@@ -133,16 +133,16 @@
 .landing-stripe { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 20px max(44px, calc((100% - 1380px) / 2)); border-top: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 10px; font-weight: 700; letter-spacing: .12em; }
 .landing-stripe-line { height: 1px; background: var(--color-border); flex: 1; }
 /* Make the service split feel like a continuation of the dual-rail story. */
-.service-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; border: 0; }
-.service-row { position: relative; display: flex; flex-direction: column; gap: 22px; min-width: 0; min-height: 355px; padding: 34px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); transition: border-color .18s, transform .18s; }
-.service-row:hover { border-color: var(--color-control-border); transform: translateY(-3px); }
-.service-row > div:nth-child(2) { flex: 1; }
-.service-row h3 { font-size: clamp(25px, 2.7vw, 34px); }
-.service-row ul { grid-column: auto; }
-.service-row .service-arrow { position: absolute; top: 33px; right: 30px; }
-.service-meta { justify-content: flex-start; }
-.service-symbol { width: 33px; height: 33px; font-size: 19px; }
-.workflow-preview { transform: none; box-shadow: 0 18px 48px rgb(27 26 24 / 7%); }
+.idea-section .service-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; border: 0; }
+.idea-section .service-row { position: relative; display: flex; flex-direction: column; gap: 22px; min-width: 0; min-height: 355px; padding: 34px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); transition: border-color .18s, transform .18s; }
+.idea-section .service-row:hover { border-color: var(--color-control-border); transform: translateY(-3px); }
+.idea-section .service-row > div:nth-child(2) { flex: 1; }
+.idea-section .service-row h3 { font-size: clamp(25px, 2.7vw, 34px); }
+.idea-section .service-row ul { grid-column: auto; }
+.idea-section .service-row .service-arrow { position: absolute; top: 33px; right: 30px; }
+.idea-section .service-meta { justify-content: flex-start; }
+.idea-section .service-symbol { width: 33px; height: 33px; font-size: 19px; }
+.workflow-section .workflow-preview { transform: none; box-shadow: 0 18px 48px rgb(27 26 24 / 7%); }
 @keyframes landing-reveal { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 :lang(bn) .landing-kicker, :lang(bn) .landing-stage-top, :lang(bn) .landing-stage-bottom { letter-spacing: 0; }
 :lang(bn) .landing-intro h1 { font-size: clamp(45px, 4.5vw, 69px); line-height: 1.32; letter-spacing: 0; }
@@ -183,10 +183,10 @@
   .signal-verified { margin-left: 37px; }
   .landing-stage-bottom { gap: 4px; margin-top: 15px; }
   .landing-stripe { padding: 17px 18px; font-size: 9px; letter-spacing: 0; }
-  .service-rows { grid-template-columns: 1fr; }
-  .service-row { min-height: 0; padding: 28px; }
+  .idea-section .service-rows { grid-template-columns: 1fr; }
+  .idea-section .service-row { min-height: 0; padding: 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .landing-intro, .landing-stage { animation: none; }
-  .service-row:hover { transform: none; }
+  .idea-section .service-row:hover { transform: none; }
 }
