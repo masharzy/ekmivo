@@ -2,7 +2,7 @@
 
 Version 1 · 2026-10-10 · Design specification before application implementation.
 
-**Selected direction: warm ivory, charcoal and copper.** Hind Siliguri is the common typeface for Bengali and English. The public site uses a centered full-screen opening, restrained animated orbital lines and an editorial flow. Product workspaces remain clear and information-led. Minimal styling preserves the complete feature set.
+**Selected direction: warm ivory, charcoal and copper.** Hind Siliguri is the common typeface for Bengali and English. The public site now uses a product-led split opening: a typographic promise beside a clearly labelled illustrative conversation → order → payment interface, followed by an editorial flow. Product workspaces remain clear and information-led. Minimal styling preserves the complete feature set.
 
 বাংলায়: উষ্ণ আইভরি, গাঢ় লেখা ও সংযত তামাটে রং। বড় হিরো শুধু পাবলিক সাইটে; কাজের স্ক্রিনে তথ্য, অবস্থা ও নিয়ন্ত্রণ স্পষ্ট থাকবে।
 
@@ -10,11 +10,11 @@ The canonical product plan is [DUAL-SAAS-MVP-PLAN.bn.md](./DUAL-SAAS-MVP-PLAN.bn
 
 ## 1. Visual direction
 
-The public opening is a centered, viewport-height hero. Thin orbital lines and a faint grid move slowly behind the text. Service explanations use editorial rows, an explicitly labelled sample workflow and a concrete payment explanation. The public header starts as a centered floating bar, expands to full width after scrolling, hides while scrolling down and returns full width on upward scroll; near the top it returns to floating width. Every public page, including login and registration, shares the header and footer. Motion stops under `prefers-reduced-motion`.
+The public opening is a responsive split hero with the message on one side and an explicitly labelled illustrative workflow on the other. The concept demonstrates a proposed conversation → catalog-backed order → evidence-based payment, not a functional integration. Services are presented as two independent modules, with a second sample workflow and a concrete payment explanation further down. The public header starts as a centered floating bar, expands to full width after scrolling, hides while scrolling down and returns full width on upward scroll; near the top it returns to floating width. Every public page, including login and registration, shares the header and footer. Motion stops under `prefers-reduced-motion`.
 
 The application itself remains task-led: inbox for conversations, tables for payments, list/Kanban for orders and a calendar for bookings. Do not copy the large public hero into operational screens. Keep labels, evidence and record states visible.
 
-Avoid fabricated customer logos, reviews, analytics, growth claims and functional demos. Label illustrative records as sample. Avoid purple gradients, oversized feature-card grids, glowing interface chrome, glass-heavy surfaces, emoji decoration, parallax and scroll hijacking. The public background's faint radial tint and orbit motion are a specific design element, not a general rule for app panels.
+Avoid fabricated customer logos, reviews, analytics, growth claims and functional demos. Label illustrative records as sample. Avoid purple gradients, oversized feature-card grids, glowing interface chrome, glass-heavy surfaces, emoji decoration, parallax and scroll hijacking. The public background's faint radial tint is a restrained atmosphere, not a general rule for app panels. The redesigned home hero does not use orbital decoration; existing login/register atmosphere is separate.
 
 ## 2. Palette and semantic tokens
 
@@ -208,7 +208,7 @@ Live status comes from the backend; do not animate a fake success after a timeou
 
 ## 12. Motion and accessibility
 
-Motion tokens: 120ms hover/focus color, 180ms menu/change, 220ms drawer/dialog; easing `cubic-bezier(0.2, 0, 0, 1)`. The public header expansion/hide and slow hero orbit are permitted purposeful motion. No bounce, scroll hijacking or delayed access to content. Under reduced motion, remove translation/scale and nonessential animation; functional progress remains readable.
+Motion tokens: 120ms hover/focus color, 180ms menu/change, 220ms drawer/dialog; easing `cubic-bezier(0.2, 0, 0, 1)`. The public header expansion/hide and a short hero entrance reveal are permitted purposeful motion. No bounce, scroll hijacking or delayed access to content. Under reduced motion, remove translation/scale and nonessential animation; functional progress remains readable.
 
 Use semantic controls, visible keyboard focus, skip navigation, meaningful landmarks, programmatic field/error associations, accessible dialog focus handling and text alternatives. Announce significant async status with a restrained live region; every queue update must not interrupt the user. On auto-verification announce once without stealing focus. Support contrast/forced-color modes with native outlines where appropriate. Drag/drop always has a non-drag alternative.
 
