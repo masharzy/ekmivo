@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LandingHero } from "../../components/landing-hero";
 import { notFound } from "next/navigation";
 
 const content = {
@@ -73,11 +74,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   return <>
     <a className="skip-link" href="#main">{t.skip}</a>
     <main id="main">
-      <section className="hero" aria-labelledby="hero-title">
-        <div className="hero-atmosphere" aria-hidden="true"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-orbit orbit-three" /><div className="hero-cross cross-one" /><div className="hero-cross cross-two" /></div>
-        <div className="hero-content"><p className="eyebrow"><span className="eyebrow-line" />{t.eyebrow}</p><h1 id="hero-title"><span>{t.heroFirst}</span><span>{t.heroSecond}</span><em>{t.heroAccent}</em></h1><p className="hero-lead">{t.heroText}</p><div className="hero-actions"><Link className="button-primary" href={`/${locale}#services`}>{t.heroPrimary}<span aria-hidden="true">↗</span></Link><Link className="button-text" href={`/${locale}#workflow`}>{t.heroSecondary}<span aria-hidden="true">→</span></Link></div><p className="hero-footnote"><span aria-hidden="true" />{t.heroFoot}</p></div>
-        <div className="hero-bottom" aria-hidden="true"><span>EKMIVO / 01</span><span>{t.scroll} ↓</span><span>AI + COMMERCE</span></div>
-      </section>
+      <LandingHero locale={locale} />
 
       <section className="idea-section section-shell" id="services"><div className="section-head"><span className="section-index">{t.section01}</span><span className="section-rule" /></div><div className="idea-grid"><div><p className="small-kicker">{t.ideaKicker}</p><h2>{t.ideaTitle}</h2></div><p className="section-lead">{t.ideaText}</p></div>
         <div className="service-rows"><article className="service-row"><div className="service-meta"><span>{t.aLabel}</span><span className="service-symbol" aria-hidden="true">✳</span></div><div><h3>{t.aName}</h3><p>{t.aDesc}</p></div><ul>{t.aPoints.map(item => <li key={item}>{item}</li>)}</ul><span className="service-arrow" aria-hidden="true">↗</span></article><article className="service-row"><div className="service-meta"><span>{t.bLabel}</span><span className="service-symbol commerce-symbol" aria-hidden="true">▦</span></div><div><h3>{t.bName}</h3><p>{t.bDesc}</p></div><ul>{t.bPoints.map(item => <li key={item}>{item}</li>)}</ul><span className="service-arrow" aria-hidden="true">↗</span></article></div><div className="combined-line"><span className="combined-icon" aria-hidden="true">↔</span><p>{t.combined}</p></div>
