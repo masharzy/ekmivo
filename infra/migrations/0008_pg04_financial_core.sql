@@ -382,7 +382,7 @@ END; $$;
 ALTER TABLE financial_workspace_registry ENABLE ROW LEVEL SECURITY;
 ALTER TABLE financial_workspace_registry FORCE ROW LEVEL SECURITY;
 CREATE POLICY financial_registry_scope_read ON financial_workspace_registry
- FOR SELECT TO ekmivo_financial_runtime
+ FOR SELECT TO ekmivo_finance_reader
  USING(workspace_id=nullif(current_setting('ekmivo.workspace_id',true),'')::uuid
   AND environment=current_setting('ekmivo.environment',true) AND status='active');
 
@@ -397,7 +397,7 @@ BEGIN
  ] LOOP
   EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY',t);
   EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY',t);
-  EXECUTE format('CREATE POLICY %I ON %I FOR SELECT TO ekmivo_financial_runtime USING (
+  EXECUTE format('CREATE POLICY %I ON %I FOR SELECT TO ekmivo_finance_reader USING (
    workspace_id=nullif(current_setting(''ekmivo.workspace_id'',true),'''')::uuid
    AND environment=current_setting(''ekmivo.environment'',true)
    AND EXISTS(SELECT 1 FROM financial_workspace_registry r
@@ -411,12 +411,12 @@ REVOKE ALL ON financial_realm,financial_workspace_registry,
  financial_receiving_accounts,payment_intents,payment_attempts,
  financial_inbound_events,financial_receipt_observations,financial_payments,
  financial_allocations,financial_idempotency,financial_outbox,
- financial_audit_processed FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_worker;
+ financial_audit_processed FROM PUBLIC,ekmivo_finance_reader,ekmivo_financial_worker;
 GRANT SELECT ON financial_realm TO ekmivo_financial_worker;
 GRANT SELECT ON financial_realm,financial_workspace_registry,
  payment_intents,payment_attempts,financial_payments,
  financial_allocations,financial_idempotency,financial_outbox
- TO ekmivo_financial_runtime;
+ TO ekmivo_finance_reader;
 
 -- Only the River worker may operate the queue; it cannot mint payments.
 -- Role is separately scoped to EACH physical financial database.
