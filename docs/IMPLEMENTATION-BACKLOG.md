@@ -316,3 +316,7 @@ Owner reported All pass for supplied PG01/PG02/PG03 functional checklist; that e
 ### PG05 authoritative-source continuation — 2026-10-11
 
 PR #7 source now includes real immutable in-app order/invoice documents, database-calculated line totals, scoped linked intents, amount/currency link guards, public frozen terms, detail/history, viewer controls, rate limits and reload-safe idempotency. Real Next/Go/PostgreSQL browser CI is added; observe final run before claiming implementation verification. PG05 manual/deployment acceptance remains open in the single ledger. This minimal source does not accept full PG10 invoice/commerce lifecycle or PG06/PG07 receipt matching. Latest evidence: [PG05](evidence/PG05/README.md).
+
+### PG05 verified source checkpoint — 2026-10-11
+
+PG05 authoritative minimal order/invoice sources, linked server totals, merchant history and secured payer-locked checkout are IMPLEMENTED and isolated automated verification is COMPLETE. Source a17d5c63: CI 38148742214 all three jobs PASS; actual Next/Go/PostgreSQL Chromium 26/26 PASS, with retained JSON and inspected Bengali dark 320px screenshot in docs/evidence/PG05. This supersedes earlier pending source/CI checkpoints. Draft PR #7 remains based on separate PG04 staging. Deployment and owner acceptance remain OPEN in docs/MANUAL-VERIFICATION.md; no verified payment without PG06/PG07 receipts or full PG10 invoice lifecycle is claimed.

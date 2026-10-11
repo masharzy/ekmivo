@@ -218,3 +218,7 @@ The two independently observed PG02 UI defects and two PG03 runtime/contract blo
 
 ### Owner confirmation — 2026-10-11
 Owner reported **All pass** for the supplied PG01/PG02/PG03 combined checklist. Record this as owner-reported browser smoke, not agent-observed physical authenticator/device/provider testing. PG01 security lifecycle was independently repeated against deployed HTTP with dedicated fixtures: 51/51 PASS, cleanup included; existing owner enrollment/recovery data were untouched. The owner subsequently deferred admin UI work. Admin UI expansion remains out of this checkpoint. PG02 route latency and full-shell loading were reported separately and are being corrected; do not erase that performance follow-up.
+
+### PG05 automated verification checkpoint — 2026-10-11
+
+Source a17d5c63, CI [38148742214](https://github.com/masharzy/ekmivo/actions/runs/38148742214): all three jobs PASS; real isolated Next/Go/PostgreSQL browser 26/26 PASS, including 16 viewport/locale/theme cases. This supersedes the PG05 pending automated-CI status above. All unchecked owner/manual items remain pending. No deployment, physical-device acceptance, receipt capture or payment verification is inferred. Evidence retained in docs/evidence/PG05.
