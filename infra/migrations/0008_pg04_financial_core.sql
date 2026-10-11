@@ -260,9 +260,9 @@ BEGIN
     workspace_id = nullif(current_setting(''ekmivo.workspace_id'',true),'''')::uuid
     AND environment = current_setting(''ekmivo.environment'',true)
     AND EXISTS(SELECT 1 FROM workspace_environments e
-      WHERE e.workspace_id=workspace_id AND e.environment=environment AND e.status=''active'')
+      WHERE e.workspace_id=%2$I.workspace_id AND e.environment=%2$I.environment AND e.status=''active'')
     AND EXISTS(SELECT 1 FROM workspace_members m JOIN app_users u ON u.id=m.user_id
-      WHERE m.workspace_id=workspace_id
+      WHERE m.workspace_id=%2$I.workspace_id
       AND m.user_id=nullif(current_setting(''ekmivo.user_id'',true),'''')::uuid
       AND u.disabled_at IS NULL)
   )', t||'_reader',t);
@@ -277,6 +277,92 @@ REVOKE ALL ON financial_receiving_accounts,payment_intents,payment_attempts,
 GRANT SELECT ON payment_intents,payment_attempts,financial_payments,
  financial_allocations,financial_idempotency,financial_outbox
  TO ekmivo_financial_runtime;
+
+
+-- Bounded, crash-recoverable worker lease functions; no merchant payment
+-- status can be changed by a worker merely acknowledging a job.
+-- At PG04 only "pg04.audit" is dispatchable. Unsupported future kinds
+-- are kept pending until PG05+ implements their real handlers.
+CREATE FUNCTION financial_claim_audit_job(p_environment text, p_token uuid, p_lease_seconds integer)
+RETURNS TABLE(job_id uuid,event_kind text,event_payload jsonb)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+BEGIN
+ IF p_environment NOT IN ('sandbox','live') OR p_token IS NULL OR
+    p_lease_seconds NOT BETWEEN 10 AND 300 THEN
+  RAISE EXCEPTION 'invalid worker lease request' USING ERRCODE='22023';
+ END IF;
+ -- A crashed worker with its last allowed attempt must not leave
+ -- a permanently stuck processing row.
+ UPDATE financial_jobs j SET state='dead', lease_token=NULL,lease_until=NULL,
+  last_error_code='LEASE_EXHAUSTED',updated_at=now()
+ WHERE j.environment=p_environment AND j.state='processing'
+  AND j.lease_until<=now() AND j.attempts>=j.max_attempts;
+
+ RETURN QUERY
+ WITH candidate AS (
+  SELECT j.id FROM financial_jobs j
+  JOIN financial_outbox o ON o.id=j.outbox_id
+   AND o.workspace_id=j.workspace_id AND o.environment=j.environment
+  WHERE j.environment=p_environment AND j.queue='financial:'||p_environment
+   AND o.event_kind='pg04.audit'
+   AND j.attempts<j.max_attempts
+   AND ((j.state='pending' AND j.run_after<=now())
+      OR (j.state='processing' AND j.lease_until<=now()))
+  ORDER BY j.run_after,j.created_at,j.id
+  FOR UPDATE OF j SKIP LOCKED LIMIT 1
+ ), claimed AS (
+  UPDATE financial_jobs j SET state='processing', attempts=j.attempts+1,
+   lease_token=p_token,lease_until=now()+make_interval(secs=>p_lease_seconds),
+   updated_at=now()
+  WHERE j.id IN (SELECT id FROM candidate)
+  RETURNING j.id,j.workspace_id,j.environment,j.outbox_id
+ )
+ SELECT c.id,o.event_kind,o.payload FROM claimed c
+ JOIN financial_outbox o ON o.workspace_id=c.workspace_id
+  AND o.environment=c.environment AND o.id=c.outbox_id;
+END $;
+
+CREATE FUNCTION financial_ack_audit_job(p_job uuid,p_token uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+DECLARE n integer;
+BEGIN
+ UPDATE financial_jobs j SET state='completed', completed_at=now(),
+  lease_token=NULL,lease_until=NULL,updated_at=now(),last_error_code=NULL
+ WHERE j.id=p_job AND j.lease_token=p_token AND j.state='processing'
+  AND j.lease_until>now() AND EXISTS (
+   SELECT 1 FROM financial_outbox o WHERE o.id=j.outbox_id
+    AND o.workspace_id=j.workspace_id AND o.environment=j.environment
+    AND o.event_kind='pg04.audit')
+ ;
+ GET DIAGNOSTICS n=ROW_COUNT;
+ RETURN n=1;
+END $;
+
+CREATE FUNCTION financial_retry_audit_job(p_job uuid,p_token uuid,p_code text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+DECLARE n integer;
+BEGIN
+ IF p_code NOT IN ('HANDLER_FAILED','DEPENDENCY_UNAVAILABLE','CONTEXT_REVOKED') THEN
+  RAISE EXCEPTION 'invalid redacted failure code' USING ERRCODE='22023';
+ END IF;
+ UPDATE financial_jobs j SET
+  state=CASE WHEN j.attempts>=j.max_attempts THEN 'dead' ELSE 'pending' END,
+  run_after=now()+make_interval(secs=>least(3600,(power(2,least(j.attempts,10)))::integer)),
+  lease_token=NULL,lease_until=NULL,last_error_code=p_code,updated_at=now()
+ WHERE j.id=p_job AND j.lease_token=p_token AND j.state='processing'
+  AND j.lease_until>now() AND EXISTS (
+   SELECT 1 FROM financial_outbox o WHERE o.id=j.outbox_id
+    AND o.workspace_id=j.workspace_id AND o.environment=j.environment
+    AND o.event_kind='pg04.audit');
+ GET DIAGNOSTICS n=ROW_COUNT;
+ RETURN n=1;
+END $;
+REVOKE ALL ON FUNCTION financial_claim_audit_job(text,uuid,integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION financial_ack_audit_job(uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION financial_retry_audit_job(uuid,uuid,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION financial_claim_audit_job(text,uuid,integer),
+ financial_ack_audit_job(uuid,uuid),
+ financial_retry_audit_job(uuid,uuid,text) TO ekmivo_financial_runtime;
 
 -- Only the process which owns database migrations has INSERT rights at PG04.
 -- PG05/PG06 add narrow, validated writer entrypoints without unsafe mark-paid.
