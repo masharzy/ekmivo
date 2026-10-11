@@ -52,3 +52,29 @@ func (p *ProjectionCoordinator) Sync(ctx context.Context,workspace,realm string)
  if !applied{return version,enabled,ErrStaleProjection}
  return version,enabled,nil
 }
+
+type projectionItem struct{workspace,realm string}
+// SyncAll is a bounded operator-owned reconciler. It never copies email,
+// sessions, phone numbers or merchant credentials, and re-reads authoritative
+// control status immediately before each realm sync.
+func (p *ProjectionCoordinator) SyncAll(ctx context.Context)(int,error){
+ if p==nil||p.Control==nil||p.Sandbox==nil||p.Live==nil{return 0,ErrUnavailable}
+ rows,err:=p.Control.Query(ctx,`SELECT workspace_id::text,environment
+ FROM list_financial_projections() ORDER BY workspace_id,environment`)
+ if err!=nil{return 0,ErrUnavailable}
+ items:=make([]projectionItem,0,64)
+ for rows.Next(){
+  if len(items)>=10000{rows.Close();return 0,ErrUnavailable}
+  var item projectionItem
+  if err:=rows.Scan(&item.workspace,&item.realm);err!=nil{rows.Close();return 0,ErrUnavailable}
+  items=append(items,item)
+ }
+ if err:=rows.Err();err!=nil{rows.Close();return 0,ErrUnavailable}
+ rows.Close()
+ for i,item:=range items{
+  if _,_,err:=p.Sync(ctx,item.workspace,item.realm);err!=nil{
+   return i,fmt.Errorf("%w: projection reconciliation incomplete",ErrUnavailable)
+  }
+ }
+ return len(items),nil
+}
