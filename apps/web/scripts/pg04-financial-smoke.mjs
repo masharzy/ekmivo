@@ -285,6 +285,17 @@ try{
     [tenant,"sandbox","invoice","INV-"+randomUUID(),reader.json(invoiceLines)]))[0].value;
   });
   same(doc.amount_minor,30000,"PG05 server-calculated source total incorrect");
+  const replayedDoc=await reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+   return (await tx.unsafe("SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb) AS value",
+    [tenant,"sandbox","invoice",doc.source_reference,reader.json(invoiceLines)]))[0].value;
+  });
+  same(replayedDoc.id,doc.id,"PG05 repeated issued document duplicated source");
+  await reject(reader,()=>reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+   await tx.unsafe("SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb)",
+    [tenant,"sandbox","invoice",doc.source_reference,reader.json([{title:"Tampered",quantity:1,unit_amount_minor:1}])]);
+  }),"23505");
   same((await reader.unsafe("SELECT pg05_list_billing_sources($1::uuid,$2) AS value",[tenant,"sandbox"]))[0].value,null,
    "PG05 reader listed sources without tenant binding");
   await reject(reader,()=>reader.unsafe("SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb)",
@@ -298,6 +309,11 @@ try{
   const linked=await issueLinked();
   same(linked.amount_minor,30000,"PG05 linked intent ignored server source total");
   same((await issueLinked()).id,linked.id,"PG05 linked replay duplicated request");
+  await reject(reader,()=>reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+   await tx.unsafe("SELECT pg05_create_linked_intent($1::uuid,$2,$3,$4,$5::uuid,$6,$7,$8,$9)",
+    [tenant,"sandbox","competing-"+randomUUID(),"invoice",doc.id,15,randomUUID(),hmac(),hmac()]);
+  }),"23505");
   same((await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[lh]))[0].value.amount_minor,
    30000,"PG05 public linked checkout amount drift");
   await reject(reader,()=>reader.unsafe("UPDATE pg05_billing_sources SET amount_minor=1 WHERE id=$1::uuid",[doc.id]),"42501");
