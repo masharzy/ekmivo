@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {spawn} from "node:child_process";
+import {spawn,execFileSync} from "node:child_process";
 import {mkdir,writeFile} from "node:fs/promises";
 import {randomUUID,randomBytes} from "node:crypto";
 import {chromium} from "@playwright/test";
@@ -8,6 +8,7 @@ import {chromium} from "@playwright/test";
 // lifetime. No mocked route, provider result or browser-created paid state.
 export async function runPG05Browser({control,goOrigin,tenant,sessions,token,expiredToken}) {
  const origin="http://127.0.0.1:17886";
+ execFileSync(process.execPath,["scripts/sync-tokens.mjs"],{cwd:new URL("../",import.meta.url),stdio:"inherit"});
  const server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17886"],{
   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:goOrigin,GO_WEB_ORIGIN:goOrigin},stdio:["ignore","pipe","pipe"]
  });
@@ -27,7 +28,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   browser=await chromium.launch({headless:true});
   const context=await browser.newContext({viewport:{width:1280,height:900},permissions:["clipboard-read","clipboard-write"]});
   await context.addCookies([{name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"}]);
-  const page=await context.newPage();page.setDefaultTimeout(30000);
+  const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   page.on("dialog",dialog=>dialog.accept());
   const path=`/en/w/${tenant}/payments/requests?env=sandbox`;
   await page.goto(origin+path);
@@ -67,6 +68,11 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   await page.getByRole("heading",{name:"Payer and route locked",exact:true}).waitFor();
   assert.equal(await page.getByLabel("Number you will pay from",{exact:true}).count(),0);
   record("Bengali payer normalization, route locking and refresh resume without duplicate attempt");
+  await page.evaluate(()=>{const actual=Date.now;Date.now=()=>actual()+3*60*60*1000});
+  await page.getByRole("button",{name:/Refresh server status/}).click();
+  await page.getByRole("heading",{name:"Payer and route locked",exact:true}).waitFor();
+  assert.notEqual(await page.getByRole("timer").textContent(),"00:00","device wall clock changed server countdown");
+  record("server-time countdown survives a three-hour device wall-clock error");
   await page.locator("#site-theme").selectOption("dark");
   assert.equal(await page.locator("html").getAttribute("data-theme"),"dark");
   await page.locator("#site-locale").selectOption("bn");

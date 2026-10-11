@@ -44,8 +44,8 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
  const [payer,setPayer]=useState("");
  const [method,setMethod]=useState("bkash");
  const [locking,setLocking]=useState(false);
- const [clock,setClock]=useState(Date.now);
- const [serverOffset,setServerOffset]=useState(0);
+ const [clock,setClock]=useState(0);
+ const [serverAnchor,setServerAnchor]=useState({time:0,monotonic:0});
  const [updated,setUpdated]=useState<number|null>(null);
  const [copied,setCopied]=useState(false);
  const live=useRef(true);
@@ -60,9 +60,10 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
    if(!response.ok)throw {status:response.status,code:json.error?.code||json.code};
    if(!live.current||request!==sequence.current)return;
    const timestamp=Date.parse((json as Checkout).server_time);
-   setServerOffset(Number.isFinite(timestamp)?timestamp-Date.now():0);
+   if(!Number.isFinite(timestamp))throw {code:"INVALID_FINANCIAL_RESULT"};
+   const monotonic=performance.now();setClock(monotonic);setServerAnchor({time:timestamp,monotonic});
    latest.current=json as Checkout;
-   setInfo(json as Checkout);setStatus("ready");setCode("");setUpdated(Date.now());
+   setInfo(json as Checkout);setStatus("ready");setCode("");setUpdated(timestamp);
   }catch(err){
    if(signal?.aborted||!live.current||request!==sequence.current)return;
    const e=err as {status?:number;code?:string};
@@ -80,7 +81,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
  },[refresh]);
  useEffect(()=>{const online=()=>void refresh();const offline=()=>setCode("OFFLINE");window.addEventListener("online",online);window.addEventListener("offline",offline);return ()=>{window.removeEventListener("online",online);window.removeEventListener("offline",offline)};},[refresh]);
  useEffect(()=>{
-  const tick=window.setInterval(()=>setClock(Date.now()),1000);
+  const tick=window.setInterval(()=>setClock(performance.now()),1000);
   return ()=>window.clearInterval(tick);
  },[]);
  useEffect(()=>{
@@ -101,16 +102,17 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
    const json=await response.json();
    if(!response.ok)throw {code:json.error?.code||json.code,status:response.status};
    const timestamp=Date.parse((json as Checkout).server_time);
-   setServerOffset(Number.isFinite(timestamp)?timestamp-Date.now():0);
+   if(!Number.isFinite(timestamp))throw {code:"INVALID_FINANCIAL_RESULT"};
+   const monotonic=performance.now();setClock(monotonic);setServerAnchor({time:timestamp,monotonic});
    latest.current=json as Checkout;sequence.current++;
-   setInfo(json as Checkout);setStatus("ready");setUpdated(Date.now());setPayer("");
+   setInfo(json as Checkout);setStatus("ready");setUpdated(timestamp);setPayer("");
   }catch(err){
    const e=err as {code?:string};
    setCode(!navigator.onLine?"OFFLINE":e.code||"CHECKOUT_SERVICE_UNAVAILABLE");
   }finally{setLocking(false);}
  }
  const amount=info?new Intl.NumberFormat(bn?"bn-BD":"en-BD",{currency:"BDT",style:"currency"}).format(info.amount_minor/100):"—";
- const serverClock=clock+serverOffset;
+ const serverClock=serverAnchor.time+clock-serverAnchor.monotonic;
  const ended=info?Date.parse(info.expires_at)<=serverClock:false;
  const state=info?(ended&&["requires_payer","awaiting_payment"].includes(info.state)?"expired":info.state):"";
  const title=statusLabels[state]?.[bn?1:0]||(bn?"পেমেন্টের তথ্য":"Payment details");
@@ -175,7 +177,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
      {["expired","cancelled"].includes(state)&&<><h2>{title}</h2><p>{bn?"এই রিকোয়েস্টে আর টাকা পাঠাবেন না। আগে কোনো টাকা পাঠানো হয়ে থাকলে ব্যবসার সঙ্গে যোগাযোগ করুন; এখানে ফেরত দেওয়া হয়েছে বলা হচ্ছে না।":"Do not send more money. If funds were already sent, contact the merchant. This screen does not claim a refund."}</p></>}
      <div className="pg05-checkout-actions">
       <button type="button" onClick={()=>void refresh()}>{bn?"সার্ভার থেকে আবার দেখুন":"Refresh server status"} ↻</button>
-      {updated&&<small>{bn?"সর্বশেষ দেখা":"Last checked"}: {new Date(updated).toLocaleTimeString(bn?"bn-BD":"en-BD")}</small>}
+      {updated&&<small>{bn?"সর্বশেষ দেখা":"Last checked"}: {new Date(updated).toLocaleTimeString(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka"})}</small>}
      </div>
      {code&&<p role="alert" className="ek-form-error">{describe(code,bn)}</p>}
     </section>

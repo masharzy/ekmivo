@@ -450,6 +450,9 @@ try{
    same(foreignList.status,403,"PG05 owner read foreign workspace over HTTP");
    same(initialData.merchant_name,"PG05 HTTP tenant","PG05 checkout omitted real business identity");
    same(initialData.workspace_id,undefined,"PG05 public response leaked internal workspace field");
+   const longDoc=await fetch(endpoint,{method:"POST",headers:head("editor"),body:JSON.stringify({source_kind:"invoice",source_reference:"UTF8-20-"+randomUUID(),items:Array.from({length:20},()=>({title:"দ".repeat(160),quantity:1,unit_amount_minor:1}))})});
+   same(longDoc.status,201,"PG05 full 20-line Bengali source incorrectly exceeded HTTP body cap");
+   same((await longDoc.json()).amount_minor,20,"PG05 20-line source total corrupted");
    const bearer={};
    for(const access of ["read","write"]){
     const publicId=randomBytes(8).toString("hex");
@@ -487,7 +490,7 @@ try{
    const raceDocResponse=await fetch(endpoint,{method:"POST",headers:head("editor"),body:JSON.stringify({...docReq,source_reference:"RACE-"+randomUUID()})});
    const raceDoc=await raceDocResponse.json();
    const racePayload={...linkedPayload,merchant_reference:"RACE-PAY-"+randomUUID(),order_id:raceDoc.id};
-   const racing=await Promise.all(Array.from({length:5},()=>fetch(intentUrl,{method:"POST",headers:{...head("editor"),"Idempotency-Key":randomUUID()},body:JSON.stringify(racePayload)})));
+   const racing=await Promise.all(Array.from({length:5},()=>fetch(intentUrl,{method:"POST",headers:{...head("editor"),"Idempotency-Key":randomUUID()},body:JSON.stringify({...racePayload,merchant_reference:"RACE-PAY-"+randomUUID()})})));
    same(racing.filter(r=>r.status===201).length,1,"PG05 parallel source issuance created competing checkouts");
    same(racing.filter(r=>r.status===409).length,4,"PG05 competing source issuance did not return conflicts");
    await reject(reader,()=>reader.unsafe("SELECT pg05_create_linked_intent($1::uuid,$2,$3,$4,$5::uuid,$6,$7,$8,$9)",

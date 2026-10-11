@@ -70,3 +70,9 @@ Production-only `npm audit --omit=dev --audit-level=high`: PASS, 0 vulnerabiliti
 ### Public identity runtime correction
 
 [38147144189](https://github.com/masharzy/ekmivo/actions/runs/38147144189): Go/race and Android PASS, HTTP checkout GET failed 503. The restricted control role correctly refused a direct name/product/environment query. Fixed with additive control migration 0013 and a narrowly granted public-business read function, keeping normal tenant RLS and secret/identity grants intact. Startup fails closed if the explicit control upgrade is missing. New regressions cover enabled/disabled control state with stale finance projection, read/write bearer scopes, foreign workspace denial and expired checkout.
+
+### Browser harness and input-boundary correction
+
+CI [38147549215](https://github.com/masharzy/ekmivo/actions/runs/38147549215) passed the source/HTTP checks and Go/Android jobs, but the browser harness bypassed token generation normally run by `predev`; merchant page compilation failed. The harness now explicitly runs the same token sync before Next starts. No browser PASS is inferred from that failed run.
+
+Public countdown uses a server timestamp plus monotonic elapsed time, with a browser device-clock regression. Web proxies bound the actual streamed body before parsing/forwarding and reject duplicate scope parameters. Source issuance permits 16 KiB for the supported 20 Unicode line descriptions; ordinary mutations remain capped at 4 KiB. Concurrent-source tests use distinct merchant references so the source uniqueness constraint is independently exercised.

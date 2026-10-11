@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { boundedBody } from "../../../../lib/server/bounded-body";
 import { goOrigin } from "../../../../lib/server/go-origin";
 
 export const dynamic = "force-dynamic";
@@ -26,11 +27,12 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
  const target = new URL("/v1/" + path, base);
  const incoming = new URL(request.url);
  for (const key of ["environment", "capability"]) {
+  if(incoming.searchParams.getAll(key).length>1)return Response.json({code:"INVALID_SCOPE"},{status:400});
   const value = incoming.searchParams.get(key);
   if (value) target.searchParams.set(key, value);
  }
- const body = read ? undefined : await request.text();
- if (body && new TextEncoder().encode(body).length > 4096)
+ const body = read ? undefined : await boundedBody(request,path.endsWith("/linked-sources")?16384:4096);
+ if (body === null)
   return Response.json({ code: "BODY_TOO_LARGE" }, { status: 413 });
  try {
   const upstream = await fetch(target, {

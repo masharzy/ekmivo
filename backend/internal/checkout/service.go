@@ -186,7 +186,10 @@ func validRequest(body createRequest) bool {
 	return body.Amount >= 1 && body.Amount <= 100000000000
 }
 func decode(w http.ResponseWriter, r *http.Request, into any) bool {
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
+	return decodeLimit(w, r, into, 4096)
+}
+func decodeLimit(w http.ResponseWriter, r *http.Request, into any, limit int64) bool {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, limit))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(into); err != nil {
 		fail(w, 422, "INVALID_REQUEST")
@@ -440,7 +443,7 @@ func (s *Service) HandleSources(w http.ResponseWriter, r *http.Request) {
 		Reference string          `json:"source_reference"`
 		Items     json.RawMessage `json:"items"`
 	}
-	if !decode(w, r, &body) {
+	if !decodeLimit(w, r, &body, 16384) {
 		return
 	}
 	if body.Kind != "order" && body.Kind != "invoice" {

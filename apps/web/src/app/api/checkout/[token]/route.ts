@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { boundedBody } from "../../../../lib/server/bounded-body";
 import { goOrigin } from "../../../../lib/server/go-origin";
 export const dynamic="force-dynamic";
 const TOKEN=/^[A-Za-z0-9_-]{43}$/;
@@ -15,8 +16,8 @@ async function forward(request:NextRequest,{params}:{params:Promise<{token:strin
  const base=goOrigin();
  if(!base)return result(503,"PROXY_CONFIG_INVALID");
  const target=new URL(`/v1/public/checkout/${token}${post?"/lock":""}`,base);
- const body=post?await request.text():undefined;
- if(body&&new TextEncoder().encode(body).length>4096)return result(413,"BODY_TOO_LARGE");
+ const body=post?await boundedBody(request,4096):undefined;
+ if(body===null)return result(413,"BODY_TOO_LARGE");
  try{
   const upstream=await fetch(target,{method:request.method,body,cache:"no-store",redirect:"error",
    headers:post?{"Content-Type":"application/json",Origin:process.env.GO_WEB_ORIGIN||"https://ekmivo-web-masharzys-projects.vercel.app"}:undefined,
