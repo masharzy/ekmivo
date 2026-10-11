@@ -159,9 +159,9 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
         <select value={method} onChange={e=>setMethod(e.target.value)}>
          {(info.methods||[]).map(option=><option key={option} value={option}>{methods[option]||option}</option>)}
         </select></label>
-       <label>{bn?"যে নম্বর থেকে টাকা পাঠাবেন":"Number you will pay from"}
-        <input required type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={payer} onChange={e=>setPayer(e.target.value)} placeholder="017XXXXXXXX" aria-describedby="pg05-payer-hint"/>
-        <small id="pg05-payer-hint">{bn?"১১ সংখ্যার পূর্ণ বাংলাদেশি মোবাইল নম্বর; বাংলা সংখ্যাও গ্রহণযোগ্য।":"Full 11-digit Bangladesh mobile number; Bengali digits accepted."}</small></label>
+       <label htmlFor="pg05-payer">{bn?"যে নম্বর থেকে টাকা পাঠাবেন":"Number you will pay from"}</label>
+        <input id="pg05-payer" required type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={payer} onChange={e=>setPayer(e.target.value)} placeholder="017XXXXXXXX" aria-describedby="pg05-payer-hint"/>
+        <small id="pg05-payer-hint">{bn?"১১ সংখ্যার পূর্ণ বাংলাদেশি মোবাইল নম্বর; বাংলা সংখ্যাও গ্রহণযোগ্য।":"Full 11-digit Bangladesh mobile number; Bengali digits accepted."}</small>
        <button className="ek-action" type="submit" disabled={locking||!info.methods?.length}>{locking?(bn?"সংরক্ষণ হচ্ছে…":"Securing…"):(bn?"নম্বর ও মাধ্যম নিশ্চিত করুন":"Confirm number and method")}</button>
       </fieldset></form></>}
      {state==="awaiting_payment"&&<>
