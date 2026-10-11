@@ -57,6 +57,8 @@ func newHandler() http.Handler { return newHandlerWithRepository(nil) }
 func newHandlerWithRepository(repo *authz.Repository) http.Handler { return newHandlerWithCheckout(repo,nil) }
 func newHandlerWithCheckout(repo *authz.Repository,pay *checkout.Service) http.Handler {
  mux := http.NewServeMux()
+  mux.HandleFunc("GET /v1/workspaces/{workspaceID}/linked-sources",pay.HandleSources)
+  mux.HandleFunc("POST /v1/workspaces/{workspaceID}/linked-sources",pay.HandleSources)
  mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-intents",pay.HandleMerchant)
  mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents",pay.HandleMerchant)
  mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents/{intentID}/{action}",pay.HandleMerchant)
