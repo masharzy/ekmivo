@@ -254,7 +254,8 @@ try{
  });
  const workerBase={...env,
   EKMIVO_WORKER_ENVIRONMENT:"sandbox",
-  FINANCIAL_WORKER_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_financial_worker_sandbox","pg04-sandbox-worker-only")};
+  FINANCIAL_WORKER_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_financial_worker_sandbox","pg04-sandbox-worker-only"),
+  PG04_WORKER_CONTROL_PROJECTION_URL:ds(source.pathname.slice(1),"ekmivo_financial_projection_operator","pg04-control-projection-only")};
  const sleep=ms=>new Promise(res=>setTimeout(res,ms));
  async function startWorker(extras={}){
   const child=spawn(runner,[],{env:{...workerBase,...extras},stdio:["ignore","pipe","pipe"]});
