@@ -34,8 +34,9 @@ func TestPG03MerchantContextIsRealAuthorizationNotFakePayment(t *testing.T){
   recorder:=httptest.NewRecorder()
   handler.ServeHTTP(recorder,httptest.NewRequest(http.MethodGet,tc.path,nil))
   if recorder.Code!=tc.status{t.Fatalf("%s: got %d expected %d",tc.path,recorder.Code,tc.status)}
-  var response struct{ Error struct{Code string `json:"code"`} `json:"error"` }
+  var response struct{ Error struct{Code string `json:"code"`; CorrelationID string `json:"correlation_id"`} `json:"error"` }
   if err:=json.Unmarshal(recorder.Body.Bytes(),&response);err!=nil{t.Fatal(err)}
   if response.Error.Code!=tc.code{t.Fatalf("%s: got code %s expected %s",tc.path,response.Error.Code,tc.code)}
+  if len(response.Error.CorrelationID)!=24{t.Fatalf("%s: missing request correlation ID",tc.path)}
  }
 }
