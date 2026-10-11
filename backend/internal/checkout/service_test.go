@@ -21,4 +21,10 @@ func TestPG05InvalidLinkedAmountRejected(t *testing.T){
  if !validRequest(valid){t.Fatal("standalone should work")}
  valid.OrderID="client-controlled-order"
  if validRequest(valid){t.Fatal("accepted unverified order amount")}
+ valid.OrderID="527bf31a-bb41-4d3d-8c7f-9dbe725dc1df"
+ if validRequest(valid){t.Fatal("accepted linked request with caller-controlled amount")}
+ valid.Amount=0
+ if !validRequest(valid){t.Fatal("linked server-source request wrongly refused")}
+ valid.InvoiceID="527bf31a-bb41-4d3d-8c7f-9dbe725dc1df"
+ if validRequest(valid){t.Fatal("accepted two conflicting linked sources")}
 }
