@@ -320,3 +320,40 @@
  .ds-search-top{padding-inline:10px}
  .ds-search-hint{padding-inline:11px}
 }
+
+
+/* PG03 developer credentials: readable at 320px, keyboard, bilingual and OS theme. */
+.ds-developer-console{display:grid;gap:18px;min-width:0}
+.ds-developer-console .ds-panel-heading{align-items:flex-start;gap:12px}
+.ds-developer-console .ds-panel-heading p{color:var(--color-text-secondary);line-height:1.6}
+.ds-developer-console>p{font-size:14px;line-height:1.7;color:var(--color-text-secondary)}
+.ds-api-key-manager,.ds-key-list{display:grid;gap:16px;min-width:0}
+.ds-key-create,.ds-key-confirm{display:grid;gap:16px;min-width:0;padding:18px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface)}
+.ds-key-create>label,.ds-key-confirm>label{display:grid;gap:7px;font-size:14px;font-weight:600}
+.ds-key-create input:not([type=checkbox]),.ds-key-confirm input,.ds-key-create select{width:100%;min-height:44px;padding:10px 12px;color:var(--color-text);background:var(--color-surface);border:1px solid var(--color-control-border);border-radius:7px}
+.ds-key-create fieldset{border:1px solid var(--color-border);border-radius:8px;padding:14px;min-width:0}
+.ds-key-create legend{font-size:14px;font-weight:600;padding-inline:8px}
+.ds-key-scopes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ds-key-scopes label{display:flex;align-items:center;gap:10px;min-height:44px;padding:9px;border:1px solid var(--color-border);border-radius:7px;cursor:pointer;overflow-wrap:anywhere;min-width:0}
+.ds-key-scopes code{font-size:12px;white-space:normal;overflow-wrap:anywhere}
+.ds-key-scopes input{min-width:17px;min-height:17px;accent-color:var(--color-primary);flex-shrink:0}
+.ds-key-card{min-width:0;border:1px solid var(--color-border);border-radius:10px;padding:18px;display:grid;gap:12px}
+.ds-key-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ds-key-card-head h4{font-size:16px}
+.ds-key-card-head code{display:block;margin-top:6px;font-size:12px;color:var(--color-text-secondary);overflow-wrap:anywhere}
+.ds-key-card-head>span,.ds-key-card>small{font-size:12px;color:var(--color-text-secondary)}
+.ds-key-card p{font-size:13px;overflow-wrap:anywhere;line-height:1.6}
+.ds-key-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ds-key-actions button{min-height:44px;padding:10px 14px;background:var(--color-surface);border:1px solid var(--color-control-border);border-radius:7px;color:var(--color-text);cursor:pointer}
+.ds-key-management{display:grid;gap:10px}
+.ds-key-confirm{padding:14px;max-width:500px}
+.ds-key-confirm p{font-size:13px;color:var(--color-text-secondary)}
+.ds-key-secret{display:grid;gap:12px;min-width:0;border:1px solid var(--color-focus);border-radius:8px;padding:16px}
+.ds-key-secret code{display:block;overflow-wrap:anywhere;padding:12px;background:var(--color-canvas);font-size:12px}
+.ds-key-secret small{color:var(--color-text-secondary);line-height:1.7}
+.ds-api-key-manager :is(button,input,select):focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
+@media(max-width:600px){
+ .ds-key-scopes{grid-template-columns:1fr}
+ .ds-key-create,.ds-key-card{padding:14px}
+ .ds-api-key-manager>.ds-panel-heading{flex-wrap:wrap}
+}
