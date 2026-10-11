@@ -14,7 +14,7 @@ export async function DeveloperConsole({locale,workspace,environment,userId}:{
  let unavailable=false;
  if(allowed){
   try{
-   const rows=await database()`SELECT id,public_id,name,scopes,created_at,expires_at,revoked_at,last_used_at
+   const rows=await database()`SELECT id,public_id,name,scopes,created_at,expires_at,revoked_at,last_used_at,(expires_at<=now()) AS expired
     FROM merchant_api_keys WHERE workspace_id=${workspace.id}::uuid
     AND environment=${environment}
     ORDER BY created_at DESC LIMIT 100`;
@@ -25,7 +25,7 @@ export async function DeveloperConsole({locale,workspace,environment,userId}:{
     expiresAt:new Date(row.expires_at).toISOString(),
     revokedAt:row.revoked_at?new Date(row.revoked_at).toISOString():null,
     lastUsedAt:row.last_used_at?new Date(row.last_used_at).toISOString():null,
-    expired:new Date(row.expires_at).getTime()<=Date.now()
+    expired:Boolean(row.expired)
    }));
   }catch(e){
    unavailable=true;
