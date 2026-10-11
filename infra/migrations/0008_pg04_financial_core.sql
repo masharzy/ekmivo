@@ -22,6 +22,28 @@ CREATE TABLE financial_workspace_registry (
 -- Only a constrained operator may provision this projection after confirming
 -- the authoritative control-plane workspace and enabled product. No PII copied.
 -- Finance runtime/worker have NO INSERT/UPDATE/DELETE privilege here.
+CREATE FUNCTION financial_sync_workspace(p_workspace uuid,p_realm text,
+ p_version bigint,p_enabled boolean)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+DECLARE current_realm text; affected integer;
+BEGIN
+ SELECT environment INTO current_realm FROM financial_realm WHERE singleton;
+ IF p_workspace IS NULL OR p_realm<>current_realm OR p_version<=0 OR p_enabled IS NULL THEN
+  RAISE EXCEPTION 'invalid financial workspace projection' USING ERRCODE='22023';
+ END IF;
+ INSERT INTO financial_workspace_registry(workspace_id,environment,status,entitlement_version)
+ VALUES(p_workspace,p_realm,CASE WHEN p_enabled THEN 'active' ELSE 'suspended' END,p_version)
+ ON CONFLICT(workspace_id,environment) DO UPDATE SET
+   status=excluded.status,entitlement_version=excluded.entitlement_version,synced_at=now()
+ WHERE financial_workspace_registry.entitlement_version<excluded.entitlement_version
+    OR (financial_workspace_registry.entitlement_version=excluded.entitlement_version
+        AND financial_workspace_registry.status=excluded.status);
+ GET DIAGNOSTICS affected=ROW_COUNT;
+ RETURN affected=1;
+END; $;
+REVOKE ALL ON FUNCTION financial_sync_workspace(uuid,text,bigint,boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION financial_sync_workspace(uuid,text,bigint,boolean)
+ TO ekmivo_financial_provisioner;
 
 CREATE TABLE financial_receiving_accounts (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -390,6 +412,7 @@ REVOKE ALL ON financial_realm,financial_workspace_registry,
  financial_inbound_events,financial_receipt_observations,financial_payments,
  financial_allocations,financial_idempotency,financial_outbox,
  financial_audit_processed FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_worker;
+GRANT SELECT ON financial_realm TO ekmivo_financial_worker;
 GRANT SELECT ON financial_realm,financial_workspace_registry,
  payment_intents,payment_attempts,financial_payments,
  financial_allocations,financial_idempotency,financial_outbox
@@ -399,9 +422,21 @@ GRANT SELECT ON financial_realm,financial_workspace_registry,
 -- Role is separately scoped to EACH physical financial database.
 GRANT SELECT,INSERT,UPDATE,DELETE ON river_job TO ekmivo_financial_worker;
 GRANT USAGE,SELECT ON SEQUENCE river_job_id_seq TO ekmivo_financial_worker;
--- River leader/queue access is granted by the single migration/provisioning
--- runner after detecting the exact upstream River migration schema version.
--- No public finance/worker role is granted bypass RLS or ownership.
+-- Upstream River's migration-owned queue/leader and future tables are
+-- restricted to worker, never financial domain tables or River migrations.
+DO $
+DECLARE row_info record;
+BEGIN
+ FOR row_info IN SELECT c.relname,c.relkind FROM pg_class c
+  JOIN pg_namespace n ON n.oid=c.relnamespace
+  WHERE n.nspname='public' AND c.relname LIKE 'river\\_%' ESCAPE '\\'
+    AND c.relkind IN ('r','p') AND c.relname<>'river_migration'
+ LOOP
+  EXECUTE format('GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE %I TO ekmivo_financial_worker',row_info.relname);
+ END LOOP;
+END; $;
+-- The actual database owner/provisioner independently restricts CONNECT to
+-- this realm's credentials. No worker becomes a financial table owner.
 -- Provisioning/mutation is restricted to trusted domain writers. PG05 adds
 -- authorized API entrypoints, never a direct client-controlled mark-paid route.
 COMMIT;
