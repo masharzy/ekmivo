@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+ "crypto/rand"
+ "encoding/hex"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -24,6 +26,19 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+func merchantError(w http.ResponseWriter,status int,code,message string,retryable bool){
+ id:=make([]byte,12)
+ if _,err:=rand.Read(id);err!=nil{
+  // Missing entropy is a dependency failure: do not send a fake request ID.
+  writeJSON(w,http.StatusServiceUnavailable,map[string]any{"error":map[string]any{
+   "code":"AUTH_SERVICE_UNAVAILABLE","message":"Request identifier unavailable","retryable":true}})
+  return
+ }
+ correlationID:=hex.EncodeToString(id)
+ w.Header().Set("X-Correlation-ID",correlationID)
+ writeJSON(w,status,map[string]any{"error":map[string]any{
+  "code":code,"message":message,"retryable":retryable,"correlation_id":correlationID}})
 }
 func authFailure(w http.ResponseWriter, err error) {
 	switch {
@@ -62,27 +77,22 @@ func newHandlerWithRepository(repo *authz.Repository) http.Handler {
 	mux.HandleFunc("GET /v1/merchant/context", func(w http.ResponseWriter, r *http.Request) {
 		envs:=r.URL.Query()["environment"]
 		if len(envs)!=1 || (envs[0]!="sandbox"&&envs[0]!="live") {
-			writeJSON(w,http.StatusBadRequest,map[string]any{"error":map[string]any{
-				"code":"INVALID_ENVIRONMENT","message":"One explicit sandbox or live environment is required","retryable":false}})
+			merchantError(w,http.StatusBadRequest,"INVALID_ENVIRONMENT","One explicit sandbox or live environment is required",false)
 			return
 		}
 		if repo==nil {
-			writeJSON(w,http.StatusServiceUnavailable,map[string]any{"error":map[string]any{
-				"code":"AUTH_SERVICE_UNAVAILABLE","message":"Authorization unavailable","retryable":true}})
+			merchantError(w,http.StatusServiceUnavailable,"AUTH_SERVICE_UNAVAILABLE","Authorization unavailable",true)
 			return
 		}
 		credential,err:=repo.AuthenticateMerchant(r.Context(),r.Header.Get("Authorization"),authz.Environment(envs[0]),"payments:read")
 		if err!=nil {
 			switch {
 			case errors.Is(err,authz.ErrUnauthorized):
-				writeJSON(w,http.StatusUnauthorized,map[string]any{"error":map[string]any{
-					"code":"INVALID_API_KEY","message":"Invalid or expired API key","retryable":false}})
+				merchantError(w,http.StatusUnauthorized,"INVALID_API_KEY","Invalid or expired API key",false)
 			case errors.Is(err,authz.ErrForbidden):
-				writeJSON(w,http.StatusForbidden,map[string]any{"error":map[string]any{
-					"code":"SCOPE_OR_ENVIRONMENT_DENIED","message":"Credential is not authorized for this scope or environment","retryable":false}})
+				merchantError(w,http.StatusForbidden,"SCOPE_OR_ENVIRONMENT_DENIED","Credential is not authorized for this scope or environment",false)
 			default:
-				writeJSON(w,http.StatusServiceUnavailable,map[string]any{"error":map[string]any{
-					"code":"AUTH_SERVICE_UNAVAILABLE","message":"Authorization unavailable","retryable":true}})
+				merchantError(w,http.StatusServiceUnavailable,"AUTH_SERVICE_UNAVAILABLE","Authorization unavailable",true)
 			}
 			return
 		}
