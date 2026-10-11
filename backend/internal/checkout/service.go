@@ -26,7 +26,7 @@ import (
 
 var (
  uuidPattern=regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
- referencePattern=regexp.MustCompile(`^[^\\x00-\\x1f]{1,128}$`)
+ referencePattern=regexp.MustCompile(`^[^\x00-\x1f]{1,128}$`)
  tokenPattern=regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
  keyPattern=regexp.MustCompile(`^[A-Za-z0-9_.:-]{16,128}$`)
 )
