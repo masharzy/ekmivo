@@ -155,10 +155,10 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
       <h2>{bn?"প্রকৃত প্রেরকের নম্বর লক করুন":"Lock your actual sending number"}</h2>
       <p>{bn?"আপনি নিজে যে মোবাইল নম্বর থেকে টাকা পাঠাবেন, সেটি দিন। কোনো গ্রাহকের contact নম্বর অনুমান করা হয় না।":"Enter the full mobile number you would send money from. A customer's contact number is never assumed to be the payer."}</p>
       <form onSubmit={lock} className="pg05-form"><fieldset disabled={locking||code==="OFFLINE"}>
-       <label>{bn?"পেমেন্ট মাধ্যম":"Payment method"}
-        <select value={method} onChange={e=>setMethod(e.target.value)}>
+       <label htmlFor="pg05-method">{bn?"পেমেন্ট মাধ্যম":"Payment method"}</label>
+        <select id="pg05-method" value={method} onChange={e=>setMethod(e.target.value)}>
          {(info.methods||[]).map(option=><option key={option} value={option}>{methods[option]||option}</option>)}
-        </select></label>
+        </select>
        <label htmlFor="pg05-payer">{bn?"যে নম্বর থেকে টাকা পাঠাবেন":"Number you will pay from"}</label>
         <input id="pg05-payer" required type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={payer} onChange={e=>setPayer(e.target.value)} placeholder="017XXXXXXXX" aria-describedby="pg05-payer-hint"/>
         <small id="pg05-payer-hint">{bn?"১১ সংখ্যার পূর্ণ বাংলাদেশি মোবাইল নম্বর; বাংলা সংখ্যাও গ্রহণযোগ্য।":"Full 11-digit Bangladesh mobile number; Bengali digits accepted."}</small>
