@@ -381,6 +381,9 @@ END; $$;
 -- using this connection. PostgreSQL GUCs alone are not authentication.
 ALTER TABLE financial_workspace_registry ENABLE ROW LEVEL SECURITY;
 ALTER TABLE financial_workspace_registry FORCE ROW LEVEL SECURITY;
+DO $ BEGIN
+ EXECUTE format('CREATE POLICY financial_registry_migration_owner ON financial_workspace_registry FOR ALL TO %I USING (true) WITH CHECK (true)',current_user);
+END; $;
 CREATE POLICY financial_registry_scope_read ON financial_workspace_registry
  FOR SELECT TO ekmivo_finance_reader
  USING(workspace_id=nullif(current_setting('ekmivo.workspace_id',true),'')::uuid
@@ -397,6 +400,9 @@ BEGIN
  ] LOOP
   EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY',t);
   EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY',t);
+  -- Trusted migration-owner SECURITY DEFINER functions still work under FORCE RLS.
+  EXECUTE format('CREATE POLICY %I ON %I FOR ALL TO %I USING (true) WITH CHECK (true)',
+    t||'_migration_owner',t,current_user);
   EXECUTE format('CREATE POLICY %I ON %I FOR SELECT TO ekmivo_finance_reader USING (
    workspace_id=nullif(current_setting(''ekmivo.workspace_id'',true),'''')::uuid
    AND environment=current_setting(''ekmivo.environment'',true)
