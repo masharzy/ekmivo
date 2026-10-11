@@ -202,6 +202,61 @@ try{
    ok(denied,"sandbox worker credential accessed live financial DB");
   }finally{await attemptCross.end({timeout:1})}
  }finally{await machine.end({timeout:3})}
+
+ // PG05: run only on the two disposable finance DBs used for PG04 CI.
+ const pg05Env={...env,PG05_ALLOW_MIGRATION:"true",
+  PG05_FINANCIAL_MIGRATION_FILE:new URL("../../../infra/migrations/0010_pg05_checkout.sql",import.meta.url).pathname};
+ for(let i=0;i<2;i++)execFileSync("go",["run","./cmd/financial-migrate"],{
+  cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg05Env,timeout:100000
+ });
+ const tenant=controls[0][1];
+ const reader=postgres(ds("ekmivo_pg04_sandbox","ekmivo_finance_reader_sandbox",
+   "pg04-sandbox-reader-only"),{max:1,prepare:false});
+ try{
+  const key=randomUUID(),digest=hmac(),request=hmac(),payer=hmac();
+  const create=(id,hash,requestHash)=>reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",
+    [tenant,"sandbox"]);
+   return (await tx.unsafe("SELECT pg05_create_intent($1::uuid,$2,$3,$4,$5,$6,$7,$8) AS value",
+    [tenant,"sandbox","pg05-"+id,50000,15,id,hash,requestHash]))[0].value;
+  });
+  const first=await create(key,digest,request);
+  same(first.state,"requires_payer","PG05 issued request pretended funds verified");
+  same((await create(key,digest,request)).id,first.id,"PG05 request replay duplicated intent");
+  same((await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[digest]))[0].value.amount_minor,
+   50000,"PG05 public checkout amount drift");
+  same((await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[hmac()]))[0].value,
+   null,"PG05 random checkout capability disclosed private data");
+  const locked=(await reader.unsafe("SELECT pg05_lock_payer($1,$2,$3,$4) AS value",
+   [digest,payer,"6789","bkash"]))[0].value;
+  same(locked.state,"awaiting_payment","PG05 payer lock did not create pending attempt");
+  same(locked.payer_suffix,"6789","PG05 wrong payer suffix");
+  same((await reader.unsafe("SELECT pg05_lock_payer($1,$2,$3,$4) AS value",
+   [digest,payer,"6789","bkash"]))[0].value.state,"awaiting_payment","PG05 duplicate payer lock");
+  await reject(reader,()=>reader.unsafe("SELECT pg05_lock_payer($1,$2,$3,$4)",
+   [digest,hmac(),"8765","nagad"]),"23505");
+  const other=randomUUID(),otherHash=hmac();
+  await create(other,otherHash,hmac());
+  await reject(reader,()=>reader.unsafe("SELECT pg05_lock_payer($1,$2,$3,$4)",
+   [otherHash,payer,"6789","bkash"]),"23505");
+  await reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",
+    [tenant,"sandbox"]);
+   const result=(await tx.unsafe("SELECT pg05_cancel_intent($1::uuid,$2,$3::uuid) AS value",
+    [tenant,"sandbox",first.id]))[0].value;
+   same(result.state,"cancelled","PG05 cancellation did not take effect");
+  });
+  same((await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[digest]))[0].value.state,
+   "cancelled","PG05 cancelled link still payable");
+  same((await reader.unsafe("SELECT pg05_lock_payer($1,$2,$3,$4) AS value",
+   [otherHash,payer,"6789","bkash"]))[0].value.state,
+   "awaiting_payment","PG05 cancelled attempt permanently blocked retry");
+  same((await dbs.sandbox.unsafe("SELECT count(*)::int n FROM payment_attempts WHERE intent_id=$1::uuid",
+   [first.id]))[0].n,1,"PG05 cancellation erased immutable attempt");
+  same((await reader.unsafe("SELECT pg05_merchant_list($1::uuid,$2) AS value",
+   [tenant,"sandbox"]))[0].value,null,"PG05 unscoped reader leaked merchant history");
+  console.log("PG05 PASS: isolated migration repeat, create/replay, opaque capability, exact payer lock, collision, cancellation and replay");
+ }finally{await reader.end({timeout:3})}
  // Owner-only fixture exercises trigger-level invariants; entirely rolled back.
  const db=dbs.sandbox,workspace=controls[0][1];
  try{
