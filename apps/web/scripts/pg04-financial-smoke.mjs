@@ -16,8 +16,8 @@ const migration=await readFile(new URL("../../../infra/migrations/0008_pg04_fina
 let assertions=0;
 const ok=(v,msg)=>{assert.ok(v,msg);assertions++};
 const same=(x,y,msg)=>{assert.deepEqual(x,y,msg);assertions++};
-async function expectSQLReject(fn,code){
- try{await fn();assert.fail("expected PostgreSQL rejection");}
+async function expectSQLReject(tx,fn,code){
+ try{await tx.savepoint(async()=>await fn());assert.fail("expected PostgreSQL rejection");}
  catch(err){if(err.code===code){assertions++;return;}throw err;}
 }
 const digest=()=>randomBytes(32).toString("hex");
@@ -31,7 +31,7 @@ try{
   "financial_inbound_events","financial_receipt_observations","financial_payments",
   "financial_allocations","financial_idempotency","financial_outbox","financial_jobs"];
  const rls=await db`SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class
-  WHERE relname IN ${db(names)}`;
+  WHERE relname = ANY(${names})`;
  same(rls.length,10,"missing financial schema");
  ok(rls.every(t=>t.relrowsecurity&&t.relforcerowsecurity),"all tenant tables must force RLS");
  try{
@@ -58,18 +58,18 @@ try{
     (workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version)
     VALUES(${spaceA}::uuid,'sandbox',${intentA}::uuid,${a}::uuid,${digest()},'5678',7500,'bkash',now(),now()+interval '15 minutes',1)
     RETURNING id`)[0].id;
-   await expectSQLReject(()=>tx`INSERT INTO payment_attempts
+   await expectSQLReject(tx,()=>tx`INSERT INTO payment_attempts
     (workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version)
     VALUES(${spaceA}::uuid,'sandbox',${intentB}::uuid,${a}::uuid,${digest()},'5678',7500,'bkash',now(),now()+interval '15 minutes',1)`,"23503");
-   await expectSQLReject(()=>tx`INSERT INTO payment_intents(workspace_id,environment,merchant_reference,amount_minor,expires_at)
+   await expectSQLReject(tx,()=>tx`INSERT INTO payment_intents(workspace_id,environment,merchant_reference,amount_minor,expires_at)
     VALUES(${spaceA}::uuid,'sandbox','bad amount',-1,now()+interval '1 minute')`,"23514");
-   await expectSQLReject(()=>tx`UPDATE payment_attempts SET payer_suffix='0000' WHERE id=${attemptA}::uuid`,"55000");
+   await expectSQLReject(tx,()=>tx`UPDATE payment_attempts SET payer_suffix='0000' WHERE id=${attemptA}::uuid`,"55000");
 
    const event=(await tx`INSERT INTO financial_inbound_events
     (workspace_id,environment,source_kind,source_event_id,event_digest,original_source_at,encrypted_evidence)
     VALUES(${spaceA}::uuid,'sandbox','sandbox_fixture','evt-01',${digest()},now(),${randomBytes(48)})
     RETURNING id`)[0].id;
-   await expectSQLReject(()=>tx`INSERT INTO financial_inbound_events
+   await expectSQLReject(tx,()=>tx`INSERT INTO financial_inbound_events
     (workspace_id,environment,source_kind,source_event_id,event_digest,encrypted_evidence)
     VALUES(${spaceA}::uuid,'sandbox','sandbox_fixture','evt-01',${digest()},${randomBytes(48)})`,"23505");
    const observation=(await tx`INSERT INTO financial_receipt_observations
@@ -84,7 +84,7 @@ try{
    await tx`INSERT INTO financial_allocations
     (workspace_id,environment,payment_id,intent_id,amount_minor)
     VALUES(${spaceA}::uuid,'sandbox',${payment}::uuid,${intentA}::uuid,3500)`;
-   await expectSQLReject(()=>tx`INSERT INTO financial_allocations
+   await expectSQLReject(tx,()=>tx`INSERT INTO financial_allocations
     (workspace_id,environment,payment_id,intent_id,amount_minor)
     VALUES(${spaceA}::uuid,'sandbox',${payment}::uuid,${intentA}::uuid,5000)`,"23505");
    // New distinct payment: amount cap is enforced even without uniqueness conflict.
@@ -99,7 +99,7 @@ try{
     VALUES(${obsC}::uuid,${spaceA}::uuid,'sandbox',${evtC}::uuid,${a}::uuid,'incoming','unknown',1)`;
    const payC=(await tx`INSERT INTO financial_payments(workspace_id,environment,attempt_id,observation_id,verified_amount_minor,verification_method,policy_version)
     VALUES(${spaceA}::uuid,'sandbox',${attemptC}::uuid,${obsC}::uuid,7500,'sandbox_fixture',1) RETURNING id`)[0].id;
-   await expectSQLReject(()=>tx`INSERT INTO financial_allocations
+   await expectSQLReject(tx,()=>tx`INSERT INTO financial_allocations
     (workspace_id,environment,payment_id,intent_id,amount_minor)
     VALUES(${spaceA}::uuid,'sandbox',${payC}::uuid,${intentA}::uuid,5000)`,"23514");
    // RLS requires validated actor+workspace+realm: none means no rows.
