@@ -230,13 +230,27 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     <div className="pg05-two">
      <label>{bn?"ব্যবসার রেফারেন্স":"Merchant reference"}
       <input required maxLength={128} value={fields.reference} onChange={e=>edit("reference",e.target.value)} placeholder="ORDER-1024"/></label>
-     <label>{bn?"পরিমাণ (BDT)":"Amount (BDT)"}
+     <label>{bn?"রিকোয়েস্টের ধরন":"Request type"}
+      <select value={fields.sourceKind} onChange={e=>setFields(f=>({...f,sourceKind:e.target.value as Fields["sourceKind"],sourceId:""}))}>
+       <option value="standalone">{bn?"স্বতন্ত্র":"Standalone"}</option>
+       <option value="order">{bn?"ইস্যু করা অর্ডার":"Issued order"}</option>
+       <option value="invoice">{bn?"ইস্যু করা ইনভয়েস":"Issued invoice"}</option>
+      </select></label>
+     {fields.sourceKind==="standalone"?<label>{bn?"পরিমাণ (BDT)":"Amount (BDT)"}
       <input required inputMode="decimal" value={fields.amount} onChange={e=>edit("amount",e.target.value)} placeholder="500.00" aria-describedby="pg05-amount-hint"/>
-      <small id="pg05-amount-hint">{bn?"নির্দিষ্ট পরিমাণ; পরবর্তী সময়ে বদলানো যাবে না।":"Exact amount; cannot be edited after issuance."}</small></label>
+      <small id="pg05-amount-hint">{bn?"নির্দিষ্ট পরিমাণ; পরবর্তী সময়ে বদলানো যাবে না।":"Exact amount; cannot be edited after issuance."}</small></label>:
+      <label>{bn?"ইস্যু করা নথি":"Issued source document"}
+       <select required value={fields.sourceId} onChange={e=>edit("sourceId",e.target.value)}>
+        <option value="">{bn?"নথি নির্বাচন করুন":"Select document"}</option>
+        {sources.filter(x=>x.source_kind===fields.sourceKind).map(x=><option key={x.id} value={x.id}>{x.source_reference} — {number(x.amount_minor,locale)}</option>)}
+       </select>
+       <small>{sourceLoad==="loading"?(bn?"নথি লোড হচ্ছে…":"Loading documents…"):sourceLoad==="error"?(bn?"নথি লোড হয়নি":"Documents unavailable"):
+        (bn?"পরিমাণ সার্ভার নির্ধারণ করে; ফর্ম দিয়ে বদলানো যায় না।":"Source amount is resolved by the server, not by the form.")}</small>
+      </label>}
      <label>{bn?"মেয়াদ":"Expires in"}
       <select value={fields.expiry} onChange={e=>edit("expiry",e.target.value)}>{[5,10,15,30,60].map(value=><option key={value} value={value}>{value} {bn?"মিনিট":"minutes"}</option>)}</select></label>
-     <div className="pg05-disabled-field" aria-disabled="true"><strong>{bn?"অর্ডার / ইনভয়েস সংযোগ":"Order / invoice link"}</strong>
-       <small>{bn?"অর্ডার ও ইনভয়েসের server snapshot API তৈরি না হওয়া পর্যন্ত আলাদা লিংক নিষ্ক্রিয়; অনুমান করে পরিমাণ পাঠানো হবে না।":"Linked server-side order and invoice amount snapshots are not connected. No client-supplied total is accepted."}</small></div>
+     <div className="pg05-disabled-field"><strong>{bn?"নথির মোট অপরিবর্তনীয়":"Immutable document total"}</strong>
+       <small>{bn?"নথির লাইন থেকে সার্ভার মোট হিসাব করে। সংশোধন করতে নতুন নথি ইস্যু করুন।":"The server computes totals from document lines. Issue a new source to make a correction."}</small></div>
     </div>
     <div className="pg05-actions">
      <button type="submit" className="ek-action" disabled={submitting||environment==="live"}>{submitting?(bn?"তৈরি হচ্ছে…":"Creating…"):(bn?"Sandbox রিকোয়েস্ট তৈরি":"Create sandbox request")}</button>
@@ -246,6 +260,32 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     </div>
     {dirty&&<p className="pg05-muted" role="status">{bn?"সংরক্ষণ না করা পরিবর্তন আছে।":"Unsaved changes."}</p>}
    </form>}
+  </section>
+  <section className="ds-panel pg05-section">
+   <div className="pg05-topline"><div>
+    <p className="ds-eyebrow">{bn?"ইস্যু করা নথি":"ISSUED DOCUMENTS"}</p>
+    <h2>{bn?"অর্ডার / ইনভয়েসের উৎস":"Order and invoice sources"}</h2>
+    <p>{bn?"একটি নথির লাইন থেকে BDT মোট হিসাব করে সার্ভার ইস্যু করবে। এটি যাচাইকৃত পেমেন্ট বা পূর্ণ ইনভয়েস ম্যানেজমেন্ট নয়।":"Issue a minimal immutable order or invoice snapshot. The server calculates the BDT total from lines. This is not a paid invoice or full commerce management."}</p>
+   </div><button type="button" onClick={()=>void refreshSources()} disabled={sourceLoad==="loading"}>{bn?"নথি রিফ্রেশ":"Refresh sources"}</button></div>
+   <form className="pg05-form" onSubmit={createSource}>
+    <div className="pg05-two">
+     <label>{bn?"নথির ধরন":"Document type"}
+      <select value={sourceDraft.kind} onChange={e=>setSourceDraft(f=>({...f,kind:e.target.value as SourceDraft["kind"]}))} disabled={sourceBusy}>
+       <option value="invoice">{bn?"ইনভয়েস":"Invoice"}</option><option value="order">{bn?"অর্ডার":"Order"}</option>
+      </select></label>
+     <label>{bn?"নথির রেফারেন্স":"Document reference"}
+      <input required maxLength={128} value={sourceDraft.reference} onChange={e=>setSourceDraft(f=>({...f,reference:e.target.value}))} placeholder="INV-2026-001" disabled={sourceBusy}/></label>
+     <label>{bn?"লাইনের বিবরণ":"Line description"}
+      <input required maxLength={160} value={sourceDraft.title} onChange={e=>setSourceDraft(f=>({...f,title:e.target.value}))} placeholder={bn?"সেবা বা পণ্যের নাম":"Product or service name"} disabled={sourceBusy}/></label>
+     <label>{bn?"সংখ্যা":"Quantity"}
+      <input required inputMode="numeric" pattern="[1-9][0-9]*" value={sourceDraft.quantity} onChange={e=>setSourceDraft(f=>({...f,quantity:e.target.value}))} disabled={sourceBusy}/></label>
+     <label>{bn?"প্রতি ইউনিট মূল্য (BDT)":"Unit price (BDT)"}
+      <input required inputMode="decimal" value={sourceDraft.unitPrice} onChange={e=>setSourceDraft(f=>({...f,unitPrice:e.target.value}))} placeholder="250.00" disabled={sourceBusy}/></label>
+    </div>
+    <p className="pg05-muted">{bn?"ফর্মে একটি লাইন; API সর্বোচ্চ ২০টি যাচাইকৃত লাইন সমর্থন করে। ইস্যুর পর পরিবর্তন করা যায় না।":"This form issues one line. API accepts up to 20 validated lines; issued sources are immutable."}</p>
+    <button className="ek-action" type="submit" disabled={sourceBusy||environment==="live"}>{sourceBusy?(bn?"ইস্যু হচ্ছে…":"Issuing…"):(bn?"নথি ইস্যু করুন":"Issue document")}</button>
+    {sourceError&&<p role="alert" className="ek-form-error">{sourceError}</p>}
+   </form>
   </section>
   <section className="ds-panel pg05-section">
    <div className="pg05-topline"><div><h2>{bn?"ইস্যু করা রিকোয়েস্ট":"Issued requests"}</h2>
@@ -266,7 +306,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
      return <article className="pg05-record" key={item.id}>
       <div className="pg05-record-main"><div><strong>{item.merchant_reference}</strong><small>{item.id}</small></div>
        <div className="pg05-total"><strong>{number(item.amount_minor,locale)}</strong><span className="pg05-state" data-state={item.state}>{statusLabel(item.state,bn)}</span></div></div>
-      <div className="pg05-record-meta"><span>{bn?"মেয়াদ":"Expires"}: {new Date(item.expires_at).toLocaleString(locale==="bn"?"bn-BD":"en-BD")}</span><span>{bn?"পরিবেশ":"Environment"}: Sandbox</span></div>
+      <div className="pg05-record-meta">{item.source_reference&&<span>{item.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}: {item.source_reference}</span>}<span>{bn?"মেয়াদ":"Expires"}: {new Date(item.expires_at).toLocaleString(locale==="bn"?"bn-BD":"en-BD")}</span><span>{bn?"পরিবেশ":"Environment"}: Sandbox</span></div>
       <div className="pg05-actions">
        <Link href={checkout}>{bn?"চেকআউট খুলুন":"Open checkout"} ↗</Link>
        <button type="button" onClick={async()=>{
