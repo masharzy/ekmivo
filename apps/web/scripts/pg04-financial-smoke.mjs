@@ -259,6 +259,7 @@ try{
  }finally{await reader.end({timeout:3})}
  // Owner-only fixture exercises trigger-level invariants; entirely rolled back.
  const db=dbs.sandbox,workspace=controls[0][1];
+ const intentsBeforeFixture=(await db`SELECT count(*)::int n FROM payment_intents WHERE workspace_id=${workspace}::uuid`)[0].n;
  try{
   await db.begin(async tx=>{
    const receiving=(await tx`INSERT INTO financial_receiving_accounts
