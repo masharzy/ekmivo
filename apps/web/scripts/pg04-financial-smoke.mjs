@@ -242,6 +242,43 @@ try{
      direction,original_transaction_at,time_precision,parser_version)
     VALUES(${workspace}::uuid,'sandbox',${event}::uuid,${receiving}::uuid,${payer},7500,'bkash',
       'incoming',now(),'second',1) RETURNING id`)[0].id;
+   // Issuance and verification share [start,end): the end belongs only to
+   // an adjacent attempt. Roll back every case so receipt/payment uniqueness
+   // cannot mask the time guard being exercised.
+   async function checkBoundary(attemptId, offsetSeconds, precision, eligible) {
+    const boundaryRollback=Symbol("boundary rollback");
+    try {
+     await tx.savepoint(async b=>{
+      const inbound=(await b`INSERT INTO financial_inbound_events
+       (workspace_id,environment,source_kind,source_event_id,event_digest,encrypted_evidence)
+       VALUES(${workspace}::uuid,'sandbox','sandbox_fixture',${randomUUID()},${hmac()},${randomBytes(40)}) RETURNING id`)[0].id;
+      const observation=(await b`INSERT INTO financial_receipt_observations
+       (workspace_id,environment,inbound_event_id,receiving_account_id,payer_hmac,amount_minor,method,
+        direction,original_transaction_at,time_precision,parser_version)
+       SELECT ${workspace}::uuid,'sandbox',${inbound}::uuid,${receiving}::uuid,${payer},7500,'bkash',
+        'incoming',window_end + ${offsetSeconds} * interval '1 second',${precision},1
+       FROM payment_attempts WHERE id=${attempt}::uuid RETURNING id`)[0].id;
+      const insert=()=>b`INSERT INTO financial_payments
+       (workspace_id,environment,attempt_id,observation_id,verified_amount_minor,verification_method,policy_version)
+       VALUES(${workspace}::uuid,'sandbox',${attemptId}::uuid,${observation}::uuid,7500,'sandbox_fixture',1) RETURNING id`;
+      if(eligible)ok((await insert()).length===1,"valid boundary interval rejected");
+      else await reject(b,insert,"23514");
+      throw boundaryRollback;
+     });
+    } catch(e) { if(e!==boundaryRollback)throw e; }
+   }
+   await checkBoundary(attempt,-1,"second",true);
+   await checkBoundary(attempt,0,"second",false);
+   await checkBoundary(attempt,1,"second",false);
+   await checkBoundary(attempt,-60,"minute",true);
+   await checkBoundary(attempt,-59,"minute",false);
+   const adjacent=(await tx`INSERT INTO payment_attempts
+    (workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,
+     amount_minor,method,window_start,window_end,policy_version)
+    SELECT workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,
+     amount_minor,method,window_end,window_end+interval '15 minutes',policy_version
+    FROM payment_attempts WHERE id=${attempt}::uuid RETURNING id`)[0].id;
+   await checkBoundary(adjacent,0,"second",true);
    const payment=(await tx`INSERT INTO financial_payments
     (workspace_id,environment,attempt_id,observation_id,verified_amount_minor,verification_method,policy_version)
     VALUES(${workspace}::uuid,'sandbox',${attempt}::uuid,${obs}::uuid,7500,'sandbox_fixture',1)

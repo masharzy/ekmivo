@@ -230,7 +230,7 @@ BEGIN
    OR o.original_transaction_at IS NULL OR o.time_precision='unknown'
    OR o.original_transaction_at<a.window_start
    OR (o.time_precision='minute' AND o.original_transaction_at+interval '1 minute'>a.window_end)
-   OR (o.time_precision='second' AND o.original_transaction_at>a.window_end)
+   OR (o.time_precision='second' AND o.original_transaction_at>=a.window_end)
    OR a.policy_version<>NEW.policy_version THEN
    RAISE EXCEPTION 'verified payment requires a complete matching immutable attempt and receipt'
     USING ERRCODE='23514';
