@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { sections, type SectionKey } from "../lib/dashboard-sections";
-import { dashboardHref, navigation, searchableNavigation, serviceEnabled, serviceNames, sectionInService, type Locale, type Service, type PaymentEnvironment } from "../lib/dashboard-navigation";
+import { dashboardHref, navigation, searchableNavigation, searchableBusinesses, serviceEnabled, serviceNames, sectionInService, type Locale, type Service, type PaymentEnvironment } from "../lib/dashboard-navigation";
 import { DashboardIcon as Icon } from "./dashboard-icon";
 import { SiteControls } from "./site-controls";
 import { activeDrafts,saveActiveDrafts,discardActiveDrafts } from "../lib/client/draft-navigation";
@@ -48,6 +48,8 @@ export function DashboardFrame({ locale, service, section, workspace, spaces, us
  const groups=sidebarQuery?searchableNavigation(service,sidebarQuery):navigation[service];
  const foundGroups=searchableNavigation(service,globalQuery);
  const foundKeys=foundGroups.flatMap(group=>group.items);
+ const foundBusinesses=searchableBusinesses(spaces,globalQuery);
+ const resultCount=foundKeys.length+foundBusinesses.length;
  const roleNames={owner:{bn:"মালিক",en:"Owner"},admin:{bn:"অ্যাডমিন",en:"Admin"},editor:{bn:"সম্পাদক",en:"Editor"},viewer:{bn:"দর্শক",en:"Viewer"}} as const;
  const visibleBusinesses=spaces.filter(space=>space.name.toLocaleLowerCase().includes(businessQuery.trim().toLocaleLowerCase()));
  const contextHref=useCallback((key:SectionKey,product:Service=service,businessId:string=workspace.id,env:PaymentEnvironment=environment)=>dashboardHref(locale,businessId,product,key,env),[locale,workspace.id,service,environment]);
@@ -65,6 +67,12 @@ export function DashboardFrame({ locale, service, section, workspace, spaces, us
  useEffect(()=>{
   try{window.localStorage.setItem(memoryKey(workspace.id,service),section);}catch{/* Non-essential preference. */}
  },[pathname,section,workspace.id,service,environment]);
+ // The visible, server-authorized environment becomes the preference only
+ // after routing commits. A cancelled draft dialog must never persist a new env.
+ useEffect(()=>{
+  if(service!=="payments")return;
+  try{window.localStorage.setItem(environmentKey(workspace.id),environment);}catch{/* Optional preference. */}
+ },[service,workspace.id,environment]);
  useEffect(()=>{
   const d=drawer.current;
   if(mobileOpen && d && !d.open)d.showModal();
@@ -164,7 +172,9 @@ export function DashboardFrame({ locale, service, section, workspace, spaces, us
   if(target.id===workspace.id){setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;return;}
   if(target.mode==="off"){
    setMobileOpen(false);
-   startTransition(()=>router.push(`/${locale}/w/${target.id}/dashboard`));
+   const next=`/${locale}/w/${target.id}/dashboard`;
+   if(activeDrafts().length){setDraftError("");setBlockedRoute(next);return;}
+   startTransition(()=>router.push(next));
    return;
   }
   const chosen=serviceEnabled(service,target.mode)?service:(target.mode==="ai"?"ai":"payments");
@@ -172,6 +182,15 @@ export function DashboardFrame({ locale, service, section, workspace, spaces, us
  };
  const nav=(key:SectionKey)=>{
   goTo(workspace.id,service,environment,key);
+ };
+ const activateSearchResult=(index:number)=>{
+  if(index<foundKeys.length){
+   const key=foundKeys[index];
+   if(key)nav(key);
+   return;
+  }
+  const business=foundBusinesses[index-foundKeys.length];
+  if(business)switchBusiness(business);
  };
  const sidebar=(mobile=false)=><>
   <div className="ds-brand-row">
@@ -231,7 +250,7 @@ export function DashboardFrame({ locale, service, section, workspace, spaces, us
       <select value={environment} onChange={event=>{
        const next=event.target.value as PaymentEnvironment;
        if(!paymentContext?.availableEnvironments.includes(next))return;
-       try{window.localStorage.setItem(environmentKey(workspace.id),next);}catch{/* Explicit URL is authoritative for navigation. */}
+       // The new preference is committed only after the destination renders.
        // Environment-scoped record IDs and list filters never carry across:
        // this URL selects only the corresponding section in the other realm.
        goTo(workspace.id,service,next,section);
@@ -272,17 +291,21 @@ export function DashboardFrame({ locale, service, section, workspace, spaces, us
    <footer className="ds-footnote"><span>{serviceNames[service][locale]} · {workspace.name}</span><span>Asia/Dhaka</span></footer>
   </div>
   <dialog ref={searchDialog} className="ds-search-dialog" aria-label={bn?"ওয়ার্কস্পেস খুঁজুন":"Search workspace"} onCancel={()=>setSearchOpen(false)} onClose={()=>setSearchOpen(false)}>
-   <div className="ds-search-top"><Icon name="search"/><input ref={searchInput} autoFocus value={globalQuery} onChange={event=>{setGlobalQuery(event.target.value);setActiveResult(0);}} placeholder={bn?"এই সেবার পৃষ্ঠা খুঁজুন…":"Search this product's pages…"} aria-label={bn?"পৃষ্ঠা খুঁজুন":"Find a page"}
+   <div className="ds-search-top"><Icon name="search"/><input ref={searchInput} autoFocus role="combobox" aria-autocomplete="list" aria-expanded={searchOpen} aria-controls="ds-global-results" aria-activedescendant={resultCount?`ds-global-result-${Math.min(activeResult,resultCount-1)}`:undefined} value={globalQuery} onChange={event=>{setGlobalQuery(event.target.value);setActiveResult(0);}} placeholder={bn?"পৃষ্ঠা ও অনুমোদিত ব্যবসা খুঁজুন…":"Find pages or your businesses…"} aria-label={bn?"পৃষ্ঠা বা ব্যবসা খুঁজুন":"Find a page or your business"}
      onKeyDown={event=>{
-      if(event.key==="ArrowDown"){event.preventDefault();setActiveResult(i=>foundKeys.length?(i+1)%foundKeys.length:0);}
-      if(event.key==="ArrowUp"){event.preventDefault();setActiveResult(i=>foundKeys.length?(i+foundKeys.length-1)%foundKeys.length:0);}
-      if(event.key==="Enter"&&foundKeys[activeResult]){event.preventDefault();nav(foundKeys[activeResult]);}
+      if(event.key==="ArrowDown"){event.preventDefault();setActiveResult(i=>resultCount?(i+1)%resultCount:0);}
+      if(event.key==="ArrowUp"){event.preventDefault();setActiveResult(i=>resultCount?(i+resultCount-1)%resultCount:0);}
+      if(event.key==="Enter"&&resultCount){event.preventDefault();activateSearchResult(Math.min(activeResult,resultCount-1));}
      }}/><button type="button" className="ds-icon-button" onClick={()=>setSearchOpen(false)} aria-label={bn?"বন্ধ করুন":"Close search"}><Icon name="close"/></button></div>
-   <div className="ds-search-results" role="listbox" aria-label={bn?"ফলাফল":"Results"}>
-    {foundKeys.map((key,index)=><button type="button" role="option" aria-selected={activeResult===index} onMouseEnter={()=>setActiveResult(index)} key={key} onClick={()=>nav(key)}><Icon name={key}/><span>{sections[key][locale]}</span><small>{serviceNames[service][locale]}</small></button>)}
-    {!foundKeys.length&&<p role="status">{bn?"কোনো পৃষ্ঠা পাওয়া যায়নি":"No matching pages"}</p>}
+   <div id="ds-global-results" className="ds-search-results" role="listbox" aria-label={bn?"ফলাফল":"Results"}>
+    {foundKeys.map((key,index)=><button id={`ds-global-result-${index}`} type="button" role="option" aria-selected={activeResult===index} onMouseEnter={()=>setActiveResult(index)} key={key} onClick={()=>nav(key)}><Icon name={key}/><span>{sections[key][locale]}</span><small>{serviceNames[service][locale]}</small></button>)}
+    {foundBusinesses.map((space,index)=>{
+     const position=foundKeys.length+index;
+     return <button id={`ds-global-result-${position}`} type="button" role="option" aria-selected={activeResult===position} onMouseEnter={()=>setActiveResult(position)} key={space.id} onClick={()=>switchBusiness(space)}><Icon name="settings"/><span>{space.name}</span><small>{space.id===workspace.id?(bn?"বর্তমান ব্যবসা":"Current business"):(bn?"ব্যবসা পরিবর্তন":"Switch business")}</small></button>;
+    })}
+    {!resultCount&&<p role="status">{bn?"কোনো অনুমোদিত ফলাফল পাওয়া যায়নি":"No authorized results match"}</p>}
    </div>
-   <p className="ds-search-hint">{bn?"এই সার্চে শুধু বর্তমান সেবার পৃষ্ঠা পাওয়া যাবে; লেনদেন খোঁজার API এখনো তৈরি হয়নি।":"Navigation search is scoped to this product. Record search is unavailable until its API is implemented."}</p>
+   <p className="ds-search-hint">{bn?"শুধু বর্তমান সেবার পৃষ্ঠা ও আপনার অনুমোদিত ব্যবসা দেখানো হচ্ছে। পেমেন্ট/গ্রাহকের record search সংশ্লিষ্ট backend তৈরি হলে চালু হবে।":"Only this product's pages and your authorized businesses appear. Payment/customer record search requires the later data APIs."}</p>
   </dialog>
   <dialog ref={draftDialog} className="ds-draft-dialog" aria-label={bn?"সংরক্ষণ না করা পরিবর্তন":"Unsaved changes"} onCancel={()=>{setBlockedRoute(null);setDraftError("");}}>
    <h2>{bn?"পরিবর্তন সংরক্ষণ করা হয়নি":"You have unsaved changes"}</h2>
