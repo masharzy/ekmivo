@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
   title: Ekmivo Payment API
-  version: 0.5.0
+  version: 0.5.1
   description: |
     PG03 implemented contract: process liveness, financial readiness, and
     real server-side merchant credential verification. Credential issue/rotate/
     revoke currently use authenticated owner/admin Next.js server actions.
-    PG05 provides a SANDBOX-ONLY standalone payment-intent endpoint, opaque
-    hosted checkout, immutable payer+route lock, status refresh and cancellation.
-    Live payment instructions, linked OMS/invoice amount snapshots, receipt
-    matching and signed webhook delivery are NOT implemented; no money verification
+    PG05 provides SANDBOX-ONLY standalone and server-priced linked order/invoice
+    snapshots, immutable payment intents, opaque hosted checkout, payer+route lock,
+    status refresh and cancellation. Full commerce/invoice operations, live
+    receiving instructions, receipt matching and signed webhook delivery are
+    NOT implemented; no money verification
     can be inferred from return URLs, payer confirmation or sandbox responses.
 servers:
   - url: https://ekmivo-go-api.onrender.com
@@ -99,6 +100,81 @@ paths:
           $ref: '#/components/responses/ScopeDenied'
         '503':
           $ref: '#/components/responses/AuthUnavailable'
+  /v1/workspaces/{workspaceID}/linked-sources:
+    parameters:
+      - name: workspaceID
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: environment
+        in: query
+        required: true
+        schema: { type: string, enum: [sandbox, live] }
+    get:
+      operationId: listLinkedBillingSources
+      tags: [Merchant]
+      summary: List issued immutable order/invoice source snapshots (sandbox only)
+      security:
+        - MerchantBearer: []
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Last 50 tenant-realm-bound issued sources
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, environment]
+                properties:
+                  environment: { type: string, const: sandbox }
+                  data: { type: array, items: { $ref: '#/components/schemas/BillingSource' } }
+        '403': { description: Read scope denied }
+        '503': { description: Dependency or live source unavailable }
+    post:
+      operationId: issueLinkedBillingSource
+      tags: [Merchant]
+      summary: Persist a real immutable merchant-issued source with server-calculated total
+      description: |
+        Minimum PG05 sandbox document source of truth, not a complete invoice
+        system. Merchant authors the line prices, server computes sum(qty*unit)
+        and freezes the issued terms. NO caller-controlled total is accepted.
+        Requires payments:write and valid workspace/environment.
+      security:
+        - MerchantBearer: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [source_kind, source_reference, items]
+              properties:
+                source_kind: { type: string, enum: [order, invoice] }
+                source_reference: { type: string, minLength: 1, maxLength: 128 }
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [title, quantity, unit_amount_minor]
+                    properties:
+                      title: { type: string, minLength: 1, maxLength: 160 }
+                      quantity: { type: integer, minimum: 1, maximum: 9999 }
+                      unit_amount_minor: { type: integer, minimum: 1, maximum: 100000000000 }
+      responses:
+        '201':
+          description: Immutable issued source with total computed by database
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BillingSource' }
+        '403': { description: Write scope denied }
+        '409': { description: Duplicate issued document reference }
+        '422': { description: Invalid line or total overflow }
+        '503': { description: Dependency unavailable }
   /v1/workspaces/{workspaceID}/payment-intents:
     parameters:
       - name: workspaceID
@@ -133,13 +209,14 @@ paths:
         '503': { description: Financial database or live source unavailable }
     post:
       operationId: createPaymentIntent
-      summary: Issue an immutable standalone BDT request and opaque hosted checkout
+      summary: Issue an immutable standalone or order/invoice-linked BDT request
       tags: [Merchant]
       description: |
-        Server-side payments:write permission required. The caller cannot link a
-        client-provided order/invoice amount before its authoritative snapshot
-        service exists. Same idempotency key plus identical payload returns one
-        original request; changed payload or duplicate reference conflicts.
+        Server-side payments:write permission required. Linked requests include
+        only order_id OR invoice_id; the server resolves the exact amount from
+        its immutable tenant/environment-bound source. Caller-provided linked
+        amount is rejected. Same idempotency key plus identical payload returns
+        one original request; changed payload or duplicate reference conflicts.
         No TrxID, payment screenshot, manual approval or client paid state.
       security:
         - MerchantBearer: []
@@ -156,10 +233,16 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [merchant_reference, amount_minor, currency, expires_in_minutes]
+              required: [merchant_reference, currency, expires_in_minutes]
+              oneOf:
+                - required: [amount_minor]
+                - required: [order_id]
+                - required: [invoice_id]
               properties:
                 merchant_reference: { type: string, minLength: 1, maxLength: 128 }
                 amount_minor: { type: integer, minimum: 1, maximum: 100000000000 }
+                order_id: { type: string, format: uuid }
+                invoice_id: { type: string, format: uuid }
                 currency: { type: string, const: BDT }
                 expires_in_minutes: { type: integer, minimum: 5, maximum: 60 }
       responses:
@@ -177,7 +260,8 @@ paths:
         '401': { description: Unauthenticated }
         '403': { description: Write scope denied }
         '409': { description: Duplicate reference or changed idempotency payload }
-        '422': { description: "Invalid amount, expiry, or unsupported linked amount" }
+        '404': { description: Linked source absent from authorized realm }
+        '422': { description: "Invalid amount, expiry, mixed source or caller-forged linked total" }
         '503': { description: Finance or live source unavailable }
   /v1/workspaces/{workspaceID}/payment-intents/{intentID}/cancel:
     post:
@@ -283,6 +367,17 @@ components:
         256-bit random server-side bearer secret, never put into browser JavaScript,
         query strings or client SDK bundles; store in a server-side secret manager.
   schemas:
+    BillingSource:
+      type: object
+      required: [id, source_kind, source_reference, amount_minor, currency, issued_at, items]
+      properties:
+        id: { type: string, format: uuid }
+        source_kind: { type: string, enum: [order, invoice] }
+        source_reference: { type: string }
+        amount_minor: { type: integer, minimum: 1 }
+        currency: { type: string, const: BDT }
+        issued_at: { type: string, format: date-time }
+        items: { type: array, items: { type: object } }
     Intent:
       type: object
       required: [id, merchant_reference, amount_minor, currency, expires_at, state]
@@ -292,6 +387,9 @@ components:
         amount_minor: { type: integer, minimum: 1 }
         currency: { type: string, const: BDT }
         environment: { type: string, const: sandbox }
+        source_kind: { type: [string, 'null'], enum: [order, invoice, null] }
+        source_id: { type: [string, 'null'], format: uuid }
+        source_reference: { type: [string, 'null'] }
         expires_at: { type: string, format: date-time }
         state: { type: string, enum: [requires_payer, awaiting_payment, processing, completed, expired, cancelled] }
     Checkout:
