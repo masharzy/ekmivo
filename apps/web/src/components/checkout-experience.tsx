@@ -4,7 +4,7 @@ import Link from "next/link";
 type Locale="en"|"bn";
 type Checkout={
  id:string; merchant_reference:string;amount_minor:number;currency:string;
- environment:string;created_at:string;expires_at:string;state:string;
+ environment:string;created_at:string;expires_at:string;server_time:string;state:string;
  payer_suffix:string|null;method:string|null;methods:string[];
  destination:string|null;verification_available:boolean;
 };
@@ -43,6 +43,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
  const [method,setMethod]=useState("bkash");
  const [locking,setLocking]=useState(false);
  const [clock,setClock]=useState(Date.now);
+ const [serverOffset,setServerOffset]=useState(0);
  const [updated,setUpdated]=useState<number|null>(null);
  const [copied,setCopied]=useState(false);
  const live=useRef(true);
@@ -53,6 +54,8 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
    const json=await response.json();
    if(!response.ok)throw {status:response.status,code:json.error?.code||json.code};
    if(!live.current)return;
+   const timestamp=Date.parse((json as Checkout).server_time);
+   setServerOffset(Number.isFinite(timestamp)?timestamp-Date.now():0);
    setInfo(json as Checkout);setStatus("ready");setCode("");setUpdated(Date.now());
   }catch(err){
    if(signal?.aborted||!live.current)return;
@@ -87,6 +90,8 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
     body:JSON.stringify({payer_number:payer,method}),credentials:"same-origin"});
    const json=await response.json();
    if(!response.ok)throw {code:json.error?.code||json.code,status:response.status};
+   const timestamp=Date.parse((json as Checkout).server_time);
+   setServerOffset(Number.isFinite(timestamp)?timestamp-Date.now():0);
    setInfo(json as Checkout);setStatus("ready");setUpdated(Date.now());setPayer("");
   }catch(err){
    const e=err as {code?:string};
@@ -94,7 +99,8 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
   }finally{setLocking(false);}
  }
  const amount=info?new Intl.NumberFormat(bn?"bn-BD":"en-BD",{currency:"BDT",style:"currency"}).format(info.amount_minor/100):"—";
- const ended=info?Date.parse(info.expires_at)<=clock:false;
+ const serverClock=clock+serverOffset;
+ const ended=info?Date.parse(info.expires_at)<=serverClock:false;
  const state=info?(ended&&["requires_payer","awaiting_payment"].includes(info.state)?"expired":info.state):"";
  const title=statusLabels[state]?.[bn?1:0]||(bn?"পেমেন্টের তথ্য":"Payment details");
  const canLock=state==="requires_payer"&&info?.environment==="sandbox";
@@ -126,7 +132,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
       <div><dt>{bn?"প্রেরক নম্বর":"Sending number"}</dt><dd>{info.payer_suffix?"••••"+info.payer_suffix:(bn?"নির্বাচিত নয়":"Not confirmed")}</dd></div>
       <div><dt>{bn?"মেয়াদ":"Expires"}</dt><dd><time dateTime={info.expires_at}>{new Date(info.expires_at).toLocaleString(bn?"bn-BD":"en-BD")}</time></dd></div>
      </dl>
-     <div className="pg05-timer" role="timer" aria-label={bn?"অবশিষ্ট সময়":"Time remaining"}>{["requires_payer","awaiting_payment"].includes(state)?remaining(info.expires_at,clock):"—"}</div>
+     <div className="pg05-timer" role="timer" aria-label={bn?"অবশিষ্ট সময়":"Time remaining"}>{["requires_payer","awaiting_payment"].includes(state)?remaining(info.expires_at,serverClock):"—"}</div>
     </section>
     <section className="pg05-checkout-card" aria-live="polite">
      {canLock&&<>
