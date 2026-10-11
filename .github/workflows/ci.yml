@@ -80,6 +80,9 @@ jobs:
       - name: PG02 account-scoped draft security and persistence contracts
         working-directory: apps/web
         run: node scripts/pg02-draft-smoke.mjs
+      - name: PG02 onboarding unsaved draft and locale switch guard
+        working-directory: apps/web
+        run: node scripts/pg02-onboarding-guard-smoke.mjs
       - name: PG02 account profile/session isolation against PostgreSQL
         working-directory: apps/web
         env:
