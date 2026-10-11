@@ -177,7 +177,7 @@ paths:
         '401': { description: Unauthenticated }
         '403': { description: Write scope denied }
         '409': { description: Duplicate reference or changed idempotency payload }
-        '422': { description: Invalid amount, expiry, or unsupported linked amount }
+        '422': { description: "Invalid amount, expiry, or unsupported linked amount" }
         '503': { description: Finance or live source unavailable }
   /v1/workspaces/{workspaceID}/payment-intents/{intentID}/cancel:
     post:
@@ -258,7 +258,7 @@ paths:
               schema: { $ref: '#/components/schemas/Checkout' }
         '403': { description: Browser origin denied }
         '404': { description: Checkout capability missing }
-        '409': { description: Expired, changed payer, cancelled or overlap conflict }
+        '409': { description: "Expired, changed payer, cancelled or overlap conflict" }
         '422': { description: Invalid full payer or method }
         '503': { description: Financial service unavailable }
 components:
