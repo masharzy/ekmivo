@@ -11,7 +11,7 @@ const url=new URL(raw);
 if(!["localhost","127.0.0.1","[::1]"].includes(url.hostname)||
  !url.pathname||url.pathname==="/"||/prod/i.test(url.pathname))
  throw Error("PG04 test refuses non-ephemeral PostgreSQL targets");
-const db=postgres(raw,{max:4,prepare:false});
+const db=postgres(raw,{max:1,prepare:false});
 const migration=await readFile(new URL("../../../infra/migrations/0008_pg04_financial_core.sql",import.meta.url),"utf8");
 let assertions=0;
 const ok=(v,msg)=>{assert.ok(v,msg);assertions++};
