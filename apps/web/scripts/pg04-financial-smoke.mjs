@@ -271,6 +271,16 @@ try{
    {title:"Workbook",quantity:1,unit_amount_minor:4500}];
   const doc=await reader.begin(async tx=>{
    await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+   const preflight=(await tx.unsafe(`SELECT current_setting('ekmivo.workspace_id',true) AS workspace,
+    current_setting('ekmivo.environment',true) AS realm,
+    (SELECT status FROM financial_workspace_registry WHERE workspace_id=$1::uuid AND environment='sandbox') AS status,
+    jsonb_typeof($2::jsonb) AS input_type,jsonb_array_length($2::jsonb) AS line_count`,
+    [tenant,JSON.stringify(invoiceLines)]))[0];
+   same(preflight.workspace,tenant,"PG05 scoped source transaction workspace");
+   same(preflight.realm,"sandbox","PG05 scoped source transaction realm");
+   same(preflight.status,"active","PG05 billing source workspace not active");
+   same(preflight.input_type,"array","PG05 linked source JSON not an array");
+   same(preflight.line_count,2,"PG05 linked source line length");
    return (await tx.unsafe("SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb) AS value",
     [tenant,"sandbox","invoice","INV-"+randomUUID(),JSON.stringify(invoiceLines)]))[0].value;
   });
