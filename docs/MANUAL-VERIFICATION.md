@@ -201,3 +201,132 @@ The owner authorized dependency-independent PG04 verification hardening while PG
 ### PG04 automated follow-up outcome
 - [x] Populated Sandbox/Live tenant/no-context/wrong-realm/pool-reuse isolation, malformed five-field receipts and provenance, missing outbox job and cross-tenant allocation, real concurrent overlap/allocation caps, 12-way domain/outbox/River first-use replay and explicit orphan-job rollback: **automated PASS**, source a8fa3c9 / CI 38144576645 (107 database assertions plus Go integration races). Not owner/device evidence.
 - [ ] Existing operator production rollout and actual provider/device checks remain pending; original human checklist is preserved.
+
+
+## PG05 — Checkout and payer lock
+
+**Branch:** `pg05-checkout-payer-lock-20261011` ([PR #7](https://github.com/masharzy/ekmivo/pull/7)). **Review condition:** PG04 realm services/migration/config actually deployed to a permitted **disposable sandbox**, not production. No real transfer.
+
+- [ ] From a real owner/admin account in **Sandbox**, open Payments → Requests, create a standalone `BDT 500.50` request with unique reference/15-minute expiry; verify list amount, reference, state, exact checkout deep link, copy, browser back/reload. API response 201; same Idempotency-Key and identical payload creates exactly one record; changed payload returns 409.
+- [ ] Open in clean/incognito browser via `/bn/checkout/{opaqueToken}` and `/en/checkout/{opaqueToken}`; verify hard Sandbox **DO NOT SEND REAL MONEY** banner, amount/expiry/reference and no real receiving number. Locale/theme Light/Dark/System on 320px, 768px, 1024px, 1440px; no clipped BN conjuncts, navigation/keyboard controls work.
+- [ ] Enter `০১৭১২৩৪৫৬৭৮` as the **actual payer**, choose bKash/Nagad/Rocket; after confirming, only last four digits display, method+amount+window remain locked across reload. A different payer/method must 409; same retry must not create a second attempt.
+- [ ] Issue a second same-amount request with same payer+method+route inside overlapping window → 409; cancel first unpaid request, verify same sender can then use a **new** checkout without rewriting old immutable history. Cancel idempotent; expired/completed cannot be cancelled.
+- [ ] Wait for countdown expiry, refresh/back/revisit: state remains expired; do not offer pay instructions. Set the test device's clock incorrectly: checkout countdown must still use the finance server time. Cancel → state cancelled; receiving evidence after cancellation must later be handled in PG07 reconciliation, never merchant auto-fulfilment.
+- [ ] Suspend an isolated test workspace after issuing a checkout link: both public checkout view and payer-lock operations must become unavailable. Re-enable only this test workspace, verify access restores without creating a new payment or overwriting the original immutable attempt.
+- [ ] Network offline/Go unavailable, invalid capability, no permission, viewer read vs write, cross-workspace/realm, CSRF, wrong key and service-unavailable conditions show actionable error and never display a fabricated 0 verified or success.
+- [ ] Open a fake return/success URL, manually modify query/local JS and attempt direct 'paid' payload → still pending (no manual TrxID, screenshot, OTP, PIN, or approval). Browser writes cannot change verification or allocations.
+- [ ] Create form unsaved draft → change business/env/language: Save draft/Discard/Stay guard. Restore only same user/business/environment, then reload: no duplicate issuance or silent server mutation.
+- [ ] In Sandbox issue an immutable **Order** and **Invoice** source with 2+ lines, quantity and BDT unit prices, from the merchant UI; verify server-calculated total, unique reference, retry with identical lines returning the same ID and changed lines giving 409. Check that a viewer cannot create or change issued documents.
+- [ ] Create a linked request by choosing the issued source. It must use the server-stored total, show the linked document reference in the merchant list and customer checkout must have the exact amount. Client POST with order_id/invoice_id **and** forged `amount_minor` rejects 422; an unknown or other-workspace source must not be resolvable or leak data.
+- [ ] Issue a second active linked checkout for the same document from another session/idempotency key: conflict 409; cancel the unpaid first, then issue a new separately referenced intent for the same immutable document. Original events/attempts remain, and neither path marks funds verified.
+- [ ] Test 1/20 lines, empty names, decimal quantity, negative/overflow price, duplicate document reference with altered content, concurrent create/linked issuance and replays. On live environment, source issuance and linked checkout remain 503—**not** simulated live money.
+- [ ] Full external OMS/catalog sync, complete invoice drafting/correction/tax/discount/fulfilment and real receiving-provider verification are **outside PG05 minimum** and remain PG10/PG06/PG07 blockers. Do not pretend that this minimal issued source is a complete invoice application.
+- **Status:** SANDBOX STANDALONE + MINIMAL LINKED SOURCE CODE IMPLEMENTED; previous standalone/base test suite **PASS** ([run 38142901441](https://github.com/masharzy/ekmivo/actions/runs/38142901441)); new full linked/HTTP CI pending final pass. Owner combined manual/browser verification **PENDING**; no live payment claim. Evidence: `docs/evidence/PG05/README.md`.
+
+### PG05 continuation checks — one combined owner pass
+
+Automated coverage is recorded separately in PG05 evidence. These checks remain **manual pending** on an explicitly provisioned isolated sandbox running the PR source, financial migrations 0010–0012 and control migration 0013:
+
+- [ ] Owner/editor and viewer in separate real sessions: view the same immutable document/history; viewer sees read-only controls; direct writes deny. Follow a `requests?env=sandbox&request=<id>` deep link, reload/back and check role changes/revocation.
+- [ ] Interrupt an intent POST after the server commits but before the response reaches the browser; reload, Restore draft and retry. Confirm the original request/token returns, without duplicate history. Change the payload deliberately to create a fresh request; do not blindly resend funds.
+- [ ] Close a dirty request form, switch business/env/locale, test Stay/Save/Discard and restore only the same account/business/environment. Edit source lines during a slow response: fields stay locked until the result resolves.
+- [ ] With a physical screen reader/keyboard and browser autofill, check announcements, focus, Bengali glyphs, 200% zoom, all four widths and Light/Dark/System/cross-tab preference changes. Automated Chromium coverage is not physical-device acceptance.
+- [ ] Test source suspension and stale control-plane projection independently; unavailable business/source never displays usable instructions. Check edge/CDN logging scrubs bearer checkout paths and confirm deployment-wide quotas alongside the per-process 429 budgets.
+- [ ] Verify the exact deployed sandbox SHA, restricted control/finance roles and migration operator procedure before any owner acceptance. Real receipt/payment matching remains PG06/PG07; production deployment and full invoice lifecycle remain separate gates.
+
+## PG06 — Native Android consented receipt collection
+
+- [ ] Install one **Kotlin/Compose** app on approved actual Android device. Consent SMS/notification only where allowed; permission denial leaves payment unconfirmed; exclude OTP and unrelated SMS.
+- [ ] Test supported genuine provider receipts with **full payer number**, amount, receiving source, provider/direction and original transaction time, including Bangla digits and dual-SIM. Masked sender cannot auto-verify.
+- [ ] Reboot/offline/retry, enrollment/revoke/rotate, device binding and Android Keystore signature checks; never fabricate missing fields or receipt timestamps.
+- **Source only:** Keystore signer, canonical signature, evidence-field gate have unit tests; **real capture not implemented/verified**. PG06/AN03 NOT complete.
+- **Status:** PENDING REAL DEVICE + SERVER INGESTION.
+
+## PG07 — Unique automatic matching
+
+- [ ] Send one controlled eligible five-field match; only one payment transitions to verified once and allocation is accurate.
+- [ ] Test wrong amount, swapped source account, cash-out/direction, masked sender, stale/late/duplicate, concurrent contender, time-window edge, partially-paid/advance and cancellation. No ambiguous match is ever marked paid.
+- **Status:** PENDING.
+
+## PG08 — Merchant webhook
+
+- [ ] Receive actual sandbox `payment.verified` with canonical raw-body HMAC; verify signature, event ID and merchant env. Fail consumer; retry preserves business event, uses new delivery attempt; invalid URL/replay rejected.
+- [ ] Webhook failure must not roll back confirmed ledger, and duplicates cannot double-credit.
+- **Status:** PENDING.
+
+## PG09 — Real payment dashboards
+
+- [ ] Payments/Requests/Incoming/Devices/Accounts/Webhooks each render authorized backend records with correct statuses/method/amount/time/provenance and role masks.
+- [ ] Verify page heading primary action, URL filters/sort/cursor, data refresh/freshness, real empty vs unavailable, loading, error+retry, detail-not-found, permission denied, success, keyboard row navigation and safe export.
+- [ ] Confirm verified status cannot be changed with a local button; no missing source appears healthy.
+- **Status:** PENDING.
+
+## PG10 — Payment links/invoices/customer/imports
+
+- [ ] Generate real shareable per-visitor payment link; invoices snap server-side amount and due/advance; contact number never replaces payer identity.
+- [ ] Actual permission-scoped export/import preview, bounded upload, downloadable invoice/receipt and no invented paid state.
+- **Status:** PENDING.
+
+## PG11 — Refund and reconciliation
+
+- [ ] Refund limits, races, idempotent retries, unknown outcome clearly unresolved, settlement source reprocess, original provenance preserved; no fake “refunded” success.
+- **Status:** PENDING.
+
+## PG12 — Native provider/integrations
+
+- [ ] For each supported provider, test **approved official sandbox/live** credentials and actual permitted callbacks/query/refund as applicable; unsupported methods clearly disabled; phone receipt matching not artificially blocked by official API absence.
+- **Status:** PENDING.
+
+## PG13 — Reports, billing, team and settings
+
+- [ ] Verify accurate reconciled merchant volume vs SaaS revenue, authorized report exports, team invitation/role/grant lifecycle, settings validation, audit, notifications read/unread and help/security states.
+- **Status:** PENDING.
+
+## PG14 — Developer hub and examples
+
+- [ ] Run clean-account quickstart. Verify generated API reference and TS/Go/PHP/Python signed webhook example against actual callback; sandbox reset/test cases reproducible.
+- **Status:** PENDING.
+
+## PG15 — Load/recovery/security
+
+- [ ] Witness reproducible tenant/role security tests, real worker crash/retry, quotas, idempotency races and monitored alerts, restore from backup into **isolated** target with reconcilable balances, rollback rehearsal and documented incidents.
+- [ ] Test EN/BN light/dark/system, 320/768/1440, accessibility and performance on low-end Android.
+- **Status:** PENDING.
+
+## PG16 — Controlled real payment cohort
+
+- [ ] With owner-approved devices/accounts: one real qualifying bKash/Nagad/Rocket payment per supported receipt pattern, 7–14 day observation, duplicate correction, signed merchant consumer webhook verified; preserve test consent and logs.
+- **Status:** PENDING — can never be silently replaced by synthetics.
+
+## PG17 — Payment production release
+
+- [ ] Approve release only when PG00–PG16 evidence, backups/rollback, service readiness, security, monitoring, support and financial accuracy pass. Record released provider/device capabilities; do not claim complete dual-SaaS.
+- **Status:** PENDING.
+
+## Owner's combined test session log
+
+| Date | PG | Scenario | Result (PASS/FAIL/BLOCKED) | SHA/build | Redacted evidence | Follow-up |
+|---|---|---|---|---|---|---|
+| — | — | Not yet executed together | PENDING | — | — | Agent continues automated verification |
+
+
+### PG02 final source-layer owner/browser test additions
+
+- [ ] In `/bn/account`, edit **Display name** without saving; switch EN/BN and press **Stay**: URL, cookie locale and text remain unchanged; **Save draft & leave** preserves only account-scoped name in current tab and does **not** update server; revisit and click Restore. **Discard & leave** must not persist the unsaved name. Complete the real **Save name** action and refresh: persisted name now matches the server-confirmed success.
+- [ ] While a future registered dashboard editor has a dirty draft, switch to another business where **both products are disabled**. It must still show Save/Discard/Stay before rendering the disabled-business information page.
+- [ ] Open Ctrl/⌘K search from a focused text field; Escape and Close must restore the original focused field. On 320px mobile open menu, Escape/Close must focus the menu trigger again, including when it closes through React cleanup.
+- [ ] Test a blocked unsaved-draft **language switch**: the locale preference cookie must remain unchanged until Save/Discard actually authorizes navigation. Switching Light/Dark/System must not discard the draft.
+- [ ] Before owner browser QA, verify Vercel deployment source SHA is **`3cc4eeef` or a newer code-equivalent SHA**. The Git-connected deployment `ekmivo-5yxe0dedp-masharzys-projects.vercel.app` was verified **READY** for merged PG02 code `3cc4eeef`; the previous manual deployment API request did encounter daily quota `HTTP 402`, but automatic Git deployment later succeeded. Never test older `356575bb` as the finished PG02 code.
+
+### Independent PG02/PG03 verification — 2026-10-11
+
+**PG02: 21/21 deployed HTTP/action/DB assertions pass; browser 16 pass, 2 reproducible accessibility failures; acceptance OPEN.** Mobile search lacks an accessible name and client EN/BN navigation leaves html lang stale. **PG03: NOT ACCEPTED / release blocker.** 29 passing assertions, 8 unmet assertions: valid key/rotated/live context return 503 from PostgreSQL text[] → Go []string scan failure; OpenAPI also fails strict parsing (unclosed pattern at162, duplicate responses163/189). Deployed Vercel c441dca / Render 4f1c4d6 and green CI were inspected, so these are actual runtime/contract defects, not absent migration/provider credentials. Dedicated fixtures cleaned; no financial/user data or migrations changed. Detailed evidence and fix/retest requirements: `docs/evidence/PG02/README.md`, `docs/evidence/PG03/README.md`; manual checks remain in `docs/MANUAL-VERIFICATION.md`. Fix these gates before claiming PG03 accepted or a working merchant API.
+### Post-fix checkpoint — 2026-10-11
+The two independently observed PG02 UI defects and two PG03 runtime/contract blockers are closed by `1ffa7da` and exact-source live verification: PG02 deployed 21/21, PG03 deployed 37/37, targeted Chrome 7/7; CI 38129786695 three jobs PASS. The historical failure entry above is superseded for these four defects. Mobile search EN/BN accessible names, html lang EN→BN→EN and key-form Stay preservation now PASS. All other unchecked manual items stay open, including full screen-reader use, System OS/cross-tab changes and secret Copy/Hide/reload/back-cache. No provider/device or financial acceptance is inferred. Source/evidence: `docs/evidence/PG02/README.md`, `docs/evidence/PG03/README.md`.
+
+### Owner confirmation — 2026-10-11
+Owner reported **All pass** for the supplied PG01/PG02/PG03 combined checklist. Record this as owner-reported browser smoke, not agent-observed physical authenticator/device/provider testing. PG01 security lifecycle was independently repeated against deployed HTTP with dedicated fixtures: 51/51 PASS, cleanup included; existing owner enrollment/recovery data were untouched. The owner subsequently deferred admin UI work. Admin UI expansion remains out of this checkpoint. PG02 route latency and full-shell loading were reported separately and are being corrected; do not erase that performance follow-up.
+
+### PG05 automated verification checkpoint — 2026-10-11
+
+Source a17d5c63, CI [38148742214](https://github.com/masharzy/ekmivo/actions/runs/38148742214): all three jobs PASS; real isolated Next/Go/PostgreSQL browser 26/26 PASS, including 16 viewport/locale/theme cases. This supersedes the PG05 pending automated-CI status above. All unchecked owner/manual items remain pending. No deployment, physical-device acceptance, receipt capture or payment verification is inferred. Evidence retained in docs/evidence/PG05.

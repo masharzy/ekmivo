@@ -23,3 +23,7 @@ dist/
 tmp/
 .DS_Store
 *.log
+
+# Browser test artifacts are uploaded by CI, never source records
+apps/web/test-results/
+apps/web/playwright-report/

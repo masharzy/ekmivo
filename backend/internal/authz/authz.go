@@ -26,6 +26,7 @@ type Capability string
 
 const (
 	PaymentsRead      Capability = "payments:read"
+ PaymentsIssue     Capability = "payments:issue" // safe PG05 create/cancel; editors allowed
 	PaymentsManage    Capability = "payments:manage"
 	WorkspaceSettings Capability = "workspace:settings"
 	MembersManage     Capability = "members:manage"
@@ -127,6 +128,8 @@ func permits(role string, c Capability) bool {
 	switch c {
 	case PaymentsRead:
 		return role == "owner" || role == "admin" || role == "editor" || role == "viewer"
+	case PaymentsIssue:
+        return role == "owner" || role == "admin" || role == "editor"
 	case PaymentsManage, WorkspaceSettings, MembersManage:
 		return role == "owner" || role == "admin"
 	default:
@@ -135,7 +138,7 @@ func permits(role string, c Capability) bool {
 }
 func serviceAllows(mode string, capability Capability) bool {
 	switch capability {
-	case PaymentsRead, PaymentsManage:
+	case PaymentsRead, PaymentsIssue, PaymentsManage:
 		return mode == "commerce" || mode == "both"
 	default:
 		return true
@@ -183,7 +186,7 @@ func (r *Repository) AuthorizeWorkspace(ctx context.Context, principal Principal
 	if err != nil {
 		return result, ErrUnavailable
 	}
-	if capability == PaymentsRead || capability == PaymentsManage {
+	if capability == PaymentsRead || capability == PaymentsIssue || capability == PaymentsManage {
 		var enabled bool
 		err = tx.QueryRowContext(ctx, `SELECT enabled FROM workspace_product_access
    WHERE workspace_id=$1::uuid AND product='payments' LIMIT 1`, workspaceID).Scan(&enabled)

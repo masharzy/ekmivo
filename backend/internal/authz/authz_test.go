@@ -21,6 +21,13 @@ func TestCapabilityMatrixLeastPrivilege(t *testing.T){
  for _,role:=range []string{"owner","admin","editor","viewer"}{
   if !permits(role,PaymentsRead){t.Fatalf("%s cannot read",role)}
  }
+ for _,role:=range []string{"owner","admin","editor"}{
+  if !permits(role,PaymentsIssue){t.Fatalf("%s cannot issue safe PG05 requests",role)}
+ }
+ for _,role:=range []string{"viewer","","unknown"}{
+  if permits(role,PaymentsIssue){t.Fatalf("%s unexpectedly issued payment request",role)}
+ }
+ if serviceAllows("ai",PaymentsIssue){t.Fatal("AI-only mode bypassed payments issue")}
  for _,role:=range []string{"editor","viewer","","unknown"}{
   for _,capability:=range []Capability{PaymentsManage,WorkspaceSettings,MembersManage}{
    if permits(role,capability){t.Fatalf("%s unexpectedly got %s",role,capability)}
