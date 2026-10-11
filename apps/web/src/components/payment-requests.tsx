@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import {PaymentRequestDetail} from "./payment-request-detail";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {registerDraft} from "../lib/client/draft-navigation";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
@@ -7,7 +8,7 @@ import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 type Intent={id:string;merchant_reference:string;amount_minor:number;currency:string;
  created_at?:string;expires_at:string;state:string;checkout_token:string;
  source_kind?:string|null;source_reference?:string|null};
-type Source={id:string;source_kind:"order"|"invoice";source_reference:string;amount_minor:number;issued_at:string};
+type Source={id:string;source_kind:"order"|"invoice";source_reference:string;amount_minor:number;issued_at:string;items:{title:string;quantity:number;unit_amount_minor:number}[]};
 type SourceLine={title:string;quantity:string;unitPrice:string};
 type SourceDraft=SourceLine&{kind:"order"|"invoice";reference:string};
 const initialSource:SourceDraft={kind:"invoice",reference:"",title:"",quantity:"1",unitPrice:""};
@@ -20,6 +21,7 @@ const short=(code:string,bn:boolean)=>({
  ACCESS_DENIED:bn?"আপনার এই কাজের অনুমতি নেই।":"You do not have permission for this action.",
  FINANCIAL_SERVICE_UNAVAILABLE:bn?"আর্থিক ডেটাবেস সংযুক্ত হয়নি।":"Financial database is not connected.",
  LIVE_SOURCE_NOT_CONNECTED:bn?"Live receiving source যুক্ত হয়নি। Sandbox বেছে নিন।":"Live receiving source is not connected. Choose sandbox.",
+ RATE_LIMITED:bn?"এক মিনিট পরে চেষ্টা করুন।":"Too many requests. Retry in one minute.",
  CONFLICT:bn?"একই রেফারেন্স বা idempotency key-তে ভিন্ন অনুরোধ আছে।":"The reference or idempotency key already belongs to a different request.",
  LOCKED_OR_EXPIRED:bn?"রিকোয়েস্টটি লক বা মেয়াদোত্তীর্ণ।":"Request is locked or expired.",
  INVALID_REQUEST:bn?"সঠিক amount, reference ও মেয়াদ দিন।":"Check the amount, reference and expiry.",
@@ -27,6 +29,7 @@ const short=(code:string,bn:boolean)=>({
  INVALID_SOURCE:bn?"নথির লাইন বা পরিমাণ ভুল।":"Invalid document line or price."
 } as Record<string,string>)[code]||(bn?"অনুরোধটি সম্পন্ন হয়নি। আবার চেষ্টা করুন।":"Request was not completed. Retry.");
 function minor(value:string):number|null{
+ value=value.replace(/[০-৯]/g,ch=>String(ch.charCodeAt(0)-0x09e6));
  if(!/^(?:0|[1-9][0-9]{0,8})(?:\.[0-9]{1,2})?$/.test(value))return null;
  const [t,p=""]=value.split(".");
  const n=Number(t)*100+Number((p+"00").slice(0,2));
@@ -45,10 +48,14 @@ function statusLabel(status:string,bn:boolean){
  const pair=labels[status]||["Pending","অপেক্ষমাণ"];
  return bn?pair[1]:pair[0];
 }
-export function PaymentRequests({locale,userId,workspaceId,environment}:{
- locale:Locale;userId:string;workspaceId:string;environment:PaymentEnvironment;
+export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}:{
+ locale:Locale;userId:string;workspaceId:string;environment:PaymentEnvironment;canWrite:boolean;
 }){
  const bn=locale==="bn";
+ const [selected,setSelected]=useState("");
+ useEffect(()=>{const id=new URLSearchParams(location.search).get("request");if(id&&uuid.test(id))void Promise.resolve().then(()=>setSelected(id));},[]);
+ function selectDetail(id:string){setSelected(id);const url=new URL(location.href);if(id)url.searchParams.set("request",id);else url.searchParams.delete("request");history.replaceState(history.state,"",url);}
+
  const [data,setData]=useState<Intent[]>([]);
  const [sources,setSources]=useState<Source[]>([]);
  const [sourceLoad,setSourceLoad]=useState<"loading"|"ready"|"error">("loading");
@@ -76,14 +83,14 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  const draftKey="ekmivo:pg05-request:v1:"+userId+":"+workspaceId+":"+environment;
  const api="/api/go/workspaces/"+workspaceId+"/payment-intents?environment="+environment;
  const sourcesApi="/api/go/workspaces/"+workspaceId+"/linked-sources?environment="+environment;
- const dirty=(expanded&&JSON.stringify(fields)!==JSON.stringify(draftBase))||
+ const dirty=(JSON.stringify(fields)!==JSON.stringify(draftBase))||
   JSON.stringify({draft:sourceDraft,lines:extraLines})!==JSON.stringify(sourceBase);
  useEffect(()=>registerDraft({
   id:"pg05:"+workspaceId+":"+environment,
   isDirty:()=>{
    const d=stateRef.current;
    const source=sourceRef.current;
-   return (d.expanded&&JSON.stringify(d.fields)!==JSON.stringify(d.base))||
+   return (JSON.stringify(d.fields)!==JSON.stringify(d.base))||
     JSON.stringify({draft:source.draft,lines:source.lines})!==JSON.stringify(source.base);
   },
   save:async()=>{
@@ -91,6 +98,9 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     const d=stateRef.current;
     const source=sourceRef.current;
     sessionStorage.setItem(draftKey,JSON.stringify(d.fields));
+    sessionStorage.setItem(draftKey+":key",keyRef.current);
+    stateRef.current={...d,base:{...d.fields}};
+    sourceRef.current={...source,base:{draft:{...source.draft},lines:source.lines.map(x=>({...x}))}};
     sessionStorage.setItem(draftKey+":source",JSON.stringify({draft:source.draft,lines:source.lines}));
     setDraftBase({...d.fields});
     setSourceBase({draft:{...source.draft},lines:source.lines.map(x=>({...x}))});
@@ -98,6 +108,8 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    }catch{return false;}
   },
   discard:()=>{
+   stateRef.current={...stateRef.current,fields:{...stateRef.current.base}};
+   sourceRef.current={...sourceRef.current,...sourceRef.current.base};
    setFields({...stateRef.current.base});
    const source=sourceRef.current.base;
    setSourceDraft({...source.draft});setExtraLines(source.lines.map(x=>({...x})));
@@ -114,7 +126,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    setLoad("ready");
   }catch(reason){
    const failure=reason as {status?:number;code?:string};
-   setData([]);
+   if(failure.status===401||failure.status===403)setData([]);
    setError(short(failure.code||"",bn));
    setLoad(typeof navigator!=="undefined"&&!navigator.onLine?"offline":
     failure.status===401||failure.status===403?"forbidden":
@@ -122,7 +134,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
   }
  },[api,bn]);
  const refreshSources=useCallback(async()=>{
-  if(environment==="live"){setSources([]);setSourceLoad("ready");return;}
+  if(environment==="live"){setSources([]);setSourceLoad("error");setSourceError(short("LIVE_SOURCE_NOT_CONNECTED",bn));return;}
   setSourceLoad("loading");
   try{
    const response=await fetch(sourcesApi,{cache:"no-store",credentials:"same-origin"});
@@ -130,7 +142,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    if(!response.ok)throw Error(body.error?.code||body.code);
    setSources(Array.isArray(body.data)?body.data:[]);
    setSourceLoad("ready");setSourceError("");
-  }catch{setSources([]);setSourceLoad("error");setSourceError(bn?"নথি লোড হয়নি। আবার চেষ্টা করুন।":"Document sources unavailable. Retry.");}
+  }catch{setSourceLoad("error");setSourceError(bn?"নথি লোড হয়নি। আবার চেষ্টা করুন।":"Document sources unavailable. Retry.");}
  },[sourcesApi,environment,bn]);
  useEffect(()=>{void Promise.resolve().then(()=>refresh())},[refresh]);
  useEffect(()=>{void Promise.resolve().then(()=>refreshSources())},[refreshSources]);
@@ -142,6 +154,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  const saveDraft=()=>{
   try{
    sessionStorage.setItem(draftKey,JSON.stringify(fields));
+   sessionStorage.setItem(draftKey+":key",keyRef.current);
    sessionStorage.setItem(draftKey+":source",JSON.stringify({draft:sourceDraft,lines:extraLines}));
    setDraftBase({...fields});
    setSourceBase({draft:{...sourceDraft},lines:extraLines.map(x=>({...x}))});
@@ -165,12 +178,13 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     setSourceDraft(parsed.draft);setExtraLines(parsed.lines);
     setSourceBase({draft:parsed.draft,lines:parsed.lines});
    }
-   setFields(restored);setDraftBase(restored);setExpanded(true);keyRef.current="";
+   setFields(restored);setDraftBase(restored);setExpanded(true);keyRef.current=sessionStorage.getItem(draftKey+":key")||"";
    setNotice(bn?"খসড়া ফিরেছে; এটি এখনও জমা দেওয়া হয়নি।":"Draft restored; not submitted.");
   }catch{setError(bn?"খসড়াটি ফিরিয়ে আনা যায়নি।":"Unable to restore the draft.")}
  };
  async function create(event:React.FormEvent<HTMLFormElement>){
   event.preventDefault();
+  if(submitting||!canWrite||environment!=="sandbox")return;
   const linked=fields.sourceKind!=="standalone";
   const amount=linked?null:minor(fields.amount);
   const source=linked?sources.find(x=>x.id===fields.sourceId&&x.source_kind===fields.sourceKind):undefined;
@@ -178,6 +192,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    setError(bn?"সঠিক রেফারেন্স ও ২ দশমিক পর্যন্ত পরিমাণ দিন।":"Enter a valid reference and amount with up to two decimals.");return;
   }
   if(!keyRef.current)keyRef.current=crypto.randomUUID();
+  try{sessionStorage.setItem(draftKey,JSON.stringify(fields));sessionStorage.setItem(draftKey+":key",keyRef.current)}catch{}
   setSubmitting(true);setError("");setNotice("");
   try{
    const result=await fetch(api,{method:"POST",credentials:"same-origin",
@@ -189,7 +204,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    if(!result.ok)throw {code:json.error?.code||json.code};
    keyRef.current="";
    setFields(empty);setDraftBase(empty);setExpanded(false);
-   try{sessionStorage.removeItem(draftKey)}catch{}
+   try{sessionStorage.removeItem(draftKey);sessionStorage.removeItem(draftKey+":key")}catch{}
    setNotice(bn?"Sandbox payment request তৈরি হয়েছে। টাকা পাঠানোর দরকার নেই।":"Sandbox payment request created. Do not send real money.");
    await refresh();
    if(json.checkout_token){
@@ -201,7 +216,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
   }finally{setSubmitting(false);}
  }
  async function cancel(id:string){
-  if(!uuid.test(id))return;
+  if(!uuid.test(id)||!canWrite||acting)return;
   if(!window.confirm(bn?"এই অনিশ্চিত রিকোয়েস্ট বাতিল করবেন? আগে পাঠানো টাকা যাচাই হয়নি—বাতিল মানে ফেরত নয়।":"Cancel this outstanding request? Cancellation does not refund any money that may have been sent."))return;
   setActing(id);setError("");setNotice("");
   try{
@@ -215,7 +230,9 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
   finally{setActing("");}
  }
  async function createSource(event:React.FormEvent<HTMLFormElement>){
-  event.preventDefault();setSourceError("");setNotice("");
+  event.preventDefault();
+  if(sourceBusy||!canWrite||environment!=="sandbox")return;
+  setSourceError("");setNotice("");
   const rawLines:SourceLine[]=[{title:sourceDraft.title,quantity:sourceDraft.quantity,unitPrice:sourceDraft.unitPrice},...extraLines];
   const lines=rawLines.map(row=>({title:row.title.trim(),quantity:Number(row.quantity),unit_amount_minor:minor(row.unitPrice)}));
   const total=lines.reduce((sum,row)=>sum+row.quantity*(row.unit_amount_minor||0),0);
@@ -237,6 +254,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    setSourceDraft(initialSource);setExtraLines([]);
    setSourceBase({draft:initialSource,lines:[]});
    try{sessionStorage.removeItem(draftKey+":source")}catch{}
+   keyRef.current="";
    setFields(prev=>({...prev,sourceKind:issued.source_kind,sourceId:issued.id}));
    setExpanded(true);
    setNotice(bn?"সার্ভার নথির মোট হিসাব করেছে; কোনো পেমেন্ট হয়নি।":"Server-priced document issued; no payment occurred.");
@@ -247,16 +265,18 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  const visible=data.filter(item=>(statusFilter==="all"||item.state===statusFilter)
    &&(item.merchant_reference||"").toLowerCase().includes(search.trim().toLowerCase()));
  return <div className="pg05-merchant">
+  {selected&&<PaymentRequestDetail key={selected} id={selected} workspaceId={workspaceId} environment={environment} locale={locale} onClose={()=>selectDetail("")}/>}
   <section className="ds-panel pg05-section">
    <div className="pg05-topline">
     <div><p className="ds-eyebrow">{bn?"রিকোয়েস্ট ব্যবস্থাপনা":"REQUEST OPERATIONS"}</p>
      <h2>{bn?"পেমেন্ট রিকোয়েস্ট":"Payment requests"}</h2>
      <p>{bn?"সার্ভার-নির্ধারিত পরিমাণ, নির্দিষ্ট মেয়াদ ও প্রেরকের নম্বর। পেমেন্ট কেবল প্রকৃত প্রমাণে যাচাই হবে।":"Server-issued amount, expiry and payer lock. Only trusted receipt evidence can verify funds."}</p></div>
-    <button type="button" className="ek-action" onClick={()=>setExpanded(x=>!x)} aria-expanded={expanded} disabled={load==="forbidden"||environment==="live"}>
+    <button type="button" className="ek-action" onClick={()=>setExpanded(x=>!x)} aria-expanded={expanded} disabled={!canWrite||load==="forbidden"||environment==="live"}>
      {expanded?(bn?"ফর্ম বন্ধ":"Close form"):(bn?"রিকোয়েস্ট তৈরি":"+ Create request")}</button>
    </div>
    <p className="pg05-banner" role="note">{environment==="sandbox"?(bn?"Sandbox পরীক্ষা — আসল টাকা পাঠাবেন না; কোনো বাস্তব গ্রহণকারী নম্বর নেই।":"Sandbox test — no real money; no genuine receiving number is configured."):(bn?"Live receiving source সংযুক্ত নয়। নতুন রিকোয়েস্ট নিরাপদে বন্ধ রাখা হয়েছে।":"Live receiving source unavailable. New requests are disabled.")}</p>
-   {expanded&&<form onSubmit={create} className="pg05-form">
+   {!canWrite&&<p role="note">{bn?"শুধু দেখার অনুমতি আছে।":"Read-only access. An editor can issue or cancel requests."}</p>}
+   {expanded&&<form onSubmit={create} className="pg05-form"><fieldset disabled={submitting||!canWrite||environment==="live"}>
     <div className="pg05-two">
      <label>{bn?"ব্যবসার রেফারেন্স":"Merchant reference"}
       <input required maxLength={128} value={fields.reference} onChange={e=>edit("reference",e.target.value)} placeholder="ORDER-1024"/></label>
@@ -286,10 +306,10 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
      <button type="submit" className="ek-action" disabled={submitting||environment==="live"}>{submitting?(bn?"তৈরি হচ্ছে…":"Creating…"):(bn?"Sandbox রিকোয়েস্ট তৈরি":"Create sandbox request")}</button>
      <button type="button" onClick={saveDraft}>{bn?"খসড়া রাখুন":"Save draft"}</button>
      <button type="button" onClick={restoreDraft}>{bn?"খসড়া ফিরিয়ে আনুন":"Restore draft"}</button>
-     <button type="button" onClick={()=>{setFields(empty);setDraftBase(empty);keyRef.current="";try{sessionStorage.removeItem(draftKey)}catch{}}}>{bn?"মুছে ফেলুন":"Discard"}</button>
+     <button type="button" onClick={()=>{setFields(empty);setDraftBase(empty);keyRef.current="";try{sessionStorage.removeItem(draftKey);sessionStorage.removeItem(draftKey+":key")}catch{}}}>{bn?"মুছে ফেলুন":"Discard"}</button>
     </div>
     {dirty&&<p className="pg05-muted" role="status">{bn?"সংরক্ষণ না করা পরিবর্তন আছে।":"Unsaved changes."}</p>}
-   </form>}
+   </fieldset></form>}
   </section>
   <section className="ds-panel pg05-section">
    <div className="pg05-topline"><div>
@@ -297,7 +317,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     <h2>{bn?"অর্ডার / ইনভয়েসের উৎস":"Order and invoice sources"}</h2>
     <p>{bn?"একটি নথির লাইন থেকে BDT মোট হিসাব করে সার্ভার ইস্যু করবে। এটি যাচাইকৃত পেমেন্ট বা পূর্ণ ইনভয়েস ম্যানেজমেন্ট নয়।":"Issue a minimal immutable order or invoice snapshot. The server calculates the BDT total from lines. This is not a paid invoice or full commerce management."}</p>
    </div><button type="button" onClick={()=>void refreshSources()} disabled={sourceLoad==="loading"}>{bn?"নথি রিফ্রেশ":"Refresh sources"}</button></div>
-   <form className="pg05-form" onSubmit={createSource}>
+   <form className="pg05-form" onSubmit={createSource}><fieldset disabled={sourceBusy||!canWrite||environment==="live"}>
     <div className="pg05-two">
      <label>{bn?"নথির ধরন":"Document type"}
       <select value={sourceDraft.kind} onChange={e=>setSourceDraft(f=>({...f,kind:e.target.value as SourceDraft["kind"]}))} disabled={sourceBusy}>
@@ -331,7 +351,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     <button className="ek-action" type="submit" disabled={sourceBusy||environment==="live"}>{sourceBusy?(bn?"ইস্যু হচ্ছে…":"Issuing…"):(bn?"নথি ইস্যু করুন":"Issue document")}</button>
     {sourceError&&<p role="alert" className="ek-form-error">{sourceError}</p>}
     {dirty&&<p role="status" className="pg05-muted">{bn?"নথি বা রিকোয়েস্টে সংরক্ষণ না করা পরিবর্তন আছে।":"Unsaved document or request changes."}</p>}
-   </form>
+   </fieldset></form>
    {sourceLoad==="loading"?<p role="status">{bn?"ইস্যু করা নথি লোড হচ্ছে…":"Loading issued documents…"}</p>:
     sourceLoad==="error"?<div className="ds-empty" role="alert"><p>{sourceError|| (bn?"নথির তালিকা পাওয়া যাচ্ছে না।":"Issued documents unavailable.")}</p>
      <button type="button" onClick={()=>void refreshSources()}>{bn?"আবার চেষ্টা করুন":"Retry"}</button></div>:
@@ -341,8 +361,9 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
       <div className="pg05-record-main"><div><strong>{source.source_reference}</strong>
        <small>{source.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}</small></div>
        <div className="pg05-total"><strong>{number(source.amount_minor,locale)}</strong></div></div>
-      <div className="pg05-record-meta"><span>{bn?"ইস্যুর সময়":"Issued"}: {new Date(source.issued_at).toLocaleString(bn?"bn-BD":"en-BD")}</span></div>
-      <div className="pg05-actions"><button type="button" disabled={environment==="live"||load==="forbidden"}
+      <div className="pg05-record-meta"><span>{bn?"ইস্যুর সময়":"Issued"}: {new Date(source.issued_at).toLocaleString(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",timeZoneName:"short"})}</span></div>
+      <details><summary>{bn?"ইস্যু করা লাইন দেখুন":"View issued line items"}</summary><ul>{source.items.map((line,index)=><li key={index}>{line.title} — {line.quantity} × {number(line.unit_amount_minor,locale)}</li>)}</ul></details>
+      <div className="pg05-actions"><button type="button" disabled={!canWrite||environment==="live"||load==="forbidden"}
        onClick={()=>{setFields(prev=>({...prev,sourceKind:source.source_kind,sourceId:source.id,reference:prev.reference||source.source_reference+"-pay"}));
         keyRef.current="";setExpanded(true);setNotice("");}}>
        {bn?"এই নথির পেমেন্ট রিকোয়েস্ট":"Create payment request"} ↗</button></div>
@@ -360,22 +381,24 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
      {["requires_payer","awaiting_payment","completed","expired","cancelled"].map(key=><option value={key} key={key}>{statusLabel(key,bn)}</option>)}
     </select></label>
    </div>
-   {load==="loading"?<p role="status" aria-live="polite">{bn?"আসল রিকোয়েস্ট লোড হচ্ছে…":"Loading actual requests…"}</p>:
-    load!=="ready"?<div className="ds-empty" role={load==="forbidden"?"alert":"status"}><h3>{load==="forbidden"?(bn?"অনুমতি নেই":"Access denied"):(bn?"ডেটার উৎস উপলব্ধ নয়":"Data source unavailable")}</h3><p>{error}</p><button type="button" onClick={()=>void refresh()}>{bn?"আবার চেষ্টা করুন":"Retry"}</button></div>:
+   {load!=="ready"&&data.length>0&&<p role="status" className="pg05-banner">{bn?"সর্বশেষ পাওয়া তথ্য দেখানো হচ্ছে।":"Showing the last loaded records."} {error}</p>}
+   {load==="loading"&&data.length===0?<p role="status" aria-live="polite">{bn?"আসল রিকোয়েস্ট লোড হচ্ছে…":"Loading actual requests…"}</p>:
+    load!=="ready"&&data.length===0?<div className="ds-empty" role={load==="forbidden"?"alert":"status"}><h3>{load==="forbidden"?(bn?"অনুমতি নেই":"Access denied"):(bn?"ডেটার উৎস উপলব্ধ নয়":"Data source unavailable")}</h3><p>{error}</p><button type="button" onClick={()=>void refresh()}>{bn?"আবার চেষ্টা করুন":"Retry"}</button></div>:
     visible.length===0?<div className="ds-empty"><h3>{bn?"কোনো মিল পাওয়া যায়নি":"No matching requests"}</h3><p>{data.length===0?(bn?"এই sandbox-এ এখনো কোনো বাস্তব request record নেই।":"No issued request records in this sandbox yet."):(bn?"অন্য ফিল্টার দিয়ে দেখুন।":"Try another filter.")}</p></div>:
     <div className="pg05-records">{visible.map(item=>{
      const checkout="/"+locale+"/checkout/"+item.checkout_token;
      return <article className="pg05-record" key={item.id}>
       <div className="pg05-record-main"><div><strong>{item.merchant_reference}</strong><small>{item.id}</small></div>
        <div className="pg05-total"><strong>{number(item.amount_minor,locale)}</strong><span className="pg05-state" data-state={item.state}>{statusLabel(item.state,bn)}</span></div></div>
-      <div className="pg05-record-meta">{item.source_reference&&<span>{item.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}: {item.source_reference}</span>}<span>{bn?"মেয়াদ":"Expires"}: {new Date(item.expires_at).toLocaleString(locale==="bn"?"bn-BD":"en-BD")}</span><span>{bn?"পরিবেশ":"Environment"}: Sandbox</span></div>
+      <div className="pg05-record-meta">{item.source_reference&&<span>{item.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}: {item.source_reference}</span>}<span>{bn?"মেয়াদ":"Expires"}: {new Date(item.expires_at).toLocaleString(locale==="bn"?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",timeZoneName:"short"})}</span><span>{bn?"পরিবেশ":"Environment"}: Sandbox</span></div>
       <div className="pg05-actions">
+       <button type="button" onClick={()=>selectDetail(item.id)}>{bn?"তথ্য ও ইতিহাস":"Details and history"}</button>
        <Link href={checkout}>{bn?"চেকআউট খুলুন":"Open checkout"} ↗</Link>
        <button type="button" onClick={async()=>{
         try{await navigator.clipboard.writeText(location.origin+checkout);setCopied(item.id);}
         catch{setError(bn?"লিংক কপি করা যায়নি।":"Could not copy link.")}
        }}>{copied===item.id?(bn?"কপি হয়েছে":"Copied"):(bn?"লিংক কপি":"Copy link")}</button>
-       {["requires_payer","awaiting_payment"].includes(item.state)&&<button disabled={acting===item.id} type="button" onClick={()=>void cancel(item.id)}>{acting===item.id?(bn?"বাতিল হচ্ছে…":"Cancelling…"):(bn?"বাতিল করুন":"Cancel request")}</button>}
+       {canWrite&&["requires_payer","awaiting_payment"].includes(item.state)&&<button disabled={acting===item.id} type="button" onClick={()=>void cancel(item.id)}>{acting===item.id?(bn?"বাতিল হচ্ছে…":"Cancelling…"):(bn?"বাতিল করুন":"Cancel request")}</button>}
       </div></article>})}</div>}
    {error&&load==="ready"&&<p role="alert" className="ek-form-error">{error}</p>}
    {notice&&<p role="status" className="ek-account-success">{notice}</p>}

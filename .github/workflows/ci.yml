@@ -80,11 +80,22 @@ jobs:
         env:
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
         run: node scripts/pg03-credentials-smoke.mjs
+      - name: Install browser for real PG05 checkout journeys
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
       - name: PG04 independent financial River + realm migration and durability
         working-directory: apps/web
         env:
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+          PG05_BROWSER_TESTS: "true"
         run: node scripts/pg04-financial-smoke.mjs
+      - name: Save PG05 isolated browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pg05-browser-evidence
+          path: apps/web/test-results/pg05/
+          if-no-files-found: ignore
       - name: PG02 workspace/server environment authorization checks
         working-directory: apps/web
         env:
@@ -136,7 +147,9 @@ jobs:
           echo "END_GO_SUM"
       - name: Go unit tests
         working-directory: backend
-        run: go test ./...
+        run: |
+          go test ./...
+          go test -race ./internal/checkout
       - name: Go HTTP server smoke
         working-directory: backend
         run: |

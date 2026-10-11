@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { goOrigin } from "../../../../lib/server/go-origin";
 export const dynamic="force-dynamic";
 const TOKEN=/^[A-Za-z0-9_-]{43}$/;
 function result(status:number,code:string){return Response.json({error:{code}},{status,headers:{"Cache-Control":"no-store","Referrer-Policy":"no-referrer"}})}
@@ -11,8 +12,8 @@ async function forward(request:NextRequest,{params}:{params:Promise<{token:strin
   u.host=request.headers.get("host")||u.host;
   if(request.headers.get("origin")!==u.origin)return result(403,"ORIGIN_DENIED");
  }
- const base=new URL(process.env.GO_API_URL||"https://ekmivo-go-api.onrender.com");
- if(base.protocol!=="https:"||base.username||base.password)return result(503,"PROXY_CONFIG_INVALID");
+ const base=goOrigin();
+ if(!base)return result(503,"PROXY_CONFIG_INVALID");
  const target=new URL(`/v1/public/checkout/${token}${post?"/lock":""}`,base);
  const body=post?await request.text():undefined;
  if(body&&new TextEncoder().encode(body).length>4096)return result(413,"BODY_TOO_LARGE");
@@ -22,7 +23,7 @@ async function forward(request:NextRequest,{params}:{params:Promise<{token:strin
    signal:AbortSignal.timeout(14000)});
   return new Response(await upstream.text(),{status:upstream.status,headers:{
    "Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store",
-   "Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"
+   "Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff",...(upstream.headers.has("Retry-After")?{"Retry-After":upstream.headers.get("Retry-After")!}:{})
   }});
  }catch{return result(503,"CHECKOUT_SERVICE_UNAVAILABLE")}
 }

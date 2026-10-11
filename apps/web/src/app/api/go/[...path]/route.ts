@@ -1,13 +1,14 @@
 import { cookies } from "next/headers";
+import { goOrigin } from "../../../../lib/server/go-origin";
 
 export const dynamic = "force-dynamic";
-const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|(?:payment-intents(?:\/[0-9a-f-]{36}\/cancel)?|linked-sources))$/i;
+const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources))$/i;
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
  const path = (await context.params).path.join("/");
  const read = request.method === "GET";
  if (!(read && ["session", "platform/access"].includes(path)) && !workspacePath.test(path))
   return Response.json({ code: "NOT_FOUND" }, { status: 404 });
- const intentPath=/^workspaces\/[0-9a-f-]{36}\/(?:payment-intents(?:\/[0-9a-f-]{36}\/cancel)?|linked-sources)$/i.test(path);
+ const intentPath=/^workspaces\/[0-9a-f-]{36}\/(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources)$/i.test(path);
  if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || (intentPath&&request.method==="POST")))
   return Response.json({ code:"METHOD_NOT_ALLOWED" },{status:405});
  const requestUrl = new URL(request.url);
@@ -19,8 +20,8 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   return Response.json({ code: "ORIGIN_DENIED" }, { status: 403 });
  const token = (await cookies()).get("ekmivo-session")?.value;
  if (!token) return Response.json({ code: "UNAUTHENTICATED" }, { status: 401 });
- const base = new URL(process.env.GO_API_URL || "https://ekmivo-go-api.onrender.com");
- if (base.protocol !== "https:" || base.username || base.password)
+ const base = goOrigin();
+ if (!base)
   return Response.json({ code: "PROXY_CONFIG_INVALID" }, { status: 503 });
  const target = new URL("/v1/" + path, base);
  const incoming = new URL(request.url);
@@ -42,7 +43,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
    signal: AbortSignal.timeout(15000),
   });
   return new Response(await upstream.text(), { status: upstream.status,
-   headers: { "Content-Type": "application/json", "Cache-Control": "private, no-store" } });
+   headers: { "Content-Type": "application/json", "Cache-Control": "private, no-store",...(upstream.headers.has("Retry-After")?{"Retry-After":upstream.headers.get("Retry-After")!}:{}) } });
  } catch { return Response.json({ code: "API_UNAVAILABLE" }, { status: 503 }); }
 }
 export const GET = forward;

@@ -63,3 +63,8 @@
  .pg05-actions button,.pg05-actions a{flex:1;min-width:130px;text-align:center}
 }
 @media(prefers-reduced-motion:reduce){.pg05-checkout *, .pg05-merchant *{scroll-behavior:auto!important;transition:none!important}}
+
+.pg05-form fieldset{border:0;padding:0;margin:0;min-width:0;display:grid;gap:18px}
+.pg05-merchant summary{cursor:pointer;font-weight:600}
+.pg05-merchant li{overflow-wrap:anywhere}
+.pg05-merchant button:focus-visible,.pg05-merchant summary:focus-visible,.pg05-checkout button:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px}

@@ -263,6 +263,75 @@ paths:
         '404': { description: Linked source absent from authorized realm }
         '422': { description: "Invalid amount, expiry, mixed source or caller-forged linked total" }
         '503': { description: Finance or live source unavailable }
+  /v1/workspaces/{workspaceID}/payment-intents/{intentID}:
+    get:
+      operationId: getPaymentIntent
+      tags: [Merchant]
+      summary: Read original issued terms, linked lines and immutable history
+      security:
+        - MerchantBearer: []
+        - SessionCookie: []
+      parameters:
+        - name: workspaceID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: intentID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: environment
+          in: query
+          required: true
+          schema: { type: string, enum: [sandbox, live] }
+      responses:
+        '200':
+          description: Masked payer, issued source lines and append-only events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, environment]
+                properties:
+                  environment: { type: string, const: sandbox }
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Intent'
+                      - type: object
+                        properties:
+                          items:
+                            type: [array, 'null']
+                            items:
+                              type: object
+                              properties:
+                                title: { type: string }
+                                quantity: { type: integer }
+                                unit_amount_minor: { type: integer }
+                          attempt:
+                            type: [object, 'null']
+                            properties:
+                              payer_suffix: { type: string, pattern: '^[0-9]{4}$' }
+                              method: { type: string, enum: [bkash, nagad, rocket] }
+                              window_start: { type: string, format: date-time }
+                              window_end: { type: string, format: date-time }
+                          events:
+                            type: array
+                            items:
+                              type: object
+                              required: [event_type, reason, occurred_at]
+                              properties:
+                                event_type: { type: string, enum: [created, payer_locked, cancelled] }
+                                reason: { type: string }
+                                occurred_at: { type: string, format: date-time }
+        '401': { description: Not authenticated }
+        '403': { description: Tenant or read scope denied }
+        '404': { description: Request not found in authorized tenant/environment }
+        '429':
+          description: Per-process authenticated workspace budget exceeded
+          headers:
+            Retry-After:
+              schema: { type: integer, const: 60 }
+        '503': { description: Finance or live source unavailable }
   /v1/workspaces/{workspaceID}/payment-intents/{intentID}/cancel:
     post:
       operationId: cancelPaymentIntent

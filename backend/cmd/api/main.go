@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
- "crypto/rand"
- "encoding/hex"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"log"
@@ -14,7 +14,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/masharzy/ekmivo/backend/internal/authz"
- "github.com/masharzy/ekmivo/backend/internal/checkout"
+	"github.com/masharzy/ekmivo/backend/internal/checkout"
 )
 
 type responseError struct {
@@ -28,18 +28,18 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
-func merchantError(w http.ResponseWriter,status int,code,message string,retryable bool){
- id:=make([]byte,12)
- if _,err:=rand.Read(id);err!=nil{
-  // Missing entropy is a dependency failure: do not send a fake request ID.
-  writeJSON(w,http.StatusServiceUnavailable,map[string]any{"error":map[string]any{
-   "code":"AUTH_SERVICE_UNAVAILABLE","message":"Request identifier unavailable","retryable":true}})
-  return
- }
- correlationID:=hex.EncodeToString(id)
- w.Header().Set("X-Correlation-ID",correlationID)
- writeJSON(w,status,map[string]any{"error":map[string]any{
-  "code":code,"message":message,"retryable":retryable,"correlation_id":correlationID}})
+func merchantError(w http.ResponseWriter, status int, code, message string, retryable bool) {
+	id := make([]byte, 12)
+	if _, err := rand.Read(id); err != nil {
+		// Missing entropy is a dependency failure: do not send a fake request ID.
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": map[string]any{
+			"code": "AUTH_SERVICE_UNAVAILABLE", "message": "Request identifier unavailable", "retryable": true}})
+		return
+	}
+	correlationID := hex.EncodeToString(id)
+	w.Header().Set("X-Correlation-ID", correlationID)
+	writeJSON(w, status, map[string]any{"error": map[string]any{
+		"code": code, "message": message, "retryable": retryable, "correlation_id": correlationID}})
 }
 func authFailure(w http.ResponseWriter, err error) {
 	switch {
@@ -54,16 +54,19 @@ func authFailure(w http.ResponseWriter, err error) {
 	}
 }
 func newHandler() http.Handler { return newHandlerWithRepository(nil) }
-func newHandlerWithRepository(repo *authz.Repository) http.Handler { return newHandlerWithCheckout(repo,nil) }
-func newHandlerWithCheckout(repo *authz.Repository,pay *checkout.Service) http.Handler {
- mux := http.NewServeMux()
-  mux.HandleFunc("GET /v1/workspaces/{workspaceID}/linked-sources",pay.HandleSources)
-  mux.HandleFunc("POST /v1/workspaces/{workspaceID}/linked-sources",pay.HandleSources)
- mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-intents",pay.HandleMerchant)
- mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents",pay.HandleMerchant)
- mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents/{intentID}/{action}",pay.HandleMerchant)
- mux.HandleFunc("GET /v1/public/checkout/{token}",pay.HandlePublic)
- mux.HandleFunc("POST /v1/public/checkout/{token}/{action}",pay.HandlePublic)
+func newHandlerWithRepository(repo *authz.Repository) http.Handler {
+	return newHandlerWithCheckout(repo, nil)
+}
+func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/linked-sources", pay.HandleSources)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/linked-sources", pay.HandleSources)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-intents", pay.HandleMerchant)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-intents/{intentID}", pay.HandleMerchant)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents", pay.HandleMerchant)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents/{intentID}/{action}", pay.HandleMerchant)
+	mux.HandleFunc("GET /v1/public/checkout/{token}", pay.HandlePublic)
+	mux.HandleFunc("POST /v1/public/checkout/{token}/{action}", pay.HandlePublic)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "ekmivo-api"})
 	})
@@ -84,33 +87,33 @@ func newHandlerWithCheckout(repo *authz.Repository,pay *checkout.Service) http.H
 	// PG03: real credential verification, no simulated financial rows or writes.
 	// A valid key grants only its own environment and explicitly issued scope.
 	mux.HandleFunc("GET /v1/merchant/context", func(w http.ResponseWriter, r *http.Request) {
-		envs:=r.URL.Query()["environment"]
-		if len(envs)!=1 || (envs[0]!="sandbox"&&envs[0]!="live") {
-			merchantError(w,http.StatusBadRequest,"INVALID_ENVIRONMENT","One explicit sandbox or live environment is required",false)
+		envs := r.URL.Query()["environment"]
+		if len(envs) != 1 || (envs[0] != "sandbox" && envs[0] != "live") {
+			merchantError(w, http.StatusBadRequest, "INVALID_ENVIRONMENT", "One explicit sandbox or live environment is required", false)
 			return
 		}
-		if repo==nil {
-			merchantError(w,http.StatusServiceUnavailable,"AUTH_SERVICE_UNAVAILABLE","Authorization unavailable",true)
+		if repo == nil {
+			merchantError(w, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "Authorization unavailable", true)
 			return
 		}
-		credential,err:=repo.AuthenticateMerchant(r.Context(),r.Header.Get("Authorization"),authz.Environment(envs[0]),"payments:read")
-		if err!=nil {
+		credential, err := repo.AuthenticateMerchant(r.Context(), r.Header.Get("Authorization"), authz.Environment(envs[0]), "payments:read")
+		if err != nil {
 			switch {
-			case errors.Is(err,authz.ErrUnauthorized):
-				merchantError(w,http.StatusUnauthorized,"INVALID_API_KEY","Invalid or expired API key",false)
-			case errors.Is(err,authz.ErrForbidden):
-				merchantError(w,http.StatusForbidden,"SCOPE_OR_ENVIRONMENT_DENIED","Credential is not authorized for this scope or environment",false)
+			case errors.Is(err, authz.ErrUnauthorized):
+				merchantError(w, http.StatusUnauthorized, "INVALID_API_KEY", "Invalid or expired API key", false)
+			case errors.Is(err, authz.ErrForbidden):
+				merchantError(w, http.StatusForbidden, "SCOPE_OR_ENVIRONMENT_DENIED", "Credential is not authorized for this scope or environment", false)
 			default:
-				merchantError(w,http.StatusServiceUnavailable,"AUTH_SERVICE_UNAVAILABLE","Authorization unavailable",true)
+				merchantError(w, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "Authorization unavailable", true)
 			}
 			return
 		}
-		writeJSON(w,http.StatusOK,map[string]any{
-			"workspace_id":credential.WorkspaceID,
-			"environment":credential.Environment,
-			"key_id":credential.KeyID,
-			"scopes":credential.Scopes,
-			"financial_api_ready":false,
+		writeJSON(w, http.StatusOK, map[string]any{
+			"workspace_id":        credential.WorkspaceID,
+			"environment":         credential.Environment,
+			"key_id":              credential.KeyID,
+			"scopes":              credential.Scopes,
+			"financial_api_ready": false,
 		})
 	})
 	mux.HandleFunc("GET /v1/session", func(w http.ResponseWriter, r *http.Request) {
@@ -209,21 +212,25 @@ func main() {
 		defer db.Close()
 	}
 	checkout.SetAllowedOrigin(os.Getenv("GO_WEB_ORIGIN"))
- if os.Getenv("GO_WEB_ORIGIN")=="" { checkout.SetAllowedOrigin("https://ekmivo-web-masharzys-projects.vercel.app") }
- var pg05 *checkout.Service
- if dsn:=os.Getenv("PG05_SANDBOX_DATABASE_URL");dsn!="" {
-  ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second)
-  var err error
-  pg05,err=checkout.Start(ctx,repo,dsn,os.Getenv("AUTHZ_DATABASE_URL"),
-   []byte(os.Getenv("PG05_TOKEN_SECRET")),[]byte(os.Getenv("PG05_PAYER_SECRET")))
-  cancel()
-  if err!=nil {log.Fatal("PG05 checkout startup preflight failed: ",err)}
-  defer pg05.Close()
- }
- port := os.Getenv("PORT")
+	if os.Getenv("GO_WEB_ORIGIN") == "" {
+		checkout.SetAllowedOrigin("https://ekmivo-web-masharzys-projects.vercel.app")
+	}
+	var pg05 *checkout.Service
+	if dsn := os.Getenv("PG05_SANDBOX_DATABASE_URL"); dsn != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		var err error
+		pg05, err = checkout.Start(ctx, repo, dsn, os.Getenv("AUTHZ_DATABASE_URL"),
+			[]byte(os.Getenv("PG05_TOKEN_SECRET")), []byte(os.Getenv("PG05_PAYER_SECRET")))
+		cancel()
+		if err != nil {
+			log.Fatal("PG05 checkout startup preflight failed: ", err)
+		}
+		defer pg05.Close()
+	}
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	log.Printf("ekmivo-api listening on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, newHandlerWithCheckout(repo,pg05)))
+	log.Fatal(http.ListenAndServe(":"+port, newHandlerWithCheckout(repo, pg05)))
 }

@@ -206,6 +206,7 @@ try{
  // PG05: run only on the two disposable finance DBs used for PG04 CI.
  const pg05Env={...env,PG05_ALLOW_MIGRATION:"true",
   PG05_FINANCIAL_MIGRATION_FILE:new URL("../../../infra/migrations/0010_pg05_checkout.sql",import.meta.url).pathname,
+   PG05_INTEGRITY_MIGRATION_FILE:new URL("../../../infra/migrations/0012_pg05_source_integrity.sql",import.meta.url).pathname,
    PG05_LINKED_MIGRATION_FILE:new URL("../../../infra/migrations/0011_pg05_linked_sources.sql",import.meta.url).pathname};
  for(let i=0;i<2;i++)execFileSync("go",["run","./cmd/financial-migrate"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg05Env,timeout:100000
@@ -318,7 +319,7 @@ try{
    30000,"PG05 public linked checkout amount drift");
   await reject(reader,()=>reader.unsafe("UPDATE pg05_billing_sources SET amount_minor=1 WHERE id=$1::uuid",[doc.id]),"42501");
   await reject(reader,()=>reader.unsafe("SELECT pg05_create_linked_intent($1::uuid,$2,$3,$4,$5::uuid,$6,$7,$8,$9)",
-   [tenant,"sandbox","INVALID","order",randomUUID(),15,randomUUID(),hmac(),hmac()]),"P0002");
+   [tenant,"sandbox","INVALID","order",randomUUID(),15,randomUUID(),hmac(),hmac()]),"42501");
   const listed=await reader.begin(async tx=>{
    await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
    return (await tx.unsafe("SELECT pg05_merchant_list($1::uuid,$2) AS value",[tenant,"sandbox"]))[0].value;
@@ -446,6 +447,33 @@ try{
    const foreignList=await fetch(origin+"/v1/workspaces/"+randomUUID()+"/linked-sources?environment=sandbox",
     {headers:head("owner")});
    same(foreignList.status,403,"PG05 owner read foreign workspace over HTTP");
+   const detailResponse=await fetch(merchantRoot+"/payment-intents/"+linkedBody.id+"?environment=sandbox",{headers:head("viewer")});
+   same(detailResponse.status,200,"PG05 viewer failed immutable detail read");
+   const details=(await detailResponse.json()).data;
+   same(details.amount_minor,6800,"PG05 detail amount differs from linked source");
+   same(details.items,docReq.items,"PG05 detail lost immutable line items");
+   same(details.events[0].event_type,"created","PG05 detail missing issuance history");
+   const duplicateEnv=await fetch(intentUrl+"&environment=live",{headers:head("owner")});
+   same(duplicateEnv.status,400,"PG05 duplicate environments accepted");
+   const wrongSourcePayload={...docReq,source_reference:"BAD-TITLE-"+randomUUID(),items:[{title:123,quantity:1,unit_amount_minor:1}]};
+   same((await fetch(endpoint,{method:"POST",headers:head("owner"),body:JSON.stringify(wrongSourcePayload)})).status,422,"PG05 accepted nontext line description");
+   const raceDocResponse=await fetch(endpoint,{method:"POST",headers:head("editor"),body:JSON.stringify({...docReq,source_reference:"RACE-"+randomUUID()})});
+   const raceDoc=await raceDocResponse.json();
+   const racePayload={...linkedPayload,merchant_reference:"RACE-PAY-"+randomUUID(),order_id:raceDoc.id};
+   const racing=await Promise.all(Array.from({length:5},()=>fetch(intentUrl,{method:"POST",headers:{...head("editor"),"Idempotency-Key":randomUUID()},body:JSON.stringify(racePayload)})));
+   same(racing.filter(r=>r.status===201).length,1,"PG05 parallel source issuance created competing checkouts");
+   same(racing.filter(r=>r.status===409).length,4,"PG05 competing source issuance did not return conflicts");
+   await reject(reader,()=>reader.unsafe("SELECT pg05_create_linked_intent($1::uuid,$2,$3,$4,$5::uuid,$6,$7,$8,$9)",
+    [tenant,"sandbox","UNSCOPED","order",editorDoc.id,15,randomUUID(),hmac(),hmac()]),"42501");
+   await reject(reader,()=>reader.unsafe("SELECT pg05_create_linked_intent_v1($1::uuid,$2,$3,$4,$5::uuid,$6,$7,$8,$9)",
+    [tenant,"sandbox","BYPASS","order",editorDoc.id,15,randomUUID(),hmac(),hmac()]),"42501");
+   const limited=await Promise.all(Array.from({length:25},()=>fetch(url+"/lock",{method:"POST",headers:{Origin:origin,"Content-Type":"application/json"},body:JSON.stringify({payer_number:"01712345678",method:"bkash"})})));
+   ok(limited.some(r=>r.status===429),"PG05 public lock has no effective rate budget");
+   same(limited.find(r=>r.status===429).headers.get("Retry-After"),"60","PG05 rate limit missing retry hint");
+   if(process.env.PG05_BROWSER_TESTS==="true"){
+    const {runPG05Browser}=await import("./pg05-browser-evidence.mjs");
+    await runPG05Browser({control,goOrigin:origin,tenant,sessions,token:httpToken});
+   }
    console.log("PG05 Go HTTP PASS: owner/editor/viewer, scoped linked source amount+idempotency, token/payer/origin, live fail-closed");
   }finally{child.kill("SIGTERM")}
   console.log("PG05 PASS: standalone and immutable linked snapshots, tenant scope, payer locking, cancellation, idempotency");

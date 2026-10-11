@@ -3,7 +3,7 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
 type Locale="en"|"bn";
 type Checkout={
- id:string; merchant_reference:string;amount_minor:number;currency:string;
+ id:string; merchant_name:string;source_reference?:string;items?:{title:string;quantity:number;unit_amount_minor:number}[]; merchant_reference:string;amount_minor:number;currency:string;
  environment:string;created_at:string;expires_at:string;server_time:string;state:string;
  payer_suffix:string|null;method:string|null;methods:string[];
  destination:string|null;verification_available:boolean;
@@ -25,6 +25,8 @@ function remaining(iso:string,now:number){
 }
 function describe(code:string,bn:boolean){
  const labels:Record<string,[string,string]>={
+ OFFLINE:["You are offline. Showing the last server result; reconnect to refresh.","সংযোগ নেই। সর্বশেষ তথ্য দেখানো হচ্ছে; সংযোগ ফিরলে আবার দেখুন।"],
+ RATE_LIMITED:["Too many requests. Wait one minute before retrying.","এক মিনিট অপেক্ষা করে আবার চেষ্টা করুন।"],
  NOT_FOUND:["This checkout link is invalid or no longer available.","লিংকটি ভুল বা এই checkout আর উপলব্ধ নেই।"],
  LOCKED_OR_EXPIRED:["This request expired or was cancelled. No payment was verified.","রিকোয়েস্টটির মেয়াদ শেষ বা বাতিল। কোনো পেমেন্ট যাচাই হয়নি।"],
  CONFLICT:["This payer or receiving route has a conflicting active attempt. Do not resend money.","প্রেরক/মাধ্যমের অন্য একটি সক্রিয় পেমেন্ট রয়েছে। পুনরায় টাকা পাঠাবেন না।"],
@@ -47,20 +49,26 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
  const [updated,setUpdated]=useState<number|null>(null);
  const [copied,setCopied]=useState(false);
  const live=useRef(true);
+ const sequence=useRef(0);
+ const latest=useRef<Checkout|null>(null);
  const route="/api/checkout/"+token;
  const refresh=useCallback(async(signal?:AbortSignal)=>{
+  const request=++sequence.current;
   try{
    const response=await fetch(route,{cache:"no-store",signal});
    const json=await response.json();
    if(!response.ok)throw {status:response.status,code:json.error?.code||json.code};
-   if(!live.current)return;
+   if(!live.current||request!==sequence.current)return;
    const timestamp=Date.parse((json as Checkout).server_time);
    setServerOffset(Number.isFinite(timestamp)?timestamp-Date.now():0);
+   latest.current=json as Checkout;
    setInfo(json as Checkout);setStatus("ready");setCode("");setUpdated(Date.now());
   }catch(err){
-   if(signal?.aborted||!live.current)return;
+   if(signal?.aborted||!live.current||request!==sequence.current)return;
    const e=err as {status?:number;code?:string};
-   setCode(e.code||"CHECKOUT_SERVICE_UNAVAILABLE");
+   setCode(!navigator.onLine?"OFFLINE":e.code||"CHECKOUT_SERVICE_UNAVAILABLE");
+   if(e.status===404){latest.current=null;setInfo(null)}
+   if(latest.current&&e.status!==404){setStatus("ready");return;}
    setStatus(e.status===404?"missing":typeof navigator!=="undefined"&&!navigator.onLine?"offline":"error");
   }
  },[route]);
@@ -70,6 +78,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
   void Promise.resolve().then(()=>refresh(controller.signal));
   return ()=>{live.current=false;controller.abort();};
  },[refresh]);
+ useEffect(()=>{const online=()=>void refresh();const offline=()=>setCode("OFFLINE");window.addEventListener("online",online);window.addEventListener("offline",offline);return ()=>{window.removeEventListener("online",online);window.removeEventListener("offline",offline)};},[refresh]);
  useEffect(()=>{
   const tick=window.setInterval(()=>setClock(Date.now()),1000);
   return ()=>window.clearInterval(tick);
@@ -84,6 +93,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
   e.preventDefault();
   if(locking||!info)return;
   if(!window.confirm(bn?"এটি কি যে নম্বর থেকে টাকা পাঠাবেন? একবার লক হলে পরিবর্তন করা যাবে না।":"Is this the actual number you will pay from? Once locked, it cannot be edited."))return;
+  sequence.current++;
   setLocking(true);setCode("");
   try{
    const response=await fetch(route,{method:"POST",headers:{"Content-Type":"application/json"},
@@ -92,10 +102,11 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
    if(!response.ok)throw {code:json.error?.code||json.code,status:response.status};
    const timestamp=Date.parse((json as Checkout).server_time);
    setServerOffset(Number.isFinite(timestamp)?timestamp-Date.now():0);
+   latest.current=json as Checkout;sequence.current++;
    setInfo(json as Checkout);setStatus("ready");setUpdated(Date.now());setPayer("");
   }catch(err){
    const e=err as {code?:string};
-   setCode(e.code||"CHECKOUT_SERVICE_UNAVAILABLE");
+   setCode(!navigator.onLine?"OFFLINE":e.code||"CHECKOUT_SERVICE_UNAVAILABLE");
   }finally{setLocking(false);}
  }
  const amount=info?new Intl.NumberFormat(bn?"bn-BD":"en-BD",{currency:"BDT",style:"currency"}).format(info.amount_minor/100):"—";
@@ -124,13 +135,16 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
    {info&&status==="ready"&&<div className="pg05-checkout-grid">
     <section className="pg05-checkout-card">
      <div className="pg05-summary-overline"><span>{bn?"অবস্থা":"STATE"}</span><span className="pg05-state" data-state={state}>{title}</span></div>
+     <p><strong>{info.merchant_name}</strong></p>
      <p className="pg05-muted">{bn?"রেফারেন্স":"Merchant reference"}</p>
      <h2 className="pg05-reference">{info.merchant_reference}</h2>
+     {info.source_reference&&<p>{bn?"নথি":"Document"}: {info.source_reference}</p>}
+     {info.items&&<ul>{info.items.map((line,index)=><li key={index}>{line.title} — {line.quantity} × {new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(line.unit_amount_minor/100)}</li>)}</ul>}
      <div className="pg05-amount"><span>{bn?"পরিশোধযোগ্য":"Exact amount"}</span><strong>{amount}</strong></div>
      <dl className="pg05-summary">
       <div><dt>{bn?"পেমেন্ট মাধ্যম":"Method"}</dt><dd>{info.method?methods[info.method]||info.method:(bn?"পছন্দ করা হয়নি":"Not selected")}</dd></div>
       <div><dt>{bn?"প্রেরক নম্বর":"Sending number"}</dt><dd>{info.payer_suffix?"••••"+info.payer_suffix:(bn?"নির্বাচিত নয়":"Not confirmed")}</dd></div>
-      <div><dt>{bn?"মেয়াদ":"Expires"}</dt><dd><time dateTime={info.expires_at}>{new Date(info.expires_at).toLocaleString(bn?"bn-BD":"en-BD")}</time></dd></div>
+      <div><dt>{bn?"মেয়াদ":"Expires"}</dt><dd><time dateTime={info.expires_at}>{new Date(info.expires_at).toLocaleString(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",timeZoneName:"short"})}</time></dd></div>
      </dl>
      <div className="pg05-timer" role="timer" aria-label={bn?"অবশিষ্ট সময়":"Time remaining"}>{["requires_payer","awaiting_payment"].includes(state)?remaining(info.expires_at,serverClock):"—"}</div>
     </section>
@@ -138,7 +152,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
      {canLock&&<>
       <h2>{bn?"প্রকৃত প্রেরকের নম্বর লক করুন":"Lock your actual sending number"}</h2>
       <p>{bn?"আপনি নিজে যে মোবাইল নম্বর থেকে টাকা পাঠাবেন, সেটি দিন। কোনো গ্রাহকের contact নম্বর অনুমান করা হয় না।":"Enter the full mobile number you would send money from. A customer's contact number is never assumed to be the payer."}</p>
-      <form onSubmit={lock} className="pg05-form">
+      <form onSubmit={lock} className="pg05-form"><fieldset disabled={locking||code==="OFFLINE"}>
        <label>{bn?"পেমেন্ট মাধ্যম":"Payment method"}
         <select value={method} onChange={e=>setMethod(e.target.value)}>
          {(info.methods||[]).map(option=><option key={option} value={option}>{methods[option]||option}</option>)}
@@ -147,13 +161,13 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
         <input required type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={payer} onChange={e=>setPayer(e.target.value)} placeholder="017XXXXXXXX" aria-describedby="pg05-payer-hint"/>
         <small id="pg05-payer-hint">{bn?"১১ সংখ্যার পূর্ণ বাংলাদেশি মোবাইল নম্বর; বাংলা সংখ্যাও গ্রহণযোগ্য।":"Full 11-digit Bangladesh mobile number; Bengali digits accepted."}</small></label>
        <button className="ek-action" type="submit" disabled={locking||!info.methods?.length}>{locking?(bn?"সংরক্ষণ হচ্ছে…":"Securing…"):(bn?"নম্বর ও মাধ্যম নিশ্চিত করুন":"Confirm number and method")}</button>
-      </form></>}
+      </fieldset></form></>}
      {state==="awaiting_payment"&&<>
       <h2>{bn?"প্রেরক নম্বর নিশ্চিত হয়েছে":"Payer and route locked"}</h2>
       <p>{bn?"আপনার নম্বর, মাধ্যম, পরিমাণ ও সময়সীমা অপরিবর্তনীয় রাখা হয়েছে। কিন্তু কোনো টাকা যাচাই হয়নি।":"Your payer, method, amount and time window are immutable. No funds have been verified."}</p>
       <div className="pg05-simulated"><strong>{bn?"শুধু পরীক্ষামূলক গন্তব্য":"SIMULATED DESTINATION ONLY"}</strong>
        <p>{info.destination||"SIMULATED — DO NOT SEND MONEY"}</p>
-       <small>{bn?"কোনো বাস্তব নম্বরে টাকা পাঠাবেন না। পেমেন্ট শনাক্তকরণ PG06/PG07-তে যুক্ত হবে।":"Never send funds to a real number. Automated receipt matching is not connected until PG06/PG07."}</small></div>
+       <small>{bn?"কোনো বাস্তব নম্বরে টাকা পাঠাবেন না। পেমেন্ট শনাক্তকরণ এখনও সংযুক্ত হয়নি।":"Never send funds to a real number. Automated receipt matching is not connected."}</small></div>
       <p role="status">{bn?"টাকা পাওয়ার প্রমাণ পাওয়া যায়নি। নিজের থেকে পেমেন্ট নিশ্চিত করার বোতাম নেই।":"No verified receipt yet. There is no self-approval button."}</p>
      </>}
      {state==="processing"&&<><h2>{title}</h2><p>{bn?"সার্ভার পেমেন্টের প্রমাণ যাচাই করছে।":"The server is examining actual payment evidence."}</p></>}
