@@ -32,7 +32,7 @@ func inspectDSN(raw string)(string,string,error){
 func validateIndependent(sandbox,live string)error{
  a,au,err:=inspectDSN(sandbox);if err!=nil{return err}
  b,bu,err:=inspectDSN(live);if err!=nil{return err}
- if a==b||au==""||bu==""{return errors.New("sandbox/live must use separate named financial databases and credentials")}
+ if a==b||au==""||bu==""||au==bu{return errors.New("sandbox/live must use separate named financial databases and credentials")}
  if strings.HasSuffix(a,"/ekmivo")||strings.HasSuffix(b,"/ekmivo"){
   return errors.New("refusing the control-plane database")
  }
