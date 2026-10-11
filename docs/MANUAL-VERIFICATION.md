@@ -194,3 +194,6 @@ The two independently observed PG02 UI defects and two PG03 runtime/contract blo
 
 ### Owner confirmation — 2026-10-11
 Owner reported **All pass** for the supplied PG01/PG02/PG03 combined checklist. Record this as owner-reported browser smoke, not agent-observed physical authenticator/device/provider testing. PG01 security lifecycle was independently repeated against deployed HTTP with dedicated fixtures: 51/51 PASS, cleanup included; existing owner enrollment/recovery data were untouched. The owner subsequently deferred admin UI work. Admin UI expansion remains out of this checkpoint. PG02 route latency and full-shell loading were reported separately and are being corrected; do not erase that performance follow-up.
+
+### PG04 independent automated follow-up
+The owner authorized dependency-independent PG04 verification hardening while PG05 runs separately. Populated isolation, invalid-receipt negatives, true competing-connection guards, actual concurrent idempotent domain/job writes and explicit rollback-job checks are implemented; CI result pending. These are automated technical checks, not extra tests delegated to the owner. Original production/operator/device manual entries remain open.

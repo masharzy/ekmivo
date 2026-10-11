@@ -295,6 +295,8 @@ try{
  }catch(e){if(e!==rollback)throw e}
  same((await db`SELECT count(*)::int n FROM payment_intents WHERE workspace_id=${workspace}::uuid`)[0].n,0,
   "rolled-back financial fixture leaked");
+ const {verifyPG04Guards}=await import("./pg04-guard-matrix.mjs");
+ count+=await verifyPG04Guards({ds,dbs,controls});
  execFileSync("go",["test","./internal/financial","./cmd/financial-migrate","./cmd/worker","-count=1","-v"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env,timeout:100000
  });

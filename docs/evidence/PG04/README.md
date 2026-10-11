@@ -48,3 +48,9 @@ The second-precision time guard now excludes window_end consistently with issuan
 
 ### Boundary fix acceptance evidence
 Source 1bf4581c216e7cf1bc3aaa56c679591967b5e14b: [CI 38142699483](https://github.com/masharzy/ekmivo/actions/runs/38142699483) all 4/4 jobs PASS; actual PostgreSQL finance/River assertions 58/58, including all six new boundary cases. Owner authorized correction and merge of this implementation milestone. Remaining technical review cases are explicitly pending in INDEPENDENT-REVIEW.md; no production financial deployment is claimed. This documentation-only follow-up preserves tested application-source equivalence.
+
+### PG04 independent automated verification hardening — 2026-10-11
+
+Owner requested dependency-independent work while another agent implements PG05. Full PG05–PG17 work packages remain serially dependent; this branch completes the outstanding PG04 automated review checks without changing PG05 routes/UI/schema or production data. Scope: PG04 / F02,F06,P02 / S31,S32,S34.
+
+Implemented populated two-tenant restricted-reader positive/wrong-tenant/no-context/wrong-realm/pool-reuse checks in both physical realms; individually invalid receipt field/source/direction/precision/policy/currency cases with rollback balance assertions; missing outbox job and cross-tenant allocation denials; real competing-connection attempt/funds/intent-cap races; 12-way first-use idempotency with actual intent/outbox/River job and explicit orphan-job absence after rollback. CI verification is pending. Local integration tests require disposable PostgreSQL and skip without it; do not label unit tests as database PASS. No Docker or migration is run on the owner laptop. Production rollout/provider/device verification remains OPEN.
