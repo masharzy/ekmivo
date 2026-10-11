@@ -26,7 +26,7 @@ try{
  // CI has already applied migrations 0001–0007 using the same disposable DB.
  const existing=await db`SELECT to_regclass('public.merchant_api_keys') IS NOT NULL AS exists`;
  ok(existing[0].exists,"PG03 prerequisite missing");
- await db.unsafe(migration);
+ await db.unsafe(migration).simple();
  const names=["financial_receiving_accounts","payment_intents","payment_attempts",
   "financial_inbound_events","financial_receipt_observations","financial_payments",
   "financial_allocations","financial_idempotency","financial_outbox","financial_jobs"];
@@ -144,6 +144,6 @@ try{
  same(rows[0].n,0,"financial fixture transaction leaked");
  console.log("PG04 PASS:",assertions,"assertions; local migrations, FORCE RLS, tenant/env, monetary caps, immutability, job leases, Go integration");
 }catch(err){
- console.error("PG04 FAIL:",err instanceof Error?err.message.replace(/postgres(?:ql)?:\/\/[^\s]+/g,"[redacted]"):"unknown");
+ console.error("PG04 FAIL:",err instanceof Error?err.message.replace(/postgres(?:ql)?:\/\/[^\s]+/g,"[redacted]"):"unknown","code:",err?.code,"position:",err?.position,"where:",err?.where);
  process.exitCode=1;
 }finally{await db.end({timeout:3})}
