@@ -95,8 +95,14 @@ func (s *Store) Execute(
    VALUES($1::uuid,$2,$3,$4,$5,$6,$7::jsonb)`,
   workspace,environment,operation,key,DigestRequest(request),result.Status,string(result.Body))
  if err!=nil{return zero,fmt.Errorf("%w: idempotency commit record",ErrUnavailable)}
+ // Return the database-normalized, committed JSONB representation on BOTH
+ // initial success and replay: byte-identical API responses and no drift.
+ err=tx.QueryRowContext(ctx,`SELECT result_body FROM financial_idempotency
+  WHERE workspace_id=$1::uuid AND environment=$2 AND operation=$3 AND idempotency_key=$4`,
+  workspace,environment,operation,key).Scan(&body)
+ if err!=nil{return zero,fmt.Errorf("%w: committed response read",ErrUnavailable)}
  if err=tx.Commit();err!=nil{return zero,fmt.Errorf("%w: transaction commit",ErrUnavailable)}
- return result,nil
+ return Result{Status:result.Status,Body:body},nil
 }
 
 // EnqueueTx requires the SAME transaction as its domain mutation. Event key
