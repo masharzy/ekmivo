@@ -250,7 +250,9 @@ try{
    await tx`INSERT INTO financial_allocations(workspace_id,environment,payment_id,intent_id,amount_minor)
     VALUES(${workspace}::uuid,'sandbox',${payment}::uuid,${intent}::uuid,5000)`;
    await reject(tx,()=>tx`INSERT INTO financial_allocations(workspace_id,environment,payment_id,intent_id,amount_minor)
-    VALUES(${workspace}::uuid,'sandbox',${payment}::uuid,${intent}::uuid,4000)`,"23505");
+    VALUES(${workspace}::uuid,'sandbox',${payment}::uuid,${intent}::uuid,4000)`,"23514");
+   await reject(tx,()=>tx`INSERT INTO financial_allocations(workspace_id,environment,payment_id,intent_id,amount_minor)
+    VALUES(${workspace}::uuid,'sandbox',${payment}::uuid,${intent}::uuid,1000)`,"23505");
    throw rollback;
   });
  }catch(e){if(e!==rollback)throw e}
