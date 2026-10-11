@@ -245,7 +245,7 @@ try{
  // The worker REALLY dies after River transitions a durable job to running.
  // A fresh process must subsequently recover the unacknowledged job itself.
  const queued=(await db`SELECT j.id FROM river_job j JOIN financial_outbox o ON o.river_job_id=j.id
-  WHERE o.event_kind='pg04.audit' AND o.workspace_id<>${workspace}::uuid ORDER BY j.id DESC LIMIT 1`);
+  WHERE o.event_kind='pg04_audit' AND o.workspace_id<>${workspace}::uuid ORDER BY j.id DESC LIMIT 1`);
  ok(queued.length===1,"Go River test did not durably commit an audit job");
  const target=queued[0].id;
  const runner="/tmp/ekmivo-pg04-worker";
