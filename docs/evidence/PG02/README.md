@@ -62,3 +62,29 @@ PG06 signer/validation and AN03 Kotlin application source stay **partial and una
 - **Remaining owner/manual:** account and dashboard draft Save/Discard/Stay, focus restoration, product ON/OFF as owner and denial for nonadmin, two-browser profile/revoke session, theme/locale + 320/768/1440px + 200% zoom, denied deep links and Vercel deployment parity. [Single manual register](../../MANUAL-VERIFICATION.md). External payment/provider/evidence/user-message data, record search and notifications remain later PG deliverables, not fake PG02 completions.
 
 **Source implementation is the PG02 bounded shell/control-plane scope, not the later PG09 payment table or PG13 event service. Financial readiness remains disabled until its PG gates.**
+
+
+## PG02 hardening / regression ledger — 2026-10-11 (pending PR review)
+
+This pass is intentionally based on a **new branch from current `main`**, rather than merging stale branch changes that would overwrite the concurrent profile/drawer/disabled-business fixes. PG01's parallel work and production accounts are untouched.
+
+**New implementation:**
+- Global command search includes **business-switch shortcuts only from `workspacesFor(user.id)`** (server-authenticated membership list). EN/BN business names, keyboard arrows/Enter and combobox active-descendant IDs included; no speculative payment, customer or historical financial record lookup. Search is still not a payment data search; that requires later PG endpoints.
+- Workspace onboarding now handles `ekmivo:guarded-navigation` emitted by locale controls: a dirty business form triggers Save draft / Discard / Stay and does not silently navigate/change language.
+- Sandbox/Live remembered preference is persisted **after authorized route context commits**, not before the unsaved-draft decision. Cancelling a switch leaves the stored preference intact; cross-environment record identifiers are not transferred.
+- Search dialogs close on a current or both-disabled business selection; concurrent Both Off draft-guard and mobile drawer focus fixes on `main` are preserved.
+- Confirmed server profile-name saves clear stale tab-local name drafts, avoiding restoration of an obsolete value.
+
+**Regression coverage:** extended `pg02-navigation-smoke.mjs` tests membership-only business search including Bengali; added `pg02-onboarding-guard-smoke.mjs` (actual TSX component event intercept under isolated JS hooks) and made it a mandatory `web` CI step. Existing PG02 navigation, locale, draft, product, tenant, account and Go/RLS checks remain required. **CI run and browser/device outcomes must be recorded after execution; writing code is not a passing test.**
+
+**Deployment parity observation:** Vercel project `ekmivo-web` (`prj_LVQsrrOUH8f2xjp5MlqFCugqbP2j`) reported latest **READY production** deployment [dpl_dKKR6HPvQ9TtsQnEmwNpxH5vQTMa](https://vercel.com/masharzys-projects/ekmivo-web/dKKR6HPvQ9TtsQnEmwNpxH5vQTMa) at source `b2a7b0dc1b3a09587e4b41f548ee9c3bd95b7c84`. During this pass `main` had advanced to `c31b65386e9e3c470c5ac6b0a231d4968b7a83e5`; the production deployment was **behind source**. This pass's branch is not claimed deployed. Before sign-off, compare production `meta.githubCommitSha` to the merged release SHA, and use two owner-controlled accounts to test authorized browser behavior.
+
+**Manual-only reproductions** (use disposable owner/admin/viewer accounts and a second business, not a production payment or admin account):
+1. Open `/bn/workspaces`, enter an unsaved business name, switch EN in the site language control; **Stay** must retain form + URL, **Save draft** must allow route navigation and later Restore must recover only that account's draft, **Discard** must drop the unsaved name. Repeat with actual links.
+2. From an authorized business `/en/w/{id}/payments/overview?env=sandbox`, open Ctrl/⌘K; type a distinct authorized business name, arrows/Enter select the right business and focus returns on Escape. Unknown business names must not surface. Validate mobile 320px.
+3. From an editable dashboard form when added, modify a field, choose Live then **Stay**; the address and remembered sandbox preference must not change. Save/Discard must permit only the chosen authorized environment. Avoid claiming this check passed while the later PG form backend does not exist.
+4. Toggle both products off in a second business, then switch to it with an open draft; confirm the same Save/Discard/Stay gate and disabled-state explanation (never a fake empty payment list).
+5. Update real test profile name, refresh, Restore tab draft and revoke other test-browser sessions; current browser remains signed in, revoked browser is denied.
+6. Repeat keyboard-only, touch, EN/BN with Light/Dark/System + OS change, zoom 200%, widths 320/768/1440, back/forward, malformed env, suspended membership, offline/forbidden/loading/error/empty and screen-reader output.
+
+**Status:** PG02 functional source hardening added, final CI + production deploy parity + browser/device matrix still open. PG03–PG09 backend record/payment actions and PG13 notification streams are *dependency-owned*, not PG02 completion claims. Keep PG02 **OPEN** until its genuine required gates are verified.
