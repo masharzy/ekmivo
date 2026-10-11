@@ -54,6 +54,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  const [sourceLoad,setSourceLoad]=useState<"loading"|"ready"|"error">("loading");
  const [sourceDraft,setSourceDraft]=useState<SourceDraft>(initialSource);
  const [extraLines,setExtraLines]=useState<SourceLine[]>([]);
+ const [sourceBase,setSourceBase]=useState<{draft:SourceDraft;lines:SourceLine[]}>({draft:initialSource,lines:[]});
  const [sourceBusy,setSourceBusy]=useState(false);
  const [sourceError,setSourceError]=useState("");
  const [load,setLoad]=useState<LoadState>("loading");
@@ -69,27 +70,37 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  const [copied,setCopied]=useState("");
  const keyRef=useRef("");
  const stateRef=useRef({fields,base:draftBase,expanded});
+ const sourceRef=useRef({draft:sourceDraft,lines:extraLines,base:sourceBase});
  useEffect(()=>{stateRef.current={fields,base:draftBase,expanded}},[fields,draftBase,expanded]);
+ useEffect(()=>{sourceRef.current={draft:sourceDraft,lines:extraLines,base:sourceBase}},[sourceDraft,extraLines,sourceBase]);
  const draftKey="ekmivo:pg05-request:v1:"+userId+":"+workspaceId+":"+environment;
  const api="/api/go/workspaces/"+workspaceId+"/payment-intents?environment="+environment;
  const sourcesApi="/api/go/workspaces/"+workspaceId+"/linked-sources?environment="+environment;
- const dirty=expanded&&JSON.stringify(fields)!==JSON.stringify(draftBase);
+ const dirty=(expanded&&JSON.stringify(fields)!==JSON.stringify(draftBase))||
+  JSON.stringify({draft:sourceDraft,lines:extraLines})!==JSON.stringify(sourceBase);
  useEffect(()=>registerDraft({
   id:"pg05:"+workspaceId+":"+environment,
   isDirty:()=>{
    const d=stateRef.current;
-   return d.expanded&&JSON.stringify(d.fields)!==JSON.stringify(d.base);
+   const source=sourceRef.current;
+   return (d.expanded&&JSON.stringify(d.fields)!==JSON.stringify(d.base))||
+    JSON.stringify({draft:source.draft,lines:source.lines})!==JSON.stringify(source.base);
   },
   save:async()=>{
    try{
     const d=stateRef.current;
+    const source=sourceRef.current;
     sessionStorage.setItem(draftKey,JSON.stringify(d.fields));
+    sessionStorage.setItem(draftKey+":source",JSON.stringify({draft:source.draft,lines:source.lines}));
     setDraftBase({...d.fields});
+    setSourceBase({draft:{...source.draft},lines:source.lines.map(x=>({...x}))});
     return true;
    }catch{return false;}
   },
   discard:()=>{
    setFields({...stateRef.current.base});
+   const source=sourceRef.current.base;
+   setSourceDraft({...source.draft});setExtraLines(source.lines.map(x=>({...x})));
    keyRef.current="";
   }
  }),[workspaceId,environment,draftKey]);
@@ -131,7 +142,9 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  const saveDraft=()=>{
   try{
    sessionStorage.setItem(draftKey,JSON.stringify(fields));
+   sessionStorage.setItem(draftKey+":source",JSON.stringify({draft:sourceDraft,lines:extraLines}));
    setDraftBase({...fields});
+   setSourceBase({draft:{...sourceDraft},lines:extraLines.map(x=>({...x}))});
    setNotice(bn?"খসড়া শুধু এই ট্যাবে সংরক্ষিত। কোনো পেমেন্ট রিকোয়েস্ট তৈরি হয়নি।":"Draft saved only in this tab. No payment request was created.");
   }catch{setError(bn?"এই ব্রাউজারে খসড়া রাখা যাচ্ছে না।":"Cannot save a draft in this browser.")}
  };
@@ -143,6 +156,15 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    if(typeof value.reference!=="string"||typeof value.amount!=="string"||!["5","10","15","30","60"].includes(value.expiry))throw Error("bad draft");
    const restored:Fields={...empty,...value};
    if(!["standalone","order","invoice"].includes(restored.sourceKind)||typeof restored.sourceId!=="string")throw Error("bad source");
+   const rawSource=sessionStorage.getItem(draftKey+":source");
+   if(rawSource){
+    const parsed=JSON.parse(rawSource) as {draft:SourceDraft;lines:SourceLine[]};
+    const validLine=(line:SourceLine)=>typeof line?.title==="string"&&typeof line?.quantity==="string"&&typeof line?.unitPrice==="string";
+    if(!["order","invoice"].includes(parsed.draft?.kind)||typeof parsed.draft.reference!=="string"||
+     !validLine(parsed.draft)||!Array.isArray(parsed.lines)||parsed.lines.length>19||!parsed.lines.every(validLine))throw Error("bad source draft");
+    setSourceDraft(parsed.draft);setExtraLines(parsed.lines);
+    setSourceBase({draft:parsed.draft,lines:parsed.lines});
+   }
    setFields(restored);setDraftBase(restored);setExpanded(true);keyRef.current="";
    setNotice(bn?"খসড়া ফিরেছে; এটি এখনও জমা দেওয়া হয়নি।":"Draft restored; not submitted.");
   }catch{setError(bn?"খসড়াটি ফিরিয়ে আনা যায়নি।":"Unable to restore the draft.")}
@@ -213,6 +235,8 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    if(!response.ok)throw {code:body.error?.code||body.code};
    const issued=body as Source;
    setSourceDraft(initialSource);setExtraLines([]);
+   setSourceBase({draft:initialSource,lines:[]});
+   try{sessionStorage.removeItem(draftKey+":source")}catch{}
    setFields(prev=>({...prev,sourceKind:issued.source_kind,sourceId:issued.id}));
    setExpanded(true);
    setNotice(bn?"সার্ভার নথির মোট হিসাব করেছে; কোনো পেমেন্ট হয়নি।":"Server-priced document issued; no payment occurred.");
@@ -306,6 +330,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     <p className="pg05-muted">{bn?"সর্বোচ্চ ২০টি লাইন; সার্ভারই মোট মূল্য হিসাব করবে এবং ইস্যু করা নথি পরিবর্তন করা যাবে না।":"Up to 20 lines. The server computes and locks the issued document total, regardless of any client preview."}</p>
     <button className="ek-action" type="submit" disabled={sourceBusy||environment==="live"}>{sourceBusy?(bn?"ইস্যু হচ্ছে…":"Issuing…"):(bn?"নথি ইস্যু করুন":"Issue document")}</button>
     {sourceError&&<p role="alert" className="ek-form-error">{sourceError}</p>}
+    {dirty&&<p role="status" className="pg05-muted">{bn?"নথি বা রিকোয়েস্টে সংরক্ষণ না করা পরিবর্তন আছে।":"Unsaved document or request changes."}</p>}
    </form>
   </section>
   <section className="ds-panel pg05-section">
