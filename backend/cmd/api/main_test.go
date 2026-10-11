@@ -22,3 +22,20 @@ func TestHealthIsLiveButFinancialReadinessIsNot(t *testing.T){
  if err:=json.Unmarshal(ready.Body.Bytes(),&state);err!=nil{t.Fatal(err)}
  if state["status"]!="not_ready"||state["reason"]!="financial_services_not_implemented"{t.Fatalf("readiness misrepresented: %#v",state)}
 }
+
+func TestPG03MerchantContextIsRealAuthorizationNotFakePayment(t *testing.T){
+ handler:=newHandler()
+ for _,tc:=range []struct{path string;status int;code string}{
+  {"/v1/merchant/context",400,"INVALID_ENVIRONMENT"},
+  {"/v1/merchant/context?environment=LIVE",400,"INVALID_ENVIRONMENT"},
+  {"/v1/merchant/context?environment=sandbox&environment=live",400,"INVALID_ENVIRONMENT"},
+  {"/v1/merchant/context?environment=live",503,"AUTH_SERVICE_UNAVAILABLE"},
+ }{
+  recorder:=httptest.NewRecorder()
+  handler.ServeHTTP(recorder,httptest.NewRequest(http.MethodGet,tc.path,nil))
+  if recorder.Code!=tc.status{t.Fatalf("%s: got %d expected %d",tc.path,recorder.Code,tc.status)}
+  var response struct{ Error struct{Code string `json:"code"`} `json:"error"` }
+  if err:=json.Unmarshal(recorder.Body.Bytes(),&response);err!=nil{t.Fatal(err)}
+  if response.Error.Code!=tc.code{t.Fatalf("%s: got code %s expected %s",tc.path,response.Error.Code,tc.code)}
+ }
+}
