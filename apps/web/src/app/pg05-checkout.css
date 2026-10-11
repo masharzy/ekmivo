@@ -1,0 +1,65 @@
+/* PG05. Token-only Ink & Bone checkout and merchant operations. */
+.pg05-merchant{display:grid;gap:24px}
+.pg05-section{display:grid;gap:22px}
+.pg05-topline{display:flex;align-items:start;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.pg05-topline h2{font-size:clamp(21px,2vw,26px);margin:2px 0 8px}
+.pg05-topline p{color:var(--color-text-secondary);margin:5px 0 0;max-width:650px}
+.pg05-topline .ek-action{flex-shrink:0}
+.pg05-banner{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;border:1px solid var(--color-control-border);background:var(--color-surface-subtle);color:var(--color-text);padding:14px 16px;border-radius:8px;line-height:1.6}
+.pg05-warning{flex-direction:column;align-items:stretch}
+.pg05-warning strong{letter-spacing:.02em}
+.pg05-form{display:grid;gap:17px}
+.pg05-form label,.pg05-two label{display:grid;gap:7px;font-size:14px;font-weight:600;color:var(--color-text)}
+.pg05-form input,.pg05-form select,.pg05-two input,.pg05-two select{width:100%;min-width:0;min-height:44px;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-control-border);border-radius:6px;padding:11px 13px}
+.pg05-form small,.pg05-two small{font-weight:400;color:var(--color-text-secondary);line-height:1.5}
+.pg05-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.pg05-disabled-field{padding:12px;border:1px dashed var(--color-border);border-radius:8px;display:grid;gap:7px;align-content:center;background:var(--color-surface-subtle)}
+.pg05-disabled-field strong{font-size:14px}
+.pg05-actions,.pg05-checkout-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pg05-actions button,.pg05-checkout-actions button,.pg05-checkout-foot button,.pg05-record a,.pg05-topline>button{border:1px solid var(--color-control-border);border-radius:6px;min-height:44px;background:var(--color-surface);color:var(--color-text);padding:10px 14px;font:inherit;text-decoration:none}
+.pg05-actions .ek-action,.pg05-topline .ek-action,.pg05-form .ek-action{background:var(--color-primary);color:var(--color-on-primary);border-color:var(--color-primary);min-height:44px}
+.pg05-actions button:disabled,.pg05-checkout button:disabled{opacity:.5;cursor:not-allowed}
+.pg05-records{display:grid;gap:12px}
+.pg05-record{display:grid;gap:12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:9px;padding:18px}
+.pg05-record-main,.pg05-record-meta{display:flex;justify-content:space-between;align-items:start;gap:18px;flex-wrap:wrap}
+.pg05-record-main>div{display:grid;gap:6px}
+.pg05-record-main strong{overflow-wrap:anywhere}
+.pg05-record-main small,.pg05-record-meta,.pg05-muted{color:var(--color-text-secondary);font-size:13px}
+.pg05-total{text-align:right}
+.pg05-state{font-weight:600;font-size:12px;display:inline-flex;align-items:center;width:fit-content;line-height:1.5;padding:3px 9px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface-subtle);color:var(--color-text)}
+.pg05-state[data-state="completed"]{color:var(--color-success);border-color:var(--color-success)}
+.pg05-state[data-state="cancelled"],.pg05-state[data-state="expired"]{color:var(--color-text-secondary)}
+.pg05-checkout{min-height:calc(100svh - 80px);padding:152px 20px 90px;background:var(--color-canvas);color:var(--color-text)}
+.pg05-checkout-wrap{max-width:1000px;margin:0 auto;display:grid;gap:24px}
+.pg05-checkout-back a{font-size:13px;color:var(--color-text-secondary);text-decoration:none}
+.pg05-checkout-heading h1{font-size:clamp(29px,5vw,48px);line-height:1.25;margin:8px 0}
+.pg05-checkout-heading p{max-width:650px;color:var(--color-text-secondary);line-height:1.7}
+.pg05-checkout-grid{display:grid;grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);gap:20px;align-items:start}
+.pg05-checkout-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:10px;padding:clamp(20px,3vw,32px);display:grid;gap:22px;min-width:0}
+.pg05-checkout-card h2{font-size:clamp(20px,2.5vw,26px);line-height:1.35;margin:0;overflow-wrap:anywhere}
+.pg05-checkout-card p{margin:0;line-height:1.65;color:var(--color-text-secondary)}
+.pg05-summary-overline{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:12px;font-weight:600}
+.pg05-reference{font-size:21px!important}
+.pg05-amount{border-block:1px solid var(--color-border);padding:21px 0;display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.pg05-amount span{font-size:14px}
+.pg05-amount strong{font-size:clamp(23px,3vw,33px);font-variant-numeric:tabular-nums}
+.pg05-summary{margin:0;display:grid;gap:16px}
+.pg05-summary>div{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.pg05-summary dt{color:var(--color-text-secondary)}
+.pg05-summary dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.pg05-timer{font:600 25px ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:.05em}
+.pg05-simulated{display:grid;gap:10px;padding:19px;border:1px dashed var(--color-control-border);border-radius:9px;background:var(--color-surface-subtle);overflow-wrap:anywhere}
+.pg05-simulated strong{font-size:12px;letter-spacing:.03em}
+.pg05-simulated small,.pg05-checkout-actions small{color:var(--color-text-secondary);line-height:1.6}
+.pg05-checkout-foot{border-top:1px solid var(--color-border);padding-top:22px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;color:var(--color-text-secondary);font-size:13px}
+.pg05-checkout-foot p{margin:0}
+@media(max-width:767px){
+ .pg05-checkout{padding:124px 16px 65px}
+ .pg05-checkout-grid,.pg05-two{grid-template-columns:minmax(0,1fr)}
+ .pg05-checkout-card{padding:20px}
+ .pg05-record-main,.pg05-record-meta{gap:8px}
+ .pg05-total{text-align:left}
+ .pg05-topline .ek-action{width:100%}
+ .pg05-actions button,.pg05-actions a{flex:1;min-width:130px;text-align:center}
+}
+@media(prefers-reduced-motion:reduce){.pg05-checkout *, .pg05-merchant *{scroll-behavior:auto!important;transition:none!important}}
