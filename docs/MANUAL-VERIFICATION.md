@@ -97,10 +97,18 @@
 
 ## PG05 — Checkout and payer lock
 
-- [ ] Create standalone sandbox request; checkout shows exact server amount, method, receiving account, expiry, original reference; no order/catalog prerequisite.
-- [ ] Enter full permitted payer mobile, lock route/window, test refresh/resume/cancel/expiry and spoofed callback; never see TrxID/screenshot/manual approval.
-- [ ] Overlapping attempts and amount changes show explicit conflict, not duplicate paid.
-- **Status:** PENDING.
+**Branch:** `pg05-checkout-payer-lock-20261011` ([PR #7](https://github.com/masharzy/ekmivo/pull/7)). **Review condition:** PG04 realm services/migration/config actually deployed to a permitted **disposable sandbox**, not production. No real transfer.
+
+- [ ] From a real owner/admin account in **Sandbox**, open Payments → Requests, create a standalone `BDT 500.50` request with unique reference/15-minute expiry; verify list amount, reference, state, exact checkout deep link, copy, browser back/reload. API response 201; same Idempotency-Key and identical payload creates exactly one record; changed payload returns 409.
+- [ ] Open in clean/incognito browser via `/bn/checkout/{opaqueToken}` and `/en/checkout/{opaqueToken}`; verify hard Sandbox **DO NOT SEND REAL MONEY** banner, amount/expiry/reference and no real receiving number. Locale/theme Light/Dark/System on 320px, 768px, 1024px, 1440px; no clipped BN conjuncts, navigation/keyboard controls work.
+- [ ] Enter `০১৭১২৩৪৫৬৭৮` as the **actual payer**, choose bKash/Nagad/Rocket; after confirming, only last four digits display, method+amount+window remain locked across reload. A different payer/method must 409; same retry must not create a second attempt.
+- [ ] Issue a second same-amount request with same payer+method+route inside overlapping window → 409; cancel first unpaid request, verify same sender can then use a **new** checkout without rewriting old immutable history. Cancel idempotent; expired/completed cannot be cancelled.
+- [ ] Wait for countdown expiry, refresh/back/revisit: state remains expired; do not offer pay instructions. Cancel → state cancelled; receiving evidence after cancellation must later be handled in PG07 reconciliation, never merchant auto-fulfilment.
+- [ ] Network offline/Go unavailable, invalid capability, no permission, viewer read vs write, cross-workspace/realm, CSRF, wrong key and service-unavailable conditions show actionable error and never display a fabricated 0 verified or success.
+- [ ] Open a fake return/success URL, manually modify query/local JS and attempt direct 'paid' payload → still pending (no manual TrxID, screenshot, OTP, PIN, or approval). Browser writes cannot change verification or allocations.
+- [ ] Create form unsaved draft → change business/env/language: Save draft/Discard/Stay guard. Restore only same user/business/environment, then reload: no duplicate issuance or silent server mutation.
+- [ ] Check actual order/invoice linkage, Live receiving destinations and actual payment verification **BLOCKED** until authoritative order/invoice data, provider/source and PG06/PG07 exist. Never force a misleading PASS.
+- **Status:** SOURCE IMPLEMENTED — sandbox CI + owner combined manual/browser verification pending; no live payment claim. Evidence: `docs/evidence/PG05/README.md`.
 
 ## PG06 — Native Android consented receipt collection
 
