@@ -109,7 +109,7 @@
 - [ ] Open a fake return/success URL, manually modify query/local JS and attempt direct 'paid' payload → still pending (no manual TrxID, screenshot, OTP, PIN, or approval). Browser writes cannot change verification or allocations.
 - [ ] Create form unsaved draft → change business/env/language: Save draft/Discard/Stay guard. Restore only same user/business/environment, then reload: no duplicate issuance or silent server mutation.
 - [ ] Check actual order/invoice linkage, Live receiving destinations and actual payment verification **BLOCKED** until authoritative order/invoice data, provider/source and PG06/PG07 exist. Never force a misleading PASS.
-- **Status:** SOURCE IMPLEMENTED — sandbox CI + owner combined manual/browser verification pending; no live payment claim. Evidence: `docs/evidence/PG05/README.md`.
+- **Status:** SANDBOX SOURCE IMPLEMENTED; **CI PASS** ([all-green run 38138883297](https://github.com/masharzy/ekmivo/actions/runs/38138883297), including PG05 PostgreSQL/River, OpenAPI, Go, Next.js and Android); owner combined manual/browser verification **PENDING**, linked order/invoice integration **BLOCKED** until authoritative backend exists; no live payment claim. Evidence: `docs/evidence/PG05/README.md`.
 
 ## PG06 — Native Android consented receipt collection
 
