@@ -66,7 +66,7 @@ func TestPG04PostgresRiverAtomicIdempotency(t *testing.T){
   err:=tx.QueryRow(ctx,`INSERT INTO payment_intents(workspace_id,environment,merchant_reference,amount_minor,expires_at)
    VALUES($1::uuid,'sandbox',$2,1800,now()+interval '1 hour') RETURNING id::text`,ws,"pg04-"+key).Scan(&id)
   if err!=nil{return Result{},err}
-  out,err:=st.EnqueueTx(ctx,tx,ws,"sandbox","created:"+id,"pg04.audit",
+  out,err:=st.EnqueueTx(ctx,tx,ws,"sandbox","created:"+id,"pg04_audit",
    json.RawMessage(`{"schema_version":1,"action":"durability_probe"}`))
   if err!=nil{return Result{},err}
   return Result{Status:201,Body:json.RawMessage(fmt.Sprintf(`{"intent":%q,"outbox":%q}`,id,out))},nil
@@ -93,7 +93,7 @@ func TestPG04PostgresRiverAtomicIdempotency(t *testing.T){
  rollbackKey,err:=randomUUID();if err!=nil{t.Fatal(err)}
  _,err=st.Execute(ctx,ws,"sandbox","payments.create",rollbackKey,payload,
   func(ctx context.Context,tx pgx.Tx)(Result,error){
-   if _,err:=st.EnqueueTx(ctx,tx,ws,"sandbox","rollback", "pg04.audit",
+   if _,err:=st.EnqueueTx(ctx,tx,ws,"sandbox","rollback", "pg04_audit",
      json.RawMessage(`{"schema_version":1,"action":"durability_probe"}`));err!=nil{return Result{},err}
    return Result{},errors.New("expected rollback")
   })
