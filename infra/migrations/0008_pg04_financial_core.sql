@@ -363,7 +363,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
  FROM financial_outbox o JOIN financial_workspace_registry r
   ON r.workspace_id=o.workspace_id AND r.environment=o.environment
  JOIN financial_realm f ON f.environment=o.environment AND f.singleton=true
- WHERE o.id=p_outbox AND o.event_kind='pg04.audit' AND r.status='active'
+ WHERE o.id=p_outbox AND o.event_kind='pg04_audit' AND r.status='active'
  LIMIT 1
 $;
 REVOKE ALL ON FUNCTION financial_audit_context(uuid) FROM PUBLIC;
@@ -375,7 +375,7 @@ DECLARE evt financial_outbox%ROWTYPE; realm text;
 BEGIN
  SELECT environment INTO realm FROM financial_realm WHERE singleton=true;
  SELECT * INTO evt FROM financial_outbox o WHERE o.id=p_outbox_id AND o.environment=realm;
- IF evt.id IS NULL OR evt.event_kind<>'pg04.audit' OR
+ IF evt.id IS NULL OR evt.event_kind<>'pg04_audit' OR
   evt.payload<>'{"schema_version":1,"action":"durability_probe"}'::jsonb OR
   NOT EXISTS(SELECT 1 FROM financial_workspace_registry r
      WHERE r.workspace_id=evt.workspace_id AND r.environment=evt.environment AND r.status='active')
