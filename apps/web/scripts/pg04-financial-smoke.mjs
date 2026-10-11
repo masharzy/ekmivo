@@ -275,20 +275,20 @@ try{
     current_setting('ekmivo.environment',true) AS realm,
     (SELECT status FROM financial_workspace_registry WHERE workspace_id=$1::uuid AND environment='sandbox') AS status,
     jsonb_typeof($2::jsonb) AS input_type,jsonb_array_length($2::jsonb) AS line_count`,
-    [tenant,JSON.stringify(invoiceLines)]))[0];
+    [tenant,reader.json(invoiceLines)]))[0];
    same(preflight.workspace,tenant,"PG05 scoped source transaction workspace");
    same(preflight.realm,"sandbox","PG05 scoped source transaction realm");
    same(preflight.status,"active","PG05 billing source workspace not active");
    same(preflight.input_type,"array","PG05 linked source JSON not an array");
    same(preflight.line_count,2,"PG05 linked source line length");
    return (await tx.unsafe("SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb) AS value",
-    [tenant,"sandbox","invoice","INV-"+randomUUID(),JSON.stringify(invoiceLines)]))[0].value;
+    [tenant,"sandbox","invoice","INV-"+randomUUID(),reader.json(invoiceLines)]))[0].value;
   });
   same(doc.amount_minor,30000,"PG05 server-calculated source total incorrect");
   same((await reader.unsafe("SELECT pg05_list_billing_sources($1::uuid,$2) AS value",[tenant,"sandbox"]))[0].value,null,
    "PG05 reader listed sources without tenant binding");
   await reject(reader,()=>reader.unsafe("SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb)",
-   [tenant,"sandbox","invoice","INVALID-"+randomUUID(),JSON.stringify([{title:"Fake",quantity:1,unit_amount_minor:-1}])]),"22023");
+   [tenant,"sandbox","invoice","INVALID-"+randomUUID(),reader.json([{title:"Fake",quantity:1,unit_amount_minor:-1}])]),"22023");
   const refLinked="LINK-"+randomUUID(),lk=randomUUID(),lh=hmac(),rq=hmac();
   const issueLinked=()=>reader.begin(async tx=>{
    await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
