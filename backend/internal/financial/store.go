@@ -72,7 +72,7 @@ func (s *Store) Execute(
  // the complete scoped key is checked against the UNIQUE primary key.
  _,err=tx.ExecContext(ctx,
   "SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
-  workspace+"\x00"+environment+"\x00"+operation+"\x00"+key)
+  workspace+"|"+environment+"|"+operation+"|"+key)
  if err!=nil{return zero,fmt.Errorf("%w: lock",ErrUnavailable)}
  var digest string
  var code int
