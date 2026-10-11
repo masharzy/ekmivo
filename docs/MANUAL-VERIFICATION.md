@@ -82,10 +82,13 @@
 
 ## PG04 — Financial source of truth and job durability
 
-- [ ] Inspect authorized read-only records from sandbox: attempts/evidence/allocations refer to exact tenant and environment; append-only audit immutable; no arbitrary "mark paid".
-- [ ] Execute safe duplicate and concurrent sandbox requests; only one idempotent result, replay same event stable; crash/restart worker with no lost durable job.
-- **Automated required:** empty/prior schema migrations, FK/unique/money constraints, DB atomicity, rollback, partition env and crash recovery.
-- **Status:** PENDING.
+- [ ] **After isolated preflight and separately authorized deployment only:** inspect anonymized sandbox records as real owner/admin. Attempt, receipt, verified funds and allocation must be under the exact business and environment. Viewer/editor cannot change financial state; unauthorized workspace and missing tenant context expose no rows.
+- [ ] In an approved **disposable sandbox**, submit the same server-authorized idempotency key and payload concurrently; request response and payment intent/event/job counts remain one. Retry the same key with a different payload: conflict, no second financial effect. No direct `mark paid` control exists.
+- [ ] Crash the dedicated audit worker after it acquires but before it acknowledges an internal `pg04.audit` job, then restart it after the lease period. Exactly one completed outcome must be visible; stale token cannot ACK. Repeat for Sandbox and Live *synthetic internal test realms* separately, not real receiving accounts.
+- [ ] Verify that an unsupported financial job is retained rather than acknowledged. Confirm no SMS, payer HMAC, API secret, encrypted evidence or transaction data appears in worker logs.
+- [ ] Confirm deployed DB and worker match the reviewed source SHA, and prove physical sandbox/live data/credentials/queue split before enabling actual payment writes. Do not test with real money in this phase.
+- **Automated required:** migrations 0001–0008, FORCE RLS, correct multi-tenant negative matrix, valid/invalid five-field insert, immutable attempt/proof, FK/amount/allocation and collision invariants, 12-way idempotent retry, rollback and outbox/job atomicity.
+- **Source checkpoint:** [PG04 evidence](evidence/PG04/README.md), draft [PR #4](https://github.com/masharzy/ekmivo/pull/4). SQL-backed durability helper and audit-only worker under CI review; River integration, physical database split, real worker termination/recovery and migration rollout still open. **Status: SOURCE PARTIAL / NOT ACCEPTED.**
 
 ## PG05 — Checkout and payer lock
 
