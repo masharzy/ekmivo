@@ -51,4 +51,13 @@ for(const product of ["ai","payments"]){
 assert.ok(nav.searchableNavigation("payments","receipts").length>0);
 assert.ok(nav.searchableNavigation("payments","আসা").length>0);
 assert.equal(nav.searchableNavigation("payments","inbox").length,0,"Record/product search must not escape active product");
+
+const memberships=[
+ {id:"allowed-workspace-1",name:"অগ্রযাত্রা Shop",mode:"both",role:"owner"},
+ {id:"allowed-workspace-2",name:"North Studio",mode:"ai",role:"viewer"}
+];
+assert.equal(nav.searchableBusinesses(memberships,"").length,0,"Blank global query must not enumerate all businesses");
+assert.equal(nav.searchableBusinesses(memberships,"north")[0].id,memberships[1].id,"Search is constrained to supplied memberships");
+assert.equal(nav.searchableBusinesses(memberships,"অগ্র")[0].id,memberships[0].id,"Bengali authorized business names must be searchable");
+assert.equal(nav.searchableBusinesses(memberships,"outside-tenant").length,0,"No unauthorized business can be inferred");
 console.log("PG02 PASS: payment-first default, authorized products, sandbox/live URL scope, invalid query denial, EN/BN navigation and product-limited search");
