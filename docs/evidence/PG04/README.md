@@ -16,7 +16,7 @@ Backlog PG04 (F02/F06/P02; S31/S32/S34). Canonical architecture: `docs/DUAL-SAAS
 
 ## Required proof before calling PG04 implemented/accepted
 
-- [ ] CI green on final PR SHA: Node script, Go unit+integration, web compile/lint/build, Android regression. Record run ID and exact SHA.
+- [x] Source CI passed 3/3 at SHA `b2489e8dd01ed5910f2739022a0a7cce0fc45a3c` in [GitHub Actions 38131692361](https://github.com/masharzy/ekmivo/actions/runs/38131692361). Migration and 20 PostgreSQL assertions, Go Postgres idempotency/concurrency/rollback tests, full Go suite, Next.js lint/typecheck/production build and Kotlin Android assemble/unit tests passed. Source-only evidence; documentation follow-up commits need their own CI parity check.
 - [ ] Confirm original 0001–0007 migrations plus 0008 from both empty and already-upgraded **isolated** DB without collisions. Validate RLS under actual restricted role, rollback of domain mutation and job, concurrent identical/different requests, lease-expiration/restart and allocation race with multiple DB connections.
 - [ ] Architecture discrepancy: canonical plan requires **physically isolated sandbox/live financial DBs and worker credentials**. This migration currently uses workspace+environment partitioning/FORCE RLS in the existing control DB. This protects scoped queries but is NOT physical split. Resolve provisioning and isolated DB registry/migration contract before real money.
 - [ ] Architecture discrepancy: canonical F06 specifies **River transactional queues**. This checkpoint implements a PostgreSQL leased durable queue, not River. Decide and implement River replacement/adapter under the single `infra/migrations` authority before PG04 is fully accepted.
@@ -28,3 +28,12 @@ Backlog PG04 (F02/F06/P02; S31/S32/S34). Canonical architecture: `docs/DUAL-SAAS
 The only owner checklist is `docs/MANUAL-VERIFICATION.md` under PG04; do not request an independent PG04 test session. All fixtures must be approved, isolated and redacted.
 
 **Explicit non-goals:** API payment creation, hosted checkout, order linkage, actual SMS ingestion, automatic five-field matcher, signed outgoing webhook delivery, refunds, platform billing ledger and provider settlement are later PGs. An internal audit job cannot verify customer money.
+
+## Verified isolated source checkpoint — 2026-10-11
+
+- **Passing 3/3 CI source SHA:** `b2489e8dd01ed5910f2739022a0a7cce0fc45a3c`; [run 38131692361](https://github.com/masharzy/ekmivo/actions/runs/38131692361): all **Go**, **web**, **Android** jobs completed `success`.
+- PostgreSQL 17: migration 0008 applied against an already upgraded disposable DB following 0001–0007, `PG04 PASS: 20 assertions` (FORCE RLS, no tenant context, cross-business/sandbox/live, negative FK/currency/amount, duplicate evidence, attempt immutability, allocation overdraw, claim/stale ACK). Expected `235xx`/immutable failures in Postgres service logs belong to deliberately rejected negative tests, not production errors.
+- Go Postgres integration: `TestPG04PostgresIdempotentMutationAndQueue` PASS, including stable replay on original request, mismatch conflict, domain-event-job-result atomicity, callback rollback and 12 concurrent same-key requests. Unit tests for amount/body validation, scoped tenant environment and fail-closed storage PASS.
+- Actual **process-kill/crash-restart across lease expiry** is *not yet proven* by this set; CI SQL claim/ACK and retry-cap logic are not a replacement for that live recovery observation.
+- **No privileged migration or finance writes** performed against production Neon. No Render worker/financial deployment verified; no live customer payment recorded. Payment matcher/checkout/webhook absent until later PGs.
+- **Architecture blockers remain:** physical sandbox/live financial data and credential segregation, canonical River queue implementation, worker process crash/restart witness, actual ingress authorization and separate source/destination operator identities. PG04 remains **IN PROGRESS / NOT ACCEPTED** despite green integration tests.
