@@ -60,7 +60,7 @@ CREATE TABLE payment_attempts (
 -- windows for the same evidence bucket would create ambiguous matches.
 CREATE FUNCTION financial_validate_attempt() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE intent payment_intents%ROWTYPE; method_of_account text; overlaps boolean;
+DECLARE intent payment_intents%ROWTYPE; method_of_account text; has_overlap boolean;
 BEGIN
  SELECT * INTO intent FROM payment_intents
   WHERE workspace_id=NEW.workspace_id AND environment=NEW.environment
@@ -86,8 +86,8 @@ BEGIN
     AND a.amount_minor=NEW.amount_minor
     AND tstzrange(a.window_start,a.window_end,'[)') &&
         tstzrange(NEW.window_start,NEW.window_end,'[)')
- ) INTO overlaps;
- IF overlaps THEN
+ ) INTO has_overlap;
+ IF has_overlap THEN
   RAISE EXCEPTION 'overlapping payer/account/method/amount attempt'
    USING ERRCODE='23505';
  END IF;
