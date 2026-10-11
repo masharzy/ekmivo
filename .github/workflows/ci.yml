@@ -43,6 +43,9 @@ jobs:
       - name: Lint all web sources
         working-directory: apps/web
         run: npm run lint
+      - name: Strict OpenAPI contract and schema references
+        working-directory: apps/web
+        run: node scripts/openapi-check.mjs
       - name: Verify PostgreSQL schema on ephemeral local database
         working-directory: apps/web
         env:
