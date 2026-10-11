@@ -85,6 +85,14 @@ export function DashboardFrame({ locale, service, section, workspace, spaces, us
   }
   return ()=>{if(d?.open)d.close();};
  },[mobileOpen]);
+ // Mobile modal must lock document scrolling as well as pointer/focus.
+ // Restore the exact previous body style instead of forcing a new value.
+ useEffect(()=>{
+  if(!mobileOpen)return;
+  const prior=document.body.style.overflow;
+  document.body.style.overflow="hidden";
+  return ()=>{document.body.style.overflow=prior;};
+ },[mobileOpen]);
  useEffect(()=>{
   const d=searchDialog.current;
   if(searchOpen && d && !d.open){d.showModal();searchInput.current?.focus();}
