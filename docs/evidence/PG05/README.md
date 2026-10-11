@@ -2,7 +2,7 @@
 
 **Source branch:** `pg05-checkout-payer-lock-20261011`  
 **Review:** [PR #7](https://github.com/masharzy/ekmivo/pull/7), depends on the *unmerged* PG04 staging branch.  
-**Classification:** SANDBOX SOURCE IMPLEMENTED; previous exact-code CI succeeded, explicit OpenAPI gate/owner browser acceptance pending. **NOT** a live-money release.
+**Classification:** SANDBOX SOURCE IMPLEMENTED + ALL CI GATES PASS; owner browser acceptance and production provisioning pending. **NOT** a live-money release.
 
 ## Implemented in source
 - Independent PG04 sandbox/live databases preserved. PG05 migration `0010_pg05_checkout.sql` applies **only by explicit** `PG05_ALLOW_MIGRATION=true` on each separately provisioned financial realm, after PG04 migration. No finance migration applied to production here.
@@ -19,13 +19,13 @@
 
 - [x] Go compile and unit suite: `go test ./...`; Bengali payer normalization, token isolation, client-forged linked amount reject.
 - [x] Next.js `npm run lint`, `npx tsc --noEmit`, production build.
-- [ ] OpenAPI `npm run ...` or `node scripts/openapi-check.mjs`: strict schema parser.
+- [x] OpenAPI `node scripts/openapi-check.mjs`: strict schema parser (dedicated GitHub Actions gate).
 - [x] CI `apps/web/scripts/pg04-financial-smoke.mjs` provisions physical sandbox/live PostgreSQL 17 and PG05 schema via explicit migration; repeated migration, restricted finance reader, request idempotency, full payer+route lock, collision, cancellation/history+retry, opaque invalid token and no-scope list denial. Includes server-time and suspension regressions and PG04 killed-worker River recovery.
 - [ ] Real HTTP tests using local Go API + separate restricted control and finance sessions, owner/editor/viewer vs scoped merchant keys, environment mismatch, CSRF, POST replay, 503 fail-closed, concurrent payer locks.
 - [ ] End-to-end Playwright/Chrome on real responsive widths, locale+theme toggles, reload/cancel/expiry state, autofill, focus/contrast, copy and share deep links.
 - [ ] Browser script and physical customer SMS/provider/device verification intentionally **not** claimed, since PG06/PG07 and PG12 are not implemented.
 
-**Verified CI evidence for code commit `ae28291c37a2b1aedbb64cdd6b08b5fa5c5d1e1c`:** [Actions run 38138527873](https://github.com/masharzy/ekmivo/actions/runs/38138527873) — Go tests + HTTP smoke PASS; Native Kotlin/Compose assemble/tests PASS; Web lint, TypeScript, PostgreSQL PG00–PG05 integrations, killed-worker River crash recovery and Next.js production build PASS. This run did not have an explicit OpenAPI gate; it was added in a later commit and must be checked independently before marking that line done. No browser or real payment success claimed.
+**Verified CI evidence for code commit `0a8dd61febc9ae948c85c4e7614d1a6ae0d93e62`:** [Actions run 38138883297](https://github.com/masharzy/ekmivo/actions/runs/38138883297) — all **three jobs PASS**; Go unit + HTTP smoke, native Kotlin/Compose assemble + unit, strict OpenAPI schema/ref parsing, Next.js lint/TypeScript/production build and independent PostgreSQL 17 PG00–PG05 smoke, including killed-worker River recovery, payer/route lock, idempotency and suspended-workspace rejection. No real-browser, real-provider or production payment success claimed.
 
 ## Release blockers / honest limitations
 1. PG04 staging base has not been merged into `main` or safely provisioned in production; real database, service roles, key material and deployment preflight must be arranged separately. No production DDL without explicit authorization.
