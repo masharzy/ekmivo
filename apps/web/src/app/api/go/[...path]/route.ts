@@ -1,13 +1,13 @@
 import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
-const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|payment-intents(?:\/[0-9a-f-]{36}\/cancel)?)$/i;
+const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|(?:payment-intents(?:\/[0-9a-f-]{36}\/cancel)?|linked-sources))$/i;
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
  const path = (await context.params).path.join("/");
  const read = request.method === "GET";
  if (!(read && ["session", "platform/access"].includes(path)) && !workspacePath.test(path))
   return Response.json({ code: "NOT_FOUND" }, { status: 404 });
- const intentPath=/^workspaces\/[0-9a-f-]{36}\/payment-intents(?:\/[0-9a-f-]{36}\/cancel)?$/i.test(path);
+ const intentPath=/^workspaces\/[0-9a-f-]{36}\/(?:payment-intents(?:\/[0-9a-f-]{36}\/cancel)?|linked-sources)$/i.test(path);
  if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || (intentPath&&request.method==="POST")))
   return Response.json({ code:"METHOD_NOT_ALLOWED" },{status:405});
  const requestUrl = new URL(request.url);
