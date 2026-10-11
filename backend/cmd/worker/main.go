@@ -1,115 +1,78 @@
-// PG04 durable financial audit queue consumer. This is NOT a payment matcher:
- // only pg04.audit work is claimable until PG05–PG09 handlers are implemented.
+// PG04: separate realm-bound River payment worker; only nonfinancial
+// pg04.audit durability events are currently registered.
 package main
 
 import (
  "context"
- "crypto/rand"
- "database/sql"
- "encoding/json"
  "errors"
  "fmt"
  "log"
  "os"
  "os/signal"
+ "strings"
  "syscall"
  "time"
 
- _ "github.com/jackc/pgx/v5/stdlib"
+ "github.com/jackc/pgx/v5/pgxpool"
+ "github.com/masharzy/ekmivo/backend/internal/financial"
+ "github.com/riverqueue/river"
+ "github.com/riverqueue/river/riverdriver/riverpgxv5"
 )
 
-type auditJob struct {
- ID string
- Kind string
- Payload []byte
+type AuditWorker struct{
+ river.WorkerDefaults[financial.AuditArgs]
+ Pool *pgxpool.Pool
+ Realm string
 }
-
-func parseAuditPayload(raw []byte) error {
- var body struct {
-  SchemaVersion int `json:"schema_version"`
-  Action string `json:"action"`
+func (w *AuditWorker) Work(ctx context.Context,job *river.Job[financial.AuditArgs])error{
+ if job.Args.Environment!=w.Realm||!strings.Contains(job.Args.OutboxID,"-") {
+  return errors.New("financial audit job realm or identifier is invalid")
  }
- if err:=json.Unmarshal(raw,&body);err!=nil{return err}
- if body.SchemaVersion!=1 || body.Action!="durability_probe" {
-  return errors.New("unsupported audit payload; no financial processing attempted")
+ // SECURITY DEFINER function checks physical realm, exact immutable event
+ // kind/payload, workspace projection and idempotent processed-event PK.
+ // No fake merchant payment, webhook or receipt is created here.
+ var first bool
+ if err:=w.Pool.QueryRow(ctx,"SELECT financial_process_audit($1::uuid)",job.Args.OutboxID).Scan(&first);err!=nil{
+  return errors.New("financial audit handler rejected event")
  }
  return nil
 }
-
-func makeLeaseToken() (string,error) {
- b:=make([]byte,16)
- if _,err:=rand.Read(b);err!=nil{return "",err}
- // RFC4122 UUIDv4; cryptographically unpredictable lease/claim token.
- b[6]=(b[6]&0x0f)|0x40
- b[8]=(b[8]&0x3f)|0x80
- return fmt.Sprintf("%x-%x-%x-%x-%x",b[0:4],b[4:6],b[6:8],b[8:10],b[10:]),nil
+func validateWorkerRole(name,realm string)error{
+ if realm!="sandbox"&&realm!="live"{return errors.New("invalid explicit financial realm")}
+ if name!="ekmivo_financial_worker_"+realm{return fmt.Errorf("wrong restricted financial worker role for %s",realm)}
+ return nil
 }
-func claim(ctx context.Context,db *sql.DB,env,token string)(auditJob,error){
- var j auditJob
- err:=db.QueryRowContext(ctx,
-  "SELECT job_id::text,event_kind,event_payload FROM financial_claim_audit_job($1,$2::uuid,$3)",
-  env,token,90).Scan(&j.ID,&j.Kind,&j.Payload)
- return j,err
+func verifyRealm(ctx context.Context,pool *pgxpool.Pool,realm string)error{
+ var actual,actor string
+ err:=pool.QueryRow(ctx,`SELECT environment,current_user FROM financial_realm WHERE singleton=true`).Scan(&actual,&actor)
+ if err!=nil||actual!=realm{return errors.New("wrong or missing independent financial realm")}
+ return validateWorkerRole(actor,realm)
 }
-func runOnce(ctx context.Context,db *sql.DB,env string)(bool,error){
- token,err:=makeLeaseToken()
- if err!=nil{return false,err}
- job,err:=claim(ctx,db,env,token)
- if errors.Is(err,sql.ErrNoRows){return false,nil}
- if err!=nil{return false,err}
- var acknowledged bool
- if job.Kind!="pg04.audit" || parseAuditPayload(job.Payload)!=nil {
-  err=db.QueryRowContext(ctx,
-   "SELECT financial_retry_audit_job($1::uuid,$2::uuid,$3)",job.ID,token,"HANDLER_FAILED").Scan(&acknowledged)
-  if err!=nil{return true,err}
-  if !acknowledged{return true,errors.New("worker lease expired before safe retry")}
-  return true,nil
- }
- // Acknowledgement is the durable outcome of this strictly internal probe.
- // No fake customer payment/receipt/merchant webhook is emitted here.
- err=db.QueryRowContext(ctx,
-  "SELECT financial_ack_audit_job($1::uuid,$2::uuid)",job.ID,token).Scan(&acknowledged)
- if err!=nil{return true,err}
- if !acknowledged{return true,errors.New("worker lease expired before acknowledgement")}
- return true,nil
-}
-
 func main(){
- env:=os.Getenv("EKMIVO_WORKER_ENVIRONMENT")
- if env!="sandbox"&&env!="live"{
-  log.Fatal("EKMIVO_WORKER_ENVIRONMENT must explicitly be sandbox or live")
- }
+ realm:=os.Getenv("EKMIVO_WORKER_ENVIRONMENT")
+ if realm!="sandbox"&&realm!="live"{log.Fatal("EKMIVO_WORKER_ENVIRONMENT is required: sandbox|live")}
  dsn:=os.Getenv("FINANCIAL_WORKER_DATABASE_URL")
- if dsn==""{log.Fatal("FINANCIAL_WORKER_DATABASE_URL is required")}
- db,err:=sql.Open("pgx",dsn)
- if err!=nil{log.Fatal("cannot initialize financial worker database driver")}
- defer db.Close()
- db.SetMaxOpenConns(2);db.SetMaxIdleConns(1)
- ctx,stop:=signal.NotifyContext(context.Background(),os.Interrupt,syscall.SIGTERM)
- defer stop()
- initCtx,cancel:=context.WithTimeout(ctx,10*time.Second)
- err=db.PingContext(initCtx)
- if err==nil {
-  var role string
-  err=db.QueryRowContext(initCtx,"SELECT current_user").Scan(&role)
-  if err==nil && role!="ekmivo_financial_runtime" {
-   err=errors.New("financial worker requires the restricted runtime role")
-  }
- }
- cancel()
- if err!=nil{log.Fatal("worker's restricted PostgreSQL connection unavailable: ",err)}
- log.Printf("financial PG04 audit worker ready for realm=%s (no payment matching)",env)
- ticker:=time.NewTicker(time.Second)
- defer ticker.Stop()
- for {
-  workCtx,cancel:=context.WithTimeout(ctx,20*time.Second)
-  worked,e:=runOnce(workCtx,db,env)
-  cancel()
-  if e!=nil&&ctx.Err()==nil{log.Printf("financial audit queue error: %v",e)}
-  if worked{continue}
-  select {
-  case <-ctx.Done():return
-  case <-ticker.C:
-  }
- }
+ if dsn==""{log.Fatal("FINANCIAL_WORKER_DATABASE_URL missing (no control DB fallback)")}
+ ctx,cancel:=signal.NotifyContext(context.Background(),os.Interrupt,syscall.SIGTERM)
+ defer cancel()
+ pool,err:=pgxpool.New(ctx,dsn)
+ if err!=nil{log.Fatal("financial worker database initialization unavailable")}
+ defer pool.Close()
+ probe,cancelProbe:=context.WithTimeout(ctx,10*time.Second)
+ err=verifyRealm(probe,pool,realm)
+ cancelProbe()
+ if err!=nil{log.Fatal("financial queue realm/role preflight: ",err)}
+ workers:=river.NewWorkers()
+ river.AddWorker(workers,&AuditWorker{Pool:pool,Realm:realm})
+ client,err:=river.NewClient(riverpgxv5.New(pool),&river.Config{
+  Queues:map[string]river.QueueConfig{"financial_"+realm:{MaxWorkers:2}},
+  Workers:workers,
+ })
+ if err!=nil{log.Fatal("River worker creation: ",err)}
+ if err:=client.Start(ctx);err!=nil{log.Fatal("River worker startup: ",err)}
+ log.Printf("PG04 River worker active for %s, audit-only; payment verification DISABLED",realm)
+ <-ctx.Done()
+ stopCtx,stopCancel:=context.WithTimeout(context.Background(),15*time.Second)
+ defer stopCancel()
+ if err:=client.Stop(stopCtx);err!=nil{log.Printf("River worker stop: %v",err)}
 }
