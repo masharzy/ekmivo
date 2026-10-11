@@ -1,5 +1,6 @@
 "use client";
-import {useActionState,useState} from "react";
+import {useActionState,useEffect,useState} from "react";
+import {registerDraft} from "../lib/client/draft-navigation";
 import {useFormStatus} from "react-dom";
 import {createMerchantKey,rotateMerchantKey,revokeMerchantKey,type KeyActionState} from "../actions/merchant-keys";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
@@ -65,11 +66,62 @@ function KeyControls({locale,workspaceId,environment,keyItem}:{locale:Locale;wor
   </form>}
  </div>;
 }
-export function ApiKeyManager({locale,workspaceId,environment,keys}:{
- locale:Locale;workspaceId:string;environment:PaymentEnvironment;keys:ApiKeyRow[]
+export function ApiKeyManager({locale,userId,workspaceId,environment,keys}:{
+ locale:Locale;userId:string;workspaceId:string;environment:PaymentEnvironment;keys:ApiKeyRow[]
 }){
  const [state,action]=useActionState(createMerchantKey.bind(null,locale),initial);
  const [showCreate,setShowCreate]=useState(false),bn=locale==="bn";
+ const [draftName,setDraftName]=useState("");
+ const [draftExpiry,setDraftExpiry]=useState("30");
+ const [draftScopes,setDraftScopes]=useState<string[]>(["payments:read"]);
+ const [saved,setSaved]=useState({name:"",expiresDays:"30",scopes:["payments:read"] as string[]});
+ const [draftNotice,setDraftNotice]=useState("");
+ const key=`ekmivo:pg03-key-draft:v1:${userId}:${workspaceId}:${environment}`;
+ const draft={name:draftName,expiresDays:draftExpiry,scopes:draftScopes};
+ const dirty=showCreate && state.status!=="success" && (
+  draft.name!==saved.name||draft.expiresDays!==saved.expiresDays||
+  draft.scopes.join(",")!==saved.scopes.join(",")
+ );
+ const saveDraft=()=>{
+  try{
+   // Never persist passwords, bearer tokens, key IDs or response secrets.
+   window.sessionStorage.setItem(key,JSON.stringify(draft));
+   setSaved({name:draftName,expiresDays:draftExpiry,scopes:[...draftScopes]});
+   setDraftNotice(bn?"শুধু নাম, মেয়াদ ও অনুমতি এই ট্যাবে রাখা হয়েছে।":"Only the name, expiry and scopes were saved in this tab.");
+   return true;
+  }catch{
+   setDraftNotice(bn?"এই ট্যাবে খসড়া রাখা যাচ্ছে না।":"This tab cannot save drafts.");
+   return false;
+  }
+ };
+ const discardDraft=()=>{
+  try{window.sessionStorage.removeItem(key);}catch{/* Optional storage. */}
+  setDraftName("");setDraftExpiry("30");setDraftScopes(["payments:read"]);
+  setSaved({name:"",expiresDays:"30",scopes:["payments:read"]});
+  setDraftNotice(bn?"খসড়া বাতিল করা হয়েছে।":"Draft discarded.");
+ };
+ const restoreDraft=()=>{
+  try{
+   const value=window.sessionStorage.getItem(key);
+   if(!value)throw Error("missing");
+   const parsed=JSON.parse(value) as {name?:unknown;expiresDays?:unknown;scopes?:unknown};
+   if(typeof parsed.name!=="string"||parsed.name.length>80||
+    !["7","30","90"].includes(String(parsed.expiresDays))||
+    !Array.isArray(parsed.scopes)||parsed.scopes.some(x=>typeof x!=="string"||!possibleScopes.includes(x))
+   )throw Error("invalid");
+   const next={name:parsed.name,expiresDays:String(parsed.expiresDays),scopes:parsed.scopes as string[]};
+   setDraftName(next.name);setDraftExpiry(next.expiresDays);setDraftScopes(next.scopes);setSaved(next);
+   setDraftNotice(bn?"খসড়া ফিরিয়ে আনা হয়েছে।":"Draft restored.");
+  }catch{setDraftNotice(bn?"বৈধ খসড়া পাওয়া যায়নি।":"No valid draft found.");}
+ };
+ useEffect(()=>{
+  return registerDraft({
+   id:`pg03-key:${userId}:${workspaceId}:${environment}`,
+   isDirty:()=>dirty,
+   save:async()=>saveDraft(),
+   discard:discardDraft
+  });
+ });
  const showDate=(raw:string)=>new Intl.DateTimeFormat(bn?"bn-BD-u-nu-latn":"en-US",{timeZone:"Asia/Dhaka",dateStyle:"medium"}).format(new Date(raw));
  return <div className="ds-api-key-manager">
   <div className="ds-panel-heading">
@@ -82,10 +134,10 @@ export function ApiKeyManager({locale,workspaceId,environment,keys}:{
    <input type="hidden" name="workspaceId" value={workspaceId}/>
    <input type="hidden" name="environment" value={environment}/>
    <label>{bn?"Key-এর নাম":"Key name"}
-    <input name="name" type="text" minLength={2} maxLength={80} required placeholder={bn?"যেমন: স্টোর backend":"e.g. Store backend"}/>
+    <input name="name" type="text" minLength={2} maxLength={80} required value={draftName} onChange={event=>setDraftName(event.target.value)} placeholder={bn?"যেমন: স্টোর backend":"e.g. Store backend"}/>
    </label>
    <label>{bn?"মেয়াদ":"Expiry"}
-    <select name="expiresDays" defaultValue="30">
+    <select name="expiresDays" value={draftExpiry} onChange={event=>setDraftExpiry(event.target.value)}>
      <option value="7">{bn?"৭ দিন":"7 days"}</option>
      <option value="30">{bn?"৩০ দিন":"30 days"}</option>
      <option value="90">{bn?"৯০ দিন":"90 days"}</option>
@@ -93,7 +145,7 @@ export function ApiKeyManager({locale,workspaceId,environment,keys}:{
    </label>
    <fieldset><legend>{bn?"অনুমতি — শুধু প্রয়োজনীয়গুলো বেছে নিন":"Scopes — grant the minimum required"}</legend>
     <div className="ds-key-scopes">{possibleScopes.map(scope=><label key={scope}>
-     <input name="scopes" value={scope} type="checkbox" defaultChecked={scope==="payments:read"}/>
+     <input name="scopes" value={scope} type="checkbox" checked={draftScopes.includes(scope)} onChange={event=>setDraftScopes(current=>event.target.checked?[...current,scope]:current.filter(x=>x!==scope))}/>
      <code>{scope}</code>
     </label>)}</div>
    </fieldset>
@@ -101,6 +153,12 @@ export function ApiKeyManager({locale,workspaceId,environment,keys}:{
     <input name="password" type="password" required autoComplete="current-password" maxLength={256}/>
    </label>
    <SaveButton label={bn?"API key তৈরি করুন":"Issue API key"}/>
+   <div className="ds-key-actions">
+    <button type="button" disabled={!dirty} onClick={()=>{saveDraft();}}>{bn?"খসড়া সংরক্ষণ":"Save draft"}</button>
+    <button type="button" onClick={restoreDraft}>{bn?"খসড়া ফিরিয়ে আনুন":"Restore draft"}</button>
+    <button type="button" onClick={discardDraft}>{bn?"খসড়া বাতিল":"Discard draft"}</button>
+   </div>
+   {draftNotice&&<p role="status">{draftNotice}</p>}
    <Result state={state} locale={locale}/>
   </form>}
   {!keys.length?<div className="ds-empty" role="status">
