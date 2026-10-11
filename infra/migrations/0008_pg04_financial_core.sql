@@ -317,7 +317,7 @@ CREATE TABLE financial_outbox (
  event_key text NOT NULL CHECK(char_length(event_key) BETWEEN 1 AND 160),
  event_kind text NOT NULL CHECK(event_kind ~ '^[a-z][a-z0-9_.:-]{1,95}$'),
  payload jsonb NOT NULL CHECK(jsonb_typeof(payload)='object' AND pg_column_size(payload)<=16384),
- river_job_id bigint NOT NULL UNIQUE REFERENCES river_job(id) ON DELETE RESTRICT,
+ river_job_id bigint NOT NULL UNIQUE,
  created_at timestamptz NOT NULL DEFAULT now(),
  UNIQUE(workspace_id,environment,id),
  UNIQUE(workspace_id,environment,event_key),
@@ -327,6 +327,22 @@ CREATE TABLE financial_outbox (
 
 -- Durable queue/outbox association. Never acknowledge a financial event before
 -- its handling is committed; one outbox event has exactly one base delivery job.
+-- Outbox and River job must co-commit; do NOT use a permanent FK
+-- since River legitimately prunes completed jobs while financial audit remains.
+CREATE FUNCTION financial_require_river_job() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM river_job WHERE id=NEW.river_job_id
+  AND queue='financial_'||NEW.environment AND kind=NEW.event_kind) THEN
+  RAISE EXCEPTION 'financial outbox requires the matching River job in same transaction'
+   USING ERRCODE='23514';
+ END IF;
+ RETURN NULL;
+END; $;
+CREATE CONSTRAINT TRIGGER financial_outbox_river_commit
+ AFTER INSERT ON financial_outbox DEFERRABLE INITIALLY DEFERRED
+ FOR EACH ROW EXECUTE FUNCTION financial_require_river_job();
+
 -- River owns the durable queue schema; the immutable financial outbox stores
 -- its committed job ID. The event AND job are inserted by one pgx transaction.
 CREATE TABLE financial_audit_processed (
