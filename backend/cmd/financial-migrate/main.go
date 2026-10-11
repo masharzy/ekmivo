@@ -38,6 +38,29 @@ func validateIndependent(sandbox,live string)error{
  }
  return nil
 }
+func migrateControl(ctx context.Context,raw,filename string)error{
+ pool,err:=pgxpool.New(ctx,raw)
+ if err!=nil{return errors.New("cannot open control migration connection")}
+ defer pool.Close()
+ var auth,finance,versioned bool
+ err=pool.QueryRow(ctx,`SELECT to_regclass('public.auth_sessions') IS NOT NULL,
+   to_regclass('public.financial_realm') IS NOT NULL,
+   to_regclass('public.financial_projection_versions') IS NOT NULL`).
+  Scan(&auth,&finance,&versioned)
+ if err!=nil||!auth||finance{return errors.New("refusing to apply control migration outside auth DB")}
+ if versioned{return nil}
+ content,err:=os.ReadFile(filepath.Clean(filename))
+ if err!=nil{return errors.New("control migration source missing")}
+ conn,err:=pool.Acquire(ctx)
+ if err!=nil{return errors.New("control migration connection unavailable")}
+ defer conn.Release()
+ if _,err=conn.Conn().PgConn().Exec(ctx,string(content)).ReadAll();err!=nil{
+  return fmt.Errorf("versioned control projection DDL: %w",err)
+ }
+ log.Print("PG04 control projection migration applied (financial/user data not copied)")
+ return nil
+}
+
 func migrateRealm(ctx context.Context,env,raw,filename string)error{
  pool,err:=pgxpool.New(ctx,raw)
  if err!=nil{return errors.New("cannot open financial migration pool")}
@@ -92,10 +115,18 @@ func main(){
  if os.Getenv("PG04_ALLOW_MIGRATION")!="true"{log.Fatal("explicit PG04_ALLOW_MIGRATION=true is mandatory")}
  sa,lv:=os.Getenv("PG04_SANDBOX_MIGRATION_DATABASE_URL"),os.Getenv("PG04_LIVE_MIGRATION_DATABASE_URL")
  if err:=validateIndependent(sa,lv);err!=nil{log.Fatal(err)}
+ control:=os.Getenv("PG04_CONTROL_MIGRATION_DATABASE_URL")
+ controlFile:=os.Getenv("PG04_CONTROL_MIGRATION_FILE")
+ if controlFile==""{log.Fatal("PG04_CONTROL_MIGRATION_FILE must refer to infra/migrations/0009_pg04_control_projection.sql")}
+ ct,_,err:=inspectDSN(control)
+ if err!=nil{log.Fatal(err)}
+ a,_,_:=inspectDSN(sa);z,_,_:=inspectDSN(lv)
+ if ct==a||ct==z{log.Fatal("control and finance databases must never be the same")}
  file:=os.Getenv("PG04_FINANCIAL_MIGRATION_FILE")
  if file==""{log.Fatal("PG04_FINANCIAL_MIGRATION_FILE must explicitly point to infra/migrations/0008_pg04_financial_core.sql")}
  ctx,cancel:=context.WithTimeout(context.Background(),3*time.Minute)
  defer cancel()
+ if err:=migrateControl(ctx,control,controlFile);err!=nil{log.Fatal(err)}
  for _,target:=range []realmDSN{{"sandbox",sa},{"live",lv}}{
   if err:=migrateRealm(ctx,target.environment,target.raw,file);err!=nil{log.Fatalf("realm %s migration blocked: %v",target.environment,err)}
  }
