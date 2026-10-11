@@ -1,13 +1,16 @@
 openapi: 3.1.0
 info:
   title: Ekmivo Payment API
-  version: 0.3.0
+  version: 0.5.0
   description: |
     PG03 implemented contract: process liveness, financial readiness, and
     real server-side merchant credential verification. Credential issue/rotate/
     revoke currently use authenticated owner/admin Next.js server actions.
-    No payment-intent, checkout, receipt verification or webhook delivery endpoint
-    is implemented yet; they remain PG04–PG09 / PG14 release contracts.
+    PG05 provides a SANDBOX-ONLY standalone payment-intent endpoint, opaque
+    hosted checkout, immutable payer+route lock, status refresh and cancellation.
+    Live payment instructions, linked OMS/invoice amount snapshots, receipt
+    matching and signed webhook delivery are NOT implemented; no money verification
+    can be inferred from return URLs, payer confirmation or sandbox responses.
 servers:
   - url: https://ekmivo-go-api.onrender.com
     description: Deployed Go API (does NOT imply financial readiness)
@@ -96,7 +99,377 @@ paths:
           $ref: '#/components/responses/ScopeDenied'
         '503':
           $ref: '#/components/responses/AuthUnavailable'
+  /v1/workspaces/{workspaceID}/payment-intents:
+    parameters:
+      - name: workspaceID
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: environment
+        in: query
+        required: true
+        schema: { type: string, enum: [sandbox, live] }
+        description: Live returns 503 until a real approved receiving source is connected.
+    get:
+      operationId: listPaymentIntents
+      summary: List up to 50 tenant/environment-scoped issued requests
+      tags: [Merchant]
+      security:
+        - MerchantBearer: []
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Authorized list of actual financial records
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, environment]
+                properties:
+                  environment: { type: string, const: sandbox }
+                  data: { type: array, items: { $ref: '#/components/schemas/Intent' } }
+        '401': { description: Not authenticated }
+        '403': { description: Read scope or business denied }
+        '503': { description: Financial database or live source unavailable }
+    post:
+      operationId: createPaymentIntent
+      summary: Issue an immutable standalone BDT request and opaque hosted checkout
+      tags: [Merchant]
+      description: |
+        Server-side payments:write permission required. The caller cannot link a
+        client-provided order/invoice amount before its authoritative snapshot
+        service exists. Same idempotency key plus identical payload returns one
+        original request; changed payload or duplicate reference conflicts.
+        No TrxID, payment screenshot, manual approval or client paid state.
+      security:
+        - MerchantBearer: []
+        - SessionCookie: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [merchant_reference, amount_minor, currency, expires_in_minutes]
+              properties:
+                merchant_reference: { type: string, minLength: 1, maxLength: 128 }
+                amount_minor: { type: integer, minimum: 1, maximum: 100000000000 }
+                currency: { type: string, const: BDT }
+                expires_in_minutes: { type: integer, minimum: 5, maximum: 60 }
+      responses:
+        '201':
+          description: Issued standalone payment request, not paid
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Intent'
+                  - type: object
+                    required: [checkout_token]
+                    properties:
+                      checkout_token: { type: string, minLength: 43, maxLength: 43 }
+        '401': { description: Unauthenticated }
+        '403': { description: Write scope denied }
+        '409': { description: Duplicate reference or changed idempotency payload }
+        '422': { description: Invalid amount, expiry, or unsupported linked amount }
+        '503': { description: Finance or live source unavailable }
+  /v1/workspaces/{workspaceID}/payment-intents/{intentID}/cancel:
+    post:
+      operationId: cancelPaymentIntent
+      tags: [Merchant]
+      summary: Append-only cancellation for an unpaid unexpired request
+      description: No refund or paid-state mutation occurs. Verified evidence processing is separate.
+      security:
+        - MerchantBearer: []
+        - SessionCookie: []
+      parameters:
+        - name: workspaceID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: intentID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: environment
+          in: query
+          required: true
+          schema: { type: string, enum: [sandbox, live] }
+      responses:
+        '200': { description: Cancelled or previously cancelled }
+        '403': { description: Workspace permission denied }
+        '404': { description: Intent not found in authorized realm }
+        '409': { description: Intent already paid or expired }
+        '503': { description: Finance source unavailable }
+  /v1/public/checkout/{token}:
+    get:
+      operationId: getCheckoutStatus
+      tags: [Checkout]
+      summary: Safe public capability lookup and authoritative status
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CheckoutToken'
+      responses:
+        '200':
+          description: Opaque-token scope only, no full payer, no raw evidence
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+            Referrer-Policy: { schema: { type: string, const: no-referrer } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Checkout' }
+        '404': { description: Invalid or unprovisioned capability }
+        '503': { description: Financial service unavailable }
+  /v1/public/checkout/{token}/lock:
+    post:
+      operationId: lockCheckoutPayer
+      tags: [Checkout]
+      summary: Confirm actual payer, receiving method and immutable attempt window
+      description: |
+        The full payer number is normalized server-side, persisted only as keyed
+        digest and last-four suffix. Repeating identical lock returns the same
+        attempt; changed payer/method or overlapping active evidence bucket is
+        409. This does not assert that money was sent or verified.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CheckoutToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payer_number, method]
+              additionalProperties: false
+              properties:
+                payer_number: { type: string, minLength: 11, maxLength: 20 }
+                method: { type: string, enum: [bkash, nagad, rocket] }
+      responses:
+        '200':
+          description: Locked payer and route, awaiting payment evidence only
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Checkout' }
+        '403': { description: Browser origin denied }
+        '404': { description: Checkout capability missing }
+        '409': { description: Expired, changed payer, cancelled or overlap conflict }
+        '422': { description: Invalid full payer or method }
+        '503': { description: Financial service unavailable }
 components:
+  parameters:
+    CheckoutToken:
+      name: token
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[A-Za-z0-9_-]{43}  securitySchemes:
+    MerchantBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: ek_test_<publicId>_<random32> or ek_live_<publicId>_<random32>
+      description: |
+        256-bit random server-side bearer secret, never put into browser JavaScript,
+        query strings or client SDK bundles; store in a server-side secret manager.
+    MerchantContext:
+      type: object
+      additionalProperties: false
+      required: [workspace_id, environment, key_id, scopes, financial_api_ready]
+      properties:
+        workspace_id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum: [sandbox, live]
+        key_id:
+          type: string
+          format: uuid
+        scopes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/KeyScope'
+        financial_api_ready:
+          type: boolean
+          const: false
+    KeyScope:
+      type: string
+      enum:
+        - payments:read
+        - payments:write
+        - customers:read
+        - customers:write
+        - invoices:read
+        - invoices:write
+        - refunds:read
+        - refunds:write
+        - webhooks:manage
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, retryable, correlation_id]
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              enum: [INVALID_ENVIRONMENT, INVALID_API_KEY, SCOPE_OR_ENVIRONMENT_DENIED, AUTH_SERVICE_UNAVAILABLE]
+            message:
+              type: string
+            retryable:
+              type: boolean
+            correlation_id:
+              type: string
+              pattern: '^[a-f0-9]{24}$'
+  responses:
+    BadEnvironment:
+      description: Missing, repeated or unsupported environment
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InvalidCredential:
+      description: Invalid, revoked or expired merchant key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ScopeDenied:
+      description: Authenticated key cannot access required scope/environment
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    AuthUnavailable:
+      description: Credential database unavailable; safe to retry
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+ }
+  schemas:
+    Intent:
+      type: object
+      required: [id, merchant_reference, amount_minor, currency, expires_at, state]
+      properties:
+        id: { type: string, format: uuid }
+        merchant_reference: { type: string }
+        amount_minor: { type: integer, minimum: 1 }
+        currency: { type: string, const: BDT }
+        environment: { type: string, const: sandbox }
+        expires_at: { type: string, format: date-time }
+        state: { type: string, enum: [requires_payer, awaiting_payment, processing, completed, expired, cancelled] }
+    Checkout:
+      allOf:
+        - $ref: '#/components/schemas/Intent'
+        - type: object
+          properties:
+            payer_suffix: { type: [string, 'null'], pattern: '^[0-9]{4}  securitySchemes:
+    MerchantBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: ek_test_<publicId>_<random32> or ek_live_<publicId>_<random32>
+      description: |
+        256-bit random server-side bearer secret, never put into browser JavaScript,
+        query strings or client SDK bundles; store in a server-side secret manager.
+  schemas:
+    MerchantContext:
+      type: object
+      additionalProperties: false
+      required: [workspace_id, environment, key_id, scopes, financial_api_ready]
+      properties:
+        workspace_id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum: [sandbox, live]
+        key_id:
+          type: string
+          format: uuid
+        scopes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/KeyScope'
+        financial_api_ready:
+          type: boolean
+          const: false
+    KeyScope:
+      type: string
+      enum:
+        - payments:read
+        - payments:write
+        - customers:read
+        - customers:write
+        - invoices:read
+        - invoices:write
+        - refunds:read
+        - refunds:write
+        - webhooks:manage
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, retryable, correlation_id]
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              enum: [INVALID_ENVIRONMENT, INVALID_API_KEY, SCOPE_OR_ENVIRONMENT_DENIED, AUTH_SERVICE_UNAVAILABLE]
+            message:
+              type: string
+            retryable:
+              type: boolean
+            correlation_id:
+              type: string
+              pattern: '^[a-f0-9]{24}$'
+  responses:
+    BadEnvironment:
+      description: Missing, repeated or unsupported environment
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InvalidCredential:
+      description: Invalid, revoked or expired merchant key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ScopeDenied:
+      description: Authenticated key cannot access required scope/environment
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    AuthUnavailable:
+      description: Credential database unavailable; safe to retry
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+ }
+            method: { type: [string, 'null'], enum: [bkash, nagad, rocket, null] }
+            methods: { type: array, items: { type: string, enum: [bkash, nagad, rocket] } }
+            destination: { type: [string, 'null'] }
+            verification_available: { type: boolean, const: false }
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: ekmivo-session
   securitySchemes:
     MerchantBearer:
       type: http
