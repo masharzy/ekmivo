@@ -111,6 +111,29 @@ func migrateRealm(ctx context.Context,env,raw,filename string)error{
  log.Printf("PG04 financial database realm=%s migrated and verified (no customer rows)",env)
  return nil
 }
+
+func migratePG05(ctx context.Context,realm,raw,filename string)error{
+ if filename==""{return errors.New("PG05 explicit migration source required")}
+ pool,err:=pgxpool.New(ctx,raw)
+ if err!=nil{return errors.New("PG05 financial realm unavailable")}
+ defer pool.Close()
+ var installed string;var ready bool
+ if err=pool.QueryRow(ctx,`SELECT environment,
+  to_regclass('public.pg05_checkout_tokens') IS NOT NULL
+ FROM financial_realm WHERE singleton`).Scan(&installed,&ready);err!=nil||installed!=realm{
+  return errors.New("PG05 migration refused wrong or uninitialized financial realm")
+ }
+ if ready{return nil}
+ body,err:=os.ReadFile(filepath.Clean(filename))
+ if err!=nil{return errors.New("PG05 migration source unavailable")}
+ conn,err:=pool.Acquire(ctx)
+ if err!=nil{return errors.New("PG05 migration connection unavailable")}
+ defer conn.Release()
+ if _,err=conn.Conn().PgConn().Exec(ctx,string(body)).ReadAll();err!=nil{
+  return fmt.Errorf("PG05 financial checkout migration: %w",err)
+ }
+ return pool.QueryRow(ctx,"SELECT to_regprocedure('pg05_checkout_view(text)') IS NOT NULL").Scan(&ready)
+}
 func main(){
  if os.Getenv("PG04_ALLOW_MIGRATION")!="true"{log.Fatal("explicit PG04_ALLOW_MIGRATION=true is mandatory")}
  sa,lv:=os.Getenv("PG04_SANDBOX_MIGRATION_DATABASE_URL"),os.Getenv("PG04_LIVE_MIGRATION_DATABASE_URL")
@@ -129,5 +152,14 @@ func main(){
  if err:=migrateControl(ctx,control,controlFile);err!=nil{log.Fatal(err)}
  for _,target:=range []realmDSN{{"sandbox",sa},{"live",lv}}{
   if err:=migrateRealm(ctx,target.environment,target.raw,file);err!=nil{log.Fatalf("realm %s migration blocked: %v",target.environment,err)}
+ }
+ if os.Getenv("PG05_ALLOW_MIGRATION")=="true" {
+  source:=os.Getenv("PG05_FINANCIAL_MIGRATION_FILE")
+  if source==""{log.Fatal("PG05_FINANCIAL_MIGRATION_FILE is required")}
+  for _,target:=range []realmDSN{{"sandbox",sa},{"live",lv}} {
+   if err:=migratePG05(ctx,target.environment,target.raw,source);err!=nil{
+    log.Fatalf("PG05 realm %s migration blocked: %v",target.environment,err)
+   }
+  }
  }
 }
