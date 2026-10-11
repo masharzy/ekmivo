@@ -12,7 +12,7 @@ Reviewed PR #6 head `50909d23f53aa075ef654367bdfc83b117ed324d`, branch `pg04-int
 
 ## Findings preventing unconditional acceptance
 
-### P1 — inconsistent transaction-time window endpoint
+### P1 — inconsistent transaction-time window endpoint (corrected)
 
 In `infra/migrations/0008_pg04_financial_core.sql`, attempt overlap uses `tstzrange(...,'[)')`: the end is excluded. However, `financial_verify_payment_fields` rejects second-precision observations only when `original_transaction_at > window_end`. An observation exactly at the end therefore passes this time check. Adjacent attempts can share that instant under the verification rule despite being nonoverlapping under the issuance rule.
 
@@ -36,4 +36,6 @@ PR source evidence explicitly says financial production databases/migrations, pr
 
 Checkout (PG05), actual native receipt collection (PG06), automatic matching (PG07), and merchant webhook delivery (PG08) are later gates, not missing PG04 user-interface work. No fabricated UI acceptance or real provider/device result is claimed.
 
-**Verdict:** substantial PG04 implementation and verified isolated CI, but full PG04 acceptance remains OPEN pending the boundary correction and stronger automated financial/isolation proof; production rollout also remains unverified. These technical gaps should not be labelled merely owner manual testing.
+**Correction verified:** source `1bf4581c216e7cf1bc3aaa56c679591967b5e14b` changes the second-precision end comparison to >= and adds six real database cases. [CI 38142699483](https://github.com/masharzy/ekmivo/actions/runs/38142699483) passes all four jobs and 58 financial assertions. The boundary finding is CLOSED.
+
+**Verdict:** the owner authorized merging this corrected implementation milestone. Stronger automated financial/isolation proof listed above remains pending, and production rollout remains unverified. These technical gaps should not be labelled merely owner manual testing.

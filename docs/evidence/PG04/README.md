@@ -45,3 +45,6 @@ GitHub Actions must prove on the **same head SHA**:
 ## Independent boundary correction
 The second-precision time guard now excludes window_end consistently with issuance [start,end). New real PostgreSQL regression cases cover immediately before/exactly at/after expiry, minute uncertainty containment, and an adjacent attempt accepting the shared boundary only as its start. CI on the correction commit is pending. Independent review/test coverage follow-ups remain in INDEPENDENT-REVIEW.md; this correction does not claim production rollout or all missing financial tests complete.
 
+
+### Boundary fix acceptance evidence
+Source 1bf4581c216e7cf1bc3aaa56c679591967b5e14b: [CI 38142699483](https://github.com/masharzy/ekmivo/actions/runs/38142699483) all 4/4 jobs PASS; actual PostgreSQL finance/River assertions 58/58, including all six new boundary cases. Owner authorized correction and merge of this implementation milestone. Remaining technical review cases are explicitly pending in INDEPENDENT-REVIEW.md; no production financial deployment is claimed. This documentation-only follow-up preserves tested application-source equivalence.
