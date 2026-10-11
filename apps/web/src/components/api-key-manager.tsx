@@ -5,7 +5,7 @@ import {createMerchantKey,rotateMerchantKey,revokeMerchantKey,type KeyActionStat
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 
 export type ApiKeyRow={
- id:string;publicId:string;name:string;scopes:string[];
+ id:string;publicId:string;name:string;scopes:string[];expired:boolean;
  createdAt:string;expiresAt:string;revokedAt:string|null;lastUsedAt:string|null
 };
 const initial:KeyActionState={status:"idle",message:""};
@@ -42,7 +42,7 @@ function KeyControls({locale,workspaceId,environment,keyItem}:{locale:Locale;wor
  const [rotate,rotateAction]=useActionState(rotateMerchantKey.bind(null,locale),initial);
  const [revoke,revokeAction]=useActionState(revokeMerchantKey.bind(null,locale),initial);
  const [operation,setOperation]=useState<"rotate"|"revoke"|null>(null);
- const bn=locale==="bn",isRevoked=!!keyItem.revokedAt||new Date(keyItem.expiresAt).getTime()<=Date.now();
+ const bn=locale==="bn",isRevoked=!!keyItem.revokedAt||keyItem.expired;
  if(isRevoked)return <span className="ds-availability">{keyItem.revokedAt?(bn?"বাতিল":"Revoked"):(bn?"মেয়াদ শেষ":"Expired")}</span>;
  const chosen=operation==="rotate"?rotateAction:revokeAction;
  const state=operation==="rotate"?rotate:revoke;
@@ -109,7 +109,7 @@ export function ApiKeyManager({locale,workspaceId,environment,keys}:{
   </div>:<div className="ds-key-list">{keys.map(keyItem=><article key={keyItem.id} className="ds-key-card">
    <div className="ds-key-card-head"><div><h4>{keyItem.name}</h4>
     <code>{environment==="sandbox"?"ek_test_":"ek_live_"}{keyItem.publicId}_••••</code></div>
-    <span>{keyItem.revokedAt?(bn?"বাতিল":"Revoked"):new Date(keyItem.expiresAt).getTime()<=Date.now()?(bn?"মেয়াদ শেষ":"Expired"):(bn?"সক্রিয়":"Active")}</span>
+    <span>{keyItem.revokedAt?(bn?"বাতিল":"Revoked"):keyItem.expired?(bn?"মেয়াদ শেষ":"Expired"):(bn?"সক্রিয়":"Active")}</span>
    </div>
    <p>{bn?"অনুমতি":"Scopes"}: {keyItem.scopes.join(" · ")}</p>
    <small>{bn?"তৈরি":"Created"}: {showDate(keyItem.createdAt)} · {bn?"মেয়াদ":"Expires"}: {showDate(keyItem.expiresAt)} · {bn?"শেষ ব্যবহার":"Last used"}: {keyItem.lastUsedAt?showDate(keyItem.lastUsedAt):"—"}</small>
