@@ -57,6 +57,43 @@ func newHandlerWithRepository(repo *authz.Repository) http.Handler {
 		}
 		return repo.Authenticate(r.Context(), cookie.Value)
 	}
+	// PG03: real credential verification, no simulated financial rows or writes.
+	// A valid key grants only its own environment and explicitly issued scope.
+	mux.HandleFunc("GET /v1/merchant/context", func(w http.ResponseWriter, r *http.Request) {
+		envs:=r.URL.Query()["environment"]
+		if len(envs)!=1 || (envs[0]!="sandbox"&&envs[0]!="live") {
+			writeJSON(w,http.StatusBadRequest,map[string]any{"error":map[string]any{
+				"code":"INVALID_ENVIRONMENT","message":"One explicit sandbox or live environment is required","retryable":false}})
+			return
+		}
+		if repo==nil {
+			writeJSON(w,http.StatusServiceUnavailable,map[string]any{"error":map[string]any{
+				"code":"AUTH_SERVICE_UNAVAILABLE","message":"Authorization unavailable","retryable":true}})
+			return
+		}
+		credential,err:=repo.AuthenticateMerchant(r.Context(),r.Header.Get("Authorization"),authz.Environment(envs[0]),"payments:read")
+		if err!=nil {
+			switch {
+			case errors.Is(err,authz.ErrUnauthorized):
+				writeJSON(w,http.StatusUnauthorized,map[string]any{"error":map[string]any{
+					"code":"INVALID_API_KEY","message":"Invalid or expired API key","retryable":false}})
+			case errors.Is(err,authz.ErrForbidden):
+				writeJSON(w,http.StatusForbidden,map[string]any{"error":map[string]any{
+					"code":"SCOPE_OR_ENVIRONMENT_DENIED","message":"Credential is not authorized for this scope or environment","retryable":false}})
+			default:
+				writeJSON(w,http.StatusServiceUnavailable,map[string]any{"error":map[string]any{
+					"code":"AUTH_SERVICE_UNAVAILABLE","message":"Authorization unavailable","retryable":true}})
+			}
+			return
+		}
+		writeJSON(w,http.StatusOK,map[string]any{
+			"workspace_id":credential.WorkspaceID,
+			"environment":credential.Environment,
+			"key_id":credential.KeyID,
+			"scopes":credential.Scopes,
+			"financial_api_ready":false,
+		})
+	})
 	mux.HandleFunc("GET /v1/session", func(w http.ResponseWriter, r *http.Request) {
 		user, err := identify(r)
 		if err != nil {
