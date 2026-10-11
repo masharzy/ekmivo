@@ -126,6 +126,65 @@ try{
    ok(!perms[0].can_raw,"reader could inspect private receipt evidence");
   }finally{await testReader.end({timeout:3})}
  }
+ // Real control-to-finance projected entitlement, not copied identity data.
+ const userId=randomUUID(),workspaceId=randomUUID();
+ await admin`INSERT INTO app_users(id,email,display_name,password_hash)
+ VALUES(${userId}::uuid,${"pg04-projection-"+userId+"@example.invalid"},'PG04 projection','test-invalid-no-login')`;
+ await admin`INSERT INTO workspaces(id,name,service_mode,created_by)
+ VALUES(${workspaceId}::uuid,'PG04 controlled provisioning','commerce',${userId}::uuid)`;
+ await admin`INSERT INTO workspace_members(workspace_id,user_id,role)
+ VALUES(${workspaceId}::uuid,${userId}::uuid,'owner')`;
+ const machine=postgres(ds(source.pathname.slice(1),"ekmivo_financial_projection_operator","pg04-control-projection-only"),{max:1,prepare:false});
+ let originalVersion=0;
+ try{
+  const sourceRows=await machine`SELECT * FROM resolve_financial_projection(${workspaceId}::uuid,'sandbox')`;
+  same(sourceRows.length,1,"authenticated projection missing");
+  ok(sourceRows[0].active,"enabled payments should be projected active");
+  originalVersion=Number(sourceRows[0].source_version);
+  const pEnv={...env,
+   PG04_PROJECTION_CONTROL_URL:ds(source.pathname.slice(1),"ekmivo_financial_projection_operator","pg04-control-projection-only"),
+   PG04_PROVISIONER_SANDBOX_URL:ds("ekmivo_pg04_sandbox","ekmivo_financial_provisioner_sandbox","pg04-sandbox-provision-only"),
+   PG04_PROVISIONER_LIVE_URL:ds("ekmivo_pg04_live","ekmivo_financial_provisioner_live","pg04-live-provision-only"),
+   PG04_WORKSPACE_ID:workspaceId};
+  for(const realm of names){
+   execFileSync("go",["run","./cmd/financial-sync"],{
+    cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",
+    env:{...pEnv,PG04_ENVIRONMENT:realm},timeout:60000
+   });
+  }
+  for(const realm of names){
+   const state=await dbs[realm]`SELECT status,entitlement_version FROM financial_workspace_registry
+    WHERE workspace_id=${workspaceId}::uuid`;
+   same(state[0].status,"active","control product did not provision finance realm");
+  }
+  await admin`UPDATE workspace_product_access SET enabled=false,updated_at=now()
+   WHERE workspace_id=${workspaceId}::uuid AND product='payments'`;
+  const updated=await machine`SELECT source_version,active FROM
+    resolve_financial_projection(${workspaceId}::uuid,'sandbox')`;
+  ok(!updated[0].active&&Number(updated[0].source_version)>originalVersion,
+   "payment disable not versioned or still active");
+  for(const realm of names){
+   execFileSync("go",["run","./cmd/financial-sync"],{
+    cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",
+    env:{...pEnv,PG04_ENVIRONMENT:realm},timeout:60000
+   });
+   const state=await dbs[realm]`SELECT status FROM financial_workspace_registry
+    WHERE workspace_id=${workspaceId}::uuid`;
+   same(state[0].status,"suspended","payment disable did not suspend financial realm");
+  }
+  const prov=postgres(pEnv.PG04_PROVISIONER_SANDBOX_URL,{max:1,prepare:false});
+  try{
+   const stale=await prov`SELECT financial_sync_workspace(${workspaceId}::uuid,'sandbox',${originalVersion},true) AS applied`;
+   same(stale[0].applied,false,"stale activation overwrote newer suspension");
+  }finally{await prov.end({timeout:3})}
+  const attemptCross=postgres(ds("ekmivo_pg04_live","ekmivo_financial_worker_sandbox","pg04-sandbox-worker-only"),
+   {max:1,prepare:false,connect_timeout:3});
+  try{
+   let denied=false;
+   try{await attemptCross`SELECT 1`}catch(e){denied=true}
+   ok(denied,"sandbox worker credential accessed live financial DB");
+  }finally{await attemptCross.end({timeout:1})}
+ }finally{await machine.end({timeout:3})}
  // Owner-only fixture exercises trigger-level invariants; entirely rolled back.
  const db=dbs.sandbox,workspace=controls[0][1];
  try{
