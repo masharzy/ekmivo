@@ -93,7 +93,7 @@ func (s *Store) Execute(
  _,err=tx.ExecContext(ctx,`INSERT INTO financial_idempotency
    (workspace_id,environment,operation,idempotency_key,request_hash,result_code,result_body)
    VALUES($1::uuid,$2,$3,$4,$5,$6,$7::jsonb)`,
-  workspace,environment,operation,key,DigestRequest(request),result.Status,[]byte(result.Body))
+  workspace,environment,operation,key,DigestRequest(request),result.Status,string(result.Body))
  if err!=nil{return zero,fmt.Errorf("%w: idempotency commit record",ErrUnavailable)}
  if err=tx.Commit();err!=nil{return zero,fmt.Errorf("%w: transaction commit",ErrUnavailable)}
  return result,nil
@@ -112,14 +112,14 @@ func EnqueueTx(ctx context.Context,tx *sql.Tx,workspace,environment,eventKey,kin
    (workspace_id,environment,event_key,event_kind,payload)
    VALUES($1::uuid,$2,$3,$4,$5::jsonb)
    ON CONFLICT(workspace_id,environment,event_key) DO NOTHING
-   RETURNING id::text`,workspace,environment,eventKey,kind,[]byte(payload)).Scan(&id)
+   RETURNING id::text`,workspace,environment,eventKey,kind,string(payload)).Scan(&id)
  if errors.Is(err,sql.ErrNoRows){
   var oldKind string
   var equal bool
   err=tx.QueryRowContext(ctx,`SELECT id::text,event_kind,payload=$1::jsonb
    FROM financial_outbox
    WHERE workspace_id=$2::uuid AND environment=$3 AND event_key=$4`,
-   []byte(payload),workspace,environment,eventKey).Scan(&id,&oldKind,&equal)
+   string(payload),workspace,environment,eventKey).Scan(&id,&oldKind,&equal)
   if err!=nil{return "",fmt.Errorf("%w: existing outbox",ErrUnavailable)}
   if oldKind!=kind||!equal{return "",ErrConflict}
  }else if err!=nil{return "",fmt.Errorf("%w: append outbox",ErrUnavailable)}
