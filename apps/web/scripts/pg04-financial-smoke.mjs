@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {randomUUID,randomBytes} from "node:crypto";
-import {execFileSync} from "node:child_process";
+import {execFileSync,spawn} from "node:child_process";
 import postgres from "postgres";
 
 const control=process.env.PG00_TEST_DATABASE_URL;
@@ -183,6 +183,69 @@ try{
  execFileSync("go",["test","./internal/financial","./cmd/financial-migrate","./cmd/worker","-count=1","-v"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env,timeout:100000
  });
+ // The worker REALLY dies after River transitions a durable job to running.
+ // A fresh process must subsequently recover the unacknowledged job itself.
+ const queued=(await db`SELECT j.id FROM river_job j JOIN financial_outbox o ON o.river_job_id=j.id
+  WHERE o.event_kind='pg04.audit' AND o.workspace_id<>${workspace}::uuid ORDER BY j.id DESC LIMIT 1`);
+ ok(queued.length===1,"Go River test did not durably commit an audit job");
+ const target=queued[0].id;
+ const runner="/tmp/ekmivo-pg04-worker";
+ execFileSync("go",["build","-o",runner,"./cmd/worker"],{
+  cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env,timeout:100000
+ });
+ const workerBase={...env,
+  EKMIVO_WORKER_ENVIRONMENT:"sandbox",
+  FINANCIAL_WORKER_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_financial_worker_sandbox","pg04-sandbox-worker-only")};
+ const sleep=ms=>new Promise(res=>setTimeout(res,ms));
+ async function startWorker(extras={}){
+  const child=spawn(runner,[],{env:{...workerBase,...extras},stdio:["ignore","pipe","pipe"]});
+  let output="";
+  for(const stream of [child.stdout,child.stderr])stream.on("data",x=>{
+   output+=(String(x)).slice(-3000);
+   if(output.length>12000)output=output.slice(-12000);
+  });
+  return {child,logs:()=>output};
+ }
+ async function poll(check,timeout=120000){
+  const end=Date.now()+timeout;
+  while(Date.now()<end){if(await check())return true;await sleep(400)}
+  return false;
+ }
+ const first=await startWorker({PG04_CI_FAULT_INJECTION:"true",PG04_TEST_PAUSE_AFTER_CLAIM_MS:"30000"});
+ try{
+  const running=await poll(async()=>{
+   const j=await db`SELECT state FROM river_job WHERE id=${target}`;
+   return j.length>0&&j[0].state==="running";
+  },25000);
+  ok(running,"River worker did not acquire the job before crash: "+first.logs().slice(-500));
+  first.child.kill("SIGKILL");
+  await Promise.race([new Promise(resolve=>first.child.once("close",resolve)),sleep(5000)]);
+  const before=await db`SELECT state FROM river_job WHERE id=${target}`;
+  same(before[0]?.state,"running","job was not in flight when the process died");
+  const auditBefore=await db`SELECT count(*)::int AS n FROM financial_audit_processed o
+    JOIN financial_outbox e ON e.id=o.outbox_id WHERE e.river_job_id=${target}`;
+  same(auditBefore[0]?.n,0,"crashed job already completed side effect");
+ }finally{
+  if(first.child.exitCode===null)first.child.kill("SIGKILL");
+ }
+ const second=await startWorker();
+ try{
+  const recovered=await poll(async()=>{
+   const result=await db`SELECT j.state,
+     EXISTS(SELECT 1 FROM financial_audit_processed x
+      JOIN financial_outbox o ON o.id=x.outbox_id WHERE o.river_job_id=j.id) AS applied
+     FROM river_job j WHERE j.id=${target}`;
+   return result.length===1&&result[0].state==="completed"&&result[0].applied;
+  },240000);
+  ok(recovered,"River did not automatically rescue/complete the killed in-flight job: "+second.logs().slice(-600));
+  const row=await db`SELECT count(*)::int AS n FROM financial_audit_processed p
+    JOIN financial_outbox o ON o.id=p.outbox_id WHERE o.river_job_id=${target}`;
+  same(row[0].n,1,"crash/recovery duplicated audit side effect");
+ }finally{
+  second.child.kill("SIGTERM");
+  await Promise.race([new Promise(resolve=>second.child.once("close",resolve)),sleep(5000)]);
+  if(second.child.exitCode===null)second.child.kill("SIGKILL");
+ }
  const controlEmpty=await admin`SELECT to_regclass('public.payment_intents') IS NULL AS no_payments`;
  ok(controlEmpty[0].no_payments,"financial tables leaked into control DB");
  console.log(`PG04 isolated finance+River PASS: ${count} assertions; 2 DBs, no shared auth, registry, realm/cross-role isolation, PGX River rollback/idempotency`);
