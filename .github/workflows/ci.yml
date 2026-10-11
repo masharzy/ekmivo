@@ -72,6 +72,11 @@ jobs:
       - name: PG02 product and environment navigation contracts
         working-directory: apps/web
         run: node scripts/pg02-navigation-smoke.mjs
+      - name: PG03 scoped bearer key hash, RLS and environment security
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg03-credentials-smoke.mjs
       - name: PG02 workspace/server environment authorization checks
         working-directory: apps/web
         env:
