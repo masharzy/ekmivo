@@ -15,7 +15,7 @@ let stateCalls=0,refCalls=0;
 const sandbox={
  exports:{},URL,
  window:{
-  location:{href:"https://example.test/bn/workspaces"},
+  location:{href:"https://example.test/bn/workspaces",origin:"https://example.test"},
   addEventListener:(name,listener)=>listeners.set(name,listener),
   removeEventListener:()=>{},
   localStorage:{setItem(){},getItem(){return null},removeItem(){}},
