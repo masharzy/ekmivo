@@ -1,7 +1,27 @@
--- PG04 financial source-of-truth foundation.
--- Apply ONCE through the existing infra/migrations runner, never from HTTP.
--- This schema deliberately creates no synthetic paid records and no public "mark paid" API.
+-- PG04: independent financial DATABASE schema (apply only through one PG04 migration runner).
+-- River's pinned upstream migrations run first in that same runner.
+-- This database MUST NOT contain auth_sessions/app_users/workspaces/merchant_api_keys.
+-- Provision one database per realm, each with a separate credential and worker.
 BEGIN;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE financial_realm (
+ singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),
+ environment text NOT NULL UNIQUE CHECK(environment IN ('sandbox','live')),
+ installed_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO financial_realm(singleton,environment) VALUES
+ (true,current_setting('ekmivo.financial_migration_realm'));
+CREATE TABLE financial_workspace_registry (
+ workspace_id uuid NOT NULL,
+ environment text NOT NULL REFERENCES financial_realm(environment),
+ status text NOT NULL CHECK(status IN ('active','suspended')),
+ entitlement_version bigint NOT NULL CHECK(entitlement_version>0),
+ synced_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY(workspace_id,environment)
+);
+-- Only a constrained operator may provision this projection after confirming
+-- the authoritative control-plane workspace and enabled product. No PII copied.
+-- Finance runtime/worker have NO INSERT/UPDATE/DELETE privilege here.
 
 CREATE TABLE financial_receiving_accounts (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -14,7 +34,7 @@ CREATE TABLE financial_receiving_accounts (
  UNIQUE(workspace_id,environment,id),
  UNIQUE(workspace_id,environment,method,identity_hmac),
  FOREIGN KEY(workspace_id,environment)
-  REFERENCES workspace_environments(workspace_id,environment) ON DELETE RESTRICT
+  REFERENCES financial_workspace_registry(workspace_id,environment) ON DELETE RESTRICT
 );
 
 CREATE TABLE payment_intents (
@@ -29,7 +49,7 @@ CREATE TABLE payment_intents (
  UNIQUE(workspace_id,environment,id),
  UNIQUE(workspace_id,environment,merchant_reference),
  FOREIGN KEY(workspace_id,environment)
-  REFERENCES workspace_environments(workspace_id,environment) ON DELETE RESTRICT
+  REFERENCES financial_workspace_registry(workspace_id,environment) ON DELETE RESTRICT
 );
 
 -- Issued attempts are immutable. New payer/route/time means a NEW attempt,
@@ -114,7 +134,7 @@ CREATE TABLE financial_inbound_events (
  UNIQUE(workspace_id,environment,id),
  UNIQUE(workspace_id,environment,source_kind,source_event_id),
  FOREIGN KEY(workspace_id,environment)
-  REFERENCES workspace_environments(workspace_id,environment) ON DELETE RESTRICT
+  REFERENCES financial_workspace_registry(workspace_id,environment) ON DELETE RESTRICT
 );
 
 CREATE TABLE financial_receipt_observations (
@@ -265,7 +285,7 @@ CREATE TABLE financial_idempotency (
  created_at timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY(workspace_id,environment,operation,idempotency_key),
  FOREIGN KEY(workspace_id,environment)
-  REFERENCES workspace_environments(workspace_id,environment) ON DELETE RESTRICT
+  REFERENCES financial_workspace_registry(workspace_id,environment) ON DELETE RESTRICT
 );
 
 CREATE TABLE financial_outbox (
@@ -275,58 +295,47 @@ CREATE TABLE financial_outbox (
  event_key text NOT NULL CHECK(char_length(event_key) BETWEEN 1 AND 160),
  event_kind text NOT NULL CHECK(event_kind ~ '^[a-z][a-z0-9_.:-]{1,95}$'),
  payload jsonb NOT NULL CHECK(jsonb_typeof(payload)='object' AND pg_column_size(payload)<=16384),
+ river_job_id bigint NOT NULL UNIQUE REFERENCES river_job(id) ON DELETE RESTRICT,
  created_at timestamptz NOT NULL DEFAULT now(),
  UNIQUE(workspace_id,environment,id),
  UNIQUE(workspace_id,environment,event_key),
  FOREIGN KEY(workspace_id,environment)
-  REFERENCES workspace_environments(workspace_id,environment) ON DELETE RESTRICT
+  REFERENCES financial_workspace_registry(workspace_id,environment) ON DELETE RESTRICT
 );
 
 -- Durable queue/outbox association. Never acknowledge a financial event before
 -- its handling is committed; one outbox event has exactly one base delivery job.
-CREATE TABLE financial_jobs (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+-- River owns the durable queue schema; the immutable financial outbox stores
+-- its committed job ID. The event AND job are inserted by one pgx transaction.
+CREATE TABLE financial_audit_processed (
  workspace_id uuid NOT NULL,
- environment text NOT NULL CHECK(environment IN ('sandbox','live')),
+ environment text NOT NULL,
  outbox_id uuid NOT NULL,
- queue text NOT NULL CHECK(queue='financial:'||environment),
- state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','processing','completed','dead')),
- attempts integer NOT NULL DEFAULT 0 CHECK(attempts>=0),
- max_attempts integer NOT NULL DEFAULT 10 CHECK(max_attempts BETWEEN 1 AND 30),
- run_after timestamptz NOT NULL DEFAULT now(),
- lease_token uuid,
- lease_until timestamptz,
- last_error_code text CHECK(last_error_code ~ '^[A-Z_]{1,64}$'),
- completed_at timestamptz,
- created_at timestamptz NOT NULL DEFAULT now(),
- updated_at timestamptz NOT NULL DEFAULT now(),
- UNIQUE(workspace_id,environment,id),
- UNIQUE(workspace_id,environment,outbox_id),
- CHECK((state='processing')=(lease_token IS NOT NULL AND lease_until IS NOT NULL)),
- CHECK((state='completed')=(completed_at IS NOT NULL)),
+ processed_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY(workspace_id,environment,outbox_id),
  FOREIGN KEY(workspace_id,environment,outbox_id)
   REFERENCES financial_outbox(workspace_id,environment,id) ON DELETE RESTRICT
 );
-CREATE INDEX financial_jobs_claim_idx
- ON financial_jobs(environment,run_after,created_at)
- WHERE state IN ('pending','processing');
-
--- Enforce outbox and job commit atomically (the FK enforces the other
--- direction). A transaction inserting only an outbox row CANNOT commit.
-CREATE FUNCTION financial_require_queued_outbox() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+CREATE FUNCTION financial_process_audit(p_outbox_id uuid)
+ RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER
+ SET search_path=public,pg_temp AS $$
+DECLARE evt financial_outbox%ROWTYPE; realm text;
 BEGIN
- IF NOT EXISTS(SELECT 1 FROM financial_jobs j
-    WHERE j.workspace_id=NEW.workspace_id AND j.environment=NEW.environment
-      AND j.outbox_id=NEW.id) THEN
-  RAISE EXCEPTION 'outbox must enqueue durable job in the same transaction'
-    USING ERRCODE='23514';
+ SELECT environment INTO realm FROM financial_realm WHERE singleton=true;
+ SELECT * INTO evt FROM financial_outbox o WHERE o.id=p_outbox_id AND o.environment=realm;
+ IF evt.id IS NULL OR evt.event_kind<>'pg04.audit' OR
+  evt.payload<>'{"schema_version":1,"action":"durability_probe"}'::jsonb OR
+  NOT EXISTS(SELECT 1 FROM financial_workspace_registry r
+     WHERE r.workspace_id=evt.workspace_id AND r.environment=evt.environment AND r.status='active')
+ THEN
+  RAISE EXCEPTION 'audit job is not authorized for this realm or version' USING ERRCODE='42501';
  END IF;
- RETURN NULL;
+ INSERT INTO financial_audit_processed(workspace_id,environment,outbox_id)
+ VALUES(evt.workspace_id,evt.environment,evt.id) ON CONFLICT DO NOTHING;
+ RETURN FOUND;
 END; $$;
-CREATE CONSTRAINT TRIGGER financial_outbox_requires_job
- AFTER INSERT ON financial_outbox DEFERRABLE INITIALLY DEFERRED
- FOR EACH ROW EXECUTE FUNCTION financial_require_queued_outbox();
+REVOKE ALL ON FUNCTION financial_process_audit(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION financial_process_audit(uuid) TO ekmivo_financial_worker;
 
 -- Every source and outbox row is append-only, including "expired" attempts.
 -- Corrections are compensating events, not destructive editing.
@@ -339,131 +348,60 @@ BEGIN
  FOREACH t IN ARRAY ARRAY[
   'financial_receiving_accounts','payment_intents','payment_attempts',
   'financial_inbound_events','financial_receipt_observations','financial_payments',
-  'financial_allocations','financial_idempotency','financial_outbox'
+  'financial_allocations','financial_idempotency','financial_outbox','financial_audit_processed'
  ] LOOP
   EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OR DELETE ON %I FOR EACH ROW EXECUTE FUNCTION financial_reject_history_change()',t||'_immutable',t);
  END LOOP;
 END; $$;
 
--- Tenant+realm scope is always transaction-local; absent context sees no rows.
+-- Defense-in-depth: no finance rows without an authorized transaction-local scope.
+-- IMPORTANT: Go authenticates user/merchant in the separate control DB BEFORE
+-- using this connection. PostgreSQL GUCs alone are not authentication.
+ALTER TABLE financial_workspace_registry ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_workspace_registry FORCE ROW LEVEL SECURITY;
+CREATE POLICY financial_registry_scope_read ON financial_workspace_registry
+ FOR SELECT TO ekmivo_financial_runtime
+ USING(workspace_id=nullif(current_setting('ekmivo.workspace_id',true),'')::uuid
+  AND environment=current_setting('ekmivo.environment',true) AND status='active');
+
 DO $$
 DECLARE t text;
 BEGIN
  FOREACH t IN ARRAY ARRAY[
   'financial_receiving_accounts','payment_intents','payment_attempts',
   'financial_inbound_events','financial_receipt_observations','financial_payments',
-  'financial_allocations','financial_idempotency','financial_outbox','financial_jobs'
+  'financial_allocations','financial_idempotency','financial_outbox',
+  'financial_audit_processed'
  ] LOOP
   EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY',t);
   EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY',t);
   EXECUTE format('CREATE POLICY %I ON %I FOR SELECT TO ekmivo_financial_runtime USING (
-    workspace_id = nullif(current_setting(''ekmivo.workspace_id'',true),'''')::uuid
-    AND environment = current_setting(''ekmivo.environment'',true)
-    AND EXISTS(SELECT 1 FROM workspace_environments e
-      WHERE e.workspace_id=%2$I.workspace_id AND e.environment=%2$I.environment AND e.status=''active'')
-    AND EXISTS(SELECT 1 FROM workspace_members m JOIN app_users u ON u.id=m.user_id
-      WHERE m.workspace_id=%2$I.workspace_id
-      AND m.user_id=nullif(current_setting(''ekmivo.user_id'',true),'''')::uuid
-      AND u.disabled_at IS NULL)
-  )', t||'_reader',t);
+   workspace_id=nullif(current_setting(''ekmivo.workspace_id'',true),'''')::uuid
+   AND environment=current_setting(''ekmivo.environment'',true)
+   AND EXISTS(SELECT 1 FROM financial_workspace_registry r
+    WHERE r.workspace_id=%2$I.workspace_id AND r.environment=%2$I.environment
+    AND r.status=''active'')
+  )',t||'_reader',t);
  END LOOP;
 END; $$;
 
-REVOKE ALL ON financial_receiving_accounts,payment_intents,payment_attempts,
+REVOKE ALL ON financial_realm,financial_workspace_registry,
+ financial_receiving_accounts,payment_intents,payment_attempts,
  financial_inbound_events,financial_receipt_observations,financial_payments,
- financial_allocations,financial_idempotency,financial_outbox,financial_jobs
- FROM PUBLIC,ekmivo_financial_runtime;
--- Read-only control-plane projections. No raw ingress bytes or auth-less writes.
-GRANT SELECT ON payment_intents,payment_attempts,financial_payments,
+ financial_allocations,financial_idempotency,financial_outbox,
+ financial_audit_processed FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_worker;
+GRANT SELECT ON financial_realm,financial_workspace_registry,
+ payment_intents,payment_attempts,financial_payments,
  financial_allocations,financial_idempotency,financial_outbox
  TO ekmivo_financial_runtime;
 
-
--- Bounded, crash-recoverable worker lease functions; no merchant payment
--- status can be changed by a worker merely acknowledging a job.
--- At PG04 only "pg04.audit" is dispatchable. Unsupported future kinds
--- are kept pending until PG05+ implements their real handlers.
-CREATE FUNCTION financial_claim_audit_job(p_environment text, p_token uuid, p_lease_seconds integer)
-RETURNS TABLE(job_id uuid,event_kind text,event_payload jsonb)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-BEGIN
- IF p_environment NOT IN ('sandbox','live') OR p_token IS NULL OR
-    p_lease_seconds NOT BETWEEN 10 AND 300 THEN
-  RAISE EXCEPTION 'invalid worker lease request' USING ERRCODE='22023';
- END IF;
- -- A crashed worker with its last allowed attempt must not leave
- -- a permanently stuck processing row.
- UPDATE financial_jobs j SET state='dead', lease_token=NULL,lease_until=NULL,
-  last_error_code='LEASE_EXHAUSTED',updated_at=now()
- WHERE j.environment=p_environment AND j.state='processing'
-  AND j.lease_until<=now() AND j.attempts>=j.max_attempts;
-
- RETURN QUERY
- WITH candidate AS (
-  SELECT j.id FROM financial_jobs j
-  JOIN financial_outbox o ON o.id=j.outbox_id
-   AND o.workspace_id=j.workspace_id AND o.environment=j.environment
-  WHERE j.environment=p_environment AND j.queue='financial:'||p_environment
-   AND o.event_kind='pg04.audit'
-   AND j.attempts<j.max_attempts
-   AND ((j.state='pending' AND j.run_after<=now())
-      OR (j.state='processing' AND j.lease_until<=now()))
-  ORDER BY j.run_after,j.created_at,j.id
-  FOR UPDATE OF j SKIP LOCKED LIMIT 1
- ), claimed AS (
-  UPDATE financial_jobs j SET state='processing', attempts=j.attempts+1,
-   lease_token=p_token,lease_until=now()+make_interval(secs=>p_lease_seconds),
-   updated_at=now()
-  WHERE j.id IN (SELECT id FROM candidate)
-  RETURNING j.id,j.workspace_id,j.environment,j.outbox_id
- )
- SELECT c.id,o.event_kind,o.payload FROM claimed c
- JOIN financial_outbox o ON o.workspace_id=c.workspace_id
-  AND o.environment=c.environment AND o.id=c.outbox_id;
-END; $$;
-
-CREATE FUNCTION financial_ack_audit_job(p_job uuid,p_token uuid)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE n integer;
-BEGIN
- UPDATE financial_jobs j SET state='completed', completed_at=now(),
-  lease_token=NULL,lease_until=NULL,updated_at=now(),last_error_code=NULL
- WHERE j.id=p_job AND j.lease_token=p_token AND j.state='processing'
-  AND j.lease_until>now() AND EXISTS (
-   SELECT 1 FROM financial_outbox o WHERE o.id=j.outbox_id
-    AND o.workspace_id=j.workspace_id AND o.environment=j.environment
-    AND o.event_kind='pg04.audit')
- ;
- GET DIAGNOSTICS n=ROW_COUNT;
- RETURN n=1;
-END; $$;
-
-CREATE FUNCTION financial_retry_audit_job(p_job uuid,p_token uuid,p_code text)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE n integer;
-BEGIN
- IF p_code NOT IN ('HANDLER_FAILED','DEPENDENCY_UNAVAILABLE','CONTEXT_REVOKED') THEN
-  RAISE EXCEPTION 'invalid redacted failure code' USING ERRCODE='22023';
- END IF;
- UPDATE financial_jobs j SET
-  state=CASE WHEN j.attempts>=j.max_attempts THEN 'dead' ELSE 'pending' END,
-  run_after=now()+make_interval(secs=>least(3600,(power(2,least(j.attempts,10)))::integer)),
-  lease_token=NULL,lease_until=NULL,last_error_code=p_code,updated_at=now()
- WHERE j.id=p_job AND j.lease_token=p_token AND j.state='processing'
-  AND j.lease_until>now() AND EXISTS (
-   SELECT 1 FROM financial_outbox o WHERE o.id=j.outbox_id
-    AND o.workspace_id=j.workspace_id AND o.environment=j.environment
-    AND o.event_kind='pg04.audit');
- GET DIAGNOSTICS n=ROW_COUNT;
- RETURN n=1;
-END; $$;
-REVOKE ALL ON FUNCTION financial_claim_audit_job(text,uuid,integer) FROM PUBLIC;
-REVOKE ALL ON FUNCTION financial_ack_audit_job(uuid,uuid) FROM PUBLIC;
-REVOKE ALL ON FUNCTION financial_retry_audit_job(uuid,uuid,text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION financial_claim_audit_job(text,uuid,integer),
- financial_ack_audit_job(uuid,uuid),
- financial_retry_audit_job(uuid,uuid,text) TO ekmivo_financial_runtime;
-
--- Only the process which owns database migrations has INSERT rights at PG04.
--- PG05/PG06 add narrow, validated writer entrypoints without unsafe mark-paid.
+-- Only the River worker may operate the queue; it cannot mint payments.
+-- Role is separately scoped to EACH physical financial database.
+GRANT SELECT,INSERT,UPDATE,DELETE ON river_job TO ekmivo_financial_worker;
+GRANT USAGE,SELECT ON SEQUENCE river_job_id_seq TO ekmivo_financial_worker;
+-- River leader/queue access is granted by the single migration/provisioning
+-- runner after detecting the exact upstream River migration schema version.
+-- No public finance/worker role is granted bypass RLS or ownership.
+-- Provisioning/mutation is restricted to trusted domain writers. PG05 adds
+-- authorized API entrypoints, never a direct client-controlled mark-paid route.
 COMMIT;
