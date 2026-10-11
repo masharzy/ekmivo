@@ -24,7 +24,7 @@ func TestMerchantKeySyntaxAndEnvironment(t *testing.T){
   if valid{t.Fatal("accepted trailing token bytes")}
  }
  for _,token:=range []string{
-  "", "ek_test_"+prefix+"_short","ek_live_"+prefix+"_"+strings.Repeat("a",43),
+  "", "ek_test_"+prefix+"_short","ek_live_"+prefix+"_"+strings.Repeat("a",42)+"B",
   "ek_test_"+strings.Repeat("f",16)+"_"+strings.Repeat("!",43),
   "ek_test_"+prefix+"_"+raw+" extra",
   "ek_prod_"+prefix+"_"+raw,
