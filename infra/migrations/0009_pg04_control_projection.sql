@@ -73,6 +73,9 @@ GRANT EXECUTE ON FUNCTION resolve_financial_projection(uuid,text)
 
 ALTER TABLE financial_projection_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE financial_projection_versions FORCE ROW LEVEL SECURITY;
+DO $ BEGIN
+ EXECUTE format('CREATE POLICY financial_projection_migration_owner ON financial_projection_versions FOR ALL TO %I USING (true) WITH CHECK (true)',current_user);
+END; $;
 REVOKE ALL ON financial_projection_versions FROM PUBLIC,ekmivo_financial_runtime,
  ekmivo_financial_projection;
 COMMIT;
