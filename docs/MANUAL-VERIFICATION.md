@@ -92,7 +92,7 @@
 - [ ] Check that process logs, output, CI artifacts and temporary fixtures do not expose raw SMS, full payer numbers, secrets, DB URLs or user identity. Review separate outbox/dead job monitoring and recovery path.
 - [ ] Record reviewed SHA, isolated migration run, River rescue and 3/3 CI, production migration/operator decision; **do not** treat PG04 as permission to issue real payment receipts, payment intents or claims of provider settlement.
 - **Automated gates:** CI PostgreSQL 17 three-DB setup, migration replay, RLS, immutable/dedup/monetary guards, River InsertTx rollback and 12-way replay, real SIGKILL/restart recovery, Go/Next/Android regression.
-- **Status:** SOURCE IMPLEMENTATION UNDER CI; mark **IMPLEMENTED — MANUAL PENDING** only after latest full tests pass. Production release remains separate PG17.
+- **Status:** **IMPLEMENTED — MANUAL PENDING** (source verified SHA `12d80eb3`; [CI 38135142457](https://github.com/masharzy/ekmivo/actions/runs/38135142457) **4/4 PASS**, 52 isolated finance assertions plus true SIGKILL/River recovery). Production financial migration, provider/device testing and release remain separate.
 
 
 ## PG05 — Checkout and payer lock
