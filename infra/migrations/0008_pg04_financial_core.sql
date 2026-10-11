@@ -59,7 +59,7 @@ CREATE TABLE payment_attempts (
 -- The payer/route/time tuple is locked at issue; overlapping active
 -- windows for the same evidence bucket would create ambiguous matches.
 CREATE FUNCTION financial_validate_attempt() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE intent payment_intents%ROWTYPE; method_of_account text; overlaps boolean;
 BEGIN
  SELECT * INTO intent FROM payment_intents
@@ -92,7 +92,7 @@ BEGIN
    USING ERRCODE='23505';
  END IF;
  RETURN NEW;
-END $;
+END $$;
 CREATE TRIGGER financial_attempt_issuance BEFORE INSERT ON payment_attempts
  FOR EACH ROW EXECUTE FUNCTION financial_validate_attempt();
 
@@ -170,7 +170,7 @@ CREATE TABLE financial_payments (
 -- PG07 matcher. All five actual receipt fields must align with the issued
 -- immutable attempt; no client-submitted verified=true can pass this alone.
 CREATE FUNCTION financial_verify_payment_fields() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE a payment_attempts%ROWTYPE; o financial_receipt_observations%ROWTYPE; src text;
 BEGIN
  SELECT * INTO a FROM payment_attempts
@@ -205,7 +205,7 @@ BEGIN
   RAISE EXCEPTION 'verification source provenance or environment mismatch' USING ERRCODE='23514';
  END IF;
  RETURN NEW;
-END $;
+END $$;
 CREATE TRIGGER financial_verified_fields BEFORE INSERT ON financial_payments
  FOR EACH ROW EXECUTE FUNCTION financial_verify_payment_fields();
 
@@ -314,7 +314,7 @@ CREATE INDEX financial_jobs_claim_idx
 -- Enforce outbox and job commit atomically (the FK enforces the other
 -- direction). A transaction inserting only an outbox row CANNOT commit.
 CREATE FUNCTION financial_require_queued_outbox() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM financial_jobs j
     WHERE j.workspace_id=NEW.workspace_id AND j.environment=NEW.environment
@@ -323,7 +323,7 @@ BEGIN
     USING ERRCODE='23514';
  END IF;
  RETURN NULL;
-END $;
+END $$;
 CREATE CONSTRAINT TRIGGER financial_outbox_requires_job
  AFTER INSERT ON financial_outbox DEFERRABLE INITIALLY DEFERRED
  FOR EACH ROW EXECUTE FUNCTION financial_require_queued_outbox();
@@ -385,7 +385,7 @@ GRANT SELECT ON payment_intents,payment_attempts,financial_payments,
 -- are kept pending until PG05+ implements their real handlers.
 CREATE FUNCTION financial_claim_audit_job(p_environment text, p_token uuid, p_lease_seconds integer)
 RETURNS TABLE(job_id uuid,event_kind text,event_payload jsonb)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
  IF p_environment NOT IN ('sandbox','live') OR p_token IS NULL OR
     p_lease_seconds NOT BETWEEN 10 AND 300 THEN
@@ -420,10 +420,10 @@ BEGIN
  SELECT c.id,o.event_kind,o.payload FROM claimed c
  JOIN financial_outbox o ON o.workspace_id=c.workspace_id
   AND o.environment=c.environment AND o.id=c.outbox_id;
-END $;
+END $$;
 
 CREATE FUNCTION financial_ack_audit_job(p_job uuid,p_token uuid)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE n integer;
 BEGIN
  UPDATE financial_jobs j SET state='completed', completed_at=now(),
@@ -436,10 +436,10 @@ BEGIN
  ;
  GET DIAGNOSTICS n=ROW_COUNT;
  RETURN n=1;
-END $;
+END $$;
 
 CREATE FUNCTION financial_retry_audit_job(p_job uuid,p_token uuid,p_code text)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE n integer;
 BEGIN
  IF p_code NOT IN ('HANDLER_FAILED','DEPENDENCY_UNAVAILABLE','CONTEXT_REVOKED') THEN
@@ -456,7 +456,7 @@ BEGIN
     AND o.event_kind='pg04.audit');
  GET DIAGNOSTICS n=ROW_COUNT;
  RETURN n=1;
-END $;
+END $$;
 REVOKE ALL ON FUNCTION financial_claim_audit_job(text,uuid,integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION financial_ack_audit_job(uuid,uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION financial_retry_audit_job(uuid,uuid,text) FROM PUBLIC;
