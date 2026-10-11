@@ -177,6 +177,23 @@ try{
    const stale=await prov`SELECT financial_sync_workspace(${workspaceId}::uuid,'sandbox',${originalVersion},true) AS applied`;
    same(stale[0].applied,false,"stale activation overwrote newer suspension");
   }finally{await prov.end({timeout:3})}
+  // Deleting a workspace creates a versioned non-PII tombstone, not an
+  // orphaned active financial registry. Sync remains possible after cascade.
+  await admin`DELETE FROM workspaces WHERE id=${workspaceId}::uuid`;
+  const tomb=await machine`SELECT source_version,active FROM
+    resolve_financial_projection(${workspaceId}::uuid,'sandbox')`;
+  same(tomb.length,1,"deleted workspace lost its source tombstone");
+  ok(!tomb[0].active&&Number(tomb[0].source_version)>Number(updated[0].source_version),
+   "deleted workspace did not invalidate the prior projection");
+  for(const realm of names){
+   execFileSync("go",["run","./cmd/financial-sync"],{
+    cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",
+    env:{...pEnv,PG04_ENVIRONMENT:realm},timeout:60000
+   });
+   const state=await dbs[realm]`SELECT status,entitlement_version FROM financial_workspace_registry
+    WHERE workspace_id=${workspaceId}::uuid`;
+   same(state[0].status,"suspended","deleted business still active in finance");
+  }
   const attemptCross=postgres(ds("ekmivo_pg04_live","ekmivo_financial_worker_sandbox","pg04-sandbox-worker-only"),
    {max:1,prepare:false,connect_timeout:3});
   try{
