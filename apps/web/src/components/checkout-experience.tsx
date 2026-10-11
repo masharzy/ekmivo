@@ -42,7 +42,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
  const [payer,setPayer]=useState("");
  const [method,setMethod]=useState("bkash");
  const [locking,setLocking]=useState(false);
- const [clock,setClock]=useState(Date.now());
+ const [clock,setClock]=useState(Date.now);
  const [updated,setUpdated]=useState<number|null>(null);
  const [copied,setCopied]=useState(false);
  const live=useRef(true);
