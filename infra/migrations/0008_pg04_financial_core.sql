@@ -24,7 +24,7 @@ CREATE TABLE financial_workspace_registry (
 -- Finance runtime/worker have NO INSERT/UPDATE/DELETE privilege here.
 CREATE FUNCTION financial_sync_workspace(p_workspace uuid,p_realm text,
  p_version bigint,p_enabled boolean)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE current_realm text; affected integer;
 BEGIN
  SELECT environment INTO current_realm FROM financial_realm WHERE singleton;
@@ -40,7 +40,7 @@ BEGIN
         AND financial_workspace_registry.status=excluded.status);
  GET DIAGNOSTICS affected=ROW_COUNT;
  RETURN affected=1;
-END; $;
+END; $$;
 REVOKE ALL ON FUNCTION financial_sync_workspace(uuid,text,bigint,boolean) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION financial_sync_workspace(uuid,text,bigint,boolean)
  TO ekmivo_financial_provisioner;
@@ -330,7 +330,7 @@ CREATE TABLE financial_outbox (
 -- Outbox and River job must co-commit; do NOT use a permanent FK
 -- since River legitimately prunes completed jobs while financial audit remains.
 CREATE FUNCTION financial_require_river_job() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM river_job WHERE id=NEW.river_job_id
   AND queue='financial_'||NEW.environment AND kind=NEW.event_kind) THEN
@@ -338,7 +338,7 @@ BEGIN
    USING ERRCODE='23514';
  END IF;
  RETURN NULL;
-END; $;
+END; $$;
 CREATE CONSTRAINT TRIGGER financial_outbox_river_commit
  AFTER INSERT ON financial_outbox DEFERRABLE INITIALLY DEFERRED
  FOR EACH ROW EXECUTE FUNCTION financial_require_river_job();
@@ -358,14 +358,14 @@ CREATE TABLE financial_audit_processed (
 -- it cannot SELECT arbitrary payment or raw receipt rows.
 CREATE FUNCTION financial_audit_context(p_outbox uuid)
 RETURNS TABLE(workspace_id uuid,environment text,entitlement_version bigint)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT o.workspace_id,o.environment,r.entitlement_version
  FROM financial_outbox o JOIN financial_workspace_registry r
   ON r.workspace_id=o.workspace_id AND r.environment=o.environment
  JOIN financial_realm f ON f.environment=o.environment AND f.singleton=true
  WHERE o.id=p_outbox AND o.event_kind='pg04_audit' AND r.status='active'
  LIMIT 1
-$;
+$$;
 REVOKE ALL ON FUNCTION financial_audit_context(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION financial_audit_context(uuid) TO ekmivo_financial_worker;
 CREATE FUNCTION financial_process_audit(p_outbox_id uuid)
@@ -411,9 +411,9 @@ END; $$;
 -- using this connection. PostgreSQL GUCs alone are not authentication.
 ALTER TABLE financial_workspace_registry ENABLE ROW LEVEL SECURITY;
 ALTER TABLE financial_workspace_registry FORCE ROW LEVEL SECURITY;
-DO $ BEGIN
+DO $$ BEGIN
  EXECUTE format('CREATE POLICY financial_registry_migration_owner ON financial_workspace_registry FOR ALL TO %I USING (true) WITH CHECK (true)',current_user);
-END; $;
+END; $$;
 CREATE POLICY financial_registry_scope_read ON financial_workspace_registry
  FOR SELECT TO ekmivo_finance_reader
  USING(workspace_id=nullif(current_setting('ekmivo.workspace_id',true),'')::uuid
@@ -460,7 +460,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON river_job TO ekmivo_financial_worker;
 GRANT USAGE,SELECT ON SEQUENCE river_job_id_seq TO ekmivo_financial_worker;
 -- Upstream River's migration-owned queue/leader and future tables are
 -- restricted to worker, never financial domain tables or River migrations.
-DO $
+DO $$
 DECLARE row_info record;
 BEGIN
  FOR row_info IN SELECT c.relname,c.relkind FROM pg_class c
@@ -470,7 +470,7 @@ BEGIN
  LOOP
   EXECUTE format('GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE %I TO ekmivo_financial_worker',row_info.relname);
  END LOOP;
-END; $;
+END; $$;
 -- The actual database owner/provisioner independently restricts CONNECT to
 -- this realm's credentials. No worker becomes a financial table owner.
 -- Provisioning/mutation is restricted to trusted domain writers. PG05 adds
