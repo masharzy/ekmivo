@@ -56,7 +56,7 @@ $$;
 CREATE FUNCTION pg05_create_intent(p_workspace uuid,p_environment text,p_reference text,
  p_amount bigint,p_minutes integer,p_key text,p_digest text,p_request_hash text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE existing financial_idempotency%ROWTYPE; issued payment_intents%ROWTYPE; result jsonb; method text;
+DECLARE existing financial_idempotency%ROWTYPE; issued payment_intents%ROWTYPE; result jsonb; route_method text;
 BEGIN
  IF p_environment<>'sandbox' OR p_workspace IS NULL OR
   current_setting('ekmivo.workspace_id',true) IS DISTINCT FROM p_workspace::text OR
@@ -86,11 +86,11 @@ BEGIN
  VALUES(p_workspace,p_environment,issued.id,p_digest,p_key);
  -- Explicitly SIMULATED destinations. Neither real receiving phone numbers nor
  -- provider credentials are created. Live paths require PG06/PG12 onboarding.
- FOREACH method IN ARRAY ARRAY['bkash','nagad','rocket'] LOOP
+ FOREACH route_method IN ARRAY ARRAY['bkash','nagad','rocket'] LOOP
   INSERT INTO financial_receiving_accounts
    (workspace_id,environment,method,identity_hmac,display_suffix)
-  VALUES(p_workspace,p_environment,method,
-   encode(digest('pg05-NO-REAL-MONEY:'||p_workspace::text||':'||method,'sha256'),'hex'),'0000')
+  VALUES(p_workspace,p_environment,route_method,
+   encode(digest('pg05-NO-REAL-MONEY:'||p_workspace::text||':'||route_method,'sha256'),'hex'),'0000')
   ON CONFLICT(workspace_id,environment,method,identity_hmac) DO NOTHING;
  END LOOP;
  INSERT INTO pg05_intent_events(workspace_id,environment,intent_id,event_type)
