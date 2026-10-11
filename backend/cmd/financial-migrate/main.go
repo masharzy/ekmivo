@@ -134,6 +134,28 @@ func migratePG05(ctx context.Context,realm,raw,filename string)error{
  }
  return pool.QueryRow(ctx,"SELECT to_regprocedure('pg05_checkout_view(text)') IS NOT NULL").Scan(&ready)
 }
+// PG05 0011 is an additive upgrade. Apply even if 0010 was already installed.
+func migratePG05Linked(ctx context.Context,realm,raw,filename string)error{
+ if filename==""{return errors.New("PG05 linked-source migration path required")}
+ pool,err:=pgxpool.New(ctx,raw);if err!=nil{return err}
+ defer pool.Close()
+ var installed string;var present bool
+ err=pool.QueryRow(ctx,`SELECT environment,
+  to_regclass('public.pg05_billing_sources') IS NOT NULL FROM financial_realm WHERE singleton`).
+  Scan(&installed,&present)
+ if err!=nil||installed!=realm{return errors.New("PG05 linked-source realm mismatch")}
+ if present{return nil}
+ var base bool
+ err=pool.QueryRow(ctx,"SELECT to_regclass('public.pg05_checkout_tokens') IS NOT NULL").Scan(&base)
+ if err!=nil||!base{return errors.New("PG05 0010 prerequisite missing")}
+ body,err:=os.ReadFile(filepath.Clean(filename))
+ if err!=nil{return errors.New("PG05 0011 migration source missing")}
+ conn,err:=pool.Acquire(ctx);if err!=nil{return err};defer conn.Release()
+ if _,err=conn.Conn().PgConn().Exec(ctx,string(body)).ReadAll();err!=nil{
+  return fmt.Errorf("PG05 linked-source migration: %w",err)
+ }
+ return pool.QueryRow(ctx,"SELECT to_regclass('public.pg05_billing_sources') IS NOT NULL").Scan(&present)
+}
 func main(){
  if os.Getenv("PG04_ALLOW_MIGRATION")!="true"{log.Fatal("explicit PG04_ALLOW_MIGRATION=true is mandatory")}
  sa,lv:=os.Getenv("PG04_SANDBOX_MIGRATION_DATABASE_URL"),os.Getenv("PG04_LIVE_MIGRATION_DATABASE_URL")
@@ -159,6 +181,13 @@ func main(){
   for _,target:=range []realmDSN{{"sandbox",sa},{"live",lv}} {
    if err:=migratePG05(ctx,target.environment,target.raw,source);err!=nil{
     log.Fatalf("PG05 realm %s migration blocked: %v",target.environment,err)
+   }
+  }
+  linked:=os.Getenv("PG05_LINKED_MIGRATION_FILE")
+  if linked==""{log.Fatal("PG05_LINKED_MIGRATION_FILE must point to 0011_pg05_linked_sources.sql")}
+  for _,target:=range []realmDSN{{"sandbox",sa},{"live",lv}} {
+   if err:=migratePG05Linked(ctx,target.environment,target.raw,linked);err!=nil{
+    log.Fatalf("PG05 linked realm %s migration blocked: %v",target.environment,err)
    }
   }
  }
