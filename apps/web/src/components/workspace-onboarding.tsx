@@ -60,21 +60,34 @@ export function WorkspaceOnboarding({locale,userId}:{locale:Locale;userId:string
    if(submitting.current)return;
    event.preventDefault();event.returnValue="";
   };
+  const confirmNavigation=(href:string)=>{
+   const next=new URL(href,window.location.href);
+   if(next.origin!==window.location.origin||next.href===window.location.href)return false;
+   setPendingUrl(next.href);
+   if(!dialog.current?.open)dialog.current?.showModal();
+   return true;
+  };
   const onLink=(event:MouseEvent)=>{
    if(submitting.current||event.defaultPrevented||event.button!==0||event.ctrlKey||event.shiftKey||event.metaKey||event.altKey)return;
-   if(!(event.target instanceof Element))return;
-   const anchor=event.target.closest("a[href]");
+   const anchor=event.target instanceof Element?event.target.closest("a[href]"):null;
    if(!anchor||anchor.hasAttribute("download")||anchor.getAttribute("target"))return;
-   const href=anchor.getAttribute("href");
-   if(!href)return;
-   const next=new URL(href,window.location.href);
-   if(next.origin!==window.location.origin||next.href===window.location.href)return;
-   event.preventDefault();event.stopPropagation();
-   setPendingUrl(next.href);dialog.current?.showModal();
+   if(confirmNavigation((anchor as HTMLAnchorElement).href)){event.preventDefault();event.stopPropagation();}
+  };
+  // SiteControls uses this event for locale changes that do not have an anchor.
+  // Do not persist a new locale or discard form input before Save/Discard/Stay.
+  const onGuardedNavigation=(event:Event)=>{
+   if(submitting.current)return;
+   const href=(event as CustomEvent<{href?:string}>).detail?.href;
+   if(typeof href==="string"&&confirmNavigation(href))event.preventDefault();
   };
   window.addEventListener("beforeunload",onUnload);
+  window.addEventListener("ekmivo:guarded-navigation",onGuardedNavigation);
   document.addEventListener("click",onLink,true);
-  return ()=>{window.removeEventListener("beforeunload",onUnload);document.removeEventListener("click",onLink,true);};
+  return ()=>{
+   window.removeEventListener("beforeunload",onUnload);
+   window.removeEventListener("ekmivo:guarded-navigation",onGuardedNavigation);
+   document.removeEventListener("click",onLink,true);
+  };
  },[dirty,name,mode,locale,draftKey]);
  useEffect(()=>{if(state.status==="error")submitting.current=false;},[state]);
  const leave=(choice:"save"|"discard")=>{
