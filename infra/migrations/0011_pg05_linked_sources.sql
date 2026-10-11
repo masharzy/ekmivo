@@ -82,7 +82,17 @@ BEGIN
  INSERT INTO pg05_billing_sources
  (workspace_id,environment,source_kind,source_reference,items,amount_minor)
  VALUES(p_workspace,p_environment,p_kind,p_reference,p_items,total::bigint)
+ ON CONFLICT(workspace_id,environment,source_kind,source_reference) DO NOTHING
  RETURNING * INTO issued;
+ IF NOT FOUND THEN
+  SELECT * INTO issued FROM pg05_billing_sources
+  WHERE workspace_id=p_workspace AND environment=p_environment
+   AND source_kind=p_kind AND source_reference=p_reference;
+  IF issued.id IS NULL OR issued.items IS DISTINCT FROM p_items
+   OR issued.amount_minor IS DISTINCT FROM total::bigint THEN
+   RAISE EXCEPTION 'source document identity conflict' USING ERRCODE='23505';
+  END IF;
+ END IF;
  RETURN jsonb_build_object('id',issued.id,'source_kind',issued.source_kind,
   'source_reference',issued.source_reference,'amount_minor',issued.amount_minor,
   'currency',issued.currency,'issued_at',issued.issued_at,'items',issued.items);
@@ -117,8 +127,20 @@ BEGIN
  WHERE workspace_id=p_workspace AND environment=p_environment AND
  source_kind=p_kind AND id=p_source_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'linked source not found' USING ERRCODE='P0002'; END IF;
+ -- Serialize issuance for the same authoritative source across different
+ -- idempotency keys: never issue competing active full-amount checkouts.
+ PERFORM pg_advisory_xact_lock(hashtextextended(
+  p_workspace::text||':'||p_environment||':pg05.linked:'||p_source_id::text,0));
  issued:=pg05_create_intent(p_workspace,p_environment,p_reference,source.amount_minor,
   p_minutes,p_key,p_digest,p_request_hash);
+ IF EXISTS(SELECT 1 FROM pg05_intent_source_links l WHERE
+  l.workspace_id=p_workspace AND l.environment=p_environment
+  AND l.source_kind=p_kind AND l.source_id=p_source_id
+  AND l.intent_id<>(issued->>'id')::uuid
+  AND pg05_intent_state(l.workspace_id,l.environment,l.intent_id)
+    NOT IN ('cancelled','expired')) THEN
+  RAISE EXCEPTION 'source has an active request' USING ERRCODE='23505';
+ END IF;
  INSERT INTO pg05_intent_source_links(workspace_id,environment,intent_id,source_kind,source_id)
  VALUES(p_workspace,p_environment,(issued->>'id')::uuid,p_kind,p_source_id)
  ON CONFLICT(workspace_id,environment,intent_id) DO NOTHING;
