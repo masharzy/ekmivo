@@ -78,4 +78,66 @@ DO $ BEGIN
 END; $;
 REVOKE ALL ON financial_projection_versions FROM PUBLIC,ekmivo_financial_runtime,
  ekmivo_financial_projection;
+
+-- Deleted workspaces are tombstoned (no identity data) so the projector
+-- disables their financial registry even after control FK cascades finish.
+CREATE TABLE financial_projection_tombstones (
+ workspace_id uuid NOT NULL,
+ environment text NOT NULL CHECK(environment IN ('sandbox','live')),
+ version bigint NOT NULL CHECK(version>0),
+ deleted_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY(workspace_id,environment)
+);
+CREATE FUNCTION financial_projection_workspace_deleted() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+BEGIN
+ INSERT INTO financial_projection_tombstones(workspace_id,environment,version)
+ SELECT workspace_id,environment,version+1
+ FROM financial_projection_versions WHERE workspace_id=OLD.id
+ ON CONFLICT(workspace_id,environment) DO UPDATE SET
+ version=greatest(financial_projection_tombstones.version,excluded.version),
+ deleted_at=now();
+ RETURN OLD;
+END; $;
+CREATE TRIGGER financial_projection_workspace_deleted_trigger
+ BEFORE DELETE ON workspaces FOR EACH ROW
+ EXECUTE FUNCTION financial_projection_workspace_deleted();
+
+ALTER TABLE financial_projection_tombstones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_projection_tombstones FORCE ROW LEVEL SECURITY;
+DO $ BEGIN
+ EXECUTE format('CREATE POLICY financial_tombstone_owner ON financial_projection_tombstones FOR ALL TO %I USING(true) WITH CHECK(true)',current_user);
+END; $;
+REVOKE ALL ON financial_projection_tombstones FROM PUBLIC,
+ ekmivo_financial_runtime,ekmivo_financial_projection;
+
+CREATE FUNCTION list_financial_projections()
+RETURNS TABLE(workspace_id uuid,environment text,source_version bigint,active boolean)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT v.workspace_id,v.environment,v.version,
+ (e.status='active' AND COALESCE(pa.enabled,false)) AS active
+ FROM financial_projection_versions v
+ JOIN workspace_environments e ON e.workspace_id=v.workspace_id
+  AND e.environment=v.environment
+ LEFT JOIN workspace_product_access pa ON pa.workspace_id=v.workspace_id
+  AND pa.product='payments'
+ UNION ALL
+ SELECT t.workspace_id,t.environment,t.version,false
+ FROM financial_projection_tombstones t
+ WHERE NOT EXISTS(SELECT 1 FROM financial_projection_versions v
+  WHERE v.workspace_id=t.workspace_id AND v.environment=t.environment)
+$;
+REVOKE ALL ON FUNCTION list_financial_projections() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION list_financial_projections() TO ekmivo_financial_projection;
+
+CREATE OR REPLACE FUNCTION resolve_financial_projection(p_workspace uuid,p_environment text)
+RETURNS TABLE(workspace_id uuid,environment text,source_version bigint,active boolean)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT v.workspace_id,v.environment,v.source_version,v.active
+ FROM list_financial_projections() v
+ WHERE v.workspace_id=p_workspace AND v.environment=p_environment LIMIT 1
+$;
+REVOKE ALL ON FUNCTION resolve_financial_projection(uuid,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION resolve_financial_projection(uuid,text)
+ TO ekmivo_financial_projection;
 COMMIT;
