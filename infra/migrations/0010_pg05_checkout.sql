@@ -220,7 +220,7 @@ GRANT EXECUTE ON FUNCTION pg05_create_intent(uuid,text,text,bigint,integer,text,
 -- A cancelled immutable attempt stays in history but must not prevent a
 -- NEW honest payment attempt against the same payer/route/time bucket.
 CREATE OR REPLACE FUNCTION financial_validate_attempt() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE intent payment_intents%ROWTYPE; method_of_account text; has_overlap boolean;
 BEGIN
  SELECT * INTO intent FROM payment_intents
@@ -251,5 +251,5 @@ BEGIN
   RAISE EXCEPTION 'overlapping active payer/account/method/amount attempt' USING ERRCODE='23505';
  END IF;
  RETURN NEW;
-END; $;
+END; $$;
 COMMIT;
