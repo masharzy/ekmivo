@@ -54,13 +54,14 @@ try{
     await tx`INSERT INTO payment_intents(id,workspace_id,environment,merchant_reference,amount_minor,expires_at)
      VALUES(${i}::uuid,${w}::uuid,${env},${"ref-"+i},7500,now()+interval '1 hour')`;
    }
+   const payerA=digest();
    const attemptA=(await tx`INSERT INTO payment_attempts
     (workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version)
-    VALUES(${spaceA}::uuid,'sandbox',${intentA}::uuid,${a}::uuid,${digest()},'5678',7500,'bkash',now(),now()+interval '15 minutes',1)
+    VALUES(${spaceA}::uuid,'sandbox',${intentA}::uuid,${a}::uuid,${payerA},'5678',7500,'bkash',now(),now()+interval '15 minutes',1)
     RETURNING id`)[0].id;
    await expectSQLReject(tx,()=>tx`INSERT INTO payment_attempts
     (workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version)
-    VALUES(${spaceA}::uuid,'sandbox',${intentB}::uuid,${a}::uuid,${digest()},'5678',7500,'bkash',now(),now()+interval '15 minutes',1)`,"23503");
+    VALUES(${spaceA}::uuid,'sandbox',${intentB}::uuid,${a}::uuid,${digest()},'5678',7500,'bkash',now(),now()+interval '15 minutes',1)`,"23514");
    await expectSQLReject(tx,()=>tx`INSERT INTO payment_intents(workspace_id,environment,merchant_reference,amount_minor,expires_at)
     VALUES(${spaceA}::uuid,'sandbox','bad amount',-1,now()+interval '1 minute')`,"23514");
    await expectSQLReject(tx,()=>tx`UPDATE payment_attempts SET payer_suffix='0000' WHERE id=${attemptA}::uuid`,"55000");
@@ -75,7 +76,7 @@ try{
    const observation=(await tx`INSERT INTO financial_receipt_observations
     (workspace_id,environment,inbound_event_id,receiving_account_id,provider_reference_hmac,payer_hmac,amount_minor,
      method,direction,original_transaction_at,time_precision,parser_version)
-    VALUES(${spaceA}::uuid,'sandbox',${event}::uuid,${a}::uuid,${digest()},${digest()},7500,'bkash','incoming',now(),'second',1)
+    VALUES(${spaceA}::uuid,'sandbox',${event}::uuid,${a}::uuid,${digest()},${payerA},7500,'bkash','incoming',now(),'second',1)
     RETURNING id`)[0].id;
    const payment=(await tx`INSERT INTO financial_payments
     (workspace_id,environment,attempt_id,observation_id,verified_amount_minor,verification_method,policy_version)
@@ -86,17 +87,17 @@ try{
     VALUES(${spaceA}::uuid,'sandbox',${payment}::uuid,${intentA}::uuid,3500)`;
    await expectSQLReject(tx,()=>tx`INSERT INTO financial_allocations
     (workspace_id,environment,payment_id,intent_id,amount_minor)
-    VALUES(${spaceA}::uuid,'sandbox',${payment}::uuid,${intentA}::uuid,5000)`,"23505");
+    VALUES(${spaceA}::uuid,'sandbox',${payment}::uuid,${intentA}::uuid,1000)`,"23505");
    // New distinct payment: amount cap is enforced even without uniqueness conflict.
-   const intentC=randomUUID(),attemptC=randomUUID(),evtC=randomUUID(),obsC=randomUUID();
+   const intentC=randomUUID(),attemptC=randomUUID(),evtC=randomUUID(),obsC=randomUUID(),payerC=digest();
    await tx`INSERT INTO payment_intents(id,workspace_id,environment,merchant_reference,amount_minor,expires_at)
     VALUES(${intentC}::uuid,${spaceA}::uuid,'sandbox','another payment',7500,now()+interval '1 hour')`;
    await tx`INSERT INTO payment_attempts(id,workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version)
-    VALUES(${attemptC}::uuid,${spaceA}::uuid,'sandbox',${intentC}::uuid,${a}::uuid,${digest()},'5678',7500,'bkash',now(),now()+interval '15 minutes',1)`;
+    VALUES(${attemptC}::uuid,${spaceA}::uuid,'sandbox',${intentC}::uuid,${a}::uuid,${payerC},'5678',7500,'bkash',now(),now()+interval '15 minutes',1)`;
    await tx`INSERT INTO financial_inbound_events(id,workspace_id,environment,source_kind,source_event_id,event_digest,encrypted_evidence)
     VALUES(${evtC}::uuid,${spaceA}::uuid,'sandbox','sandbox_fixture','evt-02',${digest()},${randomBytes(48)})`;
-   await tx`INSERT INTO financial_receipt_observations(id,workspace_id,environment,inbound_event_id,receiving_account_id,direction,time_precision,parser_version)
-    VALUES(${obsC}::uuid,${spaceA}::uuid,'sandbox',${evtC}::uuid,${a}::uuid,'incoming','unknown',1)`;
+   await tx`INSERT INTO financial_receipt_observations(id,workspace_id,environment,inbound_event_id,receiving_account_id,payer_hmac,amount_minor,method,direction,original_transaction_at,time_precision,parser_version)
+    VALUES(${obsC}::uuid,${spaceA}::uuid,'sandbox',${evtC}::uuid,${a}::uuid,${payerC},7500,'bkash','incoming',now(),'second',1)`;
    const payC=(await tx`INSERT INTO financial_payments(workspace_id,environment,attempt_id,observation_id,verified_amount_minor,verification_method,policy_version)
     VALUES(${spaceA}::uuid,'sandbox',${attemptC}::uuid,${obsC}::uuid,7500,'sandbox_fixture',1) RETURNING id`)[0].id;
    await expectSQLReject(tx,()=>tx`INSERT INTO financial_allocations
