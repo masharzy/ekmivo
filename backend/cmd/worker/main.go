@@ -108,7 +108,7 @@ func main(){
  source:=os.Getenv("PG04_WORKER_CONTROL_PROJECTION_URL")
  if source==""{log.Fatal("restricted control projection URL is required for fresh reauthorization")}
  financeURL,e1:=url.Parse(dsn);controlURL,e2:=url.Parse(source)
- if e1!=nil||e2!=nil||financeURL.Host+financeURL.Path==controlURL.Host+controlURL.Path||
+ if e1!=nil||e2!=nil||financeURL.User==nil||controlURL.User==nil||financeURL.Host+financeURL.Path==controlURL.Host+controlURL.Path||
   financeURL.User.Username()==controlURL.User.Username(){
   log.Fatal("financial and control DB/credential identities must be separate")
  }
