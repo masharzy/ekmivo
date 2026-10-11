@@ -141,6 +141,8 @@ BEGIN
  END IF;
  SELECT intent.* INTO i FROM pg05_checkout_tokens t JOIN payment_intents intent
   ON intent.id=t.intent_id AND intent.workspace_id=t.workspace_id AND intent.environment=t.environment
+ JOIN financial_workspace_registry registry ON registry.workspace_id=intent.workspace_id
+  AND registry.environment=intent.environment AND registry.status='active'
  WHERE t.token_digest=p_digest AND intent.environment=(SELECT environment FROM financial_realm WHERE singleton)
  FOR UPDATE OF intent;
  IF NOT FOUND THEN RETURN NULL; END IF;
