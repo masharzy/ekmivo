@@ -256,6 +256,15 @@ try{
    [first.id]))[0].n,1,"PG05 cancellation erased immutable attempt");
   same((await reader.unsafe("SELECT pg05_merchant_list($1::uuid,$2) AS value",
    [tenant,"sandbox"]))[0].value,null,"PG05 unscoped reader leaked merchant history");
+  same((await dbs.sandbox.unsafe("SELECT financial_sync_workspace($1::uuid,'sandbox',2,false) AS active",
+   [tenant]))[0].active,true,"PG05 sandbox suspension was not applied");
+  same((await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[otherHash]))[0].value,
+   null,"PG05 suspended workspace kept exposing public checkout");
+  same((await reader.unsafe("SELECT pg05_lock_payer($1,$2,$3,$4) AS value",
+   [otherHash,payer,"6789","bkash"]))[0].value,null,
+   "PG05 suspended workspace allowed payer lock");
+  same((await dbs.sandbox.unsafe("SELECT financial_sync_workspace($1::uuid,'sandbox',3,true) AS active",
+   [tenant]))[0].active,true,"PG05 sandbox resume failed");
   console.log("PG05 PASS: isolated migration repeat, create/replay, opaque capability, exact payer lock, collision, cancellation and replay");
  }finally{await reader.end({timeout:3})}
  // Owner-only fixture exercises trigger-level invariants; entirely rolled back.
