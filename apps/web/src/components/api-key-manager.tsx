@@ -78,7 +78,7 @@ export function ApiKeyManager({locale,userId,workspaceId,environment,keys}:{
  const [draftNotice,setDraftNotice]=useState("");
  const key=`ekmivo:pg03-key-draft:v1:${userId}:${workspaceId}:${environment}`;
  const draft={name:draftName,expiresDays:draftExpiry,scopes:draftScopes};
- const dirty=showCreate && state.status!=="success" && (
+ const dirty=showCreate && (
   draft.name!==saved.name||draft.expiresDays!==saved.expiresDays||
   draft.scopes.join(",")!==saved.scopes.join(",")
  );
