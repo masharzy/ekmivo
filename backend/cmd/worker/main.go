@@ -7,7 +7,9 @@ import (
  "errors"
  "fmt"
  "log"
+ "net/url"
  "os"
+ "strconv"
  "os/signal"
  "strings"
  "syscall"
@@ -24,10 +26,33 @@ type AuditWorker struct{
  Pool *pgxpool.Pool
  Realm string
 }
+// This bounded timeout applies only to the PG04 internal audit probe. River
+// reclaims timed-out running jobs after process death, and the audit PK makes
+// repeated handler execution idempotent.
+func (w *AuditWorker) Timeout(_ *river.Job[financial.AuditArgs]) time.Duration {
+ return 10*time.Second
+}
+func testPause(ctx context.Context)error{
+ ms:=os.Getenv("PG04_TEST_PAUSE_AFTER_CLAIM_MS")
+ if ms==""{return nil}
+ if os.Getenv("PG04_CI_FAULT_INJECTION")!="true"{return errors.New("fault injection forbidden")}
+ u,e:=url.Parse(os.Getenv("FINANCIAL_WORKER_DATABASE_URL"))
+ if e!=nil||u.Hostname()!="127.0.0.1"&&u.Hostname()!="localhost"{
+  return errors.New("fault injection permitted only with local disposable PostgreSQL")
+ }
+ n,e:=strconv.Atoi(ms)
+ if e!=nil||n<1||n>30000{return errors.New("invalid bounded test-only delay")}
+ select {
+ case <-ctx.Done():return ctx.Err()
+ case <-time.After(time.Duration(n)*time.Millisecond):return nil
+ }
+}
+
 func (w *AuditWorker) Work(ctx context.Context,job *river.Job[financial.AuditArgs])error{
  if job.Args.Environment!=w.Realm||!strings.Contains(job.Args.OutboxID,"-") {
   return errors.New("financial audit job realm or identifier is invalid")
  }
+ if err:=testPause(ctx);err!=nil{return err}
  // SECURITY DEFINER function checks physical realm, exact immutable event
  // kind/payload, workspace projection and idempotent processed-event PK.
  // No fake merchant payment, webhook or receipt is created here.
