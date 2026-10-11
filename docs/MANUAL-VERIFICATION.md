@@ -197,3 +197,7 @@ Owner reported **All pass** for the supplied PG01/PG02/PG03 combined checklist. 
 
 ### PG04 independent automated follow-up
 The owner authorized dependency-independent PG04 verification hardening while PG05 runs separately. Populated isolation, invalid-receipt negatives, true competing-connection guards, actual concurrent idempotent domain/job writes and explicit rollback-job checks are implemented; CI result pending. These are automated technical checks, not extra tests delegated to the owner. Original production/operator/device manual entries remain open.
+
+### PG04 automated follow-up outcome
+- [x] Populated Sandbox/Live tenant/no-context/wrong-realm/pool-reuse isolation, malformed five-field receipts and provenance, missing outbox job and cross-tenant allocation, real concurrent overlap/allocation caps, 12-way domain/outbox/River first-use replay and explicit orphan-job rollback: **automated PASS**, source a8fa3c9 / CI 38144576645 (107 database assertions plus Go integration races). Not owner/device evidence.
+- [ ] Existing operator production rollout and actual provider/device checks remain pending; original human checklist is preserved.

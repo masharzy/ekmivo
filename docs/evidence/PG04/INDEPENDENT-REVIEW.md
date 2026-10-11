@@ -1,6 +1,6 @@
 # PG04 independent verification — 2026-10-11
 
-Reviewed PR #6 head `50909d23f53aa075ef654367bdfc83b117ed324d`, branch `pg04-integrated-current-main-20261011`. PR remains OPEN, not merged into main. This review does not change the concurrent implementation branch, applied migrations, credentials or financial data.
+Reviewed PR #6 head `50909d23f53aa075ef654367bdfc83b117ed324d`, branch `pg04-integrated-current-main-20261011`. At the original review this PR was OPEN; it subsequently merged as 13db19a after the boundary correction. This review does not change the concurrent implementation branch, applied migrations, credentials or financial data.
 
 ## Verified evidence
 
@@ -39,3 +39,9 @@ Checkout (PG05), actual native receipt collection (PG06), automatic matching (PG
 **Correction verified:** source `1bf4581c216e7cf1bc3aaa56c679591967b5e14b` changes the second-precision end comparison to >= and adds six real database cases. [CI 38142699483](https://github.com/masharzy/ekmivo/actions/runs/38142699483) passes all four jobs and 58 financial assertions. The boundary finding is CLOSED.
 
 **Verdict:** the owner authorized merging this corrected implementation milestone. Stronger automated financial/isolation proof listed above remains pending, and production rollout remains unverified. These technical gaps should not be labelled merely owner manual testing.
+
+### PG04 independent automated follow-up complete — 2026-10-11
+
+Tested source a8fa3c98ddd55196be02a142f34f3f79e2f40597: [CI 38144576645](https://github.com/masharzy/ekmivo/actions/runs/38144576645) all four jobs PASS. Actual isolated PostgreSQL finance/River harness: **107/107 assertions**; separate Go integration cases pass actual competing-connection attempt/funds/intent races and 12-way idempotent intent/outbox/job creation, including explicit orphaned-job rollback denial. Worker running-job SIGKILL/fresh restart still passes. Restricted populated two-tenant readers tested in both physical realms. Sixteen malformed receipt cases deny with no financial effects; valid control case succeeds.
+
+Earlier independent review automated-evidence gaps are CLOSED. PG04 bounded source and available automated verification are complete; production provisioning/migration/projector/worker rollout and real provider/device release evidence remain OPEN. This does not accept PG05 or later PGs. Local full Go unit tests/vet and both Node syntax checks PASS; no local PostgreSQL integration or laptop Docker is claimed. Application/migrations/UI unchanged; only test code and documentation changed.
