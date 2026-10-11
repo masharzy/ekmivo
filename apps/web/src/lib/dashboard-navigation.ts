@@ -46,3 +46,11 @@ export function searchableNavigation(service: Service, query: string) {
   const normalized = query.trim().toLocaleLowerCase();
   return navigation[service].map(group => ({ ...group, items: group.items.filter(key => `${sections[key].en} ${sections[key].bn}`.toLocaleLowerCase().includes(normalized)) })).filter(group => group.items.length);
 }
+
+/** Search only memberships supplied by the authenticated server, never the global tenant table.
+ * Business results are switch shortcuts, NOT payment/customer record search. */
+export function searchableBusinesses<T extends {name: string}>(authorized: readonly T[], query: string): T[] {
+ const term=query.trim().toLocaleLowerCase();
+ if(!term)return [];
+ return authorized.filter(space=>space.name.toLocaleLowerCase().includes(term)).slice(0,8);
+}
