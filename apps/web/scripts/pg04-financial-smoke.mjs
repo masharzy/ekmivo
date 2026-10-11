@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {randomUUID,randomBytes} from "node:crypto";
+import {randomUUID,randomBytes,createHmac,createHash} from "node:crypto";
 import {execFileSync,spawn} from "node:child_process";
 import postgres from "postgres";
 
@@ -324,6 +324,66 @@ try{
    return (await tx.unsafe("SELECT pg05_merchant_list($1::uuid,$2) AS value",[tenant,"sandbox"]))[0].value;
   });
   same(listed.find(x=>x.id===linked.id)?.source_id,doc.id,"PG05 missing link provenance in merchant list");
+  // Real Go HTTP API smoke using the actually restricted control+finance roles.
+  // This is no substitute for owner browser/devices; no real money is involved.
+  const tokenSecret=randomBytes(40).toString("hex"),payerSecret=randomBytes(40).toString("hex");
+  const httpKey=randomUUID(),httpToken=createHmac("sha256",tokenSecret)
+   .update(tenant+"|sandbox|"+httpKey).digest("base64url");
+  const httpDigest=createHash("sha256").update(httpToken).digest("hex");
+  const httpIssued=await reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+   return (await tx.unsafe("SELECT pg05_create_intent($1::uuid,$2,$3,$4,$5,$6,$7,$8) AS value",
+    [tenant,"sandbox","PG05-HTTP-"+httpKey,12345,15,httpKey,httpDigest,hmac()]))[0].value;
+  });
+  const goCwd=new URL("../../../backend/",import.meta.url);
+  const apiBin="/tmp/ekmivo-pg05-ci-api-"+process.pid;
+  execFileSync("go",["build","-o",apiBin,"./cmd/api"],{cwd:goCwd,timeout:120000});
+  const port=17885,origin="http://127.0.0.1:"+port;
+  const child=spawn(apiBin,[],{cwd:goCwd,env:{
+    ...process.env,PORT:String(port),GO_WEB_ORIGIN:origin,
+    EKMIVO_REQUIRE_AUTHZ:"true",
+    AUTHZ_DATABASE_URL:ds(source.pathname.slice(1),"ekmivo_financial_runtime","pg01-ci-only-password"),
+    PG05_SANDBOX_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_finance_reader_sandbox","pg04-sandbox-reader-only"),
+    PG05_TOKEN_SECRET:tokenSecret,PG05_PAYER_SECRET:payerSecret
+  },stdio:["ignore","pipe","pipe"]});
+  let apiLogs="";
+  child.stdout.on("data",d=>{apiLogs=(apiLogs+String(d)).slice(-1200)});
+  child.stderr.on("data",d=>{apiLogs=(apiLogs+String(d)).slice(-1200)});
+  try{
+   let ready=false;
+   for(let tries=0;tries<85;tries++){
+    if(child.exitCode!==null)throw Error("PG05 Go API stopped during preflight: "+apiLogs);
+    try{const status=await fetch(origin+"/healthz",{signal:AbortSignal.timeout(700)});
+     if(status.status===200){ready=true;break}}catch{}
+    await new Promise(resolve=>setTimeout(resolve,160));
+   }
+   ok(ready,"PG05 real Go HTTP process did not start: "+apiLogs);
+   const url=origin+"/v1/public/checkout/"+httpToken;
+   const initial=await fetch(url),initialData=await initial.json();
+   same(initial.status,200,"PG05 public checkout HTTP GET failed");
+   same(initialData.id,httpIssued.id,"PG05 Go HTTP token cannot resolve immutable intent");
+   const malformed=await fetch(origin+"/v1/public/checkout/"+randomBytes(32).toString("base64url"));
+   same(malformed.status,404,"PG05 invalid public token HTTP access");
+   const forbiddenOrigin=await fetch(url+"/lock",{method:"POST",headers:{"Origin":"https://attacker.invalid",
+    "Content-Type":"application/json"},body:JSON.stringify({payer_number:"01712345678",method:"bkash"})});
+   same(forbiddenOrigin.status,403,"PG05 public payer lock accepted forged browser origin");
+   const lockResponse=await fetch(url+"/lock",{method:"POST",headers:{"Origin":origin,
+    "Content-Type":"application/json"},body:JSON.stringify({payer_number:"০১৭১২৩৪৫৬৭৮",method:"bkash"})});
+   same(lockResponse.status,200,"PG05 actual payer lock over Go HTTP failed");
+   const lockedHttp=await lockResponse.json();
+   same(lockedHttp.state,"awaiting_payment","PG05 HTTP lock fabricated a paid result");
+   same(lockedHttp.payer_suffix,"5678","PG05 HTTP payer suffix mismatch");
+   const replay=await fetch(url+"/lock",{method:"POST",headers:{"Origin":origin,
+    "Content-Type":"application/json"},body:JSON.stringify({payer_number:"01812345678",method:"bkash"})});
+   same(replay.status,409,"PG05 HTTP allowed a different payer after lock");
+   const merchantDenied=await fetch(origin+"/v1/workspaces/"+tenant+"/payment-intents?environment=sandbox");
+   same(merchantDenied.status,401,"PG05 HTTP financial list was available without merchant auth");
+   const sourceDenied=await fetch(origin+"/v1/workspaces/"+tenant+"/linked-sources?environment=sandbox");
+   same(sourceDenied.status,401,"PG05 HTTP linked documents were exposed without authorization");
+   const liveDenied=await fetch(origin+"/v1/workspaces/"+tenant+"/payment-intents?environment=live");
+   same(liveDenied.status,503,"PG05 HTTP live intent incorrectly enabled");
+   console.log("PG05 Go HTTP PASS: auth deny, opaque bearer, payer lock, CSRF, 409 immutability, live fail-closed");
+  }finally{child.kill("SIGTERM")}
   console.log("PG05 PASS: standalone and immutable linked snapshots, tenant scope, payer locking, cancellation, idempotency");
  }finally{await reader.end({timeout:3})}
  // Owner-only fixture exercises trigger-level invariants; entirely rolled back.
