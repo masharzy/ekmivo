@@ -261,7 +261,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
      <label>{bn?"ব্যবসার রেফারেন্স":"Merchant reference"}
       <input required maxLength={128} value={fields.reference} onChange={e=>edit("reference",e.target.value)} placeholder="ORDER-1024"/></label>
      <label>{bn?"রিকোয়েস্টের ধরন":"Request type"}
-      <select value={fields.sourceKind} onChange={e=>setFields(f=>({...f,sourceKind:e.target.value as Fields["sourceKind"],sourceId:""}))}>
+      <select value={fields.sourceKind} onChange={e=>{keyRef.current="";setNotice("");setFields(f=>({...f,sourceKind:e.target.value as Fields["sourceKind"],sourceId:""}))}}>
        <option value="standalone">{bn?"স্বতন্ত্র":"Standalone"}</option>
        <option value="order">{bn?"ইস্যু করা অর্ডার":"Issued order"}</option>
        <option value="invoice">{bn?"ইস্যু করা ইনভয়েস":"Issued invoice"}</option>
@@ -332,6 +332,22 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     {sourceError&&<p role="alert" className="ek-form-error">{sourceError}</p>}
     {dirty&&<p role="status" className="pg05-muted">{bn?"নথি বা রিকোয়েস্টে সংরক্ষণ না করা পরিবর্তন আছে।":"Unsaved document or request changes."}</p>}
    </form>
+   {sourceLoad==="loading"?<p role="status">{bn?"ইস্যু করা নথি লোড হচ্ছে…":"Loading issued documents…"}</p>:
+    sourceLoad==="error"?<div className="ds-empty" role="alert"><p>{sourceError|| (bn?"নথির তালিকা পাওয়া যাচ্ছে না।":"Issued documents unavailable.")}</p>
+     <button type="button" onClick={()=>void refreshSources()}>{bn?"আবার চেষ্টা করুন":"Retry"}</button></div>:
+    sources.length===0?<p className="pg05-muted">{bn?"এখনো কোনো ইস্যু করা নথি নেই।":"No issued source documents yet."}</p>:
+    <div className="pg05-records" aria-label={bn?"ইস্যু করা নথি":"Issued documents"}>
+     {sources.map(source=><article key={source.id} className="pg05-record">
+      <div className="pg05-record-main"><div><strong>{source.source_reference}</strong>
+       <small>{source.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}</small></div>
+       <div className="pg05-total"><strong>{number(source.amount_minor,locale)}</strong></div></div>
+      <div className="pg05-record-meta"><span>{bn?"ইস্যুর সময়":"Issued"}: {new Date(source.issued_at).toLocaleString(bn?"bn-BD":"en-BD")}</span></div>
+      <div className="pg05-actions"><button type="button" disabled={environment==="live"||load==="forbidden"}
+       onClick={()=>{setFields(prev=>({...prev,sourceKind:source.source_kind,sourceId:source.id,reference:prev.reference||source.source_reference+"-pay"}));
+        keyRef.current="";setExpanded(true);setNotice("");}}>
+       {bn?"এই নথির পেমেন্ট রিকোয়েস্ট":"Create payment request"} ↗</button></div>
+     </article>)}
+    </div>}
   </section>
   <section className="ds-panel pg05-section">
    <div className="pg05-topline"><div><h2>{bn?"ইস্যু করা রিকোয়েস্ট":"Issued requests"}</h2>
