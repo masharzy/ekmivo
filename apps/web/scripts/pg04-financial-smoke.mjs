@@ -45,6 +45,9 @@ try{
   IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_financial_projection') THEN
    CREATE ROLE ekmivo_financial_projection NOLOGIN;
   END IF;
+  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_financial_projection') THEN
+   CREATE ROLE ekmivo_financial_projection NOLOGIN;
+  END IF;
  END $$;`;
  await admin.unsafe(adminSQL).simple();
  await admin.unsafe("CREATE ROLE ekmivo_financial_projection_operator LOGIN PASSWORD 'pg04-control-projection-only'");
@@ -72,6 +75,8 @@ try{
  const env={
   ...process.env,
   PG04_ALLOW_MIGRATION:"true",
+  PG04_CONTROL_MIGRATION_DATABASE_URL:control,
+  PG04_CONTROL_MIGRATION_FILE:new URL("../../../infra/migrations/0009_pg04_control_projection.sql",import.meta.url).pathname,
   PG04_CONTROL_MIGRATION_DATABASE_URL:control,
   PG04_CONTROL_MIGRATION_FILE:new URL("../../../infra/migrations/0009_pg04_control_projection.sql",import.meta.url).pathname,
   PG04_SANDBOX_MIGRATION_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_pg04_migrate_sandbox","pg04-sandbox-migration-only"),
