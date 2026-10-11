@@ -29,7 +29,7 @@ type AuditArgs struct {
  OutboxID string `json:"outbox_id"`
  Environment string `json:"environment"`
 }
-func (AuditArgs) Kind()string{return "pg04.audit"}
+func (AuditArgs) Kind()string{return "pg04_audit"}
 type Store struct{
  DB *pgxpool.Pool
  Queue *river.Client[pgx.Tx]
@@ -107,7 +107,7 @@ func (s *Store) Execute(
 // Outbox-key lock prevents a raced or replayed job with different arguments.
 func (s *Store) EnqueueTx(ctx context.Context,tx pgx.Tx,workspace,env,eventKey,kind string,payload json.RawMessage)(string,error){
  if err:=s.valid(workspace,env);err!=nil{return "",err}
- if tx==nil||len(eventKey)==0||len(eventKey)>160||kind!="pg04.audit"{
+ if tx==nil||len(eventKey)==0||len(eventKey)>160||kind!="pg04_audit"{
   return "",ErrInvalid // future event kinds require their own real handlers
  }
  if err:=validateResult(Result{Status:200,Body:payload});err!=nil{return "",err}
