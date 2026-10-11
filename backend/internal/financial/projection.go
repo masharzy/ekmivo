@@ -26,7 +26,7 @@ func ValidateFinanceSeparation(control,sandbox,live string)error{
  users:=map[string]bool{}
  for _,raw:=range urls{
   u,e:=url.Parse(raw)
-  if e!=nil||(u.Scheme!="postgres"&&u.Scheme!="postgresql")||u.Host==""||u.User.Username()==""||
+  if e!=nil||(u.Scheme!="postgres"&&u.Scheme!="postgresql")||u.Host==""||u.User==nil||u.User.Username()==""||
     strings.TrimPrefix(u.Path,"/")==""{return ErrInvalid}
   name:=u.Host+u.Path
   if names[name]||users[u.User.Username()]{return ErrInvalid}
