@@ -24,7 +24,8 @@ export async function DeveloperConsole({locale,workspace,environment}:{
     createdAt:new Date(row.created_at).toISOString(),
     expiresAt:new Date(row.expires_at).toISOString(),
     revokedAt:row.revoked_at?new Date(row.revoked_at).toISOString():null,
-    lastUsedAt:row.last_used_at?new Date(row.last_used_at).toISOString():null
+    lastUsedAt:row.last_used_at?new Date(row.last_used_at).toISOString():null,
+    expired:new Date(row.expires_at).getTime()<=Date.now()
    }));
   }catch(e){
    unavailable=true;
