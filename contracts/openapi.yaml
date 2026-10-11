@@ -267,15 +267,7 @@ components:
       name: token
       in: path
       required: true
-      schema: { type: string, pattern: '^[A-Za-z0-9_-]{43}  securitySchemes:
-    MerchantBearer:
-      type: http
-      scheme: bearer
-      bearerFormat: ek_test_<publicId>_<random32> or ek_live_<publicId>_<random32>
-      description: |
-        256-bit random server-side bearer secret, never put into browser JavaScript,
-        query strings or client SDK bundles; store in a server-side secret manager.
-    MerchantContext:
+      schema: { type: string, pattern: '^[A-Za-z0-9_-]{43}    MerchantContext:
       type: object
       additionalProperties: false
       required: [workspace_id, environment, key_id, scopes, financial_api_ready]
@@ -329,6 +321,14 @@ components:
             correlation_id:
               type: string
               pattern: '^[a-f0-9]{24}$'
+  securitySchemes:
+    MerchantBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: ek_test_<publicId>_<random32> or ek_live_<publicId>_<random32>
+      description: |
+        256-bit random server-side bearer secret, never put into browser JavaScript,
+        query strings or client SDK bundles; store in a server-side secret manager.
   responses:
     BadEnvironment:
       description: Missing, repeated or unsupported environment
