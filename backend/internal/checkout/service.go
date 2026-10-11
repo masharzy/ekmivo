@@ -154,7 +154,7 @@ func (s *Service) merchant(r *http.Request,ws,realm,scope string)error{
  actor,err:=s.Auth.Authenticate(r.Context(),cookie.Value)
  if err!=nil{return err}
  capability:=authz.PaymentsRead
- if scope=="payments:write"{capability=authz.PaymentsManage}
+ if scope=="payments:write"{capability=authz.PaymentsIssue}
  _,err=s.Auth.AuthorizeWorkspace(r.Context(),actor,ws,authz.Environment(realm),capability)
  return err
 }
