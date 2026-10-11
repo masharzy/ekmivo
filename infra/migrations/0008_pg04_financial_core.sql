@@ -92,7 +92,7 @@ BEGIN
    USING ERRCODE='23505';
  END IF;
  RETURN NEW;
-END $$;
+END; $$;
 CREATE TRIGGER financial_attempt_issuance BEFORE INSERT ON payment_attempts
  FOR EACH ROW EXECUTE FUNCTION financial_validate_attempt();
 
@@ -205,7 +205,7 @@ BEGIN
   RAISE EXCEPTION 'verification source provenance or environment mismatch' USING ERRCODE='23514';
  END IF;
  RETURN NEW;
-END $$;
+END; $$;
 CREATE TRIGGER financial_verified_fields BEFORE INSERT ON financial_payments
  FOR EACH ROW EXECUTE FUNCTION financial_verify_payment_fields();
 
@@ -248,7 +248,7 @@ BEGIN
   RAISE EXCEPTION 'allocation exceeds verified funds or requested amount' USING ERRCODE='23514';
  END IF;
  RETURN NEW;
-END $$;
+END; $$;
 CREATE TRIGGER financial_allocation_caps BEFORE INSERT ON financial_allocations
  FOR EACH ROW EXECUTE FUNCTION financial_enforce_allocation_caps();
 
@@ -323,7 +323,7 @@ BEGIN
     USING ERRCODE='23514';
  END IF;
  RETURN NULL;
-END $$;
+END; $$;
 CREATE CONSTRAINT TRIGGER financial_outbox_requires_job
  AFTER INSERT ON financial_outbox DEFERRABLE INITIALLY DEFERRED
  FOR EACH ROW EXECUTE FUNCTION financial_require_queued_outbox();
@@ -332,7 +332,7 @@ CREATE CONSTRAINT TRIGGER financial_outbox_requires_job
 -- Corrections are compensating events, not destructive editing.
 CREATE FUNCTION financial_reject_history_change() RETURNS trigger
 LANGUAGE plpgsql SET search_path=public,pg_temp AS $$
-BEGIN RAISE EXCEPTION 'immutable financial history' USING ERRCODE='55000'; END $$;
+BEGIN RAISE EXCEPTION 'immutable financial history' USING ERRCODE='55000'; END; $$;
 DO $$
 DECLARE t text;
 BEGIN
@@ -343,7 +343,7 @@ BEGIN
  ] LOOP
   EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OR DELETE ON %I FOR EACH ROW EXECUTE FUNCTION financial_reject_history_change()',t||'_immutable',t);
  END LOOP;
-END $$;
+END; $$;
 
 -- Tenant+realm scope is always transaction-local; absent context sees no rows.
 DO $$
@@ -367,7 +367,7 @@ BEGIN
       AND u.disabled_at IS NULL)
   )', t||'_reader',t);
  END LOOP;
-END $$;
+END; $$;
 
 REVOKE ALL ON financial_receiving_accounts,payment_intents,payment_attempts,
  financial_inbound_events,financial_receipt_observations,financial_payments,
@@ -420,7 +420,7 @@ BEGIN
  SELECT c.id,o.event_kind,o.payload FROM claimed c
  JOIN financial_outbox o ON o.workspace_id=c.workspace_id
   AND o.environment=c.environment AND o.id=c.outbox_id;
-END $$;
+END; $$;
 
 CREATE FUNCTION financial_ack_audit_job(p_job uuid,p_token uuid)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
@@ -436,7 +436,7 @@ BEGIN
  ;
  GET DIAGNOSTICS n=ROW_COUNT;
  RETURN n=1;
-END $$;
+END; $$;
 
 CREATE FUNCTION financial_retry_audit_job(p_job uuid,p_token uuid,p_code text)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
@@ -456,7 +456,7 @@ BEGIN
     AND o.event_kind='pg04.audit');
  GET DIAGNOSTICS n=ROW_COUNT;
  RETURN n=1;
-END $$;
+END; $$;
 REVOKE ALL ON FUNCTION financial_claim_audit_job(text,uuid,integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION financial_ack_audit_job(uuid,uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION financial_retry_audit_job(uuid,uuid,text) FROM PUBLIC;
