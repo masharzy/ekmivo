@@ -68,7 +68,7 @@ func (s *Service) token(ws, realm, key string) string {
 	return base64.RawURLEncoding.EncodeToString(mac(s.TokenKey, ws+"|"+realm+"|"+key))
 }
 func (s *Service) ready() bool {
-	return s != nil && s.Sandbox != nil && s.Auth != nil && len(s.TokenKey) >= 32 && len(s.PayerKey) >= 32
+	return s != nil && s.Sandbox != nil && s.Auth != nil && s.Auth.DB != nil && len(s.TokenKey) >= 32 && len(s.PayerKey) >= 32
 }
 func (s *Service) Close() {
 	if s != nil && s.Sandbox != nil {
@@ -79,7 +79,7 @@ func (s *Service) Close() {
 // Start refuses the control-plane database, privileged roles and a wrongly
 // connected physical realm; there is no silent fallback to the auth database.
 func Start(ctx context.Context, auth *authz.Repository, raw, controlURL string, tokenKey, payerKey []byte) (*Service, error) {
-	if raw == "" || auth == nil || len(tokenKey) < 32 || len(payerKey) < 32 {
+	if raw == "" || auth == nil || auth.DB == nil || len(tokenKey) < 32 || len(payerKey) < 32 {
 		return nil, errors.New("PG05 sandbox finance/auth/secrets unavailable")
 	}
 	f, e := url.Parse(raw)
@@ -101,6 +101,11 @@ func Start(ctx context.Context, auth *authz.Repository, raw, controlURL string, 
 	if err != nil || realm != "sandbox" || !hasReader || super || bypass {
 		pool.Close()
 		return nil, errors.New("PG05 restricted sandbox reader role/realm check failed")
+	}
+	var controlReady bool
+	if err = auth.DB.QueryRowContext(ctx, "SELECT to_regprocedure('pg05_public_business(uuid,text)') IS NOT NULL").Scan(&controlReady); err != nil || !controlReady {
+		pool.Close()
+		return nil, errors.New("PG05 public business control migration not installed")
 	}
 	// Check the migration exists before accepting customer-facing traffic.
 	var installed bool
@@ -619,10 +624,7 @@ func (s *Service) publicBusiness(r *http.Request, raw []byte) (string, error) {
 		return "", errors.New("invalid checkout workspace")
 	}
 	var name string
-	err := s.Auth.DB.QueryRowContext(r.Context(), `SELECT w.name FROM workspaces w
- JOIN workspace_environments e ON e.workspace_id=w.id AND e.environment='sandbox' AND e.status='active'
- JOIN workspace_product_access p ON p.workspace_id=w.id AND p.product='payments' AND p.enabled
- WHERE w.id=$1::uuid`, ws).Scan(&name)
+	err := s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg05_public_business($1::uuid,'sandbox')", ws).Scan(&name)
 	return name, err
 }
 

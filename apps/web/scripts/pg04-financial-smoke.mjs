@@ -205,6 +205,7 @@ try{
 
  // PG05: run only on the two disposable finance DBs used for PG04 CI.
  const pg05Env={...env,PG05_ALLOW_MIGRATION:"true",
+  PG05_CONTROL_MIGRATION_FILE:new URL("../../../infra/migrations/0013_pg05_public_business.sql",import.meta.url).pathname,
   PG05_FINANCIAL_MIGRATION_FILE:new URL("../../../infra/migrations/0010_pg05_checkout.sql",import.meta.url).pathname,
    PG05_INTEGRITY_MIGRATION_FILE:new URL("../../../infra/migrations/0012_pg05_source_integrity.sql",import.meta.url).pathname,
    PG05_LINKED_MIGRATION_FILE:new URL("../../../infra/migrations/0011_pg05_linked_sources.sql",import.meta.url).pathname};
@@ -343,9 +344,9 @@ try{
   // The finance test tenant is also made into an actual control-plane workspace
   // for HTTP role+session checks. Each session is valid but never contains a key
   // to the financial database or a forged workspace_id claim.
-  const sessions={};
+  const sessions={},sessionUsers={};
   for(const role of ["owner","editor","viewer"]){
-   const userId=randomUUID();
+   const userId=randomUUID();sessionUsers[role]=userId;
    await admin`INSERT INTO app_users(id,email,display_name,password_hash,email_verified_at)
     VALUES(${userId}::uuid,${"pg05-"+role+"-"+userId+"@example.invalid"},${"PG05 "+role},'invalid-ci-hash',now())`;
    if(role==="owner")await admin`INSERT INTO workspaces(id,name,service_mode,created_by)
@@ -447,6 +448,32 @@ try{
    const foreignList=await fetch(origin+"/v1/workspaces/"+randomUUID()+"/linked-sources?environment=sandbox",
     {headers:head("owner")});
    same(foreignList.status,403,"PG05 owner read foreign workspace over HTTP");
+   same(initialData.merchant_name,"PG05 HTTP tenant","PG05 checkout omitted real business identity");
+   same(initialData.workspace_id,undefined,"PG05 public response leaked internal workspace field");
+   const bearer={};
+   for(const access of ["read","write"]){
+    const publicId=randomBytes(8).toString("hex");
+    const secret="ek_test_"+publicId+"_"+randomBytes(32).toString("base64url");
+    await admin`INSERT INTO merchant_api_keys(workspace_id,environment,public_id,secret_digest,name,scopes,created_by,expires_at)
+      VALUES(${tenant}::uuid,'sandbox',${publicId},${createHash("sha256").update(secret).digest("hex")},'PG05 ephemeral API client',${access==="read"?["payments:read"]:["payments:read","payments:write"]},${sessionUsers.owner}::uuid,now()+interval '1 hour')`;
+    bearer[access]={Authorization:"Bearer "+secret,"Content-Type":"application/json"};
+   }
+   same((await fetch(endpoint,{headers:bearer.read})).status,200,"PG05 scoped bearer source read failed");
+   same((await fetch(endpoint,{method:"POST",headers:bearer.read,body:JSON.stringify({...docReq,source_reference:"BEARER-DENIED"})})).status,403,"PG05 read-only key issued source");
+   const bearerDocResponse=await fetch(endpoint,{method:"POST",headers:bearer.write,body:JSON.stringify({...docReq,source_reference:"BEARER-"+randomUUID()})});
+   same(bearerDocResponse.status,201,"PG05 write-scoped bearer source issue failed");
+   same((await fetch(origin+"/v1/workspaces/"+randomUUID()+"/linked-sources?environment=sandbox",{headers:bearer.write})).status,403,"PG05 bearer escaped own workspace");
+   const staleKey=randomUUID(),staleToken=createHmac("sha256",tokenSecret).update(tenant+"|sandbox|"+staleKey).digest("base64url");
+   await reader.begin(async tx=>{
+    await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+    await tx.unsafe("SELECT pg05_create_intent($1::uuid,$2,$3,$4,$5,$6,$7,$8)",[tenant,"sandbox","STALE-"+staleKey,789,15,staleKey,createHash("sha256").update(staleToken).digest("hex"),hmac()]);
+   });
+   await admin`UPDATE workspace_product_access SET enabled=false WHERE workspace_id=${tenant}::uuid AND product='payments'`;
+   const staleUrl=origin+"/v1/public/checkout/"+staleToken;
+   same((await fetch(staleUrl)).status,503,"PG05 stale active finance projection exposed disabled business");
+   same((await fetch(staleUrl+"/lock",{method:"POST",headers:{Origin:origin,"Content-Type":"application/json"},body:JSON.stringify({payer_number:"01912345678",method:"rocket"})})).status,503,"PG05 disabled control business allowed payer lock");
+   await admin`UPDATE workspace_product_access SET enabled=true WHERE workspace_id=${tenant}::uuid AND product='payments'`;
+   same((await (await fetch(staleUrl)).json()).state,"requires_payer","PG05 control-disabled checkout wrote a payer attempt");
    const detailResponse=await fetch(merchantRoot+"/payment-intents/"+linkedBody.id+"?environment=sandbox",{headers:head("viewer")});
    same(detailResponse.status,200,"PG05 viewer failed immutable detail read");
    const details=(await detailResponse.json()).data;
@@ -470,9 +497,18 @@ try{
    const limited=await Promise.all(Array.from({length:25},()=>fetch(url+"/lock",{method:"POST",headers:{Origin:origin,"Content-Type":"application/json"},body:JSON.stringify({payer_number:"01712345678",method:"bkash"})})));
    ok(limited.some(r=>r.status===429),"PG05 public lock has no effective rate budget");
    same(limited.find(r=>r.status===429).headers.get("Retry-After"),"60","PG05 rate limit missing retry hint");
+   const expiredKey=randomUUID(),expiredToken=createHmac("sha256",tokenSecret).update(tenant+"|sandbox|"+expiredKey).digest("base64url");
+   const expiredIntent=(await dbs.sandbox`INSERT INTO payment_intents(workspace_id,environment,merchant_reference,amount_minor,created_at,expires_at)
+    VALUES(${tenant}::uuid,'sandbox',${"EXPIRED-"+expiredKey},987,now()-interval '20 minutes',now()-interval '5 minutes') RETURNING id`)[0].id;
+   await dbs.sandbox`INSERT INTO pg05_checkout_tokens(workspace_id,environment,intent_id,token_digest,creation_key)
+    VALUES(${tenant}::uuid,'sandbox',${expiredIntent}::uuid,${createHash("sha256").update(expiredToken).digest("hex")},${expiredKey})`;
+   const expiredView=await fetch(origin+"/v1/public/checkout/"+expiredToken);
+   same(expiredView.status,200,"PG05 expired checkout unavailable instead of truthful expired state");
+   same((await expiredView.json()).state,"expired","PG05 expired checkout offered payment");
+   same((await fetch(origin+"/v1/public/checkout/"+expiredToken+"/lock",{method:"POST",headers:{Origin:origin,"Content-Type":"application/json"},body:JSON.stringify({payer_number:"01912345678",method:"rocket"})})).status,409,"PG05 expired checkout created payer attempt");
    if(process.env.PG05_BROWSER_TESTS==="true"){
     const {runPG05Browser}=await import("./pg05-browser-evidence.mjs");
-    await runPG05Browser({control,goOrigin:origin,tenant,sessions,token:httpToken});
+    await runPG05Browser({control,goOrigin:origin,tenant,sessions,token:httpToken,expiredToken});
    }
    console.log("PG05 Go HTTP PASS: owner/editor/viewer, scoped linked source amount+idempotency, token/payer/origin, live fail-closed");
   }finally{child.kill("SIGTERM")}

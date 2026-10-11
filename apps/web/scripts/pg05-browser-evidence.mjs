@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
 import {mkdir,writeFile} from "node:fs/promises";
-import {randomUUID} from "node:crypto";
+import {randomUUID,randomBytes} from "node:crypto";
 import {chromium} from "@playwright/test";
 
 // Executed only inside pg04-financial-smoke's disposable localhost DB/API
 // lifetime. No mocked route, provider result or browser-created paid state.
-export async function runPG05Browser({control,goOrigin,tenant,sessions,token}) {
+export async function runPG05Browser({control,goOrigin,tenant,sessions,token,expiredToken}) {
  const origin="http://127.0.0.1:17886";
  const server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17886"],{
   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:goOrigin,GO_WEB_ORIGIN:goOrigin},stdio:["ignore","pipe","pipe"]
@@ -91,6 +91,13 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token}) {
   await page.goto(origin+"/en/checkout/"+issued.checkout_token);
   await page.getByRole("heading",{name:"Request cancelled",exact:true}).waitFor();
   record("real merchant cancellation survives public reload and preserves source history");
+  await page.goto(origin+"/en/checkout/"+randomBytes(32).toString("base64url"));
+  await page.getByRole("heading",{name:"Checkout not found",exact:true}).waitFor();
+  record("invalid opaque capability displays actual missing state without payment instructions");
+  await page.goto(origin+"/en/checkout/"+expiredToken);
+  await page.getByRole("heading",{name:"Checkout expired",exact:true}).waitFor();
+  assert.equal(await page.getByLabel("Number you will pay from",{exact:true}).count(),0);
+  record("expired real server record retains summary and removes payer/payment actions");
   await context.close();
   const viewer=await browser.newContext();
   await viewer.addCookies([{name:"ekmivo-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"}]);

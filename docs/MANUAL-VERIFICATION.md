@@ -117,7 +117,7 @@
 
 ### PG05 continuation checks — one combined owner pass
 
-Automated coverage is recorded separately in PG05 evidence. These checks remain **manual pending** on an explicitly provisioned isolated sandbox running the PR source and migrations 0010–0012:
+Automated coverage is recorded separately in PG05 evidence. These checks remain **manual pending** on an explicitly provisioned isolated sandbox running the PR source, financial migrations 0010–0012 and control migration 0013:
 
 - [ ] Owner/editor and viewer in separate real sessions: view the same immutable document/history; viewer sees read-only controls; direct writes deny. Follow a `requests?env=sandbox&request=<id>` deep link, reload/back and check role changes/revocation.
 - [ ] Interrupt an intent POST after the server commits but before the response reaches the browser; reload, Restore draft and retry. Confirm the original request/token returns, without duplicate history. Change the payload deliberately to create a fresh request; do not blindly resend funds.

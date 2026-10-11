@@ -258,6 +258,38 @@ func migratePG05Integrity(ctx context.Context, realm, raw, filename string) erro
 	_, err = conn.Conn().PgConn().Exec(ctx, string(body)).ReadAll()
 	return err
 }
+func migratePG05Control(ctx context.Context, raw, filename string) error {
+	if filename == "" {
+		return errors.New("PG05 explicit control migration path required")
+	}
+	pool, err := pgxpool.New(ctx, raw)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	var auth, finance, present bool
+	err = pool.QueryRow(ctx, `SELECT to_regclass('public.auth_sessions') IS NOT NULL,
+ to_regclass('public.financial_realm') IS NOT NULL,
+ to_regprocedure('pg05_public_business(uuid,text)') IS NOT NULL`).Scan(&auth, &finance, &present)
+	if err != nil || !auth || finance {
+		return errors.New("PG05 public business migration requires control DB")
+	}
+	if present {
+		return nil
+	}
+	body, err := os.ReadFile(filepath.Clean(filename))
+	if err != nil {
+		return err
+	}
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	_, err = conn.Conn().PgConn().Exec(ctx, string(body)).ReadAll()
+	return err
+}
+
 func main() {
 	if os.Getenv("PG04_ALLOW_MIGRATION") != "true" {
 		log.Fatal("explicit PG04_ALLOW_MIGRATION=true is mandatory")
@@ -295,6 +327,9 @@ func main() {
 		}
 	}
 	if os.Getenv("PG05_ALLOW_MIGRATION") == "true" {
+		if err := migratePG05Control(ctx, control, os.Getenv("PG05_CONTROL_MIGRATION_FILE")); err != nil {
+			log.Fatal(err)
+		}
 		source := os.Getenv("PG05_FINANCIAL_MIGRATION_FILE")
 		if source == "" {
 			log.Fatal("PG05_FINANCIAL_MIGRATION_FILE is required")

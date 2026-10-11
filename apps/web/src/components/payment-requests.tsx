@@ -139,7 +139,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
   try{
    const response=await fetch(sourcesApi,{cache:"no-store",credentials:"same-origin"});
    const body=await response.json();
-   if(!response.ok)throw Error(body.error?.code||body.code);
+   if(!response.ok){if(response.status===401||response.status===403)setSources([]);throw Error(body.error?.code||body.code);}
    setSources(Array.isArray(body.data)?body.data:[]);
    setSourceLoad("ready");setSourceError("");
   }catch{setSourceLoad("error");setSourceError(bn?"নথি লোড হয়নি। আবার চেষ্টা করুন।":"Document sources unavailable. Retry.");}
