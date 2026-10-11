@@ -64,7 +64,7 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
  useEffect(()=>{
   live.current=true;
   const controller=new AbortController();
-  void refresh(controller.signal);
+  void Promise.resolve().then(()=>refresh(controller.signal));
   return ()=>{live.current=false;controller.abort();};
  },[refresh]);
  useEffect(()=>{
