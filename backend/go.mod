@@ -2,7 +2,10 @@ module github.com/masharzy/ekmivo/backend
 
 go 1.27.0
 
-require github.com/jackc/pgx/v5 v5.7.6
+require (
+ github.com/jackc/pgx/v5 v5.7.6
+ github.com/riverqueue/river v0.26.0
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
