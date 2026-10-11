@@ -152,6 +152,19 @@ jobs:
           go build -o /tmp/ekmivo-api ./cmd/api
           go build -o /tmp/ekmivo-worker ./cmd/worker
 
+  financial_containers:
+    name: PG04 runtime and migration Docker builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile API, River worker and financial-sync in production image
+        run: docker build --progress=plain -f backend/Dockerfile -t ekmivo-pg04-runtime:ci backend
+      - name: Compile isolated financial migration operator image
+        run: docker build --progress=plain -f infra/Dockerfile.financial-migrate -t ekmivo-pg04-migrate:ci .
+
+
   android:
     name: Native Kotlin Compose assemble and unit tests
     runs-on: ubuntu-latest
