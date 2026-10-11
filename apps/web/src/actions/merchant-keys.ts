@@ -68,11 +68,15 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
     WHERE workspace_id=${workspace}::uuid AND product='payments' FOR SHARE`;
    if(realm.length!==1||product.length!==1||!product[0].enabled)return {code:"denied" as const};
    if(!await passwordMatches(password,String(session[0].password_hash)))return {code:"reauth" as const};
-   const recent=await tx`SELECT count(*)::int AS total FROM merchant_api_key_audit
-    WHERE workspace_id=${workspace}::uuid AND environment=${environment}
-    AND actor_id=${actor.id}::uuid AND action IN ('created','rotated')
-    AND occurred_at>now()-interval '1 hour'`;
-   if(Number(recent[0].total)>=10)return {code:"limit" as const};
+   // Emergency revocation must remain available even if issuance is rate-limited.
+   // Rate limit only the operations that mint a new secret.
+   if(operation!=="revoke"){
+    const recent=await tx`SELECT count(*)::int AS total FROM merchant_api_key_audit
+     WHERE workspace_id=${workspace}::uuid AND environment=${environment}
+     AND actor_id=${actor.id}::uuid AND action IN ('created','rotated')
+     AND occurred_at>now()-interval '1 hour'`;
+    if(Number(recent[0].total)>=10)return {code:"limit" as const};
+   }
    let nextName=name,nextScopes=scopes,nextExpires=new Date(Date.now()+days*86400000);
    if(operation!=="create"){
     const existing=await tx`SELECT id,name,scopes,expires_at,revoked_at FROM merchant_api_keys
