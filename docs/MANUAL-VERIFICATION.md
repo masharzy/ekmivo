@@ -330,3 +330,6 @@ Owner reported **All pass** for the supplied PG01/PG02/PG03 combined checklist. 
 ### PG05 automated verification checkpoint — 2026-10-11
 
 Source a17d5c63, CI [38148742214](https://github.com/masharzy/ekmivo/actions/runs/38148742214): all three jobs PASS; real isolated Next/Go/PostgreSQL browser 26/26 PASS, including 16 viewport/locale/theme cases. This supersedes the PG05 pending automated-CI status above. All unchecked owner/manual items remain pending. No deployment, physical-device acceptance, receipt capture or payment verification is inferred. Evidence retained in docs/evidence/PG05.
+
+### PG05 integrated automated result
+Source 63e50c8 / CI 38150117547: four jobs PASS, combined PG04/PG05 financial 198 assertions and real browser 26/26 PASS. This closes available isolated source/CI checks, not operator production parity, physical screen-reader/device/provider checks. Existing manual checklist remains authoritative.

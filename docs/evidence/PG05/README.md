@@ -88,3 +88,9 @@ Runs 38148190837 and 38148473093 exposed ambiguous implicit accessible names for
 ### Main integration verification
 PG05 PR now targets main. Integration preserves main's exclusive expiry backstop, six boundary cases, populated tenant/receipt matrix, concurrent financial guards and explicit River rollback tests. PG05's upstream River bounded native rescue configuration is retained. Earlier audit facts are historical; combined CI must pass before merge. Production migrations/deployment are not performed here.
 
+
+### Final current-main integration — 2026-10-11
+
+Source **63e50c8295f5d0cd8a89231b09371360cf734eca**, [CI 38150117547](https://github.com/masharzy/ekmivo/actions/runs/38150117547): **4/4 jobs PASS**. Combined PG04/PG05 isolated financial harness **198/198 assertions**, including 49 populated tenant/invalid receipt assertions, real concurrent attempt/allocation guards, idempotent domain/outbox/River writes, orphan-free rollback and native River SIGKILL/restart recovery. Actual Next/Go/PostgreSQL browser journey **26/26 PASS**; [machine results](browser-results-38150117547.json), artifact 11706528376. Go, race, strict OpenAPI, full web lint/TypeScript/production build, Kotlin and both Docker images pass.
+
+PR #7 now targets main and owner authorized merge. Preserved current main exclusive expiry rule, six boundary cases, independent guard matrix and financial integration tests; retained PG05 upstream River bounded recovery and restored dedicated image build CI. No production migration/provisioning or live financial acceptance claimed. This evidence-only follow-up preserves tested application-source equivalence.
