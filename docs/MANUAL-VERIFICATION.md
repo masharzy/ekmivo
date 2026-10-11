@@ -82,10 +82,18 @@
 
 ## PG04 — Financial source of truth and job durability
 
-- [ ] Inspect authorized read-only records from sandbox: attempts/evidence/allocations refer to exact tenant and environment; append-only audit immutable; no arbitrary "mark paid".
-- [ ] Execute safe duplicate and concurrent sandbox requests; only one idempotent result, replay same event stable; crash/restart worker with no lost durable job.
-- **Automated required:** empty/prior schema migrations, FK/unique/money constraints, DB atomicity, rollback, partition env and crash recovery.
-- **Status:** PENDING.
+**Implementation and acceptance are distinct.** Detailed evidence: [PG04](evidence/PG04/README.md); clean source [PR #6](https://github.com/masharzy/ekmivo/pull/6). No real money or merchant payment verification belongs to this phase.
+
+- [ ] **Operator-only, isolated environment:** Confirm PostgreSQL has *three separate database names, credentials and connections*: control auth, sandbox finance, live finance. Control has no payment tables; finance holds no sessions/passwords/API secrets. No worker can connect to the other financial realm, no financial reader can INSERT a verified payment or SELECT raw encrypted SMS evidence.
+- [ ] With an approved disposable workspace, enable Payments in control: projector creates both minimal financial registry rows with monotonic version. Disable Payments / suspend Live: appropriate projected state becomes suspended. Older version cannot reactivate it. Delete disposable workspace: tombstone updates both finance realms; identity data is not copied.
+- [ ] Run migration 0009 in isolated control, River+0008 separately in both isolated financial DBs, then rerun: idempotent, no missing tables, no cross-realm or existing-user mutations. Confirm automated CI used real restricted roles, not superuser-only assertions.
+- [ ] **Safe synthetic financial cases only:** two requests with same idempotency key/body return the identical result, even under concurrency; different body with same key is rejected. No extra intent/event/River job. Attempt cannot change amount/payer/receiving account/window; forged receipt/method/time and cross-tenant references cannot create verified funds.
+- [ ] **Worker kill rehearsal:** Kill sandbox River worker after its synthetic `pg04_audit` job transitions to `running`, before ACK; restart fresh worker. Observe automatically recovered job, one processing marker (no duplicate), no loss; repeat for Live on isolated synthetic data if needed. Invalid/unsupported jobs never mark payment paid.
+- [ ] Check that process logs, output, CI artifacts and temporary fixtures do not expose raw SMS, full payer numbers, secrets, DB URLs or user identity. Review separate outbox/dead job monitoring and recovery path.
+- [ ] Record reviewed SHA, isolated migration run, River rescue and 3/3 CI, production migration/operator decision; **do not** treat PG04 as permission to issue real payment receipts, payment intents or claims of provider settlement.
+- **Automated gates:** CI PostgreSQL 17 three-DB setup, migration replay, RLS, immutable/dedup/monetary guards, River InsertTx rollback and 12-way replay, real SIGKILL/restart recovery, Go/Next/Android regression.
+- **Status:** SOURCE IMPLEMENTATION UNDER CI; mark **IMPLEMENTED — MANUAL PENDING** only after latest full tests pass. Production release remains separate PG17.
+
 
 ## PG05 — Checkout and payer lock
 
