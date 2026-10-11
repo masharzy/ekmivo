@@ -24,6 +24,12 @@ export function AccountActions({locale,name:initialName,accountId}:{locale:Local
  const dirty=name!==savedName;
  const key=`ekmivo:account-name-draft:v1:${accountId}`;
 
+ // A confirmed server save supersedes any stale tab-local name draft.
+ useEffect(()=>{
+  if(profile.status!=="success")return;
+  try{window.sessionStorage.removeItem(key);}catch{/* Optional storage. */}
+ },[profile.status,key]);
+
  const restore=()=>{
   try{
    const value=window.sessionStorage.getItem(key);
