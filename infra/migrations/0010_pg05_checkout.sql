@@ -124,7 +124,7 @@ BEGIN
   ORDER BY issued_at DESC LIMIT 1;
  RETURN jsonb_build_object('id',i.id,'merchant_reference',i.merchant_reference,
   'amount_minor',i.amount_minor,'currency',i.currency,'environment',i.environment,
-  'created_at',i.created_at,'expires_at',i.expires_at,'state',state,
+  'created_at',i.created_at,'expires_at',i.expires_at,'server_time',now(),'state',state,
   'payer_suffix',attempt.payer_suffix,'method',attempt.method,
   'methods',CASE WHEN state='requires_payer' THEN '["bkash","nagad","rocket"]'::jsonb ELSE '[]'::jsonb END,
   'destination',CASE WHEN attempt.id IS NOT NULL THEN 'SIMULATED — DO NOT SEND MONEY' ELSE NULL END,
