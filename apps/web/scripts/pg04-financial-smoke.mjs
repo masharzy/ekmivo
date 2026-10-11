@@ -339,6 +339,24 @@ try{
   const apiBin="/tmp/ekmivo-pg05-ci-api-"+process.pid;
   execFileSync("go",["build","-o",apiBin,"./cmd/api"],{cwd:goCwd,timeout:120000});
   const port=17885,origin="http://127.0.0.1:"+port;
+  // The finance test tenant is also made into an actual control-plane workspace
+  // for HTTP role+session checks. Each session is valid but never contains a key
+  // to the financial database or a forged workspace_id claim.
+  const sessions={};
+  for(const role of ["owner","editor","viewer"]){
+   const userId=randomUUID();
+   await admin`INSERT INTO app_users(id,email,display_name,password_hash,email_verified_at)
+    VALUES(${userId}::uuid,${"pg05-"+role+"-"+userId+"@example.invalid"},${"PG05 "+role},'invalid-ci-hash',now())`;
+   if(role==="owner")await admin`INSERT INTO workspaces(id,name,service_mode,created_by)
+    VALUES(${tenant}::uuid,'PG05 HTTP tenant','commerce',${userId}::uuid)`;
+   await admin`INSERT INTO workspace_members(workspace_id,user_id,role)
+    VALUES(${tenant}::uuid,${userId}::uuid,${role})`;
+   const opaque=randomBytes(32).toString("base64url");
+   const sessionHash=createHash("sha256").update(opaque).digest("hex");
+   await admin`INSERT INTO auth_sessions(user_id,token_hash,expires_at)
+    VALUES(${userId}::uuid,${sessionHash},now()+interval '1 hour')`;
+   sessions[role]=opaque;
+  }
   const child=spawn(apiBin,[],{cwd:goCwd,env:{
     ...process.env,PORT:String(port),GO_WEB_ORIGIN:origin,
     EKMIVO_REQUIRE_AUTHZ:"true",
@@ -382,7 +400,53 @@ try{
    same(sourceDenied.status,401,"PG05 HTTP linked documents were exposed without authorization");
    const liveDenied=await fetch(origin+"/v1/workspaces/"+tenant+"/payment-intents?environment=live");
    same(liveDenied.status,503,"PG05 HTTP live intent incorrectly enabled");
-   console.log("PG05 Go HTTP PASS: auth deny, opaque bearer, payer lock, CSRF, 409 immutability, live fail-closed");
+   const merchantRoot=origin+"/v1/workspaces/"+tenant;
+   const endpoint=merchantRoot+"/linked-sources?environment=sandbox";
+   const head=role=>({Cookie:"ekmivo-session="+sessions[role],"Content-Type":"application/json",Origin:origin});
+   const ownerList=await fetch(merchantRoot+"/payment-intents?environment=sandbox",{headers:head("owner")});
+   same(ownerList.status,200,"PG05 owner failed actual scoped HTTP list");
+   const editorList=await fetch(endpoint,{headers:head("editor")});
+   same(editorList.status,200,"PG05 editor failed authorized source HTTP read");
+   const viewerList=await fetch(endpoint,{headers:head("viewer")});
+   same(viewerList.status,200,"PG05 viewer failed permitted read");
+   const docReq={source_kind:"order",source_reference:"ORDER-HTTP-"+randomUUID(),
+    items:[{title:"Native receipt test class",quantity:2,unit_amount_minor:3400}]};
+   const blockedViewer=await fetch(endpoint,{method:"POST",headers:head("viewer"),body:JSON.stringify(docReq)});
+   same(blockedViewer.status,403,"PG05 viewer created source by direct HTTP");
+   const editorCreate=await fetch(endpoint,{method:"POST",headers:head("editor"),body:JSON.stringify(docReq)});
+   same(editorCreate.status,201,"PG05 editor could not issue source");
+   const editorDoc=await editorCreate.json();
+   same(editorDoc.amount_minor,6800,"PG05 merchant posted line amount but database did not calculate");
+   const documentReplay=await fetch(endpoint,{method:"POST",headers:head("editor"),body:JSON.stringify(docReq)});
+   same(documentReplay.status,201,"PG05 identical HTTP source replay unavailable");
+   same((await documentReplay.json()).id,editorDoc.id,"PG05 HTTP source replay duplicated document");
+   const alteredDoc=await fetch(endpoint,{method:"POST",headers:head("owner"),body:JSON.stringify({...docReq,
+    items:[{title:"Altered line",quantity:1,unit_amount_minor:1}]})});
+   same(alteredDoc.status,409,"PG05 source identity accepted tampered reissue");
+   const intentUrl=merchantRoot+"/payment-intents?environment=sandbox";
+   const linkedPayload={merchant_reference:"HTTP-LINK-"+randomUUID(),order_id:editorDoc.id,
+    currency:"BDT",expires_in_minutes:15};
+   const forgedTotal=await fetch(intentUrl,{method:"POST",headers:{...head("editor"),"Idempotency-Key":randomUUID()},
+    body:JSON.stringify({...linkedPayload,amount_minor:1})});
+   same(forgedTotal.status,422,"PG05 accepted browser-forged linked order amount");
+   const viewerIssue=await fetch(intentUrl,{method:"POST",headers:{...head("viewer"),"Idempotency-Key":randomUUID()},
+    body:JSON.stringify(linkedPayload)});
+   same(viewerIssue.status,403,"PG05 viewer created linked payment");
+   const linkedKey=randomUUID();
+   const editorIssue=await fetch(intentUrl,{method:"POST",headers:{...head("editor"),"Idempotency-Key":linkedKey},
+    body:JSON.stringify(linkedPayload)});
+   same(editorIssue.status,201,"PG05 editor linked issuance denied or crashed");
+   const linkedBody=await editorIssue.json();
+   same(linkedBody.amount_minor,6800,"PG05 linked amount was not server-priced over HTTP");
+   same(linkedBody.source_id,editorDoc.id,"PG05 linked HTTP response lost immutable provenance");
+   const replayIssue=await fetch(intentUrl,{method:"POST",headers:{...head("editor"),"Idempotency-Key":linkedKey},
+    body:JSON.stringify(linkedPayload)});
+   same(replayIssue.status,201,"PG05 HTTP idempotent linked retry status changed");
+   same((await replayIssue.json()).id,linkedBody.id,"PG05 HTTP duplicate linked issue created another intent");
+   const foreignList=await fetch(origin+"/v1/workspaces/"+randomUUID()+"/linked-sources?environment=sandbox",
+    {headers:head("owner")});
+   same(foreignList.status,403,"PG05 owner read foreign workspace over HTTP");
+   console.log("PG05 Go HTTP PASS: owner/editor/viewer, scoped linked source amount+idempotency, token/payer/origin, live fail-closed");
   }finally{child.kill("SIGTERM")}
   console.log("PG05 PASS: standalone and immutable linked snapshots, tenant scope, payer locking, cancellation, idempotency");
  }finally{await reader.end({timeout:3})}
