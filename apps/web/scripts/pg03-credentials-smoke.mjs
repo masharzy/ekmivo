@@ -51,7 +51,7 @@ try{
    await tx`SET LOCAL ROLE ekmivo_financial_runtime`;
    assert.equal((await lookup(publicId,digest)).length,0,"Revoked secret accepted");
    await tx`RESET ROLE`;
-   await tx`UPDATE merchant_api_keys SET revoked_at=NULL,expires_at=now()-interval '1 day' WHERE id=${keyId}::uuid`;
+   await tx`UPDATE merchant_api_keys SET revoked_at=NULL,created_at=now()-interval '9 days',expires_at=now()-interval '1 day' WHERE id=${keyId}::uuid`;
    await tx`SET LOCAL ROLE ekmivo_financial_runtime`;
    assert.equal((await lookup(publicId,digest)).length,0,"Expired secret accepted");
    await tx`RESET ROLE`;
