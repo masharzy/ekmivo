@@ -354,6 +354,20 @@ CREATE TABLE financial_audit_processed (
  FOREIGN KEY(workspace_id,environment,outbox_id)
   REFERENCES financial_outbox(workspace_id,environment,id) ON DELETE RESTRICT
 );
+-- Only the River worker may resolve a safe audit event's workspace/version;
+-- it cannot SELECT arbitrary payment or raw receipt rows.
+CREATE FUNCTION financial_audit_context(p_outbox uuid)
+RETURNS TABLE(workspace_id uuid,environment text,entitlement_version bigint)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT o.workspace_id,o.environment,r.entitlement_version
+ FROM financial_outbox o JOIN financial_workspace_registry r
+  ON r.workspace_id=o.workspace_id AND r.environment=o.environment
+ JOIN financial_realm f ON f.environment=o.environment AND f.singleton=true
+ WHERE o.id=p_outbox AND o.event_kind='pg04.audit' AND r.status='active'
+ LIMIT 1
+$;
+REVOKE ALL ON FUNCTION financial_audit_context(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION financial_audit_context(uuid) TO ekmivo_financial_worker;
 CREATE FUNCTION financial_process_audit(p_outbox_id uuid)
  RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER
  SET search_path=public,pg_temp AS $$
