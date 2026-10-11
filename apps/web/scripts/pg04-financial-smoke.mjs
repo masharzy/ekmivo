@@ -42,8 +42,14 @@ try{
   IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_financial_provisioner') THEN
    CREATE ROLE ekmivo_financial_provisioner NOLOGIN;
   END IF;
+  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_financial_projection') THEN
+   CREATE ROLE ekmivo_financial_projection NOLOGIN;
+  END IF;
  END $$;`;
  await admin.unsafe(adminSQL).simple();
+ await admin.unsafe("CREATE ROLE ekmivo_financial_projection_operator LOGIN PASSWORD 'pg04-control-projection-only'");
+ await admin.unsafe("GRANT ekmivo_financial_projection TO ekmivo_financial_projection_operator");
+
  for(const realm of names){
   const roles=[
    ["migrate",`pg04-${realm}-migration-only`,null],
@@ -66,6 +72,8 @@ try{
  const env={
   ...process.env,
   PG04_ALLOW_MIGRATION:"true",
+  PG04_CONTROL_MIGRATION_DATABASE_URL:control,
+  PG04_CONTROL_MIGRATION_FILE:new URL("../../../infra/migrations/0009_pg04_control_projection.sql",import.meta.url).pathname,
   PG04_SANDBOX_MIGRATION_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_pg04_migrate_sandbox","pg04-sandbox-migration-only"),
   PG04_LIVE_MIGRATION_DATABASE_URL:ds("ekmivo_pg04_live","ekmivo_pg04_migrate_live","pg04-live-migration-only"),
   PG04_FINANCIAL_MIGRATION_FILE:new URL("../../../infra/migrations/0008_pg04_financial_core.sql",import.meta.url).pathname,
