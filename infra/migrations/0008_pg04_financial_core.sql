@@ -126,6 +126,49 @@ CREATE TABLE financial_payments (
   REFERENCES financial_receipt_observations(workspace_id,environment,id) ON DELETE RESTRICT
 );
 
+-- Guard against a forged or incomplete "verified" insert independently of the
+-- PG07 matcher. All five actual receipt fields must align with the issued
+-- immutable attempt; no client-submitted verified=true can pass this alone.
+CREATE FUNCTION financial_verify_payment_fields() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+DECLARE a payment_attempts%ROWTYPE; o financial_receipt_observations%ROWTYPE; src text;
+BEGIN
+ SELECT * INTO a FROM payment_attempts
+  WHERE workspace_id=NEW.workspace_id AND environment=NEW.environment
+   AND id=NEW.attempt_id FOR UPDATE;
+ SELECT * INTO o FROM financial_receipt_observations
+  WHERE workspace_id=NEW.workspace_id AND environment=NEW.environment
+   AND id=NEW.observation_id FOR UPDATE;
+ IF a.id IS NULL OR o.id IS NULL OR o.payer_hmac IS NULL
+   OR a.payer_hmac<>o.payer_hmac
+   OR a.receiving_account_id<>o.receiving_account_id
+   OR a.method<>o.method OR a.currency<>o.currency
+   OR a.currency<>NEW.currency OR a.amount_minor<>NEW.verified_amount_minor
+   OR o.amount_minor<>NEW.verified_amount_minor OR o.direction<>'incoming'
+   OR o.original_transaction_at IS NULL OR o.time_precision='unknown'
+   OR o.original_transaction_at<a.window_start
+   OR (o.time_precision='minute' AND o.original_transaction_at+interval '1 minute'>a.window_end)
+   OR (o.time_precision='second' AND o.original_transaction_at>a.window_end)
+   OR a.policy_version<>NEW.policy_version THEN
+   RAISE EXCEPTION 'verified payment requires a complete matching immutable attempt and receipt'
+    USING ERRCODE='23514';
+ END IF;
+ SELECT e.source_kind INTO src FROM financial_inbound_events e
+  WHERE e.workspace_id=NEW.workspace_id AND e.environment=NEW.environment AND e.id=o.inbound_event_id;
+ IF NOT (
+    (NEW.verification_method='sms_match' AND src='device_sms')
+ OR (NEW.verification_method='notification_match' AND src='device_notification')
+ OR (NEW.verification_method='provider_api' AND src='provider_api')
+ OR (NEW.verification_method='bank_statement' AND src='bank_statement')
+ OR (NEW.verification_method='sandbox_fixture' AND src='sandbox_fixture' AND NEW.environment='sandbox')
+ ) THEN
+  RAISE EXCEPTION 'verification source provenance or environment mismatch' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $;
+CREATE TRIGGER financial_verified_fields BEFORE INSERT ON financial_payments
+ FOR EACH ROW EXECUTE FUNCTION financial_verify_payment_fields();
+
 CREATE TABLE financial_allocations (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  workspace_id uuid NOT NULL,
@@ -145,7 +188,7 @@ CREATE TABLE financial_allocations (
 
 -- Explicit row locks serialize competitors to enforce both caps under READ COMMITTED.
 CREATE FUNCTION financial_enforce_allocation_caps() RETURNS trigger
-LANGUAGE plpgsql SECURITY INVOKER SET search_path=public,pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE verified bigint; requested bigint; paid bigint; allocated bigint; payment_currency text; intent_currency text;
 BEGIN
  SELECT p.verified_amount_minor,p.currency INTO verified,payment_currency
@@ -227,6 +270,23 @@ CREATE TABLE financial_jobs (
 CREATE INDEX financial_jobs_claim_idx
  ON financial_jobs(environment,run_after,created_at)
  WHERE state IN ('pending','processing');
+
+-- Enforce outbox and job commit atomically (the FK enforces the other
+-- direction). A transaction inserting only an outbox row CANNOT commit.
+CREATE FUNCTION financial_require_queued_outbox() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM financial_jobs j
+    WHERE j.workspace_id=NEW.workspace_id AND j.environment=NEW.environment
+      AND j.outbox_id=NEW.id) THEN
+  RAISE EXCEPTION 'outbox must enqueue durable job in the same transaction'
+    USING ERRCODE='23514';
+ END IF;
+ RETURN NULL;
+END $;
+CREATE CONSTRAINT TRIGGER financial_outbox_requires_job
+ AFTER INSERT ON financial_outbox DEFERRABLE INITIALLY DEFERRED
+ FOR EACH ROW EXECUTE FUNCTION financial_require_queued_outbox();
 
 -- Every source and outbox row is append-only, including "expired" attempts.
 -- Corrections are compensating events, not destructive editing.
