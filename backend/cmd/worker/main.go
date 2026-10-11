@@ -125,6 +125,12 @@ func main(){
  client,err:=river.NewClient(riverpgxv5.New(pool),&river.Config{
   Queues:map[string]river.QueueConfig{"financial_"+realm:{MaxWorkers:2}},
   Workers:workers,
+  // This worker only handles bounded 10s PG04 audit probes. River defaults
+  // to a ONE HOUR stuck-job rescue horizon, which defeats crash recovery for
+  // these tiny idempotent jobs. Keep rescue later than job timeout, while
+  // ensuring a killed process is safely retried by River within minutes.
+  JobTimeout:20*time.Second,
+  RescueStuckJobsAfter:75*time.Second,
  })
  if err!=nil{log.Fatal("River worker creation: ",err)}
  if err:=client.Start(ctx);err!=nil{log.Fatal("River worker startup: ",err)}
