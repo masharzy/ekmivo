@@ -1,5 +1,5 @@
 // PG04: separate realm-bound River payment worker; only nonfinancial
-// pg04.audit durability events are currently registered.
+// pg04_audit durability events are currently registered.
 package main
 
 import (
