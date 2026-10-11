@@ -84,7 +84,8 @@ func Start(ctx context.Context,auth *authz.Repository,raw,controlURL string,toke
  }
  // Check the migration exists before accepting customer-facing traffic.
  var installed bool
- err=pool.QueryRow(ctx,"SELECT to_regprocedure('pg05_checkout_view(text)') IS NOT NULL").Scan(&installed)
+ err=pool.QueryRow(ctx,`SELECT to_regprocedure('pg05_checkout_view(text)') IS NOT NULL
+  AND to_regprocedure('pg05_create_linked_intent(uuid,text,text,text,uuid,integer,text,text,text)') IS NOT NULL`).Scan(&installed)
  if err!=nil||!installed{
   pool.Close();return nil,errors.New("PG05 checkout migration not installed")
  }
@@ -114,15 +115,23 @@ func mapped(w http.ResponseWriter,err error){
   case "23514": fail(w,409,"LOCKED_OR_EXPIRED");return
   case "22023","23502","22001","22003":fail(w,422,"INVALID_REQUEST");return
   case "42501":fail(w,403,"ACCESS_DENIED");return
+  case "P0002":fail(w,404,"SOURCE_NOT_FOUND");return
   }
  }
  fail(w,503,"FINANCIAL_SERVICE_UNAVAILABLE")
 }
 func validRequest(body createRequest)bool{
- if body.Currency!="BDT"||body.Amount<1||body.Amount>100000000000||body.Expiry<5||body.Expiry>60{return false}
+ if body.Currency!="BDT"||body.Expiry<5||body.Expiry>60{return false}
  if strings.TrimSpace(body.Reference)!=body.Reference||!referencePattern.MatchString(body.Reference){return false}
- // PG05 must never accept a forged client amount for a linked order/invoice.
- return body.OrderID==""&&body.InvoiceID==""
+ // A linked total must NEVER be supplied by the browser; SQL resolves
+ // it from a frozen server-side source document under the same realm/tenant.
+ if body.OrderID!=""||body.InvoiceID!=""{
+  if body.OrderID!=""&&body.InvoiceID!=""{return false}
+  id:=body.OrderID
+  if id==""{id=body.InvoiceID}
+  return body.Amount==0&&uuidPattern.MatchString(id)
+ }
+ return body.Amount>=1&&body.Amount<=100000000000
 }
 func decode(w http.ResponseWriter,r *http.Request,into any)bool{
  dec:=json.NewDecoder(http.MaxBytesReader(w,r.Body,4096));dec.DisallowUnknownFields()
@@ -212,6 +221,13 @@ func (s *Service) HandleMerchant(w http.ResponseWriter,r *http.Request){
   token:=s.token(ws,realm,key)
   var answer []byte
   err:=s.scoped(r.Context(),ws,realm,func(tx pgx.Tx)error{
+   if payload.OrderID!=""||payload.InvoiceID!=""{
+    kind,sourceID:="order",payload.OrderID
+    if payload.InvoiceID!=""{kind,sourceID="invoice",payload.InvoiceID}
+    return tx.QueryRow(r.Context(),
+     `SELECT pg05_create_linked_intent($1::uuid,$2,$3,$4,$5::uuid,$6,$7,$8,$9)`,
+     ws,realm,payload.Reference,kind,sourceID,payload.Expiry,key,digest(token),digest(string(raw))).Scan(&answer)
+   }
    return tx.QueryRow(r.Context(),`SELECT pg05_create_intent($1::uuid,$2,$3,$4,$5,$6,$7,$8)`,
     ws,realm,payload.Reference,payload.Amount,payload.Expiry,key,digest(token),digest(string(raw))).Scan(&answer)
   })
@@ -222,6 +238,49 @@ func (s *Service) HandleMerchant(w http.ResponseWriter,r *http.Request){
   write(w,201,data)
  default:fail(w,405,"METHOD_NOT_ALLOWED")
  }
+}
+// HandleSources creates immutable, server-calculated sandbox invoice/order
+// snapshots and lists ONLY the documents in the authorized workspace.
+func (s *Service) HandleSources(w http.ResponseWriter,r *http.Request){
+ if !s.ready(){fail(w,503,"FINANCIAL_SERVICE_UNAVAILABLE");return}
+ ws:=r.PathValue("workspaceID");realm:=explicitRealm(r)
+ if !uuidPattern.MatchString(ws)||realm==""{fail(w,400,"INVALID_SCOPE");return}
+ if realm=="live"{fail(w,503,"LIVE_SOURCE_NOT_CONNECTED");return}
+ if r.Method!="GET"&&r.Method!="POST"{fail(w,405,"METHOD_NOT_ALLOWED");return}
+ if r.Method=="POST"&&!originAllowed(r){fail(w,403,"ORIGIN_DENIED");return}
+ scope:="payments:read"
+ if r.Method=="POST"{scope="payments:write"}
+ if err:=s.merchant(r,ws,realm,scope);err!=nil{authError(w,err);return}
+ if r.Method=="GET"{
+  var raw []byte
+  err:=s.scoped(r.Context(),ws,realm,func(tx pgx.Tx)error{
+   return tx.QueryRow(r.Context(),
+    "SELECT pg05_list_billing_sources($1::uuid,$2)",ws,realm).Scan(&raw)
+  })
+  if err!=nil{mapped(w,err);return}
+  if len(raw)==0||string(raw)=="null"{fail(w,403,"ACCESS_DENIED");return}
+  var data any
+  if json.Unmarshal(raw,&data)!=nil{fail(w,503,"INVALID_FINANCIAL_RESULT");return}
+  write(w,200,map[string]any{"data":data,"environment":realm});return
+ }
+ var body struct{
+  Kind string `json:"source_kind"`
+  Reference string `json:"source_reference"`
+  Items json.RawMessage `json:"items"`
+ }
+ if !decode(w,r,&body){return}
+ if body.Kind!="order"&&body.Kind!="invoice"{fail(w,422,"INVALID_SOURCE");return}
+ if !referencePattern.MatchString(body.Reference)||strings.TrimSpace(body.Reference)!=body.Reference||
+  len(body.Items)==0{fail(w,422,"INVALID_SOURCE");return}
+ var answer []byte
+ err:=s.scoped(r.Context(),ws,realm,func(tx pgx.Tx)error{
+  return tx.QueryRow(r.Context(),
+   "SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb)",
+   ws,realm,body.Kind,body.Reference,string(body.Items)).Scan(&answer)
+ })
+ if err!=nil{mapped(w,err);return}
+ w.Header().Set("Content-Type","application/json; charset=utf-8")
+ w.Header().Set("Cache-Control","no-store");w.WriteHeader(201);_,_=w.Write(answer)
 }
 func (s *Service) cancel(w http.ResponseWriter,r *http.Request,ws,realm string){
  if r.PathValue("action")!="cancel"||!uuidPattern.MatchString(r.PathValue("intentID")){
