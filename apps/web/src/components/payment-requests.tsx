@@ -5,10 +5,14 @@ import {registerDraft} from "../lib/client/draft-navigation";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 
 type Intent={id:string;merchant_reference:string;amount_minor:number;currency:string;
- created_at?:string;expires_at:string;state:string;checkout_token:string};
-type Fields={reference:string;amount:string;expiry:string};
+ created_at?:string;expires_at:string;state:string;checkout_token:string;
+ source_kind?:string|null;source_reference?:string|null};
+type Source={id:string;source_kind:"order"|"invoice";source_reference:string;amount_minor:number;issued_at:string};
+type SourceDraft={kind:"order"|"invoice";reference:string;title:string;quantity:string;unitPrice:string};
+const initialSource:SourceDraft={kind:"invoice",reference:"",title:"",quantity:"1",unitPrice:""};
+type Fields={reference:string;amount:string;expiry:string;sourceKind:"standalone"|"order"|"invoice";sourceId:string};
 type LoadState="loading"|"ready"|"offline"|"unavailable"|"forbidden"|"error";
-const empty:Fields={reference:"",amount:"",expiry:"15"};
+const empty:Fields={reference:"",amount:"",expiry:"15",sourceKind:"standalone",sourceId:""};
 const uuid=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const short=(code:string,bn:boolean)=>({
  UNAUTHENTICATED:bn?"সেশন শেষ হয়েছে। আবার লগইন করুন।":"Session expired. Sign in again.",
@@ -17,7 +21,9 @@ const short=(code:string,bn:boolean)=>({
  LIVE_SOURCE_NOT_CONNECTED:bn?"Live receiving source যুক্ত হয়নি। Sandbox বেছে নিন।":"Live receiving source is not connected. Choose sandbox.",
  CONFLICT:bn?"একই রেফারেন্স বা idempotency key-তে ভিন্ন অনুরোধ আছে।":"The reference or idempotency key already belongs to a different request.",
  LOCKED_OR_EXPIRED:bn?"রিকোয়েস্টটি লক বা মেয়াদোত্তীর্ণ।":"Request is locked or expired.",
- INVALID_REQUEST:bn?"সঠিক amount, reference ও মেয়াদ দিন।":"Check the amount, reference and expiry."
+ INVALID_REQUEST:bn?"সঠিক amount, reference ও মেয়াদ দিন।":"Check the amount, reference and expiry.",
+ SOURCE_NOT_FOUND:bn?"নির্বাচিত নথি পাওয়া যায়নি।":"Selected source document not found.",
+ INVALID_SOURCE:bn?"নথির লাইন বা পরিমাণ ভুল।":"Invalid document line or price."
 } as Record<string,string>)[code]||(bn?"অনুরোধটি সম্পন্ন হয়নি। আবার চেষ্টা করুন।":"Request was not completed. Retry.");
 function minor(value:string):number|null{
  if(!/^(?:0|[1-9][0-9]{0,8})(?:\.[0-9]{1,2})?$/.test(value))return null;
@@ -43,6 +49,11 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
 }){
  const bn=locale==="bn";
  const [data,setData]=useState<Intent[]>([]);
+ const [sources,setSources]=useState<Source[]>([]);
+ const [sourceLoad,setSourceLoad]=useState<"loading"|"ready"|"error">("loading");
+ const [sourceDraft,setSourceDraft]=useState<SourceDraft>(initialSource);
+ const [sourceBusy,setSourceBusy]=useState(false);
+ const [sourceError,setSourceError]=useState("");
  const [load,setLoad]=useState<LoadState>("loading");
  const [error,setError]=useState("");
  const [fields,setFields]=useState<Fields>(empty);
@@ -59,7 +70,8 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  useEffect(()=>{stateRef.current={fields,base:draftBase,expanded}},[fields,draftBase,expanded]);
  const draftKey="ekmivo:pg05-request:v1:"+userId+":"+workspaceId+":"+environment;
  const api="/api/go/workspaces/"+workspaceId+"/payment-intents?environment="+environment;
- const dirty=expanded&&(fields.reference!==draftBase.reference||fields.amount!==draftBase.amount||fields.expiry!==draftBase.expiry);
+ const sourcesApi="/api/go/workspaces/"+workspaceId+"/linked-sources?environment="+environment;
+ const dirty=expanded&&JSON.stringify(fields)!==JSON.stringify(draftBase);
  useEffect(()=>registerDraft({
   id:"pg05:"+workspaceId+":"+environment,
   isDirty:()=>{
@@ -96,7 +108,19 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     failure.status===503?"unavailable":"error");
   }
  },[api,bn]);
+ const refreshSources=useCallback(async()=>{
+  if(environment==="live"){setSources([]);setSourceLoad("ready");return;}
+  setSourceLoad("loading");
+  try{
+   const response=await fetch(sourcesApi,{cache:"no-store",credentials:"same-origin"});
+   const body=await response.json();
+   if(!response.ok)throw Error(body.error?.code||body.code);
+   setSources(Array.isArray(body.data)?body.data:[]);
+   setSourceLoad("ready");setSourceError("");
+  }catch{setSources([]);setSourceLoad("error");setSourceError(bn?"নথি লোড হয়নি। আবার চেষ্টা করুন।":"Document sources unavailable. Retry.");}
+ },[sourcesApi,environment,bn]);
  useEffect(()=>{void Promise.resolve().then(()=>refresh())},[refresh]);
+ useEffect(()=>{void Promise.resolve().then(()=>refreshSources())},[refreshSources]);
  const edit=(field:keyof Fields,value:string)=>{
   setFields(f=>({...f,[field]:value}));
   keyRef.current="";
@@ -115,14 +139,18 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    if(!raw){setNotice(bn?"সংরক্ষিত খসড়া নেই।":"No saved draft found.");return;}
    const value=JSON.parse(raw) as Fields;
    if(typeof value.reference!=="string"||typeof value.amount!=="string"||!["5","10","15","30","60"].includes(value.expiry))throw Error("bad draft");
-   setFields(value);setDraftBase(value);setExpanded(true);keyRef.current="";
+   const restored:Fields={...empty,...value};
+   if(!["standalone","order","invoice"].includes(restored.sourceKind)||typeof restored.sourceId!=="string")throw Error("bad source");
+   setFields(restored);setDraftBase(restored);setExpanded(true);keyRef.current="";
    setNotice(bn?"খসড়া ফিরেছে; এটি এখনও জমা দেওয়া হয়নি।":"Draft restored; not submitted.");
   }catch{setError(bn?"খসড়াটি ফিরিয়ে আনা যায়নি।":"Unable to restore the draft.")}
  };
  async function create(event:React.FormEvent<HTMLFormElement>){
   event.preventDefault();
-  const amount=minor(fields.amount);
-  if(amount===null||fields.reference.trim().length<1||fields.reference.length>128){
+  const linked=fields.sourceKind!=="standalone";
+  const amount=linked?null:minor(fields.amount);
+  const source=linked?sources.find(x=>x.id===fields.sourceId&&x.source_kind===fields.sourceKind):undefined;
+  if((!linked&&amount===null)||(linked&&!source)||fields.reference.trim().length<1||fields.reference.length>128){
    setError(bn?"সঠিক রেফারেন্স ও ২ দশমিক পর্যন্ত পরিমাণ দিন।":"Enter a valid reference and amount with up to two decimals.");return;
   }
   if(!keyRef.current)keyRef.current=crypto.randomUUID();
@@ -130,7 +158,9 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
   try{
    const result=await fetch(api,{method:"POST",credentials:"same-origin",
     headers:{"Content-Type":"application/json","Idempotency-Key":keyRef.current},
-    body:JSON.stringify({merchant_reference:fields.reference.trim(),amount_minor:amount,currency:"BDT",expires_in_minutes:Number(fields.expiry)})});
+    body:JSON.stringify({merchant_reference:fields.reference.trim(),
+     ...(linked?{[fields.sourceKind+"_id"]:source?.id}:{amount_minor:amount}),
+     currency:"BDT",expires_in_minutes:Number(fields.expiry)})});
    const json=await result.json();
    if(!result.ok)throw {code:json.error?.code||json.code};
    keyRef.current="";
@@ -159,6 +189,30 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
    await refresh();
   }catch(reason){setError(short((reason as {code?:string}).code||"",bn));}
   finally{setActing("");}
+ }
+ async function createSource(event:React.FormEvent<HTMLFormElement>){
+  event.preventDefault();setSourceError("");setNotice("");
+  const price=minor(sourceDraft.unitPrice),quantity=Number(sourceDraft.quantity);
+  if(price===null||!Number.isSafeInteger(quantity)||quantity<1||quantity>9999||
+   price*quantity>100000000000||!sourceDraft.reference.trim()||!sourceDraft.title.trim()){
+   setSourceError(bn?"সঠিক লাইন, সংখ্যা ও পরিমাণ দিন।":"Enter a valid line, quantity and price.");return;
+  }
+  setSourceBusy(true);
+  try{
+   const response=await fetch(sourcesApi,{method:"POST",credentials:"same-origin",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({source_kind:sourceDraft.kind,source_reference:sourceDraft.reference.trim(),
+     items:[{title:sourceDraft.title.trim(),quantity,unit_amount_minor:price}]})});
+   const body=await response.json();
+   if(!response.ok)throw {code:body.error?.code||body.code};
+   const issued=body as Source;
+   setSourceDraft(initialSource);
+   setFields(prev=>({...prev,sourceKind:issued.source_kind,sourceId:issued.id}));
+   setExpanded(true);
+   setNotice(bn?"সার্ভার নথির মোট হিসাব করেছে; কোনো পেমেন্ট হয়নি।":"Server-priced document issued; no payment occurred.");
+   await refreshSources();
+  }catch(reason){setSourceError(short((reason as {code?:string}).code||"",bn));}
+  finally{setSourceBusy(false);}
  }
  const visible=data.filter(item=>(statusFilter==="all"||item.state===statusFilter)
    &&(item.merchant_reference||"").toLowerCase().includes(search.trim().toLowerCase()));
