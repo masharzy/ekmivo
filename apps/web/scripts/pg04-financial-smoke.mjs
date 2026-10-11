@@ -205,7 +205,8 @@ try{
 
  // PG05: run only on the two disposable finance DBs used for PG04 CI.
  const pg05Env={...env,PG05_ALLOW_MIGRATION:"true",
-  PG05_FINANCIAL_MIGRATION_FILE:new URL("../../../infra/migrations/0010_pg05_checkout.sql",import.meta.url).pathname};
+  PG05_FINANCIAL_MIGRATION_FILE:new URL("../../../infra/migrations/0010_pg05_checkout.sql",import.meta.url).pathname,
+   PG05_LINKED_MIGRATION_FILE:new URL("../../../infra/migrations/0011_pg05_linked_sources.sql",import.meta.url).pathname};
  for(let i=0;i<2;i++)execFileSync("go",["run","./cmd/financial-migrate"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg05Env,timeout:100000
  });
@@ -265,7 +266,39 @@ try{
    "PG05 suspended workspace allowed payer lock");
   same((await dbs.sandbox.unsafe("SELECT financial_sync_workspace($1::uuid,'sandbox',3,true) AS active",
    [tenant]))[0].active,true,"PG05 sandbox resume failed");
-  console.log("PG05 PASS: isolated migration repeat, create/replay, opaque capability, exact payer lock, collision, cancellation and replay");
+  // PG05 authoritative linked invoice/order: server computes quantity x price.
+  const invoiceLines=[{title:"Engineering course",quantity:2,unit_amount_minor:12750},
+   {title:"Workbook",quantity:1,unit_amount_minor:4500}];
+  const doc=await reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+   return (await tx.unsafe("SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb) AS value",
+    [tenant,"sandbox","invoice","INV-"+randomUUID(),JSON.stringify(invoiceLines)]))[0].value;
+  });
+  same(doc.amount_minor,30000,"PG05 server-calculated source total incorrect");
+  same((await reader.unsafe("SELECT pg05_list_billing_sources($1::uuid,$2) AS value",[tenant,"sandbox"]))[0].value,null,
+   "PG05 reader listed sources without tenant binding");
+  await reject(reader,()=>reader.unsafe("SELECT pg05_create_billing_source($1::uuid,$2,$3,$4,$5::jsonb)",
+   [tenant,"sandbox","invoice","INVALID-"+randomUUID(),JSON.stringify([{title:"Fake",quantity:1,unit_amount_minor:-1}])]),"22023");
+  const refLinked="LINK-"+randomUUID(),lk=randomUUID(),lh=hmac(),rq=hmac();
+  const issueLinked=()=>reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+   return (await tx.unsafe("SELECT pg05_create_linked_intent($1::uuid,$2,$3,$4,$5::uuid,$6,$7,$8,$9) AS value",
+    [tenant,"sandbox",refLinked,"invoice",doc.id,15,lk,lh,rq]))[0].value;
+  });
+  const linked=await issueLinked();
+  same(linked.amount_minor,30000,"PG05 linked intent ignored server source total");
+  same((await issueLinked()).id,linked.id,"PG05 linked replay duplicated request");
+  same((await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[lh]))[0].value.amount_minor,
+   30000,"PG05 public linked checkout amount drift");
+  await reject(reader,()=>reader.unsafe("UPDATE pg05_billing_sources SET amount_minor=1 WHERE id=$1::uuid",[doc.id]),"42501");
+  await reject(reader,()=>reader.unsafe("SELECT pg05_create_linked_intent($1::uuid,$2,$3,$4,$5::uuid,$6,$7,$8,$9)",
+   [tenant,"sandbox","INVALID","order",randomUUID(),15,randomUUID(),hmac(),hmac()]),"P0002");
+  const listed=await reader.begin(async tx=>{
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)",[tenant,"sandbox"]);
+   return (await tx.unsafe("SELECT pg05_merchant_list($1::uuid,$2) AS value",[tenant,"sandbox"]))[0].value;
+  });
+  same(listed.find(x=>x.id===linked.id)?.source_id,doc.id,"PG05 missing link provenance in merchant list");
+  console.log("PG05 PASS: standalone and immutable linked snapshots, tenant scope, payer locking, cancellation, idempotency");
  }finally{await reader.end({timeout:3})}
  // Owner-only fixture exercises trigger-level invariants; entirely rolled back.
  const db=dbs.sandbox,workspace=controls[0][1];
