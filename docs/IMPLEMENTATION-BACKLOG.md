@@ -312,3 +312,7 @@ Measured previous production full responses: first Overview 4859ms, warmed Overv
 **LIVE PERFORMANCE FOLLOW-UP BLOCKED:** GitHub Vercel deployment status for de68839 is failure: Deployment rate limited — retry in 24 hours. Production still serves previous source 66ee26a. No post-deploy speed result is claimed. After quota resets, deploy this source, confirm sin1 from deployment/request metadata, repeat authenticated full-response latency and actual route/dirty-form/environment browser checks. Do not upgrade a paid plan or mark this follow-up closed without evidence.
 
 Owner reported All pass for supplied PG01/PG02/PG03 functional checklist; that evidence is owner-reported. Prior agent-observed post-fix production checks remain PG01 51/51, PG02 21/21, PG03 37/37. Admin UI expansion is deferred by the owner. These results do not accept PG04 financial engine, all future financial screens or real device/provider flows.
+
+### PG05 authoritative-source continuation — 2026-10-11
+
+PR #7 source now includes real immutable in-app order/invoice documents, database-calculated line totals, scoped linked intents, amount/currency link guards, public frozen terms, detail/history, viewer controls, rate limits and reload-safe idempotency. Real Next/Go/PostgreSQL browser CI is added; observe final run before claiming implementation verification. PG05 manual/deployment acceptance remains open in the single ledger. This minimal source does not accept full PG10 invoice/commerce lifecycle or PG06/PG07 receipt matching. Latest evidence: [PG05](evidence/PG05/README.md).

@@ -5,7 +5,7 @@
 **Classification:** SANDBOX SOURCE UNDER FINAL CI — standalone + in-app issued order/invoice source and linked intent implemented. Latest extended run pending; owner browser acceptance and production provisioning pending. **NOT** a live-money release.
 
 ## Implemented in source
-- Independent PG04 sandbox/live databases preserved. PG05 migrations `0010_pg05_checkout.sql` **and additive `0011_pg05_linked_sources.sql`** run **only with explicit** `PG05_ALLOW_MIGRATION=true`, `PG05_FINANCIAL_MIGRATION_FILE` and `PG05_LINKED_MIGRATION_FILE` on each separately provisioned financial realm, after PG04. A previously installed 0010 still receives 0011. No finance migration applied to production here.
+- Independent PG04 sandbox/live databases preserved. PG05 migrations `0010_pg05_checkout.sql`, additive `0011_pg05_linked_sources.sql` **and `0012_pg05_source_integrity.sql`** run **only with explicit** `PG05_ALLOW_MIGRATION=true`, `PG05_FINANCIAL_MIGRATION_FILE` and `PG05_LINKED_MIGRATION_FILE` and `PG05_INTEGRITY_MIGRATION_FILE` on each separately provisioned financial realm, after PG04. A previously installed 0010 still receives 0011. No finance migration applied to production here.
 - Minimal **authoritative in-app order/invoice source**: `0011_pg05_linked_sources.sql` creates tenant/environment-bound immutable issued documents with 1–20 validated line items. Merchant authors unit prices and quantities under `payments:write`; PostgreSQL calculates the total, caps overflow and freezes the original document. Replayed identical document reference returns the same source; same reference with changed lines conflicts. This is a real in-app source snapshot, **not** an unimplemented external catalog/OMS or the full PG10 invoice lifecycle.
 - **Linked payment intent** accepts exactly one valid `order_id` or `invoice_id` with **no amount submitted by the client**. The SQL issuance function fetches the server-frozen amount in the same tenant/realm, binds it immutably to the intent, rejects missing/mismatched sources, preserves idempotency and serializes one active full-amount intent per source. A cancelled or expired source's old intent stays append-only, and a fresh distinct request can use it. Merchant list shows linkage provenance.
 - Real server-side standalone sandbox BDT request creation with actor/key `payments:write` authorization, tenant+environment binding, 5–60 minute expiry, reference+minor units, **idempotency key**, immutable amount/terms. Read and append-only cancel operations scoped to `payments:read` / `payments:write`.
@@ -39,3 +39,30 @@
 5. URL path is a scoped bearer capability. Referrer policy disables referrer leakage; complete CDN/WAF log scrubbing, hosting security checks, broad rate limiting and full public route production tests before launch.
 
 Owner's one-time combined manual checks live in `docs/MANUAL-VERIFICATION.md` under PG05; no separate test session requested.
+
+## PG05 continuation — source integrity and real browser verification
+
+Implementation commit: `55d6322` on the existing PR branch. Final CI results are pending at this checkpoint.
+
+- Additive 0012 authorizes the tenant/environment **before** source lookup, revokes access to legacy helper functions and validates linked intent amount/currency at the database boundary. Only an actual immutable issued order/invoice record is linkable; its item quantities and integer unit prices determine the total.
+- Merchant GET detail endpoint reads original terms, source lines, masked payer/method/window and append-only created/locked/cancelled history, including records outside the latest-50 list. `?request=<id>` is a shareable authorized detail deep link.
+- Public checkout resolves the current enabled business name from the control plane and includes frozen source lines. Public output strips the internal workspace field. Source unavailability remains an error; no placeholder business, fake totals or customer payment proof.
+- Public capability and global budgets plus authenticated workspace budgets are bounded in memory and concurrency-tested. 429 includes Retry-After=60; web proxies preserve it. These process-local budgets complement, and do not replace, deployment-level WAF/global quotas.
+- Viewer controls are read-only; a forged direct write still fails Go authorization. Unknown mutation outcomes retain the same idempotency key and request fields in a user/workspace/environment-scoped tab draft, allowing a reload/restore retry. Busy fields prevent payload changes while the outcome is pending. Hidden dirty forms remain guarded; Save/Discard update the guard immediately.
+- Offline checkout preserves the last server result, marks sync failure and reconnects. Older poll responses cannot undo a newer payer-lock result. Amounts accept Bengali digits; timestamps show Asia/Dhaka explicitly.
+- CI now runs real Chromium against **Next.js + the restricted Go API + disposable PostgreSQL**, without mocked financial routes: two-line invoice → linked 6735-paisa request → source/history/share → Bengali payer + Nagad lock → reload → locale/theme/system changes → offline/reconnect → merchant cancel → public cancelled state. Viewer UI and a 16-case 320/768/1024/1440 × EN/BN × light/dark checkout matrix check keyboard, real data, no horizontal overflow and no manual approval button. Results/screenshots are uploaded as `pg05-browser-evidence`.
+- Isolated HTTP regressions cover five competing requests for one source (one issuance, four 409s), original lines in detail, invalid title types, unscoped/private helper denial, duplicate environment denial and effective public lock rate limits.
+
+Local evidence observed during this continuation: Go all-package tests and checkout race suite PASS; web lint PASS (existing unused-variable warnings), TypeScript PASS, strict OpenAPI PASS, production build PASS. Final changed-source CI and browser evidence must be recorded below only after observation.
+
+Production provisioning/deployment parity, owner/manual browser acceptance, PG06 receipt capture, PG07 five-field matching, PG08 signed consumer webhooks and full PG10 invoice lifecycle remain OPEN. No real-money, deployed or payment-verified claim is made by these source checks.
+
+### Dependency audit
+
+The local npm audit found five high entries tracing to the same development-only `braces` stack-exhaustion advisory [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). Upstream reports no patched release; the proposed eslint downgrade is incompatible with the pinned Next 16 toolchain and is not applied. Lint consumes repository patterns only, not merchant/customer input. Production-only dependency audit is checked separately; this records a remaining tooling advisory, not a zero-vulnerability claim.
+
+### First continuation CI correction
+
+[38146670615](https://github.com/masharzy/ekmivo/actions/runs/38146670615) failed at Go compile (`err :=` redeclared inside payer-lock branch). Additive source migrations passed before the HTTP binary compile. The declaration is corrected; rerun required. This run is not browser or implementation acceptance evidence.
+
+Production-only `npm audit --omit=dev --audit-level=high`: PASS, 0 vulnerabilities observed. Added as a CI gate.

@@ -466,6 +466,17 @@ components:
         - $ref: '#/components/schemas/Intent'
         - type: object
           properties:
+            merchant_name: { type: string, description: Current enabled business name from control-plane records }
+            server_time: { type: string, format: date-time }
+            source_reference: { type: string }
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  title: { type: string }
+                  quantity: { type: integer }
+                  unit_amount_minor: { type: integer }
             payer_suffix: { type: [string, 'null'], pattern: '^[0-9]{4}$' }
             method: { type: [string, 'null'], enum: [bkash, nagad, rocket, null] }
             methods: { type: array, items: { type: string, enum: [bkash, nagad, rocket] } }

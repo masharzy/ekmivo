@@ -576,7 +576,7 @@ func (s *Service) HandlePublic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var raw []byte
-		err := s.Sandbox.QueryRow(r.Context(), "SELECT pg05_lock_payer($1,$2,$3,$4)",
+		err = s.Sandbox.QueryRow(r.Context(), "SELECT pg05_lock_payer($1,$2,$3,$4)",
 			digest(token), hex.EncodeToString(mac(s.PayerKey, payer)), payer[len(payer)-4:], body.Method).Scan(&raw)
 		if err != nil {
 			mapped(w, err)

@@ -40,6 +40,9 @@ jobs:
       - name: Clean dependency install
         working-directory: apps/web
         run: npm ci
+      - name: Production dependency security audit
+        working-directory: apps/web
+        run: npm audit --omit=dev --audit-level=high
       - name: Lint all web sources
         working-directory: apps/web
         run: npm run lint

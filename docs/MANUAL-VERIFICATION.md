@@ -115,6 +115,17 @@
 - [ ] Full external OMS/catalog sync, complete invoice drafting/correction/tax/discount/fulfilment and real receiving-provider verification are **outside PG05 minimum** and remain PG10/PG06/PG07 blockers. Do not pretend that this minimal issued source is a complete invoice application.
 - **Status:** SANDBOX STANDALONE + MINIMAL LINKED SOURCE CODE IMPLEMENTED; previous standalone/base test suite **PASS** ([run 38142901441](https://github.com/masharzy/ekmivo/actions/runs/38142901441)); new full linked/HTTP CI pending final pass. Owner combined manual/browser verification **PENDING**; no live payment claim. Evidence: `docs/evidence/PG05/README.md`.
 
+### PG05 continuation checks — one combined owner pass
+
+Automated coverage is recorded separately in PG05 evidence. These checks remain **manual pending** on an explicitly provisioned isolated sandbox running the PR source and migrations 0010–0012:
+
+- [ ] Owner/editor and viewer in separate real sessions: view the same immutable document/history; viewer sees read-only controls; direct writes deny. Follow a `requests?env=sandbox&request=<id>` deep link, reload/back and check role changes/revocation.
+- [ ] Interrupt an intent POST after the server commits but before the response reaches the browser; reload, Restore draft and retry. Confirm the original request/token returns, without duplicate history. Change the payload deliberately to create a fresh request; do not blindly resend funds.
+- [ ] Close a dirty request form, switch business/env/locale, test Stay/Save/Discard and restore only the same account/business/environment. Edit source lines during a slow response: fields stay locked until the result resolves.
+- [ ] With a physical screen reader/keyboard and browser autofill, check announcements, focus, Bengali glyphs, 200% zoom, all four widths and Light/Dark/System/cross-tab preference changes. Automated Chromium coverage is not physical-device acceptance.
+- [ ] Test source suspension and stale control-plane projection independently; unavailable business/source never displays usable instructions. Check edge/CDN logging scrubs bearer checkout paths and confirm deployment-wide quotas alongside the per-process 429 budgets.
+- [ ] Verify the exact deployed sandbox SHA, restricted control/finance roles and migration operator procedure before any owner acceptance. Real receipt/payment matching remains PG06/PG07; production deployment and full invoice lifecycle remain separate gates.
+
 ## PG06 — Native Android consented receipt collection
 
 - [ ] Install one **Kotlin/Compose** app on approved actual Android device. Consent SMS/notification only where allowed; permission denial leaves payment unconfirmed; exclude OTP and unrelated SMS.
