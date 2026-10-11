@@ -68,6 +68,16 @@
 - **Automated required:** hash-only storage, scoped roles, OpenAPI security and error conformance, real PostgreSQL env-isolation.
 - **Status:** NOT IMPLEMENTED / PENDING.
 
+### PG03 implementation-specific single-session checks (do not treat as passed yet)
+
+- [ ] As a real owner/admin, open `/{locale}/w/{workspaceId}/payments/developers?env=sandbox`. Create a scoped `payments:read` key with a distinctive name, 7/30/90-day expiry and correct current password. Raw secret is shown once; refresh/return must not reveal it. Wrong password/no scopes are denied and create no row.
+- [ ] With the server-side secret, call `GET /v1/merchant/context?environment=sandbox` directly through Go API. Confirm exact workspace, sandbox, key id, scopes, `financial_api_ready:false`; wrong environment, missing scope, unknown key, revoked key and expired key must deny. Live key cannot access sandbox and vice versa.
+- [ ] Rotate an actual sandbox key. Old token immediately stops (401); new token inherits scope/expiry and works. Revoke it and retest denial. Confirm no key secret in DB, frontend JS bundle, logs, URL, web analytics or error body.
+- [ ] Repeat creation/list as editor/viewer (forbidden, no key metadata); disable payment product or suspend environment (key must fail) and restore only test fixtures. Test owner vs removed member and second business; no cross-tenant result.
+- [ ] Visit EN/BN and Light/Dark/System at 320/768/1440 px, zoom 200%, keyboard and screen reader: name/scopes/expiry/password, list/empty/error/success, copy/hide and disabled status must render. Verify loading and offline from a deliberately disconnected test browser.
+- [ ] Verify applied production Neon 0007 migration, Vercel + Render deployment SHA/health, and no active key exists without correct RLS/function grants. Do not use actual merchant payment credentials or attempt real payouts.
+- **Dependency / deliberately unavailable:** PG04–PG09 payment attempts, checkout, automatic verification and signed outbound webhooks; PG14 generated SDK/reference harness. Real operational API cannot be accepted by testing credential context alone.
+
 ## PG04 — Financial source of truth and job durability
 
 - [ ] Inspect authorized read-only records from sandbox: attempts/evidence/allocations refer to exact tenant and environment; append-only audit immutable; no arbitrary "mark paid".
