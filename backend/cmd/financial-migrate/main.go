@@ -22,7 +22,7 @@ type realmDSN struct{ environment,raw string }
 func inspectDSN(raw string)(string,string,error){
  if raw==""{return "","",errors.New("missing financial migration URL")}
  u,err:=url.Parse(raw)
- if err!=nil||u.Scheme!="postgres"&&u.Scheme!="postgresql"||u.Host==""{
+ if err!=nil||u.Scheme!="postgres"&&u.Scheme!="postgresql"||u.Host==""||u.User==nil{
   return "","",errors.New("financial migration requires an explicit PostgreSQL URL")
  }
  name:=strings.TrimPrefix(u.Path,"/")
