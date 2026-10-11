@@ -34,7 +34,27 @@ func TestPG04PostgresRiverAtomicIdempotency(t *testing.T){
  queue,err:=river.NewClient(riverpgxv5.New(pool),&river.Config{})
  if err!=nil{t.Fatal(err)}
  ws,err:=randomUUID();if err!=nil{t.Fatal(err)}
- _,err=pool.Exec(ctx,"SELECT financial_sync_workspace($1::uuid,$2,$3,$4)",ws,"sandbox",1,true)
+ // Build the test tenant in the isolated CONTROL fixture first. The River
+ // worker must recheck this authoritative entitlement before processing.
+ controlURL:=os.Getenv("PG00_TEST_DATABASE_URL")
+ if controlURL==""{t.Fatal("PG04 needs separate disposable control DB fixture")}
+ control,err:=pgxpool.New(ctx,controlURL);if err!=nil{t.Fatal(err)}
+ defer control.Close()
+ uid,err:=randomUUID();if err!=nil{t.Fatal(err)}
+ _,err=control.Exec(ctx,`INSERT INTO app_users(id,email,display_name,password_hash)
+ VALUES($1::uuid,$2,'PG04 River Test','invalid-test-only')`,uid,"pg04-river-"+uid+"@example.invalid")
+ if err!=nil{t.Fatal(err)}
+ _,err=control.Exec(ctx,`INSERT INTO workspaces(id,name,service_mode,created_by)
+ VALUES($1::uuid,'PG04 durable River','commerce',$2::uuid)`,ws,uid)
+ if err!=nil{t.Fatal(err)}
+ _,err=control.Exec(ctx,`INSERT INTO workspace_members(workspace_id,user_id,role)
+ VALUES($1::uuid,$2::uuid,'owner')`,ws,uid)
+ if err!=nil{t.Fatal(err)}
+ var sourceVersion int64;var active bool
+ err=control.QueryRow(ctx,`SELECT source_version,active
+ FROM resolve_financial_projection($1::uuid,'sandbox')`,ws).Scan(&sourceVersion,&active)
+ if err!=nil||!active{t.Fatal("PG04 authoritative control projection not enabled",err)}
+ _,err=pool.Exec(ctx,"SELECT financial_sync_workspace($1::uuid,$2,$3,$4)",ws,"sandbox",sourceVersion,true)
  if err!=nil{t.Fatal(err)}
  st:=&Store{DB:pool,Queue:queue,Realm:"sandbox"}
  var calls atomic.Int32
