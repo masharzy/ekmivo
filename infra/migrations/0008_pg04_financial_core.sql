@@ -465,7 +465,7 @@ DECLARE row_info record;
 BEGIN
  FOR row_info IN SELECT c.relname,c.relkind FROM pg_class c
   JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='public' AND c.relname LIKE 'river\\_%' ESCAPE '\\'
+  WHERE n.nspname='public' AND left(c.relname,6)='river_'
     AND c.relkind IN ('r','p') AND c.relname<>'river_migration'
  LOOP
   EXECUTE format('GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE %I TO ekmivo_financial_worker',row_info.relname);
