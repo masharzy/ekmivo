@@ -56,6 +56,46 @@ CREATE TABLE payment_attempts (
  FOREIGN KEY(workspace_id,environment,receiving_account_id)
   REFERENCES financial_receiving_accounts(workspace_id,environment,id) ON DELETE RESTRICT
 );
+-- The payer/route/time tuple is locked at issue; overlapping active
+-- windows for the same evidence bucket would create ambiguous matches.
+CREATE FUNCTION financial_validate_attempt() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+DECLARE intent payment_intents%ROWTYPE; method_of_account text; overlaps boolean;
+BEGIN
+ SELECT * INTO intent FROM payment_intents
+  WHERE workspace_id=NEW.workspace_id AND environment=NEW.environment
+   AND id=NEW.intent_id;
+ SELECT method INTO method_of_account FROM financial_receiving_accounts
+  WHERE workspace_id=NEW.workspace_id AND environment=NEW.environment
+   AND id=NEW.receiving_account_id;
+ IF intent.id IS NULL OR method_of_account IS NULL
+    OR intent.amount_minor<>NEW.amount_minor OR intent.currency<>NEW.currency
+    OR method_of_account<>NEW.method OR NEW.window_start<NEW.issued_at
+    OR NEW.window_end>intent.expires_at THEN
+  RAISE EXCEPTION 'attempt cannot change issued amount, receiving method or window'
+   USING ERRCODE='23514';
+ END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended(
+  NEW.workspace_id::text||':'||NEW.environment||':'||NEW.receiving_account_id::text||
+  ':'||NEW.payer_hmac||':'||NEW.method||':'||NEW.amount_minor::text,0));
+ SELECT EXISTS (
+  SELECT 1 FROM payment_attempts a
+  WHERE a.workspace_id=NEW.workspace_id AND a.environment=NEW.environment
+    AND a.receiving_account_id=NEW.receiving_account_id
+    AND a.payer_hmac=NEW.payer_hmac AND a.method=NEW.method
+    AND a.amount_minor=NEW.amount_minor
+    AND tstzrange(a.window_start,a.window_end,'[)') &&
+        tstzrange(NEW.window_start,NEW.window_end,'[)')
+ ) INTO overlaps;
+ IF overlaps THEN
+  RAISE EXCEPTION 'overlapping payer/account/method/amount attempt'
+   USING ERRCODE='23505';
+ END IF;
+ RETURN NEW;
+END $;
+CREATE TRIGGER financial_attempt_issuance BEFORE INSERT ON payment_attempts
+ FOR EACH ROW EXECUTE FUNCTION financial_validate_attempt();
+
 CREATE INDEX payment_attempts_intent_idx ON payment_attempts(workspace_id,environment,intent_id,issued_at);
 
 -- The signed/approved ingress layer in PG06 must resolve tenant/environment
