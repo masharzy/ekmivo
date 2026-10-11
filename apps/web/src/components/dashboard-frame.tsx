@@ -175,8 +175,9 @@ export function DashboardFrame({ locale, service, section, workspace, spaces, us
   goTo(workspace.id,target,target==="payments"?rememberedEnvironment(workspace.id):environment,remembered);
  };
  const switchBusiness=(target:Space)=>{
-  if(target.id===workspace.id){setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;return;}
+  if(target.id===workspace.id){setSearchOpen(false);setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;return;}
   if(target.mode==="off"){
+   setSearchOpen(false);
    setMobileOpen(false);
    const next=`/${locale}/w/${target.id}/dashboard`;
    // Even a disabled product has a guarded destination. Never bypass an
