@@ -2,11 +2,11 @@ package financial
 
 import(
  "context"
- "database/sql"
  "encoding/json"
  "errors"
  "strings"
  "testing"
+ "github.com/jackc/pgx/v5"
 )
 func TestTransactionBoundaryValidatesScope(t *testing.T){
  for _,tc:=range []struct{ws,env string}{
@@ -32,12 +32,14 @@ func TestResultMustBeBoundedSuccessObject(t *testing.T){
 func TestAbsentStoreNeverInvokesMutation(t *testing.T){
  called:=false
  _,err:=(&Store{}).Execute(t.Context(),"12345678-1234-4234-8234-123456789012","sandbox","payments.create","1234567890123456",[]byte("{}"),
-  func(_ context.Context,_ *sql.Tx)(Result,error){called=true;return Result{},nil})
- if !errors.Is(err,ErrUnavailable)||called{t.Fatal("callback ran without a financial DB")}
+  func(_ context.Context,_ pgx.Tx)(Result,error){called=true;return Result{},nil})
+ if !errors.Is(err,ErrUnavailable)||called{t.Fatal("callback ran without financial DB+River")}
 }
 func TestDigestUsesWholeRequest(t *testing.T){
- if DigestRequest([]byte(`{"amount":1}`))==DigestRequest([]byte(`{"amount":2}`)){
-  t.Fatal("distinct request bytes collided")
- }
+ if DigestRequest([]byte(`{"amount":1}`))==DigestRequest([]byte(`{"amount":2}`)){t.Fatal("different request bytes collided")}
  if len(DigestRequest([]byte("{}")))!=64{t.Fatal("digest length")}
+}
+func TestInvalidRealmBlocksAnyWrite(t *testing.T){
+ s:=&Store{Realm:"live"}
+ if err:=s.valid("12345678-1234-4234-8234-123456789012","sandbox");!errors.Is(err,ErrUnavailable){t.Fatal("nil pool must fail closed")}
 }
