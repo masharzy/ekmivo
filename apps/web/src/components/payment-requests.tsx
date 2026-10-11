@@ -8,7 +8,8 @@ type Intent={id:string;merchant_reference:string;amount_minor:number;currency:st
  created_at?:string;expires_at:string;state:string;checkout_token:string;
  source_kind?:string|null;source_reference?:string|null};
 type Source={id:string;source_kind:"order"|"invoice";source_reference:string;amount_minor:number;issued_at:string};
-type SourceDraft={kind:"order"|"invoice";reference:string;title:string;quantity:string;unitPrice:string};
+type SourceLine={title:string;quantity:string;unitPrice:string};
+type SourceDraft=SourceLine&{kind:"order"|"invoice";reference:string};
 const initialSource:SourceDraft={kind:"invoice",reference:"",title:"",quantity:"1",unitPrice:""};
 type Fields={reference:string;amount:string;expiry:string;sourceKind:"standalone"|"order"|"invoice";sourceId:string};
 type LoadState="loading"|"ready"|"offline"|"unavailable"|"forbidden"|"error";
@@ -52,6 +53,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  const [sources,setSources]=useState<Source[]>([]);
  const [sourceLoad,setSourceLoad]=useState<"loading"|"ready"|"error">("loading");
  const [sourceDraft,setSourceDraft]=useState<SourceDraft>(initialSource);
+ const [extraLines,setExtraLines]=useState<SourceLine[]>([]);
  const [sourceBusy,setSourceBusy]=useState(false);
  const [sourceError,setSourceError]=useState("");
  const [load,setLoad]=useState<LoadState>("loading");
@@ -192,21 +194,25 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  }
  async function createSource(event:React.FormEvent<HTMLFormElement>){
   event.preventDefault();setSourceError("");setNotice("");
-  const price=minor(sourceDraft.unitPrice),quantity=Number(sourceDraft.quantity);
-  if(price===null||!Number.isSafeInteger(quantity)||quantity<1||quantity>9999||
-   price*quantity>100000000000||!sourceDraft.reference.trim()||!sourceDraft.title.trim()){
-   setSourceError(bn?"সঠিক লাইন, সংখ্যা ও পরিমাণ দিন।":"Enter a valid line, quantity and price.");return;
+  const rawLines:SourceLine[]=[{title:sourceDraft.title,quantity:sourceDraft.quantity,unitPrice:sourceDraft.unitPrice},...extraLines];
+  const lines=rawLines.map(row=>({title:row.title.trim(),quantity:Number(row.quantity),unit_amount_minor:minor(row.unitPrice)}));
+  const total=lines.reduce((sum,row)=>sum+row.quantity*(row.unit_amount_minor||0),0);
+  if(!sourceDraft.reference.trim()||sourceDraft.reference.length>128||lines.length>20||
+   !lines.every(row=>row.title.length>0&&row.title.length<=160&&
+    Number.isSafeInteger(row.quantity)&&row.quantity>=1&&row.quantity<=9999&&row.unit_amount_minor!==null)||
+   !Number.isSafeInteger(total)||total<=0||total>100000000000){
+   setSourceError(bn?"প্রতিটি লাইনের শিরোনাম, সংখ্যা ও মূল্য সঠিক দিন।":"Check every line title, quantity and unit price.");return;
   }
   setSourceBusy(true);
   try{
    const response=await fetch(sourcesApi,{method:"POST",credentials:"same-origin",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({source_kind:sourceDraft.kind,source_reference:sourceDraft.reference.trim(),
-     items:[{title:sourceDraft.title.trim(),quantity,unit_amount_minor:price}]})});
+     items:lines})});
    const body=await response.json();
    if(!response.ok)throw {code:body.error?.code||body.code};
    const issued=body as Source;
-   setSourceDraft(initialSource);
+   setSourceDraft(initialSource);setExtraLines([]);
    setFields(prev=>({...prev,sourceKind:issued.source_kind,sourceId:issued.id}));
    setExpanded(true);
    setNotice(bn?"সার্ভার নথির মোট হিসাব করেছে; কোনো পেমেন্ট হয়নি।":"Server-priced document issued; no payment occurred.");
@@ -282,7 +288,22 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
      <label>{bn?"প্রতি ইউনিট মূল্য (BDT)":"Unit price (BDT)"}
       <input required inputMode="decimal" value={sourceDraft.unitPrice} onChange={e=>setSourceDraft(f=>({...f,unitPrice:e.target.value}))} placeholder="250.00" disabled={sourceBusy}/></label>
     </div>
-    <p className="pg05-muted">{bn?"ফর্মে একটি লাইন; API সর্বোচ্চ ২০টি যাচাইকৃত লাইন সমর্থন করে। ইস্যুর পর পরিবর্তন করা যায় না।":"This form issues one line. API accepts up to 20 validated lines; issued sources are immutable."}</p>
+    {extraLines.map((line,index)=><div className="pg05-two" key={index}>
+      <label>{bn?"লাইনের বিবরণ":"Line description"} ({index+2})
+       <input required maxLength={160} value={line.title} disabled={sourceBusy}
+        onChange={e=>setExtraLines(rows=>rows.map((x,i)=>i===index?{...x,title:e.target.value}:x))}/></label>
+      <label>{bn?"সংখ্যা":"Quantity"}
+       <input required inputMode="numeric" pattern="[1-9][0-9]*" value={line.quantity} disabled={sourceBusy}
+        onChange={e=>setExtraLines(rows=>rows.map((x,i)=>i===index?{...x,quantity:e.target.value}:x))}/></label>
+      <label>{bn?"প্রতি ইউনিট মূল্য (BDT)":"Unit price (BDT)"}
+       <input required inputMode="decimal" value={line.unitPrice} disabled={sourceBusy}
+        onChange={e=>setExtraLines(rows=>rows.map((x,i)=>i===index?{...x,unitPrice:e.target.value}:x))}/></label>
+      <button type="button" disabled={sourceBusy} onClick={()=>setExtraLines(rows=>rows.filter((_,i)=>i!==index))}>{bn?"লাইন বাদ দিন":"Remove line"}</button>
+     </div>)}
+    <button type="button" disabled={sourceBusy||extraLines.length>=19} onClick={()=>setExtraLines(rows=>[...rows,{title:"",quantity:"1",unitPrice:""}])}>
+     {bn?"আরেকটি লাইন যোগ করুন":"Add another line"} ({extraLines.length+1}/20)
+    </button>
+    <p className="pg05-muted">{bn?"সর্বোচ্চ ২০টি লাইন; সার্ভারই মোট মূল্য হিসাব করবে এবং ইস্যু করা নথি পরিবর্তন করা যাবে না।":"Up to 20 lines. The server computes and locks the issued document total, regardless of any client preview."}</p>
     <button className="ek-action" type="submit" disabled={sourceBusy||environment==="live"}>{sourceBusy?(bn?"ইস্যু হচ্ছে…":"Issuing…"):(bn?"নথি ইস্যু করুন":"Issue document")}</button>
     {sourceError&&<p role="alert" className="ek-form-error">{sourceError}</p>}
    </form>
