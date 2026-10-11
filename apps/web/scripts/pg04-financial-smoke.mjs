@@ -223,8 +223,9 @@ try{
   const first=await create(key,digest,request);
   same(first.state,"requires_payer","PG05 issued request pretended funds verified");
   same((await create(key,digest,request)).id,first.id,"PG05 request replay duplicated intent");
-  same((await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[digest]))[0].value.amount_minor,
-   50000,"PG05 public checkout amount drift");
+  const checkout=(await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[digest]))[0].value;
+  same(checkout.amount_minor,50000,"PG05 public checkout amount drift");
+  ok(Number.isFinite(Date.parse(checkout.server_time)),"PG05 checkout missing authoritative server time");
   same((await reader.unsafe("SELECT pg05_checkout_view($1) AS value",[hmac()]))[0].value,
    null,"PG05 random checkout capability disclosed private data");
   const locked=(await reader.unsafe("SELECT pg05_lock_payer($1,$2,$3,$4) AS value",
