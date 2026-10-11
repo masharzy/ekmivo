@@ -1,137 +1,136 @@
-// Package financial implements PG04's internal transactional durability boundary.
- // It never creates verified payments or treats client input as financial evidence.
+// Package financial is Ekmivo's PG04 durable financial transaction boundary.
+// PG04 does not expose a public mutation route or assert customer money is paid.
 package financial
 
 import (
  "context"
+ "crypto/rand"
  "crypto/sha256"
- "database/sql"
  "encoding/hex"
  "encoding/json"
  "errors"
  "fmt"
  "regexp"
  "strings"
-)
 
+ "github.com/jackc/pgx/v5"
+ "github.com/jackc/pgx/v5/pgxpool"
+ "github.com/riverqueue/river"
+)
 var (
- ErrConflict=errors.New("idempotency key reused with different request")
- ErrInvalid=errors.New("invalid financial operation")
- ErrUnavailable=errors.New("financial store unavailable")
+ ErrConflict=errors.New("idempotency key reused with another payload")
+ ErrInvalid=errors.New("invalid financial operation or realm")
+ ErrUnavailable=errors.New("financial database unavailable")
  uuidRE=regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
  opRE=regexp.MustCompile(`^[a-z][a-z0-9_.:-]{1,63}$`)
 )
-type Result struct {
- Status int
- Body json.RawMessage
+type Result struct{Status int; Body json.RawMessage}
+type AuditArgs struct {
+ OutboxID string `json:"outbox_id"`
+ Environment string `json:"environment"`
 }
-// Store uses an explicitly authorized SQL connection. At PG04 the restricted
-// API role has NO financial INSERT grants: PG05 must add validated writer
-// entrypoints and call this only after fresh Go authorization.
-type Store struct { DB *sql.DB }
-
-func validateScope(workspace,environment string) error {
- if !uuidRE.MatchString(workspace) || (environment!="sandbox"&&environment!="live") {
-  return ErrInvalid
- }
+func (AuditArgs) Kind()string{return "pg04.audit"}
+type Store struct{
+ DB *pgxpool.Pool
+ Queue *river.Client[pgx.Tx]
+ Realm string
+}
+func validateScope(workspace,env string)error{
+ if !uuidRE.MatchString(workspace)||(env!="sandbox"&&env!="live"){return ErrInvalid}
  return nil
 }
-func validateResult(r Result) error {
- if r.Status<200 || r.Status>299 || len(r.Body)==0 || len(r.Body)>16384 || !json.Valid(r.Body){
-  return ErrInvalid
- }
+func validateResult(r Result)error{
+ if r.Status<200||r.Status>299||len(r.Body)==0||len(r.Body)>16384||!json.Valid(r.Body){return ErrInvalid}
  var value any
  if err:=json.Unmarshal(r.Body,&value);err!=nil{return ErrInvalid}
  if _,ok:=value.(map[string]any);!ok{return ErrInvalid}
  return nil
 }
-func DigestRequest(payload []byte) string {
- h:=sha256.Sum256(payload)
- return hex.EncodeToString(h[:])
+func DigestRequest(request []byte)string{digest:=sha256.Sum256(request);return hex.EncodeToString(digest[:])}
+func randomUUID()(string,error){
+ b:=make([]byte,16);if _,err:=rand.Read(b);err!=nil{return "",err}
+ b[6]=(b[6]&0x0f)|0x40;b[8]=(b[8]&0x3f)|0x80
+ out:=hex.EncodeToString(b)
+ return out[:8]+"-"+out[8:12]+"-"+out[12:16]+"-"+out[16:20]+"-"+out[20:],nil
 }
-
-// Execute serializes identical operation/key scopes using a transaction-level
-// advisory lock, verifies the full request digest and commits the domain
-// callback, any outbox rows and immutable response atomically.
-// A rolled-back callback leaves NO persisted idempotency result or job.
-// Canonicalize structured request bytes at the authenticated API boundary.
+func (s *Store) valid(workspace,environment string)error{
+ if s==nil||s.DB==nil||s.Queue==nil{return ErrUnavailable}
+ if err:=validateScope(workspace,environment);err!=nil{return err}
+ if s.Realm!=environment{return ErrInvalid}
+ return nil
+}
+// Execute must only be called after a FRESH control-plane session/member/key,
+// product and environment authorization. PG04 does not grant untrusted clients
+// mutation rights. Business write, River insert, outbox and result commit once.
+// Replay returns database-normalized exactly identical result bytes.
 func (s *Store) Execute(
  ctx context.Context,workspace,environment,operation,key string,request []byte,
- callback func(context.Context,*sql.Tx)(Result,error),
+ callback func(context.Context,pgx.Tx)(Result,error),
 )(Result,error){
- var zero Result
- if s==nil||s.DB==nil{return zero,ErrUnavailable}
- if err:=validateScope(workspace,environment);err!=nil{return zero,err}
- if !opRE.MatchString(operation)||len(key)<16||len(key)>128||len(request)==0||callback==nil{
-  return zero,ErrInvalid
- }
- tx,err:=s.DB.BeginTx(ctx,&sql.TxOptions{Isolation:sql.LevelReadCommitted})
+ zero:=Result{}
+ if err:=s.valid(workspace,environment);err!=nil{return zero,err}
+ if !opRE.MatchString(operation)||len(key)<16||len(key)>128||len(request)==0||callback==nil{return zero,ErrInvalid}
+ tx,err:=s.DB.BeginTx(ctx,pgx.TxOptions{})
  if err!=nil{return zero,fmt.Errorf("%w: begin",ErrUnavailable)}
- defer tx.Rollback()
- // Hash collisions only cause extra serialization, never a result alias:
- // the complete scoped key is checked against the UNIQUE primary key.
- _,err=tx.ExecContext(ctx,
-  "SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+ defer tx.Rollback(ctx)
+ _,err=tx.Exec(ctx,`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,
   workspace+"|"+environment+"|"+operation+"|"+key)
  if err!=nil{return zero,fmt.Errorf("%w: lock",ErrUnavailable)}
- var digest string
- var code int
- var body []byte
- err=tx.QueryRowContext(ctx,`SELECT request_hash::text,result_code,result_body
-   FROM financial_idempotency WHERE workspace_id=$1::uuid AND environment=$2
-   AND operation=$3 AND idempotency_key=$4`,workspace,environment,operation,key).
-  Scan(&digest,&code,&body)
+ var digest string;var status int;var body []byte
+ err=tx.QueryRow(ctx,`SELECT request_hash::text,result_code,result_body
+ FROM financial_idempotency WHERE workspace_id=$1::uuid AND environment=$2
+ AND operation=$3 AND idempotency_key=$4`,
+ workspace,environment,operation,key).Scan(&digest,&status,&body)
  if err==nil{
   if strings.TrimSpace(digest)!=DigestRequest(request){return zero,ErrConflict}
-  if err=tx.Commit();err!=nil{return zero,fmt.Errorf("%w: replay commit",ErrUnavailable)}
-  return Result{Status:code,Body:body},nil
+  if err=tx.Commit(ctx);err!=nil{return zero,fmt.Errorf("%w: replay commit",ErrUnavailable)}
+  return Result{Status:status,Body:body},nil
  }
- if !errors.Is(err,sql.ErrNoRows){return zero,fmt.Errorf("%w: idempotency read",ErrUnavailable)}
+ if !errors.Is(err,pgx.ErrNoRows){return zero,fmt.Errorf("%w: read",ErrUnavailable)}
  result,err:=callback(ctx,tx)
  if err!=nil{return zero,err}
  if err=validateResult(result);err!=nil{return zero,err}
- _,err=tx.ExecContext(ctx,`INSERT INTO financial_idempotency
-   (workspace_id,environment,operation,idempotency_key,request_hash,result_code,result_body)
-   VALUES($1::uuid,$2,$3,$4,$5,$6,$7::jsonb)`,
-  workspace,environment,operation,key,DigestRequest(request),result.Status,string(result.Body))
- if err!=nil{return zero,fmt.Errorf("%w: idempotency commit record",ErrUnavailable)}
- // Return the database-normalized, committed JSONB representation on BOTH
- // initial success and replay: byte-identical API responses and no drift.
- err=tx.QueryRowContext(ctx,`SELECT result_body FROM financial_idempotency
-  WHERE workspace_id=$1::uuid AND environment=$2 AND operation=$3 AND idempotency_key=$4`,
-  workspace,environment,operation,key).Scan(&body)
- if err!=nil{return zero,fmt.Errorf("%w: committed response read",ErrUnavailable)}
- if err=tx.Commit();err!=nil{return zero,fmt.Errorf("%w: transaction commit",ErrUnavailable)}
+ _,err=tx.Exec(ctx,`INSERT INTO financial_idempotency
+ (workspace_id,environment,operation,idempotency_key,request_hash,result_code,result_body)
+ VALUES($1::uuid,$2,$3,$4,$5,$6,$7::jsonb)`,
+ workspace,environment,operation,key,DigestRequest(request),result.Status,string(result.Body))
+ if err!=nil{return zero,fmt.Errorf("%w: write",ErrUnavailable)}
+ err=tx.QueryRow(ctx,`SELECT result_body FROM financial_idempotency
+ WHERE workspace_id=$1::uuid AND environment=$2 AND operation=$3 AND idempotency_key=$4`,
+ workspace,environment,operation,key).Scan(&body)
+ if err!=nil{return zero,fmt.Errorf("%w: normalized result",ErrUnavailable)}
+ if err=tx.Commit(ctx);err!=nil{return zero,fmt.Errorf("%w: atomic commit",ErrUnavailable)}
  return Result{Status:result.Status,Body:body},nil
 }
-
-// EnqueueTx requires the SAME transaction as its domain mutation. Event key
-// collision with a different event is a conflict rather than a second job.
-// The deferred database constraint also prohibits orphan outbox events.
-func EnqueueTx(ctx context.Context,tx *sql.Tx,workspace,environment,eventKey,kind string,payload json.RawMessage)(string,error){
- if tx==nil{return "",ErrInvalid}
- if err:=validateScope(workspace,environment);err!=nil{return "",err}
- if !opRE.MatchString(kind)||len(eventKey)<1||len(eventKey)>160{return "",ErrInvalid}
+// EnqueueTx uses River's transactional InsertTx on the SAME pgx.Tx used by the
+// domain write and immutable idempotency record. Any error rolls all back.
+// Outbox-key lock prevents a raced or replayed job with different arguments.
+func (s *Store) EnqueueTx(ctx context.Context,tx pgx.Tx,workspace,env,eventKey,kind string,payload json.RawMessage)(string,error){
+ if err:=s.valid(workspace,env);err!=nil{return "",err}
+ if tx==nil||len(eventKey)==0||len(eventKey)>160||kind!="pg04.audit"{
+  return "",ErrInvalid // future event kinds require their own real handlers
+ }
  if err:=validateResult(Result{Status:200,Body:payload});err!=nil{return "",err}
- var id string
- err:=tx.QueryRowContext(ctx,`INSERT INTO financial_outbox
-   (workspace_id,environment,event_key,event_kind,payload)
-   VALUES($1::uuid,$2,$3,$4,$5::jsonb)
-   ON CONFLICT(workspace_id,environment,event_key) DO NOTHING
-   RETURNING id::text`,workspace,environment,eventKey,kind,string(payload)).Scan(&id)
- if errors.Is(err,sql.ErrNoRows){
-  var oldKind string
-  var equal bool
-  err=tx.QueryRowContext(ctx,`SELECT id::text,event_kind,payload=$1::jsonb
-   FROM financial_outbox
-   WHERE workspace_id=$2::uuid AND environment=$3 AND event_key=$4`,
-   string(payload),workspace,environment,eventKey).Scan(&id,&oldKind,&equal)
-  if err!=nil{return "",fmt.Errorf("%w: existing outbox",ErrUnavailable)}
-  if oldKind!=kind||!equal{return "",ErrConflict}
- }else if err!=nil{return "",fmt.Errorf("%w: append outbox",ErrUnavailable)}
- _,err=tx.ExecContext(ctx,`INSERT INTO financial_jobs(workspace_id,environment,outbox_id,queue)
-  VALUES($1::uuid,$2,$3::uuid,'financial:'||$2)
-  ON CONFLICT(workspace_id,environment,outbox_id) DO NOTHING`,workspace,environment,id)
- if err!=nil{return "",fmt.Errorf("%w: enqueue job",ErrUnavailable)}
- return id,nil
+ _,err:=tx.Exec(ctx,"SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+  "outbox|"+workspace+"|"+env+"|"+eventKey)
+ if err!=nil{return "",ErrUnavailable}
+ var previous,oldKind string;var same bool
+ err=tx.QueryRow(ctx,`SELECT id::text,event_kind,payload=$1::jsonb
+ FROM financial_outbox WHERE workspace_id=$2::uuid AND environment=$3 AND event_key=$4`,
+ string(payload),workspace,env,eventKey).Scan(&previous,&oldKind,&same)
+ if err==nil{
+  if oldKind!=kind||!same{return "",ErrConflict}
+  return previous,nil
+ }
+ if !errors.Is(err,pgx.ErrNoRows){return "",ErrUnavailable}
+ outboxID,err:=randomUUID();if err!=nil{return "",ErrUnavailable}
+ job,err:=s.Queue.InsertTx(ctx,tx,AuditArgs{OutboxID:outboxID,Environment:env},
+  &river.InsertOpts{Queue:"financial_"+env,MaxAttempts:10})
+ if err!=nil{return "",fmt.Errorf("%w: River transactional enqueue",ErrUnavailable)}
+ _,err=tx.Exec(ctx,`INSERT INTO financial_outbox
+ (id,workspace_id,environment,event_key,event_kind,payload,river_job_id)
+ VALUES($1::uuid,$2::uuid,$3,$4,$5,$6::jsonb,$7)`,
+ outboxID,workspace,env,eventKey,kind,string(payload),job.Job.ID)
+ if err!=nil{return "",fmt.Errorf("%w: atomic outbox insert",ErrUnavailable)}
+ return outboxID,nil
 }
