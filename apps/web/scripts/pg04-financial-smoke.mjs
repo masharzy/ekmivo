@@ -14,6 +14,7 @@ if(!["localhost","127.0.0.1","[::1]"].includes(url.hostname)||
 const db=postgres(raw,{max:1,prepare:false});
 const migration=await readFile(new URL("../../../infra/migrations/0008_pg04_financial_core.sql",import.meta.url),"utf8");
 let assertions=0;
+let rolledBackTenant=null;
 const ok=(v,msg)=>{assert.ok(v,msg);assertions++};
 const same=(x,y,msg)=>{assert.deepEqual(x,y,msg);assertions++};
 async function expectSQLReject(tx,fn,code){
@@ -37,6 +38,7 @@ try{
  try{
   await db.begin(async tx=>{
    const [userA,userB,spaceA,spaceB]=Array.from({length:4},randomUUID);
+   rolledBackTenant=spaceA;
    for(const [u,w] of [[userA,spaceA],[userB,spaceB]]){
     await tx`INSERT INTO app_users(id,email,display_name,password_hash)
      VALUES(${u}::uuid,${"pg04-"+u+"@example.invalid"},'PG04 test','invalid-only-fixture')`;
@@ -140,7 +142,7 @@ try{
  execFileSync("go",["test","./internal/financial","-count=1","-v"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:process.env
  });
- const rows=await db`SELECT count(*)::int n FROM payment_intents`;
+ const rows=await db`SELECT count(*)::int n FROM payment_intents WHERE workspace_id=${rolledBackTenant}::uuid`;
  same(rows[0].n,0,"financial fixture transaction leaked");
  console.log("PG04 PASS:",assertions,"assertions; local migrations, FORCE RLS, tenant/env, monetary caps, immutability, job leases, Go integration");
 }catch(err){
