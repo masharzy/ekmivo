@@ -56,7 +56,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
  const [copied,setCopied]=useState("");
  const keyRef=useRef("");
  const stateRef=useRef({fields,base:draftBase,expanded});
- stateRef.current={fields,base:draftBase,expanded};
+ useEffect(()=>{stateRef.current={fields,base:draftBase,expanded}},[fields,draftBase,expanded]);
  const draftKey="ekmivo:pg05-request:v1:"+userId+":"+workspaceId+":"+environment;
  const api="/api/go/workspaces/"+workspaceId+"/payment-intents?environment="+environment;
  const dirty=expanded&&(fields.reference!==draftBase.reference||fields.amount!==draftBase.amount||fields.expiry!==draftBase.expiry);
@@ -96,7 +96,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment}:{
     failure.status===503?"unavailable":"error");
   }
  },[api,bn]);
- useEffect(()=>{void refresh()},[refresh]);
+ useEffect(()=>{void Promise.resolve().then(()=>refresh())},[refresh]);
  const edit=(field:keyof Fields,value:string)=>{
   setFields(f=>({...f,[field]:value}));
   keyRef.current="";
