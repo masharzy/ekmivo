@@ -136,7 +136,7 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
     <small>{t("The code disappears automatically once paired or after 5 minutes.","Pair হলেই অথবা ৫ মিনিট পরে কোড স্বয়ংক্রিয়ভাবে সরে যাবে।")}</small>
    </section>}
    <div className="pg-phone-grid">
-    {phones.filter(p=>p.claimed_at||!p.created_at||Date.now()-Date.parse(p.created_at)<300000).map(p=>
+    {phones.filter(p=>p.claimed_at||!p.created_at||now===0||now-Date.parse(p.created_at)<300000).map(p=>
      <article key={p.id} className={"pg-phone-card"+(selected===p.id?" is-selected":"")}>
       <div className="pg-phone-icon" aria-hidden="true">▣</div>
       <div className="pg-phone-card-main">
