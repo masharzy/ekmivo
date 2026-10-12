@@ -24,7 +24,10 @@ func paymentSMSSource(sender, body string) bool {
  // from the same originatingAddress must not be uploaded.
  return len(normalized)>=22 && len(normalized)<=6000 &&
   (strings.Contains(normalized,"received")||strings.Contains(normalized,"cash in")) &&
-  (strings.Contains(normalized,"tk ")||strings.Contains(normalized,"amount:"))
+  (strings.Contains(normalized,"tk ")||strings.Contains(normalized,"amount:")) &&
+  (strings.Contains(normalized," from ")||strings.Contains(normalized,"sender")||
+   strings.Contains(normalized,"trx")||strings.Contains(normalized,"txn")||
+   strings.Contains(normalized,"uddokta"))
 }
 
 func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw []byte,phoneID,workspace,realm string) {

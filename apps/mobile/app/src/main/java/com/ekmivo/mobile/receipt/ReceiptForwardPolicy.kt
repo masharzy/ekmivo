@@ -8,6 +8,8 @@ object ReceiptForwardPolicy{
   val text=body.trim().lowercase()
   if(text.length<22||body.toByteArray(Charsets.UTF_8).size>6000)return false
   return (text.contains("received")||text.contains("cash in")) &&
-   (text.contains("tk ")||text.contains("amount:"))
+   (text.contains("tk ")||text.contains("amount:")) &&
+   (text.contains(" from ")||text.contains("sender")||
+    text.contains("trx")||text.contains("txn")||text.contains("uddokta"))
  }
 }

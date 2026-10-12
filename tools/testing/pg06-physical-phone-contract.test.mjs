@@ -33,15 +33,24 @@ test("checkout displays canonical server destination in full with accessible cop
 test("signed receipt events cannot be rerouted to a new account while queued",async()=>{
  const android=await source("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/ReceiptSyncWorker.kt");
  assert.match(android,/val boundID=queued.optString\("enrollment_id"\)/);
- assert.match(android,/ReceiptTransport.post\("events",boundID/);
+ assert.match(android,/ReceiptTransport.post\(action,boundID,next\.first,next\.second\)/);
+ assert.match(android,/queued\.optBoolean\("physical_forward"\)/);
  assert.match(android,/QUEUED_ASSOCIATION_REVOKED/);
  const store=await source("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/ReceiptStore.kt");
  assert.match(store,/if\(count\(\)>0\).*return false/);
  assert.match(store,/fun adoptLegacyPhone/);
 });
-test("the view keeps one card per phone and uses explicit account selection",async()=>{
+test("one physical phone card pairs once without merchant parser or SIM binding fields",async()=>{
  const page=await source("apps/web/src/components/payment-phone-management.tsx");
  assert.match(page,/phones\.map\(p=>/);
- assert.match(page,/accounts\.filter\(permitted\)/);
- assert.match(page,/selected phone|selected account|Add receiving|Save selected account bindings/i);
+ assert.match(page,/accounts\.filter\(a=>!a\.Disabled\)/);
+ assert.match(page,/Generate code|একবার pair/);
+ assert.doesNotMatch(page,/accounts\.filter\(permitted\)|parser_id|sms:1 \/ package|Save selected account bindings/);
+ const forwarder=await source("backend/internal/checkout/phone_forward.go");
+ assert.match(forwarder,/handlePhoneForward/);
+ assert.match(forwarder,/pg06_phone_candidate_accounts/);
+ const migration=await source("infra/migrations/0047_pg06_phone_forwarder.sql");
+ assert.match(migration,/CREATE TABLE pg06_phone_forwarded/);
+ assert.match(migration,/captured_version<>p.config_version/);
+ assert.match(migration,/verification_pending/);
 });
