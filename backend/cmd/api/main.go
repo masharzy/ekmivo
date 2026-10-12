@@ -101,6 +101,9 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		mux.HandleFunc(method+" /v1/workspaces/{workspaceID}/reconciliation", pay.HandleReconciliation)
 		mux.HandleFunc(method+" /v1/workspaces/{workspaceID}/reconciliation/{reconcileAction}", pay.HandleReconciliation)
 	}
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/phones", pay.HandlePhones)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/phones", pay.HandlePhones)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/phones/{phoneID}/{phoneAction}", pay.HandlePhones)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/operations/{resource}", pay.HandleOperations)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/operations/{resource}/{resourceID}", pay.HandleOperations)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/operations/{resource}", pay.HandleOperations)

@@ -1,3 +1,12 @@
+## PG06 one physical phone / multiple receiving accounts — MANUAL PENDING (2026-10-12)
+
+- [ ] Run the `USER-DEVICE-TESTS.txt` checklist with an explicitly identified configured debug APK, exact Go/SQL SHA, one phone/two SIMs, bKash/Nagad/Rocket and real consented receipts only after financial Sandbox/Live provisioning.
+- [ ] Pair phone **once**, attach/detach multiple receiving accounts, verify exact source routing and the receiving-account identity, original payer (not SMS sender), amount and original time.
+- [ ] Prove duplicate/signed replay settles once; wrong workspace/environment rejected; queued receipt remains bound on detach or number replacement; reboot/offline/permission/revoke and legacy enrollment upgrade preserve evidence.
+- [ ] Verify full receiving number/copy in authorized merchant setup and selected **actual** number on public checkout, correct method/intent and no phone numbers in other workspaces or logs.
+- [ ] Audit mobile 320dp/200% font, EN/BN, Light/Dark/System, screen reader, focus, error/offline/forbidden/empty and one card per physical phone.
+- [ ] QR camera scanner remains incomplete; manual one-time pairing code exists. Do not call this flow accepted from code or simulated SQL alone.
+
 # Ekmivo — consolidated manual verification register
 
 ## PG10–PG17 combined verification — source still in progress

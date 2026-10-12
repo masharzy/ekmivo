@@ -33,6 +33,7 @@ type ParserRule struct {
 	SandboxOnly    bool   `json:"sandbox_only"`
 }
 type ParsedReceipt struct {
+	Receiving     string // optional approved full receiving identity, never SMS originatingAddress
 	Payer         string
 	Amount        int64
 	TransactionAt time.Time
@@ -167,6 +168,10 @@ func (r ParserRule) Parse(source, realm, body string) (ParsedReceipt, error) {
 	}
 	capture := func(name string) string { return match[expression.SubexpIndex(name)] }
 	var ok bool
+	if expression.SubexpIndex("receiving") >= 0 {
+		p.Receiving, ok = NormalizeNumber(capture("receiving"))
+		if !ok { return p, errors.New("invalid full receiving identity") }
+	}
 	p.Payer, ok = NormalizeNumber(capture("payer"))
 	if !ok {
 		return p, errors.New("missing actual full payer")

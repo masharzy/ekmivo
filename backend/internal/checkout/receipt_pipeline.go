@@ -437,6 +437,14 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var result []byte
+		e = s.Sandbox.QueryRow(r.Context(), "SELECT pg06_phone_claim($1,$2)", digest(claim.Token), key).Scan(&result)
+		if e != nil && s.Pipeline.Live != nil {
+			e = s.Pipeline.Live.QueryRow(r.Context(), "SELECT pg06_phone_claim($1,$2)", digest(claim.Token), key).Scan(&result)
+		}
+		if e == nil {
+			write(w, 200, json.RawMessage(result))
+			return
+		}
 		e = s.Sandbox.QueryRow(r.Context(), "SELECT pg06_claim($1,$2)", digest(claim.Token), key).Scan(&result)
 		if e != nil && s.Pipeline.Live != nil {
 			e = s.Pipeline.Live.QueryRow(r.Context(), "SELECT pg06_claim($1,$2)", digest(claim.Token), key).Scan(&result)
@@ -461,6 +469,10 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 		}
 		enrollment["capture_pattern"] = strings.ReplaceAll(capturePattern, "(?P<", "(?<")
 		write(w, 200, enrollment)
+		return
+	}
+	if r.PathValue("action") == "configuration" || r.PathValue("action") == "phone-heartbeat" {
+		s.HandlePhysicalDevice(w, r, raw)
 		return
 	}
 	d, e := s.device(r, raw)
@@ -523,11 +535,23 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		receipt, parseErr := rule.Parse(body.Source, d.Realm, body.Evidence)
+		// If the approved receipt contains its full receiving number, it must
+		// match the server's encrypted enrolled destination. Never use the SMS
+		// originatingAddress as payer or a route authority.
+		if parseErr == nil && receipt.Receiving != "" {
+			var cipher []byte
+			if err := d.Pool.QueryRow(r.Context(),"SELECT pg06_device_receiving_cipher($1::uuid)",r.Header.Get("X-Ekmivo-Device-ID")).Scan(&cipher);err!=nil||len(cipher)==0 {
+				fail(w,503,"RECEIVING_ACCOUNT_UNAVAILABLE");return
+			}
+			plain,err:=merchantwebhook.Decrypt(s.Pipeline.Key,cipher,d.Workspace+"|"+d.Realm)
+			if err!=nil {fail(w,503,"RECEIVING_ACCOUNT_UNAVAILABLE");return}
+			if receipt.Receiving!=string(plain) {parseErr=errors.New("receiving identity mismatch")}
+		}
 		reason := ""
 		var payer, ref any
 		var amount, at, precision, method, version any
 		if parseErr != nil {
-			reason = "unrecognized_or_incomplete_receipt"
+			if receipt.Receiving != "" {reason="receiving_identity_mismatch"} else {reason = "unrecognized_or_incomplete_receipt"}
 		} else {
 			payer = deviceevidence.Identity(s.PayerKey, receipt.Payer)
 			ref = deviceevidence.Identity(s.PayerKey, "receipt|"+d.Account+"|"+receipt.Reference)

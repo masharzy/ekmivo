@@ -1,3 +1,14 @@
+## Physical phone / multi-account source follow-up — 2026-10-12 (CODE, NOT ACCEPTED)
+
+Owner correction: one physical phone is paired once; multiple receiving-account/SIM or approved notification-source bindings are attached without re-pairing. New additive `0045_pg06_physical_phone_multi_account.sql` introduces `pg06_phones` and keeps legacy `pg06_devices` as stable **per-source evidence enrollments**; it backfills claimed legacy IDs without replacing device public keys, encrypted queued evidence IDs or historical receipts. A source/SIM cannot ambiguously bind two active accounts on one phone; account detach/revoke never retargets queued evidence.
+
+Source changes: `backend/internal/checkout/physical_devices.go` and `receipt_pipeline.go` add owner-authorized phone management/one-use pairing, signed configuration/heartbeat, approved parser and server-key checks; optional full receiving identity in approved receipt parsing must equal the encrypted server account, while actual payer/time still originate only in the approved parser. Full merchant receiving numbers are decrypted only for authenticated scoped setup, and checkout already uses an immutable locked destination cipher; Web now offers an accessible copy control. Android Native Compose upgrades legacy enrollment when server supports 0045 and fetches account/source config; new source opt-in is local, while retained encrypted outbox uses original enrollment IDs.
+
+New Ink & Bone Payment Methods and SMS Devices cards, guided setup, account management, mobile states, EN/BN and theme via tokens supersede generic CRUD on those routes. QR scanner is **not** implemented; one-use manual code is supported. Planned/created source is not production activation. Existing public Go service cannot use these endpoints until separate Sandbox/Live financial databases, approved parser registry and migration 0045 are actually configured.
+
+Automated checks: `apps/web/scripts/pg04-financial-smoke.mjs` includes disposable two-account phone/mapping/tenant/revoke SQL assertions; `ReceiptRoutingTest.kt` checks unique per-SIM routing, ambiguity, removed queued mapping; Go `receiving_test.go` checks parsed payer/receiver distinct from SMS source. These tests require execution at the final exact commit; **no PASS claimed yet**. Source/build/CI failures, if any, must be recorded after actual run. Real SIMs/OEM, permission loss, reboot, provider receipts and one webhook per unique payment are **MANUAL PENDING**. See `USER-DEVICE-TESTS.txt`.
+
+---
 # PG06 — native receipt collection & signed evidence (NOT ACCEPTED)
 
 ## Current source follow-up — 2026-10-12

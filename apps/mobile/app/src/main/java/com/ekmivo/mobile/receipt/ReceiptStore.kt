@@ -31,20 +31,77 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
   }.generateKey()
  }
  fun enrollment():JSONObject?=preferences.getString("enrollment",null)?.let{JSONObject(it)}
+ fun phone():JSONObject?=preferences.getString("physical_phone",null)?.let{JSONObject(it)}
+ fun adoptLegacyPhone(response:JSONObject){
+  val original=enrollment()?:return
+  if(phone()!=null||original.optString("id")!=response.optString("id")||
+     original.optString("environment")!=response.optString("environment"))return
+  val phone=JSONObject().put("id",response.getString("id"))
+   .put("environment",original.getString("environment")).put("physical_device",true)
+  val items=response.optJSONArray("bindings")?:org.json.JSONArray()
+  val exists=(0 until items.length()).any{items.getJSONObject(it).optString("id")==original.optString("id")}
+  if(!exists)return
+  check(preferences.edit().putString("physical_phone",phone.toString())
+   .putString("physical_bindings",items.toString())
+   .putStringSet("selected_binding_ids",setOf(original.getString("id"))).commit())
+ }
+
+ fun bindings():List<JSONObject>{
+  val payload=preferences.getString("physical_bindings",null)?:return emptyList()
+  val items=org.json.JSONArray(payload)
+  return (0 until items.length()).map{items.getJSONObject(it)}
+ }
+ fun selectedBindingIds():Set<String> =
+  preferences.getStringSet("selected_binding_ids",emptySet())?.toSet()?:emptySet()
+ fun selectBinding(id:String,enabled:Boolean){
+  val available=bindings().any{it.optString("id")==id}
+  if(!available)return
+  val updated=selectedBindingIds().toMutableSet()
+  if(enabled)updated.add(id) else updated.remove(id)
+  check(preferences.edit().putStringSet("selected_binding_ids",updated).commit())
+ }
+ fun savePhoneConfiguration(response:JSONObject){
+  val current=phone()?:return
+  if(response.optString("id")!=current.optString("id") ||
+    response.optString("environment")!=current.optString("environment"))return
+  val items=response.optJSONArray("bindings")?:org.json.JSONArray()
+  // Removed bindings are removed from collection, never from the encrypted outbox.
+  // Newly attached sources require an explicit local opt-in before collection.
+  val ids=(0 until items.length()).map{items.getJSONObject(it).optString("id")}.toSet()
+  val selected=selectedBindingIds().intersect(ids)
+  check(preferences.edit().putString("physical_bindings",items.toString())
+    .putStringSet("selected_binding_ids",selected).commit())
+ }
+ fun collectionEnrollments():List<JSONObject>{
+  if(phone()!=null)return bindings().filter{selectedBindingIds().contains(it.optString("id"))}
+  return listOfNotNull(enrollment())
+ }
  // Server consumes pairing only once. Keep the reply for confirmation after
  // rotation/process death; pending enrollment never turns on collection.
  fun pendingEnrollment():JSONObject?=preferences.getString("pending_enrollment",null)?.let{JSONObject(it)}
  fun savePendingEnrollment(value:JSONObject){check(preferences.edit().putString("pending_enrollment",value.toString()).commit())}
  fun saveEnrollment(value:JSONObject){
-  check(preferences.edit().putString("enrollment",value.toString()).remove("pending_enrollment")
-   .putBoolean("consented",true).putBoolean("paused",false).commit())
+  val editor=preferences.edit().remove("pending_enrollment")
+    .putBoolean("consented",true).putBoolean("paused",false)
+  if(value.optBoolean("physical_device")){
+   editor.putString("physical_phone",value.toString())
+    .putString("physical_bindings","[]")
+    .putStringSet("selected_binding_ids",emptySet())
+  }else{
+   editor.putString("enrollment",value.toString())
+  }
+  check(editor.commit())
  }
  fun overflowCount():Long=preferences.getLong("overflow_count",0)
  // Operational reason codes only. Do not persist server error bodies or OTPs.
  fun queueError():String=preferences.getString("queue_error","")?:""
  fun setQueueError(code:String){require(code.matches(Regex("[A-Z0-9_]{0,64}")));preferences.edit().putString("queue_error",code).commit()}
- fun enabled()=preferences.getBoolean("consented",false)&&!preferences.getBoolean("paused",false)&&enrollment()!=null
- fun pause(){preferences.edit().putBoolean("paused",true).commit()}
+ fun enabled()=preferences.getBoolean("consented",false)&&!preferences.getBoolean("paused",false)&&(enrollment()!=null||phone()!=null)
+ fun pause(id:String?=null){
+  // id retained as an optional scope argument for older callsites/partial upgrades.
+  if(id==null||phone()?.optString("id")==id||enrollment()?.optString("id")==id)
+   preferences.edit().putBoolean("paused",true).commit()
+ }
  fun disconnect(){
   // Stop collection before waiting for a concurrent database writer.
   check(preferences.edit().clear().commit())

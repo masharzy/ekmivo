@@ -5,15 +5,16 @@ import { goOrigin } from "../../../../lib/server/go-origin";
 export const dynamic = "force-dynamic";
 const operationPath=/^workspaces\/[0-9a-f-]{36}\/operations\/(payments|incoming|gateways|devices|webhooks|deliveries|events|parsers|overview|notices)(?:\/[0-9a-f-]{36}(?:\/(revoke|rename|reprocess|enable|disable|rotate|replay|retry))?)?$/i;
 const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources))$/i;
+const phonePath=/^workspaces\/[0-9a-f-]{36}\/phones(?:\/[0-9a-f-]{36}\/(?:attach|detach|rename|revoke|edit-account))?$/i;
 const documentPath=/^workspaces\/[0-9a-f-]{36}\/(?:documents\/(?:customers|invoices|payment-links)(?:\/(?:[0-9a-f-]{36}|commands)(?:\/(?:publish|archive|issue|cancel|correct|send|remind|import|import-preview|export))?)?|refunds(?:\/[0-9a-f-]{36}(?:\/(?:review|approve|reject|report-returned|cancel))?)?|reconciliation(?:\/(?:statement-preview|statement-import|settlement-link))?)$/i;
 const extensionPath=/^(?:workspace-invites\/accept-invite|workspaces\/[0-9a-f-]{36}\/(?:sandbox\/(?:scenarios|runs|reset)|exports(?:\/[0-9a-f-]{36}(?:\/download)?)?|billing(?:\/[0-9a-f-]{36}\/reconcile)?|reports|privacy(?:\/[0-9a-f-]{36}\/cancel)?|notifications(?:\/[0-9a-f-]{36}\/read)?|integrations(?:\/[0-9a-f-]{36}\/(?:enable|disable|edit))?|workspace-tools\/(?:team|settings|help|invite|resend-invite|revoke-invite|remove-member|change-role|grants|transfer-owner)(?:\/[0-9a-f-]{36})?))$/i;
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
  const path = (await context.params).path.join("/");
  const read = request.method === "GET";
- if (!(read && ["session", "platform/access"].includes(path)) && !workspacePath.test(path) && !operationPath.test(path) && !documentPath.test(path) && !extensionPath.test(path))
+ if (!(read && ["session", "platform/access"].includes(path)) && !workspacePath.test(path) && !operationPath.test(path) && !documentPath.test(path) && !extensionPath.test(path) && !phonePath.test(path))
   return Response.json({ code: "NOT_FOUND" }, { status: 404 });
  const intentPath=/^workspaces\/[0-9a-f-]{36}\/(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources)$/i.test(path);
- if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || ((intentPath||operationPath.test(path)||extensionPath.test(path))&&request.method==="POST") || (documentPath.test(path)&&["POST","PATCH"].includes(request.method))))
+ if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || ((intentPath||operationPath.test(path)||extensionPath.test(path)||phonePath.test(path))&&request.method==="POST") || (documentPath.test(path)&&["POST","PATCH"].includes(request.method))))
   return Response.json({ code:"METHOD_NOT_ALLOWED" },{status:405});
  const requestUrl = new URL(request.url);
  // Next's local server may use localhost internally despite a 127.0.0.1 Host.

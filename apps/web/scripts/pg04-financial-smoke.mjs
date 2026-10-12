@@ -713,6 +713,51 @@ try{
     [realm]),"42501");
   }finally{await restricted.end({timeout:3})}
  }
+
+ // PG06 additive physical identity migration: disposable financial realms only.
+ for(const realm of names){
+  const sql=await readFile(new URL("../../../infra/migrations/0045_pg06_physical_phone_multi_account.sql",import.meta.url),"utf8");
+  await dbs[realm].unsafe(sql).simple();
+  ok((await dbs[realm].unsafe("SELECT to_regclass('public.pg06_phones') IS NOT NULL AS installed"))[0].installed,
+    "Missing physical-device schema in "+realm);
+ }
+ try{
+  await dbs.sandbox.begin(async tx=>{
+   const ws=controls[0][1];
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment','sandbox',true)",[ws]);
+   const account=async(method,suffix)=>(await tx.unsafe(
+    "INSERT INTO financial_receiving_accounts(workspace_id,environment,method,identity_hmac,display_suffix) VALUES($1::uuid,'sandbox',$2,$3,$4) RETURNING id",
+    [ws,method,hmac(),suffix]))[0].id;
+   const bkash=await account("bkash","1212"),nagad=await account("nagad","3434"),token=hmac();
+   const phone=(await tx.unsafe("SELECT pg06_phone_begin($1::uuid,'sandbox','One physical handset',$2) AS result",[ws,token]))[0].result;
+   ok(Boolean(phone.id),"physical phone missing");
+   const key=randomBytes(91);
+   same((await tx.unsafe("SELECT pg06_phone_claim($1,$2) AS result",[token,key]))[0].result.id,phone.id,"initial pairing failed");
+   same((await tx.unsafe("SELECT pg06_phone_claim($1,$2) AS result",[token,key]))[0].result.id,phone.id,"pairing retry failed");
+   await reject(tx,()=>tx.unsafe("SELECT pg06_phone_claim($1,$2)",[token,randomBytes(91)]),"42501");
+   const b=(await tx.unsafe("SELECT pg06_phone_attach($1::uuid,'sandbox',$2::uuid,$3::uuid,'bKash','BKASH','fixture-v1','sms:1') AS result",
+    [ws,phone.id,bkash]))[0].result;
+   const n=(await tx.unsafe("SELECT pg06_phone_attach($1::uuid,'sandbox',$2::uuid,$3::uuid,'Nagad','NAGAD','fixture-v1','sms:2') AS result",
+    [ws,phone.id,nagad]))[0].result;
+   const configuration=(await tx.unsafe("SELECT pg06_phone_configuration($1::uuid) AS value",[phone.id]))[0].value;
+   same(configuration.bindings.length,2,"one phone failed to bind both accounts");
+   same(new Set(configuration.bindings.map(b=>b.account_id)).size,2,"accounts not distinct");
+   await reject(tx,()=>tx.unsafe("SELECT pg06_phone_attach($1::uuid,'sandbox',$2::uuid,$3::uuid,'Ambiguous','BKASH','fixture-v1','sms:1')",
+    [ws,phone.id,nagad]),"23505");
+   await reject(tx,()=>tx.unsafe("SELECT pg06_phone_list($1::uuid,'live')",[ws]),"42501");
+   await reject(tx,()=>tx.unsafe("SELECT pg06_phone_list($1::uuid,'sandbox')",[randomUUID()]),"42501");
+   same((await tx.unsafe("SELECT pg06_phone_detach($1::uuid,'sandbox',$2::uuid,$3::uuid) AS ok",[ws,phone.id,b.id]))[0].ok,true,
+    "detach failed");
+   same((await tx.unsafe("SELECT pg06_phone_configuration($1::uuid) AS value",[phone.id]))[0].value.bindings[0].id,n.id,
+    "removed association was rerouted");
+   await tx.unsafe("SELECT pg06_phone_action($1::uuid,'sandbox',$2::uuid,'revoke',NULL)",[ws,phone.id]);
+   same((await tx.unsafe("SELECT count(*)::int AS n FROM pg06_phone_key($1::uuid)",[phone.id]))[0].n,0,"revoked phone still valid");
+   same((await tx.unsafe("SELECT count(*)::int AS n FROM pg06_device_context($1::uuid)",[n.id]))[0].n,0,
+    "revoked account binding still valid");
+   throw rollback;
+  });
+ }catch(error){if(error!==rollback)throw error}
+ console.log("PG06 isolated synthetic SQL: one phone + two accounts, scope denial, ambiguous binding, detach, revoke, rollback");
  const controlPipeline=(await admin.unsafe(
   "SELECT to_regclass('public.pg06_transport') IS NULL AS no_receipt_tables, "+
   "to_regprocedure('pg07_match(uuid,bigint)') IS NULL AS no_matcher"))[0];
