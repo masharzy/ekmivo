@@ -1,82 +1,162 @@
 "use client";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useMemo,useState} from "react";
+import qrcode from "../lib/qr-generator.mjs";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 
+type Phone={
+ id:string;name:string;created_at?:string;claimed_at?:string|null;revoked_at?:string|null;
+ model?:string;app_version?:string;heartbeat_at?:string|null;permission_ok:boolean;
+ backlog:number;last_queue_error:string;
+};
 type Account={ID:string;Method:string;Number:string;Label:string;Disabled:boolean};
-type Phone={id:string;name:string;model?:string;app_version?:string;claimed_at?:string|null;revoked_at?:string|null;heartbeat_at?:string|null;permission_ok:boolean;backlog:number;overflow_count:number;last_queue_error:string;bindings:{id:string;account_id:string;last_receipt_at?:string|null}[]};
-type Scope={locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;detailId?:string};
-function phoneState(p:Phone,bn:boolean){
- if(p.revoked_at)return bn?"বাতিল করা হয়েছে":"Revoked";
- if(!p.claimed_at)return bn?"Pair করার অপেক্ষা":"Awaiting pairing";
- if(!p.heartbeat_at)return bn?"প্রথম Sync বাকি":"Waiting for first sync";
- if(!p.permission_ok)return bn?"SMS অনুমতি প্রয়োজন":"SMS permission required";
- const minutes=(Date.now()-Date.parse(p.heartbeat_at))/60000;
- if(!Number.isFinite(minutes)||minutes>15)return bn?"Offline":"Offline";
- if(minutes>5)return bn?"Sync দেরি হচ্ছে":"Sync delayed";
- return bn?"SMS forwarding online":"SMS forwarding online";
+type Props={locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;detailId?:string};
+function status(p:Phone,bn:boolean){
+ if(!p.claimed_at)return bn?"পেয়ারিংয়ের অপেক্ষা":"Waiting for pairing";
+ return bn?"সংযুক্ত":"Connected";
 }
-export function PaymentPhoneManagement({locale,workspaceId,environment,canManage,detailId}:Scope){
+function pairingQr(token:string){
+ if(!/^[A-Za-z0-9_-]{24,160}$/.test(token))return "";
+ const qr=qrcode(0,"M");
+ qr.addData("ekmivo://pair?token="+encodeURIComponent(token));qr.make();
+ return qr.createSvgTag({cellSize:4,margin:12,scalable:true});
+}
+
+export function PaymentPhoneManagement({locale,workspaceId,environment,canManage,detailId}:Props){
  const bn=locale==="bn",t=useCallback((en:string,bg:string)=>bn?bg:en,[bn]);
  const base="/api/go/workspaces/"+workspaceId+"/phones";
- const [phones,setPhones]=useState<Phone[]>([]),[accounts,setAccounts]=useState<Account[]>([]),[selected,setSelected]=useState<string|null>(detailId||null);
- const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
- const [name,setName]=useState(""),[token,setToken]=useState("");
- const refresh=useCallback(async(signal?:AbortSignal)=>{
-  setLoading(true);setError("");
+ const [phones,setPhones]=useState<Phone[]>([]);
+ const [accounts,setAccounts]=useState<Account[]>([]);
+ const [selected,setSelected]=useState<string|null>(detailId||null);
+ const [createOpen,setCreateOpen]=useState(false);
+ const [name,setName]=useState("");
+ const [token,setToken]=useState("");
+ const [expiresAt,setExpiresAt]=useState(0);
+ const [now,setNow]=useState(0);
+ const [loading,setLoading]=useState(true);
+ const [busy,setBusy]=useState(false);
+ const [error,setError]=useState("");
+ const [notice,setNotice]=useState("");
+ const refresh=useCallback(async(silent=false,signal?:AbortSignal)=>{
+  if(!silent){setLoading(true);setError("")}
   try{
-   const res=await fetch(base+"?environment="+environment,{cache:"no-store",signal});
-   if(res.status===403)throw Error(t("Only an authorized payment owner/admin may view receiving numbers or manage devices.","শুধু অনুমোদিত payment owner/admin নম্বর দেখতে ও ডিভাইস পরিচালনা করতে পারেন।"));
-   if(!res.ok)throw Error(t("Phone service is unavailable. Verify the dedicated financial database and server.","ফোন সার্ভিস পাওয়া যাচ্ছে না। Financial database ও server পরীক্ষা করুন।"));
-   const data=await res.json();
-   if(!signal?.aborted){setPhones(data.items||[]);setAccounts(data.accounts||[])}
-  }catch(e){if(!signal?.aborted)setError(String(e))}
-  finally{if(!signal?.aborted)setLoading(false)}
- },[base,environment,t]);
- useEffect(()=>{const ctrl=new AbortController();void Promise.resolve().then(()=>{if(!ctrl.signal.aborted)void refresh(ctrl.signal)});return()=>ctrl.abort()},[refresh]);
- async function send(path:string,body:unknown){
+   const response=await fetch(base+"?environment="+environment,{cache:"no-store",signal});
+   if(!response.ok)throw Error(response.status===403?"FORBIDDEN":"SOURCE_UNAVAILABLE");
+   const data=await response.json();
+   if(!signal?.aborted){
+    setPhones((data.items||[]).filter((p:Phone)=>!p.revoked_at));
+    setAccounts(data.accounts||[]);
+    if(!silent)setError("");
+   }
+  }catch(e){if(!silent&&!signal?.aborted)setError(String(e))}
+  finally{if(!silent&&!signal?.aborted)setLoading(false)}
+ },[base,environment]);
+ useEffect(()=>{const ctrl=new AbortController();void Promise.resolve().then(()=>{if(!ctrl.signal.aborted)void refresh(false,ctrl.signal)});return()=>ctrl.abort()},[refresh]);
+ // Real-time without reloading or remounting the checkout/dashboard page.
+ useEffect(()=>{
+  const timer=window.setInterval(()=>{setNow(Date.now());void refresh(true)},token?2000:10000);
+  return()=>window.clearInterval(timer);
+ },[refresh,token]);
+ const current=phones.find(p=>p.id===selected)||null;
+ const paired=phones.filter(p=>!!p.claimed_at);
+ const pairDone=!!token&&!!current?.claimed_at;
+ const expired=!!token&&now>=expiresAt;
+ const showCode=!!token&&!pairDone&&!expired&&expiresAt>0;
+ useEffect(()=>{
+  if((pairDone||expired)&&token){void Promise.resolve().then(()=>{setToken("");setExpiresAt(0)})}
+ },[pairDone,expired,token]);
+ const svg=useMemo(()=>showCode?pairingQr(token):"",[showCode,token]);
+ const remaining=Math.max(0,Math.ceil((expiresAt-now)/1000));
+ async function send(suffix:string,body:unknown){
   setBusy(true);setError("");setNotice("");
   try{
-   const res=await fetch(base+path+"?environment="+environment,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-   const out=await res.json();
-   if(!res.ok)throw Error(out.error?.code||out.code||String(res.status));
-   await refresh();
-   setNotice(t("Saved on server.","সার্ভারে সংরক্ষিত হয়েছে।"));
-   return out;
-  }catch(e){setError(t("Could not save: ","সংরক্ষণ হয়নি: ")+String(e));return null}
+   const response=await fetch(base+suffix+"?environment="+environment,{
+    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)
+   });
+   const json=await response.json();
+   if(!response.ok)throw Error(json.error?.code||json.code||String(response.status));
+   await refresh(true);
+   return json;
+  }catch(e){setError(t("Could not complete the action: ","কাজটি করা যায়নি: ")+String(e));return null}
   finally{setBusy(false)}
  }
- async function addPhone(){
-  if(!name.trim())return;
+ async function generate(){
+  if(!name.trim()||!canManage)return;
   const result=await send("",{name:name.trim()});
-  if(result){setSelected(result.id);setToken(result.pairing_token||"");setName("")}
+  if(result){
+   setSelected(result.id);
+   setToken(result.pairing_token||"");
+   setExpiresAt(Date.parse(result.expires_at)||Date.now()+300000);
+   setNow(Date.now());
+   setName("");
+   setCreateOpen(false);
+  }
  }
- const current=phones.find(p=>p.id===selected)||null;
- return <section className="pg-phone-panel" aria-busy={loading||busy}>
-  <header className="pg-phone-hero"><div><p className="pg-device-kicker">{t("Payment receipts","পেমেন্ট রসিদ")} / {environment.toUpperCase()}</p><h2>{t("Connect an SMS phone","SMS ফোন সংযোগ")}</h2><p>{t("One phone, one pairing. The phone forwards relevant incoming payment SMS. Go verifies payments separately. No parser, SIM ID or account setup is needed here.","একটি ফোন একবার pair করুন। ফোন শুধু প্রাসঙ্গিক incoming payment SMS পাঠাবে। পেমেন্ট যাচাই করবে Go server। এখানে parser, SIM ID বা account setup লাগবে না।")}</p></div><button type="button" disabled={busy||loading} onClick={()=>void refresh()}>{t("Refresh","রিফ্রেশ")}</button></header>
-  {error&&<div className="pg-phone-warning" role="alert"><strong>{t("Unable to load devices","ডিভাইস পাওয়া যায়নি")}</strong><p>{error}</p><button onClick={()=>void refresh()}>{t("Retry","আবার চেষ্টা")}</button></div>}
-  {notice&&<p className="pg-phone-notice" role="status">{notice}</p>}
-  {loading?<div className="pg-phone-placeholder" role="status">{t("Loading SMS phones…","SMS ফোন লোড হচ্ছে…")}</div>:<>
-   {canManage&&<section className="pg-phone-box"><h3>{t("1. Connect your phone","১. ফোন যুক্ত করুন")}</h3><p>{t("Install the Ekmivo Android app, open the SMS collection setup from its home screen, and enter the one-time pairing code.","Ekmivo Android app-এর Home থেকে SMS collection খুলে একবারের pairing code দিন।")}</p>
-     <form className="pg-phone-inline" onSubmit={e=>{e.preventDefault();void addPhone()}}><label>{t("Phone name","ফোনের নাম")}<input required maxLength={80} value={name} onChange={e=>setName(e.target.value)} placeholder={t("e.g. Shop counter phone","যেমন: দোকানের ফোন")}/></label><button type="submit" disabled={busy||!name.trim()}>{t("Generate code","কোড তৈরি করুন")}</button></form>
-     {token&&<div className="pg-phone-pair" role="status"><strong>{t("One-time pairing code · valid for 5 minutes","একবারের pairing code · ৫ মিনিট মেয়াদ")}</strong><code>{token}</code><button type="button" onClick={()=>void navigator.clipboard.writeText(token).then(()=>setNotice(t("Code copied","কোড কপি হয়েছে"))).catch(()=>setError(t("Copy failed","কপি হয়নি")))}>{t("Copy pairing code","কোড কপি করুন")}</button><p>{t("Open Ekmivo Android → SMS receipt collection → paste code → confirm → grant SMS permission. A QR scanner is not installed in this app; use the actual code flow.","Ekmivo Android → SMS receipt collection → কোড দিন → নিশ্চিত করুন → SMS অনুমতি দিন। এই অ্যাপে QR scanner নেই; আসল code flow ব্যবহার করুন।")}</p></div>}
+ async function remove(p:Phone){
+  if(!window.confirm(t("Remove this phone? Its pairing will be revoked and it can no longer send receipts.","এই ফোন সরাবেন? Pairing বাতিল হবে এবং আর রসিদ পাঠাতে পারবে না।")))return;
+  const result=await send("/"+p.id+"/revoke",{});
+  if(result){
+   if(selected===p.id)setSelected(null);
+   setToken("");setExpiresAt(0);
+   setPhones(old=>old.filter(item=>item.id!==p.id));
+   setNotice(t("Device removed.","ডিভাইস সরানো হয়েছে।"));
+  }
+ }
+ async function copy(value:string){
+  try{await navigator.clipboard.writeText(value);setNotice(t("Copied","কপি হয়েছে"))}
+  catch{setError(t("Copy failed","কপি হয়নি"))}
+ }
+ return <section className="pg-phone-panel" aria-busy={busy||loading}>
+  <header className="pg-phone-hero">
+   <div><p className="pg-device-kicker">SMS FORWARDER · {environment.toUpperCase()}</p>
+    <h2>{paired.length?t("Connected","সংযুক্ত"):t("Connect your phone","ফোন যুক্ত করুন")}</h2>
+    <p>{paired.length?t("Your paired phone forwards relevant payment SMS securely.","সংযুক্ত ফোন নিরাপদে প্রাসঙ্গিক payment SMS পাঠাবে।"):t("Pair one phone using a code or QR scan.","কোড অথবা QR দিয়ে একবার ফোন pair করুন।")}</p>
+   </div>
+   {canManage&&<button type="button" onClick={()=>setCreateOpen(v=>!v)} disabled={busy}>
+    {createOpen?t("Cancel","বাতিল"):t("Add phone","ফোন যোগ করুন")}
+   </button>}
+  </header>
+  {error&&<div className="pg-phone-warning" role="alert">{error}<button onClick={()=>void refresh()}>{t("Retry","আবার চেষ্টা")}</button></div>}
+  {notice&&<p role="status" className="pg-phone-notice">{notice}</p>}
+  {loading?<p role="status">{t("Loading…","লোড হচ্ছে…")}</p>:<>
+   {canManage&&(createOpen||(!paired.length&&!showCode))&&<section className="pg-phone-box">
+    <h3>{t("Pair a phone","ফোন পেয়ার করুন")}</h3>
+    <form className="pg-phone-inline" onSubmit={e=>{e.preventDefault();void generate()}}>
+     <label>{t("Phone name","ফোনের নাম")}<input value={name} onChange={e=>setName(e.target.value)}
+      placeholder={t("My Android phone","আমার Android ফোন")} maxLength={80} required/></label>
+     <button type="submit" disabled={!name.trim()||busy}>{t("Generate code","কোড তৈরি করুন")}</button>
+    </form>
+   </section>}
+   {showCode&&<section className="pg-phone-box pg-phone-pair" role="status" aria-live="polite">
+    <h3>{t("Scan QR or enter code","QR স্ক্যান বা কোড দিন")}</h3>
+    {svg&&<div style={{maxWidth:220,margin:"14px auto"}} aria-label={t("Pairing QR code","পেয়ারিং QR কোড")}
+      dangerouslySetInnerHTML={{__html:svg}}/>}
+    <code style={{overflowWrap:"anywhere"}}>{token}</code>
+    <button type="button" onClick={()=>void copy(token)}>{t("Copy code","কোড কপি করুন")}</button>
+    <p>{t("Expires in","মেয়াদ শেষ হবে")} {String(Math.floor(remaining/60)).padStart(2,"0")}:{String(remaining%60).padStart(2,"0")}</p>
+    <small>{t("The code disappears automatically once paired or after 5 minutes.","Pair হলেই অথবা ৫ মিনিট পরে কোড স্বয়ংক্রিয়ভাবে সরে যাবে।")}</small>
    </section>}
    <div className="pg-phone-grid">
-    {phones.map(p=><article key={p.id} className={"pg-phone-card"+(p.id===selected?" is-selected":"")}>
-     <div className="pg-phone-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></svg></div>
-     <div className="pg-phone-card-main"><div className="pg-phone-title"><h3>{p.name}</h3><span className="pg-phone-state">{phoneState(p,bn)}</span></div><p>{p.model||t("Android phone","Android ফোন")} {p.app_version?"· v"+p.app_version:""}</p><small>{t("Last sync","শেষ সিঙ্ক")}: {p.heartbeat_at?new Date(p.heartbeat_at).toLocaleString(locale):t("Not yet","এখনো নয়")}</small><small>{t("Encrypted queue on phone","ফোনে অপেক্ষমাণ রসিদ")}: {p.backlog}</small>
-     <p className="pg-phone-muted">{t("SMS forwarding is not payment confirmation. Go confirms only valid unique matches.","SMS forward হলেই payment verified নয়। Go শুধু নির্ভরযোগ্য unique match যাচাই করে।")}</p></div>
-     <button type="button" disabled={busy} onClick={()=>setSelected(p.id)}>{t("Details","বিস্তারিত")}</button>
-    </article>)}
-    {!phones.length&&!error&&<div className="pg-phone-empty"><h3>{t("No registered phones","কোনো ফোন নিবন্ধিত নেই")}</h3><p>{t("Add your first phone above. A receiving-account picker is not required.","উপরে প্রথম ফোন যুক্ত করুন। আলাদা receiving-account picker লাগবে না।")}</p></div>}
+    {phones.filter(p=>p.claimed_at||!p.created_at||Date.now()-Date.parse(p.created_at)<300000).map(p=>
+     <article key={p.id} className={"pg-phone-card"+(selected===p.id?" is-selected":"")}>
+      <div className="pg-phone-icon" aria-hidden="true">▣</div>
+      <div className="pg-phone-card-main">
+       <div className="pg-phone-title"><h3>{p.name}</h3><span className="pg-phone-state">{status(p,bn)}</span></div>
+       {p.claimed_at&&<><p>{p.permission_ok?t("SMS access enabled","SMS অনুমতি চালু"):t("SMS permission not confirmed","SMS অনুমতি নিশ্চিত হয়নি")}</p>
+        <small>{t("Last sync","শেষ সিঙ্ক")}: {p.heartbeat_at?new Date(p.heartbeat_at).toLocaleString(locale):"—"}</small></>}
+      </div>
+      {canManage&&<button type="button" className="is-danger" disabled={busy}
+       onClick={()=>void remove(p)}>{t("Delete","ডিলিট")}</button>}
+     </article>
+    )}
    </div>
-   {current&&<section className="pg-phone-box"><div className="pg-phone-title"><div><h3>{current.name}</h3><p>{phoneState(current,bn)}</p></div><button type="button" onClick={()=>setSelected(null)}>{t("Close","বন্ধ")}</button></div>
-    {current.last_queue_error&&<p className="pg-phone-warning" role="alert">{t("Device needs attention","ডিভাইসে সমস্যা")}: {current.last_queue_error}</p>}
-    {current.overflow_count>0&&<p role="alert">{t("Some receipts could not be collected because the offline queue was full","Offline queue পূর্ণ থাকায় কিছু রসিদ সংগ্রহ হয়নি")}: {current.overflow_count}</p>}
-    <h4>{t("Saved receiving accounts","সংরক্ষিত receiving account")}</h4>
-    <p className="pg-phone-muted">{t("These numbers come directly from Payment Methods. They are not editable on the phone and are not automatically verified by SMS sender identity.","নম্বরগুলো Payment Methods থেকে এসেছে। ফোনে আবার লিখতে হবে না; SMS sender দেখে এগুলো verified ধরা হবে না।")}</p>
-    <div className="pg-phone-bindings">{accounts.filter(a=>!a.Disabled).map(a=><div className="pg-phone-binding" key={a.ID}><div><strong>{a.Label||a.Method}</strong><p>{a.Number}</p><small>{t("Server verification requires an unambiguous receiving identity and a validated receipt format.","Server verification-এর জন্য নিশ্চিত receiving identity ও validated receipt format দরকার।")}</small></div><button type="button" aria-label={t("Copy receiving number","Receiving number কপি")} onClick={()=>void navigator.clipboard.writeText(a.Number).then(()=>setNotice(t("Number copied","নম্বর কপি হয়েছে"))).catch(()=>setError(t("Copy failed","কপি হয়নি")))}>{t("Copy","কপি")}</button></div>)}</div>
-    {!accounts.some(a=>!a.Disabled)&&<p className="pg-phone-muted">{t("No enabled receiving account. Add one in Payment Methods.","কোনো চালু receiving account নেই। Payment Methods-এ যোগ করুন।")}</p>}
-    {canManage&&!current.revoked_at&&<div className="pg-phone-actions"><button disabled={busy} onClick={()=>{const n=window.prompt(t("New phone name","ফোনের নতুন নাম"),current.name);if(n?.trim())void send("/"+current.id+"/rename",{name:n.trim()})}}>{t("Rename","নাম বদলান")}</button><button className="is-danger" disabled={busy} onClick={()=>{if(window.confirm(t("Revoke this phone? Its signing key will no longer be accepted.","এই ফোন বাতিল করবেন? এরপর server এর signature গ্রহণ করবে না।")))void send("/"+current.id+"/revoke",{})}}>{t("Revoke phone","ফোন বাতিল")}</button></div>}
+   {!phones.length&&!error&&!showCode&&<p className="pg-phone-empty">{t("No phone connected yet.","এখনো কোনো ফোন যুক্ত হয়নি।")}</p>}
+   {current?.claimed_at&&accounts.some(a=>!a.Disabled)&&<section className="pg-phone-box">
+    <h3>{t("Receiving accounts","টাকা গ্রহণকারী অ্যাকাউন্ট")}</h3>
+    <div className="pg-phone-bindings">{accounts.filter(a=>!a.Disabled).map(a=>
+     <div key={a.ID} className="pg-phone-binding"><div><strong>{a.Label||a.Method}</strong>
+      <p>{a.Method} · {a.Number}</p></div>
+      <button type="button" onClick={()=>void copy(a.Number)}>{t("Copy","কপি")}</button>
+     </div>)}</div>
    </section>}
   </>}
  </section>;
