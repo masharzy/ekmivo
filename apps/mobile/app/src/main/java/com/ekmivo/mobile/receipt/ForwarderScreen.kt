@@ -48,7 +48,8 @@ private fun scannedPairingCode(raw:String):String {
 
 @Composable
 fun ForwarderScreen(bn:Boolean){
- val context=LocalContext.current.applicationContext
+ val uiContext=LocalContext.current
+ val context=uiContext.applicationContext
  val lifecycleOwner=LocalLifecycleOwner.current
  val scope=rememberCoroutineScope()
  var phone by remember{mutableStateOf(ReceiptStore(context).use{it.phone()?:it.enrollment()})}
@@ -56,14 +57,12 @@ fun ForwarderScreen(bn:Boolean){
  var code by remember{mutableStateOf("")}
  var busy by remember{mutableStateOf(false)}
  var message by remember{mutableStateOf("")}
- var confirmed by remember{mutableStateOf(false)}
  var permissionGranted by remember{mutableStateOf(ContextCompat.checkSelfPermission(context,Manifest.permission.RECEIVE_SMS)==PackageManager.PERMISSION_GRANTED)}
  var serverCheck by remember{mutableStateOf("checking")}
  val allow=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->
   permissionGranted=granted
   if(granted){ReceiptSyncWorker.schedule(context);message=""}
  }
- val scanner=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()){}
  fun updateLocal(){
   phone=ReceiptStore(context).use{it.phone()?:it.enrollment()}
   permissionGranted=ContextCompat.checkSelfPermission(context,Manifest.permission.RECEIVE_SMS)==PackageManager.PERMISSION_GRANTED
@@ -154,7 +153,7 @@ fun ForwarderScreen(bn:Boolean){
       onClick={
        val options=GmsBarcodeScannerOptions.Builder()
         .setBarcodeFormats(Barcode.FORMAT_QR_CODE).enableAutoZoom().build()
-       GmsBarcodeScanning.getClient(context,options).startScan()
+       GmsBarcodeScanning.getClient(uiContext,options).startScan()
         .addOnSuccessListener{barcode->
          val parsed=scannedPairingCode(barcode.rawValue?:"")
          if(parsed.isNotEmpty()){code=parsed;message=""}
@@ -188,7 +187,6 @@ fun ForwarderScreen(bn:Boolean){
          val paired=JSONObject(answer.second)
          ReceiptStore(context).use{it.savePendingEnrollment(paired);it.saveEnrollment(paired)}
          code="";phone=paired;serverCheck="checking"
-         confirmed=true
          ReceiptSyncWorker.schedule(context)
          if(!permissionGranted)allow.launch(Manifest.permission.RECEIVE_SMS)
         }catch(_:Exception){message=if(bn)"পেয়ারিং হয়নি। কোডের মেয়াদ ও ইন্টারনেট দেখুন।"

@@ -9,6 +9,7 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode" />
         <activity android:name=".receipt.ReceiptSetupActivity" android:exported="false" />
         <receiver android:name=".receipt.ReceiptSmsReceiver" android:exported="true" android:permission="android.permission.BROADCAST_SMS">
             <intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter>
