@@ -471,7 +471,7 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 		write(w, 200, enrollment)
 		return
 	}
-	if r.PathValue("action") == "configuration" || r.PathValue("action") == "phone-heartbeat" {
+	if r.PathValue("action") == "configuration" || r.PathValue("action") == "phone-heartbeat" || r.PathValue("action") == "phone-events" {
 		s.HandlePhysicalDevice(w, r, raw)
 		return
 	}

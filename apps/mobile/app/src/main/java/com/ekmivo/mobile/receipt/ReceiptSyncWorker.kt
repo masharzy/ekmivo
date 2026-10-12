@@ -66,7 +66,10 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
     store.savePhoneConfiguration(JSONObject(config.second))
    }
    val sources=store.collectionEnrollments()
-   val permission=sources.isNotEmpty()&&sources.all { entry->
+   val permission=if(phone!=null) {
+    store.forwardVersion()>=0 &&
+     ContextCompat.checkSelfPermission(applicationContext,Manifest.permission.RECEIVE_SMS)==PackageManager.PERMISSION_GRANTED
+   } else sources.isNotEmpty()&&sources.all { entry->
     if(entry.optString("binding").startsWith("sms:"))
      ContextCompat.checkSelfPermission(applicationContext,Manifest.permission.RECEIVE_SMS)==PackageManager.PERMISSION_GRANTED
     else NotificationManagerCompat.getEnabledListenerPackages(applicationContext)
@@ -87,7 +90,8 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
     if(boundID.isEmpty()) {store.setQueueError("QUEUED_ASSOCIATION_UNKNOWN");return Result.failure()}
     // Send with the ORIGINAL immutable enrollment ID from encrypted outbox.
     // Never replace it with a newly selected account.
-    val response=ReceiptTransport.post("events",boundID,next.first,next.second)
+    val action=if(queued.optBoolean("physical_forward"))"phone-events" else "events"
+    val response=ReceiptTransport.post(action,boundID,next.first,next.second)
     if(response.first==403){
      store.setQueueError("QUEUED_ASSOCIATION_REVOKED")
      return Result.failure() // Keep the encrypted evidence until operator recovery.

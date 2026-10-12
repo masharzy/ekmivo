@@ -27,7 +27,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   try{
    const response=await fetch(base+path+(path.includes("?")?"":"?environment="+environment),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
    const data=await response.json();if(!response.ok)throw Error(data.error?.code||data.code||response.status);
-   await load();setNotice(t("Saved. Verify the receiving account and device source before collecting payments.","সংরক্ষিত। Payment নেওয়ার আগে account ও device source যাচাই করুন।"));
+   await load();setNotice(t("Saved. Link a phone once; payment verification remains server-controlled.","সংরক্ষিত। একটি ফোন pair করুন; payment verification server-এ থাকবে।"));
    return data;
   }catch(e){setError(t("Change not saved: ","পরিবর্তন সংরক্ষিত হয়নি: ")+String(e));return null}
   finally{setBusy(false)}
@@ -40,19 +40,19 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   if(label.trim()&&accountId)await post("/phones/"+accountId+"/edit-account",{label:label.trim()});
   setNumber("");setLabel("");setStep(3);
  }
- const connected=(a:Account)=>phones.flatMap(p=>p.bindings.filter(b=>b.account_id===a.ID).map(b=>({p,b})));
+ const paired=phones.filter(p=>p.claimed_at&&!p.revoked_at);
  return <section className="pg-phone-panel" aria-busy={loading||busy}>
-  <div className="pg-phone-hero"><div><p className="pg-device-kicker">{t("Receiving & verification","টাকা গ্রহণ ও যাচাই")} / {environment.toUpperCase()}</p><h2>{t("Payment methods","পেমেন্ট মাধ্যম")}</h2><p>{t("Receiving numbers are shown in full only in your authorized workspace. Each account must be associated with an approved phone/source before real verification.","শুধু অনুমোদিত workspace-এ পুরো receiving number দেখানো হয়। আসল verification-এর আগে account-এর অনুমোদিত phone/source যুক্ত করুন।")}</p></div><button type="button" onClick={()=>void load()} disabled={loading||busy}>{t("Refresh","Refresh")}</button></div>
+  <div className="pg-phone-hero"><div><p className="pg-device-kicker">{t("Receiving & verification","টাকা গ্রহণ ও যাচাই")} / {environment.toUpperCase()}</p><h2>{t("Payment methods","পেমেন্ট মাধ্যম")}</h2><p>{t("Your receiving numbers are saved here. Pair a phone once to forward relevant payment SMS; the server verifies the receiving identity separately.","আপনার receiving number এখানেই সংরক্ষিত। একটি ফোন একবার pair করে payment SMS forward করুন; receiving identity server আলাদাভাবে যাচাই করবে।")}</p></div><button type="button" onClick={()=>void load()} disabled={loading||busy}>{t("Refresh","Refresh")}</button></div>
   {error&&<div className="pg-phone-warning" role="alert"><strong>{t("Connection needs attention","সংযোগে সমস্যা")}</strong><p>{error}</p><button onClick={()=>void load()}>{t("Retry","আবার চেষ্টা")}</button></div>}
   {notice&&<p role="status" className="pg-phone-notice">{notice}</p>}
   {loading?<div className="pg-phone-placeholder" role="status">{t("Loading receiving accounts…","Receiving account লোড হচ্ছে…")}</div>:<>
    <div className="pg-method-grid">
-    {accounts.map(a=>{const bindings=connected(a);return <article className="pg-method-card" key={a.ID}>
-     <div className="pg-method-header"><div className="pg-method-symbol" aria-hidden="true"><span>{(methodName[a.Method]||a.Method).slice(0,1).toUpperCase()}</span></div><span className="pg-method-status">{a.Disabled?t("Disabled","বন্ধ"):bindings.length===0?t("Setup required","সেটআপ বাকি"):t("Connected","সংযুক্ত")}</span></div>
+    {accounts.map(a=>{return <article className="pg-method-card" key={a.ID}>
+     <div className="pg-method-header"><div className="pg-method-symbol" aria-hidden="true"><span>{(methodName[a.Method]||a.Method).slice(0,1).toUpperCase()}</span></div><span className="pg-method-status">{a.Disabled?t("Disabled","বন্ধ"):paired.length===0?t("Phone needed","ফোন যুক্ত করুন"):t("SMS collection · verification pending","SMS সংগ্রহ · verification বাকি")}</span></div>
      <h3>{a.Label||methodName[a.Method]||a.Method}</h3><p>{methodName[a.Method]||a.Method}</p>
      <div className="pg-method-number"><span>{a.Number}</span><button type="button" aria-label={t("Copy full receiving number","সম্পূর্ণ receiving number কপি")} onClick={()=>void navigator.clipboard.writeText(a.Number).then(()=>setNotice(t("Number copied","নম্বর কপি হয়েছে"))).catch(()=>setError(t("Copy failed","কপি হয়নি")))}>{t("Copy","কপি")}</button></div>
-     <div className="pg-method-info"><span>{t("Connected phone/source","যুক্ত ফোন/উৎস")}</span><strong>{bindings.length?bindings.map(x=>x.p.name+" · "+x.b.binding).join(", "):t("No phone source linked","কোনো ফোন উৎস যুক্ত নেই")}</strong></div>
-     {bindings.length===0&&!a.Disabled&&<p className="pg-phone-muted">{t("Next: open SMS Devices, connect a phone, then select this account and source.","পরের ধাপ: SMS Devices-এ ফোন যুক্ত করে এই account ও source বেছে নিন।")}</p>}
+     <div className="pg-method-info"><span>{t("Paired SMS phones","Pair করা SMS ফোন")}</span><strong>{paired.length?paired.map(x=>x.name).join(", "):t("No phone paired","এখনো ফোন pair হয়নি")}</strong></div>
+     {!a.Disabled&&<p className="pg-phone-muted">{paired.length?t("The phone forwards relevant SMS. A signed SMS is not proof of which account received funds; unverified receipts remain pending.","ফোন প্রাসঙ্গিক SMS পাঠায়। Signed SMS দিয়ে receiving account নিশ্চিত হয় না; অসম্পূর্ণ রসিদ pending থাকবে।"):t("Next: connect an Android phone in SMS Devices. No account or parser selection is required.","পরের ধাপ: SMS Devices-এ Android ফোন pair করুন। account বা parser select করতে হবে না।")}</p>}
      <div className="pg-method-actions"><Link href={href}>{t("Manage connections","সংযোগ পরিচালনা")}</Link>
       {canManage&&<button type="button" onClick={()=>{setEdited(a.ID);setNewLabel(a.Label||"");setNewNumber(a.Number)}}>{t("Edit account","অ্যাকাউন্ট সম্পাদনা")}</button>}
       {canManage&&<button type="button" disabled={busy} onClick={()=>{if(window.confirm(a.Disabled?t("Enable this account?","অ্যাকাউন্ট চালু করবেন?"):t("Disable this account for new payment requests?","নতুন পেমেন্টের জন্য account বন্ধ করবেন?")))void post("/operations/gateways/"+a.ID+"/"+(a.Disabled?"enable":"disable"),{})}}>{a.Disabled?t("Enable","চালু"):t("Disable","বন্ধ")}</button>}
@@ -69,7 +69,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
      <label>{t("Account label (optional)","অ্যাকাউন্টের নাম (ঐচ্ছিক)")}<input value={label} maxLength={100} onChange={e=>setLabel(e.target.value)} placeholder={t("e.g. Main shop","যেমন: মূল দোকান")}/></label>
      <p className="pg-phone-muted">{t("The receiving number cannot be silently replaced after payment history is created. To change it, disable this account and add a new receiving number.","পেমেন্টের ইতিহাস তৈরি হলে এই নম্বর গোপনে পরিবর্তন করা যাবে না। বদলাতে আগের account বন্ধ করে নতুন নম্বর যুক্ত করুন।")}</p>
      <div className="pg-phone-actions"><button type="button" onClick={()=>setStep(0)}>{t("Back","পেছনে")}</button><button type="submit" disabled={busy||!number}>{t("Save account","অ্যাকাউন্ট সংরক্ষণ")}</button></div>
-    </form>:<div className="pg-phone-setup"><p>{t("Next: pair a phone once or select your existing phone, then add this receiving account's approved source mapping.","এবার একটি ফোন একবার pair করুন অথবা আগের ফোনে এই account-এর approved source mapping যুক্ত করুন।")}</p><Link href={href}>{t("Go to SMS Devices","SMS Devices-এ যান")}</Link><button onClick={()=>setStep(0)}>{t("Add another account","আরেকটি account যোগ করুন")}</button></div>}
+    </form>:<div className="pg-phone-setup"><p>{t("Pair your phone once in SMS Devices. No more numbers or technical source IDs needed.","SMS Devices-এ একবার ফোন pair করুন। আবার নম্বর বা technical source ID দিতে হবে না।")}</p><Link href={href}>{t("Go to SMS Devices","SMS Devices-এ যান")}</Link><button onClick={()=>setStep(0)}>{t("Add another account","আরেকটি account যোগ করুন")}</button></div>}
    </section>}
   </>}
  </section>;

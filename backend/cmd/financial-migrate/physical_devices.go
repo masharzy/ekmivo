@@ -45,3 +45,29 @@ func migratePhysicalPhones(ctx context.Context, realm, dsn, filename string) err
  _,err=conn.Conn().PgConn().Exec(ctx,string(sql)).ReadAll()
  return err
 }
+
+
+// Explicit, additive PG06 SMS forwarder upgrade; uses the SAME guarded
+// financial migration coordinator as 0045/0046, never API startup.
+func migratePhoneForwarder(ctx context.Context, realm, dsn, filename string) error {
+ if filepath.Base(filename)!="0047_pg06_phone_forwarder.sql" {
+  return errors.New("explicit additive PG06 forwarder 0047 file required")
+ }
+ pool,err:=pgxpool.New(ctx,dsn);if err!=nil{return err};defer pool.Close()
+ conn,err:=pool.Acquire(ctx);if err!=nil{return err};defer conn.Release()
+ var actual string;var installed,prior,repair,owner bool
+ err=conn.QueryRow(ctx,`SELECT environment,
+  to_regclass('public.pg06_phone_forwarded') IS NOT NULL,
+  to_regclass('public.pg06_phones') IS NOT NULL,
+  to_regprocedure('pg06_phone_account_cipher(uuid,text)') IS NOT NULL,
+  (SELECT relowner=(SELECT oid FROM pg_roles WHERE rolname=current_user)
+   FROM pg_class WHERE oid='public.financial_realm'::regclass)
+  FROM financial_realm WHERE singleton`).Scan(&actual,&installed,&prior,&repair,&owner)
+ if err!=nil||actual!=realm||!prior||!repair||!owner {
+  return errors.New("forwarder migration requires correct realm, 0045/0046 and migration owner")
+ }
+ if installed{return nil}
+ script,err:=os.ReadFile(filepath.Clean(filename));if err!=nil{return err}
+ _,err=conn.Conn().PgConn().Exec(ctx,string(script)).ReadAll()
+ return err
+}

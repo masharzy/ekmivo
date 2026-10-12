@@ -720,6 +720,10 @@ try{
   await dbs[realm].unsafe(sql).simple();
   ok((await dbs[realm].unsafe("SELECT to_regclass('public.pg06_phones') IS NOT NULL AS installed"))[0].installed,
     "Missing physical-device schema in "+realm);
+  const forwardSQL=await readFile(new URL("../../../infra/migrations/0047_pg06_phone_forwarder.sql",import.meta.url),"utf8");
+  await dbs[realm].unsafe(forwardSQL).simple();
+  ok((await dbs[realm].unsafe("SELECT to_regclass('public.pg06_phone_forwarded') IS NOT NULL AS installed"))[0].installed,
+    "Missing phone forwarder schema in "+realm);
  }
  try{
   await dbs.sandbox.begin(async tx=>{
@@ -735,6 +739,16 @@ try{
    same((await tx.unsafe("SELECT pg06_phone_claim($1,$2) AS result",[token,key]))[0].result.id,phone.id,"initial pairing failed");
    same((await tx.unsafe("SELECT pg06_phone_claim($1,$2) AS result",[token,key]))[0].result.id,phone.id,"pairing retry failed");
    await reject(tx,()=>tx.unsafe("SELECT pg06_phone_claim($1,$2)",[token,randomBytes(91)]),"42501");
+   const fEvent=randomUUID(),fDigest=hmac(),fCipher=randomBytes(41);
+   const forward=async(digest)=>(await tx.unsafe(
+    "SELECT pg06_phone_forward($1::uuid,$2,$3,$4,$5,$6,now(),1,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL) AS receipt",
+    [phone.id,fEvent,digest,fCipher,"bKash","sms:unknown"]))[0].receipt;
+   same((await forward(fDigest)).ack,"durable","Physical phone forward without parser/account must be durably stored");
+   same((await forward(fDigest)).reason,"verification_pending","Source without trusted parser/recipient must not verify funds");
+   same((await forward(fDigest)).replayed,true,"Retry must be idempotent");
+   await reject(tx,()=>forward(hmac()),"23505");
+   same((await tx.unsafe("SELECT count(*)::int AS total FROM pg06_phone_forwarded WHERE phone_id=$1::uuid",[phone.id]))[0].total,1,
+    "One signed event must not produce duplicate evidence");
    const b=(await tx.unsafe("SELECT pg06_phone_attach($1::uuid,'sandbox',$2::uuid,$3::uuid,'bKash','BKASH','fixture-v1','sms:1') AS result",
     [ws,phone.id,bkash]))[0].result;
    const n=(await tx.unsafe("SELECT pg06_phone_attach($1::uuid,'sandbox',$2::uuid,$3::uuid,'Nagad','NAGAD','fixture-v1','sms:2') AS result",
@@ -751,6 +765,9 @@ try{
    same((await tx.unsafe("SELECT pg06_phone_configuration($1::uuid) AS value",[phone.id]))[0].value.bindings[0].id,n.id,
     "removed association was rerouted");
    await tx.unsafe("SELECT pg06_phone_action($1::uuid,'sandbox',$2::uuid,'revoke',NULL)",[ws,phone.id]);
+   await reject(tx,()=>tx.unsafe(
+    "SELECT pg06_phone_forward($1::uuid,$2,$3,$4,'bKash','sms:unknown',now(),2,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)",
+    [phone.id,randomUUID(),hmac(),randomBytes(41)]),"42501");
    same((await tx.unsafe("SELECT count(*)::int AS n FROM pg06_phone_key($1::uuid)",[phone.id]))[0].n,0,"revoked phone still valid");
    same((await tx.unsafe("SELECT count(*)::int AS n FROM pg06_device_context($1::uuid)",[n.id]))[0].n,0,
     "revoked account binding still valid");

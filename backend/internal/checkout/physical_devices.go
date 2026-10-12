@@ -155,6 +155,9 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter,r *http.Request,raw
  if e!=nil||se!=nil||!deviceevidence.TimestampWithinSkew(r.Header.Get("X-Ekmivo-Timestamp"),time.Now())||!deviceevidence.VerifyP256DER(key,canonical,signature){
   fail(w,403,"PHONE_SIGNATURE_REJECTED");return
  }
+ if r.PathValue("action")=="phone-events"{
+  s.handlePhoneForward(w,r,raw,id,ws,realm);return
+ }
  if r.PathValue("action")=="configuration" {
   var encoded []byte
   if e:=pool.QueryRow(r.Context(),"SELECT pg06_phone_configuration($1::uuid)",id).Scan(&encoded);e!=nil||len(encoded)==0||string(encoded)=="null"{
@@ -167,6 +170,29 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter,r *http.Request,raw
    Bindings []phoneAssociation `json:"bindings"`
   }
   if json.Unmarshal(encoded,&result)!=nil{fail(w,503,"INVALID_CONFIGURATION");return}
+  // Forwarding is independent of parser availability and account selection.
+  // The fixed sender allowlist only scopes collection; it is not approval
+  // of a receipt format or a promise that payment matching is ready.
+  allowedSources:=[]string{}
+  for _,candidate:=range []struct{method,sender string}{{"bkash","bKash"},{"nagad","NAGAD"},{"rocket","Rocket"}} {
+   rows,err:=pool.Query(r.Context(),"SELECT account_id FROM pg06_phone_candidate_accounts($1::uuid,$2)",id,candidate.method)
+   if err!=nil{fail(w,503,"RECEIVING_ACCOUNT_UNAVAILABLE");return}
+   available:=rows.Next()
+   scanErr:=error(nil)
+   if available{var uuid string;scanErr=rows.Scan(&uuid)}
+   if rows.Err()!=nil{scanErr=rows.Err()}
+   rows.Close()
+   if scanErr!=nil{fail(w,503,"RECEIVING_ACCOUNT_UNAVAILABLE");return}
+   if available{allowedSources=append(allowedSources,candidate.sender)}
+  }
+  // A configured receiving method permits narrow collection, not paid status.
+  // Backend parser readiness is separate, and no financial destination
+  // number/account identifier is returned to the phone.
+  forwarding:=map[string]any{
+   "id":result.ID,"environment":result.Environment,
+   "config_version":result.ConfigVersion,
+   "forwarder":true,"forward_sources":allowedSources,
+  }
   for i:=range result.Bindings{
    a:=&result.Bindings[i];rule,ok:=s.Pipeline.Rules[a.ParserID]
    if !ok||!rule.Approved||rule.Source!=a.Source||(rule.SandboxOnly&&realm!="sandbox"){
@@ -180,7 +206,8 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter,r *http.Request,raw
    }
    a.Method=method;a.Label=label;a.DisplaySuffix=suffix
   }
-  write(w,200,result);return
+  forwarding["bindings"]=result.Bindings
+  write(w,200,forwarding);return
  }
  if r.PathValue("action")=="phone-heartbeat" {
   if body.Backlog<0||body.Backlog>10000||body.Overflow<0||len(body.QueueError)>64||

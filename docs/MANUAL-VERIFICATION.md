@@ -1,3 +1,15 @@
+## PG06 SMS forwarder — 2026-10-13 (REAL DEVICE PENDING)
+
+- [ ] Pair one physical phone once using the actual code journey from Android Home. No required account/parser/SIM-ID picker or nonexistent QR scanner.
+- [ ] Check only configured provider SMS senders and payment-like message bodies are forwarded; OTP/personal SMS are not. Unknown SIM ID must not silently select an account.
+- [ ] Validate 0047 on BOTH isolated Sandbox and Live financial DBs, parser registry/current production settings, immutable captured configuration version, original queue key and account changes.
+- [ ] Real consented bKash/Nagad/Rocket samples: actual payer != provider sender; original transaction time; complete receiving identity/source mapping; unique match and single webhook. Missing identity/parser must remain pending, never paid.
+- [ ] Test offline/reboot/permission revoked/wrong realm/tenant/revoked key, duplicate replay, full receiving number checkout, 320dp EN/BN and theme.
+- [ ] Preserve checkout ready-source gate; signed forwarding heartbeat is NOT a payment readiness or financial acceptance signal.
+
+Full owner steps: USER-DEVICE-TESTS.txt. Source handoff: docs/evidence/PG06/PHONE-FORWARDER-2026-10-13.md. No real-device or provider PASS without recorded evidence.
+
+---
 ## PG06 one physical phone / multiple receiving accounts — MANUAL PENDING (2026-10-12)
 
 - [ ] Run the `USER-DEVICE-TESTS.txt` checklist with an explicitly identified configured debug APK, exact Go/SQL SHA, one phone/two SIMs, bKash/Nagad/Rocket and real consented receipts only after financial Sandbox/Live provisioning.

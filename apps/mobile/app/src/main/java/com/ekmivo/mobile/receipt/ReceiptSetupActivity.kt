@@ -47,9 +47,9 @@ class ReceiptSetupActivity:ComponentActivity(){
     Surface(Modifier.fillMaxSize()){
      Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
       Text(if(bn)"পেমেন্ট receipt সংগ্রহ" else "Payment receipt collection",style=MaterialTheme.typography.headlineSmall)
-      Text(if(bn)"শুধু নির্ধারিত account-এর অনুমোদিত payment receipt সংগ্রহ হবে। ব্যক্তিগত SMS বা OTP সংরক্ষণ হবে না। Device signature অর্থ প্রাপ্তির প্রমাণ নয়; server যাচাই করবে।" else "Collect approved payment receipts for the bound account. Personal messages and OTPs are excluded. Device signatures identify this device; the server verifies payments.")
+      Text(if(bn)"শুধু নির্দিষ্ট payment sender-এর প্রাসঙ্গিক SMS forward হবে। OTP বা ব্যক্তিগত SMS নয়। Go server পেমেন্ট যাচাই করবে।" else "Only relevant payment SMS from narrowly scoped senders are forwarded. Not personal SMS or OTP. Go alone verifies payments.")
       if(active==null){
-       Row{Checkbox(consent,onCheckedChange={consent=it},enabled=!busy);Text(if(bn)"আমি এই account-এর receipt সংগ্রহে সম্মতি দিচ্ছি।" else "I consent to receipt collection for this account.")}
+       Row{Checkbox(consent,onCheckedChange={consent=it},enabled=!busy);Text(if(bn)"আমি এই ফোনে payment SMS collection-এ সম্মতি দিচ্ছি।" else "I consent to payment SMS collection on this phone.")}
        OutlinedTextField(token,onValueChange={token=it.trim()},label={Text(if(bn)"Devices page-এর pairing token" else "Pairing token from Devices")},enabled=!busy,modifier=Modifier.fillMaxWidth())
        Button(enabled=consent&&!busy&&token.isNotBlank(),onClick={
         busy=true;message="";scope.launch{
@@ -71,12 +71,12 @@ class ReceiptSetupActivity:ComponentActivity(){
        }){Text(if(bn)"Pair করুন" else "Pair device")}
        proposed?.let{bound ->
         Text((if(bn)"নিশ্চিত করুন: " else "Confirm: ")+bound.optString("environment")+" · "+(if(bound.optBoolean("physical_device"))(if(bn)"একটি ফোন — একাধিক account" else "One phone, multiple accounts") else bound.optString("account_id")+" · "+bound.optString("source")+" · "+bound.optString("binding")))
-        Button(onClick={ReceiptStore(applicationContext).use{it.saveEnrollment(bound)};active=bound;proposed=null;ReceiptSyncWorker.schedule(applicationContext)}){Text(if(bn)"Account নিশ্চিত করে চালু করুন" else "Confirm account and enable")}
+        Button(onClick={ReceiptStore(applicationContext).use{it.saveEnrollment(bound)};active=bound;proposed=null;ReceiptSyncWorker.schedule(applicationContext)}){Text(if(bn)"ফোন সংযোগ নিশ্চিত করুন" else "Confirm phone connection")}
        }
       }else{
        Text(active!!.optString("environment")+" · "+(if(active!!.optBoolean("physical_device"))(if(bn)"Physical device" else "Physical device") else active!!.optString("source")+" · "+active!!.optString("binding")))
        if(active!!.optBoolean("physical_device")){
-        Text(if(bn)"একটি ফোনে একাধিক receiving account যুক্ত করুন। Website থেকে source/SIM mapping সংরক্ষণ করার পর এখানে অনুমোদন দিন।" else "Use one paired phone for multiple receiving accounts. Approve each website-configured source/SIM binding here.")
+        Text(if(bn)"ফোনটি একবার pair হয়েছে। এখন শুধু bKash, Nagad বা Rocket-এর উপযুক্ত incoming payment SMS নিরাপদে Go server-এ পাঠানো হবে। কোনো account, parser বা SIM ID লিখতে হবে না।" else "Phone paired once. Relevant incoming bKash, Nagad and Rocket payment SMS will be forwarded securely to Go. No account, parser or SIM ID setup is needed.")
         Button(enabled=!busy,onClick={busy=true;scope.launch{
          try{
           val phone=active!!
@@ -85,23 +85,17 @@ class ReceiptSetupActivity:ComponentActivity(){
           if(response.first!=200)throw IllegalStateException()
           withContext(Dispatchers.IO){ReceiptStore(applicationContext).use{it.savePhoneConfiguration(JSONObject(response.second))}}
           ReceiptStore(applicationContext).use{configured=it.bindings();selectedSources=it.selectedBindingIds()}
-          message=if(bn)"Account/source তালিকা আপডেট হয়েছে।" else "Account/source list refreshed."
-         }catch(_:Exception){message=if(bn)"Binding list পাওয়া যায়নি; server বা অনুমতি পরীক্ষা করুন।" else "Binding refresh unavailable. Check server and authorization."}finally{busy=false}
-        }}){Text(if(bn)"Accounts refresh করুন" else "Refresh available accounts")}
-        if(configured.isEmpty())Text(if(bn)"কোনো account যুক্ত হয়নি। Website → SMS Devices → Manage থেকে যুক্ত করুন।" else "No receiving account linked. Add it under Website → SMS Devices → Manage.")
-        configured.forEach{binding->
-         val id=binding.optString("id")
-         Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
-          Checkbox(checked=selectedSources.contains(id),enabled=!busy,onCheckedChange={checked->
-           ReceiptStore(applicationContext).use{it.selectBinding(id,checked);selectedSources=it.selectedBindingIds()}
-           ReceiptSyncWorker.schedule(applicationContext)
-          })
-          Column{
-           Text((binding.optString("label").ifBlank{binding.optString("method")})+" · "+binding.optString("source"))
-           Text("•••• "+binding.optString("display_suffix")+" · "+binding.optString("binding"),style=MaterialTheme.typography.bodySmall)
-          }
-         }
-        }
+          message=if(bn)"SMS forwarding-এর server settings আপডেট হয়েছে।" else "SMS forwarding settings refreshed from server."
+         }catch(_:Exception){message=if(bn)"Server settings পাওয়া যায়নি; internet/authorization দেখুন।" else "Server settings unavailable. Check network and device authorization."}finally{busy=false}
+        }}){Text(if(bn)"সংযোগ যাচাই / Refresh" else "Check connection / Refresh")}
+        val forwardReady=ReceiptStore(applicationContext).use{it.forwardVersion()>=0}
+        Text(if(forwardReady){
+         if(bn)"SMS collection configured। Payment verification আলাদা server যাচাই; parser/account identification অসম্পূর্ণ থাকলে pending থাকবে।"
+         else "SMS collection configured. Payment verification requires independently validated server evidence; incomplete sources remain pending."
+        }else{
+         if(bn)"সংযোগ হওয়ার পর Refresh করুন। Server configuration না পাওয়া পর্যন্ত কোনো SMS পাঠানো হবে না।"
+         else "Refresh after pairing. No SMS will be sent until signed server configuration arrives."
+        })
        }
        Text((if(bn)"অপেক্ষমাণ receipt: " else "Queued receipts: ")+ReceiptStore(applicationContext).use{it.count()})
        val overflow=ReceiptStore(applicationContext).use{it.overflowCount()}

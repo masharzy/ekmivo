@@ -69,8 +69,22 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
   // Newly attached sources require an explicit local opt-in before collection.
   val ids=(0 until items.length()).map{items.getJSONObject(it).optString("id")}.toSet()
   val selected=selectedBindingIds().intersect(ids)
+  val allowed=response.optJSONArray("forward_sources")?:org.json.JSONArray()
+  val sources=(0 until allowed.length()).map{allowed.optString(it).trim()}
+   .filter{it.matches(Regex("[A-Za-z0-9_-]{2,40}"))}
   check(preferences.edit().putString("physical_bindings",items.toString())
-    .putStringSet("selected_binding_ids",selected).commit())
+    .putStringSet("selected_binding_ids",selected)
+    .putBoolean("forwarder",response.optBoolean("forwarder",false))
+    .putLong("forward_config_version",response.optLong("config_version",-1))
+    .putString("forward_sources",sources.joinToString(",")).commit())
+ }
+ // Physical-phone forwarding is independent of payment account selection.
+ // Empty/expired scope never falls back to uploading all SMS.
+ fun forwardVersion():Long=preferences.getLong("forward_config_version",-1)
+ fun canForward(sender:String):Boolean {
+  if(!enabled()||phone()==null||!preferences.getBoolean("forwarder",false))return false
+  val sourceList=preferences.getString("forward_sources","")?:return false
+  return sourceList.split(",").any{it.equals(sender.trim(),ignoreCase=true)}
  }
  fun collectionEnrollments():List<JSONObject>{
   if(phone()!=null)return bindings().filter{selectedBindingIds().contains(it.optString("id"))}

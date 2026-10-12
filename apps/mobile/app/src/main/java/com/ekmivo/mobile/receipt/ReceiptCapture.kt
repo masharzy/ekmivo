@@ -15,6 +15,24 @@ object ReceiptCapture {
  fun accept(context:Context,source:String,binding:String,kind:String,text:String){
   ReceiptStore(context).use {store->
    if(!store.enabled()||text.toByteArray(Charsets.UTF_8).size>6000)return
+   // PipraPay-style receipt forwarding: source/body/SIM go to the signed
+   // physical phone endpoint. Financial payer and account stay unknown here.
+   // Never collect arbitrary SMS, notifications, logins or OTPs.
+   if(kind=="device_sms"&&store.phone()!=null){
+    if(!store.canForward(source)||!ReceiptForwardPolicy.likelyPayment(source,text))return
+    val version=store.forwardVersion()
+    if(version<0)return
+    val phone=store.phone()?:return
+    val body=JSONObject().put("enrollment_id",phone.getString("id"))
+     .put("environment",phone.getString("environment"))
+     .put("physical_forward",true)
+     .put("source",source).put("binding",binding)
+     .put("kind","device_sms").put("evidence",text)
+     .put("configuration_version",version)
+     .put("observed_at",Instant.now().toString())
+    if(store.enqueue(body))ReceiptSyncWorker.schedule(context)
+    return
+   }
    val collection=store.collectionEnrollments()
    val rules=collection.map{
     ReceiptRoute(it.optString("id"),it.optString("source"),it.optString("binding"),it.optString("capture_pattern"))
@@ -43,8 +61,9 @@ class ReceiptSmsReceiver:BroadcastReceiver(){
   val sender=messages.first().originatingAddress?:return
   if(messages.any{it.originatingAddress!=sender})return
   val subscription=intent.getIntExtra("subscription",-1)
-  if(subscription<0)return // An unknown SIM must never map to a guessed account.
-  ReceiptCapture.accept(context,sender,"sms:"+subscription,"device_sms",
+  // A missing subscription is an opaque source hint, never a guessed account.
+  // Server does not use SIM slot or originatingAddress as payer identity.
+  ReceiptCapture.accept(context,sender,"sms:"+(if(subscription>=0)subscription.toString() else "unknown"),"device_sms",
    messages.joinToString(""){it.messageBody?:""})
  }
 }

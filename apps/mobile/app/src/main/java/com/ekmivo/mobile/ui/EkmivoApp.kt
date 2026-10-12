@@ -169,6 +169,7 @@ private fun AppBar(copy:AppCopy,page:Page) {
 }
 @Composable
 private fun Overview(copy:AppCopy,status:ServiceStatus,onRefresh:()->Unit,onPayments:()->Unit) {
+ val context=LocalContext.current
  LazyColumn(
   modifier=Modifier.fillMaxSize(),
   contentPadding=androidx.compose.foundation.layout.PaddingValues(horizontal=20.dp,vertical=23.dp),
@@ -191,6 +192,19 @@ private fun Overview(copy:AppCopy,status:ServiceStatus,onRefresh:()->Unit,onPaym
       colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.surface,contentColor=MaterialTheme.colorScheme.onSurface),
       shape=RoundedCornerShape(9.dp)
      ) {Text(copy.payments+"  ↗")}
+    }
+   }
+  }
+  item {
+   Card(modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),
+    colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant)){
+    Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+     Text("SMS receipt forwarding / এসএমএস রসিদ",style=MaterialTheme.typography.titleMedium)
+     Text("Pair this phone once. It will securely forward relevant incoming payment SMS. No account, parser or SIM ID setup.",
+      style=MaterialTheme.typography.bodyMedium)
+     Button(onClick={
+      context.startActivity(android.content.Intent(context,com.ekmivo.mobile.receipt.ReceiptSetupActivity::class.java))
+     }){Text("Connect phone / ফোন যুক্ত করুন")}
     }
    }
   }

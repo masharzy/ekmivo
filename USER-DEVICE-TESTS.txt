@@ -1,92 +1,31 @@
-EKMIVO — ONE PHONE / MULTIPLE PAYMENT ACCOUNTS
-OWNER DEVICE TESTS (PG06, MANUAL PENDING)
-============================================
-Build under test: record exact Git commit, GitHub Actions run and APK hash.
-API origin: https://ekmivo-go-api.onrender.com
-IMPORTANT: This is not a real provider approval or production-payment acceptance.
-The financial Sandbox/Live databases, signed collector pipeline, approved parsers,
-and workspace/source provisioning must be configured before the steps below.
-Never test Live with invented receipts or send real funds merely to test UX.
-
-PREPARATION
-1. Install the explicitly identified DEBUG APK; verify its commit and signing
-   context. Check the configured API URL and the backend /healthz separately.
-2. In an authorized merchant workspace, open Payment Methods (Sandbox first).
-   Create bKash, Nagad and Rocket accounts you own; verify that each full
-   receiving number is visible and Copy returns exactly the same number.
-   Try another workspace: numbers must not leak across tenant boundaries.
-3. Try Edit account. Save a label; change an unused number. After an account has
-   a device, receipt or payment history, changing its number must be rejected.
-   Create a replacement and disable the original instead.
-4. Open SMS Devices. Add phone ONCE, note its device name and the one-time
-   five-minute pairing code. Do not store the token in shared logs.
-5. Open Ekmivo Android > Receipt collection setup; enter the token; confirm
-   correct business/environment. A different phone/key must not claim it.
-   Retrying the same claim with the same key inside expiry must be safe.
-6. Back on web SMS Devices > Manage ONE phone. Select multiple available
-   receiving accounts, each with approved source/parser and its exact
-   SIM subscription ID (sms:N) or approved app package binding.
-7. Save sources individually. Source ambiguity (same sender/source and SIM
-   mapped to different accounts with no receipt-specific identity) must fail.
-   Check that the phone is still a SINGLE phone card, not three phones.
-8. On Android, Refresh available accounts. Explicitly tick the accounts this
-   handset may collect. New website-added accounts MUST NOT collect without
-   local opt-in. Confirm the exact source/SIM and environment.
-9. Grant RECEIVE_SMS where needed, or opt-in to Notification Listener only
-   for approved packages; observe clearly indicated permission status.
-   Unrelated private SMS, OTP and outgoing notifications must never upload.
-
-CONTROLLED RECEIPTS (real consented samples, no fake PASS)
-10. In Sandbox use only approved fictional receipt fixtures; note simulation
-    labels. For actual bKash/Nagad/Rocket in Live, obtain owner consent and
-    controlled REAL transfers only after staging, rollback and go-live approval.
-11. Receive different valid incoming messages on SIM 1 and SIM 2. Go must
-    resolve correct receiving account/method and parse ACTUAL payer phone
-    (not provider SMS originatingAddress), amount and ORIGINAL transaction time.
-12. Inspect Incoming receipts, verified payment, associated intent, and
-    webhook delivery exactly once for a UNIQUE matching five-field receipt.
-13. Test a payer phone different from the SMS originatingAddress; verifier
-    must use parsed payer, never SMS source label.
-14. Test wrong payer, wrong amount, wrong receiving account, wrong method,
-    missing original time, reversed/outgoing, masked receiving or ambiguous
-    parser data. Nothing is marked paid; actionable exception is visible.
-15. Deliver same receipt twice (including same event identifier after lost ACK).
-    It must create one durable observation/payment allocation/webhook only.
-16. Select only one receiving method on public checkout: displayed FULL number
-    and Copy must be the selected immutable attempt receiving account. An
-    unavailable destination means do not send money (not fake zero/placeholder).
-
-OFFLINE, CONFIG CHANGE, REVOCATION
-17. Disconnect Android from network. Receive a controlled approved test receipt.
-    The encrypted outbox must hold it without a silent ACK or clearing.
-18. Reconnect: WorkManager retries; server durable ACK must clear it only once.
-    Force close/reopen and reboot. Check persistence and automatic sync.
-19. While an accepted receipt is QUEUED, detach or reassign its original
-    account. The queued event must retain original enrollment identity, never
-    redirect to new account, and show a hold/diagnostic if the old one is revoked.
-20. Disable a receiving account. Existing finance history must remain. No new
-    checkout route may select it. Re-enable only with operator authorization.
-21. Remove SMS/notification permission. See Permission required on web; no
-    unrelated capture, no invented 0 receipts and no false payment failures.
-22. Test SIM subscription changes / absent subscription ID. Never silently
-    fall back to another SIM/receiving account.
-23. Revoke the physical phone from Web. All source enrollments must reject
-    signed events/heartbeats/configuration and display Revoked.
-24. Try another workspace's phone/account, wrong Sandbox/Live environment,
-    and wrong signing key. All must be denied.
-25. Upgrade a handset with a LEGACY single-account enrollment and queued
-    receipt. The original key/enrollment/outbox must survive upgrade; the
-    backend migration may associate it with a physical parent using SAME ID.
-    Attach another account without pairing the phone a second time.
-
-RECORD EVIDENCE
-Record date/time (BDT and UTC), Android version/OEM, SIM slots/source IDs,
-APK SHA, server SHA/config readiness, parser version, webhook event IDs,
-anonymized screenshots and pass/fail for each step. Redact customer numbers,
-SMS body, passwords, pairing tokens, API credentials and payment evidence.
-Do not claim production acceptance based only on source, CI or simulation.
-
-Known infrastructure dependency as of 2026-10-12:
-Control-plane Neon exists but dedicated financial Sandbox/Live databases and
-required migrations were not installed in the inspected production environment.
-The additive migration 0045 needs an isolated migration operator and review.
+EKMIVO SMS FORWARDER — OWNER TESTS (MANUAL; NOT YET ACCEPTED)
+================================================================
+1. Payment Methods: create receiving bKash/Nagad/Rocket numbers you own. Verify
+   full number/copy and tenant privacy.
+2. SMS Devices: Connect phone, enter name, copy one-time pairing code.
+   No parser, SMS source, subscription ID or account selection is required.
+3. Android Home > Connect phone: consent, enter code, confirm; grant SMS.
+   Expect ONE physical phone in website device list.
+4. Android Refresh and Web Refresh: verify real heartbeat and permission state,
+   never a fabricated payment-verified status.
+5. Receive consented controlled payment SMS on two SIMs. Verify narrow scope:
+   correct provider sender only and payment-like content, signed to Go.
+6. With missing parser or unproven receiver, Go must durably store pending SMS
+   but NOT verify payment. Provider SMS sender is NEVER actual payer.
+7. On validated real receipt sample with full receiving identity, actual payer,
+   original time and amount, uniquely match the correct intent and webhook once.
+   Replay same SMS/event and verify no duplicate credit.
+8. Send personal SMS, OTP, unrelated source and ambiguous receipt: no money paid.
+   Unrelated texts must not be forwarded; unknown SIM must not map arbitrarily.
+9. Offline: receive receipt, reboot, reconnect and retry; queue survives and
+   empties only after durable ACK. Don't lose pending evidence on disconnect.
+10. Change/disable receiving account while queued: capture version prevents
+    reassignment; server retains diagnostic/pending evidence.
+11. Deny/revoke SMS permission; inspect truthful status, then restore.
+12. Revoke phone; verify signed API requests denied. Wrong workspace/realm/key
+    also denied.
+13. Checkout must display actual receiving number; no bypass of readiness gate.
+14. Verify 320dp width, EN/BN, Light/Dark/System, accessible controls.
+Record real device, APK/server SHA, time, redacted event/intent/webhook IDs,
+parser version, pass/fail and exact blockers. NEVER call synthetic tests live.
+0047 requires owner-approved execution on BOTH isolated financial databases.
