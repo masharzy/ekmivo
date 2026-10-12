@@ -133,3 +133,5 @@
  .pg-phone-card,.pg-method-card,.pg-phone-box{padding:16px}
 }
 @media(prefers-reduced-motion:reduce){.pg-phone-panel *{transition:none!important}}
+
+.pg-method-symbol span{font-weight:700;font-size:1.18rem;line-height:1;color:var(--color-text)}

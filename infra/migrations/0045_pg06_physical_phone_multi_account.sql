@@ -114,16 +114,24 @@ END $$;
 
 CREATE FUNCTION pg06_phone_action(w uuid,e text,phone_id uuid,act text,new_name text DEFAULT NULL)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE changed integer;
 BEGIN
  PERFORM pg06_scope(w,e);
  IF act='rename' AND length(trim(new_name)) BETWEEN 1 AND 80 THEN
-  UPDATE pg06_phones SET name=new_name WHERE id=phone_id AND workspace_id=w AND environment=e AND revoked_at IS NULL;
+  UPDATE pg06_phones SET name=new_name
+  WHERE id=phone_id AND workspace_id=w AND environment=e AND revoked_at IS NULL;
  ELSIF act='revoke' THEN
   UPDATE pg06_phones SET revoked_at=now(),config_version=config_version+1
-   WHERE id=phone_id AND workspace_id=w AND environment=e AND revoked_at IS NULL;
-  UPDATE pg06_devices SET revoked_at=now() WHERE physical_phone_id=phone_id AND revoked_at IS NULL;
- ELSE RAISE EXCEPTION 'invalid phone action' USING ERRCODE='22023'; END IF;
- IF NOT FOUND AND act='rename' THEN RETURN false; END IF;
+  WHERE id=phone_id AND workspace_id=w AND environment=e AND revoked_at IS NULL;
+ ELSE
+  RAISE EXCEPTION 'invalid phone action' USING ERRCODE='22023';
+ END IF;
+ GET DIAGNOSTICS changed=ROW_COUNT;
+ IF changed=0 THEN RETURN false; END IF;
+ IF act='revoke' THEN
+  UPDATE pg06_devices SET revoked_at=now()
+  WHERE physical_phone_id=phone_id AND workspace_id=w AND environment=e AND revoked_at IS NULL;
+ END IF;
  INSERT INTO pg09_audit(workspace_id,environment,resource,resource_id,action)
  VALUES(w,e,'phones',phone_id,act);
  RETURN true;

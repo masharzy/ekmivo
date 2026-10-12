@@ -1,0 +1,47 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+const root = new URL("../../",import.meta.url);
+async function source(path){return readFile(new URL(path,root),"utf8")}
+
+test("physical phone registration is distinct from stable source enrollments",async()=>{
+ const migration=await source("infra/migrations/0045_pg06_physical_phone_multi_account.sql");
+ assert.match(migration,/CREATE TABLE pg06_phones/);
+ assert.match(migration,/physical_phone_id uuid/);
+ assert.match(migration,/pg06_phone_claim/);
+ assert.match(migration,/pg06_phone_attach/);
+ assert.match(migration,/pg06_phone_detach/);
+ assert.match(migration,/UPDATE pg06_devices SET physical_phone_id=id/);
+ assert.match(migration,/WHERE physical_phone_id=phone_id/);
+ assert.match(migration,/FORCE ROW LEVEL SECURITY/);
+});
+test("scoped full receiving number is decrypted only after workspace management check",async()=>{
+ const handler=await source("backend/internal/checkout/physical_devices.go");
+ assert.match(handler,/pipelineSession\(r,ws,realm,true\)/);
+ assert.match(handler,/pg06_phone_account_cipher/);
+ assert.match(handler,/merchantwebhook.Decrypt/);
+ assert.match(handler,/account_label/);
+});
+test("checkout displays canonical server destination in full with accessible copy",async()=>{
+ const publicGo=await source("backend/internal/checkout/public_realm.go");
+ const checkout=await source("apps/web/src/components/checkout-experience.tsx");
+ assert.match(publicGo,/data\["destination"\] = number/);
+ assert.match(checkout,/data-testid="checkout-receiving-number"/);
+ assert.match(checkout,/navigator.clipboard.writeText\(info.destination!/);
+ assert.doesNotMatch(checkout,/destination\.slice\(-4\)/);
+});
+test("signed receipt events cannot be rerouted to a new account while queued",async()=>{
+ const android=await source("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/ReceiptSyncWorker.kt");
+ assert.match(android,/val boundID=queued.optString\("enrollment_id"\)/);
+ assert.match(android,/ReceiptTransport.post\("events",boundID/);
+ assert.match(android,/QUEUED_ASSOCIATION_REVOKED/);
+ const store=await source("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/ReceiptStore.kt");
+ assert.match(store,/if\(count\(\)>0\).*return false/);
+ assert.match(store,/fun adoptLegacyPhone/);
+});
+test("the view keeps one card per phone and uses explicit account selection",async()=>{
+ const page=await source("apps/web/src/components/payment-phone-management.tsx");
+ assert.match(page,/phones\.map\(p=>/);
+ assert.match(page,/accounts\.filter\(permitted\)/);
+ assert.match(page,/selected phone|selected account|Add receiving|Save selected account bindings/i);
+});

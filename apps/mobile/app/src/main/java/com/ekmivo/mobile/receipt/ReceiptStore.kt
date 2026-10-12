@@ -102,7 +102,10 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
   if(id==null||phone()?.optString("id")==id||enrollment()?.optString("id")==id)
    preferences.edit().putBoolean("paused",true).commit()
  }
- fun disconnect(){
+ fun disconnect():Boolean{
+  // Never delete an unacknowledged encrypted receipt just because a user
+  // disconnects the phone. Revoke/hold it for support first.
+  if(count()>0){setQueueError("PENDING_RECEIPTS_BLOCK_DISCONNECT");return false}
   // Stop collection before waiting for a concurrent database writer.
   check(preferences.edit().clear().commit())
   writableDatabase.delete("pending",null,null)
@@ -110,6 +113,7 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
   // must not remain decryptable after this device is disconnected.
   KeyStore.getInstance("AndroidKeyStore").apply{load(null)}.deleteEntry("ekmivo-receipt-outbox")
   AndroidKeystoreSigner("ekmivo-receipt-device").forgetEnrollmentKey()
+  return true
  }
  fun count():Int=readableDatabase.rawQuery("SELECT count(*) FROM pending",null).use{it.moveToFirst();it.getInt(0)}
  fun enqueue(body:JSONObject):Boolean {

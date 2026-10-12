@@ -363,6 +363,13 @@ func main() {
 			}
 		}
 	}
+	if os.Getenv("PG06_PHYSICAL_PHONES_ALLOW_MIGRATION") == "true" {
+		for _, target := range []realmDSN{{"sandbox", sa}, {"live", lv}} {
+			if err := migratePhysicalPhones(ctx,target.environment,target.raw,os.Getenv("PG06_PHYSICAL_PHONES_MIGRATION_FILE"));err!=nil{
+				log.Fatalf("PG06 physical phone migration blocked in %s: %v",target.environment,err)
+			}
+		}
+	}
 	if os.Getenv("PG08_NOTICE_ALLOW_MIGRATION") == "true" {
 		for _, target := range []realmDSN{{"sandbox", sa}, {"live", lv}} {
 			if err := migrateCustomerNotice(ctx, target.environment, target.raw, os.Getenv("PG08_NOTICE_MIGRATION_FILE")); err != nil {

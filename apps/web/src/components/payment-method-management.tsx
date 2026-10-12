@@ -7,7 +7,7 @@ type Account={ID:string;Method:string;Number:string;Label:string;Disabled:boolea
 type Phone={id:string;name:string;claimed_at?:string|null;revoked_at?:string|null;heartbeat_at?:string|null;bindings:{id:string;account_id:string;source:string;binding:string}[]};
 const methodName:Record<string,string>={bkash:"bKash",nagad:"Nagad",rocket:"Rocket"};
 export function PaymentMethodManagement({locale,workspaceId,environment,canManage}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean}){
- const bn=locale==="bn",t=(e:string,b:string)=>bn?b:e;
+ const bn=locale==="bn";const t=useCallback((e:string,b:string)=>bn?b:e,[bn]);
  const base="/api/go/workspaces/"+workspaceId,href="/"+locale+"/w/"+workspaceId+"/payments/devices?env="+environment;
  const [accounts,setAccounts]=useState<Account[]>([]),[phones,setPhones]=useState<Phone[]>([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [step,setStep]=useState(0),[method,setMethod]=useState("bkash"),[number,setNumber]=useState(""),[label,setLabel]=useState("");
@@ -15,12 +15,13 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const load=useCallback(async(signal?:AbortSignal)=>{
   setLoading(true);setError("");
   try{const response=await fetch(base+"/phones?environment="+environment,{cache:"no-store",signal});
+   if(response.status===403)throw Error(t("You need owner/admin payment management access to see full receiving numbers.","সম্পূর্ণ গ্রহণকারী নম্বর দেখতে owner/admin permission প্রয়োজন।"));
    if(!response.ok)throw Error(t("Receiving-account service is unavailable. Configure financial databases and receipt pipeline first.","Receiving-account service প্রস্তুত নয়। Financial database ও receipt pipeline সেটআপ করুন।"));
    const data=await response.json();if(!signal?.aborted){setAccounts(data.accounts||[]);setPhones(data.items||[])}
   }catch(e){if(!signal?.aborted)setError(String(e))}
   finally{if(!signal?.aborted)setLoading(false)}
- },[base,environment,bn]);
- useEffect(()=>{const c=new AbortController();void load(c.signal);return()=>c.abort()},[load]);
+ },[base,environment,t]);
+ useEffect(()=>{const c=new AbortController();void Promise.resolve().then(()=>{if(!c.signal.aborted)void load(c.signal)});return()=>c.abort()},[load]);
  async function post(path:string,body:unknown){
   setBusy(true);setError("");setNotice("");
   try{
@@ -47,7 +48,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   {loading?<div className="pg-phone-placeholder" role="status">{t("Loading receiving accounts…","Receiving account লোড হচ্ছে…")}</div>:<>
    <div className="pg-method-grid">
     {accounts.map(a=>{const bindings=connected(a);return <article className="pg-method-card" key={a.ID}>
-     <div className="pg-method-header"><div className="pg-method-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="2" y="5" width="20" height="15" rx="2"/><path d="M2 10h20M6 16h5"/></svg></div><span className="pg-method-status">{a.Disabled?t("Disabled","বন্ধ"):bindings.length===0?t("Setup required","সেটআপ বাকি"):t("Connected","সংযুক্ত")}</span></div>
+     <div className="pg-method-header"><div className="pg-method-symbol" aria-hidden="true"><span>{(methodName[a.Method]||a.Method).slice(0,1).toUpperCase()}</span></div><span className="pg-method-status">{a.Disabled?t("Disabled","বন্ধ"):bindings.length===0?t("Setup required","সেটআপ বাকি"):t("Connected","সংযুক্ত")}</span></div>
      <h3>{a.Label||methodName[a.Method]||a.Method}</h3><p>{methodName[a.Method]||a.Method}</p>
      <div className="pg-method-number"><span>{a.Number}</span><button type="button" aria-label={t("Copy full receiving number","সম্পূর্ণ receiving number কপি")} onClick={()=>void navigator.clipboard.writeText(a.Number).then(()=>setNotice(t("Number copied","নম্বর কপি হয়েছে"))).catch(()=>setError(t("Copy failed","কপি হয়নি")))}>{t("Copy","কপি")}</button></div>
      <div className="pg-method-info"><span>{t("Connected phone/source","যুক্ত ফোন/উৎস")}</span><strong>{bindings.length?bindings.map(x=>x.p.name+" · "+x.b.binding).join(", "):t("No phone source linked","কোনো ফোন উৎস যুক্ত নেই")}</strong></div>

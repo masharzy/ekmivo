@@ -23,6 +23,9 @@ type phoneAssociation struct {
  Binding string `json:"binding"`
  ParserID string `json:"parser_id"`
  CapturePattern string `json:"capture_pattern"`
+ Method string `json:"method"`
+ Label string `json:"label"`
+ DisplaySuffix string `json:"display_suffix"`
 }
 func (s *Service) HandlePhones(w http.ResponseWriter,r *http.Request) {
  if !s.pipelineReady(){ fail(w,503,"PIPELINE_SOURCE_UNAVAILABLE");return }
@@ -30,7 +33,7 @@ func (s *Service) HandlePhones(w http.ResponseWriter,r *http.Request) {
  id,action:=r.PathValue("phoneID"),r.PathValue("phoneAction")
  if !uuidPattern.MatchString(ws)|| (id!=""&&!uuidPattern.MatchString(id))||(realm!="sandbox"&&realm!="live"){fail(w,400,"INVALID_SCOPE");return}
  if r.Method!="GET"&&!originAllowed(r){fail(w,403,"ORIGIN_DENIED");return}
- if e:=s.pipelineSession(r,ws,realm,r.Method!="GET");e!=nil{authError(w,e);return}
+ if e:=s.pipelineSession(r,ws,realm,true);e!=nil{authError(w,e);return}
  if r.Method=="GET" {
   if id!="" || action!=""{fail(w,404,"NOT_FOUND");return}
   var raw []byte
@@ -171,6 +174,11 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter,r *http.Request,raw
    }
    pat:=rule.CapturePattern;if pat==""{pat=rule.Pattern}
    a.CapturePattern=strings.ReplaceAll(pat,"(?P<","(?<")
+   var method,label,suffix string
+   if err:=pool.QueryRow(r.Context(),"SELECT a.method,c.label,a.display_suffix FROM financial_receiving_accounts a JOIN pg06_account_configuration c ON c.account_id=a.id WHERE a.id=$1::uuid AND a.workspace_id=$2::uuid AND a.environment=$3 AND c.disabled_at IS NULL",a.AccountID,ws,realm).Scan(&method,&label,&suffix);err!=nil{
+    fail(w,503,"RECEIVING_ACCOUNT_UNAVAILABLE");return
+   }
+   a.Method=method;a.Label=label;a.DisplaySuffix=suffix
   }
   write(w,200,result);return
  }

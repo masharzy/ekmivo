@@ -70,7 +70,7 @@ class ReceiptSetupActivity:ComponentActivity(){
         }
        }){Text(if(bn)"Pair করুন" else "Pair device")}
        proposed?.let{bound ->
-        Text((if(bn)"নিশ্চিত করুন: " else "Confirm: ")+bound.optString("environment")+" · "+(if(bound.optBoolean("physical_device"))(if(bn)"একটি ফোন — একাধিক account" else "One phone, multiple accounts") else bound.optString("account_id")+" · "+bound.optString("source")+" · "+bound.optString("binding"))
+        Text((if(bn)"নিশ্চিত করুন: " else "Confirm: ")+bound.optString("environment")+" · "+(if(bound.optBoolean("physical_device"))(if(bn)"একটি ফোন — একাধিক account" else "One phone, multiple accounts") else bound.optString("account_id")+" · "+bound.optString("source")+" · "+bound.optString("binding")))
         Button(onClick={ReceiptStore(applicationContext).use{it.saveEnrollment(bound)};active=bound;proposed=null;ReceiptSyncWorker.schedule(applicationContext)}){Text(if(bn)"Account নিশ্চিত করে চালু করুন" else "Confirm account and enable")}
        }
       }else{
@@ -97,8 +97,8 @@ class ReceiptSetupActivity:ComponentActivity(){
            ReceiptSyncWorker.schedule(applicationContext)
           })
           Column{
-           Text(binding.optString("source")+" · "+binding.optString("binding"))
-           Text(binding.optString("account_id").take(8),style=MaterialTheme.typography.bodySmall)
+           Text((binding.optString("label").ifBlank{binding.optString("method")})+" · "+binding.optString("source"))
+           Text("•••• "+binding.optString("display_suffix")+" · "+binding.optString("binding"),style=MaterialTheme.typography.bodySmall)
           }
          }
         }
@@ -130,7 +130,10 @@ class ReceiptSetupActivity:ComponentActivity(){
        Text(if(bn)"Durable ACK মানে সংরক্ষিত হয়েছে; payment নিশ্চিত হওয়ার অর্থ নয়।" else "Durable ACK means stored; it does not mean payment confirmed.")
        var disconnect by remember{mutableStateOf(false)}
        OutlinedButton(onClick={disconnect=true}){Text(if(bn)"সংযোগ বিচ্ছিন্ন করুন" else "Disconnect")}
-       if(disconnect)AlertDialog(onDismissRequest={disconnect=false},title={Text(if(bn)"এই device বন্ধ করবেন?" else "Disconnect this device?")},text={Text(if(bn)"স্থানীয় queue ও key মুছবে। Web Devices-এ enrollment revoke করুন।" else "Deletes this device's local queue and key. Revoke its enrollment in Web Devices.")},confirmButton={TextButton(onClick={ReceiptStore(applicationContext).use{it.disconnect()};active=null;disconnect=false}){Text(if(bn)"বিচ্ছিন্ন করুন" else "Disconnect")}},dismissButton={TextButton(onClick={disconnect=false}){Text(if(bn)"ফিরে যান" else "Cancel")}})
+       if(disconnect)AlertDialog(onDismissRequest={disconnect=false},title={Text(if(bn)"এই device বন্ধ করবেন?" else "Disconnect this device?")},text={Text(if(bn)"স্থানীয় queue ও key মুছবে। Web Devices-এ enrollment revoke করুন।" else "Deletes this device's local queue and key. Revoke its enrollment in Web Devices.")},confirmButton={TextButton(onClick={val cleared=ReceiptStore(applicationContext).use{it.disconnect()}
+         if(cleared){active=null;configured=emptyList();selectedSources=emptySet()}
+         else message=if(bn)"অপেক্ষমাণ receipt আছে; sync/সমাধান না করে disconnect করা যাবে না।" else "Pending receipt evidence must be synced or resolved before disconnecting."
+         disconnect=false}){Text(if(bn)"বিচ্ছিন্ন করুন" else "Disconnect")}},dismissButton={TextButton(onClick={disconnect=false}){Text(if(bn)"ফিরে যান" else "Cancel")}})
       }
       if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
       if(message.isNotEmpty())Text(message)

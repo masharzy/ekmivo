@@ -17,7 +17,7 @@ function health(p:Phone,bn:boolean){
  return bn?"Online":"Online";
 }
 export function PaymentPhoneManagement({locale,workspaceId,environment,canManage,detailId}:Scope){
- const bn=locale==="bn",t=(a:string,b:string)=>bn?b:a;
+ const bn=locale==="bn";const t=useCallback((a:string,b:string)=>bn?b:a,[bn]);
  const base="/api/go/workspaces/"+workspaceId+"/phones",op="/api/go/workspaces/"+workspaceId+"/operations/parsers?environment="+environment;
  const [phones,setPhones]=useState<Phone[]>([]),[accounts,setAccounts]=useState<Account[]>([]),[parsers,setParsers]=useState<Parser[]>([]);
  const [selected,setSelected]=useState<string|null>(detailId||null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false);
@@ -29,13 +29,14 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
   try{
    const responses=await Promise.all([fetch(base+"?environment="+environment,{cache:"no-store",signal}),
     fetch(op,{cache:"no-store",signal})]);
+   if(responses.some(r=>r.status===403))throw Error(t("Only payment owner/admin roles can manage physical devices and account associations.","শুধু payment owner/admin physical device ও account binding পরিচালনা করতে পারবেন।"));
    if(responses.some(r=>!r.ok))throw Error(t("Device source is not configured. Set up the financial database and approved parsers, then retry.","ডিভাইসের উৎস প্রস্তুত নয়। Financial database ও approved parser সেটআপ করে আবার চেষ্টা করুন।"));
    const [data,approved]=await Promise.all(responses.map(r=>r.json()));
    if(!signal?.aborted){setPhones(data.items||[]);setAccounts(data.accounts||[]);setParsers(approved.items||[])}
   }catch(e){if(!signal?.aborted)setError(String(e))}
   finally{if(!signal?.aborted)setLoading(false)}
- },[base,environment,op,bn]);
- useEffect(()=>{const c=new AbortController();void refresh(c.signal);return()=>c.abort()},[refresh]);
+ },[base,environment,op,t]);
+ useEffect(()=>{const c=new AbortController();void Promise.resolve().then(()=>{if(!c.signal.aborted)void refresh(c.signal)});return()=>c.abort()},[refresh]);
  async function command(path:string,body:unknown){
   setBusy(true);setError("");setNotice("");
   try{
