@@ -398,6 +398,13 @@ func main() {
 			}
 		}
 	}
+	if os.Getenv("PG10_PUBLIC_METHODS_ALLOW_MIGRATION") == "true" {
+		for _,target := range []realmDSN{{"sandbox",sa},{"live",lv}} {
+			if err:=migratePublicMethods(ctx,target.environment,target.raw,os.Getenv("PG10_PUBLIC_METHODS_MIGRATION_FILE"));err!=nil {
+				log.Fatalf("PG10 public-method migration blocked in %s: %v",target.environment,err)
+			}
+		}
+	}
 	if os.Getenv("PG10_ALLOW_MIGRATION") == "true" {
 		dir := os.Getenv("PG10_MIGRATION_DIRECTORY")
 		if dir == "" {
