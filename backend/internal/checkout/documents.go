@@ -603,6 +603,30 @@ func (s *Service) HandlePublicDocument(w http.ResponseWriter, r *http.Request) {
 		delete(data, "workspace_id")
 		data["merchant_name"] = business.Name
 		data["brand"] = business.Brand
+		// Only the document's own opaque capability determines workspace/realm.
+		// Public customers see configured accounts by provider name, never phone
+		// identities, receiving numbers or unreleased parser rules.
+		if doc.Environment == "live" {
+			var sourceBytes []byte
+			err := s.pipelineScoped(r.Context(),doc.Workspace,doc.Environment,func(tx pgx.Tx)error{
+				return tx.QueryRow(r.Context(),"SELECT pg10_public_payment_sources($1::uuid,$2)",doc.Workspace,doc.Environment).Scan(&sourceBytes)
+			})
+			if err!=nil {fail(w,503,"DOCUMENT_SOURCE_UNAVAILABLE");return}
+			var selection struct{
+				Configured []string `json:"configured_methods"`
+			}
+			if json.Unmarshal(sourceBytes,&selection)!=nil{fail(w,503,"INVALID_DOCUMENT_RESULT");return}
+			allowed:=s.liveMethods(sourceBytes)
+			methods:=[]string{}
+			for _,method:=range []string{"bkash","nagad","rocket"}{
+				if allowed[method]{methods=append(methods,method)}
+			}
+			data["configured_methods"]=selection.Configured
+			data["methods"]=methods
+		}else{
+			data["configured_methods"]=[]string{"bkash","nagad","rocket"}
+			data["methods"]=[]string{"bkash","nagad","rocket"}
+		}
 		write(w, 200, data)
 		return
 	}
