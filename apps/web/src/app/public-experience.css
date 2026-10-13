@@ -25,6 +25,7 @@
  background:color-mix(in srgb,var(--ek-pub-surface) 94%,transparent);
  box-shadow:var(--ek-pub-shadow);width:min(1250px,calc(100% - 36px));
 }
+.site-header.ek-public-header.is-wide{top:0;width:100%;border-radius:0;border-left:0;border-right:0}
 .ek-public-header .header-inner{
  display:grid;grid-template-columns:minmax(165px,1fr) auto minmax(165px,1fr);
  gap:clamp(14px,2vw,34px);max-width:1340px;padding-inline:25px;min-height:72px;

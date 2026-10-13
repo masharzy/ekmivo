@@ -29,7 +29,7 @@ const copy = {
   paySteps: [
    {title:"Create a payment request",body:"Use a payment link, invoice, hosted checkout or merchant API."},
    {title:"Customer pays",body:"They send money using their selected supported mobile wallet."},
-   {title:"Evidence is checked",body:"Ekmivo checks the provider, sender, amount and transaction time."},
+   {title:"Evidence is checked",body:"Eligible merchant payment evidence is securely checked before a request is confirmed."},
    {title:"Receive the result",body:"A unique match verifies the payment. Check its status in the dashboard or via webhook."}
   ],
   aiSteps: [
@@ -47,7 +47,7 @@ const copy = {
    {n:"03",icon:"layers",title:"A clearer picture",text:"Keep payment states, conversations and decisions easier to follow."}
   ],
   payStoryEyebrow:"A CLOSER LOOK / PAYMENTS", payStoryTitle:"From checkout",payStoryMarked:"to verification.",
-  payStoryBody:"Start with a payment link, invoice or API-powered checkout. When customers pay through a supported wallet, Ekmivo checks the receipt against the payment request. Only a unique valid match becomes verified, with updates available in your dashboard and webhooks.",
+  payStoryBody:"Start with a payment link, invoice or API-powered checkout. Payment evidence is checked securely before a request is marked verified. Follow the result in your dashboard or receive an update through webhooks.",
   payStoryButton:"Get started with payments", paymentPreview:"SAMPLE CHECKOUT · NOT LIVE DATA", linkLabel:"Your payment request", sampleMethod:"bKash · Nagad · Rocket", sampleAmount:"৳ 1,250", sampleContinue:"Continue to checkout", proofMessage:"Verification checks the receipt, not a screenshot.",
   aiStoryEyebrow:"A CLOSER LOOK / AI", aiStoryTitle:"A good answer matters.", aiStoryMarked:"So does a human.",
   aiStoryBody:"Give your team the context behind each customer question. AI assistance and human handover are being developed for supported channels.",
@@ -60,14 +60,14 @@ const copy = {
    {n:"03 / BUILD",title:"Developers & teams",body:"Connect your own product to payment requests, status checks and merchant webhooks.",icon:"code"}
   ],
   promiseEyebrow:"05 / PAYMENT INTEGRITY", promiseTitle:"A verified payment", promiseMarked:"must earn its check.",
-  promiseText:"Only an eligible receipt that uniquely matches a payment request is verified. Missing or conflicting evidence never becomes an automatic success.",
+  promiseText:"Every payment is checked against eligible receipt evidence before confirmation. Missing or uncertain proof does not become an automatic success.",
   promiseItems:["No customer TrxID form in the normal flow","No automatic success from an ambiguous receipt","People remain responsible for exceptions and refunds"],
   pricingEyebrow:"PRICING & AVAILABILITY", pricingTitle:"Plan details are on the way.", pricingNote:"Final pricing and AI launch dates have not been announced.", pricingCTA:"Create your workspace",
   faqEyebrow:"GOOD QUESTIONS", faqTitle:"Before you get started.",
   faqs:[
    ["What can I use Ekmivo for?","Ekmivo offers payment links, invoices, hosted checkout and merchant API/webhooks with evidence-based payment verification. AI tools for customer conversations are being developed separately."],
    ["Do my customers need to install Ekmivo?","No. They open the checkout from a payment link or your integrated website/app and use their payment wallet. An enrolled Android forwarder on the merchant side supplies supported receipt SMS."],
-   ["Does Ekmivo automatically verify every payment?","Only when a trusted receipt uniquely matches the payer, method, exact amount and original transaction time within the request window. Otherwise the status remains pending or requires attention."],
+   ["Does Ekmivo automatically verify every payment?","Only when eligible payment evidence can be confirmed securely. If confirmation is uncertain or unavailable, the request remains pending or requires merchant attention."],
    ["Can I use payments without AI?","Yes. The services are designed to be independent. You do not need to use the AI workspace to set up payment tools."],
    ["Are all AI and third-party integrations live?","No. Several AI, social-channel and commerce integrations are planned or awaiting the necessary approvals and testing. The relevant product pages will reflect availability."]
   ],
@@ -97,7 +97,7 @@ bn: {
   paySteps:[
    {title:"পেমেন্ট রিকোয়েস্ট তৈরি করুন",body:"লিংক, ইনভয়েস, চেকআউট বা API—আপনার সুবিধামতো শুরু করুন।"},
    {title:"কাস্টমার পেমেন্ট করবেন",body:"পছন্দের মাধ্যম বেছে নিয়ে নির্ধারিত অ্যাকাউন্টে টাকা পাঠাবেন।"},
-   {title:"লেনদেনের তথ্য মিলবে",body:"কোন মাধ্যম থেকে, কে, কত টাকা এবং কখন পাঠিয়েছেন—এসব তথ্য মিলিয়ে দেখা হবে।"},
+   {title:"পেমেন্ট যাচাই হবে",body:"মার্চেন্টের সংযুক্ত ফোন থেকে পাওয়া রসিদের তথ্য সার্ভারে নিরাপদে যাচাই করা হবে।"},
    {title:"পেমেন্টের আপডেট পাবেন",body:"সঠিক মিল হলে Verified হবে। ড্যাশবোর্ড বা ওয়েবহুক থেকে অবস্থা জানা যাবে।"}
   ],
   aiSteps:[
@@ -112,10 +112,10 @@ bn: {
   benefitCards:[
    {n:"০১",icon:"link",title:"বারবার স্ক্রিনশট নয়",text:"পেমেন্টের তথ্য মিললে আলাদা করে ট্রানজ্যাকশন আইডি বা স্ক্রিনশট চাইতে হবে না।"},
    {n:"০২",icon:"spark",title:"একই কাজ বারবার নয়",text:"কাস্টমারের সাধারণ প্রশ্ন ও নিয়মিত কাজে AI-এর সাহায্য নেওয়ার সুবিধা তৈরি হচ্ছে।"},
-   {n:"০৩",icon:"layers",title:"পেমেন্টের অবস্থা স্পষ্ট",text:"কোন পেমেন্ট সফল, কোনটি অপেক্ষমাণ—এক জায়গা থেকে দেখুন।"}
+   {n:"০৩",icon:"layers",title:"পেমেন্টের অবস্থা স্পষ্ট",text:"সফল, অপেক্ষমাণ ও সমস্যাযুক্ত পেমেন্টের আপডেট এক জায়গায় দেখুন।"}
   ],
   payStoryEyebrow:"পেমেন্ট সেবা",payStoryTitle:"চেকআউট থেকে",payStoryMarked:"পেমেন্ট যাচাই পর্যন্ত।",
-  payStoryBody:"পেমেন্ট লিংক, ইনভয়েস বা API দিয়ে চেকআউট শুরু করুন। কাস্টমার বিকাশ, নগদ বা রকেটে টাকা পাঠালে Ekmivo রসিদের প্রেরক নম্বর, মাধ্যম, টাকার পরিমাণ ও লেনদেনের সময় মিলিয়ে দেখবে। একটি সঠিক মিল পাওয়া গেলেই পেমেন্ট Verified হবে; ফলাফল ড্যাশবোর্ড ও ওয়েবহুকে পাওয়া যাবে।",
+  payStoryBody:"লিংক, ইনভয়েস বা API দিয়ে পেমেন্ট নেওয়া শুরু করুন। কাস্টমার টাকা পাঠালে Ekmivo নিরাপদে রসিদ যাচাই করে পেমেন্টের অবস্থা জানাবে। ড্যাশবোর্ড বা ওয়েবহুক থেকে আপডেট পাবেন।",
   payStoryButton:"পেমেন্ট শুরু করুন",paymentPreview:"নমুনা পেমেন্ট পেজ",linkLabel:"পেমেন্টের পরিমাণ",sampleMethod:"বিকাশ · নগদ · রকেট",sampleAmount:"৳ ১,২৫০",sampleContinue:"পেমেন্ট করুন",proofMessage:"স্ক্রিনশট পাঠানোর দরকার নেই।",
   aiStoryEyebrow:"AI সেবা · তৈরি হচ্ছে",aiStoryTitle:"প্রশ্নের উত্তর দিন।",aiStoryMarked:"প্রয়োজনে নিজেই সামলান।",
   aiStoryBody:"কাস্টমার আগেও কী জানতে চেয়েছিলেন, কী পণ্য দেখছিলেন—এসব তথ্য সামনে রেখেই উত্তর দেওয়ার ব্যবস্থা তৈরি হচ্ছে। AI সাহায্য করবে, নিয়ন্ত্রণ থাকবে আপনার টিমের হাতে।",
@@ -128,14 +128,14 @@ bn: {
    {n:"০৩ / সফটওয়্যার",title:"ডেভেলপার ও টিম",body:"নিজের ওয়েবসাইট বা অ্যাপে পেমেন্ট লিংক, স্ট্যাটাস ও ওয়েবহুক যুক্ত করুন।",icon:"code"}
   ],
   promiseEyebrow:"০৫ / পেমেন্ট যাচাই",promiseTitle:"শুধু টাকা পাঠালেই",promiseMarked:"সফল নয়।",
-  promiseText:"প্রেরকের নম্বর, পেমেন্টের মাধ্যম, টাকার পরিমাণ ও লেনদেনের সময়—সব তথ্য ঠিকমতো মিললে তবেই পেমেন্ট সফল হবে। না মিললে ভুল করে সফল দেখানো হবে না।",
+  promiseText:"পেমেন্ট যাচাই না হওয়া পর্যন্ত সেটিকে সফল দেখানো হবে না। যথেষ্ট প্রমাণ না পাওয়া গেলে মার্চেন্টের নজর দেওয়ার সুযোগ থাকবে।",
   promiseItems:["পেমেন্টের সময় কাস্টমারকে TrxID লিখতে হবে না","একাধিক পেমেন্টের সঙ্গে তথ্য মিলে গেলে স্বয়ংক্রিয়ভাবে সফল হবে না","সমস্যা হলে বিক্রেতা পেমেন্ট দেখে প্রয়োজনীয় ব্যবস্থা নিতে পারবেন"],
   pricingEyebrow:"মূল্য ও প্যাকেজ",pricingTitle:"প্যাকেজের বিস্তারিত শিগগিরই।",pricingNote:"চূড়ান্ত মূল্য ও AI সেবা চালুর সময় এখনো ঘোষণা করা হয়নি।",pricingCTA:"অ্যাকাউন্ট তৈরি করুন",
   faqEyebrow:"জানতে চাইতে পারেন",faqTitle:"কিছু সাধারণ প্রশ্ন",
   faqs:[
    ["Ekmivo দিয়ে কী করা যায়?","Ekmivo-তে পেমেন্ট লিংক, ইনভয়েস ও চেকআউট ব্যবহার করা যায়। নিজের ওয়েবসাইট বা অ্যাপের জন্য API ও ওয়েবহুকও রয়েছে। পেমেন্ট যাচাইয়ের পাশাপাশি কাস্টমার যোগাযোগের AI সেবা আলাদাভাবে তৈরি হচ্ছে।"],
    ["আমার কাস্টমারকে কি Ekmivo অ্যাপ ইনস্টল করতে হবে?","না। কাস্টমার পেমেন্ট লিংক বা আপনার ওয়েবসাইটের চেকআউট খুলে নিজের বিকাশ, নগদ বা রকেট ব্যবহার করবেন। SMS দিয়ে যাচাইয়ের জন্য মার্চেন্টের সংযুক্ত Android ফোন প্রয়োজন।"],
-   ["পেমেন্ট কি নিজে থেকেই সফল দেখাবে?","প্রেরকের নম্বর, পেমেন্টের মাধ্যম, টাকার পরিমাণ ও লেনদেনের সময় একটি পেমেন্টের সঙ্গে ঠিকমতো মিললে স্বয়ংক্রিয়ভাবে যাচাই হবে। তথ্য না মিললে বা একাধিক পেমেন্টের সঙ্গে মিলে গেলে অপেক্ষমাণ থাকবে।"],
+   ["পেমেন্ট কি নিজে থেকেই সফল দেখাবে?","Ekmivo পেমেন্টের রসিদ নিরাপদে যাচাই করে। যাচাই নিশ্চিত হলে সফল দেখাবে; প্রমাণ না পাওয়া গেলে বা সমস্যা হলে অপেক্ষমাণ থাকবে।"],
    ["পেমেন্ট নিতে কি AI সেবা ব্যবহার করতেই হবে?","না। পেমেন্ট ও AI আলাদা সেবা। শুধু পেমেন্ট সেবা ব্যবহার করতে পারবেন।"],
    ["AI ও Messenger, WhatsApp-এর মতো সংযোগ কি এখনই পাওয়া যাবে?","না। AI ও বেশ কিছু চ্যানেল সংযোগ এখনো তৈরি হচ্ছে। কিছু সংযোগ চালুর আগে সংশ্লিষ্ট প্ল্যাটফর্মের অনুমোদন প্রয়োজন।"]
   ],
