@@ -9,8 +9,8 @@ export const siteCopy = {
  },
  bn: {
   nav: {services:"সেবাগুলো",workflow:"কীভাবে কাজ করে",principles:"পেমেন্ট যাচাই",ai:"AI সেবা",commerce:"পেমেন্ট",pricing:"প্যাকেজ",solutions:"যাদের জন্য",faq:"প্রশ্ন ও উত্তর"},
-  login:"Sign in",register:"অ্যাকাউন্ট খুলুন",theme:"থিম",language:"ভাষা",menu:"মেনু খুলুন",closeMenu:"মেনু বন্ধ করুন",
-  footerLine:"পেমেন্ট লিংক, চেকআউট ও পেমেন্ট যাচাই। AI Bot সেবা পরে আসছে।",
-  footerStatus:"সেবার বর্তমান অবস্থা", rights:"সর্বস্বত্ব সংরক্ষিত।",
+  login:"Sign in",register:"অ্যাকাউন্ট তৈরি করুন",theme:"থিম",language:"ভাষা",menu:"মেনু খুলুন",closeMenu:"মেনু বন্ধ করুন",
+  footerLine:"পেমেন্ট লিংক, ইনভয়েস ও চেকআউটের সুবিধা। AI Bot-এর কাজ শুরু হবে শিগগিরই।",
+  footerStatus:"সেবার অবস্থা", rights:"সর্বস্বত্ব সংরক্ষিত।",
  }
 } as const;

@@ -46,6 +46,7 @@ export function SiteControls({locale,initialTheme}:{locale:"bn"|"en";initialThem
    <select value={theme} aria-label="Theme" onChange={e=>changeTheme(e.target.value as Theme)}>
     <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
    </select>
+   <svg className="ek-theme-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5.5 7.5 4.5 4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
   </label>
  </div>;
 }

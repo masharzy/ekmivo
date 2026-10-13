@@ -16,11 +16,11 @@ const copy={
   introDetail:"Your payments and everyday work, in one place.",loginTip:"Use the email address associated with your account."
  },
  bn:{
-  login:{intro:"আপনার সব কাজ, এক জায়গায়।",title:"আবার স্বাগতম।",subtitle:"পেমেন্ট ও ওয়ার্কস্পেসের কাজ চালিয়ে যেতে Sign in করুন।",submit:"Sign in",bottom:"Ekmivo-তে নতুন?",swap:"অ্যাকাউন্ট তৈরি করুন",eyebrow:"আবার স্বাগতম"},
-  register:{intro:"পেমেন্টের কাজ শুরু হোক গুছিয়ে।",title:"অ্যাকাউন্ট তৈরি করুন।",subtitle:"Ekmivo-তে আপনার ওয়ার্কস্পেস তৈরি করে প্রয়োজনের সেবা বেছে নিন।",submit:"অ্যাকাউন্ট তৈরি করুন",bottom:"আগেই অ্যাকাউন্ট আছে?",swap:"Sign in",eyebrow:"নতুন অ্যাকাউন্ট"},
-  name:"পুরো নাম",email:"ইমেইল ঠিকানা",password:"পাসওয়ার্ড",confirm:"আবার পাসওয়ার্ড লিখুন",show:"দেখুন",hide:"লুকান",
-  strength:"কমপক্ষে ১২ অক্ষর ব্যবহার করুন।",back:"হোমপেজে ফিরুন",pending:"অপেক্ষা করুন…",forgot:"পাসওয়ার্ড ভুলে গেছেন?",
-  introDetail:"পেমেন্ট, চেকআউট ও ব্যবসার তথ্য একই ওয়ার্কস্পেসে।",loginTip:"অ্যাকাউন্ট খোলার সময় যে ইমেইল ব্যবহার করেছেন, সেটি লিখুন।"
+  login:{intro:"",title:"আবার স্বাগতম",subtitle:"আপনার Ekmivo অ্যাকাউন্টে লগইন করুন।",submit:"Sign in",bottom:"Ekmivo-তে নতুন?",swap:"অ্যাকাউন্ট খুলুন",eyebrow:"SIGN IN"},
+  register:{intro:"",title:"নতুন অ্যাকাউন্ট খুলুন",subtitle:"কিছু তথ্য দিলেই আপনার Ekmivo অ্যাকাউন্ট তৈরি হবে।",submit:"অ্যাকাউন্ট তৈরি করুন",bottom:"আগেই অ্যাকাউন্ট আছে?",swap:"Sign in",eyebrow:"CREATE ACCOUNT"},
+  name:"আপনার নাম",email:"ইমেইল",password:"পাসওয়ার্ড",confirm:"পাসওয়ার্ড আবার লিখুন",show:"দেখুন",hide:"লুকান",
+  strength:"কমপক্ষে ১২ অক্ষরের পাসওয়ার্ড দিন।",back:"হোমপেজে ফিরুন",pending:"অপেক্ষা করুন…",forgot:"পাসওয়ার্ড ভুলে গেছেন?",
+  introDetail:"",loginTip:""
  }
 } as const;
 
