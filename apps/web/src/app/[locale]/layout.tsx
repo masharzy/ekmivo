@@ -22,8 +22,9 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const jar=await cookies();
   const storedTheme = jar.get("ekmivo-theme")?.value;
   const initialTheme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "system";
-  const isApp = (await headers()).get("x-ekmivo-application") === "1";
-  if(isApp) return <>{children}</>;
+  const routeHeaders=await headers();
+  const standalone=routeHeaders.get("x-ekmivo-application")==="1" || routeHeaders.get("x-ekmivo-auth-page")==="1";
+  if(standalone) return <>{children}</>;
   // A temporary auth-store outage must not take down the public marketing site.
   let user:Awaited<ReturnType<typeof currentUser>>=null;
   if(jar.has("ekmivo-session")){

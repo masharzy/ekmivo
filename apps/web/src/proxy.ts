@@ -22,7 +22,12 @@ export function proxy(request:NextRequest){
  target.pathname="/"+locale+path;
  if(path==="/")target.pathname="/"+locale;
  const headers=new Headers(request.headers);
+ // Public headers are never trusted to select the UI shell.
+ headers.delete("x-ekmivo-application");
+ headers.delete("x-ekmivo-auth-page");
  headers.set("x-ekmivo-locale",locale);
+ if(/^\/(?:workspaces|w|account|admin)(?:\/|$)/.test(path))headers.set("x-ekmivo-application","1");
+ if(/^\/(?:login|register|forgot-password|verify-email)(?:\/|$)/.test(path))headers.set("x-ekmivo-auth-page","1");
  return NextResponse.rewrite(target,{request:{headers}});
 }
 

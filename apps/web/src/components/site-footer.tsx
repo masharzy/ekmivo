@@ -1,7 +1,12 @@
+"use client";
+import {usePathname} from "next/navigation";
 import Link from "next/link";
 import {siteCopy,type Locale} from "../lib/site-copy";
 
 export function SiteFooter({locale}:{locale:Locale}){
+ const pathname=usePathname();
+ const path=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
+ if(/^\/(?:workspaces|w|account|admin|login|register|forgot-password|verify-email)(?:\/|$)/.test(path))return null;
  const t=siteCopy[locale];
  return <footer className="site-footer ek-public-footer">
   <div className="footer-inner">

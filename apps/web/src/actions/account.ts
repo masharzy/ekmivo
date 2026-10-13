@@ -43,7 +43,7 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
    catch(e){report("send initial verification email",e);}
   }
  } catch(e){report("register",e);return fail(t.generic);}
- redirect(verify?`/${locale}/verify-email`:`/${locale}/workspaces/open`);
+ redirect(verify?"/verify-email":"/workspaces/open");
 }
 
 export async function loginAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -72,13 +72,13 @@ export async function loginAction(localeParam:string,_previous:FormErrorState,fo
   const verify=await verificationEnabled();
   if(verify){
    const status=await database()`SELECT email_verified_at FROM app_users WHERE id=${users[0].id}::uuid`;
-   if(status.length&&!status[0].email_verified_at)redirect(`/${locale}/verify-email`);
+   if(status.length&&!status[0].email_verified_at)redirect("/verify-email");
   }
  } catch(e){
   if(e && typeof e==="object" && "digest" in e && String(e.digest).startsWith("NEXT_REDIRECT"))throw e;
   report("login",e);return fail(t.generic);
  }
- redirect(`/${locale}/workspaces/open`);
+ redirect("/workspaces/open");
 }
 
 export async function createWorkspaceAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -102,7 +102,7 @@ export async function createWorkspaceAction(localeParam:string,_previous:FormErr
  // New users get their first workspace as their default automatically.
  try{if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,workspaceId);}
  catch(e){report("set initial workspace default",e);}
- redirect(`/${locale}/w/${workspaceId}/dashboard`);
+ redirect(`/w/${workspaceId}/dashboard`);
 }
 
 
