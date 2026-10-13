@@ -205,7 +205,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
         <label htmlFor="ek-nagad-number">{bn?"আপনার নগদ অ্যাকাউন্ট নম্বর":"Your Nagad Account Number"}</label>
         <input id="ek-nagad-number" type="tel" autoFocus inputMode="numeric" pattern="01[0-9]{9}"
          placeholder="01XXXXXXXXX" minLength={11} maxLength={11} required disabled={locking}
-         value={payer} onChange={e=>setPayer(e.target.value.replace(/\\D/g,"").slice(0,11))}/>
+         value={payer} onChange={e=>setPayer(e.target.value.replace(/\D/g,"").slice(0,11))}/>
         <p className="ek-nagad-consent">{bn?"Proceed চাপলে আপনি আমাদের শর্তাবলীতে সম্মতি দিচ্ছেন।":'By clicking/tapping "Proceed" you are agreeing to our Terms and Conditions'}</p>
         <div className="ek-nagad-actions">
          <button type="submit" disabled={locking||!/^(?:01)[0-9]{9}$/.test(payer)}>{locking?"…":bn?"এগিয়ে যান":"Proceed"}</button>
