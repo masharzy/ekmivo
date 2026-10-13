@@ -182,7 +182,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
      <div className="provider-pay-headline">{bn?"মোবাইল ব্যাংকিং":"Mobile Banking"}</div>
      <div className="provider-checkout-options pg05-method-options">
       {payMethods.filter(x=>info.methods?.includes(x)).map(option=><button key={option} type="button" aria-pressed={method===option}
-       onClick={()=>setMethod(option)} data-method={option}><ProviderMark method={option}/></button>)}
+       onClick={()=>setMethod(option)} data-method={option}><ProviderMark method={option} bn={bn}/></button>)}
      </div>
      {canLock&&!!info.methods?.length?<button type="button" className="provider-primary-action pg05-pay" onClick={()=>setStep("payer")}>
       {bn?"পরিশোধ করুন ":"Pay "}{amount} BDT
@@ -192,7 +192,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
     </section>}
     {isFlow&&<div className="provider-flow" data-provider={selectedMethod}>
      <header className="provider-flow-brand">
-      <ProviderMark method={selectedMethod}/>
+      <ProviderMark method={selectedMethod} bn={bn}/>
      </header>
      <div className="provider-flow-invoice">
       <div className="provider-flow-merchant"><div className="provider-flow-shopicon">⌑</div>
@@ -220,7 +220,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
          <button type="button" onClick={()=>void cancelPayment()} disabled={locking||cancelling}>{bn?"বাতিল":"Close"}</button>
         </div>
        </form>
-       <div className="ek-nagad-footer-brand"><ProviderMark method="nagad"/></div>
+       <div className="ek-nagad-footer-brand"><ProviderMark method="nagad" bn={bn}/></div>
       </div>}
       {showPayer&&selectedMethod!=="nagad"&&<div className="provider-payer-step">
        <form onSubmit={lock} className="provider-payer-form pg05-form">
@@ -245,16 +245,13 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
         <li><span>1</span>{bn?"উপরের পার্সোনাল অ্যাকাউন্ট নম্বর কপি করুন":"Copy the personal account number above"}</li>
         <li><span>2</span>{bn?methods[selectedMethod]+" অ্যাপ থেকে 'সেন্ড মানি' নির্বাচন করুন":"Open "+methods[selectedMethod]+" and choose Send Money"}</li>
        </ol>
-       <div className="provider-instruction-graphic" aria-label={bn?"সেন্ড মানি নির্বাচন করার উদাহরণ":"Send Money instruction illustration"}>
-        <div className="provider-instruction-top"><span className="provider-instruction-user">●</span><span className="provider-instruction-text">{methods[selectedMethod]}<small>{bn?"পেমেন্ট অ্যাপ":"Payment app"}</small></span><span className="provider-instruction-dots">● ● ●</span></div>
-        <div className="provider-instruction-tiles">
-         <div className="is-target"><b>➤</b><span>{bn?"সেন্ড মানি":"Send Money"}</span></div>
-         <div><b>▤</b><span>{bn?"রিচার্জ":"Recharge"}</span></div>
-         <div><b>▥</b><span>{bn?"ক্যাশ আউট":"Cash out"}</span></div>
-         <div><b>▢</b><span>{bn?"পেমেন্ট":"Payment"}</span></div>
-        </div>
-        <svg viewBox="0 0 120 70" className="provider-graphic-arrow" aria-hidden="true"><path d="M8 8q32 28 62 34l-9-17 49 23-48 16 9-15Q31 44 8 8Z" fill="#ffd12c" stroke="#4d3419" strokeWidth="3" strokeLinejoin="round"/></svg>
-       </div>
+       {selectedMethod!=="rocket"&&<div className="provider-instruction-graphic ek-send-money-guide"
+         aria-label={bn?"সেন্ড মানি বেছে নেওয়ার নির্দেশনা":"How to select Send Money"}>
+        <img alt={bn?"সেন্ড মানি অপশন দেখানো আসল অ্যাপ স্ক্রিনশট":"Actual app screenshot showing Send Money"} 
+         src={selectedMethod==="bkash"?"/payment-assets/bkash-send-money.webp":"/payment-assets/nagad-send-money.webp"}
+         width={330} height={222} loading="lazy"/>
+        <span className="ek-guide-tap" aria-hidden="true"><span className="ek-guide-pulse"/><span className="ek-guide-pointer">☝</span></span>
+       </div>}
        <ol className="provider-instructions" start={3}>
         <li><span>3</span>{bn?"সঠিক নম্বরে ৳"+amount+" পাঠিয়ে এই পেজে অপেক্ষা করুন। আবার টাকা পাঠাবেন না।":"Send exactly ৳"+amount+" to this number and keep this page open. Do not pay twice."}</li>
        </ol>
@@ -290,5 +287,16 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
   @media(max-width:480px){.ek-nagad-entry{min-height:570px;padding:22px 16px}.ek-nagad-actions{margin-top:12px}.ek-nagad-form input{font-size:20px}}
   `}</style>
   </div>
+ <style>{`
+ .ek-send-money-guide{position:relative;max-width:520px;margin:0 auto;overflow:hidden;border-radius:16px;background:white;}
+ .ek-send-money-guide img{display:block;width:100%;height:auto;object-fit:contain;max-height:none}
+ .ek-guide-tap{position:absolute;top:23%;left:11%;width:32px;height:32px;pointer-events:none;animation:ek-guide-move 2.7s ease-in-out infinite}
+ .ek-guide-pulse{position:absolute;inset:-6px;border:3px solid #db1d64;border-radius:50%;animation:ek-guide-pulse 2.7s ease-out infinite}
+ .ek-guide-pointer{position:absolute;left:10px;top:5px;font-size:26px;text-shadow:0 1px 4px white}
+ [data-provider="nagad"] .ek-guide-pulse{border-color:#e52a28}
+ @keyframes ek-guide-move{0%,18%,100%{transform:translate(38px,-32px);opacity:0}35%,75%{transform:translate(0,0);opacity:1}58%{transform:scale(.8)}}
+ @keyframes ek-guide-pulse{0%,35%,100%{opacity:0;transform:scale(.6)}49%{opacity:1;transform:scale(1)}73%{opacity:0;transform:scale(1.7)}}
+ @media(prefers-reduced-motion:reduce){.ek-guide-tap,.ek-guide-pulse{animation:none;opacity:1;transform:none}}
+`}</style>
  </main>;
 }
