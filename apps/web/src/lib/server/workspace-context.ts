@@ -41,7 +41,10 @@ export async function paymentContextFor(
  const environment=canonicalEnvironment(rawEnvironment);
  if(!environment || (workspace.mode!=="commerce"&&workspace.mode!=="both")) notFound();
  const permitted=await authorizedEnvironments(workspace.id,userId);
- const selected=shellOnly?(permitted.includes("sandbox")?"sandbox":permitted[0]):environment;
+ // The merchant UI has no environment switch for now. Never fall back to
+ // Sandbox when Live is unavailable: all sensitive actions stay authorized.
+ // const selected=shellOnly?(permitted.includes("sandbox")?"sandbox":permitted[0]):environment;
+ const selected=shellOnly?"live":environment;
  if(!selected||!permitted.includes(selected)) notFound();
  return {environment:selected,status:"active",availableEnvironments:permitted,liveOperational:false};
 }

@@ -35,12 +35,16 @@ export function sectionService(section: SectionKey, mode: "ai" | "commerce" | "b
 }
 export type PaymentEnvironment = "sandbox" | "live";
 export function canonicalEnvironment(raw: string | undefined | null): PaymentEnvironment | null {
-  if(raw == null || raw === "") return "sandbox";
+  if(raw == null || raw === "") return "live";
   return raw === "sandbox" || raw === "live" ? raw : null;
 }
-export function dashboardHref(locale: Locale, workspaceId: string, service: Service, section: SectionKey = "overview", environment: PaymentEnvironment = "sandbox") {
-  const base = `/${locale}/w/${workspaceId}/${service}/${section}`;
-  return service === "payments" ? `${base}?env=${environment}` : base;
+export function dashboardHref(locale: Locale, workspaceId: string, service: Service, section: SectionKey = "overview", environment: PaymentEnvironment = "live") {
+  const base = `/w/${workspaceId}/${service}/${section}`;
+  // Sandbox/Live URL selector deliberately paused. The authorized payment
+  // context resolves to Live server-side; keep the type for future reactivation.
+  // return service === "payments" ? `${base}?env=${environment}` : base;
+  void locale; void environment;
+  return base;
 }
 export function searchableNavigation(service: Service, query: string) {
   const normalized = query.trim().toLocaleLowerCase();

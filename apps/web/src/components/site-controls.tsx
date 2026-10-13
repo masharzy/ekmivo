@@ -26,8 +26,9 @@ export function SiteControls({locale,initialTheme}:{locale:"bn"|"en";initialThem
   try{localStorage.setItem("ekmivo-theme-preference",next)}catch{/*cookie remains authoritative*/}
  }
  useEffect(()=>{
+  // Language is an explicit user preference, never rewrite the cookie from
+  // an old/suspended dashboard render during client-side navigation.
   document.documentElement.lang=locale;
-  document.cookie=`ekmivo-locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
  },[locale]);
  function toggleLocale(){
   const next=locale==="bn"?"en":"bn";

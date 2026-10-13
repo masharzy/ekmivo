@@ -44,7 +44,14 @@ export function AuthForm({locale,mode}:{locale:Locale;mode:"login"|"register"}){
  const [errors,setErrors]=useState<FieldErrors>({});
  const [edited,setEdited]=useState<Partial<Record<Field,boolean>>>({});
  const [show,setShow]=useState(false);
+ // Keep inputs controlled so a failed server action cannot clear user-entered data.
+ const [values,setValues]=useState({name:"",email:"",password:"",confirm:""});
  const [length,setLength]=useState(0);
+ const change=(field:Field,value:string)=>{
+  setValues(previous=>({...previous,[field]:value}));
+  clear(field);
+  if(field==="password")setLength(value.length);
+ };
  const fieldError=(field:Field)=>errors[field]||(!edited[field]&&server.status==="error"?server.fields?.[field]:undefined);
  const clear=(field:Field)=>{setErrors(old=>({...old,[field]:undefined}));setEdited(old=>({...old,[field]:true}));};
  function validate(event:React.FormEvent<HTMLFormElement>){
@@ -62,12 +69,12 @@ export function AuthForm({locale,mode}:{locale:Locale;mode:"login"|"register"}){
   }else setErrors({});
  }
  const form=<form className="ek-auth-fields" action={formAction} noValidate onSubmit={validate}>
-  {!isLogin&&<label htmlFor="auth-full-name">{t.name}<input id="auth-full-name" name="name" autoComplete="name" maxLength={100} placeholder={t.name} onChange={()=>clear("name")} aria-invalid={!!fieldError("name")} aria-describedby={fieldError("name")?"auth-name-error":undefined}/>{fieldError("name")&&<small id="auth-name-error" role="status" className="ek-field-error">{fieldError("name")}</small>}</label>}
-  <label htmlFor="auth-email">{t.email}<input id="auth-email" name="email" type="email" inputMode="email" autoComplete="email" maxLength={254} placeholder="you@company.com" onChange={()=>clear("email")} aria-invalid={!!fieldError("email")} aria-describedby={fieldError("email")?"auth-email-error":undefined}/>{fieldError("email")&&<small id="auth-email-error" role="status" className="ek-field-error">{fieldError("email")}</small>}</label>
-  <label htmlFor="auth-password">{t.password}<span className="ek-auth-password"><input id="auth-password" name="password" type={show?"text":"password"} autoComplete={isLogin?"current-password":"new-password"} maxLength={256} onChange={e=>{clear("password");setLength(e.target.value.length)}} aria-invalid={!!fieldError("password")} aria-describedby={fieldError("password")?"auth-password-error":undefined}/><button type="button" onClick={()=>setShow(v=>!v)} aria-label={show?t.hide:t.show}>{show?t.hide:t.show}</button></span>{fieldError("password")&&<small id="auth-password-error" role="status" className="ek-field-error">{fieldError("password")}</small>}</label>
+  {!isLogin&&<label htmlFor="auth-full-name">{t.name}<input id="auth-full-name" name="name" autoComplete="name" maxLength={100} placeholder={t.name} value={values.name} onChange={event=>change("name",event.target.value)} aria-invalid={!!fieldError("name")} aria-describedby={fieldError("name")?"auth-name-error":undefined}/>{fieldError("name")&&<small id="auth-name-error" role="status" className="ek-field-error">{fieldError("name")}</small>}</label>}
+  <label htmlFor="auth-email">{t.email}<input id="auth-email" name="email" type="email" inputMode="email" autoComplete="email" maxLength={254} placeholder="you@company.com" value={values.email} onChange={event=>change("email",event.target.value)} aria-invalid={!!fieldError("email")} aria-describedby={fieldError("email")?"auth-email-error":undefined}/>{fieldError("email")&&<small id="auth-email-error" role="status" className="ek-field-error">{fieldError("email")}</small>}</label>
+  <label htmlFor="auth-password">{t.password}<span className="ek-auth-password"><input id="auth-password" name="password" type={show?"text":"password"} autoComplete={isLogin?"current-password":"new-password"} maxLength={256} value={values.password} onChange={event=>change("password",event.target.value)} aria-invalid={!!fieldError("password")} aria-describedby={fieldError("password")?"auth-password-error":undefined}/><button type="button" onClick={()=>setShow(v=>!v)} aria-label={show?t.hide:t.show}>{show?t.hide:t.show}</button></span>{fieldError("password")&&<small id="auth-password-error" role="status" className="ek-field-error">{fieldError("password")}</small>}</label>
   {!isLogin&&<>
    <div className="ek-auth-strength" aria-label={locale==="bn"?"পাসওয়ার্ডে কমপক্ষে ১২ অক্ষর থাকতে হবে":"Use at least 12 characters"}><div className={length>=12?"has-password":""}/><div className={length>=12?"has-password":""}/><div className={length>=12?"has-password":""}/><div className={length>=12?"has-password":""}/><span>{length>=12?(locale==="bn"?"দৈর্ঘ্য ঠিক আছে":"Length requirement met"):(locale==="bn"?"কমপক্ষে ১২ অক্ষর":"At least 12 characters")}</span></div>
-   <label htmlFor="auth-confirm">{t.confirm}<input id="auth-confirm" name="confirm" type={show?"text":"password"} autoComplete="new-password" maxLength={256} onChange={()=>clear("confirm")} aria-invalid={!!fieldError("confirm")} aria-describedby={fieldError("confirm")?"auth-confirm-error":undefined}/>{fieldError("confirm")&&<small id="auth-confirm-error" role="status" className="ek-field-error">{fieldError("confirm")}</small>}</label>
+   <label htmlFor="auth-confirm">{t.confirm}<input id="auth-confirm" name="confirm" type={show?"text":"password"} autoComplete="new-password" maxLength={256} value={values.confirm} onChange={event=>change("confirm",event.target.value)} aria-invalid={!!fieldError("confirm")} aria-describedby={fieldError("confirm")?"auth-confirm-error":undefined}/>{fieldError("confirm")&&<small id="auth-confirm-error" role="status" className="ek-field-error">{fieldError("confirm")}</small>}</label>
   </>}
   {isLogin&&<Link href="/forgot-password" className="ek-auth-forgot">{t.forgot} ↗</Link>}
   {server.status==="error"&&<p className="ek-form-error" role="alert">{server.message}</p>}

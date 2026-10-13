@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { sections, type SectionKey } from "../lib/dashboard-sections";
 import { dashboardHref, navigation, searchableNavigation, searchableBusinesses, serviceEnabled, serviceNames, sectionInService, type Locale, type Service, type PaymentEnvironment } from "../lib/dashboard-navigation";
@@ -13,10 +13,12 @@ type Space = { id: string; name: string; mode: "ai" | "commerce" | "both" | "off
 type PaymentContext = { environment: PaymentEnvironment; status: "active" | "suspended"; availableEnvironments: PaymentEnvironment[]; liveOperational: false };
 type Props = { locale: Locale; service: Service; section: SectionKey; workspace: Space; spaces: Space[]; userName: string; platformAdmin: boolean; theme: "light" | "dark" | "system"; paymentContext?: PaymentContext; children: React.ReactNode; logout: React.ReactNode };
 const memoryKey=(workspaceId:string,service:Service)=>`ekmivo-last:${workspaceId}:${service}`;
-const environmentKey=(workspaceId:string)=>`ekmivo-last-env:${workspaceId}`;
-function rememberedEnvironment(workspaceId:string):PaymentEnvironment{
- try{return window.localStorage.getItem(environmentKey(workspaceId))==="live"?"live":"sandbox";}catch{return "sandbox";}
-}
+// Paused: Sandbox/Live preference in merchant UI.
+// const environmentKey=(workspaceId:string)=>`ekmivo-last-env:${workspaceId}`;
+// Paused until sandbox UI is restored.
+// function rememberedEnvironment(workspaceId:string):PaymentEnvironment{
+//  try{return window.localStorage.getItem(environmentKey(workspaceId))==="live"?"live":"sandbox";}catch{return "sandbox";}
+// }
 function rememberedSection(workspaceId:string,service:Service): SectionKey {
  try {
   const stored=window.localStorage.getItem(memoryKey(workspaceId,service));
@@ -26,11 +28,13 @@ function rememberedSection(workspaceId:string,service:Service): SectionKey {
 }
 export function DashboardFrame({ locale, service, section:initialSection, workspace, spaces, userName, platformAdmin, theme, paymentContext, children, logout }: Props) {
  const bn=locale==="bn",router=useRouter(),pathname=usePathname();
- const query=useSearchParams(),requestedSection=pathname.split("/")[5];
+ // Locale-neutral visible URL, with tolerance for old prefixed URLs.
+ const requestedSection=pathname.match(/\/(?:bn\/|en\/)?w\/[^/]+\/(?:ai|payments)\/([^/?#]+)/)?.[1];
  const section=sectionInService(service,requestedSection??"")?requestedSection as SectionKey:initialSection;
- const requestedEnvironment=query.getAll("env");
- const selectedEnvironment=requestedEnvironment.length===1?requestedEnvironment[0]:undefined;
- const environment=paymentContext?.availableEnvironments.includes(selectedEnvironment as PaymentEnvironment)?selectedEnvironment as PaymentEnvironment:paymentContext?.environment??"sandbox";
+ // Browser environment selection is disabled; the server-authorized Live realm wins.
+ // const requestedEnvironment=query.getAll("env");
+ // const selectedEnvironment=requestedEnvironment.length===1?requestedEnvironment[0]:undefined;
+ const environment:PaymentEnvironment=paymentContext?.environment??"live";
  const [mobileOpen,setMobileOpen]=useState(false);
  const [businessQuery,setBusinessQuery]=useState("");
  const [sidebarQuery,setSidebarQuery]=useState("");
@@ -75,10 +79,11 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
  },[pathname,section,workspace.id,service,environment]);
  // The visible, server-authorized environment becomes the preference only
  // after routing commits. A cancelled draft dialog must never persist a new env.
- useEffect(()=>{
-  if(service!=="payments")return;
-  try{window.localStorage.setItem(environmentKey(workspace.id),environment);}catch{/* Optional preference. */}
- },[service,workspace.id,environment]);
+ // Paused: Sandbox/Live selection memory.
+ // useEffect(()=>{
+ //  if(service!=="payments")return;
+ //  try{window.localStorage.setItem(environmentKey(workspace.id),environment);}catch{/* Optional preference. */}
+ // },[service,workspace.id,environment]);
  useEffect(()=>{
   const d=drawer.current;
   if(mobileOpen && d && !d.open){d.showModal();mobileDrawerWasOpen.current=true;}
@@ -185,14 +190,14 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
   if(target===service)return;
   if(!serviceEnabled(target,workspace.mode))return;
   const remembered=rememberedSection(workspace.id,target);
-  goTo(workspace.id,target,target==="payments"?rememberedEnvironment(workspace.id):environment,remembered);
+  goTo(workspace.id,target,environment,remembered);
  };
  const switchBusiness=(target:Space)=>{
   if(target.id===workspace.id){setSearchOpen(false);setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;return;}
   if(target.mode==="off"){
    setSearchOpen(false);
    setMobileOpen(false);
-   const next=`/${locale}/w/${target.id}/dashboard`;
+   const next=`/w/${target.id}/dashboard`;
    // Even a disabled product has a guarded destination. Never bypass an
    // active unsaved draft when switching to a business with both products off.
    if(activeDrafts().length){setBlockedRoute(next);setDraftError("");return;}
@@ -200,7 +205,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
    return;
   }
   const chosen=serviceEnabled(service,target.mode)?service:(target.mode==="ai"?"ai":"payments");
-  goTo(target.id,chosen,chosen==="payments"?rememberedEnvironment(target.id):environment,rememberedSection(target.id,chosen));
+  goTo(target.id,chosen,environment,rememberedSection(target.id,chosen));
  };
  const nav=(key:SectionKey)=>{
   goTo(workspace.id,service,environment,key);
@@ -216,7 +221,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
  };
  const sidebar=(mobile=false)=><>
   <div className="ds-brand-row">
-   <Link href={`/${locale}`} className="ek-wordmark">ekmivo<span>.</span></Link>
+   <Link href="/" className="ek-wordmark">ekmivo<span>.</span></Link>
    <span className="ds-product-tag">{service==="ai"?"AI":"PAY"}</span>
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
@@ -226,7 +231,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
     <label className="ds-switch-search"><span className="sr-only">{bn?"ব্যবসা খুঁজুন":"Find business"}</span><input value={businessQuery} onChange={event=>setBusinessQuery(event.target.value)} placeholder={bn?"ব্যবসা খুঁজুন…":"Search businesses…"} /></label>
     {visibleBusinesses.map(space=><button key={space.id} type="button" aria-current={space.id===workspace.id?"true":undefined} onClick={()=>switchBusiness(space)}><span className="ds-business-avatar">{space.name.slice(0,1).toUpperCase()}</span><span><strong>{space.name}</strong><small>{roleNames[space.role][locale]}{space.id===workspace.id?(bn?" · বর্তমান":" · Current"):""}</small></span>{space.id===workspace.id&&<Icon name="check"/>}</button>)}
     {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No businesses match"}</p>}
-    <Link href={`/${locale}/workspaces`} onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"ব্যবসা পরিচালনা / নতুন ব্যবসা":"Manage / create businesses"}</Link>
+    <Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"ব্যবসা পরিচালনা / নতুন ব্যবসা":"Manage / create businesses"}</Link>
    </div>
   </details>
   <label className="ds-nav-search"><Icon name="search"/><span className="sr-only">{bn?"মেনু খুঁজুন":"Find a page"}</span><input value={sidebarQuery} onChange={event=>setSidebarQuery(event.target.value)} placeholder={bn?"মেনু খুঁজুন…":"Find a page…"}/></label>
@@ -239,7 +244,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
    {!groups.length&&<p className="ds-search-empty" role="status">{bn?"কোনো মেনু পাওয়া যায়নি।":"No matching pages."}</p>}
   </nav>
   <div className="ds-sidebar-foot">
-   {platformAdmin&&<Link href={`/${locale}/admin`}><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
+   {platformAdmin&&<Link href="/admin"><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
    {logout}
    <div className="ds-signed-in"><span className="ds-person-avatar">{userName.slice(0,1).toUpperCase()}</span><span><strong>{userName}</strong><small>{bn?"আপনার অ্যাকাউন্ট":"Your account"}</small></span></div>
   </div>
@@ -267,6 +272,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
        <p className="ds-service-note">{bn?"ব্যবসা অপরিবর্তিত থাকবে; আগের পৃষ্ঠা মনে রাখা হবে।":"Business stays selected. Your last page is remembered."}</p>
       </div>
      </details>
+     {/* Paused Sandbox/Live picker (restore if public sandbox is revived).
      {service==="payments"&&<label className="ds-environment-picker">
       <span className="sr-only">{bn?"পেমেন্ট পরিবেশ":"Payment environment"}</span>
       <select value={environment} onChange={event=>{
@@ -280,6 +286,8 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
        {(["sandbox","live"] as PaymentEnvironment[]).map(item=><option key={item} value={item} disabled={!paymentContext?.availableEnvironments.includes(item)}>{item==="sandbox"?"Sandbox":"Live"}</option>)}
       </select>
      </label>}
+
+     */}
     </div>
     <div className="ds-topbar-tools">
      <button type="button" className="ds-global-search-button" aria-label={bn?"পৃষ্ঠা বা ব্যবসা খুঁজুন":"Search pages or businesses"} onClick={()=>{searchReturnFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setSearchOpen(true);setGlobalQuery("");setActiveResult(0);}}><Icon name="search"/><span>{bn?"খুঁজুন":"Search"}</span><kbd>⌘ K</kbd></button>
@@ -293,19 +301,22 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
       <summary aria-label={bn?"অ্যাকাউন্ট মেনু":"Account menu"} title={userName}><span className="ds-person-avatar">{userName.slice(0,1).toUpperCase()}</span></summary>
       <div className="ds-profile-popover">
        <strong>{userName}</strong><small>{workspace.name}</small>
-       <Link href={`/${locale}/account`}><Icon name="settings"/>{bn?"অ্যাকাউন্ট ও নিরাপত্তা":"Account & security"}</Link>
+       <Link href="/account"><Icon name="settings"/>{bn?"অ্যাকাউন্ট ও নিরাপত্তা":"Account & security"}</Link>
        <Link href={contextHref("settings")}><Icon name="settings"/>{bn?"ওয়ার্কস্পেস সেটিংস · নির্মাণাধীন":"Workspace settings · In development"}</Link>
        <Link href={contextHref("help")}><Icon name="help"/>{bn?"সাহায্য":"Help"}</Link>
-       {platformAdmin&&<Link href={`/${locale}/admin`}><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
+       {platformAdmin&&<Link href="/admin"><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
        {logout}
       </div>
      </details>
     </div>
    </header>
+   {/* Paused Sandbox status banner.
    {service==="payments"&&environment==="sandbox"&&<div className="ds-env-banner" role="status">
     <strong>{bn?"Sandbox · আলাদা পরীক্ষার পরিবেশ":"Sandbox · Isolated test environment"}</strong>
     <span>{bn?"এটি পরীক্ষার পরিবেশ। আসল টাকা পাঠাবেন না।":"Test environment only. Do not send real money."}</span>
    </div>}
+   */}
+
    <div className="ds-breadcrumb"><span>{workspace.name}</span><Icon name="chevron"/><span>{serviceNames[service][locale]}</span><Icon name="chevron"/><strong>{sections[section][locale]}</strong></div>
    {isNavigating&&<div className="ds-navigation-progress" role="status">{bn?"পৃষ্ঠা খুলছে…":"Opening page…"}</div>}
    <main id="dashboard-content" className="ds-content" tabIndex={-1} aria-busy={isNavigating}>{children}</main>
