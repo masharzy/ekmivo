@@ -184,20 +184,27 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter,r *http.Request,raw
    "config_version":result.ConfigVersion,
    "forwarder":true,"forward_sources":allowedSources,
   }
-  for i:=range result.Bindings{
-   a:=&result.Bindings[i];rule,ok:=s.Pipeline.Rules[a.ParserID]
-   if !ok||!rule.Approved||rule.Source!=a.Source||(rule.SandboxOnly&&realm!="sandbox"){
-    fail(w,503,"APPROVED_SOURCE_UNAVAILABLE");return
+  // Legacy per-account source bindings are optional compatibility metadata.
+  // A revoked/unsupported old parser must not disable the new physical SMS
+  // forwarding path, which depends only on the signed phone + source allowlist.
+  approvedBindings:=[]phoneAssociation{}
+  for _,binding:=range result.Bindings {
+   rule,ok:=s.Pipeline.Rules[binding.ParserID]
+   if !ok||!rule.Approved||rule.Source!=binding.Source||(rule.SandboxOnly&&realm!="sandbox"){
+    continue
    }
    pat:=rule.CapturePattern;if pat==""{pat=rule.Pattern}
-   a.CapturePattern=strings.ReplaceAll(pat,"(?P<","(?<")
+   binding.CapturePattern=strings.ReplaceAll(pat,"(?P<","(?<")
    var method,label,suffix string
-   if err:=pool.QueryRow(r.Context(),"SELECT a.method,c.label,a.display_suffix FROM financial_receiving_accounts a JOIN pg06_account_configuration c ON c.account_id=a.id WHERE a.id=$1::uuid AND a.workspace_id=$2::uuid AND a.environment=$3 AND c.disabled_at IS NULL",a.AccountID,ws,realm).Scan(&method,&label,&suffix);err!=nil{
-    fail(w,503,"RECEIVING_ACCOUNT_UNAVAILABLE");return
+   if err:=pool.QueryRow(r.Context(),
+     "SELECT a.method,c.label,a.display_suffix FROM financial_receiving_accounts a JOIN pg06_account_configuration c ON c.account_id=a.id WHERE a.id=$1::uuid AND a.workspace_id=$2::uuid AND a.environment=$3 AND c.disabled_at IS NULL",
+     binding.AccountID,ws,realm).Scan(&method,&label,&suffix);err!=nil{
+    continue
    }
-   a.Method=method;a.Label=label;a.DisplaySuffix=suffix
+   binding.Method=method;binding.Label=label;binding.DisplaySuffix=suffix
+   approvedBindings=append(approvedBindings,binding)
   }
-  forwarding["bindings"]=result.Bindings
+  forwarding["bindings"]=approvedBindings
   write(w,200,forwarding);return
  }
  if r.PathValue("action")=="phone-heartbeat" {

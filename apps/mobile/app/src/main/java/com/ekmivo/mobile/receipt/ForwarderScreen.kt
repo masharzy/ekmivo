@@ -134,11 +134,12 @@ fun ForwarderScreen(bn:Boolean){
     Column(
      Modifier.fillMaxWidth().padding(vertical=36.dp,horizontal=24.dp),
      verticalArrangement=Arrangement.spacedBy(13.dp),horizontalAlignment=Alignment.CenterHorizontally){
-     Surface(shape=CircleShape,color=if(serverCheck=="revoked") MaterialTheme.colorScheme.error.copy(alpha=.12f)
-      else Color(0xFF289667).copy(alpha=.12f)){
-      Icon(if(serverCheck=="revoked")Icons.Outlined.WarningAmber else Icons.Outlined.CheckCircleOutline,
+     val healthy=serverCheck=="connected"&&permissionGranted
+     Surface(shape=CircleShape,color=if(healthy) Color(0xFF289667).copy(alpha=.12f)
+      else MaterialTheme.colorScheme.error.copy(alpha=.12f)){
+      Icon(if(healthy)Icons.Outlined.CheckCircleOutline else Icons.Outlined.WarningAmber,
        contentDescription=null,modifier=Modifier.padding(19.dp).size(43.dp),
-       tint=if(serverCheck=="revoked")MaterialTheme.colorScheme.error else Color(0xFF289667))
+       tint=if(healthy)Color(0xFF289667) else MaterialTheme.colorScheme.error)
      }
      Text(
       when(serverCheck){
