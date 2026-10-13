@@ -101,6 +101,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
       </div>
      </div>
      {doc.environment==="sandbox"&&<div className="customer-pay-warning" role="note">{t("SANDBOX · Do not send real money","স্যান্ডবক্স · আসল টাকা পাঠাবেন না")}</div>}
+     {doc.reference&&<div className="customer-pay-reference"><strong>{doc.reference}</strong></div>}
      <section className="customer-pay-body" aria-label={t("Choose a payment method","পেমেন্ট মাধ্যম বাছাই")}>
       <div className="customer-pay-section-title">{t("Mobile Banking","মোবাইল ব্যাংকিং")}</div>
       <div className="customer-pay-methods">
