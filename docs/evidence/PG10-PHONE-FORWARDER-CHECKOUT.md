@@ -1,0 +1,6 @@
+# PG10 physical-forwarder checkout follow-up
+- Root cause: pairing/health moved to `pg06_phones` in 0047; installed `pg10_checkout_view` and `pg10_lock_route` still checked only `pg06_devices`. Kotlin WorkManager polls health every 15m but SQL used a 5m threshold.
+- `0048_pg10_phone_forwarder_checkout.sql` updates the existing financial-realm functions without altering confirmed attempts or modifying any funds. Both sandbox and live realms require explicit operator migration. Requires prior 0047.
+- Physical routes need a claimed, unrevoked, permission-approved signed handset with a heartbeat less than 20m old AND an enabled matching receiving account. The Go backend additionally requires a production-approved provider parser that captures the real receiving account number; a paired phone, sender hint or one configured receiver alone is insufficient.
+- Full five-field matching, deduplication, original transaction timestamp, queued evidence, replays and merchant webhooks remain owned by existing PG06/PG07 code and need real provider/device acceptance.
+- **Outstanding:** Verify production database match for public checkout links, configure approved receiver-aware provider SMS formats from consented genuine samples, and run real handset/provider tests. Never ask customers to send funds while `verification_available=false`.

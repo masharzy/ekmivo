@@ -7,6 +7,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
 	"net/http"
+ "regexp"
+ "strings"
 )
 
 // The opaque capability resolves the realm; a public caller cannot supply it.
@@ -89,16 +91,31 @@ func (s *Service) liveMethods(raw []byte) map[string]bool {
 			Method string `json:"method"`
 			Source string `json:"source"`
 			Parser string `json:"parser_id"`
+            Forwarder bool `json:"forwarder"`
 		} `json:"sources"`
 	}
 	if json.Unmarshal(raw, &data) != nil {
 		return methods
 	}
 	for _, source := range data.Sources {
-		rule, ok := s.Pipeline.Rules[source.Parser]
-		if ok && rule.Approved && !rule.SandboxOnly && rule.Method == source.Method && rule.Source == source.Source {
-			methods[source.Method] = true
-		}
-	}
+  if source.Forwarder {
+   // Pairing or sender names do not authenticate a payment. An approved
+   // production parser must capture the actual receiving identity before a
+   // physical forwarder is eligible to accept customer payments.
+   for _, rule := range s.Pipeline.Rules {
+    if !rule.Approved || rule.SandboxOnly || rule.Method != source.Method ||
+     !strings.EqualFold(rule.Source,source.Source) {continue}
+    expression,err:=regexp.Compile(rule.Pattern)
+    if err==nil && expression.SubexpIndex("receiving")>=0 {
+     methods[source.Method]=true
+     break
+    }
+   }
+   continue
+  }
+  rule,ok:=s.Pipeline.Rules[source.Parser]
+  if ok && rule.Approved && !rule.SandboxOnly &&
+   rule.Method==source.Method && rule.Source==source.Source {methods[source.Method]=true}
+ }
 	return methods
 }
