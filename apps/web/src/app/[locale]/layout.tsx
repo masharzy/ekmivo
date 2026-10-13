@@ -3,10 +3,10 @@ import type { Metadata } from "next";
 export async function generateMetadata({ params }: { params: Promise<{locale:string}> }): Promise<Metadata> {
  const {locale}=await params;
  const bn=locale==="bn";
- const title=bn?"Ekmivo — মেসেজ থেকে অর্ডার, পেমেন্ট থেকে ডেলিভারি":"Ekmivo — From conversations to commerce";
+ const title=bn?"Ekmivo — সহজ পেমেন্ট, স্মার্ট কাস্টমার যোগাযোগ":"Ekmivo — Payments and AI, made clearer";
  const description=bn
-  ?"AI কথোপকথন, কমার্স, স্বয়ংক্রিয় পেমেন্ট যাচাই ও ডেলিভারি—দুটি স্বাধীন সেবা, একটি সংযুক্ত ব্যবসার অভিজ্ঞতা। Ekmivo প্রথম রিলিজের প্রিভিউ।"
-  :"Explore the future Ekmivo workspace for AI communication, orders, evidence-based payment verification and fulfilment. Product preview, not a live business integration.";
+  ?"Ekmivo-তে পেমেন্ট লিংক, প্রমাণভিত্তিক পেমেন্ট যাচাই এবং পরিকল্পিত AI কাস্টমার যোগাযোগের সুবিধা। দুটি স্বাধীন সেবা, প্রয়োজন অনুযায়ী ব্যবহার করুন।"
+   :"Create payment links and verify eligible mobile-wallet payments with Ekmivo. Explore the upcoming AI workspace for customer conversations and automation.";
  return {title,description,openGraph:{title,description,type:"website",siteName:"Ekmivo"}};
 }
 

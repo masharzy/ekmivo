@@ -1,3 +1,5 @@
+> **Latest landing-page direction — 2026-10-13, supersedes the old public V3 split-hero specification below:** The owner selected a centered, full-height typographic hero with no two-column hero image; editorial cream/light-yellow/powder-blue/blush brush marks and tilted sketch-border cards in Light mode; **strict Vercel-like black, white and grayscale in Dark mode**. The landing page is concise product discovery with two clearly separated services (Payments and AI), one interactive workflow, benefit cards, audience, integrity/trust, honest service readiness, and FAQ. Preserve EN/BN, reduced motion, mobile, and existing shared header/footer. Never invent customer logos, usage metrics, testimonials, prices or unsupported provider integrations. The operational UI design remains as otherwise documented here.
+
 # Ekmivo design system
 
 Version 5 · 2026-10-11 · Same Ink & Bone palette; payment-first product/environment UX specification.
