@@ -250,7 +250,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
         <img alt={bn?"সেন্ড মানি অপশন দেখানো আসল অ্যাপ স্ক্রিনশট":"Actual app screenshot showing Send Money"} 
          src={selectedMethod==="bkash"?"/payment-assets/bkash-send-money.webp":"/payment-assets/nagad-send-money.webp"}
          width={330} height={222} loading="lazy"/>
-        <span className="ek-guide-tap" aria-hidden="true"><span className="ek-guide-pulse"/><span className="ek-guide-pointer">☝</span></span>
+        
        </div>}
        <ol className="provider-instructions" start={3}>
         <li><span>3</span>{bn?"সঠিক নম্বরে ৳"+amount+" পাঠিয়ে এই পেজে অপেক্ষা করুন। আবার টাকা পাঠাবেন না।":"Send exactly ৳"+amount+" to this number and keep this page open. Do not pay twice."}</li>
@@ -283,20 +283,14 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
   .ek-nagad-actions button{background:white;color:#aa0c14;border:0;border-radius:7px;font-weight:800;font-size:20px;padding:11px 22px;min-width:116px;cursor:pointer}
   .ek-nagad-actions button:disabled{opacity:.55}
   .ek-nagad-footer-brand{margin-top:auto;display:flex;justify-content:center;padding-top:48px}
-  .ek-nagad-footer-brand svg{width:165px;height:70px;filter:brightness(0) invert(1)}
+  .ek-nagad-footer-brand svg{width:190px;height:74px;filter:none!important} .ek-nagad-footer-brand{background:#fff;border-radius:14px;width:max-content;max-width:100%;padding:10px 14px;margin-left:auto;margin-right:auto}
   @media(max-width:480px){.ek-nagad-entry{min-height:570px;padding:22px 16px}.ek-nagad-actions{margin-top:12px}.ek-nagad-form input{font-size:20px}}
   `}</style>
   </div>
  <style>{`
  .ek-send-money-guide{position:relative;max-width:520px;margin:0 auto;overflow:hidden;border-radius:16px;background:white;}
  .ek-send-money-guide img{display:block;width:100%;height:auto;object-fit:contain;max-height:none}
- .ek-guide-tap{position:absolute;top:23%;left:11%;width:32px;height:32px;pointer-events:none;animation:ek-guide-move 2.7s ease-in-out infinite}
- .ek-guide-pulse{position:absolute;inset:-6px;border:3px solid #db1d64;border-radius:50%;animation:ek-guide-pulse 2.7s ease-out infinite}
- .ek-guide-pointer{position:absolute;left:10px;top:5px;font-size:26px;text-shadow:0 1px 4px white}
- [data-provider="nagad"] .ek-guide-pulse{border-color:#e52a28}
- @keyframes ek-guide-move{0%,18%,100%{transform:translate(38px,-32px);opacity:0}35%,75%{transform:translate(0,0);opacity:1}58%{transform:scale(.8)}}
- @keyframes ek-guide-pulse{0%,35%,100%{opacity:0;transform:scale(.6)}49%{opacity:1;transform:scale(1)}73%{opacity:0;transform:scale(1.7)}}
- @media(prefers-reduced-motion:reduce){.ek-guide-tap,.ek-guide-pulse{animation:none;opacity:1;transform:none}}
+ .ek-send-money-guide img{max-width:100%;border-radius:12px}
 `}</style>
  </main>;
 }

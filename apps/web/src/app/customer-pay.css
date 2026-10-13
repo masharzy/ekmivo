@@ -83,8 +83,8 @@
 .provider-flow-merchant span{font-size:10px;color:#8e93a0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:295px}
 .provider-flow-amount{font-size:24px;font-weight:850;white-space:nowrap}
 .provider-flow-content{min-height:380px;background:var(--provider-accent);color:#fff}
-.provider-flow[data-provider=nagad] .provider-flow-brand{background:#991809;min-height:80px}
-.provider-flow[data-provider=nagad] .provider-flow-brand svg{filter:brightness(0) invert(1)}
+.provider-flow[data-provider=nagad] .provider-flow-brand{background:#fff;min-height:90px}
+.provider-flow[data-provider=nagad] .provider-flow-brand svg{filter:none}
 .provider-flow[data-provider=nagad] .provider-flow-invoice{background:linear-gradient(135deg,#991809,#b61114);color:#fff;border-top:1px solid #ffffff35}
 .provider-flow[data-provider=nagad] .provider-flow-merchant span{color:#ffe0da}
 .provider-flow[data-provider=nagad] .provider-flow-shopicon{background:#ffffff25;color:#fff}
