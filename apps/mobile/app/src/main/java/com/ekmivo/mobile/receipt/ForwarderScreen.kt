@@ -74,6 +74,26 @@ fun ForwarderScreen(bn:Boolean){
    delay(4000)
   }
  }
+ fun recoverMissed(){
+  busy=true
+  scope.launch{
+   try {
+    val recovered=withContext(Dispatchers.IO){ReceiptInboxRecovery.recover(context)}
+    message=if(bn)"$recovered টি আগের SMS queue-তে যোগ হয়েছে।"
+      else "$recovered earlier SMS added to the forwarding queue."
+    ReceiptSyncWorker.schedule(context)
+   }catch(_:SecurityException){
+    message=if(bn)"SMS history পড়ার অনুমতি নেই।" else "SMS history permission unavailable."
+   }catch(_:Exception){
+    message=if(bn)"আগের SMS উদ্ধার করা যায়নি।" else "Could not recover earlier SMS."
+   }finally{busy=false}
+  }
+ }
+ val readOldSms=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->
+  if(granted)recoverMissed()
+  else message=if(bn)"পুরোনো SMS উদ্ধার করতে ঐচ্ছিক READ_SMS অনুমতি প্রয়োজন।"
+    else "Optional READ_SMS permission is needed to recover missed messages."
+ }
  val allow=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->
   permissionGranted=granted
   if(granted){ReceiptSyncWorker.schedule(context);message=""}
@@ -155,6 +175,15 @@ fun ForwarderScreen(bn:Boolean){
        message=if(bn)"নেটওয়ার্ক থাকলে পুনরায় পাঠানো হবে" else "Retry scheduled for when connected"
       }){Text(if(bn)"আবার পাঠান" else "Retry sync")}
      }
+     OutlinedButton(enabled=!busy&&serverCheck!="revoked",modifier=Modifier.fillMaxWidth(),onClick={
+      if(ContextCompat.checkSelfPermission(context,Manifest.permission.READ_SMS)==PackageManager.PERMISSION_GRANTED)recoverMissed()
+      else readOldSms.launch(Manifest.permission.READ_SMS)
+     }) {
+      Text(if(bn)"বন্ধ থাকার সময়ের SMS উদ্ধার করুন" else "Recover missed SMS from inbox")
+     }
+     Text(if(bn)"এটি ঐচ্ছিক; permission দিলে শুধু গত ৭২ ঘণ্টার প্রাসঙ্গিক payment SMS উদ্ধার করার চেষ্টা হবে। ফোন সম্পূর্ণ বন্ধ থাকলে তখনই SMS পড়া সম্ভব নয়।"
+       else "Optional: with your permission, check up to 72 hours of recent provider receipts. Android cannot capture messages while the phone is powered off.",
+       style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
      if(syncError.isNotEmpty())
       Text(if(bn)"শেষ সিঙ্কে সমস্যা: $syncError" else "Sync attention: $syncError",
        color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)

@@ -101,7 +101,7 @@ BEGIN
    OR original_time IS NULL OR original_time>now()+interval '5 minutes'
    OR amount IS NULL OR amount<=0 OR precision_name NOT IN ('second','minute')
    OR NOT EXISTS(SELECT 1 FROM financial_receiving_accounts a
-    JOIN pg06_account_configuration c ON c.account_id=a.id AND c.disabled_at IS NULL
+    JOIN pg06_account_configuration c ON c.account_id=a.id
     WHERE a.id=receiving AND a.workspace_id=p.workspace_id
     AND a.environment=p.environment AND a.method=method_name)
   THEN RAISE EXCEPTION 'invalid authoritative receipt' USING ERRCODE='22023';END IF;

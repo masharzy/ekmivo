@@ -1,0 +1,47 @@
+# PG06 / PG07 / PG11: phone SMS, offline recovery and delayed refund handoff
+
+Implementation PR: #19. Source only, NOT device/provider verified or deployed.
+
+## Owner decisions (2026-10-13)
+
+- Payment Methods / SMS devices count: account/device quotas are **plan-managed in future**. Plans are OFF during this implementation. No "unlimited plan" contract or hard-coded infinite entitlement.
+- Phone app does not display SIM slot selector or require mapped receiver/SIM account numbers.
+- Merchant pairs multiple Android phones via current one-time code/QR. Signed forwarding collects only allowlisted bKash/Nagad/Rocket payment SMS, not arbitrary inbox/OTP.
+- The backend uses **the signed phone's enrolled workspace** and matches the original receipt's full payer, amount, provider and original transaction timestamp to exactly one immutable checkout attempt. The displayed/selected receiving number does NOT disqualify a customer who paid another account owned by that merchant.
+- Server attributes received funds to the matching *attempt's* receiving-account route for existing financial schema compatibility; that account is **NOT evidence of the actual SIM recipient**. Do not represent inferred account as provider-confirmed receiver.
+- Provider message ID (TrxID/TxnID) is internal dedup data. Customer does not type TrxID.
+- If original transfer time is in the issued attempt window but receipt processes **after** intent expiry/cancellation, create one seller-managed refund request. Do not auto-send money and do not falsely mark payment verified. The seller's return is independent/external and seller-reported return is not provider confirmation.
+- Duplicate SMS/ambiguous matching never pays two attempts.
+
+## Android capture and lifetime
+
+- Android SMS_RECEIVED_ACTION can reach the manifest receiver while the app UI is closed; signed evidence is put into an encrypted SQLite outbox before WorkManager sends it.
+- Unique constrained network WorkManager resends pending items in order and deletes them only after a durable backend ACK. Network loss does not delete the queue; the UI displays `Waiting to send`, `Forwarded`, sender/amount/time hints, backlog, errors and Retry. These are **transport**, not financial verification results.
+- Boot receiver schedules WorkManager again after BOOT_COMPLETED or MY_PACKAGE_REPLACED.
+- An app **cannot execute while the phone is powered off**, and Android force-stop/OEM background limits can prevent capture/restart. The optional `Recover missed SMS from inbox` action requests restricted READ_SMS permission **only on user tap**, scans a bounded recent inbox window and forwards only allowlisted payment-looking provider messages. It is not a guarantee of lossless history.
+- `READ_SMS` is policy-restricted for Play distribution; owner must review eligibility and use approved capabilities/distribution. Tests on several OEMs are mandatory.
+- Supported built-in server receipt grammars: two owner-supplied formats (bKash with optional Ref, Nagad with Ref). Rocket and other provider message variants can forward, but remain unverified/pending until a reviewed grammar based on actual consented receipts exists.
+
+## Migration and operations
+
+- 0051_pg06_late_sms_refund.sql is an additive migration for **each independent Sandbox and Live financial DB** after prerequisite 0045–0050 and PG11. Requires the migration-owner credentials and explicit `PG06_LATE_SMS_REFUND_ALLOW_MIGRATION=true` with `PG06_LATE_SMS_REFUND_MIGRATION_FILE=infra/migrations/0051_pg06_late_sms_refund.sql`. It must not touch auth/control DB.
+- This SQL intentionally extends PG11 refund requests to permit a receipt-backed claim with no successful payment row; the normal seller refund UI lists both kinds, and only a seller can report external return.
+- No migration has been applied by this PR. No real money was transferred or refunded in testing.
+
+## Manual verification / blockers
+
+- [ ] Build Kotlin APK and verify pair, RECEIVE_SMS consent, relevant SMS only, background stopped UI, reboot, Wi-Fi/cellular outage, retry, no duplicated ACK and encrypted history on two actual devices.
+- [ ] Exercise optional READ_SMS consent and bounded recovery, denied permission, Android force-stop and Play policy review. Do not claim impossible powered-off execution.
+- [ ] Apply new 0051 to disposable isolated Sandbox and Live test DBs. Test SQL rollback, role grants, no cross-tenant/environment leakage.
+- [ ] Controlled provider receipt samples: bKash with/without Ref, Nagad, Rocket (format missing), varying Android sender labels and time precision. Sender is from SMS body, not originatingAddress.
+- [ ] Three merchant accounts on two paired devices; paid to a different account than selected on checkout; server must still find exact UNIQUE payer/amount/method/time attempt.
+- [ ] No intent, wrong payer, wrong amount, transaction before issuance, duplicate receipt, same payer+amount+time overlapping attempts, unsupported format, masked payer and spoofed provider SMS: must NOT mark Verified.
+- [ ] Real signed SMS whose transaction time is within attempt but arrives after expiry/cancel: creates exactly one seller refund request with payer contact, reason and amount; payment stays unverified. Merchant action must never initiate an automatic refund transfer.
+- [ ] Slow/lost ACK, HTTP 503, background shutdown during resend; encrypted outbox survives until durable ACK.
+- [ ] CI and browser/responsive EN/BN dark/light checks; all upstream runners failed before running steps in the first PR run, so no test passes are claimed.
+
+## Known limitations
+
+- Sender label plus device signature do not cryptographically prove bKash/Nagad/Rocket issued the receipt. Fraud threat testing and merchant policy still apply.
+- A different personal receiving account on the same merchant phone is intentionally not excluded; if its valid-looking SMS matches an *unrelated* active request across all four fields, attribution may be incorrect. This is a user-selected product trade-off.
+- If original transfer timestamp is **outside** the immutable payment window, evidence stays unmatched and needs reconciliation; a later unrelated transfer is not automatically converted into a refund claim.
