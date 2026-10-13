@@ -5,6 +5,19 @@
 -- Go independently requires an approved live parser with an explicit receiving-number capture.
 -- Migration is additive, realm-isolated, and must be applied in both financial databases.
 BEGIN;
+-- Refuse control plane, missing 0047 or an unknown financial realm.
+DO $preflight$
+DECLARE realm text;
+BEGIN
+ SELECT environment INTO realm FROM financial_realm WHERE singleton;
+ IF realm NOT IN ('sandbox','live')
+ OR to_regclass('public.pg06_phones') IS NULL
+ OR to_regclass('public.pg06_phone_forwarded') IS NULL
+ OR to_regprocedure('public.pg10_checkout_view(text)') IS NULL
+ OR to_regprocedure('public.pg10_lock_route(text,text,text,text)') IS NULL
+ THEN RAISE EXCEPTION 'PG10 forwarder checkout preflight failed';
+ END IF;
+END $preflight$;
 CREATE OR REPLACE FUNCTION public.pg10_checkout_view(cap text)
  RETURNS jsonb
  LANGUAGE plpgsql
