@@ -12,13 +12,13 @@ const copy = {
   eyebrow: "PAYMENTS  /  CUSTOMER CONVERSATIONS",
   heroLine1: "GET PAID.",
   heroLine2: "KEEP MOVING.",
-  heroLead: "Create payment links and follow payment status with less back-and-forth. Explore an AI workspace for customer conversations, coming to Ekmivo.",
+  heroLead: "Manage payment links, invoices and checkout for your business. Ekmivo verifies eligible wallet receipts, while an AI workspace for customer conversations is in development.",
   explore: "Explore payments", aiAction: "Discover AI workspace", scroll: "Explore services",
   serviceEyebrow: "01 / WHAT YOU CAN DO", servicesTitle: "Payments or AI.", servicesMarked: "Your choice.",
   servicesLead: "Use payment tools on their own, or explore what’s coming to customer communication.",
-  payNumber: "01 / PAYMENTS", payName: "Get paid without the back-and-forth.",
-  payBody: "Share a payment link, let customers pay through their familiar wallet, and track the result without chasing transaction screenshots.",
-  payBullets: ["Shareable payment links", "bKash, Nagad & Rocket checkout options", "Automatic verification for unique eligible receipts", "Merchant API & webhooks"],
+  payNumber: "01 / PAYMENTS", payName: "Links, invoices or checkout.",
+  payBody: "Create payment requests through links, invoices, or checkout on your website or app. Keep track of payment status without relying on customer screenshots.",
+  payBullets: ["Links, invoices & hosted checkout", "bKash, Nagad & Rocket payment options", "Receipt-based payment verification", "Merchant API, status checks & webhooks"],
   payExplore: "Explore payments", aiNumber: "02 / AI WORKSPACE", aiName: "Make room for better conversations.",
   aiBody: "An upcoming workspace for customer messages, AI-assisted answers and smooth handover to your team.",
   aiBullets: ["Unified customer inbox", "Business-aware AI assistance", "Human handover", "Follow-ups & customer context"],
@@ -27,10 +27,10 @@ const copy = {
   howLead: "",
   tabPayments: "Payments", tabAI: "AI workspace", demo: "ILLUSTRATIVE WORKFLOW",
   paySteps: [
-   {title:"Create a request",body:"Set an amount and share a checkout link."},
-   {title:"Customer sends money",body:"They use their own bKash, Nagad or Rocket account."},
+   {title:"Create a payment request",body:"Use a payment link, invoice, hosted checkout or merchant API."},
+   {title:"Customer pays",body:"They send money using their selected supported mobile wallet."},
    {title:"Evidence is checked",body:"Ekmivo checks the provider, sender, amount and transaction time."},
-   {title:"Know where it stands",body:"A unique match verifies. Missing or conflicting proof stays pending."}
+   {title:"Receive the result",body:"A unique match verifies the payment. Check its status in the dashboard or via webhook."}
   ],
   aiSteps: [
    {title:"Connect a supported channel",body:"Bring authorized conversations into one workspace."},
@@ -46,8 +46,8 @@ const copy = {
    {n:"02",icon:"spark",title:"Less repetition",text:"Let helpful workflows handle routine steps, with people in control."},
    {n:"03",icon:"layers",title:"A clearer picture",text:"Keep payment states, conversations and decisions easier to follow."}
   ],
-  payStoryEyebrow:"A CLOSER LOOK / PAYMENTS", payStoryTitle:"Send a link.",payStoryMarked:"Know what happened.",
-  payStoryBody:"Send customers a clear checkout link. Eligible payment receipts are matched to the request; uncertain results stay pending instead of showing a false success.",
+  payStoryEyebrow:"A CLOSER LOOK / PAYMENTS", payStoryTitle:"From checkout",payStoryMarked:"to verification.",
+  payStoryBody:"Start with a payment link, invoice or API-powered checkout. When customers pay through a supported wallet, Ekmivo checks the receipt against the payment request. Only a unique valid match becomes verified, with updates available in your dashboard and webhooks.",
   payStoryButton:"Get started with payments", paymentPreview:"SAMPLE CHECKOUT · NOT LIVE DATA", linkLabel:"Your payment request", sampleMethod:"bKash · Nagad · Rocket", sampleAmount:"৳ 1,250", sampleContinue:"Continue to checkout", proofMessage:"Verification checks the receipt, not a screenshot.",
   aiStoryEyebrow:"A CLOSER LOOK / AI", aiStoryTitle:"A good answer matters.", aiStoryMarked:"So does a human.",
   aiStoryBody:"Give your team the context behind each customer question. AI assistance and human handover are being developed for supported channels.",
@@ -55,8 +55,8 @@ const copy = {
   customerPrompt:"Is the blue one available?", agentReply:"Let me check the available options for you.", handoff:"Bring in a teammate", agentName:"Your assistant", customerName:"Customer",
   audienceEyebrow:"04 / WHO IT’S FOR", audienceTitle:"Built around", audienceMarked:"your kind of work.",
   audienceCards:[
-   {n:"01 / SELL",title:"Online sellers",body:"Keep payment requests, customer questions and the next step less complicated.",icon:"bag"},
-   {n:"02 / SERVE",title:"Service businesses",body:"Request payment for a session, project or service—with a clear status to follow.",icon:"calendar"},
+   {n:"01 / SELL",title:"Online sellers",body:"Take payments through checkout on your store or with a shareable payment link.",icon:"bag"},
+   {n:"02 / SERVE",title:"Service businesses",body:"Issue invoices or requests for bookings, projects and services, and check their status.",icon:"calendar"},
    {n:"03 / BUILD",title:"Developers & teams",body:"Connect your own product to payment requests, status checks and merchant webhooks.",icon:"code"}
   ],
   promiseEyebrow:"05 / PAYMENT INTEGRITY", promiseTitle:"A verified payment", promiseMarked:"must earn its check.",
@@ -65,14 +65,14 @@ const copy = {
   pricingEyebrow:"PRICING & AVAILABILITY", pricingTitle:"Plan details are on the way.", pricingNote:"Final pricing and AI launch dates have not been announced.", pricingCTA:"Create your workspace",
   faqEyebrow:"GOOD QUESTIONS", faqTitle:"Before you get started.",
   faqs:[
-   ["Is Ekmivo a payment gateway or an AI tool?","Both are separate service areas. Payments focuses on checkout and evidence-based verification. The AI workspace for conversations and automation is in development."],
-   ["Do my customers need to install Ekmivo?","No. Customers use a web checkout and their usual payment app. An enrolled Android forwarder is used on the merchant side for the supported SMS verification flow."],
+   ["What can I use Ekmivo for?","Ekmivo offers payment links, invoices, hosted checkout and merchant API/webhooks with evidence-based payment verification. AI tools for customer conversations are being developed separately."],
+   ["Do my customers need to install Ekmivo?","No. They open the checkout from a payment link or your integrated website/app and use their payment wallet. An enrolled Android forwarder on the merchant side supplies supported receipt SMS."],
    ["Does Ekmivo automatically verify every payment?","Only when a trusted receipt uniquely matches the payer, method, exact amount and original transaction time within the request window. Otherwise the status remains pending or requires attention."],
    ["Can I use payments without AI?","Yes. The services are designed to be independent. You do not need to use the AI workspace to set up payment tools."],
    ["Are all AI and third-party integrations live?","No. Several AI, social-channel and commerce integrations are planned or awaiting the necessary approvals and testing. The relevant product pages will reflect availability."]
   ],
-  finalEyebrow:"GET STARTED", finalTitle:"Keep your payments",finalMarked:"easy to follow.",
-  finalBody:"Create your workspace for payment links and payment tracking. AI communication tools are being developed.",
+  finalEyebrow:"YOUR BUSINESS, YOUR SETUP", finalTitle:"Build a payment setup",finalMarked:"that fits your business.",
+  finalBody:"Choose payment links, invoices or integrated checkout to suit the way your customers pay. Start by setting up your Ekmivo workspace.",
   finalButton:"Create your workspace", finalSecondary:"See how it works",
   footerHint:"Two independent services. One thoughtful direction."
  },
@@ -80,13 +80,13 @@ bn: {
   eyebrow:"পেমেন্ট ও AI সেবা",
   heroLine1:"পেমেন্ট নিন সহজে।",
   heroLine2:"কাজ রাখুন গুছিয়ে।",
-  heroLead:"পেমেন্ট লিংক তৈরি করুন, লেনদেনের অবস্থা দেখুন। আর কাস্টমারের মেসেজ ও AI সহায়তা সামলানোর জন্য নতুন ওয়ার্কস্পেস তৈরি হচ্ছে Ekmivo-তে।",
+  heroLead:"ব্যবসার জন্য পেমেন্ট লিংক, ইনভয়েস ও চেকআউট পরিচালনা করুন। লেনদেনের তথ্য মিলিয়ে পেমেন্ট যাচাইয়ের পাশাপাশি কাস্টমারের মেসেজের জন্য AI সেবাও তৈরি হচ্ছে।",
   explore:"পেমেন্ট সেবা দেখুন",aiAction:"AI সেবা সম্পর্কে জানুন",scroll:"সেবাগুলো দেখুন",
   serviceEyebrow:"০১ / আমাদের সেবা",servicesTitle:"পেমেন্ট ও AI।",servicesMarked:"যেটা দরকার, সেটাই।",
   servicesLead:"পেমেন্টের কাজ এখনই শুরু করুন। কাস্টমার যোগাযোগের AI সেবাটি তৈরি হচ্ছে।",
-  payNumber:"০১ / পেমেন্ট",payName:"লিংক পাঠান, পেমেন্ট নিন।",
-  payBody:"কাস্টমারকে একটি পেমেন্ট লিংক পাঠান। তিনি নিজের বিকাশ, নগদ বা রকেট অ্যাপ দিয়ে টাকা পাঠাতে পারবেন। লেনদেনের SMS-এর তথ্য ঠিকমতো মিললে পেমেন্ট যাচাই হবে।",
-  payBullets:["পেমেন্ট লিংক তৈরি ও শেয়ার","বিকাশ, নগদ ও রকেট চেকআউট","SMS-এর তথ্য মিলিয়ে পেমেন্ট যাচাই","ব্যবসার সফটওয়্যারের জন্য API ও ওয়েবহুক"],
+  payNumber:"০১ / পেমেন্ট",payName:"লিংক, ইনভয়েস কিংবা চেকআউট।",
+  payBody:"পেমেন্ট লিংক বা ইনভয়েস তৈরি করুন, কিংবা নিজের ওয়েবসাইট ও অ্যাপের চেকআউটের সঙ্গে Ekmivo যুক্ত করুন। কাস্টমার টাকা পাঠালে লেনদেনের তথ্য মিলিয়ে পেমেন্টের অবস্থা জানতে পারবেন।",
+  payBullets:["পেমেন্ট লিংক, ইনভয়েস ও চেকআউট","বিকাশ, নগদ ও রকেট পেমেন্ট অপশন","SMS রসিদ মিলিয়ে স্বয়ংক্রিয় যাচাই","ওয়েবসাইট ও অ্যাপের জন্য API ও ওয়েবহুক"],
   payExplore:"পেমেন্ট কীভাবে কাজ করে",aiNumber:"০২ / AI সেবা",aiName:"কাস্টমারের মেসেজ সামলান এক জায়গায়।",
   aiBody:"মেসেজের উত্তর দেওয়া, আগের কথোপকথন দেখা এবং দরকার হলে টিমের কাউকে যুক্ত করা—এসব কাজ সহজ করার জন্য AI ওয়ার্কস্পেস তৈরি হচ্ছে।",
   aiBullets:["সব মেসেজ এক ইনবক্সে","ব্যবসার তথ্য থেকে AI-এর সাহায্যে উত্তর","দরকার হলে টিম নিজেই উত্তর দেবে","কাস্টমার ও ফলো-আপের তথ্য"],
@@ -95,10 +95,10 @@ bn: {
   howLead:"",
   tabPayments:"পেমেন্ট",tabAI:"AI সেবা",demo:"উদাহরণ হিসেবে দেখানো হয়েছে",
   paySteps:[
-   {title:"লিংক তৈরি করুন",body:"পেমেন্টের পরিমাণ লিখে কাস্টমারকে লিংক পাঠান।"},
-   {title:"কাস্টমার টাকা পাঠাবেন",body:"বিকাশ, নগদ বা রকেট দিয়ে পেমেন্ট করবেন।"},
+   {title:"পেমেন্ট রিকোয়েস্ট তৈরি করুন",body:"লিংক, ইনভয়েস, চেকআউট বা API—আপনার সুবিধামতো শুরু করুন।"},
+   {title:"কাস্টমার পেমেন্ট করবেন",body:"পছন্দের মাধ্যম বেছে নিয়ে নির্ধারিত অ্যাকাউন্টে টাকা পাঠাবেন।"},
    {title:"লেনদেনের তথ্য মিলবে",body:"কোন মাধ্যম থেকে, কে, কত টাকা এবং কখন পাঠিয়েছেন—এসব তথ্য মিলিয়ে দেখা হবে।"},
-   {title:"অবস্থা জানতে পারবেন",body:"সঠিকভাবে মিললে পেমেন্ট সফল। তথ্য না মিললে অপেক্ষমাণ থাকবে।"}
+   {title:"পেমেন্টের আপডেট পাবেন",body:"সঠিক মিল হলে Verified হবে। ড্যাশবোর্ড বা ওয়েবহুক থেকে অবস্থা জানা যাবে।"}
   ],
   aiSteps:[
    {title:"মেসেজের চ্যানেল যুক্ত করুন",body:"অনুমোদিত চ্যানেলের কাস্টমার মেসেজ এক জায়গায় আনুন।"},
@@ -114,8 +114,8 @@ bn: {
    {n:"০২",icon:"spark",title:"একই কাজ বারবার নয়",text:"কাস্টমারের সাধারণ প্রশ্ন ও নিয়মিত কাজে AI-এর সাহায্য নেওয়ার সুবিধা তৈরি হচ্ছে।"},
    {n:"০৩",icon:"layers",title:"পেমেন্টের অবস্থা স্পষ্ট",text:"কোন পেমেন্ট সফল, কোনটি অপেক্ষমাণ—এক জায়গা থেকে দেখুন।"}
   ],
-  payStoryEyebrow:"পেমেন্ট সেবা",payStoryTitle:"লিংক পাঠান।",payStoryMarked:"অবস্থা দেখুন।",
-  payStoryBody:"কাস্টমার লিংক খুলে নিজের পেমেন্ট অ্যাপ দিয়ে টাকা পাঠাবেন। যোগ্য SMS-এর তথ্য মিললেই পেমেন্ট সফল দেখাবে। না মিললে অপেক্ষমাণ থাকবে—ভুল করে সফল দেখাবে না।",
+  payStoryEyebrow:"পেমেন্ট সেবা",payStoryTitle:"চেকআউট থেকে",payStoryMarked:"পেমেন্ট যাচাই পর্যন্ত।",
+  payStoryBody:"পেমেন্ট লিংক, ইনভয়েস বা API দিয়ে চেকআউট শুরু করুন। কাস্টমার বিকাশ, নগদ বা রকেটে টাকা পাঠালে Ekmivo রসিদের প্রেরক নম্বর, মাধ্যম, টাকার পরিমাণ ও লেনদেনের সময় মিলিয়ে দেখবে। একটি সঠিক মিল পাওয়া গেলেই পেমেন্ট Verified হবে; ফলাফল ড্যাশবোর্ড ও ওয়েবহুকে পাওয়া যাবে।",
   payStoryButton:"পেমেন্ট শুরু করুন",paymentPreview:"নমুনা পেমেন্ট পেজ",linkLabel:"পেমেন্টের পরিমাণ",sampleMethod:"বিকাশ · নগদ · রকেট",sampleAmount:"৳ ১,২৫০",sampleContinue:"পেমেন্ট করুন",proofMessage:"স্ক্রিনশট পাঠানোর দরকার নেই।",
   aiStoryEyebrow:"AI সেবা · তৈরি হচ্ছে",aiStoryTitle:"প্রশ্নের উত্তর দিন।",aiStoryMarked:"প্রয়োজনে নিজেই সামলান।",
   aiStoryBody:"কাস্টমার আগেও কী জানতে চেয়েছিলেন, কী পণ্য দেখছিলেন—এসব তথ্য সামনে রেখেই উত্তর দেওয়ার ব্যবস্থা তৈরি হচ্ছে। AI সাহায্য করবে, নিয়ন্ত্রণ থাকবে আপনার টিমের হাতে।",
@@ -123,8 +123,8 @@ bn: {
   customerPrompt:"নীল রঙেরটা কি আছে?",agentReply:"একটু দেখে জানাচ্ছি। কোন সাইজটি লাগবে?",handoff:"টিমের সঙ্গে কথা বলুন",agentName:"AI সহকারী",customerName:"কাস্টমার",
   audienceEyebrow:"০৪ / যাদের জন্য",audienceTitle:"আপনার ব্যবসায়ও",audienceMarked:"কাজে লাগবে।",
   audienceCards:[
-   {n:"০১ / অনলাইন শপ",title:"অনলাইন বিক্রেতা",body:"কাস্টমারকে পেমেন্ট লিংক পাঠান, টাকা এসেছে কি না দেখুন।",icon:"bag"},
-   {n:"০২ / সেবাভিত্তিক কাজ",title:"সেবা প্রদানকারী",body:"ক্লাস, পরামর্শ বা প্রজেক্টের ফি নেওয়ার জন্য লিংক পাঠান।",icon:"calendar"},
+   {n:"০১ / অনলাইন শপ",title:"অনলাইন বিক্রেতা",body:"দোকানের চেকআউট থেকে বা পেমেন্ট লিংক দিয়ে টাকা নিন।",icon:"bag"},
+   {n:"০২ / সেবাভিত্তিক কাজ",title:"সেবা প্রদানকারী",body:"ক্লাস, পরামর্শ বা প্রজেক্টের জন্য ইনভয়েস তৈরি করুন, পেমেন্টের অবস্থা দেখুন।",icon:"calendar"},
    {n:"০৩ / সফটওয়্যার",title:"ডেভেলপার ও টিম",body:"নিজের ওয়েবসাইট বা অ্যাপে পেমেন্ট লিংক, স্ট্যাটাস ও ওয়েবহুক যুক্ত করুন।",icon:"code"}
   ],
   promiseEyebrow:"০৫ / পেমেন্ট যাচাই",promiseTitle:"শুধু টাকা পাঠালেই",promiseMarked:"সফল নয়।",
@@ -133,14 +133,14 @@ bn: {
   pricingEyebrow:"মূল্য ও প্যাকেজ",pricingTitle:"প্যাকেজের বিস্তারিত শিগগিরই।",pricingNote:"চূড়ান্ত মূল্য ও AI সেবা চালুর সময় এখনো ঘোষণা করা হয়নি।",pricingCTA:"অ্যাকাউন্ট তৈরি করুন",
   faqEyebrow:"জানতে চাইতে পারেন",faqTitle:"কিছু সাধারণ প্রশ্ন",
   faqs:[
-   ["Ekmivo দিয়ে কী করা যায়?","Ekmivo-তে পেমেন্ট লিংক তৈরি করে লেনদেনের অবস্থা দেখা যায়। কাস্টমারের মেসেজ ও AI সহায়তা পরিচালনার আলাদা সেবাও তৈরি হচ্ছে।"],
-   ["আমার কাস্টমারকে কি Ekmivo অ্যাপ ইনস্টল করতে হবে?","না। কাস্টমার শুধু পেমেন্ট লিংক খুলবেন এবং নিজের বিকাশ, নগদ বা রকেট অ্যাপ ব্যবহার করবেন। SMS দিয়ে পেমেন্ট যাচাইয়ের জন্য মার্চেন্টের সংযুক্ত Android ফোন ব্যবহার হয়।"],
+   ["Ekmivo দিয়ে কী করা যায়?","Ekmivo-তে পেমেন্ট লিংক, ইনভয়েস ও চেকআউট ব্যবহার করা যায়। নিজের ওয়েবসাইট বা অ্যাপের জন্য API ও ওয়েবহুকও রয়েছে। পেমেন্ট যাচাইয়ের পাশাপাশি কাস্টমার যোগাযোগের AI সেবা আলাদাভাবে তৈরি হচ্ছে।"],
+   ["আমার কাস্টমারকে কি Ekmivo অ্যাপ ইনস্টল করতে হবে?","না। কাস্টমার পেমেন্ট লিংক বা আপনার ওয়েবসাইটের চেকআউট খুলে নিজের বিকাশ, নগদ বা রকেট ব্যবহার করবেন। SMS দিয়ে যাচাইয়ের জন্য মার্চেন্টের সংযুক্ত Android ফোন প্রয়োজন।"],
    ["পেমেন্ট কি নিজে থেকেই সফল দেখাবে?","প্রেরকের নম্বর, পেমেন্টের মাধ্যম, টাকার পরিমাণ ও লেনদেনের সময় একটি পেমেন্টের সঙ্গে ঠিকমতো মিললে স্বয়ংক্রিয়ভাবে যাচাই হবে। তথ্য না মিললে বা একাধিক পেমেন্টের সঙ্গে মিলে গেলে অপেক্ষমাণ থাকবে।"],
    ["পেমেন্ট নিতে কি AI সেবা ব্যবহার করতেই হবে?","না। পেমেন্ট ও AI আলাদা সেবা। শুধু পেমেন্ট সেবা ব্যবহার করতে পারবেন।"],
    ["AI ও Messenger, WhatsApp-এর মতো সংযোগ কি এখনই পাওয়া যাবে?","না। AI ও বেশ কিছু চ্যানেল সংযোগ এখনো তৈরি হচ্ছে। কিছু সংযোগ চালুর আগে সংশ্লিষ্ট প্ল্যাটফর্মের অনুমোদন প্রয়োজন।"]
   ],
-  finalEyebrow:"শুরু করুন",finalTitle:"পেমেন্ট নিন সহজে।",finalMarked:"হিসাব রাখুন গুছিয়ে।",
-  finalBody:"পেমেন্ট লিংক তৈরি করুন, কাস্টমারকে পাঠান এবং পেমেন্টের অবস্থা দেখুন।",
+  finalEyebrow:"আপনার ব্যবসার জন্য",finalTitle:"নিজের পেমেন্ট সেটআপ",finalMarked:"শুরু করুন আজই।",
+  finalBody:"পেমেন্ট লিংক, ইনভয়েস বা ওয়েবসাইটের চেকআউট—ব্যবসার প্রয়োজন অনুযায়ী বেছে নিন। Ekmivo-তে আপনার ওয়ার্কস্পেস তৈরি করে শুরু করুন।",
   finalButton:"অ্যাকাউন্ট তৈরি করুন",finalSecondary:"কীভাবে কাজ করে",
   footerHint:"পেমেন্ট ও AI—দুটি আলাদা সেবা।"
  }
