@@ -480,3 +480,15 @@ These are remaining test requirements, not PASS claims. New migrations 0042–00
 - [ ] Privacy operator: test open owner export request, separate SQL operator/realm boundaries, encrypted snapshot credentials/raw-body exclusion and cross-tenant negatives. Do not record full export/deletion until private objects, device cache, queues and backups have their own actual outcomes.
 - [ ] Prepared 25-workspace sandbox fixtures: run receipt-load, worker observer and read-load against one tested source; failures/drops/unknowns block target PASS. No Live load.
 - [ ] Real phones/accounts and merchant receiver: complete existing receipt/payment/webhook/source, backup restore and real observed cohort/release gates. No synthetic result substitutes for these.
+
+
+## 2026-10-13 — Standalone branded customer /pay and /checkout (PR #17)
+
+Status: **manual pending**; not live-provider accepted. Test with a real authorized merchant payment-link and a real phone; no unverified payment must be sent.
+
+- [ ] 320px/375px/768px/desktop: confirm no marketing header/footer, correct workspace identity/title/logo, real configured support contacts, high-contrast provider tiles and amount, and no overflow in EN/BN or light/dark/system.
+- [ ] Only enabled configured and production-verifiable bKash/Nagad/Rocket options clickable; disabled accounts show clearly and never create a customer attempt. Do not show unsupported Upay/QR as usable.
+- [ ] bKash pink payer-number → confirm → personal receiving number/copy → Send Money instructions → countdown/auto-poll. Nagad red equivalent; Rocket only when configured and verifiable.
+- [ ] No email receipt / email consent / verification-code controls anywhere in the public checkout. Prior backend email records are retained.
+- [ ] Actual brand links never use invented contacts; close/back preserves payment record. POST loss/retry remains idempotent, payer lock irreversible, no browser-set paid state.
+- [ ] Repeat checks with device offline, receipt parser unavailable, expired link, wrong payer, active session, genuine provider receipts, and verified server/webhook settlement. Real payment acceptance remains OPEN.
