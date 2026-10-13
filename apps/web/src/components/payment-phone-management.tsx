@@ -8,11 +8,13 @@ type Phone={
  model?:string;app_version?:string;heartbeat_at?:string|null;permission_ok:boolean;
  backlog:number;last_queue_error:string;
 };
-type Account={ID:string;Method:string;Number:string;Label:string;Disabled:boolean};
 type Props={locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;detailId?:string};
 function status(p:Phone,bn:boolean){
  if(!p.claimed_at)return bn?"পেয়ারিংয়ের অপেক্ষা":"Waiting for pairing";
- return bn?"সংযুক্ত":"Connected";
+ if(!p.permission_ok)return bn?"SMS অনুমতি প্রয়োজন":"SMS access required";
+ if(!p.heartbeat_at||Date.now()-Date.parse(p.heartbeat_at)>20*60*1000)
+  return bn?"সিঙ্ক বন্ধ / অফলাইন":"Sync delayed / offline";
+ return bn?"সক্রিয়":"Online";
 }
 function pairingQr(token:string){
  if(!/^[A-Za-z0-9_-]{24,160}$/.test(token))return "";
@@ -25,7 +27,6 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
  const bn=locale==="bn",t=useCallback((en:string,bg:string)=>bn?bg:en,[bn]);
  const base="/api/go/workspaces/"+workspaceId+"/phones";
  const [phones,setPhones]=useState<Phone[]>([]);
- const [accounts,setAccounts]=useState<Account[]>([]);
  const [selected,setSelected]=useState<string|null>(detailId||null);
  const [createOpen,setCreateOpen]=useState(false);
  const [name,setName]=useState("");
@@ -44,7 +45,6 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
    const data=await response.json();
    if(!signal?.aborted){
     setPhones((data.items||[]).filter((p:Phone)=>!p.revoked_at&&(p.claimed_at||!p.created_at||Date.now()-Date.parse(p.created_at)<300000)));
-    setAccounts(data.accounts||[]);
     if(!silent)setError("");
    }
   }catch(e){if(!silent&&!signal?.aborted)setError(String(e))}
@@ -109,7 +109,7 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
   <header className="pg-phone-hero">
    <div><p className="pg-device-kicker">SMS FORWARDER · {environment.toUpperCase()}</p>
     <h2>{paired.length?t("Connected","সংযুক্ত"):t("Connect your phone","ফোন যুক্ত করুন")}</h2>
-    <p>{paired.length?t("Your paired phone forwards relevant payment SMS securely.","সংযুক্ত ফোন নিরাপদে প্রাসঙ্গিক payment SMS পাঠাবে।"):t("Pair one phone using a code or QR scan.","কোড অথবা QR দিয়ে একবার ফোন pair করুন।")}</p>
+    <p>{paired.length?t("Your paired phone forwards supported provider receipts, even when no individual SIM account is assigned.","সংযুক্ত ফোন আলাদা SIM বা অ্যাকাউন্ট নির্বাচন ছাড়াই পেমেন্ট SMS পাঠাবে।"):t("Pair one phone using a code or QR scan.","কোড অথবা QR দিয়ে একবার ফোন pair করুন।")}</p>
    </div>
    {canManage&&<button type="button" onClick={()=>setCreateOpen(v=>!v)} disabled={busy}>
     {createOpen?t("Cancel","বাতিল"):t("Add phone","ফোন যোগ করুন")}
@@ -142,7 +142,9 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
       <div className="pg-phone-card-main">
        <div className="pg-phone-title"><h3>{p.name}</h3><span className="pg-phone-state">{status(p,bn)}</span></div>
        {p.claimed_at&&<><p>{p.permission_ok?t("SMS access enabled","SMS অনুমতি চালু"):t("SMS permission not confirmed","SMS অনুমতি নিশ্চিত হয়নি")}</p>
-        <small>{t("Last sync","শেষ সিঙ্ক")}: {p.heartbeat_at?new Date(p.heartbeat_at).toLocaleString(locale):"—"}</small></>}
+        <small>{t("Last sync","শেষ সিঙ্ক")}: {p.heartbeat_at?new Date(p.heartbeat_at).toLocaleString(locale):"—"}</small>
+        <small>{t("Pending on phone","ফোনে অপেক্ষমাণ")}: {p.backlog||0}</small>
+        {p.last_queue_error&&<small role="alert">{t("Sync attention","সিঙ্কে সমস্যা")}: {p.last_queue_error}</small>}</>}
       </div>
       {canManage&&<button type="button" className="is-danger" disabled={busy}
        onClick={()=>void remove(p)}>{t("Delete","ডিলিট")}</button>}
@@ -150,13 +152,10 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
     )}
    </div>
    {!phones.length&&!error&&!showCode&&<p className="pg-phone-empty">{t("No phone connected yet.","এখনো কোনো ফোন যুক্ত হয়নি।")}</p>}
-   {current?.claimed_at&&accounts.some(a=>!a.Disabled)&&<section className="pg-phone-box">
-    <h3>{t("Receiving accounts","টাকা গ্রহণকারী অ্যাকাউন্ট")}</h3>
-    <div className="pg-phone-bindings">{accounts.filter(a=>!a.Disabled).map(a=>
-     <div key={a.ID} className="pg-phone-binding"><div><strong>{a.Label||a.Method}</strong>
-      <p>{a.Method} · {a.Number}</p></div>
-      <button type="button" onClick={()=>void copy(a.Number)}>{t("Copy","কপি")}</button>
-     </div>)}</div>
+   {current?.claimed_at&&<section className="pg-phone-box">
+    <h3>{t("Automatic SMS forwarding","স্বয়ংক্রিয় SMS ফরওয়ার্ডিং")}</h3>
+    <p>{t("No SIM selector or per-device receiving-account mapping is required. Once granted SMS permission, this phone forwards supported provider receipts to the server. Only one exact payer, amount, provider and transaction-time match can verify a checkout.","কোনো SIM selector বা ডিভাইসভিত্তিক receiving number mapping লাগবে না। SMS অনুমতি থাকলে ফোন payment SMS সার্ভারে পাঠাবে। সার্ভারে একটিমাত্র sender, amount, provider ও time match হলে payment verify হবে।")}</p>
+    <p>{t("Collected receipts stay encrypted while offline and automatically retry when the network returns. Open the Android app to review pending or forwarded SMS.","নেটওয়ার্ক বন্ধ থাকলে সংগ্রহ করা SMS encrypted queue-তে থাকবে। নেট ফিরলে নিজে থেকে পাঠাবে। Pending ও forwarded SMS দেখতে Android app খুলুন।")}</p>
    </section>}
   </>}
  </section>;

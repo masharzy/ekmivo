@@ -35,6 +35,7 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.barcode.common.Barcode
 import org.json.JSONObject
 import android.util.Base64
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -59,6 +60,20 @@ fun ForwarderScreen(bn:Boolean){
  var message by remember{mutableStateOf("")}
  var permissionGranted by remember{mutableStateOf(ContextCompat.checkSelfPermission(context,Manifest.permission.RECEIVE_SMS)==PackageManager.PERMISSION_GRANTED)}
  var serverCheck by remember{mutableStateOf("checking")}
+ var recentReceipts by remember{mutableStateOf<List<JSONObject>>(emptyList())}
+ var pendingCount by remember{mutableIntStateOf(0)}
+ var syncError by remember{mutableStateOf("")}
+ LaunchedEffect(phone?.optString("id")){
+  while(true){
+   val snapshot=withContext(Dispatchers.IO){
+    ReceiptStore(context).use{Triple(it.recent(24),it.count(),it.queueError())}
+   }
+   recentReceipts=snapshot.first
+   pendingCount=snapshot.second
+   syncError=snapshot.third
+   delay(4000)
+  }
+ }
  val allow=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->
   permissionGranted=granted
   if(granted){ReceiptSyncWorker.schedule(context);message=""}
@@ -122,6 +137,69 @@ fun ForwarderScreen(bn:Boolean){
    if(!permissionGranted&&serverCheck!="revoked"){
     Button(onClick={allow.launch(Manifest.permission.RECEIVE_SMS)},modifier=Modifier.fillMaxWidth()){
      Text(if(bn)"SMS অনুমতি দিন" else "Allow SMS access")
+    }
+   }
+   Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.surface,
+    border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)){
+    Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+      horizontalArrangement=Arrangement.SpaceBetween){
+      Column {
+       Text(if(bn)"SMS সংগ্রহ ও সিঙ্ক" else "SMS collection & sync",
+        style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+       Text(if(bn)"পাঠানোর অপেক্ষায়: $pendingCount" else "$pendingCount waiting to forward",
+        color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+      }
+      OutlinedButton(enabled=serverCheck!="revoked",onClick={
+       ReceiptSyncWorker.schedule(context)
+       message=if(bn)"নেটওয়ার্ক থাকলে পুনরায় পাঠানো হবে" else "Retry scheduled for when connected"
+      }){Text(if(bn)"আবার পাঠান" else "Retry sync")}
+     }
+     if(syncError.isNotEmpty())
+      Text(if(bn)"শেষ সিঙ্কে সমস্যা: $syncError" else "Sync attention: $syncError",
+       color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+     if(!permissionGranted)
+      Text(if(bn)"SMS permission বন্ধ আছে; নতুন SMS সংগ্রহ হবে না।"
+       else "SMS permission is off; new receipts cannot be collected.",
+       color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
+     Text(if(bn)"ইন্টারনেট বন্ধ থাকলেও ইতিমধ্যে সংগ্রহ করা SMS encrypted queue-তে থাকে। নেট ফিরে এলে নিজে থেকে পাঠাবে।"
+      else "Captured payment SMS are saved in an encrypted queue when offline and retried when connectivity returns.",
+      style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+   }
+   Text(if(bn)"সাম্প্রতিক পেমেন্ট SMS" else "Recent payment SMS",style=MaterialTheme.typography.titleLarge)
+   if(recentReceipts.isEmpty()) {
+    Text(if(bn)"এখনো কোনো পেমেন্ট SMS সংগ্রহ করা হয়নি।" else "No payment SMS captured yet.",
+     color=MaterialTheme.colorScheme.onSurfaceVariant)
+   }else{
+    recentReceipts.filter{
+     it.optString("source").lowercase() in setOf("bkash","nagad","rocket")
+    }.forEach { receipt->
+     val preview=receiptDisplay(receipt.optString("evidence"))
+     val sent=receipt.optBoolean("sent")
+     Surface(shape=RoundedCornerShape(14.dp),color=MaterialTheme.colorScheme.surface,
+      border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)){
+      Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+       Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.SpaceBetween){
+        Text(receipt.optString("source"),fontWeight=FontWeight.SemiBold)
+        Text(if(sent)(if(bn)"ফরওয়ার্ড হয়েছে" else "Forwarded")
+          else (if(bn)"পাঠানোর অপেক্ষায়" else "Waiting to send"),
+          color=if(sent)Color(0xFF289667) else MaterialTheme.colorScheme.error,
+          style=MaterialTheme.typography.labelMedium)
+       }
+       Text(preview.first,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+       Text((if(bn)"প্রেরক: " else "Sender: ")+preview.second,
+        style=MaterialTheme.typography.bodyMedium)
+       Text((if(bn)"সময়: " else "Time: ")+preview.third,
+        style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+       Text(if(sent)(if(bn)"সার্ভারে গ্রহণ করা হয়েছে; payment verification আলাদা।"
+          else "Server accepted this SMS; payment verification is separate.")
+        else (if(bn)"নেটওয়ার্ক ফিরলে স্বয়ংক্রিয়ভাবে retry হবে।"
+          else "Automatically retries when the network returns."),
+        style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+     }
     }
    }
    if(serverCheck=="revoked"){
@@ -201,4 +279,12 @@ fun ForwarderScreen(bn:Boolean){
   }
   if(message.isNotEmpty())Text(message,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodyMedium)
  }
+}
+
+private fun receiptDisplay(body:String):Triple<String,String,String>{
+ // Display-only hints; never used for server-side financial verification.
+ val money=Regex("""(?i)you have received\s+tk\s+([0-9]+(?:\.[0-9]{1,2})?)""").find(body)?.groupValues?.get(1)
+ val payer=Regex("""(?i)\bfrom\s+(\+?[0-9]{11,14})""").find(body)?.groupValues?.get(1)
+ val time=Regex("""(?i)(?:\bat\s+|\bdate:\s*)([0-9]{2}/[0-9]{2}/[0-9]{4}\s+[0-9]{2}:[0-9]{2})""").find(body)?.groupValues?.get(1)
+ return Triple(if(money!=null)"৳$money" else "—",payer?:"—",time?:"—")
 }

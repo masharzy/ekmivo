@@ -416,4 +416,13 @@ func main() {
 			}
 		}
 	}
+ if os.Getenv("PG06_LATE_SMS_REFUND_ALLOW_MIGRATION") == "true" {
+  for _,target:=range []realmDSN{{"sandbox",sa},{"live",lv}} {
+   if err:=migrateOfflineSMSRefund(ctx,target.environment,target.raw,
+    os.Getenv("PG06_LATE_SMS_REFUND_MIGRATION_FILE"));err!=nil {
+    log.Fatalf("late SMS/refund migration blocked in %s: %v",target.environment,err)
+   }
+  }
+ }
+
 }

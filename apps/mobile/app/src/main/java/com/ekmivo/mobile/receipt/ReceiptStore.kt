@@ -15,14 +15,20 @@ import org.json.JSONObject
 import java.util.UUID
 
 /** Private encrypted outbox; no read-SMS permission or inbox enumeration. */
-class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.db", null, 1) {
+class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.db", null, 2) {
  private val preferences=context.getSharedPreferences("receipt-enrollment",Context.MODE_PRIVATE)
  override fun onCreate(db:SQLiteDatabase) {
   db.execSQL("CREATE TABLE pending(id TEXT PRIMARY KEY, body BLOB NOT NULL, created INTEGER NOT NULL)")
   db.execSQL("CREATE TABLE sequence_counter(singleton INTEGER PRIMARY KEY CHECK(singleton=1), value INTEGER NOT NULL)")
   db.execSQL("INSERT INTO sequence_counter VALUES(1,0)")
+  db.execSQL("CREATE TABLE recent(id TEXT PRIMARY KEY,body BLOB NOT NULL,created INTEGER NOT NULL,sent INTEGER NOT NULL DEFAULT 0)")
  }
- override fun onUpgrade(db:SQLiteDatabase,oldVersion:Int,newVersion:Int) { error("Explicit receipt migration required") }
+ override fun onUpgrade(db:SQLiteDatabase,oldVersion:Int,newVersion:Int) {
+  if(oldVersion==1&&newVersion==2) {
+   db.execSQL("CREATE TABLE recent(id TEXT PRIMARY KEY,body BLOB NOT NULL,created INTEGER NOT NULL,sent INTEGER NOT NULL DEFAULT 0)")
+   db.execSQL("INSERT INTO recent(id,body,created,sent) SELECT id,body,created,0 FROM pending")
+  } else error("Explicit receipt migration required")
+ }
  private fun key():SecretKey {
   val store=KeyStore.getInstance("AndroidKeyStore").apply{load(null)}
   (store.getKey("ekmivo-receipt-outbox",null) as? SecretKey)?.let{return it}
@@ -123,6 +129,7 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
   // Stop collection before waiting for a concurrent database writer.
   check(preferences.edit().clear().commit())
   writableDatabase.delete("pending",null,null)
+  writableDatabase.delete("recent",null,null)
   // Destroy the outbox key as well as the signer: deleted SQLite/WAL pages
   // must not remain decryptable after this device is disconnected.
   KeyStore.getInstance("AndroidKeyStore").apply{load(null)}.deleteEntry("ekmivo-receipt-outbox")
@@ -151,12 +158,44 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
    val id=UUID.randomUUID().toString();val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key());cipher.updateAAD(id.toByteArray())
    val encrypted=cipher.iv+cipher.doFinal(body.toString().toByteArray(Charsets.UTF_8))
    val values=ContentValues().apply{put("id",id);put("body",encrypted);put("created",System.currentTimeMillis())}
-   val stored=database.insertOrThrow("pending",null,values)>0;database.setTransactionSuccessful();return stored
+   val stored=database.insertOrThrow("pending",null,values)>0
+   if(stored){
+    val recent=ContentValues().apply{put("id",id);put("body",encrypted);put("created",System.currentTimeMillis());put("sent",0)}
+    database.insertOrThrow("recent",null,recent)
+    // Keep a bounded encrypted operational history, never an SMS inbox.
+    database.execSQL("DELETE FROM recent WHERE id NOT IN (SELECT id FROM recent ORDER BY created DESC,id DESC LIMIT 60)")
+   }
+   database.setTransactionSuccessful();return stored
   }finally{database.endTransaction()}
  }
  fun next():Pair<String,ByteArray>?=readableDatabase.rawQuery("SELECT id,body FROM pending ORDER BY created,id LIMIT 1",null).use {
   if(!it.moveToFirst())return null
   val id=it.getString(0);val encrypted=it.getBlob(1);val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,encrypted.copyOfRange(0,12)));cipher.updateAAD(id.toByteArray());id to cipher.doFinal(encrypted.copyOfRange(12,encrypted.size))
  }
- fun acknowledge(id:String){writableDatabase.delete("pending","id=?",arrayOf(id))}
+ fun recent(limit:Int=20):List<JSONObject>{
+  val results=mutableListOf<JSONObject>()
+  readableDatabase.rawQuery("SELECT id,body,created,sent FROM recent ORDER BY created DESC,id DESC LIMIT ?",arrayOf(limit.coerceIn(1,60).toString())).use{cursor->
+   while(cursor.moveToNext()){
+    try {
+     val id=cursor.getString(0);val encrypted=cursor.getBlob(1)
+     val cipher=Cipher.getInstance("AES/GCM/NoPadding")
+     cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,encrypted.copyOfRange(0,12)))
+     cipher.updateAAD(id.toByteArray())
+     val receipt=JSONObject(String(cipher.doFinal(encrypted.copyOfRange(12,encrypted.size)),Charsets.UTF_8))
+     results.add(JSONObject().put("source",receipt.optString("source")).put("evidence",receipt.optString("evidence"))
+      .put("received_at",cursor.getLong(2)).put("sent",cursor.getInt(3)==1))
+    }catch(_:Exception){setQueueError("RECEIPT_HISTORY_UNAVAILABLE")}
+   }
+  }
+  return results
+ }
+ fun acknowledge(id:String){
+  val db=writableDatabase
+  db.beginTransaction()
+  try{
+   db.execSQL("UPDATE recent SET sent=1 WHERE id=?",arrayOf(id))
+   db.delete("pending","id=?",arrayOf(id))
+   db.setTransactionSuccessful()
+  }finally{db.endTransaction()}
+ }
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
 	"net/http"
- "regexp"
  "strings"
 )
 
@@ -99,14 +98,10 @@ func (s *Service) liveMethods(raw []byte) map[string]bool {
 	}
 	for _, source := range data.Sources {
   if source.Forwarder {
-   // Pairing or sender names do not authenticate a payment. An approved
-   // production parser must capture the actual receiving identity before a
-   // physical forwarder is eligible to accept customer payments.
+   // Provider parser readiness, not a captured receiver/SIM number.
    for _, rule := range s.Pipeline.Rules {
-    if !rule.Approved || rule.SandboxOnly || rule.Method != source.Method ||
-     !strings.EqualFold(rule.Source,source.Source) {continue}
-    expression,err:=regexp.Compile(rule.Pattern)
-    if err==nil && expression.SubexpIndex("receiving")>=0 {
+    if rule.Approved && !rule.SandboxOnly && rule.Method==source.Method &&
+      strings.EqualFold(rule.Source,source.Source) {
      methods[source.Method]=true
      break
     }

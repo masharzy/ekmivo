@@ -173,18 +173,9 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter,r *http.Request,raw
   // Forwarding is independent of parser availability and account selection.
   // The fixed sender allowlist only scopes collection; it is not approval
   // of a receipt format or a promise that payment matching is ready.
-  allowedSources:=[]string{}
-  for _,candidate:=range []struct{method,sender string}{{"bkash","bKash"},{"nagad","NAGAD"},{"rocket","Rocket"}} {
-   rows,err:=pool.Query(r.Context(),"SELECT account_id FROM pg06_phone_candidate_accounts($1::uuid,$2)",id,candidate.method)
-   if err!=nil{fail(w,503,"RECEIVING_ACCOUNT_UNAVAILABLE");return}
-   available:=rows.Next()
-   scanErr:=error(nil)
-   if available{var uuid string;scanErr=rows.Scan(&uuid)}
-   if rows.Err()!=nil{scanErr=rows.Err()}
-   rows.Close()
-   if scanErr!=nil{fail(w,503,"RECEIVING_ACCOUNT_UNAVAILABLE");return}
-   if available{allowedSources=append(allowedSources,candidate.sender)}
-  }
+  // Only approved provider labels are forwarded after explicit handset consent.
+  // Payment account count and SIM mapping are not a reason to discard SMS.
+  allowedSources:=[]string{"bKash","NAGAD","Rocket"}
   // A configured receiving method permits narrow collection, not paid status.
   // Backend parser readiness is separate, and no financial destination
   // number/account identifier is returned to the phone.

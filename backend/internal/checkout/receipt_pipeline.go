@@ -37,10 +37,15 @@ func (s *Service) ConfigurePipeline(ctx context.Context, keyHex, rulesJSON, cont
 		return errors.New("pipeline encryption/control configuration unavailable")
 	}
 	rules := []deviceevidence.ParserRule{}
+	if strings.TrimSpace(rulesJSON)=="" { rulesJSON="[]" }
 	if e = json.Unmarshal([]byte(rulesJSON), &rules); e != nil {
 		return errors.New("invalid receipt parser registry")
 	}
 	registry := map[string]deviceevidence.ParserRule{}
+	for _, r := range builtinSMSRules() {
+		if e = r.Validate(); e != nil { return e }
+		registry[r.ID] = r
+	}
 	for _, r := range rules {
 		if e = r.Validate(); e != nil {
 			return e
