@@ -13,6 +13,45 @@ export function SiteHeader({ locale, initialTheme }: { locale: Locale; initialTh
   const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const lastY = useRef(0);
+  // Smooth anchor navigation must not look like a user's scroll-down.
+  const keepVisibleAfterAnchor = useRef(false);
+
+  function onSectionNavigate() {
+    keepVisibleAfterAnchor.current = true;
+    setHidden(false);
+    setMenuOpen(false);
+  }
+
+  useEffect(() => {
+    const releasePinnedHeader = () => { keepVisibleAfterAnchor.current = false; };
+    const onKeyboardScroll = (event: KeyboardEvent) => {
+      if (!["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(event.key)) return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [contenteditable='true']")) return;
+      releasePinnedHeader();
+    };
+    const onAnchorHistory = () => {
+      if (window.location.hash) {
+        keepVisibleAfterAnchor.current = true;
+        setHidden(false);
+      }
+    };
+    onAnchorHistory(); // Keep navigation visible on deep links and reloads.
+    window.addEventListener("hashchange", onAnchorHistory);
+    window.addEventListener("popstate", onAnchorHistory);
+    window.addEventListener("wheel", releasePinnedHeader, { passive: true });
+    window.addEventListener("touchmove", releasePinnedHeader, { passive: true });
+    document.addEventListener("pointerdown", releasePinnedHeader, { passive: true });
+    window.addEventListener("keydown", onKeyboardScroll);
+    return () => {
+      window.removeEventListener("hashchange", onAnchorHistory);
+      window.removeEventListener("popstate", onAnchorHistory);
+      window.removeEventListener("wheel", releasePinnedHeader);
+      window.removeEventListener("touchmove", releasePinnedHeader);
+      document.removeEventListener("pointerdown", releasePinnedHeader);
+      window.removeEventListener("keydown", onKeyboardScroll);
+    };
+  }, []);
 
   useEffect(() => {
     lastY.current = window.scrollY;
@@ -20,7 +59,7 @@ export function SiteHeader({ locale, initialTheme }: { locale: Locale; initialTh
       const y = window.scrollY;
       const delta = y - lastY.current;
       setScrolled(y > 36);
-      if (y < 72 || menuOpen) setHidden(false);
+      if (keepVisibleAfterAnchor.current || y < 72 || menuOpen) setHidden(false);
       else if (delta > 6 && y > 168) setHidden(true);
       else if (delta < -6) setHidden(false);
       lastY.current = y;
@@ -34,13 +73,13 @@ export function SiteHeader({ locale, initialTheme }: { locale: Locale; initialTh
     <div className="header-inner">
       <Link className="brand" href={`/${locale}`} aria-label="Ekmivo home" onClick={() => setMenuOpen(false)}><span className="brand-mark" aria-hidden="true"><span /></span><span>ekmivo<span className="brand-dot">.</span></span></Link>
       <nav className={`header-nav${menuOpen ? " open" : ""}`} aria-label={locale === "bn" ? "প্রধান নেভিগেশন" : "Main navigation"}>
-        <Link href={`/${locale}#services`} onClick={() => setMenuOpen(false)}>{t.nav.services}</Link>
-        <Link href={`/${locale}#ai`} onClick={() => setMenuOpen(false)}>{t.nav.ai}</Link>
-        <Link href={`/${locale}#commerce`} onClick={() => setMenuOpen(false)}>{t.nav.commerce}</Link>
-        <Link href={`/${locale}#workflow`} onClick={() => setMenuOpen(false)}>{t.nav.workflow}</Link>
-        <Link href={`/${locale}#pricing`} onClick={() => setMenuOpen(false)}>{t.nav.pricing}</Link>
-        <Link className="mobile-extra" href={`/${locale}#solutions`} onClick={() => setMenuOpen(false)}>{t.nav.solutions}</Link>
-        <Link className="mobile-extra" href={`/${locale}#faq`} onClick={() => setMenuOpen(false)}>{t.nav.faq}</Link>
+        <Link href={`/${locale}#services`} onClick={onSectionNavigate}>{t.nav.services}</Link>
+        <Link href={`/${locale}#ai`} onClick={onSectionNavigate}>{t.nav.ai}</Link>
+        <Link href={`/${locale}#commerce`} onClick={onSectionNavigate}>{t.nav.commerce}</Link>
+        <Link href={`/${locale}#workflow`} onClick={onSectionNavigate}>{t.nav.workflow}</Link>
+        <Link href={`/${locale}#pricing`} onClick={onSectionNavigate}>{t.nav.pricing}</Link>
+        <Link className="mobile-extra" href={`/${locale}#solutions`} onClick={onSectionNavigate}>{t.nav.solutions}</Link>
+        <Link className="mobile-extra" href={`/${locale}#faq`} onClick={onSectionNavigate}>{t.nav.faq}</Link>
         <Link className="mobile-login" href={`/${locale}/login`} onClick={() => setMenuOpen(false)}>{t.login}</Link>
         <Link className="mobile-register" href={`/${locale}/register`} onClick={() => setMenuOpen(false)}>{t.register} ↗</Link>
       </nav>

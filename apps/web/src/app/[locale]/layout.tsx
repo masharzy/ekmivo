@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 export async function generateMetadata({ params }: { params: Promise<{locale:string}> }): Promise<Metadata> {
  const {locale}=await params;
  const bn=locale==="bn";
- const title=bn?"Ekmivo — সহজ পেমেন্ট, স্মার্ট কাস্টমার যোগাযোগ":"Ekmivo — Payments and AI, made clearer";
+ const title=bn?"Ekmivo — পেমেন্ট লিংক ও AI সেবা":"Ekmivo — Payments and AI, made clearer";
  const description=bn
-  ?"Ekmivo-তে পেমেন্ট লিংক, প্রমাণভিত্তিক পেমেন্ট যাচাই এবং পরিকল্পিত AI কাস্টমার যোগাযোগের সুবিধা। দুটি স্বাধীন সেবা, প্রয়োজন অনুযায়ী ব্যবহার করুন।"
+  ?"Ekmivo-তে পেমেন্ট লিংক তৈরি করুন এবং লেনদেনের অবস্থা দেখুন। কাস্টমারের মেসেজ ও AI সহায়তার সেবাও তৈরি হচ্ছে।"
    :"Create payment links and verify eligible mobile-wallet payments with Ekmivo. Explore the upcoming AI workspace for customer conversations and automation.";
  return {title,description,openGraph:{title,description,type:"website",siteName:"Ekmivo"}};
 }

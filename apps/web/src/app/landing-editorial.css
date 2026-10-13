@@ -18,6 +18,8 @@
 .em :is(button,a){-webkit-tap-highlight-color:transparent}
 .em :is(a,button,summary):focus-visible{outline:3px solid var(--em-ink);outline-offset:5px}
 .em-section{padding:clamp(76px,7.7vw,122px) 0;scroll-margin-top:100px}
+/* Anchor targets inside a card need the same clearance as full sections. */
+.em :is(#ai,#commerce,#services,#workflow,#pricing,#solutions,#faq,#payments,#principles){scroll-margin-top:110px}
 .em-container{width:min(calc(100% - 84px),1260px);margin:auto;position:relative}
 .em-kicker{font-weight:800;letter-spacing:.135em;font-size:12px;line-height:1.5;text-transform:uppercase;display:inline-block}
 .em h1,.em h2,.em h3{color:var(--em-ink)}
