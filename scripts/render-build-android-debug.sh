@@ -56,14 +56,14 @@ echo "[APK] Compiling Ekmivo Android developer build"
 )
 APK="$ROOT/apps/mobile/app/build/outputs/apk/debug/app-debug.apk"
 test -s "$APK"
-cp "$APK" "$ROOT/apk-dist/ekmivo-v0.2.0-debug.apk"
-(cd "$ROOT/apk-dist"; sha256sum ekmivo-v0.2.0-debug.apk > SHA256SUMS.txt)
+cp "$APK" "$ROOT/apk-dist/ekmivo-v0.2.1-debug.apk"
+(cd "$ROOT/apk-dist"; sha256sum ekmivo-v0.2.1-debug.apk > SHA256SUMS.txt)
 cat > "$ROOT/apk-dist/index.html" <<'HTML'
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ekmivo Android test build</title>
 <style>body{font:16px system-ui,sans-serif;max-width:540px;margin:12vh auto;padding:24px;background:#f7f7f3;color:#20211f}a{display:inline-block;background:#171717;color:white;padding:14px 20px;border-radius:10px;text-decoration:none}small{display:block;margin-top:20px;color:#555}h1{letter-spacing:-.04em}</style>
 <h1>Ekmivo Android</h1><p>Debug test APK. Pair your Android device from Ekmivo SMS Devices after installing. SMS permissions are requested with your consent.</p>
-<a href="./ekmivo-v0.2.0-debug.apk" download>Download Android test APK</a>
+<a href="./ekmivo-v0.2.1-debug.apk" download>Download Android test APK</a>
 <small>Test build, not production-signed. Only install if you trust this Ekmivo build. Do not share your pairing codes.</small>
 </html>
 HTML

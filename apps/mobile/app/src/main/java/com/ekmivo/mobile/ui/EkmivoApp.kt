@@ -31,6 +31,7 @@ import com.ekmivo.mobile.data.AppPreferences
 import com.ekmivo.mobile.data.Appearance
 import com.ekmivo.mobile.data.Language
 import com.ekmivo.mobile.receipt.ForwarderScreen
+import com.ekmivo.mobile.receipt.ReceiptRecoveryControl
 import kotlinx.coroutines.launch
 
 private enum class Tab(val icon:ImageVector) {
@@ -131,6 +132,8 @@ fun EkmivoApp(preferences:AppPreferences){
           onClick={scope.launch{preferences.updateAppearance(option)}},label={Text(text)})
         }
        }
+       HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+       ReceiptRecoveryControl(bn)
        Spacer(Modifier.weight(1f))
        Text("Ekmivo · v"+BuildConfig.VERSION_NAME,style=MaterialTheme.typography.labelMedium,
         color=MaterialTheme.colorScheme.onSurfaceVariant)

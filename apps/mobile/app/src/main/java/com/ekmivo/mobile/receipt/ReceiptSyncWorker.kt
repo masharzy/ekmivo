@@ -11,6 +11,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.Constraints
 import androidx.work.NetworkType
 import androidx.work.BackoffPolicy
+import androidx.work.OutOfQuotaPolicy
 import android.os.Build
 import android.Manifest
 import android.content.pm.PackageManager
@@ -78,7 +79,12 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
      store.setQueueError("INGEST_REJECTED_"+response.first)
      return Result.failure()
     }
-    if(response.first !in 200..299)return Result.retry()
+    if(response.first !in 200..299){
+     // HTTP failures used to be silently retried while UI always blamed
+     // the network. Persist a SAFE status code without SMS/customer data.
+     store.setQueueError("FORWARD_HTTP_"+response.first)
+     return Result.retry()
+    }
     if(JSONObject(response.second).optString("ack")!="durable"){
      store.setQueueError("DURABLE_ACK_MISSING");return Result.retry()
     }
@@ -117,27 +123,54 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
     continueQueued(applicationContext)
     Result.success()
    }else Result.success()
-  }}catch(_:Exception){
-   ReceiptStore(applicationContext).use{it.setQueueError("QUEUE_OR_TRANSPORT_ERROR")}
+  }}catch(e:Exception){
+   ReceiptStore(applicationContext).use{
+    it.setQueueError(
+     when(e){
+      is java.net.UnknownHostException,is java.net.ConnectException->"NETWORK_UNAVAILABLE"
+      is java.net.SocketTimeoutException, is java.io.InterruptedIOException->"NETWORK_TIMEOUT"
+      is javax.net.ssl.SSLException->"TLS_CONNECTION_ERROR"
+      else->"QUEUE_OR_TRANSPORT_ERROR"
+     }
+    )
+   }
    Result.retry()
   }
  }
  companion object {
-  private fun continueQueued(context:Context){
-   val constraints=Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-   WorkManager.getInstance(context).enqueueUniqueWork(
-    "receipt-sync",ExistingWorkPolicy.APPEND_OR_REPLACE,
-    OneTimeWorkRequestBuilder<ReceiptSyncWorker>()
-     .setConstraints(constraints)
-     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30,TimeUnit.SECONDS)
-     .build()
-   )
+  private fun request(context:Context,expedited:Boolean):androidx.work.OneTimeWorkRequest{
+   val constraint=Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+   val builder=OneTimeWorkRequestBuilder<ReceiptSyncWorker>()
+    .setConstraints(constraint)
+    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,15,TimeUnit.SECONDS)
+   if(expedited && Build.VERSION.SDK_INT>=31)builder.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+   return builder.build()
+  }
+
+  /** A fresh SMS/boot/resume/manual retry MUST wake a stalled backoff chain.
+   * REPLACE only on urgent wake; ordinary scheduling preserves a running upload.
+   * Server ACKs are idempotent per immutable event ID if cancellation races.
+   */
+  fun scheduleNow(context:Context){
+   val manager=WorkManager.getInstance(context)
+   manager.enqueueUniqueWork("receipt-sync",ExistingWorkPolicy.REPLACE,request(context,true))
+   schedulePeriodic(context)
   }
   fun schedule(context:Context){
-   val constraints=Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-   val manager=WorkManager.getInstance(context)
-   manager.enqueueUniqueWork("receipt-sync",ExistingWorkPolicy.KEEP,OneTimeWorkRequestBuilder<ReceiptSyncWorker>().setConstraints(constraints).setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30,TimeUnit.SECONDS).build())
-   manager.enqueueUniquePeriodicWork("receipt-health",ExistingPeriodicWorkPolicy.KEEP,PeriodicWorkRequestBuilder<ReceiptSyncWorker>(15,TimeUnit.MINUTES).setConstraints(constraints).build())
+   WorkManager.getInstance(context).enqueueUniqueWork(
+    "receipt-sync",ExistingWorkPolicy.KEEP,request(context,false))
+   schedulePeriodic(context)
+  }
+  private fun schedulePeriodic(context:Context){
+   val constraint=Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+   WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+    "receipt-health",ExistingPeriodicWorkPolicy.KEEP,
+    PeriodicWorkRequestBuilder<ReceiptSyncWorker>(15,TimeUnit.MINUTES)
+     .setConstraints(constraint).build())
+  }
+  private fun continueQueued(context:Context){
+   WorkManager.getInstance(context).enqueueUniqueWork(
+    "receipt-sync",ExistingWorkPolicy.APPEND_OR_REPLACE,request(context,false))
   }
  }
 }

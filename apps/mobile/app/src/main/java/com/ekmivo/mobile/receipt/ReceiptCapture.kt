@@ -9,6 +9,7 @@ import android.service.notification.StatusBarNotification
 import android.app.Notification
 import org.json.JSONObject
 import java.time.Instant
+import java.util.concurrent.Executors
 
 object ReceiptCapture {
  // Provider SMS originatingAddress identifies only the message source, not payer.
@@ -30,7 +31,7 @@ object ReceiptCapture {
      .put("kind","device_sms").put("evidence",text)
      .put("configuration_version",version)
      .put("observed_at",Instant.now().toString())
-    if(store.enqueue(body))ReceiptSyncWorker.schedule(context)
+    if(store.enqueue(body))ReceiptSyncWorker.scheduleNow(context)
     return
    }
    val collection=store.collectionEnrollments()
@@ -54,17 +55,31 @@ object ReceiptCapture {
  }
 }
 class ReceiptSmsReceiver:BroadcastReceiver(){
+ companion object {
+  private val captureExecutor=Executors.newSingleThreadExecutor()
+ }
  override fun onReceive(context:Context,intent:Intent){
   if(intent.action!=Telephony.Sms.Intents.SMS_RECEIVED_ACTION)return
-  val messages=Telephony.Sms.Intents.getMessagesFromIntent(intent)
-  if(messages.isEmpty())return
-  val sender=messages.first().originatingAddress?:return
-  if(messages.any{it.originatingAddress!=sender})return
-  val subscription=intent.getIntExtra("subscription",-1)
-  // A missing subscription is an opaque source hint, never a guessed account.
-  // Server does not use SIM slot or originatingAddress as payer identity.
-  ReceiptCapture.accept(context,sender,"sms:"+(if(subscription>=0)subscription.toString() else "unknown"),"device_sms",
-   messages.joinToString(""){it.messageBody?:""})
+  // Persist the encrypted SMS without waiting for the UI or a running app.
+  // goAsync keeps the broadcast alive for this short database enqueue.
+  val pending=goAsync()
+  val appContext=context.applicationContext
+  captureExecutor.execute {
+   try{
+    val messages=Telephony.Sms.Intents.getMessagesFromIntent(intent)
+    if(messages.isNotEmpty()){
+     val sender=messages.first().originatingAddress
+     if(sender!=null && messages.all{it.originatingAddress==sender}){
+      val subscription=intent.getIntExtra("subscription",-1)
+      val hint="sms:"+(if(subscription>=0)subscription.toString() else "unknown")
+      ReceiptCapture.accept(appContext,sender,hint,"device_sms",
+       messages.joinToString(""){it.messageBody?:""})
+     }
+    }
+   }catch(_:Exception){
+    runCatching{ReceiptStore(appContext).use{it.setQueueError("SMS_CAPTURE_RETRY_NEEDED")}}
+   }finally{pending.finish()}
+  }
  }
 }
 class ReceiptNotificationListener:NotificationListenerService(){
