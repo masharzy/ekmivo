@@ -105,7 +105,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
  async function lock(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();
   if(locking||!info)return;
-  if(!window.confirm(bn?"এটি কি যে নম্বর থেকে টাকা পাঠাবেন? একবার লক হলে পরিবর্তন করা যাবে না।":"Is this the actual number you will pay from? Once locked, it cannot be edited."))return;
+  if(!info.methods?.includes(method))return; // URL preferences never bypass availability.
   sequence.current++;
   setLocking(true);setCode("");
   try{
@@ -130,7 +130,8 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
  const title=statusLabels[state]?.[bn?1:0]||(bn?"পেমেন্ট":"Payment");
  const canLock=state==="requires_payer"&&(info?.environment==="sandbox"||info?.environment==="live"&&info.verification_available);
  const selectedMethod=(info?.method&&isPayMethod(info.method)?info.method:method);
- const showPayer=state==="requires_payer"&&step==="payer"&&canLock;
+ const availableSelected=info?.methods?.includes(method)===true;
+ const showPayer=state==="requires_payer"&&step==="payer"&&canLock&&availableSelected;
  const isFlow=showPayer||state!=="requires_payer";
  const logoUrl=(()=>{try{if(!info?.brand?.logo_url)return "";const u=new URL(info.brand.logo_url);return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return ""}})();
  const contactUrl=(()=>{try{if(!info?.brand?.support_url)return "";const u=new URL(info.brand.support_url);return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return ""}})();
@@ -150,7 +151,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
     <p>{describe(code,bn)}</p><button type="button" onClick={()=>{setStatus("loading");void refresh()}}>{bn?"আবার চেষ্টা করুন":"Retry"}</button>
    </div>}
    {info&&status==="ready"&&<>
-    {state==="requires_payer"&&step==="methods"&&<section className="provider-method-picker">
+    {state==="requires_payer"&&(step==="methods"||!availableSelected)&&<section className="provider-method-picker">
      <div className="provider-merchant-head">
       <div className="provider-merchant-avatar">{logoUrl?<Image src={logoUrl} unoptimized width={54} height={54} alt={info.merchant_name} referrerPolicy="no-referrer"/>:<span>{info.merchant_name.slice(0,1).toUpperCase()}</span>}</div>
       <h1>{info.merchant_name}</h1>
