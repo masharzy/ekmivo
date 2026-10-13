@@ -21,6 +21,7 @@
 .customer-pay-contact a:nth-child(2){color:#10bd6f;border-color:#adf0d0}
 .customer-pay-contact a:hover{transform:translateY(-2px);box-shadow:0 8px 16px #174f7d12}
 .customer-pay-contact svg{width:25px;height:25px}
+.customer-pay-reference{margin:0 30px 28px;padding:16px 0 12px;border-top:1px solid #e7eef5;color:#172236;font-size:23px;font-weight:800;overflow-wrap:anywhere}
 .customer-pay-warning{margin:0 24px 12px;padding:9px;border:1px solid #fcbd82;background:#fff6eb;border-radius:7px;font-size:13px;font-weight:700;text-align:center;color:#8e4800}
 .customer-pay-body{padding:0 31px 31px}
 .customer-pay-section-title{display:grid;place-items:center;background:#0084c8;color:white;min-height:45px;border-radius:7px;font-weight:750;font-size:15px;margin-bottom:28px}
