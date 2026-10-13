@@ -13,6 +13,6 @@ test("0049 live intent supports physical phone but not unpaired/revoked/unhealth
  assert.match(sql,/pg06_phone_forwarded/);
  assert.match(sql,/pg10_checkout_view\(text\)/);
  assert.match(sql,/financial_idempotency/);
- assert.match(sql,/SELECT pg06_scope\(w,e\)/);
+ assert.match(sql,/PERFORM pg06_scope\(w,e\)/);
  assert.doesNotMatch(sql,/UPDATE payment_intents|DELETE FROM payment_/);
 });
