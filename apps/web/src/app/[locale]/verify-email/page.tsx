@@ -8,6 +8,6 @@ export default async function VerifyEmailPage({params}:{params:Promise<{locale:s
  const locale=raw==="en"?"en":"bn";
  const user=await currentUser();
  if(!user)redirect(`/${locale}/login`);
- if(user.verified||!await verificationEnabled())redirect(`/${locale}/workspaces`);
+ if(user.verified||!await verificationEnabled())redirect(`/${locale}/workspaces/open`);
  return <VerificationForm locale={locale} email={user.email}/>;
 }

@@ -74,6 +74,22 @@ export async function workspacesFor(userId:string):Promise<Workspace[]>{
  WHERE m.user_id=${userId} ORDER BY w.created_at DESC`;
  return rows.map(w=>({id:String(w.id),name:String(w.name),mode:w.service_mode as Workspace["mode"],role:w.role as Workspace["role"]}));
 }
+
+const DEFAULT_WORKSPACE_COOKIE="ekmivo-default-workspace";
+const YEAR=365*24*60*60;
+export async function selectDefaultWorkspace(userId:string,workspaceId:string){
+ const rows=await database()`SELECT 1 FROM workspace_members WHERE user_id=${userId}::uuid AND workspace_id=${workspaceId}::uuid LIMIT 1`;
+ if(!rows.length)return false;
+ (await cookies()).set(DEFAULT_WORKSPACE_COOKIE,userId+":"+workspaceId,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:YEAR});
+ return true;
+}
+export async function preferredWorkspaceFor(userId:string){
+ const spaces=await workspacesFor(userId);
+ if(!spaces.length)return null;
+ const encoded=(await cookies()).get(DEFAULT_WORKSPACE_COOKIE)?.value||"";
+ const chosen=encoded.startsWith(userId+":")?encoded.slice(userId.length+1):"";
+ return spaces.find(w=>w.id===chosen)??spaces[0];
+}
 export const requireWorkspace=cache(async function requireWorkspace(locale:"bn"|"en",id:string){
  const user=await requireUser(locale);
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))redirect(`/${locale}/workspaces`);

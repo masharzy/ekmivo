@@ -14,7 +14,7 @@ const pages=[
  {path:"developers",en:"Developers",bn:"Developers"}
 ] as const;
 
-export function SiteHeader({locale,initialTheme}:{locale:Locale;initialTheme:Theme}){
+export function SiteHeader({locale,initialTheme,authenticated=false}:{locale:Locale;initialTheme:Theme;authenticated?:boolean}){
  const t=siteCopy[locale];
  const pathname=usePathname();
  const [scrolled,setScrolled]=useState(false);
@@ -58,15 +58,15 @@ export function SiteHeader({locale,initialTheme}:{locale:Locale;initialTheme:The
  function closeMenu(){setMenuOpen(false);setHidden(false)}
  return <header className={`site-header ek-public-header${scrolled?" is-wide":""}${hidden?" is-hidden":""}${menuOpen?" menu-open":""}`}>
   <div className="header-inner">
-   <Link className="brand" href={`/${locale}`} aria-label="Ekmivo home" onClick={closeMenu}>
+   <Link className="brand" href="/" aria-label="Ekmivo home" onClick={closeMenu}>
     <span className="brand-mark" aria-hidden="true"><span/></span><span>ekmivo<span className="brand-dot">.</span></span>
    </Link>
    <nav id="ek-public-navigation" className={`header-nav${menuOpen?" open":""}`} aria-label={locale==="bn"?"মূল মেনু":"Main navigation"}>
-    {pages.map(page=><Link key={page.path} aria-current={pathname===`/${locale}/${page.path}`?"page":undefined} href={`/${locale}/${page.path}`} onClick={closeMenu}>{page[locale]}</Link>)}
+    {pages.map(page=><Link key={page.path} aria-current={pathname.replace(/^\/(bn|en)(?=\/|$)/,"")===`/${page.path}`?"page":undefined} href={`/${page.path}`} onClick={closeMenu}>{page[locale]}</Link>)}
    </nav>
    <div className="header-right">
     <SiteControls locale={locale} initialTheme={initialTheme}/>
-    <Link className="header-cta ek-signin" href={`/${locale}/login`} onClick={closeMenu}>{t.login}<span aria-hidden="true">↗</span></Link>
+    <Link className="header-cta ek-signin" href={authenticated?"/workspaces/open":"/login"} onClick={closeMenu}>{authenticated?(locale==="bn"?"Dashboard":"Dashboard"):t.login}<span aria-hidden="true">↗</span></Link>
     <button className="menu-toggle" type="button" aria-label={menuOpen?t.closeMenu:t.menu} aria-controls="ek-public-navigation" aria-expanded={menuOpen} onClick={()=>setMenuOpen(x=>!x)}><span/><span/></button>
    </div>
   </div>

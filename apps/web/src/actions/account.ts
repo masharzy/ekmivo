@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { mailReady, sendCode, verificationEnabled } from "../lib/server/email";
 import { database } from "../lib/server/db";
-import { createSession, currentUser, hashToken, passwordHash, passwordMatches, revokeSession } from "../lib/server/auth";
+import { createSession, currentUser, hashToken, passwordHash, passwordMatches, revokeSession, selectDefaultWorkspace, workspacesFor } from "../lib/server/auth";
 import { asText, strongPassword, validEmail, validatedName, type FormErrorState, safeLocale } from "../lib/server/validation";
 
 const strings = {
@@ -43,7 +43,7 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
    catch(e){report("send initial verification email",e);}
   }
  } catch(e){report("register",e);return fail(t.generic);}
- redirect(verify?`/${locale}/verify-email`:`/${locale}/workspaces`);
+ redirect(verify?`/${locale}/verify-email`:`/${locale}/workspaces/open`);
 }
 
 export async function loginAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -78,7 +78,7 @@ export async function loginAction(localeParam:string,_previous:FormErrorState,fo
   if(e && typeof e==="object" && "digest" in e && String(e.digest).startsWith("NEXT_REDIRECT"))throw e;
   report("login",e);return fail(t.generic);
  }
- redirect(`/${locale}/workspaces`);
+ redirect(`/${locale}/workspaces/open`);
 }
 
 export async function createWorkspaceAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -99,7 +99,21 @@ export async function createWorkspaceAction(localeParam:string,_previous:FormErr
    return String(w[0].id);
   });
  }catch(e){report("createWorkspace",e);return fail(t.generic);}
+ // New users get their first workspace as their default automatically.
+ try{if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,workspaceId);}
+ catch(e){report("set initial workspace default",e);}
  redirect(`/${locale}/w/${workspaceId}/dashboard`);
+}
+
+
+export async function setDefaultWorkspaceAction(localeParam:string,workspaceId:string){
+ const locale=safeLocale(localeParam);
+ const user=await currentUser();
+ if(!user)redirect(`/${locale}/login`);
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId))redirect(`/${locale}/workspaces`);
+ const allowed=await selectDefaultWorkspace(user.id,workspaceId);
+ if(!allowed)redirect(`/${locale}/workspaces`);
+ redirect(`/${locale}/workspaces`);
 }
 
 export async function logoutAction(localeParam:string){

@@ -14,13 +14,16 @@ import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "../../components/site-header";
 import { SiteFooter } from "../../components/site-footer";
+import { currentUser } from "../../lib/server/auth";
 
 export default async function LocaleLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (locale !== "bn" && locale !== "en") notFound();
-  const storedTheme = (await cookies()).get("ekmivo-theme")?.value;
+  const jar=await cookies();
+  const storedTheme = jar.get("ekmivo-theme")?.value;
   const initialTheme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "system";
   const isApp = (await headers()).get("x-ekmivo-application") === "1";
   if(isApp) return <>{children}</>;
-  return <><SiteHeader locale={locale} initialTheme={initialTheme} />{children}<SiteFooter locale={locale} /></>;
+  const user=jar.has("ekmivo-session")?await currentUser():null;
+  return <><SiteHeader locale={locale} initialTheme={initialTheme} authenticated={!!user} />{children}<SiteFooter locale={locale} /></>;
 }

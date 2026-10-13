@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import {useActionState,useState} from "react";
 import {useFormStatus} from "react-dom";
@@ -7,51 +6,106 @@ import {loginAction,registerAction} from "../actions/account";
 import {emptyState,type FormErrorState} from "../lib/server/validation";
 import type {Locale} from "../lib/site-copy";
 
-const copy={
+const text={
  en:{
-  login:{intro:"Back to the work that matters.",title:"Welcome back.",subtitle:"Sign in to manage payments and your Ekmivo workspace.",submit:"Sign in",bottom:"New to Ekmivo?",swap:"Create an account",eyebrow:"WELCOME BACK"},
-  register:{intro:"A clearer way to manage payments.",title:"Create your account.",subtitle:"Get your workspace ready and choose the services you need.",submit:"Create account",bottom:"Already have an account?",swap:"Sign in",eyebrow:"GET STARTED"},
-  name:"Full name",email:"Email address",password:"Password",confirm:"Confirm password",show:"Show",hide:"Hide",
-  strength:"Use at least 12 characters.",back:"Back to home",pending:"Please wait…",forgot:"Forgot password?",
-  introDetail:"Your payments and everyday work, in one place.",loginTip:"Use the email address associated with your account."
+  login:{tag:"YOUR ACCOUNT",heading:"Good to see you again.",desc:"Your workspace is right where you left it.",submit:"Sign in",alternate:"New to Ekmivo?",alternateAction:"Create an account"},
+  register:{tag:"JOIN EKMIVO",heading:"Create your account.",desc:"A few details, then you're ready to set up your business.",submit:"Create account",alternate:"Already have an account?",alternateAction:"Sign in"},
+  name:"Your name",email:"Email address",password:"Password",confirm:"Confirm password",show:"Show",hide:"Hide",forgot:"Forgot your password?",
+  nameError:"Enter a name between 2 and 100 characters.",emailError:"Enter a valid email address.",passwordLoginError:"Enter your password.",passwordError:"Use between 12 and 256 characters.",confirmError:"The passwords do not match.",
+  summary:"Please correct the highlighted fields.",pending:"Please wait…",back:"Back to homepage",brand:"Your business, one workspace.",
+  sideNote:"PAYMENTS · CHECKOUT · API",registerInfo:"Your account is free to create. Plans are not yet announced."
  },
  bn:{
-  login:{intro:"",title:"আবার স্বাগতম",subtitle:"আপনার Ekmivo অ্যাকাউন্টে লগইন করুন।",submit:"Sign in",bottom:"Ekmivo-তে নতুন?",swap:"অ্যাকাউন্ট খুলুন",eyebrow:"SIGN IN"},
-  register:{intro:"",title:"নতুন অ্যাকাউন্ট খুলুন",subtitle:"কিছু তথ্য দিলেই আপনার Ekmivo অ্যাকাউন্ট তৈরি হবে।",submit:"অ্যাকাউন্ট তৈরি করুন",bottom:"আগেই অ্যাকাউন্ট আছে?",swap:"Sign in",eyebrow:"CREATE ACCOUNT"},
-  name:"আপনার নাম",email:"ইমেইল",password:"পাসওয়ার্ড",confirm:"পাসওয়ার্ড আবার লিখুন",show:"দেখুন",hide:"লুকান",
-  strength:"কমপক্ষে ১২ অক্ষরের পাসওয়ার্ড দিন।",back:"হোমপেজে ফিরুন",pending:"অপেক্ষা করুন…",forgot:"পাসওয়ার্ড ভুলে গেছেন?",
-  introDetail:"",loginTip:""
+  login:{tag:"আপনার অ্যাকাউন্ট",heading:"আবার স্বাগতম",desc:"আপনার ওয়ার্কস্পেসে যেতে লগইন করুন।",submit:"Sign in",alternate:"Ekmivo-তে নতুন?",alternateAction:"অ্যাকাউন্ট খুলুন"},
+  register:{tag:"নতুন অ্যাকাউন্ট",heading:"Ekmivo-তে অ্যাকাউন্ট খুলুন",desc:"শুরু করতে আপনার নাম, ইমেইল ও একটি পাসওয়ার্ড দিন।",submit:"অ্যাকাউন্ট তৈরি করুন",alternate:"আগেই অ্যাকাউন্ট আছে?",alternateAction:"Sign in"},
+  name:"আপনার নাম",email:"ইমেইল",password:"পাসওয়ার্ড",confirm:"পাসওয়ার্ড আবার লিখুন",show:"দেখুন",hide:"লুকান",forgot:"পাসওয়ার্ড ভুলে গেছেন?",
+  nameError:"নাম ২ থেকে ১০০ অক্ষরের মধ্যে লিখুন।",emailError:"সঠিক ইমেইল ঠিকানা লিখুন।",passwordLoginError:"পাসওয়ার্ড লিখুন।",passwordError:"পাসওয়ার্ড কমপক্ষে ১২ অক্ষরের হতে হবে।",confirmError:"দুটি পাসওয়ার্ড মেলেনি।",
+  summary:"চিহ্নিত তথ্যগুলো ঠিক করে আবার চেষ্টা করুন।",pending:"অপেক্ষা করুন…",back:"হোমপেজে ফিরুন",brand:"আপনার ব্যবসার কাজ, এক জায়গায়।",
+  sideNote:"PAYMENTS · CHECKOUT · API",registerInfo:"অ্যাকাউন্ট তৈরি করতে কোনো প্যাকেজ কিনতে হবে না।"
  }
 } as const;
 
-function Submit({label,loading}:{label:string;loading:string}){
+function Submit({label,pendingText}:{label:string;pendingText:string}){
  const {pending}=useFormStatus();
- return <button className="ek-auth-primary" type="submit" disabled={pending}>{pending?loading:label}<span aria-hidden="true">↗</span></button>;
+ return <button type="submit" className="ek-auth-primary ek-auth-submit" aria-busy={pending} disabled={pending}>
+  <span>{pending?pendingText:label}</span><span className="ek-auth-submit-arrow" aria-hidden="true">↗</span>
+ </button>;
 }
+type Field="name"|"email"|"password"|"confirm";
+type FieldErrors=Partial<Record<Field,string>>;
 
 export function AuthForm({locale,mode}:{locale:Locale;mode:"login"|"register"}){
- const t=copy[locale],p=t[mode],login=mode==="login";
+ const t=text[locale],p=t[mode],login=mode==="login";
  const action=login?loginAction.bind(null,locale):registerAction.bind(null,locale);
- const [state,formAction]=useActionState<FormErrorState,FormData>(action,emptyState);
+ const [server,formAction]=useActionState<FormErrorState,FormData>(action,emptyState);
+ const [errors,setErrors]=useState<FieldErrors>({});
+ const [edited,setEdited]=useState<Partial<Record<Field,boolean>>>({});
  const [show,setShow]=useState(false);
- return <main className="ek-auth-main" lang={locale}>
- 
-  <div className="ek-auth-layout ek-auth-layout-compact">
-   <div className="ek-auth-card">
-    <span className="ek-auth-card-kicker">{p.eyebrow}</span>
-    <h1>{p.title}</h1><p className="ek-auth-subtitle">{p.subtitle}</p>
-    <form action={formAction}>
-     {!login&&<label>{t.name}<input type="text" name="name" autoComplete="name" minLength={2} maxLength={100} required placeholder={t.name} aria-invalid={!!state.fields?.name}/>{state.fields?.name&&<small className="ek-field-error">{state.fields.name}</small>}</label>}
-     <label>{t.email}<input name="email" type="email" autoComplete="email" placeholder="you@company.com" required maxLength={254} aria-invalid={!!state.fields?.email}/>{state.fields?.email&&<small className="ek-field-error">{state.fields.email}</small>}</label>
-     <label>{t.password}<span className="ek-auth-password"><input name="password" type={show?"text":"password"} autoComplete={login?"current-password":"new-password"} minLength={login?1:12} maxLength={256} required aria-invalid={!!state.fields?.password}/><button type="button" onClick={()=>setShow(v=>!v)} aria-label={show?t.hide:t.show}>{show?t.hide:t.show}</button></span>{!login&&<small className="ek-auth-hint">{t.strength}</small>}{state.fields?.password&&<small className="ek-field-error">{state.fields.password}</small>}</label>
-     {!login&&<label>{t.confirm}<input name="confirm" type={show?"text":"password"} autoComplete="new-password" minLength={12} required aria-invalid={!!state.fields?.confirm}/>{state.fields?.confirm&&<small className="ek-field-error">{state.fields.confirm}</small>}</label>}
-     {login&&<Link className="ek-auth-forgot" href={`/${locale}/forgot-password`}>{t.forgot} ↗</Link>}
-     {state.status==="error"&&<p className="ek-form-error" role="alert">{state.message}</p>}
-     <Submit label={p.submit} loading={t.pending}/>
-    </form>
-    <div className="ek-auth-switch"><span>{p.bottom}</span><Link href={`/${locale}/${login?"register":"login"}`}>{p.swap} ↗</Link></div>
+ const [passwordLength,setPasswordLength]=useState(0);
+ const fieldError=(field:Field)=>errors[field]||(!edited[field]&&server.status==="error"?server.fields?.[field]:undefined);
+ const clear=(field:Field)=>{setErrors(previous=>({...previous,[field]:undefined}));setEdited(previous=>({...previous,[field]:true}));};
+ function validate(event:React.FormEvent<HTMLFormElement>){
+  const form=event.currentTarget,values=new FormData(form);
+  const name=String(values.get("name")||"").trim();
+  const email=String(values.get("email")||"").trim();
+  const password=String(values.get("password")||"");
+  const confirm=String(values.get("confirm")||"");
+  const found:FieldErrors={};
+  if(!login&&(name.length<2||name.length>100))found.name=t.nameError;
+  if(email.length>254||!/^\S+@\S+\.\S+$/.test(email))found.email=t.emailError;
+  if(login?password.length===0||password.length>256:password.length<12||password.length>256)found.password=login?t.passwordLoginError:t.passwordError;
+  if(!login&&password!==confirm)found.confirm=t.confirmError;
+  if(Object.values(found).some(Boolean)){
+   event.preventDefault();
+   setErrors(found);
+   const first=(["name","email","password","confirm"] as Field[]).find(key=>found[key]);
+   (form.elements.namedItem(first||"email") as HTMLElement|null)?.focus();
+  }else setErrors({});
+ }
+ return <main className={"ek-auth-main ek-auth-designed ek-auth-"+mode} lang={locale}>
+  <div className="ek-auth-scene">
+   <aside className="ek-auth-brand-panel">
+    <Link className="ek-auth-brand-logo" href="/">ekmivo<span>.</span></Link>
+    <div className="ek-auth-art" aria-hidden="true">
+     <span className="ek-auth-orbit ek-auth-orbit-one"/><span className="ek-auth-orbit ek-auth-orbit-two"/>
+     <div className="ek-auth-graphic">
+      <span className="ek-auth-graphic-line"/><span className="ek-auth-graphic-line ek-auth-line-short"/>
+      <span className="ek-auth-graphic-pill">↗</span>
+     </div>
+     <span className="ek-auth-spark">✳</span>
+    </div>
+    <div className="ek-auth-brand-foot">
+     <strong>{t.brand}</strong>
+     <small>{t.sideNote}</small>
+    </div>
+   </aside>
+   <div className="ek-auth-form-zone">
+    <div className="ek-auth-form-body">
+     <div className="ek-auth-form-top"><span className="ek-auth-card-kicker">{p.tag}</span><span className="ek-auth-form-step">{login?"01 / 02":"02 / 02"}</span></div>
+     <h1>{p.heading}</h1>
+     <p className="ek-auth-subtitle">{p.desc}</p>
+     <form action={formAction} noValidate onSubmit={validate} className="ek-auth-fields">
+      {!login&&<label htmlFor="ek-auth-name">{t.name}<input id="ek-auth-name" name="name" type="text" autoComplete="name" maxLength={100} onChange={()=>clear("name")} aria-invalid={!!fieldError("name")} aria-describedby={fieldError("name")?"ek-auth-name-error":undefined} placeholder={locale==="bn"?"আপনার পুরো নাম":"Full name"}/>{fieldError("name")&&<small id="ek-auth-name-error" className="ek-field-error" role="status">{fieldError("name")}</small>}</label>}
+      <label htmlFor="ek-auth-email">{t.email}<input id="ek-auth-email" name="email" type="email" inputMode="email" autoComplete="email" maxLength={254} onChange={()=>clear("email")} placeholder="you@example.com" aria-invalid={!!fieldError("email")} aria-describedby={fieldError("email")?"ek-auth-email-error":undefined}/>{fieldError("email")&&<small id="ek-auth-email-error" className="ek-field-error" role="status">{fieldError("email")}</small>}</label>
+      <label htmlFor="ek-auth-password">{t.password}
+       <span className="ek-auth-password"><input id="ek-auth-password" name="password" type={show?"text":"password"} autoComplete={login?"current-password":"new-password"} onChange={event=>{clear("password");setPasswordLength(event.target.value.length)}} aria-invalid={!!fieldError("password")} aria-describedby={fieldError("password")?"ek-auth-password-error":undefined}/>
+       <button type="button" aria-label={show?t.hide:t.show} onClick={()=>setShow(s=>!s)}>{show?t.hide:t.show}</button></span>
+       {fieldError("password")&&<small id="ek-auth-password-error" className="ek-field-error" role="status">{fieldError("password")}</small>}
+      </label>
+      {!login&&<>
+       <div className="ek-auth-strength" aria-label={locale==="bn"?"পাসওয়ার্ড কমপক্ষে ১২ অক্ষর":"Password requires 12 characters"}><div className={passwordLength>=12?"has-password":""}/><div className={passwordLength>=12?"has-password":""}/><div className={passwordLength>=12?"has-password":""}/><div className={passwordLength>=12?"has-password":""}/><span>{passwordLength>=12?(locale==="bn"?"দৈর্ঘ্য ঠিক আছে":"Length requirement met"):(locale==="bn"?"কমপক্ষে ১২ অক্ষর লিখুন":"At least 12 characters")}</span></div>
+       <label htmlFor="ek-auth-confirm">{t.confirm}<input id="ek-auth-confirm" name="confirm" type={show?"text":"password"} autoComplete="new-password" onChange={()=>clear("confirm")} aria-invalid={!!fieldError("confirm")} aria-describedby={fieldError("confirm")?"ek-auth-confirm-error":undefined}/>{fieldError("confirm")&&<small className="ek-field-error" id="ek-auth-confirm-error" role="status">{fieldError("confirm")}</small>}</label>
+      </>}
+      {login&&<Link className="ek-auth-forgot" href="/forgot-password">{t.forgot} ↗</Link>}
+      {server.status==="error"&&<p className="ek-form-error" role="alert">{server.message}</p>}
+      {Object.values(errors).some(Boolean)&&<p className="ek-form-error" role="alert">{t.summary}</p>}
+      <Submit label={p.submit} pendingText={t.pending}/>
+     </form>
+     {!login&&<p className="ek-auth-register-tip">{t.registerInfo}</p>}
+     <div className="ek-auth-switch"><span>{p.alternate}</span><Link href={login?"/register":"/login"}>{p.alternateAction} ↗</Link></div>
+     <Link className="ek-auth-return" href="/">← {t.back}</Link>
+    </div>
    </div>
   </div>
-  <Link className="ek-auth-back" href={`/${locale}`}>← {t.back}</Link>
  </main>;
 }
