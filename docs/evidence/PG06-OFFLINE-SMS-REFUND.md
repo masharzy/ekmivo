@@ -1,6 +1,6 @@
 # PG06 / PG07 / PG11: phone SMS, offline recovery and delayed refund handoff
 
-Implementation PR: #19. Source only, NOT device/provider verified or deployed.
+Implementation PR: #19. Source only, NOT device/provider verified or deployed. Latest repair: offline capture remains eligible after phone config-version rotation (signed enrollment and immutable checkout remain authoritative); concurrency lock now uses workspace/environment/payer/method/amount rather than a receiver account. Queue history retains every unsent row while only older successful history is pruned; a worker drains up to 30 receipts before heartbeat.
 
 ## Owner decisions (2026-10-13)
 
@@ -45,3 +45,10 @@ Implementation PR: #19. Source only, NOT device/provider verified or deployed.
 - Sender label plus device signature do not cryptographically prove bKash/Nagad/Rocket issued the receipt. Fraud threat testing and merchant policy still apply.
 - A different personal receiving account on the same merchant phone is intentionally not excluded; if its valid-looking SMS matches an *unrelated* active request across all four fields, attribution may be incorrect. This is a user-selected product trade-off.
 - If original transfer timestamp is **outside** the immutable payment window, evidence stays unmatched and needs reconciliation; a later unrelated transfer is not automatically converted into a refund claim.
+
+## Source-level verification performed
+
+- Parser grammar replayed against the three owner-supplied bKash/Nagad strings and three negative messages (OTP, masked payer, outgoing); exactly the intended grammar matched each sample in an independent JavaScript regex sanity check. This is **not Go test execution or Android/provider testing**.
+- Static assertions checked 0051 transaction envelope, sender-based issuance and matcher lock, absence of stale configuration rejection, and one-case-per-receipt unique index.
+- GitHub Actions [first run](https://github.com/masharzy/ekmivo/actions/runs/38344385146), [second run](https://github.com/masharzy/ekmivo/actions/runs/38344793063) and [third run](https://github.com/masharzy/ekmivo/actions/runs/38344904738) all reported failure with *zero job steps*, and downloadable runner logs returned not-found. Treat as runner/execution blocker, not successful validation or demonstrated code failure.
+- Required before release: real Go/Next/Kotlin tests, disposable sandbox/live Postgres upgrade and payment/refund race fixtures, Android receive/reboot/airplane-mode/force-stop recovery, Play permission eligibility, responsive EN/BN/theme review.

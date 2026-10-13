@@ -95,8 +95,10 @@ BEGIN
  END IF;
  -- Capture-time configuration must still match. Otherwise do not route
  -- messages that were queued before account/source changes.
- IF captured_version<>p.config_version THEN receiving:=NULL;result_reason:='configuration_changed';
- ELSIF receiving IS NOT NULL THEN
+ -- Physical forwarders no longer bind receipts to a SIM or receiving account.
+ -- Configuration changes after capture do not invalidate signed queued SMS.
+ -- Revoked phones, workspace scope and immutable candidate uniqueness are still enforced.
+ IF receiving IS NOT NULL THEN
   IF payer_identity !~ '^[a-f0-9]{64}$' OR reference_identity !~ '^[a-f0-9]{64}$'
    OR original_time IS NULL OR original_time>now()+interval '5 minutes'
    OR amount IS NULL OR amount<=0 OR precision_name NOT IN ('second','minute')
@@ -255,8 +257,7 @@ BEGIN
  -- Same bucket lock as immutable attempt issuance (0008). Match is never
  -- decided by receipt arrival time; minute precision means the whole minute.
  PERFORM pg_advisory_xact_lock(hashtextextended(
-  o.workspace_id::text||':'||o.environment||':'||o.receiving_account_id::text||
-  ':'||o.payer_hmac||':'||o.method||':'||o.amount_minor::text,0));
+  o.workspace_id::text||':'||o.environment||':'||o.payer_hmac||':'||o.method||':'||o.amount_minor::text,0));
  SELECT count(*) INTO candidate_count FROM payment_attempts p
  WHERE p.workspace_id=o.workspace_id AND p.environment=o.environment
  AND p.receiving_account_id=o.receiving_account_id AND p.payer_hmac=o.payer_hmac

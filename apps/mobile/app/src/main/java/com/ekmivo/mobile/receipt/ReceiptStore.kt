@@ -162,8 +162,9 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
    if(stored){
     val recent=ContentValues().apply{put("id",id);put("body",encrypted);put("created",System.currentTimeMillis());put("sent",0)}
     database.insertOrThrow("recent",null,recent)
-    // Keep a bounded encrypted operational history, never an SMS inbox.
-    database.execSQL("DELETE FROM recent WHERE id NOT IN (SELECT id FROM recent ORDER BY created DESC,id DESC LIMIT 60)")
+    // Keep every unsent row visible. Only prune successfully forwarded
+    // operational history; never hide offline pending receipts.
+    database.execSQL("DELETE FROM recent WHERE sent=1 AND id NOT IN (SELECT id FROM recent WHERE sent=1 ORDER BY created DESC,id DESC LIMIT 60)")
    }
    database.setTransactionSuccessful();return stored
   }finally{database.endTransaction()}
@@ -195,6 +196,7 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
   try{
    db.execSQL("UPDATE recent SET sent=1 WHERE id=?",arrayOf(id))
    db.delete("pending","id=?",arrayOf(id))
+   db.execSQL("DELETE FROM recent WHERE sent=1 AND id NOT IN (SELECT id FROM recent WHERE sent=1 ORDER BY created DESC,id DESC LIMIT 60)")
    db.setTransactionSuccessful()
   }finally{db.endTransaction()}
  }

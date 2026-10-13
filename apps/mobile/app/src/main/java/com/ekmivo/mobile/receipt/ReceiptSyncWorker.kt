@@ -61,7 +61,7 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
    // Transport first: avoid preflight configuration/heartbeat network delays.
    // Each signed receipt is independently authenticated by Go; revocation
    // and stale source configuration still fail closed on the server.
-   for(batchIndex in 0 until 5){
+   for(batchIndex in 0 until 30){
     val next=store.next()?:break
     val queued=JSONObject(next.second.toString(Charsets.UTF_8))
     val boundID=queued.optString("enrollment_id")
