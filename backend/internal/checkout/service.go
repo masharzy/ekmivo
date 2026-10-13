@@ -751,6 +751,21 @@ func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byt
 		return
 	}
 	delete(data, "workspace_id")
+	// Tell customers whether a signed phone is actually online independently
+	// from whether production-approved receipt parsing is available.
+	if checkoutRealm(raw) == "live" {
+		connected := false
+		if sources, ok := data["sources"].([]any); ok {
+			for _, item := range sources {
+				source, ok := item.(map[string]any)
+				if ok && source["forwarder"] == true {
+					connected = true
+					break
+				}
+			}
+		}
+		data["phone_connected"] = connected
+	}
 	delete(data, "sources")
 	if checkoutRealm(raw) == "live" {
 		available := s.liveMethods(raw)

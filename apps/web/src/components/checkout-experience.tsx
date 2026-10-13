@@ -11,7 +11,7 @@ type Checkout={
  payer_suffix:string|null;method:string|null;methods:string[];
  destination:string|null;verification_available:boolean;
  verification?:{method:string;verified_at:string;original_transaction_at:string;time_precision:string;amount_minor:number;currency:string;receipt_method:string;receiving_suffix:string};return_url?:string;notice_available?:boolean;
- source_online?:boolean;
+ source_online?:boolean;phone_connected?:boolean;
  notice_delivery_available?:boolean;
 };
 const methods:Record<string,string>={bkash:"bKash",nagad:"Nagad",rocket:"Rocket"};
@@ -159,7 +159,9 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
     </section>
     <section className="pg05-checkout-card" aria-live="polite">
      {canLock&&step==="methods"&&<><h2>{bn?"মোবাইল ব্যাংকিং":"Mobile Banking"}</h2><div className="pg05-method-options">{info.methods.map(option=><button type="button" key={option} data-method={option} aria-pressed={method===option} onClick={()=>setMethod(option)}>{methods[option]||option}</button>)}</div><button type="button" className="pg05-pay" disabled={!info.methods.includes(method)} onClick={()=>setStep("payer")}>{bn?"পরিশোধ করুন":"Pay"} {amount}</button></>}
-     {state==="requires_payer"&&!canLock&&<p role="alert">{bn?"এই মুহূর্তে পেমেন্ট গ্রহণের সংযোগ প্রস্তুত নেই। টাকা পাঠাবেন না; বিক্রেতার সঙ্গে যোগাযোগ করুন।":"Payment collection is currently unavailable. Do not send money; contact the merchant."}</p>}
+     {state==="requires_payer"&&!canLock&&<p role="alert">{info.phone_connected
+       ?(bn?"বিক্রেতার ফোন সংযুক্ত আছে, কিন্তু পেমেন্ট রসিদ স্বয়ংক্রিয়ভাবে যাচাই করার ব্যবস্থা এখনো প্রস্তুত নয়। টাকা পাঠাবেন না।":"The merchant phone is connected, but automatic receipt verification is not ready. Do not send money.")
+       :(bn?"বিক্রেতার টাকা গ্রহণের সংযোগ এখনো প্রস্তুত নয়। টাকা পাঠাবেন না; বিক্রেতার সঙ্গে যোগাযোগ করুন।":"The merchant's payment connection is not ready. Do not send money; contact the merchant.")}</p>}
      {canLock&&step==="payer"&&<>
       <h2>{bn?`আপনার ${methods[method]||method} নম্বর`:`Your ${methods[method]||method} account number`}</h2>
       <form onSubmit={lock} className="pg05-form"><fieldset disabled={locking||code==="OFFLINE"}>
