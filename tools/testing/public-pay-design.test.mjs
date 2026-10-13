@@ -8,11 +8,16 @@ test("public /pay uses workspace brand, configured provider choices and single i
  assert.match(s,/doc\.merchant_name/);
  assert.match(s,/doc\.brand\?\.support_url/);
  assert.match(s,/doc\.configured_methods/);
- assert.match(s,/doc\.methods\?\.includes\(m\)/);
+ assert.match(s,/readyMethods\.includes\(m\)/);
+ assert.match(s,/data-ready=\{readyMethods\.includes\(m\)\}/);
  assert.match(s,/ProviderMark method=\{m\}/);
  assert.match(s,/Idempotency-Key/);
  assert.ok(s.includes('"/checkout/"+d.checkout_token+"?method="'));
  assert.doesNotMatch(s,/SiteHeader|SiteFooter/);
+ assert.match(s,/disabled=\{locked\|\|terminal\}/);
+ assert.match(s,/disabled=\{locked\|\|terminal\|\|!selectedReady\|\|payable<=0\}/);
+ assert.match(s,/if\(busy\|\|!doc\|\|!selected\|\|!doc\.methods\?\.includes\(selected\)/);
+ assert.doesNotMatch(s,/View order details|customer-pay-details/);
 });
 test("public /checkout has payer lock, actual receiver and auto verification but no email consent",()=>{
  const s=source("apps/web/src/components/checkout-experience.tsx");
@@ -43,4 +48,10 @@ test("provider colors and no marketing header in standalone routes",()=>{
  assert.match(css,/--provider-accent:#cd1223/);
  assert.match(css,/--provider-accent:#81218a/);
  assert.match(proxy,/pay\|checkout/);
+});
+
+test("dashboard does not declare every live workspace unready from an environment string",()=>{
+ const s=source("apps/web/src/components/dashboard-frame.tsx");
+ assert.match(s,/service==="payments"&&environment==="sandbox"/);
+ assert.doesNotMatch(s,/Live payments are not enabled|Receiving sources, devices, APIs and security checks are pending/);
 });

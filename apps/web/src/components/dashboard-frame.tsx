@@ -302,10 +302,9 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
      </details>
     </div>
    </header>
-   {service==="payments"&&<div className={environment==="sandbox"?"ds-env-banner":"ds-env-banner is-live"} role="status">
-    <strong>{environment==="sandbox"?(bn?"Sandbox · আলাদা পরীক্ষার পরিবেশ":"Sandbox · Isolated test environment"):(bn?"Live · সেটআপ অসম্পূর্ণ":"Live · Setup incomplete")}</strong>
-    <span>{environment==="sandbox"?(bn?"এটি live টাকা গ্রহণ নয়; কোনো পেমেন্ট যাচাই বা webhook চালু নেই।":"This is not real money. Payment verification and webhooks are not enabled."):(bn?"Live payment চালু হয়নি। Receiving account, ডিভাইস, API ও security পরীক্ষা বাকি।":"Live payments are not enabled. Receiving sources, devices, APIs and security checks are pending.")}</span>
-    {environment==="live"&&<Link href={contextHref("gateways")}>{bn?"সেটআপ দেখুন":"View setup"} ↗</Link>}
+   {service==="payments"&&environment==="sandbox"&&<div className="ds-env-banner" role="status">
+    <strong>{bn?"Sandbox · আলাদা পরীক্ষার পরিবেশ":"Sandbox · Isolated test environment"}</strong>
+    <span>{bn?"এটি পরীক্ষার পরিবেশ। আসল টাকা পাঠাবেন না।":"Test environment only. Do not send real money."}</span>
    </div>}
    <div className="ds-breadcrumb"><span>{workspace.name}</span><Icon name="chevron"/><span>{serviceNames[service][locale]}</span><Icon name="chevron"/><strong>{sections[section][locale]}</strong></div>
    {isNavigating&&<div className="ds-navigation-progress" role="status">{bn?"পৃষ্ঠা খুলছে…":"Opening page…"}</div>}

@@ -78,6 +78,8 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
  }
  const configured=(doc?.configured_methods||[]).filter(isPayMethod);
  const methods=payMethods.filter(v=>configured.includes(v));
+ const readyMethods=doc?.methods||[];
+ const selectedReady=selected!==null&&readyMethods.includes(selected);
  const payable=Math.max(0,doc?.kind==="payment-links"?(doc?.amount_minor||0)*quantity:(doc?.due_minor??doc?.amount_minor??0));
  const amount=(payable/100).toLocaleString(bn?"bn-BD":"en-BD",{maximumFractionDigits:2});
  const support=safeUrl(doc?.brand?.support_url),email=doc?.brand?.support_email||"";
@@ -105,25 +107,25 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
      <section className="customer-pay-body" aria-label={t("Choose a payment method","পেমেন্ট মাধ্যম বাছাই")}>
       <div className="customer-pay-section-title">{t("Mobile Banking","মোবাইল ব্যাংকিং")}</div>
       <div className="customer-pay-methods">
-       {methods.map(m=><button type="button" key={m} data-method={m} aria-pressed={selected===m}
-        disabled={locked||terminal||!doc.methods?.includes(m)} onClick={()=>{setSelected(m);setError("")}} aria-label={m+" · "+(doc.methods?.includes(m)?t("Available","চালু"):t("Unavailable","বন্ধ"))}>
+       {methods.map(m=><button type="button" key={m} data-method={m} data-ready={readyMethods.includes(m)} aria-pressed={selected===m}
+        disabled={locked||terminal} onClick={()=>{setSelected(m);setError("")}} aria-label={m+" · "+(readyMethods.includes(m)?t("Ready to pay","পেমেন্ট প্রস্তুত"):t("Verification pending","যাচাই প্রস্তুত নয়"))}>
         <ProviderMark method={m}/>
-        {!doc.methods?.includes(m)&&<span className="customer-pay-disabled">{t("Unavailable","বন্ধ")}</span>}
+        {!readyMethods.includes(m)&&<span className="customer-pay-disabled">{t("Setup pending","সেটআপ বাকি")}</span>}
        </button>)}
       </div>
       {methods.length===0&&<div className="customer-pay-unavailable" role="status">{t("No receiving method has been configured yet.","এখনো কোনো receiving account যুক্ত করা হয়নি।")}</div>}
-      {methods.length>0&&!(doc.methods||[]).length&&<div className="customer-pay-unavailable" role="status">{t("The merchant's accounts are configured, but automatic verification is not ready. Do not send money.","বিক্রেতার account যুক্ত আছে, কিন্তু স্বয়ংক্রিয় যাচাই প্রস্তুত নয়। এখন টাকা পাঠাবেন না।")}</div>}
+      {methods.length>0&&readyMethods.length===0&&!selected&&<div className="customer-pay-unavailable" role="status">{t("The merchant has receiving accounts, but payment verification is not ready. Select a method to check its status. Do not send money.","বিক্রেতার receiving account আছে, কিন্তু payment verification প্রস্তুত নয়। অবস্থা দেখতে একটি মাধ্যম বেছে নিন। টাকা পাঠাবেন না।")}</div>}
+      {selected&&!selectedReady&&<div className="customer-pay-unavailable" role="status">{t("Payment through "+selected+" is not ready yet. The merchant needs a verified receiving source. Do not send money.","এই "+selected+" মাধ্যমে পেমেন্ট এখনো প্রস্তুত নয়। বিক্রেতাকে যাচাইকৃত receiving source যুক্ত করতে হবে। টাকা পাঠাবেন না।")}</div>}
       {doc.body.description&&<p className="customer-pay-description">{doc.body.description}</p>}
       {doc.body.image_url&&<Image className="customer-pay-product" src={doc.body.image_url} alt={doc.body.description||t("Product image","পণ্যের ছবি")} unoptimized width={620} height={320} referrerPolicy="no-referrer"/>}
-      {doc.body.items?.length? <details className="customer-pay-details"><summary>{t("View order details","অর্ডারের বিবরণ")}</summary><ul>{doc.body.items.map((item,index)=><li key={index}><span>{item.title} × {item.quantity}</span><strong>{(item.unit_amount_minor*item.quantity/100).toLocaleString(locale)} BDT</strong></li>)}</ul></details>:null}
       <form onSubmit={pay} className="customer-pay-form">
        {doc.kind==="payment-links"&&(doc.body.max_quantity??1)>1&&<label>{t("Quantity","পরিমাণ")}<input type="number" min={1} max={doc.body.max_quantity} value={quantity} required disabled={locked} onChange={e=>{setQuantity(Number(e.target.value));key.current=null}}/></label>}
        {doc.body.fields?.map(f=><div className="customer-pay-field" key={f.id}>
         {f.type==="checkbox"||f.type==="radio"?<fieldset disabled={locked}><legend>{f.label}{f.required?" *":""}</legend>{f.options.map(option=><label key={option}><input type={f.type} name={"field-"+f.id} required={f.type==="radio"&&f.required} checked={f.type==="radio"?values[f.id]===option:Array.isArray(values[f.id])&&values[f.id].includes(option)} onChange={e=>setValues(v=>{if(f.type==="radio")return{...v,[f.id]:option};const list=Array.isArray(v[f.id])?v[f.id] as string[]:[];return{...v,[f.id]:e.target.checked?[...list,option]:list.filter(x=>x!==option)}})}/>{option}</label>)}</fieldset>:<><label htmlFor={"customer-field-"+f.id}>{f.label}{f.required?" *":""}</label>{f.type==="file"?<><input id={"customer-field-"+f.id} type="file" required={f.required&&!values[f.id]} accept="image/jpeg,image/png,application/pdf" disabled={locked} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(f.id,file)}}/>{values[f.id]&&<span>{t("Uploaded","আপলোড হয়েছে")}</span>}</>:f.type==="select"?<select id={"customer-field-"+f.id} required={f.required} value={String(values[f.id]||"")} disabled={locked} onChange={e=>setValues(v=>({...v,[f.id]:e.target.value}))}><option value="">{t("Select","বেছে নিন")}</option>{f.options.map(option=><option key={option}>{option}</option>)}</select>:f.type==="textarea"?<textarea id={"customer-field-"+f.id} required={f.required} maxLength={2000} disabled={locked} value={String(values[f.id]||"")} onChange={e=>setValues(v=>({...v,[f.id]:e.target.value}))}/>:<input id={"customer-field-"+f.id} required={f.required} maxLength={2000} disabled={locked} value={String(values[f.id]||"")} onChange={e=>setValues(v=>({...v,[f.id]:e.target.value}))}/>}</>}
        </div>)}
        <div className="customer-pay-total"><span>{t("Total","মোট")}</span><strong>{amount} BDT</strong></div>
-       <button type="submit" className="customer-pay-submit" disabled={locked||terminal||!selected||!doc.methods?.includes(selected)||payable<=0}>
-        {busy?t("Preparing checkout…","চেকআউট তৈরি হচ্ছে…"):unconfirmed?t("Retry same checkout","একই checkout আবার চেষ্টা করুন"):t("Pay ","পরিশোধ করুন ")+amount+" BDT"}
+       <button type="submit" className="customer-pay-submit" disabled={locked||terminal||!selectedReady||payable<=0}>
+        {busy?t("Preparing checkout…","চেকআউট তৈরি হচ্ছে…"):unconfirmed?t("Retry same checkout","একই checkout আবার চেষ্টা করুন"):selected&&!selectedReady?t("Verification not ready","পেমেন্ট যাচাই প্রস্তুত নয়"):t("Pay ","পরিশোধ করুন ")+amount+" BDT"}
        </button>
       </form>
       {doc.body.notes&&<p className="customer-pay-note">{doc.body.notes}</p>}
