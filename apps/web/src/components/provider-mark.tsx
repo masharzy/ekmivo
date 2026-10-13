@@ -14,9 +14,9 @@ export function ProviderMark({method,bn=false,...props}:{method:PayMethod;bn?:bo
     : <text x="69" y="43" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="35" fill="#292329"><tspan fill="#E2136E">b</tspan>Kash</text>}
   </svg>;
  if(method==="nagad")return <svg viewBox="0 0 205 75" role="img" aria-label="Nagad" {...props}>
-   <image href="/payment-assets/nagad-logo.webp" x="0" y="0" width="205" height="75" preserveAspectRatio="xMidYMid meet"/>
+   <image href="/payment-assets/nagad-logo.png" x="0" y="0" width="205" height="75" preserveAspectRatio="xMidYMid meet"/>
   </svg>;
  return <svg viewBox="0 0 150 64" role="img" aria-label="Rocket" {...props}>
-   <image href="/payment-assets/rocket-logo.webp" x="0" y="0" width="150" height="64" preserveAspectRatio="xMidYMid meet"/>
+   <image href="/payment-assets/rocket-logo.png" x="0" y="0" width="150" height="64" preserveAspectRatio="xMidYMid meet"/>
   </svg>;
 }

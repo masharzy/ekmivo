@@ -248,8 +248,8 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
        {selectedMethod!=="rocket"&&<div className="provider-instruction-graphic ek-send-money-guide"
          aria-label={bn?"সেন্ড মানি বেছে নেওয়ার নির্দেশনা":"How to select Send Money"}>
         <img alt={bn?"সেন্ড মানি অপশন দেখানো আসল অ্যাপ স্ক্রিনশট":"Actual app screenshot showing Send Money"} 
-         src={selectedMethod==="bkash"?"/payment-assets/bkash-send-money.webp":"/payment-assets/nagad-send-money.webp"}
-         width={330} height={222} loading="lazy"/>
+         src={selectedMethod==="bkash"?"/payment-assets/bkash-send-money.gif":"/payment-assets/nagad-send-money.gif"}
+         width={selectedMethod==="bkash"?616:619} height={selectedMethod==="bkash"?411:416} loading="lazy"/>
         
        </div>}
        <ol className="provider-instructions" start={3}>
