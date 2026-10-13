@@ -1,9 +1,11 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
-import {ReceiptNotice} from "./receipt-notice";
 import {CustomerRefundRequest} from "./customer-refund-request";
-import {MerchantBrand,type MerchantBrandInfo} from "./merchant-brand";
+import type {MerchantBrandInfo} from "./merchant-brand";
+import {ProviderMark,isPayMethod,payMethods,payNames,type PayMethod} from "./provider-mark";
+import Image from "next/image";
+import {useRouter} from "next/navigation";
 type Locale="en"|"bn";
 type Checkout={
  id:string; merchant_name:string;brand?:MerchantBrandInfo;source_reference?:string;items?:{title:string;quantity:number;unit_amount_minor:number}[]; merchant_reference:string;amount_minor:number;currency:string;
@@ -14,7 +16,7 @@ type Checkout={
  source_online?:boolean;phone_connected?:boolean;
  notice_delivery_available?:boolean;
 };
-const methods:Record<string,string>={bkash:"bKash",nagad:"Nagad",rocket:"Rocket"};
+const methods:Record<string,string>=payNames;
 const statusLabels:Record<string,[string,string]>={
  requires_payer:["Choose how to pay","পেমেন্টের মাধ্যম বেছে নিন"],
  awaiting_payment:["Waiting for automatic verification","স্বয়ংক্রিয় যাচাইয়ের অপেক্ষায়"],
@@ -43,14 +45,15 @@ function describe(code:string,bn:boolean){
  };
  return (labels[code]||["Could not complete this action. Nothing has been confirmed.","কাজটি সম্পন্ন হয়নি। কোনো পেমেন্ট নিশ্চিত হয়নি।"])[bn?1:0];
 }
-export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
+export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;token:string;initialMethod?:PayMethod}){
+ const router=useRouter();
  const bn=locale==="bn";
  const [info,setInfo]=useState<Checkout|null>(null);
  const [status,setStatus]=useState<"loading"|"ready"|"missing"|"offline"|"error">("loading");
  const [code,setCode]=useState("");
  const [payer,setPayer]=useState("");
- const [method,setMethod]=useState("bkash");
- const [step,setStep]=useState<"methods"|"payer">("methods");
+ const [method,setMethod]=useState<PayMethod>(initialMethod||"bkash");
+ const [step,setStep]=useState<"methods"|"payer">(initialMethod?"payer":"methods");
  const [destinationCopied,setDestinationCopied]=useState(false);
  const [locking,setLocking]=useState(false);
  const [clock,setClock]=useState(0);
@@ -120,78 +123,112 @@ export function CheckoutExperience({locale,token}:{locale:Locale;token:string}){
    setCode(!navigator.onLine?"OFFLINE":e.code||"CHECKOUT_SERVICE_UNAVAILABLE");
   }finally{setLocking(false);}
  }
- const amount=info?new Intl.NumberFormat(bn?"bn-BD":"en-BD",{currency:"BDT",style:"currency"}).format(info.amount_minor/100):"—";
+ const amount=info?(info.amount_minor/100).toLocaleString(bn?"bn-BD":"en-BD",{maximumFractionDigits:2}):"—";
  const serverClock=serverAnchor.time+clock-serverAnchor.monotonic;
  const ended=info?Date.parse(info.expires_at)<=serverClock:false;
  const state=info?(ended&&["requires_payer","awaiting_payment"].includes(info.state)?"expired":info.state):"";
- const title=statusLabels[state]?.[bn?1:0]||(bn?"পেমেন্টের তথ্য":"Payment details");
+ const title=statusLabels[state]?.[bn?1:0]||(bn?"পেমেন্ট":"Payment");
  const canLock=state==="requires_payer"&&(info?.environment==="sandbox"||info?.environment==="live"&&info.verification_available);
- return <main className="pg05-checkout pg05-standalone" data-method={step==="payer"||state!=="requires_payer"?info?.method||method:"selection"} lang={locale}>
-  <div className="pg05-checkout-wrap">
-   <nav className="pg05-checkout-back"><button type="button" onClick={()=>{if(state==="requires_payer"&&step==="payer")setStep("methods");else if(info?.return_url)location.assign(info.return_url);else setCode(bn?"বিক্রেতার সঙ্গে যোগাযোগ করুন।":"Contact the merchant to leave this checkout.")}} aria-label={bn?"পেছনে":"Back"}>←</button><Link href={`/${bn?"en":"bn"}/pay/${token}`} hrefLang={bn?"en":"bn"}>{bn?"English":"বাংলা"}</Link></nav>
-   <header className="pg05-checkout-heading">
-    <h1>{state==="requires_payer"&&step==="methods"?(bn?"পেমেন্টের মাধ্যম বেছে নিন":"Choose your payment method"):methods[info?.method||method]||title}</h1>
-   </header>
-   {info?.environment==="sandbox"&&<div className="pg05-banner pg05-warning" role="note">
-    <strong>{bn?"স্যান্ডবক্স — আসল টাকা পাঠাবেন না":"SANDBOX — DO NOT SEND REAL MONEY"}</strong>
-    <span>{bn?"এটি একটি পরীক্ষা। এখানে কোনো বাস্তব bKash, Nagad বা Rocket প্রাপক নম্বর দেওয়া নেই।":"This is a test. No real bKash, Nagad or Rocket destination is provided."}</span>
-   </div>}
-   {status==="loading"&&<section className="pg05-checkout-card" role="status"><h2>{bn?"সার্ভার থেকে তথ্য আনা হচ্ছে…":"Loading your checkout…"}</h2><p>{bn?"কোনো লেনদেন নিশ্চিত করা হয়নি।":"No transaction has been confirmed."}</p></section>}
-   {status!=="loading"&&status!=="ready"&&<section className="pg05-checkout-card" role="alert">
-    <h2>{status==="missing"?(bn?"চেকআউট পাওয়া যায়নি":"Checkout not found"):(bn?"চেকআউট উপলব্ধ নয়":"Checkout unavailable")}</h2>
+ const selectedMethod=(info?.method&&isPayMethod(info.method)?info.method:method);
+ const showPayer=state==="requires_payer"&&step==="payer"&&canLock;
+ const isFlow=showPayer||state!=="requires_payer";
+ const logoUrl=(()=>{try{if(!info?.brand?.logo_url)return "";const u=new URL(info.brand.logo_url);return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return ""}})();
+ const contactUrl=(()=>{try{if(!info?.brand?.support_url)return "";const u=new URL(info.brand.support_url);return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return ""}})();
+ function leave(){if(info?.return_url){window.location.assign(info.return_url);return}if(window.history.length>1)router.back();else router.push("/")}
+ async function copyReceiving(){if(!info?.destination)return;try{await navigator.clipboard.writeText(info.destination);setDestinationCopied(true)}catch{setCode("COPY_FAILED")}}
+ return <main className="provider-checkout pg05-checkout pg05-standalone" data-method={isFlow?selectedMethod:"selection"} lang={locale}>
+  <div className={"provider-checkout-modal"+(isFlow?" is-flow":"")} data-method={isFlow?selectedMethod:"selection"}>
+   <nav className="provider-checkout-nav" aria-label={bn?"চেকআউট":"Checkout"}>
+    <button type="button" className="provider-checkout-back" aria-label={bn?"পেছনে":"Back"}
+     onClick={()=>{if(state==="requires_payer"&&step==="payer")setStep("methods");else leave()}}>←</button>
+    <Link href={"/"+(bn?"en":"bn")+"/checkout/"+token+(initialMethod?"?method="+initialMethod:"")} hrefLang={bn?"en":"bn"} className="provider-checkout-language">{bn?"Eng":"বাংলা"}</Link>
+    <button type="button" className="provider-checkout-close" onClick={leave} aria-label={bn?"বন্ধ":"Close"}>×</button>
+   </nav>
+   {status==="loading"&&<div className="provider-checkout-empty" role="status">{bn?"পেমেন্ট লোড হচ্ছে…":"Loading payment…"}</div>}
+   {status!=="loading"&&status!=="ready"&&<div className="provider-checkout-empty" role="alert">
+    <h1>{status==="missing"?(bn?"পেমেন্ট লিংক পাওয়া যায়নি":"Payment link not found"):(bn?"পেমেন্ট চালু নেই":"Payment unavailable")}</h1>
     <p>{describe(code,bn)}</p><button type="button" onClick={()=>{setStatus("loading");void refresh()}}>{bn?"আবার চেষ্টা করুন":"Retry"}</button>
-   </section>}
-   {info&&status==="ready"&&<div className="pg05-checkout-grid">
-    <section className="pg05-checkout-card">
-     <div className="pg05-summary-overline"><span>{bn?"অবস্থা":"STATE"}</span><span className="pg05-state" data-state={state}>{title}</span></div>
-     <MerchantBrand name={info.merchant_name} brand={info.brand} locale={locale}/>
-     <p className="pg05-muted">{bn?"রেফারেন্স":"Merchant reference"}</p>
-     <h2 className="pg05-reference">{info.merchant_reference}</h2>
-     {info.source_reference&&<p>{bn?"নথি":"Document"}: {info.source_reference}</p>}
-     {info.items&&<ul>{info.items.map((line,index)=><li key={index}>{line.title} — {line.quantity} × {new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(line.unit_amount_minor/100)}</li>)}</ul>}
-     <div className="pg05-amount"><span>{bn?"পরিশোধযোগ্য":"Exact amount"}</span><strong>{amount}</strong></div>
-     <dl className="pg05-summary">
-      <div><dt>{bn?"পেমেন্ট মাধ্যম":"Method"}</dt><dd>{info.method?methods[info.method]||info.method:(bn?"পছন্দ করা হয়নি":"Not selected")}</dd></div>
-      <div><dt>{bn?"প্রেরক নম্বর":"Sending number"}</dt><dd>{info.payer_suffix?"••••"+info.payer_suffix:(bn?"নির্বাচিত নয়":"Not confirmed")}</dd></div>
-      <div><dt>{bn?"মেয়াদ":"Expires"}</dt><dd><time dateTime={info.expires_at}>{new Date(info.expires_at).toLocaleString(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",timeZoneName:"short"})}</time></dd></div>
-     </dl>
-     <div className="pg05-timer" role="timer" aria-label={bn?"অবশিষ্ট সময়":"Time remaining"}>{["requires_payer","awaiting_payment"].includes(state)?remaining(info.expires_at,serverClock):"—"}</div>
-    </section>
-    <section className="pg05-checkout-card" aria-live="polite">
-     {canLock&&step==="methods"&&<><h2>{bn?"মোবাইল ব্যাংকিং":"Mobile Banking"}</h2><div className="pg05-method-options">{info.methods.map(option=><button type="button" key={option} data-method={option} aria-pressed={method===option} onClick={()=>setMethod(option)}>{methods[option]||option}</button>)}</div><button type="button" className="pg05-pay" disabled={!info.methods.includes(method)} onClick={()=>setStep("payer")}>{bn?"পরিশোধ করুন":"Pay"} {amount}</button></>}
-     {state==="requires_payer"&&!canLock&&<p role="alert">{info.phone_connected
-       ?(bn?"বিক্রেতার ফোন সংযুক্ত আছে, কিন্তু পেমেন্ট রসিদ স্বয়ংক্রিয়ভাবে যাচাই করার ব্যবস্থা এখনো প্রস্তুত নয়। টাকা পাঠাবেন না।":"The merchant phone is connected, but automatic receipt verification is not ready. Do not send money.")
-       :(bn?"বিক্রেতার টাকা গ্রহণের সংযোগ এখনো প্রস্তুত নয়। টাকা পাঠাবেন না; বিক্রেতার সঙ্গে যোগাযোগ করুন।":"The merchant's payment connection is not ready. Do not send money; contact the merchant.")}</p>}
-     {canLock&&step==="payer"&&<>
-      <h2>{bn?`আপনার ${methods[method]||method} নম্বর`:`Your ${methods[method]||method} account number`}</h2>
-      <form onSubmit={lock} className="pg05-form"><fieldset disabled={locking||code==="OFFLINE"}>
-       <label htmlFor="pg05-payer">{bn?"যে নম্বর থেকে টাকা পাঠাবেন":"Number you will pay from"}</label>
-        <input id="pg05-payer" required type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={payer} onChange={e=>setPayer(e.target.value)} placeholder="017XXXXXXXX" aria-describedby="pg05-payer-hint"/>
-        <small id="pg05-payer-hint">{bn?"১১ সংখ্যার পূর্ণ বাংলাদেশি মোবাইল নম্বর; বাংলা সংখ্যাও গ্রহণযোগ্য।":"Full 11-digit Bangladesh mobile number; Bengali digits accepted."}</small>
-       <button className="ek-action" type="submit" disabled={locking||!info.methods?.length}>{locking?(bn?"সংরক্ষণ হচ্ছে…":"Securing…"):(bn?"নম্বর ও মাধ্যম নিশ্চিত করুন":"Confirm number and method")}</button>
-      </fieldset></form></>}
-     {state==="awaiting_payment"&&<>
-      <h2>{bn?"টাকা পাঠানোর নির্দেশনা":"Payment instructions"}</h2>
-      {info.environment==="live"&&info.source_online===false&&<p role="alert">{bn?"গ্রহণকারী device-এর sync দেরি হচ্ছে। আগে টাকা পাঠিয়ে থাকলে আবার পাঠাবেন না। নতুন করে পাঠানোর আগে সংযোগ স্বাভাবিক হওয়া পর্যন্ত অপেক্ষা করুন।":"Receiving-device sync is delayed. If you already sent money, do not send it again. Wait for the connection to recover before sending new funds."}</p>}
-      <div className="pg05-simulated"><strong>{info.environment==="sandbox"?(bn?"শুধু পরীক্ষামূলক গন্তব্য":"SIMULATED DESTINATION ONLY"):(bn?"ব্যবসার গ্রহণকারী নম্বর":"Merchant receiving number")}</strong>
-       <p data-testid="checkout-receiving-number">{info.destination||"SIMULATED — DO NOT SEND MONEY"}</p>
-       {info.environment==="live"&&info.destination&&<button type="button" onClick={async()=>{try{await navigator.clipboard.writeText(info.destination!);setDestinationCopied(true)}catch{setCode("COPY_FAILED")}}}>{destinationCopied?(bn?"কপি হয়েছে":"Copied"):(bn?"নম্বর কপি করুন":"Copy number")}</button>}
-       <small>{info.environment==="sandbox"?(bn?"কোনো বাস্তব নম্বরে টাকা পাঠাবেন না। এটি sandbox; server-এর receipt evidence ছাড়া payment নিশ্চিত হবে না।":"Do not send real funds from this sandbox checkout. Payment requires verified server receipt evidence."):(bn?"শুধু প্রদর্শিত নম্বর ও নির্দিষ্ট পরিমাণ ব্যবহার করুন। নম্বর, সময়, amount, গ্রহণকারী account ও method মিলে গেলে স্বয়ংক্রিয়ভাবে যাচাই হবে।":"Use only the shown receiving number and exact amount. Actual payer, original time, amount, receiving account and method must match automatically.")}</small></div>
-      <ol className="pg05-payment-steps"><li>{bn?"উপরের গ্রহণকারী নম্বর কপি করুন।":"Copy the receiving number above."}</li><li>{bn?`${methods[info.method||method]||method} অ্যাপের Send Money নির্বাচন করুন।`:`Open ${methods[info.method||method]||method} and select Send Money.`}</li><li>{bn?`দেখানো নম্বরে ঠিক ${amount} পাঠান। এই পেজ খোলা রাখুন; আবার টাকা পাঠাবেন না।`:`Send exactly ${amount} to the shown number. Keep this page open; do not send twice.`}</li></ol><p role="status">{bn?"আপনার পেমেন্টের জন্য অপেক্ষা করছি…":"Waiting for your payment…"}</p><p className="pg05-session">{bn?"অবশিষ্ট সময়":"Session expires in"} {remaining(info.expires_at,serverClock)}</p>
-     </>}
-     {state==="processing"&&<><h2>{title}</h2><p>{bn?"সার্ভার পেমেন্টের প্রমাণ যাচাই করছে।":"The server is examining actual payment evidence."}</p></>}
-     {state==="completed"&&<><h2>{title}</h2><p>{bn?"এই অবস্থা শুধু সার্ভারের যাচাইকৃত ledger থেকে এসেছে।":"This status is derived only from verified server-side allocations."}</p><button type="button" onClick={()=>window.print()}>{bn?"রসিদ print / PDF":"Print receipt / save PDF"}</button>{info.verification&&<dl><dt>{bn?"যাচাই পদ্ধতি":"Verification method"}</dt><dd>{info.verification.method}</dd><dt>{bn?"আসল transaction সময়":"Original transaction time"}</dt><dd>{new Date(info.verification.original_transaction_at).toLocaleString(locale)} ({info.verification.time_precision})</dd><dt>{bn?"যাচাইয়ের সময়":"Verified at"}</dt><dd>{new Date(info.verification.verified_at).toLocaleString(locale)}</dd><dt>{bn?"Receiving account":"Receiving account"}</dt><dd>••••{info.verification.receiving_suffix}</dd></dl>}{info.return_url&&<a href={info.return_url} rel="noreferrer">{bn?"বিক্রেতার কাছে ফিরুন":"Return to merchant"}</a>}<CustomerRefundRequest locale={locale} token={token} maximumMinor={info.amount_minor}/></>}
-     {["expired","cancelled"].includes(state)&&<><h2>{title}</h2><p>{bn?"এই রিকোয়েস্টে আর টাকা পাঠাবেন না। আগে কোনো টাকা পাঠানো হয়ে থাকলে ব্যবসার সঙ্গে যোগাযোগ করুন; এখানে ফেরত দেওয়া হয়েছে বলা হচ্ছে না।":"Do not send more money. If funds were already sent, contact the merchant. This screen does not claim a refund."}</p></>}
-     {info.notice_available&&<ReceiptNotice key={token} token={token} bn={bn} deliveryAvailable={info.notice_delivery_available===true}/>}
-     <div className="pg05-checkout-actions">
-      <button type="button" onClick={()=>void refresh()}>{bn?"সার্ভার থেকে আবার দেখুন":"Refresh server status"} ↻</button>
-      {updated&&<small>{bn?"সর্বশেষ দেখা":"Last checked"}: {new Date(updated).toLocaleTimeString(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka"})}</small>}
-     </div>
-     {code&&<p role="alert" className="ek-form-error">{describe(code,bn)}</p>}
-    </section>
    </div>}
-   <footer className="pg05-checkout-foot"><p>{bn?"PIN, OTP, TrxID বা পেমেন্টের স্ক্রিনশট এখানে চাইবে না।":"We never ask for a PIN, OTP, TrxID or payment screenshot."}</p>
-    <button type="button" onClick={async()=>{try{await navigator.clipboard.writeText(location.href);setCopied(true)}catch{setCopied(false)}}}>{copied?(bn?"লিংক কপি হয়েছে":"Link copied"):(bn?"এই checkout লিংক কপি":"Copy checkout link")}</button></footer>
+   {info&&status==="ready"&&<>
+    {state==="requires_payer"&&step==="methods"&&<section className="provider-method-picker">
+     <div className="provider-merchant-head">
+      <div className="provider-merchant-avatar">{logoUrl?<Image src={logoUrl} unoptimized width={54} height={54} alt={info.merchant_name} referrerPolicy="no-referrer"/>:<span>{info.merchant_name.slice(0,1).toUpperCase()}</span>}</div>
+      <h1>{info.merchant_name}</h1>
+      {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer">{bn?"যোগাযোগ":"Contact"}</a>}
+     </div>
+     <div className="provider-pay-headline">{bn?"মোবাইল ব্যাংকিং":"Mobile Banking"}</div>
+     <div className="provider-checkout-options pg05-method-options">
+      {payMethods.filter(x=>info.methods?.includes(x)).map(option=><button key={option} type="button" aria-pressed={method===option}
+       onClick={()=>setMethod(option)} data-method={option}><ProviderMark method={option}/></button>)}
+     </div>
+     {canLock&&!!info.methods?.length?<button type="button" className="provider-primary-action pg05-pay" onClick={()=>setStep("payer")}>
+      {bn?"পরিশোধ করুন ":"Pay "}{amount} BDT
+     </button>:<div className="provider-pay-blocked" role="alert">{info.phone_connected
+      ?(bn?"ফোন সংযুক্ত, কিন্তু পেমেন্ট যাচাই এখনো প্রস্তুত নয়। টাকা পাঠাবেন না।":"Phone connected, but automatic verification is not ready. Do not send funds.")
+      :(bn?"বিক্রেতার receiving account প্রস্তুত নয়। টাকা পাঠাবেন না।":"Merchant receiving account is not ready. Do not send funds.")}</div>}
+    </section>}
+    {isFlow&&<div className="provider-flow" data-provider={selectedMethod}>
+     <header className="provider-flow-brand">
+      <ProviderMark method={selectedMethod}/>
+     </header>
+     <div className="provider-flow-invoice">
+      <div className="provider-flow-merchant"><div className="provider-flow-shopicon">⌑</div>
+       <div><strong>{info.merchant_name}</strong><span>{bn?"ইনভয়েস":"Invoice"}: {info.merchant_reference}</span></div>
+      </div>
+      <strong className="provider-flow-amount">৳{amount}</strong>
+     </div>
+     <section className="provider-flow-content" aria-live="polite">
+      {info.environment==="sandbox"&&<p className="provider-sandbox-note" role="note">{bn?"স্যান্ডবক্স — আসল টাকা পাঠাবেন না":"SANDBOX — DO NOT SEND MONEY"}</p>}
+      {showPayer&&<div className="provider-payer-step">
+       <form onSubmit={lock} className="provider-payer-form pg05-form">
+        <label htmlFor="provider-customer-number">{bn?"আপনার ":"Your "}{methods[method]} {bn?"অ্যাকাউন্ট নম্বর":"Account Number"}</label>
+        <input id="provider-customer-number" autoFocus type="tel" inputMode="tel" autoComplete="tel"
+         required maxLength={20} minLength={11} disabled={locking} placeholder="e.g 01XXXXXXXXX" value={payer} onChange={e=>setPayer(e.target.value)}/>
+        <p>{bn?"নম্বরটি নিশ্চিত করলে পরে বদলানো যাবে না।":"Confirming locks your sending number to this payment."}</p>
+        <div className="provider-payer-consent">{bn?"এগিয়ে গেলে আপনি শর্তাবলীতে সম্মতি দিচ্ছেন।":"By proceeding you agree to the payment terms."}</div>
+        <div className="provider-flow-controls">
+         <button type="button" onClick={()=>setStep("methods")} disabled={locking}>{bn?"বাতিল":"Cancel"}</button>
+         <button type="submit" disabled={locking||payer.trim().length<11}>{locking?(bn?"অপেক্ষা…":"Confirming…"):(bn?"নিশ্চিত করুন":"Confirm")}</button>
+        </div>
+       </form>
+      </div>}
+      {state==="awaiting_payment"&&<div className="provider-transfer">
+       {info.environment==="live"&&info.source_online===false&&<p role="alert" className="provider-transfer-warning">{bn?"গ্রহণকারী ফোন অফলাইনে আছে। টাকা পাঠিয়ে থাকলে দ্বিতীয়বার পাঠাবেন না।":"Receiving phone is offline. If you already paid, do not pay again."}</p>}
+       <div className="provider-recipient">
+        <div><small>{bn?"PERSONAL NUMBER":"PERSONAL NUMBER"}</small><strong data-testid="checkout-receiving-number">{info.destination||(info.environment==="sandbox"?"SIMULATED ONLY":"—")}</strong></div>
+        {info.environment==="live"&&info.destination&&<button type="button" aria-label={bn?"নম্বর কপি":"Copy number"} onClick={()=>void copyReceiving()}>{destinationCopied?"✓":"▣"}</button>}
+       </div>
+       <ol className="provider-instructions">
+        <li><span>1</span>{bn?"উপরের পার্সোনাল অ্যাকাউন্ট নম্বর কপি করুন":"Copy the personal account number above"}</li>
+        <li><span>2</span>{bn?methods[selectedMethod]+" অ্যাপ থেকে 'সেন্ড মানি' নির্বাচন করুন":"Open "+methods[selectedMethod]+" and choose Send Money"}</li>
+       </ol>
+       <div className="provider-instruction-graphic" aria-label={bn?"সেন্ড মানি নির্বাচন করার উদাহরণ":"Send Money instruction illustration"}>
+        <div className="provider-instruction-top"><span className="provider-instruction-user">●</span><span className="provider-instruction-text">{methods[selectedMethod]}<small>{bn?"পেমেন্ট অ্যাপ":"Payment app"}</small></span><span className="provider-instruction-dots">● ● ●</span></div>
+        <div className="provider-instruction-tiles">
+         <div className="is-target"><b>➤</b><span>{bn?"সেন্ড মানি":"Send Money"}</span></div>
+         <div><b>▤</b><span>{bn?"রিচার্জ":"Recharge"}</span></div>
+         <div><b>▥</b><span>{bn?"ক্যাশ আউট":"Cash out"}</span></div>
+         <div><b>▢</b><span>{bn?"পেমেন্ট":"Payment"}</span></div>
+        </div>
+        <svg viewBox="0 0 120 70" className="provider-graphic-arrow" aria-hidden="true"><path d="M8 8q32 28 62 34l-9-17 49 23-48 16 9-15Q31 44 8 8Z" fill="#ffd12c" stroke="#4d3419" strokeWidth="3" strokeLinejoin="round"/></svg>
+       </div>
+       <ol className="provider-instructions" start={3}>
+        <li><span>3</span>{bn?"সঠিক নম্বরে ৳"+amount+" পাঠিয়ে এই পেজে অপেক্ষা করুন। আবার টাকা পাঠাবেন না।":"Send exactly ৳"+amount+" to this number and keep this page open. Do not pay twice."}</li>
+       </ol>
+       <div className="provider-waiting" role="status"><span className="provider-waiting-dot"/>{bn?"আপনার পেমেন্টের জন্য অপেক্ষা করছি…":"Waiting for your payment…"}</div>
+       <p className="provider-expiry">{bn?"সেশন শেষ হতে":"Session expires in"} {remaining(info.expires_at,serverClock)}</p>
+       <div className="provider-flow-controls"><button type="button" onClick={leave}>{bn?"বন্ধ করুন":"Close"}</button><button type="button" onClick={()=>void refresh()}>{bn?"যাচাই হচ্ছে…":"Auto verifying…"} ↻</button></div>
+      </div>}
+      {state==="processing"&&<div className="provider-result"><h1>{title}</h1><p>{bn?"সার্ভার পেমেন্টের প্রমাণ যাচাই করছে।":"The server is validating payment evidence."}</p><button onClick={()=>void refresh()}>{bn?"রিফ্রেশ":"Refresh"}</button></div>}
+      {state==="completed"&&<div className="provider-result is-complete"><h1>{title}</h1><p>{bn?"সার্ভারের যাচাইকৃত রেকর্ড অনুযায়ী পেমেন্ট সম্পন্ন হয়েছে।":"The payment has been verified against server evidence."}</p>
+       {info.verification&&<dl><dt>{bn?"পদ্ধতি":"Verification"}</dt><dd>{info.verification.method}</dd><dt>{bn?"সময়":"Transaction time"}</dt><dd>{new Date(info.verification.original_transaction_at).toLocaleString(locale)}</dd><dt>{bn?"গ্রহণকারী":"Receiving"}</dt><dd>••••{info.verification.receiving_suffix}</dd></dl>}
+       <button type="button" onClick={()=>window.print()}>{bn?"রসিদ প্রিন্ট":"Print receipt"}</button>{info.return_url&&<a href={info.return_url} rel="noreferrer">{bn?"বিক্রেতার কাছে ফিরুন":"Return to merchant"}</a>}
+       <CustomerRefundRequest locale={locale} token={token} maximumMinor={info.amount_minor}/></div>}
+      {["expired","cancelled"].includes(state)&&<div className="provider-result"><h1>{title}</h1><p>{bn?"এই লিংকে আর টাকা পাঠাবেন না। টাকা পাঠিয়ে থাকলে বিক্রেতার সঙ্গে যোগাযোগ করুন।":"Do not send any more funds. If you already paid, contact the seller."}</p></div>}
+      {code&&<div className="provider-transfer-warning" role="alert">{describe(code,bn)}</div>}
+     </section>
+    </div>}
+   </>}
   </div>
  </main>;
 }
