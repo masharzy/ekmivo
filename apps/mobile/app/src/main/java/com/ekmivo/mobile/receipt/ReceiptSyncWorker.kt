@@ -111,13 +111,28 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
    if(heartbeat.first==403){store.setQueueError("DEVICE_AUTHORIZATION_DENIED");store.pause(parentId);return Result.failure()}
    if(heartbeat.first !in 200..299)return Result.retry()
 
-   if(store.count()>0)Result.retry() else Result.success()
+   if(store.count()>0){
+    // A successful batch with more pending evidence is NOT a transport error.
+    // Queue the next constrained batch instead of exponential retry backoff.
+    continueQueued(applicationContext)
+    Result.success()
+   }else Result.success()
   }}catch(_:Exception){
    ReceiptStore(applicationContext).use{it.setQueueError("QUEUE_OR_TRANSPORT_ERROR")}
    Result.retry()
   }
  }
  companion object {
+  private fun continueQueued(context:Context){
+   val constraints=Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+   WorkManager.getInstance(context).enqueueUniqueWork(
+    "receipt-sync",ExistingWorkPolicy.APPEND_OR_REPLACE,
+    OneTimeWorkRequestBuilder<ReceiptSyncWorker>()
+     .setConstraints(constraints)
+     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30,TimeUnit.SECONDS)
+     .build()
+   )
+  }
   fun schedule(context:Context){
    val constraints=Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
    val manager=WorkManager.getInstance(context)

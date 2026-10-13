@@ -175,7 +175,7 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
  }
  fun recent(limit:Int=20):List<JSONObject>{
   val results=mutableListOf<JSONObject>()
-  readableDatabase.rawQuery("SELECT id,body,created,sent FROM recent ORDER BY created DESC,id DESC LIMIT ?",arrayOf(limit.coerceIn(1,60).toString())).use{cursor->
+  readableDatabase.rawQuery("SELECT id,body,created,sent FROM recent ORDER BY sent ASC,created DESC,id DESC LIMIT ?",arrayOf(limit.coerceIn(1,500).toString())).use{cursor->
    while(cursor.moveToNext()){
     try {
      val id=cursor.getString(0);val encrypted=cursor.getBlob(1)

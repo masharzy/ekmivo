@@ -62,11 +62,12 @@ fun ForwarderScreen(bn:Boolean){
  var serverCheck by remember{mutableStateOf("checking")}
  var recentReceipts by remember{mutableStateOf<List<JSONObject>>(emptyList())}
  var pendingCount by remember{mutableIntStateOf(0)}
+ var historyLimit by remember{mutableIntStateOf(20)}
  var syncError by remember{mutableStateOf("")}
  LaunchedEffect(phone?.optString("id")){
   while(true){
    val snapshot=withContext(Dispatchers.IO){
-    ReceiptStore(context).use{Triple(it.recent(24),it.count(),it.queueError())}
+    ReceiptStore(context).use{Triple(it.recent(historyLimit),it.count(),it.queueError())}
    }
    recentReceipts=snapshot.first
    pendingCount=snapshot.second
@@ -230,6 +231,11 @@ fun ForwarderScreen(bn:Boolean){
         style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       }
      }
+    }
+   }
+   if(recentReceipts.size>=historyLimit && historyLimit<500){
+    OutlinedButton(modifier=Modifier.fillMaxWidth(),onClick={historyLimit=(historyLimit+20).coerceAtMost(500)}){
+     Text(if(bn)"আরও SMS দেখুন" else "Load more SMS")
     }
    }
    if(serverCheck=="revoked"){

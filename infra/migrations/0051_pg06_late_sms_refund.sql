@@ -191,6 +191,12 @@ BEGIN
   VALUES(o.workspace_id,o.environment,'refund_requested',case_id,
    jsonb_build_object('refund_id',case_id,'payment_intent_id',a.intent_id,'amount_minor',o.amount_minor,
    'status','requested','origin','late_phone_sms'));
+  PERFORM pg11_event(o.workspace_id,o.environment,NULL,'refund.updated',
+   jsonb_build_object('refund_id',case_id,'payment_intent_id',a.intent_id,
+    'amount_minor',o.amount_minor,'status','requested','origin','late_phone_sms',
+    'automated_refund_request',true));
+  INSERT INTO pg09_audit(workspace_id,environment,resource,resource_id,action)
+  VALUES(o.workspace_id,o.environment,'refunds',case_id,'late_receipt_refund_requested');
  END IF;
  RETURN NEW;
 END $$;

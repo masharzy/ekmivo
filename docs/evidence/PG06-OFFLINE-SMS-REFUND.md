@@ -52,3 +52,11 @@ Implementation PR: #19. Source only, NOT device/provider verified or deployed. L
 - Static assertions checked 0051 transaction envelope, sender-based issuance and matcher lock, absence of stale configuration rejection, and one-case-per-receipt unique index.
 - GitHub Actions [first run](https://github.com/masharzy/ekmivo/actions/runs/38344385146), [second run](https://github.com/masharzy/ekmivo/actions/runs/38344793063) and [third run](https://github.com/masharzy/ekmivo/actions/runs/38344904738) all reported failure with *zero job steps*, and downloadable runner logs returned not-found. Treat as runner/execution blocker, not successful validation or demonstrated code failure.
 - Required before release: real Go/Next/Kotlin tests, disposable sandbox/live Postgres upgrade and payment/refund race fixtures, Android receive/reboot/airplane-mode/force-stop recovery, Play permission eligibility, responsive EN/BN/theme review.
+
+## Latest source fixes, still unverified
+
+- The signed physical-phone configuration version is preserved for audits, but a newer configuration no longer invalidates already queued consented provider SMS. Revoked phone/realm checks still apply.
+- Server serializes issuance/matching by workspace, realm, actual payer, provider and amount regardless of displayed receiving account.
+- Successful Android sync drains batches and schedules continuation without treating a nonempty queue as a failed transport. Unsent encrypted rows are not pruned from local history; merchant can load more and see pending first.
+- The optional inbox-recovery ContentResolver query is restricted to known bKash/Nagad/Rocket senders before reading the message body.
+- A uniquely associated post-expiry/cancellation receipt creates one seller-managed refund request and merchant dashboard notification, plus an audited refund.updated webhook event. It never transfers money automatically.
