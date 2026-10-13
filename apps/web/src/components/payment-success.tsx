@@ -23,7 +23,7 @@ export function PaymentSuccess({method,returnUrl,bn}:{method:PayMethod;returnUrl
  const nagad=method==="nagad";
  return <main className={"ek-payment-success ek-payment-success-"+method+(nagad?" is-nagad":"")} role="status" aria-live="polite">
   <div className="ek-success-shell">
-   <header className="ek-success-brand"><ProviderMark method={method}/></header>
+   <header className="ek-success-brand"><ProviderMark method={method} bn={bn}/></header>
    <section className="ek-success-panel">
     <svg className="ek-success-check" width="70" height="70" viewBox="0 0 70 70" fill="none" aria-hidden="true">
      <circle cx="35" cy="35" r="32" stroke="white" strokeOpacity=".8" strokeWidth="2"/>
