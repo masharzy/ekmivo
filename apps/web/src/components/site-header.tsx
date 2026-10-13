@@ -8,10 +8,10 @@ import {siteCopy,type Locale} from "../lib/site-copy";
 
 type Theme="system"|"light"|"dark";
 const pages=[
- {path:"payment-gateway",en:"Payment Gateway",bn:"পেমেন্ট গেটওয়ে"},
- {path:"ai-bot",en:"AI Bot",bn:"AI বট"},
- {path:"pricing",en:"Pricing",bn:"প্রাইসিং"},
- {path:"developers",en:"Developers",bn:"ডেভেলপারস"}
+ {path:"payment-gateway",en:"Payment Gateway",bn:"Payment Gateway"},
+ {path:"ai-bot",en:"AI Bot",bn:"AI Bot"},
+ {path:"pricing",en:"Pricing",bn:"Pricing"},
+ {path:"developers",en:"Developers",bn:"Developers"}
 ] as const;
 
 export function SiteHeader({locale,initialTheme}:{locale:Locale;initialTheme:Theme}){
