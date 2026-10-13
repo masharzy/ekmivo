@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
 import "./globals.css";
+import {InterfaceLocaleProvider} from "../components/interface-locale-provider";
 
 const hindSiliguri = localFont({
   src: [
@@ -23,5 +24,5 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const requestHeaders = await headers();
   const locale = requestHeaders.get("x-ekmivo-locale") === "en" ? "en" : "bn";
   const theme = requestHeaders.get("cookie")?.match(/(?:^|;\s*)ekmivo-theme=(light|dark)(?:;|$)/)?.[1];
-  return <html lang={locale} data-theme={theme} className={hindSiliguri.variable} suppressHydrationWarning><body>{children}</body></html>;
+  return <html lang={locale} data-theme={theme} className={hindSiliguri.variable} suppressHydrationWarning><body><InterfaceLocaleProvider locale={locale}>{children}</InterfaceLocaleProvider></body></html>;
 }

@@ -1,7 +1,7 @@
 "use client";
-import { usePathname } from "next/navigation";
+import {useInterfaceLocale} from "../../../components/interface-locale-provider";
 export default function AccountError({reset}:{error:Error & {digest?:string};reset:()=>void}){
- const bn=usePathname().startsWith("/bn/");
+ const bn=useInterfaceLocale()==="bn";
  return <main role="alert" className="ds-route-error">
   <p className="ek-page-kicker">EKMIVO / ACCOUNT</p>
   <h1>{bn?"অ্যাকাউন্ট লোড করা যায়নি":"Unable to load account"}</h1>

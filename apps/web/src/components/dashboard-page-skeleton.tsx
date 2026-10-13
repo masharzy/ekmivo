@@ -1,11 +1,12 @@
 "use client";
 import {usePathname} from "next/navigation";
+import {useInterfaceLocale} from "./interface-locale-provider";
 import {sections,type SectionKey} from "../lib/dashboard-sections";
 import {moduleViews} from "../lib/dashboard-views";
 
 export function DashboardPageSkeleton({targetSection}:{targetSection?:SectionKey}={}){
- const pathname=usePathname(),locale=pathname.startsWith("/bn/")?"bn":"en";
- const candidate=pathname.split("/")[5]??"overview";
+ const pathname=usePathname(),locale=useInterfaceLocale();
+ const candidate=pathname.match(/\/(?:bn\/|en\/)?w\/[^/]+\/(?:ai|payments)\/([^/?#]+)/)?.[1]??"overview";
  const section=targetSection??(Object.hasOwn(sections,candidate)?candidate:"overview") as SectionKey;
  const view=moduleViews[section];
  return <section className="ds-page-skeleton" role="status" aria-busy="true" aria-label={locale==="bn"?"পৃষ্ঠা লোড হচ্ছে":"Loading page"}>

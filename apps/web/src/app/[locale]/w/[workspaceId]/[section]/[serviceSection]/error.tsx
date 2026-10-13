@@ -1,7 +1,7 @@
 "use client";
-import { usePathname } from "next/navigation";
+import {useInterfaceLocale} from "../../../../../../components/interface-locale-provider";
 export default function WorkspaceError({reset}:{error:Error & {digest?:string};reset:()=>void}){
- const bn=usePathname().startsWith("/bn/");
+ const bn=useInterfaceLocale()==="bn";
  return <main className="ds-route-error" role="alert">
   <span className="ds-error-eyebrow">EKMIVO / WORKSPACE</span>
   <h1>{bn?"ওয়ার্কস্পেস লোড করা যায়নি":"Unable to load workspace"}</h1>
