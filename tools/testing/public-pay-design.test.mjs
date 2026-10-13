@@ -11,7 +11,7 @@ test("public /pay uses workspace brand, configured provider choices and single i
  assert.match(s,/doc\.methods\?\.includes\(m\)/);
  assert.match(s,/ProviderMark method=\{m\}/);
  assert.match(s,/Idempotency-Key/);
- assert.match(s,/checkout\/"\+d\.checkout_token\+"\\?method=/);
+ assert.ok(s.includes('"/checkout/"+d.checkout_token+"?method="'));
  assert.doesNotMatch(s,/SiteHeader|SiteFooter/);
 });
 test("public /checkout has payer lock, actual receiver and auto verification but no email consent",()=>{
