@@ -156,7 +156,7 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter,r *http.Request,raw
   fail(w,403,"PHONE_SIGNATURE_REJECTED");return
  }
  if r.PathValue("action")=="phone-events"{
-  s.handlePhoneForward(w,r,raw,id,ws,realm);return
+  s.handlePhoneForward(w,r,raw,id,ws,realm,version);return
  }
  if r.PathValue("action")=="configuration" {
   var encoded []byte

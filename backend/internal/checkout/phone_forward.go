@@ -43,7 +43,7 @@ func paymentSMSSource(sender, body string) bool {
    strings.Contains(normalized,"uddokta"))
 }
 
-func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw []byte,phoneID,workspace,realm string) {
+func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw []byte,phoneID,workspace,realm string, entitlementVersion int64) {
  var event struct {
   EnrollmentID string `json:"enrollment_id"`
   Environment string `json:"environment"`
@@ -128,5 +128,24 @@ func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw [
   event.ObservedAt,event.Sequence,event.ConfigurationVersion,receiving,payer,amount,
   original,precision,reference,method,version,encryptedContact).Scan(&ack)
  if e!=nil{logPhoneIngestFailure("receipt_persist",e);mapped(w,e);return}
+ // Evidence is committed before matching. A worker is NOT needed for this
+ // primary user-visible payment transition; matching remains fail-closed,
+ // isolated to the signed phone's authoritative financial realm.
+ var receiptACK struct {
+  ObservationID *string `json:"observation_id"`
+  Ack string `json:"ack"`
+ }
+ if json.Unmarshal(ack,&receiptACK)==nil && receiptACK.Ack=="durable" &&
+  receiptACK.ObservationID!=nil && *receiptACK.ObservationID!="" {
+  var matchResult string
+  matchErr:=pool.QueryRow(r.Context(),
+   "SELECT pg07_match($1::uuid,$2)",*receiptACK.ObservationID,entitlementVersion).Scan(&matchResult)
+  if matchErr!=nil{
+   // Never turn a COMMITTED receipt into HTTP 503, forcing duplicate replay.
+   logPhoneIngestFailure("receipt_match",matchErr)
+  } else {
+   log.Printf("phone-ingest matching_result=%s",matchResult)
+  }
+ }
  write(w,202,json.RawMessage(ack))
 }
