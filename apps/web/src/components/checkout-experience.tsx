@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {CustomerRefundRequest} from "./customer-refund-request";
+import {PaymentSuccess} from "./payment-success";
 import type {MerchantBrandInfo} from "./merchant-brand";
 import {ProviderMark,isPayMethod,payMethods,payNames,type PayMethod} from "./provider-mark";
 import Image from "next/image";
@@ -137,6 +138,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
  const contactUrl=(()=>{try{if(!info?.brand?.support_url)return "";const u=new URL(info.brand.support_url);return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return ""}})();
  function leave(){if(info?.return_url){window.location.assign(info.return_url);return}if(window.history.length>1)router.back();else router.push("/")}
  async function copyReceiving(){if(!info?.destination)return;try{await navigator.clipboard.writeText(info.destination);setDestinationCopied(true)}catch{setCode("COPY_FAILED")}}
+ if(info&&status==="ready"&&state==="completed")return <PaymentSuccess method={selectedMethod} returnUrl={info.return_url} bn={bn}/>;
  return <main className="provider-checkout pg05-checkout pg05-standalone" data-method={isFlow?selectedMethod:"selection"} lang={locale}>
   <div className={"provider-checkout-modal"+(isFlow?" is-flow":"")} data-method={isFlow?selectedMethod:"selection"}>
    <nav className="provider-checkout-nav" aria-label={bn?"চেকআউট":"Checkout"}>
