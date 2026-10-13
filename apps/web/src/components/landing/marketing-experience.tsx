@@ -9,25 +9,22 @@ type WorkflowMode = "payments" | "ai";
 
 const copy = {
  en: {
-  eyebrow: "PAYMENTS  /  AI  /  LESS BUSYWORK",
+  eyebrow: "PAYMENTS  /  CUSTOMER CONVERSATIONS",
   heroLine1: "GET PAID.",
   heroLine2: "KEEP MOVING.",
-  heroLead: "Payment links, automatic receipt matching, and a home for customer conversations. Two independent services built around the way you do business.",
-  explore: "Explore payments", aiAction: "Discover AI workspace", scroll: "A better way to work",
-  note: "Start with the service you need. Add the other when you're ready.",
-  marquee: ["PAYMENT LINKS","EVIDENCE-BASED VERIFICATION","CUSTOMER CONVERSATIONS","ONE BUSINESS, TWO SERVICES"],
-  serviceEyebrow: "01 / FIND YOUR FIT", servicesTitle: "One business. Two ways", servicesMarked: "to move forward.",
-  servicesLead: "Don't change how you work overnight. Start with the tools that matter today.",
+  heroLead: "Create payment links and follow payment status with less back-and-forth. Explore an AI workspace for customer conversations, coming to Ekmivo.",
+  explore: "Explore payments", aiAction: "Discover AI workspace", scroll: "Explore services",
+  serviceEyebrow: "01 / WHAT YOU CAN DO", servicesTitle: "Payments or AI.", servicesMarked: "Your choice.",
+  servicesLead: "Use payment tools on their own, or explore what’s coming to customer communication.",
   payNumber: "01 / PAYMENTS", payName: "Get paid without the back-and-forth.",
   payBody: "Share a payment link, let customers pay through their familiar wallet, and track the result without chasing transaction screenshots.",
   payBullets: ["Shareable payment links", "bKash, Nagad & Rocket checkout options", "Automatic verification for unique eligible receipts", "Merchant API & webhooks"],
   payExplore: "Explore payments", aiNumber: "02 / AI WORKSPACE", aiName: "Make room for better conversations.",
-  aiBody: "Bring customer questions, helpful AI, and your team into the same conversation. Built for the moments that need a quick answer—and the ones that need a person.",
+  aiBody: "An upcoming workspace for customer messages, AI-assisted answers and smooth handover to your team.",
   aiBullets: ["Unified customer inbox", "Business-aware AI assistance", "Human handover", "Follow-ups & customer context"],
   aiExplore: "See the AI roadmap", aiStatus: "IN DEVELOPMENT", payStatus: "PAYMENT TOOLS",
-  linkBoth: "Need both? They're designed to work together as Ekmivo grows.",
-  howEyebrow: "02 / HOW IT WORKS", howTitle: "From request to result.", howMarked: "Without the chase.",
-  howLead: "See the steps that replace the everyday back-and-forth.",
+  howEyebrow: "02 / HOW IT WORKS", howTitle: "Four steps.", howMarked: "One clear flow.",
+  howLead: "",
   tabPayments: "Payments", tabAI: "AI workspace", demo: "ILLUSTRATIVE WORKFLOW",
   paySteps: [
    {title:"Create a request",body:"Set an amount and share a checkout link."},
@@ -41,31 +38,31 @@ const copy = {
    {title:"Help customers faster",body:"AI suggests or handles supported replies with your controls."},
    {title:"Step in when it matters",body:"Your team takes over and keeps the conversation moving."}
   ],
-  howFoot:"AI features and channel connections are being prepared. Availability depends on platform approval.",
-  benefitEyebrow:"03 / THE LITTLE THINGS MATTER", benefitTitle:"Less noise.", benefitMarked:"More breathing room.",
-  benefitLead:"A few thoughtful tools can change the way a whole day feels.",
+  howFoot:"AI tools are in development; channel availability depends on approval.",
+  benefitEyebrow:"03 / WHY EKMIVO", benefitTitle:"Less chasing.", benefitMarked:"More time for business.",
+  benefitLead:"",
   benefitCards:[
    {n:"01",icon:"link",title:"Less chasing",text:"Share one payment request instead of asking again and again for proof."},
    {n:"02",icon:"spark",title:"Less repetition",text:"Let helpful workflows handle routine steps, with people in control."},
    {n:"03",icon:"layers",title:"A clearer picture",text:"Keep payment states, conversations and decisions easier to follow."}
   ],
   payStoryEyebrow:"A CLOSER LOOK / PAYMENTS", payStoryTitle:"Send a link.",payStoryMarked:"Know what happened.",
-  payStoryBody:"A checkout your customer understands. A payment record your business can follow. Eligible receipts are matched automatically; uncertain ones never become a false success.",
+  payStoryBody:"Send customers a clear checkout link. Eligible payment receipts are matched to the request; uncertain results stay pending instead of showing a false success.",
   payStoryButton:"Get started with payments", paymentPreview:"SAMPLE CHECKOUT · NOT LIVE DATA", linkLabel:"Your payment request", sampleMethod:"bKash · Nagad · Rocket", sampleAmount:"৳ 1,250", sampleContinue:"Continue to checkout", proofMessage:"Verification checks the receipt, not a screenshot.",
   aiStoryEyebrow:"A CLOSER LOOK / AI", aiStoryTitle:"A good answer matters.", aiStoryMarked:"So does a human.",
-  aiStoryBody:"Plan a customer experience where conversations have context, routine questions get help, and your team can take over without losing the thread.",
+  aiStoryBody:"Give your team the context behind each customer question. AI assistance and human handover are being developed for supported channels.",
   aiStoryButton:"Explore the AI roadmap", aiPreview:"ILLUSTRATIVE CONVERSATION · IN DEVELOPMENT",
   customerPrompt:"Is the blue one available?", agentReply:"Let me check the available options for you.", handoff:"Bring in a teammate", agentName:"Your assistant", customerName:"Customer",
-  audienceEyebrow:"04 / MADE FOR YOUR KIND OF WORK", audienceTitle:"Different businesses.", audienceMarked:"Same need for clarity.",
+  audienceEyebrow:"04 / WHO IT’S FOR", audienceTitle:"Built around", audienceMarked:"your kind of work.",
   audienceCards:[
    {n:"01 / SELL",title:"Online sellers",body:"Keep payment requests, customer questions and the next step less complicated.",icon:"bag"},
    {n:"02 / SERVE",title:"Service businesses",body:"Request payment for a session, project or service—with a clear status to follow.",icon:"calendar"},
    {n:"03 / BUILD",title:"Developers & teams",body:"Connect your own product to payment requests, status checks and merchant webhooks.",icon:"code"}
   ],
-  promiseEyebrow:"05 / TRUST IS BUILT INTO THE DETAILS", promiseTitle:"The right result.", promiseMarked:"Not just a green tick.",
-  promiseText:"Money matters. So do the details. A payment is only marked verified when its eligible evidence uniquely matches the request. When it doesn't, the status stays honest.",
+  promiseEyebrow:"05 / PAYMENT INTEGRITY", promiseTitle:"A verified payment", promiseMarked:"must earn its check.",
+  promiseText:"Only an eligible receipt that uniquely matches a payment request is verified. Missing or conflicting evidence never becomes an automatic success.",
   promiseItems:["No customer TrxID form in the normal flow","No automatic success from an ambiguous receipt","People remain responsible for exceptions and refunds"],
-  pricingEyebrow:"YOUR SETUP, YOUR CALL", pricingTitle:"Start with what fits.", pricingBody:"Payments and AI are separate services. Choose the one your business needs, or bring them together when both are ready.", pricingNote:"Final public pricing and AI service availability are being prepared.", pricingCTA:"Create your workspace",
+  pricingEyebrow:"PRICING & AVAILABILITY", pricingTitle:"Plan details are on the way.", pricingNote:"Final pricing and AI launch dates have not been announced.", pricingCTA:"Create your workspace",
   faqEyebrow:"GOOD QUESTIONS", faqTitle:"Before you get started.",
   faqs:[
    ["Is Ekmivo a payment gateway or an AI tool?","Both are separate service areas. Payments focuses on checkout and evidence-based verification. The AI workspace for conversations and automation is in development."],
@@ -74,31 +71,28 @@ const copy = {
    ["Can I use payments without AI?","Yes. The services are designed to be independent. You do not need to use the AI workspace to set up payment tools."],
    ["Are all AI and third-party integrations live?","No. Several AI, social-channel and commerce integrations are planned or awaiting the necessary approvals and testing. The relevant product pages will reflect availability."]
   ],
-  finalEyebrow:"YOUR NEXT CHAPTER", finalTitle:"Less admin. More",finalMarked:"room to grow.",
-  finalBody:"Start with clearer payments. Explore the future of AI-assisted conversations. Build your own way forward.",
+  finalEyebrow:"GET STARTED", finalTitle:"Keep your payments",finalMarked:"easy to follow.",
+  finalBody:"Create your workspace for payment links and payment tracking. AI communication tools are being developed.",
   finalButton:"Create your workspace", finalSecondary:"See how it works",
   footerHint:"Two independent services. One thoughtful direction."
  },
  bn: {
-  eyebrow:"পেমেন্ট  /  AI  /  কম ঝামেলা",
+  eyebrow:"পেমেন্ট  /  কাস্টমার যোগাযোগ",
   heroLine1:"পেমেন্ট হোক সহজ।",
   heroLine2:"কাজ এগিয়ে যাক।",
-  heroLead:"পেমেন্ট লিংক, স্বয়ংক্রিয় রসিদ যাচাই আর কাস্টমারের কথোপকথন—ব্যবসার জন্য দুটি স্বাধীন সেবা, একটি সুন্দর অভিজ্ঞতা।",
-  explore:"পেমেন্ট দেখুন", aiAction:"AI ওয়ার্কস্পেস",scroll:"কাজের নতুন ছন্দ",
-  note:"যে সেবাটি দরকার, সেটি দিয়েই শুরু করুন।",
-  marquee:["পেমেন্ট লিংক","প্রমাণভিত্তিক যাচাই","কাস্টমার কথোপকথন","দুটি স্বাধীন সেবা"],
-  serviceEyebrow:"০১ / শুরু করুন নিজের মতো",servicesTitle:"দুটি সেবা।",servicesMarked:"একটি সহজ পথ।",
-  servicesLead:"সবকিছু একদিনে বদলাতে হবে না। আপনার ব্যবসার প্রয়োজনটাই আগে।",
+  heroLead:"পেমেন্ট লিংক তৈরি করুন, লেনদেনের অবস্থা জানুন। কাস্টমার যোগাযোগের জন্য AI ওয়ার্কস্পেসও তৈরি হচ্ছে Ekmivo-তে।",
+  explore:"পেমেন্ট দেখুন", aiAction:"AI ওয়ার্কস্পেস",scroll:"সেবাগুলো দেখুন",
+  serviceEyebrow:"০১ / সেবাগুলো",servicesTitle:"পেমেন্ট অথবা AI।",servicesMarked:"পছন্দ আপনার।",
+  servicesLead:"পেমেন্ট সেবা আলাদাভাবে ব্যবহার করুন। AI যোগাযোগের নতুন সুবিধাগুলোও জেনে নিন।",
   payNumber:"০১ / পেমেন্ট",payName:"টাকা নেওয়া হোক ঝামেলাহীন।",
   payBody:"পেমেন্ট লিংক শেয়ার করুন। কাস্টমার নিজের পরিচিত মাধ্যমে টাকা পাঠাক। বারবার স্ক্রিনশট চাওয়া ছাড়াই পেমেন্টের অবস্থা জানুন।",
   payBullets:["শেয়ার করা যায় এমন পেমেন্ট লিংক","বিকাশ, নগদ ও রকেট চেকআউট","যোগ্য রসিদ অনন্যভাবে মিললে স্বয়ংক্রিয় যাচাই","মার্চেন্ট API ও ওয়েবহুক"],
   payExplore:"পেমেন্ট সম্পর্কে জানুন",aiNumber:"০২ / AI ওয়ার্কস্পেস",aiName:"প্রতিটি কথোপকথন হোক গুছানো।",
-  aiBody:"কাস্টমারের প্রশ্ন, AI-এর সহায়তা আর আপনার টিম—একই কথোপকথনে। দ্রুত উত্তরের পাশাপাশি মানুষকে নিয়ন্ত্রণে রাখার জন্য তৈরি হচ্ছে।",
+  aiBody:"কাস্টমারের মেসেজ, AI-এর সহায়তা আর টিমের দায়িত্ব নেওয়ার সুবিধা নিয়ে নতুন ওয়ার্কস্পেস তৈরি হচ্ছে।",
   aiBullets:["কাস্টমারের সব মেসেজ এক ইনবক্সে","ব্যবসার তথ্য বুঝে AI-এর সহায়তা","মানুষের কাছে কথোপকথন হস্তান্তর","ফলো-আপ ও কাস্টমার তথ্য"],
   aiExplore:"AI পরিকল্পনা দেখুন",aiStatus:"তৈরি হচ্ছে",payStatus:"পেমেন্ট সেবা",
-  linkBoth:"দুটিই দরকার? ভবিষ্যতে একসঙ্গে কাজ করার জন্যই তৈরি হচ্ছে Ekmivo।",
-  howEyebrow:"০২ / যেভাবে কাজ করে",howTitle:"অনুরোধ থেকে ফলাফল।",howMarked:"কম অপেক্ষা, কম ঝামেলা।",
-  howLead:"প্রতিদিনের ছোট কাজগুলো কীভাবে সহজ হতে পারে, দেখে নিন।",
+  howEyebrow:"০২ / যেভাবে কাজ করে",howTitle:"চারটি ধাপ।",howMarked:"পরিষ্কার হিসাব।",
+  howLead:"",
   tabPayments:"পেমেন্ট",tabAI:"AI ওয়ার্কস্পেস",demo:"শুধু উদাহরণ",
   paySteps:[
    {title:"পেমেন্ট অনুরোধ তৈরি",body:"টাকার পরিমাণ দিন, চেকআউট লিংক শেয়ার করুন।"},
@@ -112,31 +106,31 @@ const copy = {
    {title:"প্রশ্ন সামলান দ্রুত",body:"প্রয়োজন অনুযায়ী AI সহায়তা ও নিয়ন্ত্রিত উত্তর।"},
    {title:"প্রয়োজনে মানুষ এগিয়ে আসুক",body:"টিম কথোপকথন বুঝে দায়িত্ব নিতে পারবে।"}
   ],
-  howFoot:"AI ও চ্যানেল সংযোগের সুবিধাগুলো তৈরি হচ্ছে; অনুমোদন ও পরীক্ষা সম্পন্ন হলে পাওয়া যাবে।",
-  benefitEyebrow:"০৩ / ছোট বদল, বড় স্বস্তি",benefitTitle:"কম জটিলতা।",benefitMarked:"আরও সময়।",
-  benefitLead:"প্রতিদিনের কাজে ছোট কিছু পরিবর্তনই অনেক পার্থক্য গড়ে দেয়।",
+  howFoot:"AI সেবা তৈরি হচ্ছে; চ্যানেল সংযোগে প্রয়োজনীয় অনুমোদন লাগবে।",
+  benefitEyebrow:"০৩ / কেন Ekmivo",benefitTitle:"কম খোঁজাখুঁজি।",benefitMarked:"কাজে বেশি সময়।",
+  benefitLead:"",
   benefitCards:[
    {n:"০১",icon:"link",title:"বারবার খোঁজ নয়",text:"স্ক্রিনশট চেয়ে বসে না থেকে স্পষ্ট পেমেন্ট অনুরোধ পাঠান।"},
    {n:"০২",icon:"spark",title:"এক কাজ বারবার নয়",text:"নিয়ন্ত্রণ রেখে নিয়মিত কাজগুলো সহজ করার পরিকল্পনা।"},
    {n:"০৩",icon:"layers",title:"সবকিছু পরিষ্কার",text:"পেমেন্টের অবস্থা, কথোপকথন ও সিদ্ধান্ত গুছিয়ে রাখুন।"}
   ],
   payStoryEyebrow:"একটু ভেতরে / পেমেন্ট",payStoryTitle:"লিংক পাঠান।",payStoryMarked:"নিশ্চিত অবস্থা জানুন।",
-  payStoryBody:"কাস্টমারের জন্য সহজ চেকআউট, ব্যবসার জন্য স্পষ্ট রেকর্ড। রসিদের তথ্য অনন্যভাবে মিললেই পেমেন্ট যাচাই হয়; সন্দেহ থাকলে ভুল Success দেখাবে না।",
+  payStoryBody:"কাস্টমারকে চেকআউট লিংক পাঠান। যোগ্য রসিদের তথ্য অনন্যভাবে মিললে পেমেন্ট যাচাই হবে; অনিশ্চিত হলে Pending থাকবে।",
   payStoryButton:"পেমেন্ট দিয়ে শুরু করুন",paymentPreview:"নমুনা চেকআউট · লাইভ ডেটা নয়",linkLabel:"আপনার পেমেন্ট অনুরোধ",sampleMethod:"বিকাশ · নগদ · রকেট",sampleAmount:"৳ ১,২৫০",sampleContinue:"পেমেন্ট পেজে যান",proofMessage:"স্ক্রিনশট নয়, রসিদের প্রমাণ মিলিয়েই যাচাই।",
   aiStoryEyebrow:"একটু ভেতরে / AI",aiStoryTitle:"ভালো উত্তর জরুরি।",aiStoryMarked:"মানুষও।",
-  aiStoryBody:"কাস্টমারের কথার প্রেক্ষাপট থাকবে, নিয়মিত প্রশ্নে সহায়তা আসবে এবং টিম প্রয়োজনমতো দায়িত্ব নেবে—এই অভিজ্ঞতাটি তৈরি হচ্ছে।",
+  aiStoryBody:"কাস্টমারের আগের কথার তথ্য ধরে AI সহায়তা আর টিমের কাছে দায়িত্ব হস্তান্তরের সুবিধা তৈরি হচ্ছে।",
   aiStoryButton:"AI পরিকল্পনা দেখুন",aiPreview:"নমুনা কথোপকথন · তৈরি হচ্ছে",
   customerPrompt:"নীল রঙেরটা আছে?",agentReply:"চলুন, আপনার জন্য পাওয়া যাচ্ছে কি না দেখি।",handoff:"টিমের সাহায্য নিন",agentName:"সহকারী",customerName:"কাস্টমার",
-  audienceEyebrow:"০৪ / আপনার কাজের জন্য",audienceTitle:"কাজ আলাদা।",audienceMarked:"পরিষ্কার থাকাটা সবার দরকার।",
+  audienceEyebrow:"০৪ / যাদের জন্য",audienceTitle:"আপনার কাজের",audienceMarked:"সঙ্গে মানানসই।",
   audienceCards:[
    {n:"০১ / বিক্রয়",title:"অনলাইন বিক্রেতা",body:"পেমেন্ট অনুরোধ আর কাস্টমারের কথোপকথন সহজ রাখুন।",icon:"bag"},
    {n:"০২ / সেবা",title:"সেবাভিত্তিক ব্যবসা",body:"সেশন, প্রজেক্ট বা সেবার জন্য লিংকে পেমেন্ট নিন, অবস্থা জানুন।",icon:"calendar"},
    {n:"০৩ / ডেভেলপার",title:"ডেভেলপার ও টিম",body:"নিজের সিস্টেমে পেমেন্ট অনুরোধ, স্ট্যাটাস ও ওয়েবহুক যুক্ত করুন।",icon:"code"}
   ],
-  promiseEyebrow:"০৫ / আস্থা গড়ে ওঠে কাজে",promiseTitle:"শুধু সবুজ টিক নয়।",promiseMarked:"সঠিক ফলাফল।",
-  promiseText:"টাকার হিসাব গুরুত্বপূর্ণ। প্রমাণ ঠিকমতো না মিললে Ekmivo কখনো ভুল করে Verified দেখানোর কথা নয়। অনিশ্চিত পেমেন্টের অবস্থা স্পষ্ট থাকবে।",
+  promiseEyebrow:"০৫ / পেমেন্টের নির্ভরযোগ্যতা",promiseTitle:"যাচাই ছাড়া",promiseMarked:"Verified নয়।",
+  promiseText:"একটি পেমেন্টের যোগ্য রসিদ অনন্যভাবে মিললেই Verified হবে। প্রমাণ না মিললে বা একাধিক মিল থাকলে স্বয়ংক্রিয় Success নয়।",
   promiseItems:["সাধারণ পেমেন্টে কাস্টমারকে TrxID লিখতে হবে না","একাধিক সম্ভাব্য মিল হলে অটো Success নয়","ব্যতিক্রম ও টাকা ফেরতের দায়িত্বে মানুষ থাকবে"],
-  pricingEyebrow:"পছন্দ আপনার",pricingTitle:"যেটুকু দরকার, সেটুকু দিয়েই শুরু।",pricingBody:"পেমেন্ট ও AI দুটি আলাদা সেবা। একটি বা দুটোই—ব্যবসার প্রয়োজন অনুযায়ী বেছে নেওয়ার সুবিধা।",pricingNote:"চূড়ান্ত মূল্য ও AI সেবার উন্মুক্ত হওয়ার সময় এখনো প্রকাশিত হয়নি।",pricingCTA:"ওয়ার্কস্পেস তৈরি করুন",
+  pricingEyebrow:"মূল্য ও প্রাপ্যতা",pricingTitle:"প্ল্যানের বিস্তারিত আসছে।",pricingNote:"চূড়ান্ত মূল্য ও AI চালুর সময় এখনো ঘোষণা করা হয়নি।",pricingCTA:"ওয়ার্কস্পেস তৈরি করুন",
   faqEyebrow:"সাধারণ কিছু প্রশ্ন",faqTitle:"শুরুর আগে জেনে নিন।",
   faqs:[
    ["Ekmivo কি পেমেন্ট সেবা, নাকি AI?","দুটি আলাদা সেবাই রয়েছে। পেমেন্টে চেকআউট ও প্রমাণভিত্তিক যাচাই, আর AI কথোপকথন ও অটোমেশন সেবা তৈরি হচ্ছে।"],
@@ -145,8 +139,8 @@ const copy = {
    ["AI ছাড়াই কি পেমেন্ট ব্যবহার করা যাবে?","হ্যাঁ। পেমেন্ট ও AI আলাদা সেবা হিসেবেই তৈরি হচ্ছে।"],
    ["সব AI ও থার্ড-পার্টি সংযোগ কি চালু?","না। একাধিক AI, সামাজিক মাধ্যম ও কমার্স সংযোগ তৈরি বা অনুমোদনের অপেক্ষায় আছে। সংশ্লিষ্ট পণ্যের পেজে প্রাপ্যতার অবস্থা জানানো হবে।"]
   ],
-  finalEyebrow:"পরের অধ্যায়",finalTitle:"কাজের ঝামেলা কমুক।",finalMarked:"সম্ভাবনা বাড়ুক।",
-  finalBody:"পেমেন্টকে আরও পরিষ্কার করুন। AI-এর ভবিষ্যৎ সম্ভাবনা দেখুন। ব্যবসাকে এগিয়ে নিন নিজের মতো।",
+  finalEyebrow:"শুরু করুন",finalTitle:"পেমেন্টের হিসাব",finalMarked:"থাকুক পরিষ্কার।",
+  finalBody:"পেমেন্ট লিংক তৈরি ও পেমেন্টের অবস্থা দেখার জন্য ওয়ার্কস্পেস তৈরি করুন। AI যোগাযোগের সুবিধাগুলো তৈরি হচ্ছে।",
   finalButton:"ওয়ার্কস্পেস তৈরি করুন",finalSecondary:"যেভাবে কাজ করে",
   footerHint:"দুটি স্বাধীন সেবা। এগোনোর একটি সুন্দর পথ।"
  }
@@ -191,13 +185,9 @@ export function MarketingExperience({locale}:{locale:Locale}){
     <h1 id="em-title"><span>{t.heroLine1}</span><span className="em-brush em-hero-highlight">{t.heroLine2}</span></h1>
     <p className="em-hero-lead">{t.heroLead}</p>
     <div className="em-actions"><a href="#payments" className="em-button em-button-primary">{t.explore}<span aria-hidden="true">↗</span></a><a href="#ai" className="em-button em-button-secondary">{t.aiAction}<span aria-hidden="true">↗</span></a></div>
-    <span className="em-hero-note">{t.note}</span>
    </div>
    <a href="#services" className="em-scroll-link"><span>{t.scroll}</span><span className="em-scroll-down" aria-hidden="true">↓</span></a>
-   <div className="em-hero-index" aria-hidden="true">EK — 001</div>
   </section>
-
-  <div className="em-ticker" aria-label={t.marquee.join(" · ")}><div className="em-ticker-track">{[...t.marquee,...t.marquee].map((item,i)=><span key={i}><span className="em-ticker-star" aria-hidden="true">✳</span>{item}</span>)}</div></div>
 
   <section className="em-section em-services" id="services">
    <div className="em-container">
@@ -220,7 +210,6 @@ export function MarketingExperience({locale}:{locale:Locale}){
       <Doodle type="loop" className="em-card-doodle"/>
      </article>
     </div>
-    <p className="em-service-footnote">{t.linkBoth}</p>
    </div>
   </section>
 
@@ -308,7 +297,7 @@ export function MarketingExperience({locale}:{locale:Locale}){
   </section>
 
   <section className="em-section em-pricing" id="pricing"><div className="em-container em-pricing-band">
-   <Doodle type="spark" className="em-pricing-spark"/><div><span className="em-kicker">{t.pricingEyebrow}</span><h2>{t.pricingTitle}</h2><p>{t.pricingBody}</p><small>{t.pricingNote}</small></div>
+   <Doodle type="spark" className="em-pricing-spark"/><div><span className="em-kicker">{t.pricingEyebrow}</span><h2>{t.pricingTitle}</h2><small>{t.pricingNote}</small></div>
    <Link href={"/"+locale+"/register"} className="em-button em-button-primary">{t.pricingCTA}<span aria-hidden="true">↗</span></Link>
   </div></section>
 
