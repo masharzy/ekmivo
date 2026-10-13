@@ -53,16 +53,16 @@ export function PaymentSuccess({method,returnUrl,bn}:{method:PayMethod;returnUrl
    .ek-success-progress span.active{height:11px;width:11px;background:var(--ek-brand)}
    .ek-payment-success.is-nagad{background:#aaa}.is-nagad .ek-success-shell{overflow:hidden;border-radius:12px;box-shadow:0 14px 32px #0002}
    .is-nagad .ek-success-brand{display:none}
-   .is-nagad .ek-success-panel{min-height:360px;background:#8fc645;padding:50px 18px 42px}
+   .is-nagad .ek-success-panel{min-height:560px;background:linear-gradient(to bottom,#8fc645 0 52%,#fff 52% 100%);padding:46px 18px 38px;justify-content:flex-start;gap:0}
    .is-nagad .ek-success-panel h1,.is-nagad .ek-success-panel p,.is-nagad .ek-success-return{color:#777}
    .is-nagad .ek-success-panel h1{font-size:clamp(22px,4vw,31px);font-weight:400}
    .is-nagad .ek-success-panel p{font-size:17px}
-   .is-nagad .ek-success-panel{position:relative;justify-content:flex-end;padding-bottom:36px}
+   .is-nagad .ek-success-panel{position:relative}
    .is-nagad .ek-success-check{width:92px;height:92px;margin:0 auto 18px;flex-shrink:0}
-   .is-nagad .ek-nagad-success-word{letter-spacing:.14em;font-size:29px;color:white;margin-bottom:48px}
+   .is-nagad .ek-nagad-success-word{letter-spacing:.14em;font-size:29px;color:white;margin-bottom:20px}
    .is-nagad .ek-success-panel h1,.is-nagad .ek-success-panel p,.is-nagad .ek-nagad-continue{position:relative;z-index:1}
-   .is-nagad .ek-success-panel:after{content:"";position:absolute;top:50%;bottom:0;left:0;right:0;background:white;z-index:0}
-   .is-nagad .ek-success-panel h1{margin-top:28px}
+   
+   .is-nagad .ek-success-panel h1{margin-top:135px;max-width:510px}
    .is-nagad .ek-nagad-continue{background:#8fc645;color:white;border:0;border-radius:60px;padding:16px 60px;font-weight:700;font-size:24px;margin:40px auto 0;cursor:pointer}
    .is-nagad .ek-success-progress{display:none}
    @media(max-width:560px){.ek-payment-success{padding:0;align-items:stretch;background:white}.ek-success-shell{display:flex;flex-direction:column;min-height:100dvh}.ek-success-brand{height:130px}.ek-success-panel{flex:1;min-height:380px}.ek-success-progress{height:65px}}

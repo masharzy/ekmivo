@@ -209,7 +209,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
         <p className="ek-nagad-consent">{bn?"Proceed চাপলে আপনি আমাদের শর্তাবলীতে সম্মতি দিচ্ছেন।":'By clicking/tapping "Proceed" you are agreeing to our Terms and Conditions'}</p>
         <div className="ek-nagad-actions">
          <button type="submit" disabled={locking||!/^(?:01)[0-9]{9}$/.test(payer)}>{locking?"…":bn?"এগিয়ে যান":"Proceed"}</button>
-         <button type="button" onClick={()=>setStep("methods")} disabled={locking}>{bn?"ফিরে যান":"Close"}</button>
+         <button type="button" onClick={()=>void cancelPayment()} disabled={locking||cancelling}>{bn?"বাতিল":"Close"}</button>
         </div>
        </form>
        <div className="ek-nagad-footer-brand"><ProviderMark method="nagad"/></div>
