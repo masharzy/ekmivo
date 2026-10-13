@@ -60,51 +60,33 @@ fun ForwarderScreen(bn:Boolean){
  var message by remember{mutableStateOf("")}
  var permissionGranted by remember{mutableStateOf(ContextCompat.checkSelfPermission(context,Manifest.permission.RECEIVE_SMS)==PackageManager.PERMISSION_GRANTED)}
  var serverCheck by remember{mutableStateOf("checking")}
- var recentReceipts by remember{mutableStateOf<List<JSONObject>>(emptyList())}
+ var pendingReceipts by remember{mutableStateOf<List<JSONObject>>(emptyList())}
  var pendingCount by remember{mutableIntStateOf(0)}
- var historyLimit by remember{mutableIntStateOf(20)}
+ var displayLimit by remember{mutableIntStateOf(30)}
  var syncError by remember{mutableStateOf("")}
+ var queueLoaded by remember{mutableStateOf(false)}
  LaunchedEffect(phone?.optString("id")){
   while(true){
    val snapshot=withContext(Dispatchers.IO){
-    ReceiptStore(context).use{Triple(it.recent(historyLimit),it.count(),it.queueError())}
+    ReceiptStore(context).use{Triple(it.pendingReceipts(displayLimit),it.count(),it.queueError())}
    }
-   recentReceipts=snapshot.first
+   pendingReceipts=snapshot.first
    pendingCount=snapshot.second
    syncError=snapshot.third
-   delay(4000)
+   queueLoaded=true
+   delay(2000)
   }
- }
- fun recoverMissed(){
-  busy=true
-  scope.launch{
-   try {
-    val recovered=withContext(Dispatchers.IO){ReceiptInboxRecovery.recover(context)}
-    message=if(bn)"$recovered টি আগের SMS queue-তে যোগ হয়েছে।"
-      else "$recovered earlier SMS added to the forwarding queue."
-    ReceiptSyncWorker.schedule(context)
-   }catch(_:SecurityException){
-    message=if(bn)"SMS history পড়ার অনুমতি নেই।" else "SMS history permission unavailable."
-   }catch(_:Exception){
-    message=if(bn)"আগের SMS উদ্ধার করা যায়নি।" else "Could not recover earlier SMS."
-   }finally{busy=false}
-  }
- }
- val readOldSms=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->
-  if(granted)recoverMissed()
-  else message=if(bn)"পুরোনো SMS উদ্ধার করতে ঐচ্ছিক READ_SMS অনুমতি প্রয়োজন।"
-    else "Optional READ_SMS permission is needed to recover missed messages."
  }
  val allow=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->
   permissionGranted=granted
-  if(granted){ReceiptSyncWorker.schedule(context);message=""}
+  if(granted){ReceiptSyncWorker.scheduleNow(context);message=""}
  }
  fun updateLocal(){
   phone=ReceiptStore(context).use{it.phone()?:it.enrollment()}
   permissionGranted=ContextCompat.checkSelfPermission(context,Manifest.permission.RECEIVE_SMS)==PackageManager.PERMISSION_GRANTED
  }
  DisposableEffect(lifecycleOwner){
-  val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_RESUME){updateLocal();if(phone!=null)ReceiptSyncWorker.schedule(context)}}
+  val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_RESUME){updateLocal();if(phone!=null)ReceiptSyncWorker.scheduleNow(context)}}
   lifecycleOwner.lifecycle.addObserver(observer)
   onDispose{lifecycleOwner.lifecycle.removeObserver(observer)}
  }
@@ -119,42 +101,38 @@ fun ForwarderScreen(bn:Boolean){
   if(response?.first==200){
    ReceiptStore(context).use{it.savePhoneConfiguration(JSONObject(response.second))}
    serverCheck="connected"
-   ReceiptSyncWorker.schedule(context)
+   ReceiptSyncWorker.scheduleNow(context)
   }else serverCheck=if(response?.first==403)"revoked" else "offline"
  }
  Column(
   Modifier.fillMaxSize().verticalScroll(rememberScrollState())
    .padding(start=24.dp,end=24.dp,top=27.dp,bottom=25.dp),
   verticalArrangement=Arrangement.spacedBy(15.dp)){
-  Text("SMS Forwarder",style=MaterialTheme.typography.headlineMedium)
+  Text("SMS Forwarder",style=MaterialTheme.typography.headlineSmall)
   if(phone!=null){
    Surface(
-    shape=RoundedCornerShape(26.dp),color=MaterialTheme.colorScheme.surface,
+    shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface,
     border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)){
-    Column(
-     Modifier.fillMaxWidth().padding(vertical=36.dp,horizontal=24.dp),
-     verticalArrangement=Arrangement.spacedBy(13.dp),horizontalAlignment=Alignment.CenterHorizontally){
-     val healthy=serverCheck=="connected"&&permissionGranted
-     Surface(shape=CircleShape,color=if(healthy) Color(0xFF289667).copy(alpha=.12f)
+    Row(Modifier.fillMaxWidth().padding(20.dp),verticalAlignment=Alignment.CenterVertically,
+     horizontalArrangement=Arrangement.spacedBy(12.dp)){
+     val connected=serverCheck=="connected"&&permissionGranted
+     Surface(shape=CircleShape,color=if(connected)Color(0xFF289667).copy(alpha=.12f)
       else MaterialTheme.colorScheme.error.copy(alpha=.12f)){
-      Icon(if(healthy)Icons.Outlined.CheckCircleOutline else Icons.Outlined.WarningAmber,
-       contentDescription=null,modifier=Modifier.padding(19.dp).size(43.dp),
-       tint=if(healthy)Color(0xFF289667) else MaterialTheme.colorScheme.error)
+      Icon(if(connected)Icons.Outlined.CheckCircleOutline else Icons.Outlined.WarningAmber,
+       contentDescription=null,modifier=Modifier.padding(12.dp).size(27.dp),
+       tint=if(connected)Color(0xFF289667) else MaterialTheme.colorScheme.error)
      }
-     Text(
-      when(serverCheck){
-       "revoked"->if(bn)"সংযোগ বাতিল হয়েছে" else "Disconnected"
-       "offline"->if(bn)"সার্ভার পাওয়া যাচ্ছে না" else "Connection unavailable"
-       "checking"->if(bn)"সংযোগ যাচাই হচ্ছে" else "Checking connection"
-       else->if(!permissionGranted)(if(bn)"SMS অনুমতি প্রয়োজন" else "SMS access required")
-        else if(bn)"সংযুক্ত" else "Connected"
-      },style=MaterialTheme.typography.headlineMedium,textAlign=TextAlign.Center)
-     if(serverCheck=="connected"){
-      Text(if(bn)"ফোনটি সফলভাবে যুক্ত আছে" else "Your phone is paired",
-       color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=TextAlign.Center)
+     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
+      Text(when{
+       serverCheck=="revoked"->if(bn)"ফোনের সংযোগ বাতিল" else "Phone disconnected"
+       !permissionGranted->if(bn)"SMS অনুমতি প্রয়োজন" else "SMS access required"
+       serverCheck=="checking"->if(bn)"সংযোগ যাচাই হচ্ছে" else "Checking connection"
+       serverCheck=="offline"->if(bn)"সার্ভার সংযোগ নেই" else "Server unavailable"
+       else->if(bn)"ফোন সংযুক্ত আছে" else "Phone connected"
+      },style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+      Text(phone!!.optString("environment").uppercase(),
+       style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
      }
-     Text(phone!!.optString("environment").uppercase(),style=MaterialTheme.typography.labelMedium,
-      color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
    }
    if(!permissionGranted&&serverCheck!="revoked"){
@@ -162,81 +140,61 @@ fun ForwarderScreen(bn:Boolean){
      Text(if(bn)"SMS অনুমতি দিন" else "Allow SMS access")
     }
    }
-   Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.surface,
-    border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)){
-    Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+   Text(if(bn)"অপেক্ষমাণ SMS" else "Pending SMS",style=MaterialTheme.typography.titleLarge,
+    fontWeight=FontWeight.Bold)
+   if(!queueLoaded){
+    CircularProgressIndicator(modifier=Modifier.size(24.dp))
+   }else if(pendingCount==0){
+    Surface(color=MaterialTheme.colorScheme.surface,
+     shape=RoundedCornerShape(18.dp),
+     border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)){
+     Row(Modifier.fillMaxWidth().padding(19.dp),verticalAlignment=Alignment.CenterVertically,
+      horizontalArrangement=Arrangement.spacedBy(12.dp)){
+      Icon(Icons.Outlined.CheckCircleOutline,null,Modifier.size(24.dp),tint=Color(0xFF289667))
+      Text(if(bn)"সব SMS সার্ভারে পাঠানো হয়েছে" else "All SMS sent to the server",
+       style=MaterialTheme.typography.bodyLarge)
+     }
+    }
+   }else{
+    Column(verticalArrangement=Arrangement.spacedBy(9.dp)){
      Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
       horizontalArrangement=Arrangement.SpaceBetween){
-      Column {
-       Text(if(bn)"SMS সংগ্রহ ও সিঙ্ক" else "SMS collection & sync",
-        style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-       Text(if(bn)"পাঠানোর অপেক্ষায়: $pendingCount" else "$pendingCount waiting to forward",
-        color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+      Text(if(bn)"$pendingCount টি SMS পাঠানো বাকি" else "$pendingCount SMS waiting to send",
+       style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      if(syncError.isNotEmpty()){
+       TextButton(onClick={ReceiptSyncWorker.scheduleNow(context)}){
+        Text(if(bn)"আবার চেষ্টা" else "Retry")
+       }
       }
-      OutlinedButton(enabled=serverCheck!="revoked",onClick={
-       ReceiptSyncWorker.schedule(context)
-       message=if(bn)"নেটওয়ার্ক থাকলে পুনরায় পাঠানো হবে" else "Retry scheduled for when connected"
-      }){Text(if(bn)"আবার পাঠান" else "Retry sync")}
      }
-     OutlinedButton(enabled=!busy&&serverCheck!="revoked",modifier=Modifier.fillMaxWidth(),onClick={
-      if(ContextCompat.checkSelfPermission(context,Manifest.permission.READ_SMS)==PackageManager.PERMISSION_GRANTED)recoverMissed()
-      else readOldSms.launch(Manifest.permission.READ_SMS)
-     }) {
-      Text(if(bn)"বন্ধ থাকার সময়ের SMS উদ্ধার করুন" else "Recover missed SMS from inbox")
-     }
-     Text(if(bn)"এটি ঐচ্ছিক; permission দিলে শুধু গত ৭২ ঘণ্টার প্রাসঙ্গিক payment SMS উদ্ধার করার চেষ্টা হবে। ফোন সম্পূর্ণ বন্ধ থাকলে তখনই SMS পড়া সম্ভব নয়।"
-       else "Optional: with your permission, check up to 72 hours of recent provider receipts. Android cannot capture messages while the phone is powered off.",
-       style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
      if(syncError.isNotEmpty())
-      Text(if(bn)"শেষ সিঙ্কে সমস্যা: $syncError" else "Sync attention: $syncError",
+      Text(if(bn)"পাঠাতে সমস্যা হচ্ছে, আবার চেষ্টা চলছে।"
+        else "Could not send yet. Retrying automatically.",
        color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
-     if(!permissionGranted)
-      Text(if(bn)"SMS permission বন্ধ আছে; নতুন SMS সংগ্রহ হবে না।"
-       else "SMS permission is off; new receipts cannot be collected.",
-       color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)
-     Text(if(bn)"ইন্টারনেট বন্ধ থাকলেও ইতিমধ্যে সংগ্রহ করা SMS encrypted queue-তে থাকে। নেট ফিরে এলে নিজে থেকে পাঠাবে।"
-      else "Captured payment SMS are saved in an encrypted queue when offline and retried when connectivity returns.",
-      style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
-   }
-   Text(if(bn)"সাম্প্রতিক পেমেন্ট SMS" else "Recent payment SMS",style=MaterialTheme.typography.titleLarge)
-   if(recentReceipts.isEmpty()) {
-    Text(if(bn)"এখনো কোনো পেমেন্ট SMS সংগ্রহ করা হয়নি।" else "No payment SMS captured yet.",
-     color=MaterialTheme.colorScheme.onSurfaceVariant)
-   }else{
-    recentReceipts.filter{
-     it.optString("source").lowercase() in setOf("bkash","nagad","rocket")
-    }.forEach { receipt->
+    pendingReceipts.forEach{receipt->
      val preview=receiptDisplay(receipt.optString("evidence"))
-     val sent=receipt.optBoolean("sent")
-     Surface(shape=RoundedCornerShape(14.dp),color=MaterialTheme.colorScheme.surface,
+     Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.surface,
       border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)){
-      Column(Modifier.fillMaxWidth().padding(15.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+      Column(Modifier.fillMaxWidth().padding(16.dp),
+       verticalArrangement=Arrangement.spacedBy(7.dp)){
        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
         horizontalArrangement=Arrangement.SpaceBetween){
         Text(receipt.optString("source"),fontWeight=FontWeight.SemiBold)
-        Text(if(sent)(if(bn)"ফরওয়ার্ড হয়েছে" else "Forwarded")
-          else (if(bn)"পাঠানোর অপেক্ষায়" else "Waiting to send"),
-          color=if(sent)Color(0xFF289667) else MaterialTheme.colorScheme.error,
-          style=MaterialTheme.typography.labelMedium)
+        Text(preview.first,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
        }
-       Text(preview.first,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
        Text((if(bn)"প্রেরক: " else "Sender: ")+preview.second,
         style=MaterialTheme.typography.bodyMedium)
        Text((if(bn)"সময়: " else "Time: ")+preview.third,
         style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-       Text(if(sent)(if(bn)"সার্ভারে গ্রহণ করা হয়েছে; payment verification আলাদা।"
-          else "Server accepted this SMS; payment verification is separate.")
-        else (if(bn)"নেটওয়ার্ক ফিরলে স্বয়ংক্রিয়ভাবে retry হবে।"
-          else "Automatically retries when the network returns."),
-        style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
       }
      }
     }
-   }
-   if(recentReceipts.size>=historyLimit && historyLimit<500){
-    OutlinedButton(modifier=Modifier.fillMaxWidth(),onClick={historyLimit=(historyLimit+20).coerceAtMost(500)}){
-     Text(if(bn)"আরও SMS দেখুন" else "Load more SMS")
+    if(pendingCount>displayLimit && displayLimit<500){
+     TextButton(onClick={displayLimit=(displayLimit+30).coerceAtMost(500)},
+      modifier=Modifier.fillMaxWidth()){
+      Text(if(bn)"আরও দেখুন" else "Show more")
+     }
     }
    }
    if(serverCheck=="revoked"){

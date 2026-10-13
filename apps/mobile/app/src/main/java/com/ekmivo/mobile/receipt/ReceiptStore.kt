@@ -190,6 +190,32 @@ class ReceiptStore(context: Context): SQLiteOpenHelper(context, "receipt-outbox.
   }
   return results
  }
+ /** Only receipts with NO server durable ACK are visible on the forwarding screen. */
+ fun pendingReceipts(limit:Int=40):List<JSONObject>{
+  val output=mutableListOf<JSONObject>()
+  readableDatabase.rawQuery(
+   "SELECT id,body,created FROM pending ORDER BY created ASC,id ASC LIMIT ?",
+   arrayOf(limit.coerceIn(1,500).toString())
+  ).use{cursor->
+   while(cursor.moveToNext()){
+    try{
+     val id=cursor.getString(0)
+     val encrypted=cursor.getBlob(1)
+     val cipher=Cipher.getInstance("AES/GCM/NoPadding")
+     cipher.init(Cipher.DECRYPT_MODE,key(),
+      GCMParameterSpec(128,encrypted.copyOfRange(0,12)))
+     cipher.updateAAD(id.toByteArray())
+     val receipt=JSONObject(String(
+      cipher.doFinal(encrypted.copyOfRange(12,encrypted.size)),Charsets.UTF_8))
+     output.add(JSONObject()
+      .put("source",receipt.optString("source"))
+      .put("evidence",receipt.optString("evidence"))
+      .put("received_at",cursor.getLong(2)))
+    }catch(_:Exception){setQueueError("RECEIPT_HISTORY_UNAVAILABLE")}
+   }
+  }
+  return output
+ }
  fun acknowledge(id:String){
   val db=writableDatabase
   db.beginTransaction()
