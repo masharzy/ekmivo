@@ -185,7 +185,7 @@ export function MarketingExperience({locale}:{locale:Locale}){
     <span className="em-hero-eyebrow"><span className="em-dot"/> {t.eyebrow}</span>
     <h1 id="em-title"><span>{t.heroLine1}</span><span className="em-brush em-hero-highlight">{t.heroLine2}</span></h1>
     <p className="em-hero-lead">{t.heroLead}</p>
-    <div className="em-actions"><a href="#payments" className="em-button em-button-primary">{t.explore}<span aria-hidden="true">↗</span></a><a href="#ai" className="em-button em-button-secondary">{t.aiAction}<span aria-hidden="true">↗</span></a></div>
+    <div className="em-actions"><a href={"/"+locale+"/payment-gateway"} className="em-button em-button-primary">{t.explore}<span aria-hidden="true">↗</span></a><a href={"/"+locale+"/ai-bot"} className="em-button em-button-secondary">{t.aiAction}<span aria-hidden="true">↗</span></a></div>
    </div>
    <a href="#services" className="em-scroll-link"><span>{t.scroll}</span><span className="em-scroll-down" aria-hidden="true">↓</span></a>
   </section>
@@ -199,7 +199,7 @@ export function MarketingExperience({locale}:{locale:Locale}){
       <div className="em-service-mark em-symbol-wallet" aria-hidden="true"><LineIcon name="link"/><span>৳</span></div>
       <h3>{t.payName}</h3><p>{t.payBody}</p>
       <ul>{t.payBullets.map(item=><li key={item}><span aria-hidden="true">↗</span>{item}</li>)}</ul>
-      <a className="em-card-link" href="#payments">{t.payExplore}<span aria-hidden="true">↗</span></a>
+      <Link className="em-card-link" href={"/"+locale+"/payment-gateway"}>{t.payExplore}<span aria-hidden="true">↗</span></Link>
       <Doodle type="arrow" className="em-card-doodle"/>
      </article>
      <article className="em-service-card em-service-ai" id="ai">
@@ -207,7 +207,7 @@ export function MarketingExperience({locale}:{locale:Locale}){
       <div className="em-service-mark em-symbol-ai" aria-hidden="true"><LineIcon name="spark"/><span>AI</span></div>
       <h3>{t.aiName}</h3><p>{t.aiBody}</p>
       <ul>{t.aiBullets.map(item=><li key={item}><span aria-hidden="true">↗</span>{item}</li>)}</ul>
-      <a className="em-card-link" href="#ai-story">{t.aiExplore}<span aria-hidden="true">↗</span></a>
+      <Link className="em-card-link" href={"/"+locale+"/ai-bot"}>{t.aiExplore}<span aria-hidden="true">↗</span></Link>
       <Doodle type="loop" className="em-card-doodle"/>
      </article>
     </div>
@@ -276,7 +276,7 @@ export function MarketingExperience({locale}:{locale:Locale}){
      <Doodle type="spark" className="em-chat-doodle"/>
     </div>
     <div className="em-product-copy"><SectionHead eyebrow={t.aiStoryEyebrow} title={t.aiStoryTitle} marked={t.aiStoryMarked}/>
-     <p>{t.aiStoryBody}</p><a className="em-button em-button-secondary" href="#services">{t.aiStoryButton}<span aria-hidden="true">↗</span></a>
+     <p>{t.aiStoryBody}</p><Link className="em-button em-button-secondary" href={"/"+locale+"/ai-bot"}>{t.aiStoryButton}<span aria-hidden="true">↗</span></Link>
     </div>
    </div>
   </section>

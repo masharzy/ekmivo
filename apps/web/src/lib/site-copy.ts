@@ -4,13 +4,13 @@ export const siteCopy = {
  en: {
   nav: {services:"Services",workflow:"How it works",principles:"Payment checks",ai:"AI workspace",commerce:"Payments",pricing:"Pricing",solutions:"Who it's for",faq:"FAQ"},
   login:"Sign in", register:"Create account", theme:"Theme", language:"Language", menu:"Open menu", closeMenu:"Close menu",
-  footerLine:"Payment links, invoices, checkout and verification. AI tools are in development.",
+  footerLine:"Payment links, checkout and evidence-based verification. AI Bot is coming later.",
   footerStatus:"Service availability", rights:"All rights reserved.",
  },
  bn: {
   nav: {services:"সেবাগুলো",workflow:"কীভাবে কাজ করে",principles:"পেমেন্ট যাচাই",ai:"AI সেবা",commerce:"পেমেন্ট",pricing:"প্যাকেজ",solutions:"যাদের জন্য",faq:"প্রশ্ন ও উত্তর"},
-  login:"লগইন",register:"অ্যাকাউন্ট খুলুন",theme:"থিম",language:"ভাষা",menu:"মেনু খুলুন",closeMenu:"মেনু বন্ধ করুন",
-  footerLine:"পেমেন্ট লিংক, ইনভয়েস, চেকআউট ও পেমেন্ট যাচাই। AI সেবাও তৈরি হচ্ছে।",
+  login:"Sign in",register:"অ্যাকাউন্ট খুলুন",theme:"থিম",language:"ভাষা",menu:"মেনু খুলুন",closeMenu:"মেনু বন্ধ করুন",
+  footerLine:"পেমেন্ট লিংক, চেকআউট ও পেমেন্ট যাচাই। AI Bot সেবা পরে আসছে।",
   footerStatus:"সেবার বর্তমান অবস্থা", rights:"সর্বস্বত্ব সংরক্ষিত।",
  }
 } as const;

@@ -1,33 +1,47 @@
 "use client";
 import Link from "next/link";
-import { useActionState,useState } from "react";
-import { requestPasswordResetAction,completePasswordResetAction,type RecoveryState } from "../actions/recovery";
-import type { Locale } from "../lib/site-copy";
+import {useActionState,useState} from "react";
+import {requestPasswordResetAction,completePasswordResetAction,type RecoveryState} from "../actions/recovery";
+import type {Locale} from "../lib/site-copy";
+
 const initial:RecoveryState={status:"idle",message:""};
 export function RecoveryForm({locale}:{locale:Locale}){
  const [email,setEmail]=useState("");
  const [requestState,requestAction,requestPending]=useActionState(requestPasswordResetAction.bind(null,locale),initial);
  const [resetState,resetAction,resetPending]=useActionState(completePasswordResetAction.bind(null,locale),initial);
- const isSent=requestState.status==="sent";
- return <main className="ek-verification-screen"><div className="ek-verify-card ek-reset-card">
-  <div className="ek-verify-mark">e<span>.</span></div>
-  <span className="ek-page-kicker">ACCOUNT SECURITY / 02</span>
-  <h1>{locale==="bn"?"পাসওয়ার্ড ফিরে পান":"Recover your account"}</h1>
-  <p>{locale==="bn"?"ইমেইলে একটি ছয় সংখ্যার নিরাপত্তা কোড পাঠানো হবে।":"We’ll email a six-digit security code to your registered address."}</p>
-  <form action={requestAction} className="ek-recovery-form">
-   <label>{locale==="bn"?"ইমেইল":"Email address"}<input type="email" name="email" autoComplete="email" placeholder="you@company.com" value={email} onChange={e=>setEmail(e.target.value)} required maxLength={254}/></label>
-   <button disabled={requestPending} className="ek-action" type="submit">{requestPending?"…":isSent?(locale==="bn"?"আবার কোড পাঠান":"Request a new code"):(locale==="bn"?"কোড পাঠান":"Send recovery code")} ↗</button>
-   {requestState.status!=="idle"&&<p role="status" className={requestState.status==="error"?"ek-form-error":"ek-verify-help"}>{requestState.message}</p>}
-  </form>
-  {isSent&&resetState.status!=="success"&&<form action={resetAction} className="ek-recovery-form ek-reset-step">
-   <input type="hidden" name="email" value={email}/>
-   <label>{locale==="bn"?"ছয় সংখ্যার কোড":"Six-digit code"}<input name="code" autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required placeholder="000000"/></label>
-   <label>{locale==="bn"?"নতুন পাসওয়ার্ড":"New password"}<input type="password" name="password" minLength={12} required autoComplete="new-password"/></label>
-   <label>{locale==="bn"?"পাসওয়ার্ড নিশ্চিত করুন":"Confirm password"}<input type="password" name="confirm" minLength={12} required autoComplete="new-password"/></label>
-   <button disabled={resetPending} type="submit" className="ek-action">{locale==="bn"?"পাসওয়ার্ড পরিবর্তন করুন":"Update password"} ↗</button>
-   {resetState.status==="error"&&<p className="ek-form-error" role="alert">{resetState.message}</p>}
-  </form>}
-  {resetState.status==="success"&&<p className="ek-verify-help" role="status">{resetState.message}</p>}
-  <Link className="ek-verify-back" href={`/${locale}/login`}>← {locale==="bn"?"লগইনে ফিরুন":"Back to sign in"}</Link>
- </div></main>;
+ const sent=requestState.status==="sent";
+ const bn=locale==="bn";
+ return <main className="ek-auth-main ek-auth-recovery" lang={locale}>
+  <div className="ek-auth-grain" aria-hidden="true"/>
+  <div className="ek-recovery-layout">
+   <div className="ek-recovery-intro">
+    <span className="ek-auth-eyebrow">{bn?"অ্যাকাউন্টের নিরাপত্তা":"ACCOUNT SECURITY"}</span>
+    <h1>{bn?"পাসওয়ার্ড ভুলে গেছেন?":"Forgot your password?"}</h1>
+    <p>{bn?"ইমেইলে একটি কোড পাঠাব। কোডটি দিয়ে নতুন পাসওয়ার্ড সেট করতে পারবেন।":"We'll email a code so you can choose a new password."}</p>
+    <div className="ek-recovery-doodle" aria-hidden="true">✳</div>
+   </div>
+   <div className="ek-auth-card ek-recovery-card">
+    <span className="ek-auth-card-kicker">{bn?"অ্যাকাউন্ট ফিরে পান":"RECOVER ACCOUNT"}</span>
+    <h2>{bn?"ইমেইল ঠিকানা দিন":"Start with your email"}</h2>
+    <p className="ek-auth-subtitle">{bn?"Ekmivo অ্যাকাউন্টে যে ইমেইল ব্যবহার করেছেন, সেটি লিখুন।":"Enter the address connected to your Ekmivo account."}</p>
+    <form action={requestAction}>
+     <label>{bn?"ইমেইল ঠিকানা":"Email address"}<input type="email" name="email" autoComplete="email" placeholder="you@company.com" value={email} onChange={e=>setEmail(e.target.value)} required maxLength={254}/></label>
+     <button className="ek-auth-primary" disabled={requestPending} type="submit">{requestPending?(bn?"অপেক্ষা করুন…":"Please wait…"):sent?(bn?"আবার কোড পাঠান":"Send another code"):(bn?"কোড পাঠান":"Send recovery code")} <span aria-hidden="true">↗</span></button>
+     {requestState.status!=="idle"&&<p role="status" className={requestState.status==="error"?"ek-form-error":"ek-auth-hint"}>{requestState.message}</p>}
+    </form>
+    {sent&&resetState.status!=="success"&&<form action={resetAction} className="ek-recovery-second-step">
+     <input type="hidden" name="email" value={email}/>
+     <h3>{bn?"নতুন পাসওয়ার্ড সেট করুন":"Choose a new password"}</h3>
+     <label>{bn?"ইমেইলে পাওয়া ৬ সংখ্যার কোড":"Six-digit email code"}<input name="code" autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required placeholder="000000"/></label>
+     <label>{bn?"নতুন পাসওয়ার্ড":"New password"}<input type="password" name="password" minLength={12} required autoComplete="new-password"/></label>
+     <label>{bn?"আবার পাসওয়ার্ড লিখুন":"Confirm password"}<input type="password" name="confirm" minLength={12} required autoComplete="new-password"/></label>
+     <button disabled={resetPending} type="submit" className="ek-auth-primary">{resetPending?(bn?"অপেক্ষা করুন…":"Please wait…"):(bn?"পাসওয়ার্ড পরিবর্তন করুন":"Reset password")} <span aria-hidden="true">↗</span></button>
+     {resetState.status==="error"&&<p className="ek-form-error" role="alert">{resetState.message}</p>}
+    </form>}
+    {resetState.status==="success"&&<p role="status" className="ek-auth-success">{resetState.message}</p>}
+    <Link className="ek-auth-recovery-back" href={`/${locale}/login`}>← {bn?"Sign in-এ ফিরুন":"Back to sign in"}</Link>
+   </div>
+  </div>
+  <Link className="ek-auth-back" href={`/${locale}`}>← {bn?"হোমপেজে ফিরুন":"Back to home"}</Link>
+ </main>;
 }
