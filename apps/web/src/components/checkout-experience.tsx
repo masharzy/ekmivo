@@ -144,6 +144,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
    const result=await fetch(route+"/cancel",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin"});
    const body=await result.json();
    if(!result.ok)throw new Error(body.error?.code||"CHECKOUT_SERVICE_UNAVAILABLE");
+   if(body.state==="cancelled"){setInfo(current=>current?{...current,state:"cancelled"}:current);setCode("");}
    await refresh();
   }catch(e){setCode(e instanceof Error?e.message:"CHECKOUT_SERVICE_UNAVAILABLE")}
   finally{setCancelling(false)}
@@ -151,13 +152,20 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
  function leave(){if(info?.return_url){window.location.assign(info.return_url);return}if(window.history.length>1)router.back();else router.push("/")}
  async function copyReceiving(){if(!info?.destination)return;try{await navigator.clipboard.writeText(info.destination);setDestinationCopied(true)}catch{setCode("COPY_FAILED")}}
  if(info&&status==="ready"&&state==="completed")return <PaymentSuccess method={selectedMethod} returnUrl={info.return_url} bn={bn}/>;
+ if(info&&status==="ready"&&state==="cancelled")return <main className="provider-checkout pg05-checkout pg05-standalone" lang={locale}>
+  <section className="provider-result" role="status" style={{minHeight:"100dvh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",textAlign:"center",gap:16,padding:32,background:"#faf9f6",color:"#2a2625"}}>
+   <div aria-hidden="true" style={{width:70,height:70,borderRadius:"50%",border:"3px solid #bd3838",color:"#bd3838",display:"grid",placeItems:"center",fontSize:35}}>×</div>
+   <h1 style={{fontSize:"clamp(23px,5vw,34px)",lineHeight:1.35,margin:0}}>{bn?"এই পেমেন্ট রিকোয়েস্টটি বাতিল করা হয়েছে":"This payment request has been cancelled"}</h1>
+   <p style={{maxWidth:470,lineHeight:1.7,fontSize:17,margin:0}}>{bn?"নতুন পেমেন্ট লিংকের জন্য বিক্রেতার সঙ্গে যোগাযোগ করুন। এই রিকোয়েস্টে আর টাকা পাঠাবেন না।":"Please contact the merchant for a new payment link. Do not send money using this request."}</p>
+  </section>
+ </main>;
  return <main className="provider-checkout pg05-checkout pg05-standalone" data-method={isFlow?selectedMethod:"selection"} lang={locale}>
   <div className={"provider-checkout-modal"+(isFlow?" is-flow":"")} data-method={isFlow?selectedMethod:"selection"}>
    <nav className="provider-checkout-nav" aria-label={bn?"চেকআউট":"Checkout"}>
     <button type="button" className="provider-checkout-back" aria-label={bn?"পেছনে":"Back"}
-     onClick={()=>{if(state==="requires_payer"&&step==="payer")setStep("methods");else leave()}}>←</button>
+     onClick={()=>{if(["requires_payer","awaiting_payment","processing"].includes(state))void cancelPayment();else leave()}}>←</button>
     <Link href={"/"+(bn?"en":"bn")+"/checkout/"+token+(initialMethod?"?method="+initialMethod:"")} hrefLang={bn?"en":"bn"} className="provider-checkout-language">{bn?"Eng":"বাংলা"}</Link>
-    <button type="button" className="provider-checkout-close" onClick={leave} aria-label={bn?"বন্ধ":"Close"}>×</button>
+    <button type="button" className="provider-checkout-close" onClick={()=>{if(["requires_payer","awaiting_payment","processing"].includes(state))void cancelPayment();else leave()}} aria-label={bn?"বন্ধ":"Close"}>×</button>
    </nav>
    {status==="loading"&&<div className="provider-checkout-empty" role="status">{bn?"পেমেন্ট লোড হচ্ছে…":"Loading payment…"}</div>}
    {status!=="loading"&&status!=="ready"&&<div className="provider-checkout-empty" role="alert">
@@ -222,7 +230,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
         <p>{bn?"নম্বরটি নিশ্চিত করলে পরে বদলানো যাবে না।":"Confirming locks your sending number to this payment."}</p>
         <div className="provider-payer-consent">{bn?"এগিয়ে গেলে আপনি শর্তাবলীতে সম্মতি দিচ্ছেন।":"By proceeding you agree to the payment terms."}</div>
         <div className="provider-flow-controls">
-         <button type="button" onClick={()=>setStep("methods")} disabled={locking}>{bn?"বাতিল":"Cancel"}</button>
+         <button type="button" onClick={()=>void cancelPayment()} disabled={locking||cancelling}>{bn?"বাতিল":"Cancel"}</button>
          <button type="submit" disabled={locking||payer.trim().length<11}>{locking?(bn?"অপেক্ষা…":"Confirming…"):(bn?"নিশ্চিত করুন":"Confirm")}</button>
         </div>
        </form>
