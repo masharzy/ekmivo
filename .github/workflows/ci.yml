@@ -53,7 +53,7 @@ jobs:
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.payment-examples.json
       - name: Release gate negative tests (fictional fixtures)
-        run: node --test tools/release/evidence.test.mjs tools/testing/sdk-transport.test.mjs tools/privacy/store-registry.test.mjs tools/privacy/archive-codec.test.mjs tools/recovery/backup-registry.test.mjs tools/release/compile-cohort.test.mjs tools/testing/pg06-physical-phone-contract.test.mjs tools/testing/pg10-physical-phone-intent.test.mjs
+        run: node --test tools/release/evidence.test.mjs tools/testing/sdk-transport.test.mjs tools/privacy/store-registry.test.mjs tools/privacy/archive-codec.test.mjs tools/recovery/backup-registry.test.mjs tools/release/compile-cohort.test.mjs tools/testing/pg06-physical-phone-contract.test.mjs tools/testing/pg10-physical-phone-intent.test.mjs tools/testing/public-pay-design.test.mjs
       - name: Verify PostgreSQL schema on ephemeral local database
         working-directory: apps/web
         env:
