@@ -83,6 +83,12 @@
 .provider-flow-merchant span{font-size:10px;color:#8e93a0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:295px}
 .provider-flow-amount{font-size:24px;font-weight:850;white-space:nowrap}
 .provider-flow-content{min-height:380px;background:var(--provider-accent);color:#fff}
+.provider-flow[data-provider=nagad] .provider-flow-brand{background:#991809;min-height:80px}
+.provider-flow[data-provider=nagad] .provider-flow-brand svg{filter:brightness(0) invert(1)}
+.provider-flow[data-provider=nagad] .provider-flow-invoice{background:linear-gradient(135deg,#991809,#b61114);color:#fff;border-top:1px solid #ffffff35}
+.provider-flow[data-provider=nagad] .provider-flow-merchant span{color:#ffe0da}
+.provider-flow[data-provider=nagad] .provider-flow-shopicon{background:#ffffff25;color:#fff}
+.provider-flow[data-provider=nagad] .provider-checkout-nav button,.provider-flow[data-provider=nagad] .provider-checkout-nav a{color:#8d171a}
 .provider-flow[data-provider=nagad] .provider-flow-content{background:linear-gradient(165deg,#9e1b0f 0%,#dc1028 60%,#bb121a 100%)}
 .provider-flow[data-provider=rocket] .provider-flow-content{background:linear-gradient(165deg,#762180,#9b2aa3)}
 .provider-payer-step{min-height:390px;display:flex;align-items:stretch}
