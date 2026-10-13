@@ -24,6 +24,12 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const initialTheme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "system";
   const isApp = (await headers()).get("x-ekmivo-application") === "1";
   if(isApp) return <>{children}</>;
-  const user=jar.has("ekmivo-session")?await currentUser():null;
+  // A temporary auth-store outage must not take down the public marketing site.
+  let user:Awaited<ReturnType<typeof currentUser>>=null;
+  if(jar.has("ekmivo-session")){
+   try{user=await currentUser();}catch(error){
+    console.error("[ekmivo/public] session lookup unavailable",error instanceof Error?error.message:"unknown error");
+   }
+  }
   return <><SiteHeader locale={locale} initialTheme={initialTheme} authenticated={!!user} />{children}<SiteFooter locale={locale} /></>;
 }
