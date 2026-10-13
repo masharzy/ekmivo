@@ -4,12 +4,26 @@ import (
  "crypto/sha256"
  "encoding/hex"
  "encoding/json"
+ "errors"
+ "log"
  "net/http"
  "strings"
  "time"
 
+ "github.com/jackc/pgx/v5/pgconn"
  "github.com/masharzy/ekmivo/backend/internal/deviceevidence"
 )
+
+// Log only a fixed execution stage and SQLSTATE (never provider receipts,
+// customer numbers, receipt IDs, SQL text, or request data).
+func logPhoneIngestFailure(stage string, err error) {
+ var pgErr *pgconn.PgError
+ if errors.As(err, &pgErr) {
+  log.Printf("phone-ingest stage=%s sqlstate=%s", stage, pgErr.Code)
+  return
+ }
+ log.Printf("phone-ingest stage=%s error_type=%T", stage, err)
+}
 
 // The phone is an evidence forwarder, not a receiving-account or payment authority.
 // These narrowly scoped sender labels are collection hints, NOT trusted receipt parsers.
@@ -50,7 +64,7 @@ func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw [
  }
  if !s.budget(w,"phone-forward|"+phoneID,1500){return}
  pool:=s.pipelinePool(realm)
- if pool==nil{fail(w,503,"SOURCE_UNAVAILABLE");return}
+ if pool==nil{log.Printf("phone-ingest stage=realm_pool_unavailable");fail(w,503,"SOURCE_UNAVAILABLE");return}
  // Recheck allowed receiving method on the SERVER, not only the Android
  // configuration cache; signing a sender label is not authorization alone.
  senderMethod:=strings.ToLower(strings.TrimSpace(event.Source))
@@ -90,7 +104,7 @@ func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw [
   err:=pool.QueryRow(r.Context(),
    "SELECT pg06_phone_candidate($1::uuid,$2,$3,$4,$5,$6)",
    phoneID,parsed.Method,payerIdentity,parsed.Amount,parsed.TransactionAt,parsed.Precision).Scan(&candidate)
-  if err!=nil{fail(w,503,"MATCHING_SOURCE_UNAVAILABLE");return}
+  if err!=nil{logPhoneIngestFailure("candidate_lookup",err);fail(w,503,"MATCHING_SOURCE_UNAVAILABLE");return}
   if candidate!=nil {
    receiving=*candidate
    payer=payerIdentity
@@ -99,20 +113,20 @@ func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw [
    method=parsed.Method;version=parsed.Version
    contactJSON,_:=json.Marshal(map[string]string{"name":"","email":"","phone":parsed.Payer})
    contactCipher,encErr:=deviceevidence.Encrypt(s.Pipeline.Key,contactJSON,workspace+"|"+realm+"|refund-customer")
-   if encErr!=nil{fail(w,503,"EVIDENCE_ENCRYPTION_UNAVAILABLE");return}
+   if encErr!=nil{logPhoneIngestFailure("payer_encryption",encErr);fail(w,503,"EVIDENCE_ENCRYPTION_UNAVAILABLE");return}
    encryptedContact=contactCipher
   }
  }
 
  eventID:=r.Header.Get("X-Ekmivo-Event-ID")
  cipher,e:=deviceevidence.Encrypt(s.Pipeline.Key,[]byte(event.Evidence),phoneID+"|"+eventID)
- if e!=nil{fail(w,503,"EVIDENCE_ENCRYPTION_UNAVAILABLE");return}
+ if e!=nil{logPhoneIngestFailure("receipt_encryption",e);fail(w,503,"EVIDENCE_ENCRYPTION_UNAVAILABLE");return}
  hash:=sha256.Sum256(raw)
  var ack []byte
  e=pool.QueryRow(r.Context(),"SELECT pg06_phone_forward($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10::uuid,$11,$12,$13,$14,$15,$16,$17,$18)",
   phoneID,eventID,hex.EncodeToString(hash[:]),cipher,event.Source,event.Binding,
   event.ObservedAt,event.Sequence,event.ConfigurationVersion,receiving,payer,amount,
   original,precision,reference,method,version,encryptedContact).Scan(&ack)
- if e!=nil{mapped(w,e);return}
+ if e!=nil{logPhoneIngestFailure("receipt_persist",e);mapped(w,e);return}
  write(w,202,json.RawMessage(ack))
 }
