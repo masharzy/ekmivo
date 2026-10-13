@@ -57,6 +57,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
  const [step,setStep]=useState<"methods"|"payer">(initialMethod?"payer":"methods");
  const [destinationCopied,setDestinationCopied]=useState(false);
  const [locking,setLocking]=useState(false);
+ const [cancelling,setCancelling]=useState(false);
  const [clock,setClock]=useState(0);
  const [serverAnchor,setServerAnchor]=useState({time:0,monotonic:0});
  const [updated,setUpdated]=useState<number|null>(null);
@@ -136,6 +137,17 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
  const isFlow=showPayer||state!=="requires_payer";
  const logoUrl=(()=>{try{if(!info?.brand?.logo_url)return "";const u=new URL(info.brand.logo_url);return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return ""}})();
  const contactUrl=(()=>{try{if(!info?.brand?.support_url)return "";const u=new URL(info.brand.support_url);return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return ""}})();
+ async function cancelPayment(){
+  if(cancelling||!info||!["requires_payer","awaiting_payment","processing"].includes(info.state))return;
+  setCancelling(true);setCode("");
+  try{
+   const result=await fetch(route+"/cancel",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin"});
+   const body=await result.json();
+   if(!result.ok)throw new Error(body.error?.code||"CHECKOUT_SERVICE_UNAVAILABLE");
+   await refresh();
+  }catch(e){setCode(e instanceof Error?e.message:"CHECKOUT_SERVICE_UNAVAILABLE")}
+  finally{setCancelling(false)}
+ }
  function leave(){if(info?.return_url){window.location.assign(info.return_url);return}if(window.history.length>1)router.back();else router.push("/")}
  async function copyReceiving(){if(!info?.destination)return;try{await navigator.clipboard.writeText(info.destination);setDestinationCopied(true)}catch{setCode("COPY_FAILED")}}
  if(info&&status==="ready"&&state==="completed")return <PaymentSuccess method={selectedMethod} returnUrl={info.return_url} bn={bn}/>;
@@ -182,7 +194,27 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
      </div>
      <section className="provider-flow-content" aria-live="polite">
       {info.environment==="sandbox"&&<p className="provider-sandbox-note" role="note">{bn?"স্যান্ডবক্স — আসল টাকা পাঠাবেন না":"SANDBOX — DO NOT SEND MONEY"}</p>}
-      {showPayer&&<div className="provider-payer-step">
+      {showPayer&&selectedMethod==="nagad"&&<div className="ek-nagad-entry">
+       <div className="ek-nagad-sandbox-title">{info.merchant_name}</div>
+       <div className="ek-nagad-facts">
+        <p><strong>{bn?"ইনভয়েস নং:":"Invoice No:"}</strong><span>{info.merchant_reference}</span></p>
+        <p><strong>{bn?"মোট পরিমাণ:":"Total Amount:"}</strong><span>BDT {amount}</span></p>
+        <p><strong>{bn?"চার্জ:":"Charge:"}</strong><span>BDT 0</span></p>
+       </div>
+       <form className="ek-nagad-form" onSubmit={lock}>
+        <label htmlFor="ek-nagad-number">{bn?"আপনার নগদ অ্যাকাউন্ট নম্বর":"Your Nagad Account Number"}</label>
+        <input id="ek-nagad-number" type="tel" autoFocus inputMode="numeric" pattern="01[0-9]{9}"
+         placeholder="01XXXXXXXXX" minLength={11} maxLength={11} required disabled={locking}
+         value={payer} onChange={e=>setPayer(e.target.value.replace(/\\D/g,"").slice(0,11))}/>
+        <p className="ek-nagad-consent">{bn?"Proceed চাপলে আপনি আমাদের শর্তাবলীতে সম্মতি দিচ্ছেন।":'By clicking/tapping "Proceed" you are agreeing to our Terms and Conditions'}</p>
+        <div className="ek-nagad-actions">
+         <button type="submit" disabled={locking||!/^(?:01)[0-9]{9}$/.test(payer)}>{locking?"…":bn?"এগিয়ে যান":"Proceed"}</button>
+         <button type="button" onClick={()=>setStep("methods")} disabled={locking}>{bn?"ফিরে যান":"Close"}</button>
+        </div>
+       </form>
+       <div className="ek-nagad-footer-brand"><ProviderMark method="nagad"/></div>
+      </div>}
+      {showPayer&&selectedMethod!=="nagad"&&<div className="provider-payer-step">
        <form onSubmit={lock} className="provider-payer-form pg05-form">
         <label htmlFor="provider-customer-number">{bn?"আপনার ":"Your "}{methods[method]} {bn?"অ্যাকাউন্ট নম্বর":"Account Number"}</label>
         <input id="provider-customer-number" autoFocus type="tel" inputMode="tel" autoComplete="tel"
@@ -220,18 +252,35 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
        </ol>
        <div className="provider-waiting" role="status"><span className="provider-waiting-dot"/>{bn?"আপনার পেমেন্টের জন্য অপেক্ষা করছি…":"Waiting for your payment…"}</div>
        <p className="provider-expiry">{bn?"সেশন শেষ হতে":"Session expires in"} {remaining(info.expires_at,serverClock)}</p>
-       <div className="provider-flow-controls"><button type="button" onClick={leave}>{bn?"বন্ধ করুন":"Close"}</button><button type="button" onClick={()=>void refresh()}>{bn?"যাচাই হচ্ছে…":"Auto verifying…"} ↻</button></div>
+       <div className="provider-flow-controls"><button type="button" onClick={()=>void cancelPayment()} disabled={cancelling}>{cancelling?(bn?"বাতিল হচ্ছে…":"Cancelling…"):(bn?"পেমেন্ট বাতিল":"Cancel payment")}</button><button type="button" onClick={()=>void refresh()}>{bn?"যাচাই হচ্ছে…":"Auto verifying…"} ↻</button></div>
       </div>}
       {state==="processing"&&<div className="provider-result"><h1>{title}</h1><p>{bn?"সার্ভার পেমেন্টের প্রমাণ যাচাই করছে।":"The server is validating payment evidence."}</p><button onClick={()=>void refresh()}>{bn?"রিফ্রেশ":"Refresh"}</button></div>}
       {state==="completed"&&<div className="provider-result is-complete"><h1>{title}</h1><p>{bn?"সার্ভারের যাচাইকৃত রেকর্ড অনুযায়ী পেমেন্ট সম্পন্ন হয়েছে।":"The payment has been verified against server evidence."}</p>
        {info.verification&&<dl><dt>{bn?"পদ্ধতি":"Verification"}</dt><dd>{info.verification.method}</dd><dt>{bn?"সময়":"Transaction time"}</dt><dd>{new Date(info.verification.original_transaction_at).toLocaleString(locale)}</dd><dt>{bn?"গ্রহণকারী":"Receiving"}</dt><dd>••••{info.verification.receiving_suffix}</dd></dl>}
        <button type="button" onClick={()=>window.print()}>{bn?"রসিদ প্রিন্ট":"Print receipt"}</button>{info.return_url&&<a href={info.return_url} rel="noreferrer">{bn?"বিক্রেতার কাছে ফিরুন":"Return to merchant"}</a>}
        <CustomerRefundRequest locale={locale} token={token} maximumMinor={info.amount_minor}/></div>}
-      {["expired","cancelled"].includes(state)&&<div className="provider-result"><h1>{title}</h1><p>{bn?"এই লিংকে আর টাকা পাঠাবেন না। টাকা পাঠিয়ে থাকলে বিক্রেতার সঙ্গে যোগাযোগ করুন।":"Do not send any more funds. If you already paid, contact the seller."}</p></div>}
+      {["expired","cancelled"].includes(state)&&<div className="provider-result"><h1>{title}</h1><p>{state==="cancelled"?(bn?"এই checkout বাতিল হয়েছে। আবার টাকা পাঠাবেন না।":"This checkout was cancelled. Do not send funds."):(bn?"পেমেন্ট সেশনের মেয়াদ শেষ। আবার টাকা পাঠাবেন না।":"This checkout session has expired. Do not send funds.")}</p></div>}
       {code&&<div className="provider-transfer-warning" role="alert">{describe(code,bn)}</div>}
      </section>
     </div>}
    </>}
+  <style>{`
+  .ek-nagad-entry{position:relative;background:radial-gradient(circle at 44% 48%,#ed181b 0,#c4141b 46%,#8e1319 100%);color:#fff;min-height:700px;padding:32px 22px 22px;display:flex;flex-direction:column;text-align:center;gap:10px}
+  .ek-nagad-sandbox-title{font-size:clamp(22px,4vw,33px);font-weight:800;margin:8px 0 16px}
+  .ek-nagad-facts{text-align:left;font-size:clamp(16px,2.9vw,24px);line-height:1.5;margin-bottom:auto}
+  .ek-nagad-facts p{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 13px}
+  .ek-nagad-facts strong{font-weight:800}
+  .ek-nagad-form{display:flex;flex-direction:column;align-items:center;gap:17px;margin:auto 0}
+  .ek-nagad-form label{font-weight:800;font-size:clamp(18px,3vw,24px)}
+  .ek-nagad-form input{max-width:380px;width:100%;box-sizing:border-box;background:#fff;border:2px solid #fff;border-radius:8px;color:#222;font-size:24px;letter-spacing:.13em;text-align:center;padding:15px 8px}
+  .ek-nagad-consent{font-size:clamp(14px,2.4vw,20px);max-width:520px;line-height:1.5}
+  .ek-nagad-actions{display:flex;justify-content:space-around;gap:28px;width:100%;margin-top:30px}
+  .ek-nagad-actions button{background:white;color:#aa0c14;border:0;border-radius:7px;font-weight:800;font-size:20px;padding:11px 22px;min-width:116px;cursor:pointer}
+  .ek-nagad-actions button:disabled{opacity:.55}
+  .ek-nagad-footer-brand{margin-top:auto;display:flex;justify-content:center;padding-top:48px}
+  .ek-nagad-footer-brand svg{width:165px;height:70px;filter:brightness(0) invert(1)}
+  @media(max-width:480px){.ek-nagad-entry{min-height:570px;padding:22px 16px}.ek-nagad-actions{margin-top:12px}.ek-nagad-form input{font-size:20px}}
+  `}</style>
   </div>
  </main>;
 }

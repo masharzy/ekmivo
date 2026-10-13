@@ -19,6 +19,19 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
  const [selected,setSelected]=useState<PayMethod|null>(null);
  const key=useRef<string|null>(null),pendingBody=useRef<string|null>(null),completedToken=useRef<string|null>(null);
  const [unconfirmed,setUnconfirmed]=useState(false);
+ // Reuse the same immutable checkout capability for this browser tab across
+ // reloads. Never mint another payment intent merely because the UI remounted.
+ useEffect(()=>{
+  try{
+   const current=sessionStorage.getItem("ekmivo:document:"+token);
+   if(!current)return;
+   const saved=JSON.parse(current) as {checkout?:string;key?:string;body?:string};
+   if(saved.key&&/^[0-9a-f-]{36}$/.test(saved.key))key.current=saved.key;
+   if(saved.body&&saved.body.length<50000)pendingBody.current=saved.body;
+   if(saved.checkout&&/^[A-Za-z0-9_-]{43}$/.test(saved.checkout))
+    completedToken.current=saved.checkout;
+  }catch{}
+ },[token]);
  const [terminal,setTerminal]=useState(false);
  const locked=busy||unconfirmed;
  function checkoutError(code:string){
@@ -51,7 +64,9 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
   }
   // Single immutable submission and idempotency key for lost-response recovery.
   pendingBody.current??=JSON.stringify({fields:values,quantity});
-  key.current??=crypto.randomUUID();setBusy(true);setUnconfirmed(true);setError("");
+  key.current??=crypto.randomUUID();
+  try{sessionStorage.setItem("ekmivo:document:"+token,JSON.stringify({key:key.current,body:pendingBody.current,checkout:completedToken.current}))}catch{}
+  setBusy(true);setUnconfirmed(true);setError("");
   try{
    const r=await fetch("/api/documents/"+token,{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":key.current},body:pendingBody.current});
    const d=await r.json();
@@ -65,6 +80,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
    }
    if(typeof d.checkout_token!=="string"||!/^[A-Za-z0-9_-]{43}$/.test(d.checkout_token))throw Error("UNCONFIRMED");
    completedToken.current=d.checkout_token;
+   try{sessionStorage.setItem("ekmivo:document:"+token,JSON.stringify({key:key.current,body:pendingBody.current,checkout:d.checkout_token}))}catch{}
    router.push("/"+locale+"/checkout/"+d.checkout_token+"?method="+selected);
   }catch(e){setError(checkoutError(e instanceof Error?e.message:"UNCONFIRMED"))}
   finally{setBusy(false)}

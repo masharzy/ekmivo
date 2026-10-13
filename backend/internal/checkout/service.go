@@ -626,8 +626,20 @@ func (s *Service) HandlePublic(w http.ResponseWriter, r *http.Request) {
 			fail(w, 503, "MERCHANT_UNAVAILABLE")
 			return
 		}
-		if r.PathValue("action") != "lock" || !originAllowed(r) {
+		if !originAllowed(r) {
 			fail(w, 403, "ORIGIN_DENIED")
+			return
+		}
+		if r.PathValue("action") == "cancel" {
+			var cancelled []byte
+			err = pool.QueryRow(r.Context(), "SELECT pg05_public_cancel($1)", digest(token)).Scan(&cancelled)
+			if err != nil { mapped(w, err); return }
+			if len(cancelled)==0 || string(cancelled)=="null" { fail(w,404,"NOT_FOUND");return }
+			write(w,200,json.RawMessage(cancelled))
+			return
+		}
+		if r.PathValue("action") != "lock" {
+			fail(w, 405, "METHOD_NOT_ALLOWED")
 			return
 		}
 		var body struct {
