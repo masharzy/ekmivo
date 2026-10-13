@@ -35,17 +35,11 @@ export function AuthForm({locale,mode}:{locale:Locale;mode:"login"|"register"}){
  const [state,formAction]=useActionState<FormErrorState,FormData>(action,emptyState);
  const [show,setShow]=useState(false);
  return <main className="ek-auth-main" lang={locale}>
-  <div className="ek-auth-grain" aria-hidden="true"/>
-  <div className="ek-auth-layout">
-   <div className="ek-auth-intro">
-    <span className="ek-auth-eyebrow">EKMIVO / {login?"ACCOUNT":"GET STARTED"}</span>
-    <h1>{p.intro.split(" ").slice(0,-2).join(" ")} <span className="ek-auth-brush">{p.intro.split(" ").slice(-2).join(" ")}</span></h1>
-    <p>{t.introDetail}</p>
-    <div className="ek-auth-sketch" aria-hidden="true"><span>↗</span><div className="ek-auth-doodle-circle"/><div className="ek-auth-doodle-card"><i/><i/><i/></div></div>
-   </div>
+ 
+  <div className="ek-auth-layout ek-auth-layout-compact">
    <div className="ek-auth-card">
     <span className="ek-auth-card-kicker">{p.eyebrow}</span>
-    <h2>{p.title}</h2><p className="ek-auth-subtitle">{p.subtitle}</p>
+    <h1>{p.title}</h1><p className="ek-auth-subtitle">{p.subtitle}</p>
     <form action={formAction}>
      {!login&&<label>{t.name}<input type="text" name="name" autoComplete="name" minLength={2} maxLength={100} required placeholder={t.name} aria-invalid={!!state.fields?.name}/>{state.fields?.name&&<small className="ek-field-error">{state.fields.name}</small>}</label>}
      <label>{t.email}<input name="email" type="email" autoComplete="email" placeholder="you@company.com" required maxLength={254} aria-invalid={!!state.fields?.email}/>{state.fields?.email&&<small className="ek-field-error">{state.fields.email}</small>}</label>

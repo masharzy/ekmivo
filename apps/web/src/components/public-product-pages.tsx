@@ -36,37 +36,58 @@ function EmSectionTitle({eyebrow,title,marked}:{eyebrow:string;title:string;mark
  return <div className="ek-product-heading"><span className="ek-public-kicker">{eyebrow}</span><h2>{title} <span className="ek-public-brush">{marked}</span></h2></div>;
 }
 export function PaymentGatewayPage({locale}:{locale:Locale}){
- const t=paymentCopy[locale];
- return <main className="ek-product-page" lang={locale}>
-  <section className="ek-product-hero"><div className="ek-product-grain" aria-hidden="true"/>
-   <span className="ek-doodle ek-doodle-star" aria-hidden="true">✳</span><span className="ek-doodle ek-doodle-loop" aria-hidden="true">⌁</span>
-   <div className="ek-public-wrap"><span className="ek-public-kicker">{t.kicker}</span>
-    <h1>{t.title} <span className="ek-public-brush">{t.marked}</span></h1><p>{t.intro}</p>
-    <div className="ek-public-actions"><Link className="ek-public-action" href={`/${locale}/register`}>{t.primary}<span aria-hidden="true">↗</span></Link><a className="ek-public-action ek-outline-action" href="#payment-workflow">{t.secondary}<span aria-hidden="true">↓</span></a></div>
+ const t=paymentCopy[locale],bn=locale==="bn";
+ return <main className="ek-product-page ek-pg-detail" lang={locale}>
+  <div className="ek-pg-mast"><div className="ek-public-wrap">
+   <div className="ek-pg-crumb"><Link href={"/"+locale}>ekmivo</Link><span aria-hidden="true">/</span><strong>Payment Gateway</strong><span className="ek-pg-status">{bn?"পেমেন্ট সেবা":"PAYMENTS"}</span></div>
+   <div className="ek-pg-mast-grid">
+    <div className="ek-pg-intro">
+     <h1>{bn?"আপনার ব্যবসার পেমেন্ট ব্যবস্থা":"Payments for your business"}</h1>
+     <p>{t.intro}</p>
+     <div className="ek-pg-mast-actions">
+      <Link href={"/"+locale+"/register"} className="ek-public-action">{t.primary}<span aria-hidden="true">↗</span></Link>
+      <a href="#payment-workflow" className="ek-pg-text-link">{t.secondary} <span aria-hidden="true">↓</span></a>
+     </div>
+    </div>
+    <div className="ek-pg-route-panel" aria-label={bn?"পেমেন্ট প্রক্রিয়ার সংক্ষিপ্ত বিবরণ":"Payment process overview"}>
+     <div className="ek-pg-route-header"><span>{bn?"পেমেন্টের ধাপ":"PAYMENT PATH"}</span><span>01—03</span></div>
+     <div className="ek-pg-route-node"><span className="ek-pg-route-icon">↗</span><div><strong>{bn?"পেমেন্ট রিকোয়েস্ট":"Payment request"}</strong><small>{bn?"লিংক · ইনভয়েস · API":"Link · Invoice · API"}</small></div></div>
+     <div className="ek-pg-route-connector" aria-hidden="true"/>
+     <div className="ek-pg-route-node"><span className="ek-pg-route-icon">⌁</span><div><strong>{bn?"কাস্টমার পেমেন্ট":"Customer checkout"}</strong><small>{bn?"নিজের মোবাইল ওয়ালেট ব্যবহার":"Pay with a supported wallet"}</small></div></div>
+     <div className="ek-pg-route-connector" aria-hidden="true"/>
+     <div className="ek-pg-route-node"><span className="ek-pg-route-icon">✓</span><div><strong>{bn?"রসিদ যাচাই ও ফলাফল":"Receipt review and status"}</strong><small>{bn?"ড্যাশবোর্ড · ওয়েবহুক":"Dashboard · Webhook"}</small></div></div>
+     <span className="ek-pg-route-note">{bn?"ধাপগুলোর নমুনা · লাইভ পেমেন্ট নয়":"Illustrative process · Not a live transaction"}</span>
+    </div>
    </div>
-  </section>
-  <div className="ek-product-strip" aria-label={t.strip.join(" · ")}>{t.strip.map((item,i)=><span key={item}>{i>0&&<i aria-hidden="true">✳</i>}{item}</span>)}</div>
+  </div></div>
+  <nav className="ek-pg-section-nav" aria-label={bn?"এই পেজে":"On this page"}><div className="ek-public-wrap">
+   <a href="#payment-workflow">{bn?"কীভাবে কাজ করে":"How it works"}</a>
+   <a href="#payment-receipts">{bn?"পেমেন্ট যাচাই":"Payment confirmation"}</a>
+   <a href="#payment-features">{bn?"সুবিধা":"Capabilities"}</a>
+   <a href="#payment-audiences">{bn?"যাদের জন্য":"Use cases"}</a>
+   <a href="#payment-questions">{bn?"প্রশ্ন ও উত্তর":"FAQs"}</a>
+  </div></nav>
   <section id="payment-workflow" className="ek-public-section ek-flow-section"><div className="ek-public-wrap">
    <EmSectionTitle eyebrow={t.sectionLabel} title={t.flowTitle} marked={t.flowMarked}/><p className="ek-product-section-lead">{t.flowDesc}</p>
    <div className="ek-flow-grid">{flow.map((step,i)=><article key={step.title.en} className="ek-flow-card"><div className="ek-flow-counter">{String(i+1).padStart(2,"0")} <span aria-hidden="true">↗</span></div><h3>{step.title[locale]}</h3><p>{step.body[locale]}</p></article>)}</div>
   </div></section>
-  <section className="ek-public-section ek-evidence-section"><div className="ek-public-wrap ek-evidence-layout">
+  <section id="payment-receipts" className="ek-public-section ek-evidence-section"><div className="ek-public-wrap ek-evidence-layout">
    <div className="ek-evidence-copy"><EmSectionTitle eyebrow={t.verifyLabel} title={t.verifyTitle} marked={t.verifyMarked}/><p>{t.verifyDescription}</p></div>
    <div className="ek-evidence-stack">
     <article className="ek-sketch-panel"><span className="ek-sketch-icon" aria-hidden="true">↗</span><h3>{t.phoneTitle}</h3><p>{t.phoneBody}</p></article>
     <article className="ek-sketch-panel"><span className="ek-sketch-icon" aria-hidden="true">✓</span><h3>{t.proofTitle}</h3><p>{t.proofBody}</p></article>
    </div>
   </div></section>
-  <section className="ek-public-section ek-benefits-section"><div className="ek-public-wrap"><EmSectionTitle eyebrow={t.backendKicker} title={t.backendTitle} marked={t.backendMarked}/>
-   <div className="ek-public-benefits">{benefits.map((card,i)=><article key={card.index} className={`ek-public-benefit benefit-${i}`}><div className="ek-benefit-symbol">{card.tag}</div><span className="ek-benefit-count">{card.index}</span><h3>{card.label[locale]}</h3><p>{card.body[locale]}</p></article>)}</div>
+  <section id="payment-features" className="ek-public-section ek-benefits-section"><div className="ek-public-wrap"><EmSectionTitle eyebrow={t.backendKicker} title={t.backendTitle} marked={t.backendMarked}/>
+   <div className="ek-public-benefits">{benefits.map((card,i)=><article key={card.index} className={"ek-public-benefit benefit-"+i}><div className="ek-benefit-symbol">{card.tag}</div><span className="ek-benefit-count">{card.index}</span><h3>{card.label[locale]}</h3><p>{card.body[locale]}</p></article>)}</div>
   </div></section>
-  <section className="ek-public-section ek-audience-section"><div className="ek-public-wrap"><EmSectionTitle eyebrow={t.forLabel} title={t.forTitle} marked={t.forMarked}/>
-   <div className="ek-public-audiences">{audiences.map((item,i)=><article key={item.title.en}><span>0{i+1} — EKMIVO</span><h3>{item.title[locale]}</h3><p>{item.body[locale]}</p><span className="ek-audience-arrow" aria-hidden="true">↗</span></article>)}</div>
+  <section id="payment-audiences" className="ek-public-section ek-audience-section"><div className="ek-public-wrap"><EmSectionTitle eyebrow={t.forLabel} title={t.forTitle} marked={t.forMarked}/>
+   <div className="ek-public-audiences">{audiences.map((item,i)=><article key={item.title.en}><span>0{i+1} — EKMIVO</span><h3>{item.title[locale]}</h3><p>{item.body[locale]}</p></article>)}</div>
   </div></section>
-  <section className="ek-public-section ek-public-faq"><div className="ek-public-wrap ek-faq-layout"><EmSectionTitle eyebrow={t.faqKicker} title={t.faqTitle} marked={t.faqMarked}/>
+  <section id="payment-questions" className="ek-public-section ek-public-faq"><div className="ek-public-wrap ek-faq-layout"><EmSectionTitle eyebrow={t.faqKicker} title={t.faqTitle} marked={t.faqMarked}/>
    <div className="ek-public-questions">{faqs.map((item,i)=><details key={i}><summary><span>0{i+1}</span>{item.q[locale]}<b aria-hidden="true">+</b></summary><p>{item.a[locale]}</p></details>)}</div>
   </div></section>
-  <section className="ek-public-closer"><div className="ek-public-wrap"><span className="ek-public-kicker">{t.endKicker}</span><h2>{t.endTitle} <span className="ek-public-brush">{t.endMarked}</span></h2><p>{t.endBody}</p><Link href={`/${locale}/register`} className="ek-public-action">{t.endButton}<span aria-hidden="true">↗</span></Link><small>{t.note}</small></div></section>
+  <section className="ek-pg-finish"><div className="ek-public-wrap"><div><span className="ek-public-kicker">{t.endKicker}</span><h2>{bn?"Ekmivo দিয়ে পেমেন্ট নেওয়া শুরু করুন":"Bring payments into your workflow"}</h2><p>{t.endBody}</p></div><Link href={"/"+locale+"/register"} className="ek-public-action">{t.endButton}<span aria-hidden="true">↗</span></Link></div></section>
  </main>;
 }
 
@@ -87,16 +108,70 @@ const upcoming={
 } as const;
 
 export function ComingSoonPage({locale,kind}:{locale:Locale;kind:ComingSlug}){
- const t=upcoming[kind][locale];
- return <main className={`ek-product-page ek-upcoming-page ek-upcoming-${kind}`} lang={locale}>
-  <section className="ek-upcoming-hero"><div className="ek-product-grain" aria-hidden="true"/><div className="ek-public-wrap">
-   <span className="ek-public-kicker">{t.kicker}</span><h1>{t.title} <span className="ek-public-brush">{t.mark}</span></h1>
-   <p>{t.body}</p><Link className="ek-public-action ek-outline-action" href={`/${locale}`}>← {t.back}</Link>
-  </div></section>
-  <section className="ek-public-section ek-upcoming-preview"><div className="ek-public-wrap">
-   <span className="ek-public-kicker">{t.label}</span><div className="ek-public-audiences">
-   {t.items.map(([title,body],i)=><article key={title}><span>0{i+1} — EKMIVO</span><h3>{title}</h3><p>{body}</p></article>)}
-   </div><p className="ek-upcoming-status">{t.availability}</p>
-  </div></section>
+ const t=upcoming[kind][locale],bn=locale==="bn";
+ if(kind==="ai-bot")return <main className="ek-product-page ek-public-interior ek-ai-interior" lang={locale}>
+  <div className="ek-interior-wrap">
+   <div className="ek-interior-topline"><Link href={"/"+locale}>ekmivo</Link><span>/</span><strong>AI Bot</strong><span className="ek-interior-label">{bn?"তৈরি হচ্ছে":"IN DEVELOPMENT"}</span></div>
+   <div className="ek-ai-layout">
+    <aside className="ek-ai-aside" aria-label={bn?"বর্তমান অবস্থা":"Current status"}>
+     <div className="ek-ai-aside-index">02 / EKMIVO</div>
+     <div className="ek-ai-aside-symbol" aria-hidden="true"><span>✳</span><span>⌁</span></div>
+     <span className="ek-ai-aside-status"><i/>{bn?"সেবা চালু হয়নি":"NOT AVAILABLE YET"}</span>
+    </aside>
+    <div className="ek-ai-content">
+     <span className="ek-interior-overline">AI BOT / WORK IN PROGRESS</span>
+     <h1>{bn?"AI Bot-এর কাজ শিগগিরই শুরু হচ্ছে।":"AI Bot development starts soon."}</h1>
+     <p className="ek-ai-lead">{t.body}</p>
+     <div className="ek-ai-roadmap">
+      <div className="ek-ai-roadmap-label">{bn?"পরিকল্পিত সুবিধা":"ON THE ROADMAP"}<span>03</span></div>
+      {t.items.map(([title,body],i)=><article key={title} className="ek-ai-roadmap-row"><span className="ek-ai-roadmap-number">0{i+1}</span><div><h2>{title}</h2><p>{body}</p></div><span className="ek-ai-roadmap-icon" aria-hidden="true">↗</span></article>)}
+     </div>
+     <p className="ek-ai-status-note">{t.availability}</p>
+     <Link href={"/"+locale} className="ek-ai-back">← {t.back}</Link>
+    </div>
+   </div>
+  </div>
+ </main>;
+ if(kind==="pricing")return <main className="ek-product-page ek-public-interior ek-price-interior" lang={locale}>
+  <div className="ek-interior-wrap">
+   <div className="ek-interior-topline"><Link href={"/"+locale}>ekmivo</Link><span>/</span><strong>Pricing</strong></div>
+   <div className="ek-price-heading"><div><span className="ek-interior-overline">{bn?"মূল্য ও প্যাকেজ":"PLANS & BILLING"}</span><h1>{bn?"প্যাকেজের তথ্য প্রস্তুত হচ্ছে।":"Pricing is being prepared."}</h1><p>{t.body}</p></div><span className="ek-price-badge">{bn?"প্রস্তুতির পর্যায়ে":"COMING LATER"}</span></div>
+   <div className="ek-price-panel-grid">
+    <section className="ek-price-plan"><div className="ek-price-plan-head"><span>01</span><strong>Payment Gateway</strong></div><div className="ek-price-unavailable">—<small>{bn?"এখনো নির্ধারিত হয়নি":"NOT ANNOUNCED"}</small></div><p>{bn?"পেমেন্ট রিকোয়েস্ট, চেকআউট ও ইন্টিগ্রেশনের প্যাকেজের বিস্তারিত পরে প্রকাশ করা হবে।":"Pricing for checkout, payment requests and integrations will be announced here."}</p><span className="ek-price-plan-foot">{bn?"দাম ও সীমা চূড়ান্ত হয়নি":"PRICES & LIMITS PENDING"}</span></section>
+    <section className="ek-price-plan"><div className="ek-price-plan-head"><span>02</span><strong>AI Bot</strong></div><div className="ek-price-unavailable">—<small>{bn?"এখনো নির্ধারিত হয়নি":"NOT ANNOUNCED"}</small></div><p>{bn?"AI Bot-এর কাজ শুরু হলে সেবার ধরন ও প্যাকেজ সম্পর্কে জানানো হবে।":"AI Bot plans will be introduced when its scope and availability are confirmed."}</p><span className="ek-price-plan-foot">{bn?"সেবাটি তৈরি হচ্ছে":"SERVICE IN DEVELOPMENT"}</span></section>
+   </div>
+   <div className="ek-price-note"><span aria-hidden="true">ⓘ</span><p>{t.availability} {bn?"এখন কোনো দাম বা ফিচার লিমিট নিশ্চিত করা হয়নি।":"No pricing tiers or usage limits are being represented as final."}</p></div>
+   <Link className="ek-ai-back" href={"/"+locale+"/payment-gateway"}>{bn?"পেমেন্ট সেবা সম্পর্কে জানুন":"Explore Payment Gateway"} ↗</Link>
+  </div>
+ </main>;
+ return <main className="ek-product-page ek-public-interior ek-dev-interior" lang={locale}>
+  <div className="ek-dev-layout">
+   <aside className="ek-dev-sidebar">
+    <Link className="ek-dev-home" href={"/"+locale}>← ekmivo</Link>
+    <div className="ek-dev-sidebar-title">DEVELOPERS <span>↗</span></div>
+    <nav aria-label={bn?"ডেভেলপার পোর্টাল":"Developer navigation"}>
+     <span>{bn?"শুরু করুন":"GETTING STARTED"}</span>
+     <a href="#dev-overview">{bn?"ওভারভিউ":"Overview"}</a>
+     <a href="#dev-resources">{bn?"রিসোর্স":"Resources"}</a>
+     <a href="#dev-availability">{bn?"প্রাপ্যতা":"Availability"}</a>
+    </nav>
+    <div className="ek-dev-sidebar-foot">{bn?"ডকুমেন্টেশন তৈরি হচ্ছে":"DOCUMENTATION IN PREPARATION"}</div>
+   </aside>
+   <div className="ek-dev-main">
+    <div className="ek-dev-breadcrumb"><Link href={"/"+locale}>Ekmivo</Link><span>/</span>Developers <span>/</span> Overview</div>
+    <header id="dev-overview" className="ek-dev-article-head">
+     <div className="ek-dev-doc-icon" aria-hidden="true">&lt;/&gt;</div>
+     <span className="ek-interior-overline">DEVELOPER HUB · PREVIEW</span>
+     <h1>{bn?"ডেভেলপার পোর্টাল তৈরি হচ্ছে":"Developer hub is under construction"}</h1>
+     <p>{t.body}</p>
+     <div className="ek-dev-notice"><span>ⓘ</span><p>{t.availability}</p></div>
+    </header>
+    <section className="ek-dev-resources" id="dev-resources">
+     <h2>{bn?"এখানে যা পাবেন":"Planned resources"}</h2>
+     <div className="ek-dev-resource-list">{t.items.map(([title,body],i)=><article key={title}><span className="ek-dev-resource-symbol">{["{ }","↗","⌘"][i]}</span><div><h3>{title}</h3><p>{body}</p></div><span className="ek-dev-resource-state">{bn?"শিগগিরই":"SOON"}</span></article>)}</div>
+    </section>
+    <section className="ek-dev-availability" id="dev-availability"><h2>{bn?"বর্তমান অবস্থা":"Current status"}</h2><p>{bn?"এই পেজে এখনো API reference, integration guide বা demo sandbox চালু করা হয়নি। প্রস্তুত হলে এখানে পাওয়া যাবে।":"API reference, integration guides and the public demo sandbox are not yet available from this hub. Updates will appear here as development progresses."}</p></section>
+   </div>
+  </div>
  </main>;
 }

@@ -12,17 +12,11 @@ export function RecoveryForm({locale}:{locale:Locale}){
  const sent=requestState.status==="sent";
  const bn=locale==="bn";
  return <main className="ek-auth-main ek-auth-recovery" lang={locale}>
-  <div className="ek-auth-grain" aria-hidden="true"/>
-  <div className="ek-recovery-layout">
-   <div className="ek-recovery-intro">
-    <span className="ek-auth-eyebrow">{bn?"অ্যাকাউন্টের নিরাপত্তা":"ACCOUNT SECURITY"}</span>
-    <h1>{bn?"পাসওয়ার্ড ভুলে গেছেন?":"Forgot your password?"}</h1>
-    <p>{bn?"ইমেইলে একটি কোড পাঠাব। কোডটি দিয়ে নতুন পাসওয়ার্ড সেট করতে পারবেন।":"We'll email a code so you can choose a new password."}</p>
-    <div className="ek-recovery-doodle" aria-hidden="true">✳</div>
-   </div>
+
+  <div className="ek-recovery-layout ek-recovery-layout-compact">
    <div className="ek-auth-card ek-recovery-card">
     <span className="ek-auth-card-kicker">{bn?"অ্যাকাউন্ট ফিরে পান":"RECOVER ACCOUNT"}</span>
-    <h2>{bn?"ইমেইল ঠিকানা দিন":"Start with your email"}</h2>
+    <h1>{bn?"পাসওয়ার্ড পরিবর্তন করুন":"Reset your password"}</h1>
     <p className="ek-auth-subtitle">{bn?"Ekmivo অ্যাকাউন্টে যে ইমেইল ব্যবহার করেছেন, সেটি লিখুন।":"Enter the address connected to your Ekmivo account."}</p>
     <form action={requestAction}>
      <label>{bn?"ইমেইল ঠিকানা":"Email address"}<input type="email" name="email" autoComplete="email" placeholder="you@company.com" value={email} onChange={e=>setEmail(e.target.value)} required maxLength={254}/></label>
