@@ -58,6 +58,33 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
    if(!store.enabled())return Result.success()
    val parentId=identity.getString("id")
    val environment=identity.getString("environment")
+   // Transport first: avoid preflight configuration/heartbeat network delays.
+   // Each signed receipt is independently authenticated by Go; revocation
+   // and stale source configuration still fail closed on the server.
+   for(batchIndex in 0 until 5){
+    val next=store.next()?:break
+    val queued=JSONObject(next.second.toString(Charsets.UTF_8))
+    val boundID=queued.optString("enrollment_id")
+    if(boundID.isEmpty()) {store.setQueueError("QUEUED_ASSOCIATION_UNKNOWN");return Result.failure()}
+    // Send with the ORIGINAL immutable enrollment ID from encrypted outbox.
+    // Never replace it with a newly selected account.
+    val action=if(queued.optBoolean("physical_forward"))"phone-events" else "events"
+    val response=ReceiptTransport.post(action,boundID,next.first,next.second)
+    if(response.first==403){
+     store.setQueueError("QUEUED_ASSOCIATION_REVOKED")
+     return Result.failure() // Keep the encrypted evidence until operator recovery.
+    }
+    if(response.first in listOf(400,409,413,422)){
+     store.setQueueError("INGEST_REJECTED_"+response.first)
+     return Result.failure()
+    }
+    if(response.first !in 200..299)return Result.retry()
+    if(JSONObject(response.second).optString("ack")!="durable"){
+     store.setQueueError("DURABLE_ACK_MISSING");return Result.retry()
+    }
+    store.acknowledge(next.first)
+    store.setQueueError("")
+   }
    if(phone!=null){
     val payload=JSONObject().put("enrollment_id",parentId).put("environment",environment)
     val config=ReceiptTransport.post("configuration",parentId,UUID.randomUUID().toString(),payload.toString().toByteArray())
@@ -83,30 +110,7 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
     parentId,UUID.randomUUID().toString(),health.toString().toByteArray())
    if(heartbeat.first==403){store.setQueueError("DEVICE_AUTHORIZATION_DENIED");store.pause(parentId);return Result.failure()}
    if(heartbeat.first !in 200..299)return Result.retry()
-   repeat(5){
-    val next=store.next()?:return Result.success()
-    val queued=JSONObject(next.second.toString(Charsets.UTF_8))
-    val boundID=queued.optString("enrollment_id")
-    if(boundID.isEmpty()) {store.setQueueError("QUEUED_ASSOCIATION_UNKNOWN");return Result.failure()}
-    // Send with the ORIGINAL immutable enrollment ID from encrypted outbox.
-    // Never replace it with a newly selected account.
-    val action=if(queued.optBoolean("physical_forward"))"phone-events" else "events"
-    val response=ReceiptTransport.post(action,boundID,next.first,next.second)
-    if(response.first==403){
-     store.setQueueError("QUEUED_ASSOCIATION_REVOKED")
-     return Result.failure() // Keep the encrypted evidence until operator recovery.
-    }
-    if(response.first in listOf(400,409,413,422)){
-     store.setQueueError("INGEST_REJECTED_"+response.first)
-     return Result.failure()
-    }
-    if(response.first !in 200..299)return Result.retry()
-    if(JSONObject(response.second).optString("ack")!="durable"){
-     store.setQueueError("DURABLE_ACK_MISSING");return Result.retry()
-    }
-    store.acknowledge(next.first)
-    store.setQueueError("")
-   }
+
    if(store.count()>0)Result.retry() else Result.success()
   }}catch(_:Exception){
    ReceiptStore(applicationContext).use{it.setQueueError("QUEUE_OR_TRANSPORT_ERROR")}
