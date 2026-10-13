@@ -1,3 +1,5 @@
+> **Actual Neon migration execution — 2026-10-13:** Applied `0051_pg06_late_sms_refund.sql` successfully to `ekmivo_sandbox_financial` AND `ekmivo_live_financial` on Neon project `sparkling-mountain-38618629`, production branch `br-solitary-river-b3ztvg8j`. Before applying, executed all 21 SQL statements transactionally on isolated test branch `br-shiny-moon-b3eev2dt` for BOTH realms; all succeeded. Primary realm migrations returned successfully. Postflight in both primary financial databases: `pg06_phone_candidate`, 18-arg `pg06_phone_forward`, refund-case trigger, refund source columns, unique refund index and reader grants all present. Pre/post counts: payment_attempts=0; verified financial_payments=0; existing live phones=4, sandbox phones=0. No live SMS/provider/checkout/refund lifecycle tests performed, and no web/Android backend code deployed in this operation. Render Go backend still tracks main; feature code is in PR #19. This **supersedes older "not applied" statements**; migration success does not mean product acceptance. CI runners have exhausted their limit / jobs ended before any build steps.
+
 # PG06 / PG07 / PG11: phone SMS, offline recovery and delayed refund handoff
 
 Implementation PR: #19. Source only, NOT device/provider verified or deployed. Latest repair: offline capture remains eligible after phone config-version rotation (signed enrollment and immutable checkout remain authoritative); concurrency lock now uses workspace/environment/payer/method/amount rather than a receiver account. Queue history retains every unsent row while only older successful history is pruned; a worker drains up to 30 receipts before heartbeat.
@@ -26,13 +28,14 @@ Implementation PR: #19. Source only, NOT device/provider verified or deployed. L
 
 - 0051_pg06_late_sms_refund.sql is an additive migration for **each independent Sandbox and Live financial DB** after prerequisite 0045–0050 and PG11. Requires the migration-owner credentials and explicit `PG06_LATE_SMS_REFUND_ALLOW_MIGRATION=true` with `PG06_LATE_SMS_REFUND_MIGRATION_FILE=infra/migrations/0051_pg06_late_sms_refund.sql`. It must not touch auth/control DB.
 - This SQL intentionally extends PG11 refund requests to permit a receipt-backed claim with no successful payment row; the normal seller refund UI lists both kinds, and only a seller can report external return.
-- No migration has been applied by this PR. No real money was transferred or refunded in testing.
+- **Applied on 2026-10-13:** The isolated Sandbox/Live primary Neon databases now have 0051, as recorded above. No real money was transferred or refunded in testing.
 
 ## Manual verification / blockers
 
 - [ ] Build Kotlin APK and verify pair, RECEIVE_SMS consent, relevant SMS only, background stopped UI, reboot, Wi-Fi/cellular outage, retry, no duplicated ACK and encrypted history on two actual devices.
 - [ ] Exercise optional READ_SMS consent and bounded recovery, denied permission, Android force-stop and Play policy review. Do not claim impossible powered-off execution.
-- [ ] Apply new 0051 to disposable isolated Sandbox and Live test DBs. Test SQL rollback, role grants, no cross-tenant/environment leakage.
+- [x] Apply 0051 transactionally to disposable isolated Sandbox and Live branch copies; verify new functions/permissions and repeat on both primary financial realms.
+- [ ] Still required: SQL rollback/race/cross-tenant behavior and actual end-to-end provider/device tests (no such pass claimed).
 - [ ] Controlled provider receipt samples: bKash with/without Ref, Nagad, Rocket (format missing), varying Android sender labels and time precision. Sender is from SMS body, not originatingAddress.
 - [ ] Three merchant accounts on two paired devices; paid to a different account than selected on checkout; server must still find exact UNIQUE payer/amount/method/time attempt.
 - [ ] No intent, wrong payer, wrong amount, transaction before issuance, duplicate receipt, same payer+amount+time overlapping attempts, unsupported format, masked payer and spoofed provider SMS: must NOT mark Verified.
