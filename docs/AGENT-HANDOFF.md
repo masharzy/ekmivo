@@ -1,5 +1,8 @@
 > **Remote tip:** `018ce2f725929a0d862868027d0f52281b14ea3a` on `origin/codex/pg10-pg17-code`. The source commit is `7a1cc8a`. `Foundation CI` runs on `main` pushes and pull requests, so this feature-branch push has no new CI run. Earlier local checks do not validate unapplied migrations 0016–0044 or the latest Android change. Do not claim market readiness from branch availability.
 
+> **Current implementation — 2026-10-13:** PR [#19](https://github.com/masharzy/ekmivo/pull/19), branch `codex/offline-sms-late-refund`: approved bKash/Nagad parser formats, signed phone server forwarding with unique payer+amount+provider+original-time matching independent of checkout receiving number, encrypted Android receipt history/offline retry/boot wake-up and consented historical inbox recovery, paired-device web status, late receipt seller-managed refund case and SQL 0051. Plan limits OFF (not permanent unlimited). See `docs/evidence/PG06-OFFLINE-SMS-REFUND.md` for limitations/tests. Requires disposable financial-DB migration proof, real Go/Next/Kotlin builds and provider/device E2E; GitHub Actions reported zero job steps on earlier runs. **No production migration/deployment, no verified live money/refund claims.** Supersedes earlier PG06 account/SIM mapping handoffs.
+
+
 > **Cloud handoff, 2026-10-12:** start from `origin/codex/pg10-pg17-code` at `7a1cc8acefa0bad2b187c2743ab526d7d65f6bbc`, not the older `main`. The source checkpoint is pushed; PG10–PG17 and PG02 extended remain OPEN. No deploy or production migration has been performed. Older local-only notes below are historical.
 
 ## Latest continuation — 2026-10-12

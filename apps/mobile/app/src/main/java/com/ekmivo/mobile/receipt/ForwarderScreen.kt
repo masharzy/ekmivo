@@ -144,7 +144,8 @@ fun ForwarderScreen(bn:Boolean){
        "revoked"->if(bn)"সংযোগ বাতিল হয়েছে" else "Disconnected"
        "offline"->if(bn)"সার্ভার পাওয়া যাচ্ছে না" else "Connection unavailable"
        "checking"->if(bn)"সংযোগ যাচাই হচ্ছে" else "Checking connection"
-       else->if(bn)"সংযুক্ত" else "Connected"
+       else->if(!permissionGranted)(if(bn)"SMS অনুমতি প্রয়োজন" else "SMS access required")
+        else if(bn)"সংযুক্ত" else "Connected"
       },style=MaterialTheme.typography.headlineMedium,textAlign=TextAlign.Center)
      if(serverCheck=="connected"){
       Text(if(bn)"ফোনটি সফলভাবে যুক্ত আছে" else "Your phone is paired",

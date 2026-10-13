@@ -58,6 +58,7 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
  },[refresh,token]);
  const current=phones.find(p=>p.id===selected)||null;
  const paired=phones.filter(p=>!!p.claimed_at);
+ const online=paired.filter(p=>p.permission_ok&&!!p.heartbeat_at&&Date.now()-Date.parse(p.heartbeat_at)<20*60*1000);
  const pairDone=!!token&&!!current?.claimed_at;
  const expired=!!token&&now>=expiresAt;
  const showCode=!!token&&!pairDone&&!expired&&expiresAt>0;
@@ -108,7 +109,7 @@ export function PaymentPhoneManagement({locale,workspaceId,environment,canManage
  return <section className="pg-phone-panel" aria-busy={busy||loading}>
   <header className="pg-phone-hero">
    <div><p className="pg-device-kicker">SMS FORWARDER · {environment.toUpperCase()}</p>
-    <h2>{paired.length?t("Connected","সংযুক্ত"):t("Connect your phone","ফোন যুক্ত করুন")}</h2>
+    <h2>{online.length?t("Online devices","সক্রিয় ডিভাইস"):paired.length?t("Paired devices","পেয়ার করা ডিভাইস"):t("Connect your phone","ফোন যুক্ত করুন")}</h2>
     <p>{paired.length?t("Your paired phone forwards supported provider receipts, even when no individual SIM account is assigned.","সংযুক্ত ফোন আলাদা SIM বা অ্যাকাউন্ট নির্বাচন ছাড়াই পেমেন্ট SMS পাঠাবে।"):t("Pair one phone using a code or QR scan.","কোড অথবা QR দিয়ে একবার ফোন pair করুন।")}</p>
    </div>
    {canManage&&<button type="button" onClick={()=>setCreateOpen(v=>!v)} disabled={busy}>

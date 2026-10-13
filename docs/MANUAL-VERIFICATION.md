@@ -1,5 +1,8 @@
 ## PG06 SMS forwarder — 2026-10-13 (REAL DEVICE PENDING)
 
+> **New pending release gate (PR #19, 2026-10-13):** Signed bKash/Nagad Android SMS on two paired phones; wrong payer/amount/time and duplicates; 3 merchant receiving numbers without SIM/account selector; offline network/backlog and retry, power-off and optional consented READ_SMS inbox recovery; expired/cancelled attempt creates one seller refund request (no automatic money transfer), seller action and contact; 0051 migration on disposable isolated Sandbox/Live financial DBs; Go/Next/Kotlin build and phone UI/theme tests. All remain UNVERIFIED; see [dedicated scenario checklist](evidence/PG06-OFFLINE-SMS-REFUND.md).
+
+
 - [ ] Pair one physical phone once using the actual code journey from Android Home. No required account/parser/SIM-ID picker or nonexistent QR scanner.
 - [ ] Check only configured provider SMS senders and payment-like message bodies are forwarded; OTP/personal SMS are not. Unknown SIM ID must not silently select an account.
 - [ ] Validate 0047 on BOTH isolated Sandbox and Live financial DBs, parser registry/current production settings, immutable captured configuration version, original queue key and account changes.

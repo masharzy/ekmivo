@@ -1,5 +1,11 @@
 # Ekmivo agent entry point
 
+## Latest owner decision — 2026-10-13 (supersedes receiver-number/SIM matching requirements)
+Paired Android phones forward only allowlisted bKash/Nagad/Rocket transaction SMS; **no app SIM selector, receiving-number autodetection, device-to-account mapping, merchant parser setup or extra payment approval**. Backend authenticates the signed phone's workspace, parses complete provider receipt and uniquely matches the immutable attempt by **provider, full payer number, exact amount and ORIGINAL transaction time after issuance/within the attempt's window**. Checkout's displayed/selected receiving number is NOT a matching condition; the receiving account stored on an observation is attributed from the matching attempt for financial-schema compatibility, NOT evidence of actual SIM recipient. Duplicate provider receipt/ambiguous overlap must not pay twice.
+Offline captured SMS remains encrypted and auto-retries. App shows last queued/sent receipts and offers user-initiated narrowly scoped historical SMS recovery when OS policy and READ_SMS permission allow; no impossible always-on guarantee when device is powered off or force-stopped. If a receipt for a valid pre-expiry transfer is processed after checkout expiry/cancellation, create **one seller-managed refund request** with sender contact; NEVER automatically send refund money. Device/method plan limits are OFF for now; **do not hardcode permanent unlimited plans**. Older five-field receiver identity language in documents is historical and superseded by this paragraph. Implementation PR #19 is not yet real-device/production verified.
+
+
+
 ## Canonical plan
 
 **Use `docs/DUAL-SAAS-MVP-PLAN.bn.md` as the main implementation plan.** Do not create a competing plan or infer scope from a previous chat summary when these documents contain a newer explicit correction.

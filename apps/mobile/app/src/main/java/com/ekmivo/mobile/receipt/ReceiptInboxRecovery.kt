@@ -22,8 +22,12 @@ object ReceiptInboxRecovery {
   }
   var inserted=0
   val projection=arrayOf(Telephony.Sms.ADDRESS,Telephony.Sms.BODY,Telephony.Sms.DATE)
+  // Apply the allowlist in the content provider itself: no generic inbox dump.
+  val origins=arrayOf("bKash","BKASH","bkash","NAGAD","nagad","Rocket","ROCKET","rocket")
+  val selection="${Telephony.Sms.DATE} >= ? AND ${Telephony.Sms.ADDRESS} IN (${origins.joinToString(","){"?"}})"
+  val selectionArgs=arrayOf(cutoff.toString(),*origins)
   context.contentResolver.query(Telephony.Sms.Inbox.CONTENT_URI,projection,
-   "${Telephony.Sms.DATE} >= ?",arrayOf(cutoff.toString()),"${Telephony.Sms.DATE} DESC")?.use{cursor->
+   selection,selectionArgs,"${Telephony.Sms.DATE} DESC")?.use{cursor->
    val address=cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
    val text=cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)
    var checked=0
