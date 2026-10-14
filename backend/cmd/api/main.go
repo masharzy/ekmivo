@@ -114,6 +114,55 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/device/{action}", pay.HandleDevice)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/linked-sources", pay.HandleSources)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/linked-sources", pay.HandleSources)
+	// Public merchant integration: resolve tenant/realm from the authenticated API key.
+	// Keep workspace-prefixed routes for existing signed-in dashboard clients.
+	merchantByKey := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Has("environment") {
+			merchantError(w, http.StatusBadRequest, "ENVIRONMENT_FROM_KEY", "Environment is selected by your API key, not the URL", false)
+			return
+		}
+		authorization := r.Header.Get("Authorization")
+		if len(authorization) < len("Bearer ") || authorization[:len("Bearer ")] != "Bearer " {
+			merchantError(w, http.StatusUnauthorized, "INVALID_API_KEY", "A server API key is required", false)
+			return
+		}
+		_, realm, _, valid := authz.ParseMerchantToken(authorization[len("Bearer "):])
+		if !valid {
+			merchantError(w, http.StatusUnauthorized, "INVALID_API_KEY", "Invalid API key", false)
+			return
+		}
+		if repo == nil || pay == nil {
+			merchantError(w, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "Merchant API is unavailable", true)
+			return
+		}
+		scope := "payments:read"
+		if r.Method != http.MethodGet { scope = "payments:write" }
+		credential, err := repo.AuthenticateMerchant(r.Context(), authorization, realm, scope)
+		if err != nil {
+			switch {
+			case errors.Is(err, authz.ErrUnauthorized):
+				merchantError(w, http.StatusUnauthorized, "INVALID_API_KEY", "Invalid or expired API key", false)
+			case errors.Is(err, authz.ErrForbidden):
+				merchantError(w, http.StatusForbidden, "SCOPE_DENIED", "API key cannot perform this action", false)
+			default:
+				merchantError(w, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "Merchant authorization is unavailable", true)
+			}
+			return
+		}
+		// The caller cannot select any other workspace or the other financial database.
+		next := r.Clone(r.Context())
+		u := *next.URL
+		query := u.Query()
+		query.Set("environment", string(credential.Environment))
+		u.RawQuery = query.Encode()
+		next.URL = &u
+		next.SetPathValue("workspaceID", credential.WorkspaceID)
+		pay.HandleMerchant(w, next)
+	}
+	mux.HandleFunc("GET /v1/payment-intents", merchantByKey)
+	mux.HandleFunc("POST /v1/payment-intents", merchantByKey)
+	mux.HandleFunc("GET /v1/payment-intents/{intentID}", merchantByKey)
+	mux.HandleFunc("POST /v1/payment-intents/{intentID}/{action}", merchantByKey)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-intents", pay.HandleMerchant)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-intents/{intentID}", pay.HandleMerchant)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents", pay.HandleMerchant)
