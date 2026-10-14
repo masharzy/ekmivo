@@ -1,4 +1,3 @@
-import {randomUUID} from "node:crypto";
 import {goOrigin} from "../../../../lib/server/go-origin";
 import {boundedBody} from "../../../../lib/server/bounded-body";
 
