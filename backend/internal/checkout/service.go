@@ -491,6 +491,11 @@ func (s *Service) HandleKeyScopedMerchant(w http.ResponseWriter, r *http.Request
 		authError(w, err)
 		return
 	}
+	// The public route has a literal /cancel segment; preserve the existing
+	// finance handler's explicit cancel-action guard.
+	if r.Method == http.MethodPost && r.PathValue("intentID") != "" {
+		r.SetPathValue("action", "cancel")
+	}
 	s.handleAuthorizedMerchant(w, r, credential.WorkspaceID, realm)
 }
 
