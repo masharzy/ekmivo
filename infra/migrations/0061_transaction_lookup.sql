@@ -14,7 +14,7 @@ DO $preflight$ BEGIN
  END IF;
 END $preflight$;
 
-CREATE FUNCTION public.pg61_transaction_lookup(
+CREATE OR REPLACE FUNCTION public.pg61_transaction_lookup(
  w uuid, e text, intent uuid, method text, reference_digest text, amount bigint
 ) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path=public,pg_temp AS $$
@@ -43,7 +43,7 @@ BEGIN
       AND o.workspace_id=w AND o.environment=e
  WHERE i.id=intent AND i.workspace_id=w AND i.environment=e
    AND o.provider_reference_hmac=reference_digest
-   AND o.method=method AND o.direction='incoming'
+   AND o.method=$4 AND o.direction='incoming'
    AND p.verified_amount_minor=amount
    AND o.amount_minor=amount AND i.amount_minor=amount
    AND o.payer_hmac=a.payer_hmac
