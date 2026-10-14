@@ -53,7 +53,7 @@ function codeFor(kind:Kind, language:Language):string {
   ].join("\n");
   case "Go":return [
     "package main",
-    "import (\"fmt\"; \"io\"; \"net/http\"; \"os\"; \"strings\"; \"time\")",
+    "import (\"fmt\"; \"io\"; \"net/http\"; \"os\"; \"time\""+(kind==="trx"?"; \"strings\"":"")+")",
     "func main() {",
     "  client := &http.Client{Timeout:15*time.Second}",
     ...(kind==="trx" ? ["  body := strings.NewReader(\"{\\\"transaction_id\\\":\\\"TXN123456789\\\",\\\"provider\\\":\\\"bkash\\\",\\\"amount_minor\\\":12500}\")"] : []),
