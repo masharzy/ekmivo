@@ -161,6 +161,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		u.RawQuery = query.Encode()
 		next.URL = &u
 		next.SetPathValue("workspaceID", credential.WorkspaceID)
+		next = checkout.WithAuthenticatedMerchant(next,credential)
 		if next.PathValue("action") == "verify-transaction" {
 			pay.HandleTransactionLookup(w, next)
 			return
