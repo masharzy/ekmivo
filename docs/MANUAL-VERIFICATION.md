@@ -613,3 +613,16 @@ Status: **manual pending**; not live-provider accepted. Test with a real authori
 - [ ] No email receipt / email consent / verification-code controls anywhere in the public checkout. Prior backend email records are retained.
 - [ ] Actual brand links never use invented contacts; close/back preserves payment record. POST loss/retry remains idempotent, payer lock irreversible, no browser-set paid state.
 - [ ] Repeat checks with device offline, receipt parser unavailable, expired link, wrong payer, active session, genuine provider receipts, and verified server/webhook settlement. Real payment acceptance remains OPEN.
+
+
+## 2026-10-15 — Key-derived Merchant Payment API + colorful Developer Docs (draft PR #56)
+
+Source checkpoint only. No production database write, key publish/rotation, live transaction, code merge or deployment was performed. Local Run buttons only show illustrative samples; they do not invoke the provider, the sandbox financial service or transfer funds.
+
+- [ ] **Backend / unit and integration:** Go checkout and API tests must pass, then run real scoped-key tests: Sandbox POST/GET/detail/cancel without workspace ID or environment query, 201 create and checkout_url, same-key idempotency replay, changed-payload conflict, invalid/expired/revoked/readonly key, cross-tenant access denial and financial DB separation.
+- [ ] **Live plan control:** Confirm paid/grace subscription authorizes Live payment creation and inactive plan returns 403 SUBSCRIPTION_REQUIRED; check API key authorization, disabled Payments product, suspended workspace and source unavailability separately.
+- [ ] **Actual sandbox checkout:** Open a genuine merchant-specific sandbox checkout_url and test valid receipt confirmation, cancel, expiry, simulated success and failure, webhook signature/delivery/retry, status GET and persisted observation. No fabricated receipt may credit Live.
+- [ ] **Developer docs browser QA:** English/Bengali and Light/Dark/System at 320/375/768/1024/desktop; fixed desktop sidebar and usable collapsed mobile topics; card/icon readability, text overflow, deep links, code-language tabs, Copy and local Run demonstration clarity.
+- [ ] **OpenAPI + SDK parity:** Generate contract/client artifacts, validate OpenAPI, TypeScript/Go SDK test and check that key-derived paths omit workspace/environment while legacy dashboard operations retain their explicitly authorized route.
+- [ ] **External blockers:** PR #56 GitHub Actions runs reported failure with unavailable job logs/steps. Vercel deployment reported rate limiting. Investigate both before acceptance; no production E2E or provider/device verification has been claimed.
+- [ ] **Performance:** Measure request auth, subscription lookup, sandbox/live SQL and checkout URL generation in a real deployed environment. 10ms is a desired optimization, not a verified timing guarantee.
