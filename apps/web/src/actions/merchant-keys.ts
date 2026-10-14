@@ -16,12 +16,13 @@ const SCOPES=new Set([
  "invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage"
 ]);
 type Operation="create"|"rotate"|"revoke";
-function error(bn:boolean,code:"bad"|"denied"|"reauth"|"limit"|"missing"|"offline"):KeyActionState{
+function error(bn:boolean,code:"bad"|"denied"|"reauth"|"limit"|"missing"|"offline"|"plan"):KeyActionState{
  const messages={
   bad:["Check the name, environment, expiry and scopes.","নাম, পরিবেশ, মেয়াদ ও অনুমতি যাচাই করুন।"],
   denied:["Only an authorized owner or admin can manage payment keys.","শুধু অনুমোদিত মালিক বা অ্যাডমিন পেমেন্ট কী পরিচালনা করতে পারবেন।"],
   reauth:["Confirm your current password to change API credentials.","API key পরিবর্তনের জন্য বর্তমান পাসওয়ার্ড নিশ্চিত করুন।"],
   limit:["Too many active keys or requests. Revoke an unused key or retry later.","অতিরিক্ত কী বা অনুরোধ হয়েছে। অব্যবহৃত কী বাতিল করুন অথবা পরে চেষ্টা করুন।"],
+  plan:["Activate your payment plan before creating a Live API key. Sandbox keys are available for testing.","Live API key তৈরির আগে পেমেন্ট প্ল্যান চালু করুন। পরীক্ষা করার জন্য Sandbox key ব্যবহার করতে পারবেন।"],
   missing:["This key is missing, expired or already revoked.","কীটি পাওয়া যায়নি, মেয়াদ শেষ বা বাতিল করা হয়েছে।"],
   offline:["Key storage is unavailable. No credential was changed.","কী সংরক্ষণের সেবা পাওয়া যায়নি। কোনো পরিবর্তন হয়নি।"]
  } as const;
@@ -67,6 +68,10 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
    const product=await tx`SELECT enabled FROM workspace_product_access
     WHERE workspace_id=${workspace}::uuid AND product='payments' FOR SHARE`;
    if(realm.length!==1||product.length!==1||!product[0].enabled)return {code:"denied" as const};
+   if(operation!=="revoke" && environment==="live" && workspace!==process.env.PLATFORM_BILLING_WORKSPACE_ID){
+    const entitlement=await tx`SELECT pg13_billing_allowed(${workspace}::uuid) AS allowed`;
+    if(entitlement.length!==1 || entitlement[0].allowed!==true)return {code:"plan" as const};
+   }
    if(!await passwordMatches(password,String(session[0].password_hash)))return {code:"reauth" as const};
    // Emergency revocation must remain available even if issuance is rate-limited.
    // Rate limit only the operations that mint a new secret.
@@ -108,7 +113,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
     VALUES(${workspace}::uuid,${environment},${id}::uuid,${actor.id}::uuid,'created')`;
    return {code:"created" as const,raw,keyId:id};
   });
-  if(result.code==="denied"||result.code==="reauth"||result.code==="limit"||result.code==="missing")return error(bn,result.code);
+  if(result.code==="denied"||result.code==="reauth"||result.code==="limit"||result.code==="missing"||result.code==="plan")return error(bn,result.code);
   revalidatePath(`/${locale}/w/${workspace}/payments/developers`);
   if(result.code==="revoked")return {status:"success",message:bn?"কীটি বাতিল করা হয়েছে।":"API key revoked."};
   return {status:"success",message:bn?"গোপন কীটি এখনই কপি করুন। এটি আর দেখানো হবে না।":"Copy this secret now. It will never be shown again.",rawSecret:result.raw,keyId:result.keyId};
