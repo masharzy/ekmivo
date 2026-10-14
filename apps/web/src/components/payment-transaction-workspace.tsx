@@ -8,7 +8,7 @@ const initial:Filters={q:"",status:"",method:"",from:"",to:""};
 const statusLabels:Record<string,[string,string]>={verified:["Verified","যাচাইকৃত"],matched:["Matched","মিলেছে"],pending:["Pending","অপেক্ষমাণ"],unmatched:["Unmatched","মেলেনি"],ambiguous:["Ambiguous","একাধিক match"],invalid:["Invalid","অবৈধ"],duplicate:["Duplicate","ডুপ্লিকেট"],cancelled:["Cancelled","বাতিল"]};
 const dt=(v:string|undefined,locale:Locale)=>v&&!Number.isNaN(Date.parse(v))?new Intl.DateTimeFormat(locale==="bn"?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",dateStyle:"short",timeStyle:"short"}).format(new Date(v)):"—";
 const money=(v:number|undefined,locale:Locale)=>typeof v==="number"&&Number.isFinite(v)?new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(v/100):"—";
-const nowUTC=(value:string)=>{if(!value)return "";const d=new Date(value);return Number.isFinite(d.valueOf())?d.toISOString():""};
+const dhakaUTC=(value:string)=>{if(!value)return "";const d=new Date(value+":00+06:00");return Number.isFinite(d.valueOf())?d.toISOString():""};
 function statusName(v:string|undefined,bn:boolean){return statusLabels[v||""]?.[bn?1:0]||v||"—"}
 export function PaymentTransactionWorkspace({locale,workspaceId,environment,resource,canManage}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;resource:"payments"|"incoming";canManage:boolean}){
  const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en;
@@ -17,14 +17,15 @@ export function PaymentTransactionWorkspace({locale,workspaceId,environment,reso
  const [rows,setRows]=useState<Item[]>([]),[cursor,setCursor]=useState<string|null>(null);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState<string|null>(null);
  const [error,setError]=useState(""),[notice,setNotice]=useState(""),[nonce,setNonce]=useState(0);
+ const [filterError,setFilterError]=useState("");
  const [online,setOnline]=useState(true);
  useEffect(()=>{const fn=()=>setOnline(navigator.onLine);fn();window.addEventListener("online",fn);window.addEventListener("offline",fn);return()=>{window.removeEventListener("online",fn);window.removeEventListener("offline",fn)}},[]);
  const url=useCallback((next?:string)=>{
   const q=new URLSearchParams({environment});
   for(const key of ["status","method"] as const)if(filters[key])q.set(key,filters[key]);
   if(filters.q.trim())q.set("q",filters.q.trim());
-  if(filters.from)q.set("from",nowUTC(filters.from));
-  if(filters.to)q.set("to",nowUTC(filters.to));
+  if(filters.from)q.set("from",dhakaUTC(filters.from));
+  if(filters.to)q.set("to",dhakaUTC(filters.to));
   if(next)q.set("cursor",next);
   return base+resource+"?"+q.toString();
  },[base,resource,environment,filters]);
@@ -58,18 +59,29 @@ export function PaymentTransactionWorkspace({locale,workspaceId,environment,reso
  };
  const amountTotal=useMemo(()=>rows.reduce((sum,r)=>sum+(r.verified_amount_minor??r.amount_minor??0),0),[rows]);
  const hasFilter=Boolean(filters.q||filters.status||filters.method||filters.from||filters.to);
+ const apply=(e:React.FormEvent<HTMLFormElement>)=>{
+  e.preventDefault();
+  const from=dhakaUTC(draft.from),to=dhakaUTC(draft.to);
+  if((draft.from&&!from)||(draft.to&&!to)||(from&&to&&Date.parse(to)<=Date.parse(from))){
+   setFilterError(t("Choose a valid date range (Bangladesh time).","বাংলাদেশ সময় অনুযায়ী সঠিক তারিখ বেছে নিন।"));return;
+  }
+  setFilterError("");
+  setFilters({...draft});
+  setNonce(n=>n+1);
+ };
  const title=incoming?t("Incoming receipts","আসা রসিদ"):t("Transactions","লেনদেন");
  const statuses=incoming?["matched","unmatched","ambiguous","pending","invalid","duplicate","cancelled"]:["verified"];
  return <div className="opw-workbench">
   <header className="opw-header"><div><h1>{title}</h1><p>{incoming?t("Review matched and unmatched provider receipts.","পাওয়া রসিদ ও অমিলগুলো পর্যালোচনা করুন।"):t("Verified payments, source details and delivery status.","যাচাইকৃত লেনদেন, উৎস ও webhook অবস্থা।")}</p></div>
    <button onClick={()=>setNonce(n=>n+1)} disabled={loading} className="opw-refresh" type="button">{t("Refresh","রিফ্রেশ")}</button></header>
-  <form className="opw-filters" onSubmit={e=>{e.preventDefault();setFilters({...draft})}}>
+  <form className="opw-filters" onSubmit={apply}>
    <label className="opw-search"><span>{t("Search","খুঁজুন")}</span><input value={draft.q} maxLength={96} onChange={e=>setDraft(v=>({...v,q:e.target.value}))} placeholder={incoming?t("Source or reason","উৎস বা কারণ"):t("Payment reference or payer suffix","রেফারেন্স বা নম্বরের শেষ অংশ")}/></label>
    <label><span>{t("Status","অবস্থা")}</span><select value={draft.status} onChange={e=>setDraft(v=>({...v,status:e.target.value}))}><option value="">{t("All statuses","সব অবস্থা")}</option>{statuses.map(x=><option key={x} value={x}>{statusName(x,bn)}</option>)}</select></label>
    <label><span>{t("Method","মাধ্যম")}</span><select value={draft.method} onChange={e=>setDraft(v=>({...v,method:e.target.value}))}><option value="">{t("All methods","সব মাধ্যম")}</option>{["bkash","nagad","rocket"].map(x=><option key={x} value={x}>{x==="bkash"?"bKash":x==="nagad"?"Nagad":"Rocket"}</option>)}</select></label>
-   <div className="opw-filter-actions"><button type="submit" disabled={loading}>{t("Apply","প্রয়োগ")}</button><button type="button" onClick={()=>{setDraft(initial);setFilters(initial)}}>{t("Reset","রিসেট")}</button></div>
+   <div className="opw-filter-actions"><button type="submit" disabled={loading}>{t("Apply","প্রয়োগ")}</button><button type="button" onClick={()=>{setDraft(initial);setFilters(initial);setFilterError("");setNonce(n=>n+1)}}>{t("Reset","রিসেট")}</button></div>
    <details className="opw-dates"><summary>{t("Date range","তারিখ অনুযায়ী")}</summary><div><label><span>{t("From","শুরু")}</span><input type="datetime-local" value={draft.from} onChange={e=>setDraft(v=>({...v,from:e.target.value}))}/></label><label><span>{t("Until","শেষ")}</span><input type="datetime-local" value={draft.to} onChange={e=>setDraft(v=>({...v,to:e.target.value}))}/></label></div></details>
   </form>
+  {filterError&&<p className="opw-error" role="alert">{filterError}</p>}
   {!online&&<p className="opw-notice">{t("You are offline. Data may be outdated.","ইন্টারনেট সংযোগ নেই; তথ্য পুরোনো হতে পারে।")}</p>}
   {error&&<div className="opw-error" role="alert">{t("Unable to load records.","রেকর্ড পাওয়া যাচ্ছে না।")} ({error}) <button type="button" onClick={()=>setNonce(n=>n+1)}>{t("Retry","আবার চেষ্টা")}</button></div>}
   {notice&&<p className="opw-notice" role="status">{notice}</p>}
@@ -80,7 +92,7 @@ export function PaymentTransactionWorkspace({locale,workspaceId,environment,reso
     <td>{r.method||"—"}</td><td className="opw-num">{money(r.verified_amount_minor??r.amount_minor,locale)}</td>
     <td><span className="opw-status" data-status={r.status||"verified"}>{statusName(r.status||(incoming?"pending":"verified"),bn)}</span></td>
     <td>{dt(r.original_transaction_at,locale)}</td><td>{dt(incoming?r.received_at:r.verified_at,locale)}</td>
-    <td>{incoming&&canManage&&["unmatched","ambiguous"].includes(r.status||"")?<button type="button" disabled={busy===r.id||!online} onClick={()=>void reprocess(r.id)}>{busy===r.id?t("Checking…","যাচাই হচ্ছে…"):t("Recheck","যাচাই করুন")}</button>:<Link href={"/w/"+workspaceId+"/payments/"+(incoming?"incoming":"transactions")+"/"+r.id}>{t("Details","বিস্তারিত")} ↗</Link>}</td>
+    <td>{incoming&&canManage&&["unmatched","ambiguous"].includes(r.status||"")?<button type="button" disabled={Boolean(busy)||!online} onClick={()=>void reprocess(r.id)}>{busy===r.id?t("Checking…","যাচাই হচ্ছে…"):t("Recheck","যাচাই করুন")}</button>:<Link href={"/w/"+workspaceId+"/payments/"+(incoming?"incoming":"transactions")+"/"+r.id}>{t("Details","বিস্তারিত")} ↗</Link>}</td>
    </tr>)}</tbody></table>
   </div>}
   {cursor&&<div className="opw-pagination"><span>{rows.length} {t("loaded","লোড হয়েছে")}</span><button type="button" disabled={moreLoading} onClick={()=>void loadMore()}>{moreLoading?t("Loading…","লোড হচ্ছে…"):t("Load more","আরও দেখুন")}</button></div>}
