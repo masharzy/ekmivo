@@ -353,6 +353,12 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 		authError(w, err)
 		return
 	}
+	s.handleAuthorizedMerchant(w, r, ws, realm)
+}
+
+// handleAuthorizedMerchant is called only AFTER session or bearer authorization.
+// Keep billing, financial isolation, idempotency and audit consistent.
+func (s *Service) handleAuthorizedMerchant(w http.ResponseWriter, r *http.Request, ws, realm string) {
 	if !s.budget(w, "merchant:"+ws+":"+r.Method, 120) {
 		return
 	}
@@ -444,6 +450,48 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 	default:
 		fail(w, 405, "METHOD_NOT_ALLOWED")
 	}
+}
+
+// HandleKeyScopedMerchant authenticates a key to discover its workspace and
+// financial environment. No caller-provided tenant or realm can override it.
+func (s *Service) HandleKeyScopedMerchant(w http.ResponseWriter, r *http.Request) {
+	if !s.ready() {
+		fail(w, 503, "FINANCIAL_SERVICE_UNAVAILABLE")
+		return
+	}
+	if r.URL.Query().Has("environment") {
+		fail(w, 400, "ENVIRONMENT_DERIVED_FROM_KEY")
+		return
+	}
+	bearer := r.Header.Get("Authorization")
+	if !strings.HasPrefix(bearer, "Bearer ") {
+		fail(w, 401, "UNAUTHENTICATED")
+		return
+	}
+	_, credentialRealm, _, ok := authz.ParseMerchantToken(strings.TrimPrefix(bearer, "Bearer "))
+	if !ok {
+		fail(w, 401, "UNAUTHENTICATED")
+		return
+	}
+	realm := string(credentialRealm)
+	if realm == "live" && s.pipelinePool(realm) == nil {
+		fail(w, 503, "LIVE_SOURCE_NOT_CONNECTED")
+		return
+	}
+	if r.Method != "GET" && !originAllowed(r) {
+		fail(w, 403, "ORIGIN_DENIED")
+		return
+	}
+	scope := "payments:read"
+	if r.Method != "GET" {
+		scope = "payments:write"
+	}
+	credential, err := s.Auth.AuthenticateMerchant(r.Context(), bearer, credentialRealm, scope)
+	if err != nil {
+		authError(w, err)
+		return
+	}
+	s.handleAuthorizedMerchant(w, r, credential.WorkspaceID, realm)
 }
 
 // HandleSources creates immutable, server-calculated sandbox invoice/order
