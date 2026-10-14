@@ -117,6 +117,10 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	// Public merchant integration: resolve tenant/realm from the authenticated API key.
 	// Keep workspace-prefixed routes for existing signed-in dashboard clients.
 	merchantByKey := func(w http.ResponseWriter, r *http.Request) {
+		if action := r.PathValue("action"); action != "" && action != "cancel" && action != "verify-transaction" {
+			merchantError(w, http.StatusNotFound, "NOT_FOUND", "Unknown payment action", false)
+			return
+		}
 		if r.URL.Query().Has("environment") {
 			merchantError(w, http.StatusBadRequest, "ENVIRONMENT_FROM_KEY", "Environment is selected by your API key, not the URL", false)
 			return
