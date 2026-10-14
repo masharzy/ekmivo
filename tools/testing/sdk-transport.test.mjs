@@ -15,3 +15,18 @@ test('raw uploads preserve bytes and encode Bengali filenames without public cre
 test('errors retain safe code and correlation without raw provider body',async()=>{await mocked(async()=>Response.json({error:{code:'DENIED',correlation_id:'safe-id'},internal:'fixture-private-data'},{status:403}),async()=>{await assert.rejects(client().request('listcustomers',{path:{workspaceID:'fixture'}}),e=>e instanceof ApiError&&e.status===403&&e.code==='DENIED'&&e.correlationId==='safe-id'&&!e.message.includes('private'))})});
 test('oversized response is cancelled while streaming',async()=>{let cancelled=false;await mocked(async()=>new Response(new ReadableStream({pull(c){c.enqueue(new Uint8Array(1048576))},cancel(){cancelled=true}})),async()=>{await assert.rejects(client().request('listcustomers',{path:{workspaceID:'fixture'}}),e=>e.code==='RESPONSE_TOO_LARGE');assert.equal(cancelled,true)})});
 test('non-JSON reply is a safe unconfirmed error',async()=>{await mocked(async()=>new Response('fixture upstream HTML'),async()=>{await assert.rejects(client().request('listcustomers',{path:{workspaceID:'fixture'}}),e=>e.code==='NON_JSON_RESPONSE')})});
+
+test('key-scoped merchant routes need no workspace or environment argument',async()=>{
+ const keyOnly=new EkmivoClient('https://api.example.test','fixture-no-money-key');
+ await mocked(async(url,options)=>{
+  const target=new URL(url);
+  assert.equal(target.pathname,'/v1/payment-intents');
+  assert.equal(target.searchParams.has('environment'),false);
+  assert.equal(options.headers.Authorization,'Bearer fixture-no-money-key');
+  return Response.json({data:[],environment:'sandbox'});
+ },async()=>{
+  const result=await keyOnly.request('listKeyScopedPaymentIntents');
+  assert.deepEqual(result.data,[]);
+  await assert.rejects(keyOnly.request('listKeyScopedPaymentIntents',{query:{environment:'live'}}),/Environment/);
+ });
+});
