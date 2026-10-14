@@ -2,6 +2,7 @@ import Link from "next/link";
 import {notFound} from "next/navigation";
 import {PaymentAPIReference} from "../../../../components/payment-api-reference";
 import {PaymentDocExamples} from "../../../../components/payment-doc-examples";
+import {PaymentEndpointSamples} from "../../../../components/payment-endpoint-samples";
 import {DocsNavigation} from "../../../../components/docs-navigation";
 
 export default async function PaymentGuide({params}:{params:Promise<{locale:string}>}){
@@ -61,6 +62,7 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
     <div className="ek-endpoint"><span className="ek-http-method get">GET</span><code>/v1/payment-intents/{'{intentID}'}</code><span>payments:read</span></div>
     <p>{t("Use your own backend and a read-scoped API key. Match intent, amount and reference before granting an order. HTTP 200 confirms a successful lookup, not successful payment.","Read-scoped API key দিয়ে নিজের backend থেকে status দেখুন। Order deliver করার আগে intent, amount ও reference মিলান। HTTP 200 মানে query সফল—টাকা পাওয়া নয়।")}</p>
     <p>{t("Automatic receipt matching uses provider, full payer number, amount and original transaction time. Customers do not enter a TrxID in this hosted flow.","স্বয়ংক্রিয় matching-এ provider, পূর্ণ payer number, amount ও original transaction time লাগে। Hosted flow-তে কাস্টমার TrxID লিখবেন না।")}</p>
+    <PaymentEndpointSamples kind="status" locale={locale}/>
    </section>
    <section id="webhooks" className="ds-panel">
     <span className="ek-doc-step">05 · {t("EVENTS","ইভেন্ট")}</span><h2>🔔 {t("Get signed payment updates","স্বাক্ষরযুক্ত পেমেন্ট আপডেট নিন")}</h2>
@@ -83,10 +85,11 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
     <pre><code>{JSON.stringify({transaction_id:"TXN123456789",provider:"bkash",amount_minor:12500},null,2)}</code></pre>
     <p>{t("Required: transaction_id (4–128 supported characters), provider (bkash/nagad/rocket), amount_minor (positive integer), URL intentID, Bearer API key with payments:read. Returns verified:true plus payment_id/time, or verified:false with pending. No raw sender number or SMS is exposed.","প্রয়োজন: transaction_id, provider (bkash/nagad/rocket), amount_minor, URL-এ intentID এবং payments:read API key। Result-এ verified ও payment ID/time অথবা pending আসবে। Sender-এর পূর্ণ নম্বর বা SMS প্রকাশ করা হবে না।")}</p>
     <p className="ek-doc-footnote">{t("This is not a transaction-consumption/credit-deduction API, and it never triggers a new payment confirmation. A matching verified payment must already exist.","এটি credit কাটা বা নতুন করে payment confirm করার API নয়। আগে থেকেই বিশ্বস্ত receipt দিয়ে payment verified থাকতে হবে।")}</p>
+    <PaymentEndpointSamples kind="trx" locale={locale}/>
    </section>
    <section id="sandbox" className="ds-panel">
     <span className="ek-doc-step">🧪 {t("PRACTICE","পরীক্ষা")}</span><h2>{t("Practice as much as you need","নিশ্চিন্তে পরীক্ষা করুন")}</h2>
-    <p>{t("Create your own Sandbox API key after signing in. Sandbox uses a separate financial database. Use existing workspace Sandbox tools for actual persisted scenario runs; the code rail Run button is only an explicitly labelled sample preview.","লগইন করে নিজের Sandbox API key নিন। আলাদা financial database ব্যবহার হয়। Actual test record দেখতে workspace-এর Sandbox tools ব্যবহার করুন; পাশে Run button কেবল নমুনা response দেখায়।")}</p>
+    <p>{t("Create your own Sandbox key after signing in. The code rail has two separate actions: Run simulation previews an example without network access; Create test payment sends a genuine key-scoped request to the isolated Sandbox database. Existing workspace Sandbox tools run detailed receipt scenarios. Never send real money.","লগইন করে নিজের Sandbox key নিন। পাশের Run simulation শুধু নমুনা দেখায়; Create test payment সত্যিকারের API request দিয়ে আলাদা Sandbox database-এ test record তৈরি করে। বিস্তারিত receipt scenario Workspace-এর Sandbox tools-এ চালানো যায়। আসল টাকা পাঠাবেন না।")}</p>
     <div className="ek-doc-actions"><Link href="/workspaces">{t("Open my workspace →","আমার workspace খুলুন →")}</Link><a href="#create-checkout">{t("Back to Create Payment","Create Payment-এ ফিরুন")}</a></div>
    </section>
    <section id="errors" className="ds-panel">
