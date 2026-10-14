@@ -29,7 +29,7 @@ export const sections={
  products:{en:"Products",bn:"পণ্য",detail:{en:"Catalog, variations, availability and pricing.",bn:"পণ্যতালিকা, ভ্যারিয়েন্ট, মজুত ও মূল্য।"},group:"commerce"},
  inventory:{en:"Inventory",bn:"মজুত",detail:{en:"Warehouse stock and reservations.",bn:"ওয়্যারহাউস ও স্টক রিজার্ভেশন।"},group:"commerce"},
  orders:{en:"Orders",bn:"অর্ডার",detail:{en:"Confirmed, pending and returned orders.",bn:"নিশ্চিত, অপেক্ষমাণ ও ফেরত অর্ডার।"},group:"commerce"},
- payments:{en:"Transactions",bn:"লেনদেন",detail:{en:"Evidence-based verification, pending items and exceptions.",bn:"প্রমাণভিত্তিক যাচাই, অপেক্ষমাণ ও ব্যতিক্রমী পেমেন্ট।"},group:"commerce"},
+ transactions:{en:"Transactions",bn:"লেনদেন",detail:{en:"Evidence-based verification, pending items and exceptions.",bn:"প্রমাণভিত্তিক যাচাই, অপেক্ষমাণ ও ব্যতিক্রমী পেমেন্ট।"},group:"commerce"},
  "payment-links":{en:"Payment links",bn:"পেমেন্ট লিংক",detail:{en:"Links and hosted payment requests.",bn:"পেমেন্ট লিংক ও পেমেন্ট রিকোয়েস্ট।"},group:"commerce"},
  invoices:{en:"Invoices",bn:"ইনভয়েস",detail:{en:"Customer invoices, receipts and statements.",bn:"ইনভয়েস, রসিদ ও হিসাবের বিবরণ।"},group:"commerce"},
  gateways:{en:"Payment methods",bn:"পেমেন্ট মাধ্যম",detail:{en:"Configure eligible payment adapters and merchant accounts.",bn:"অনুমোদিত payment adapter ও merchant account সংযুক্ত করুন।"},group:"commerce"},
