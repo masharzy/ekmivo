@@ -13,7 +13,7 @@ export function PaymentDocExamples({locale}:{locale:"en"|"bn"}){
   "Node.js":`// Server-side only. Persist one idempotency key per payment request.\nconst response = await fetch(\n  process.env.EKMIVO_API_ORIGIN + "/v1/payment-intents",\n  {\n    method: "POST",\n    signal: AbortSignal.timeout(15000),\n    headers: {\n      Authorization: "Bearer " + process.env.EKMIVO_API_KEY,\n      "Content-Type": "application/json",\n      "Idempotency-Key": "order-123-payment-v1"\n    },\n    body: JSON.stringify(${payload})\n  }\n);\nconst result = await response.json();\nif (!response.ok) throw new Error(result.error?.code ?? "PAYMENT_REQUEST_FAILED");\n// Save result.id and result.checkout_token with the order.`,
   Python:`import os, requests\n\nurl = (os.environ["EKMIVO_API_ORIGIN"] + "/v1/payment-intents")\nresponse = requests.post(url, timeout=15, headers={\n    "Authorization": "Bearer " + os.environ["EKMIVO_API_KEY"],\n    "Idempotency-Key": "order-123-payment-v1",\n}, json={\n    "merchant_reference": "ORDER-123",\n    "amount_minor": 12500, "currency": "BDT",\n    "expires_in_minutes": 30,\n})\nresponse.raise_for_status()\npayment = response.json()\n# Save payment["id"] and payment["checkout_token"] with the order.`,
   PHP:`<?php\n$url = getenv('EKMIVO_API_ORIGIN') . '/v1/payment-intents';\n$curl = curl_init($url);\ncurl_setopt_array($curl, [\n    CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_TIMEOUT => 15,\n    CURLOPT_HTTPHEADER => [\n        'Authorization: Bearer ' . getenv('EKMIVO_API_KEY'),\n        'Content-Type: application/json',\n        'Idempotency-Key: order-123-payment-v1'\n    ],\n    CURLOPT_POSTFIELDS => json_encode([\n        'merchant_reference' => 'ORDER-123',\n        'amount_minor' => 12500, 'currency' => 'BDT',\n        'expires_in_minutes' => 30\n    ], JSON_THROW_ON_ERROR)\n]);\n$body = curl_exec($curl);\n$status = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);\n$error = curl_error($curl);\ncurl_close($curl);\nif ($body === false) throw new RuntimeException($error);\n$payment = json_decode($body, true, 512, JSON_THROW_ON_ERROR);\nif ($status < 200 || $status >= 300)\n    throw new RuntimeException($payment['error']['code'] ?? 'PAYMENT_REQUEST_FAILED');\n// Save id and checkout_token with your order.`,
-  Go:\`package main
+  Go:`package main
 
 import ("bytes"; "fmt"; "io"; "net/http"; "os"; "time")
 func main() {
@@ -28,8 +28,8 @@ func main() {
   defer res.Body.Close()
   result, _ := io.ReadAll(io.LimitReader(res.Body, 65536))
   fmt.Printf("%d: %s\\n", res.StatusCode, result)
-}\`,
-  C:\`// Requires libcurl; compile with: cc payment.c -lcurl -o payment
+}`,
+  C:`// Requires libcurl; compile with: cc payment.c -lcurl -o payment
 #include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,7 +55,7 @@ int main(void) {
   fprintf(stderr, "\\\\nHTTP %ld, curl %d\\\\n", status, (int)result);
   curl_slist_free_all(h); curl_easy_cleanup(c);
   return (result == CURLE_OK && status == 201) ? 0 : 1;
-}\`
+}`
  };
  const bn=locale==="bn";
  const renderExample=(reference:string)=>examples[language].replaceAll("ORDER-123",environment==="sandbox"?(reference||"YOUR_UNIQUE_TEST_REFERENCE"):"ORDER-123").replaceAll("order-123-payment-v1",environment==="sandbox"?(reference||"YOUR_UNIQUE_TEST_REFERENCE")+"-payment-v1":"order-123-payment-v1");
