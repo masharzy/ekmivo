@@ -54,12 +54,12 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
    <section id="request-fields" className="ds-panel">
     <div className="ek-doc-section-label">03 · {t("INPUT & OUTPUT","ইনপুট ও আউটপুট")}</div><h2>🧩 {t("What should you send?","কী কী তথ্য পাঠাবেন?")}</h2>
     <div className="ek-docs-table"><table><thead><tr><th>{t("Field","ফিল্ড")}</th><th>{t("Type","ধরন")}</th><th>{t("Required?","বাধ্যতামূলক?")}</th><th>{t("Details","বিবরণ")}</th></tr></thead><tbody>{fields.map(([name,kind,required,detail])=><tr key={name}><td><code>{name}</code></td><td>{kind}</td><td><span className={required?"ek-doc-required":"ek-doc-optional"}>{required?t("Required","অবশ্যই"):t("Optional","ঐচ্ছিক")}</span></td><td>{detail}</td></tr>)}</tbody></table></div>
-    <div className="ek-doc-mini-note"><strong>↗ {t("Create response","Create Response")}</strong><p>HTTP 201 · {t("An intent ID, status and checkout_token. The token builds your public checkout URL.","Intent ID, status এবং checkout_token পাবেন। এই token দিয়েই public checkout URL তৈরি হয়।")}</p></div>
+    <div className="ek-doc-mini-note"><strong>↗ {t("Create response","Create Response")}</strong><p>HTTP 201 · {t("An intent ID, status, checkout_token and checkout_url. The token builds your public checkout URL.","Intent ID, status ও সরাসরি checkout_url পাবেন।")}</p></div>
    </section>
    <section id="read-status" className="ds-panel">
     <div className="ek-doc-section-label">04 · {t("CHECKOUT & VERIFY","চেকআউট ও যাচাই")}</div><h2>✅ {t("Open checkout. Then verify.","চেকআউট খুলুন, এরপর যাচাই করুন।")}</h2>
-    <div className="ek-doc-smallflow"><span>POST /payment-intents</span><b>→</b><span>checkout_token</span><b>→</b><span>{t("Customer checkout","কাস্টমারের চেকআউট")}</span><b>→</b><span>{t("Server status","সার্ভারের status")}</span></div>
-    <p>{t("Open the returned token at /en/checkout/{token} or /bn/checkout/{token} on your web origin. A browser redirect is not proof of payment.","Web origin-এ পাওয়া token দিয়ে /en/checkout/{token} বা /bn/checkout/{token} খুলুন। Browser redirect মানেই পেমেন্ট সম্পন্ন নয়।")}</p>
+    <div className="ek-doc-smallflow"><span>POST /payment-intents</span><b>→</b><span>checkout_url</span><b>→</b><span>{t("Customer checkout","কাস্টমারের চেকআউট")}</span><b>→</b><span>{t("Server status","সার্ভারের status")}</span></div>
+    <p>{t("Open the returned checkout_url directly in the customer's browser. A browser redirect is not proof of payment.","Response-এর checkout_url সরাসরি কাস্টমারের ব্রাউজারে খুলুন। Browser redirect মানেই পেমেন্ট সম্পন্ন নয়।")}</p>
     <div className="ek-doc-endpoint"><b className="ek-doc-get">GET</b><code>/v1/payment-intents/{'{intentID}'}</code><span>payments:read</span></div>
     <p>{t("Query from your backend and inspect the authoritative payment state. Match reference, currency and amount before fulfilling an order; signed payment.verified webhook is the asynchronous notification.","নিজের backend থেকে সত্যিকারের পেমেন্টের অবস্থা জানুন। অর্ডার সম্পন্ন করার আগে reference, currency, amount মিলিয়ে নিন। Signed payment.verified webhook-এ asynchronous update পাবেন।")}</p>
    </section>
