@@ -10,6 +10,7 @@ export default async function ServiceSection({ params, searchParams }: {
 }) {
  const {locale:raw,workspaceId,section:service,serviceSection:section}=await params,locale=raw==="en"?"en":"bn";
  const {user,workspace}=await requireWorkspace(locale,workspaceId);
+ if(service==="payments"&&section==="payments")redirect(`/w/${workspaceId}/payments/transactions`);
  if((service!=="ai"&&service!=="payments")||!serviceEnabled(service,workspace.mode)||!sectionInService(service,section))notFound();
  const query=await searchParams;
  // Legacy bookmarked ?env= links are normalized; environment selection is
