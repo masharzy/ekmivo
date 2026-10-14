@@ -50,3 +50,18 @@ func TestPG05InvalidLinkedAmountRejected(t *testing.T) {
 		t.Fatal("accepted two conflicting linked sources")
 	}
 }
+
+func TestCheckoutURLUsesTrustedWebOrigin(t *testing.T) {
+ previous := getAllowedOrigin()
+ defer SetAllowedOrigin(previous)
+ SetAllowedOrigin("https://pay.example.test/")
+ if got := checkoutURL("test_token"); got != "https://pay.example.test/checkout/test_token" {
+  t.Fatalf("wrong checkout URL: %q", got)
+ }
+ for _, invalid := range []string{"", "http://pay.example.test", "https://user@pay.example.test", "https://pay.example.test/path", "https://pay.example.test/?foo=bar"} {
+  SetAllowedOrigin(invalid)
+  if got := checkoutURL("test_token"); got != "" {
+   t.Fatalf("unsafe origin %q returned %q", invalid, got)
+  }
+ }
+}
