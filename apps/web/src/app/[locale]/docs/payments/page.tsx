@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {notFound} from "next/navigation";
+import {goOrigin} from "../../../../lib/server/go-origin";
 import {PaymentAPIReference} from "../../../../components/payment-api-reference";
 import {PaymentDocExamples} from "../../../../components/payment-doc-examples";
 import {PaymentEndpointSamples} from "../../../../components/payment-endpoint-samples";
@@ -9,6 +10,7 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
  const {locale}=await params;
  if(locale!=="en"&&locale!=="bn")notFound();
  const bn=locale==="bn",t=(en:string,বাংলা:string)=>bn?বাংলা:en;
+ const configuredBaseURL=goOrigin()?.origin;
  const fields=[
   ["merchant_reference","string","Yes",t("Your unique order reference, 1–128 characters","নিজস্ব order reference, ১–১২৮ অক্ষর")],
   ["amount_minor","integer","Yes*",t("BDT in paisa: 12500 means ৳125","পয়সায় হিসাব: ১২৫০০ মানে ১২৫ টাকা")],
@@ -21,7 +23,7 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
   <div className="ek-doc-topline">
    <div><span className="ek-doc-kicker">✳ EKMiVO / DEVELOPERS</span><h1>{t("A little easier to build payments.","পেমেন্ট ইন্টিগ্রেশন এখন আরও সহজ।")}</h1>
    <p>{t("Small steps, working examples and clear responses. One API key identifies your workspace and Sandbox or Live automatically.","সহজ ধাপ, কোডের উদাহরণ আর পরিষ্কার response। API key থেকেই workspace ও Sandbox/Live নির্ধারিত হবে।")}</p></div>
-   <div className="ek-doc-top-actions"><Link href="/workspaces">{t("My API keys","আমার API keys")} ↗</Link><a href="/api/payment-contract" download="ekmivo-openapi.json">OpenAPI ↓</a></div>
+   <div className="ek-doc-base-url"><strong>{t("API base URL","API-এর মূল URL")}</strong><code>{configuredBaseURL||t("Not configured","কনফিগার করা নেই")}</code><small>{t("Same URL for Sandbox & Live; your API key selects the environment.","Sandbox এবং Live-এর জন্য একই URL; API key থেকেই environment নির্ধারিত হয়।")}</small></div><div className="ek-doc-top-actions"><Link href="/workspaces">{t("My API keys","আমার API keys")} ↗</Link><a href="/api/payment-contract" download="ekmivo-openapi.json">OpenAPI ↓</a></div>
   </div>
   <DocsNavigation locale={locale}/>
   <div className="ek-doc-content">
