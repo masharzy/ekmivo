@@ -1,10 +1,9 @@
-import {notFound} from "next/navigation";
 import type {Metadata} from "next";
-import {PublicDevelopers} from "../../../components/public-developers";
 
-export const metadata:Metadata={title:"Developers — Ekmivo",description:"API integration guide for hosted checkout and verified payment updates."};
-export default async function Page({params}:{params:Promise<{locale:string}>}){
- const {locale}=await params;
- if(locale!=="en"&&locale!=="bn")notFound();
- return <PublicDevelopers locale={locale}/>;
-}
+// Developers and API Docs deliberately share one compact, searchable portal.
+// No separate marketing hero or duplicate documentation surface.
+export {default} from "../docs/payments/page";
+export const metadata:Metadata={
+ title:"Developers — Ekmivo",
+ description:"Step-by-step merchant API guide, sandbox keys and payment examples."
+};
