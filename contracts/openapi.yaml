@@ -343,7 +343,7 @@ paths:
     get:
       operationId: getMerchantContext
       tags: [Merchant]
-      summary: Authenticate a scoped merchant API key without performing financial work
+      summary: Authenticate a scoped key and discover its workspace and environment
       description: |
         Requires payments:read. Workspace, environment, expiry, revocation
         and enabled Payments product are server verified. Keys are hash-only,
@@ -351,14 +351,6 @@ paths:
         Live credentials are never interchangeable.
       security:
         - MerchantBearer: []
-      parameters:
-        - name: environment
-          in: query
-          required: true
-          description: Exact API-key environment. Not an authorization override.
-          schema:
-            type: string
-            enum: [sandbox, live]
       responses:
         '200':
           description: Authorized credential context (not payment-readiness proof)
@@ -454,6 +446,162 @@ paths:
         '409': { description: Duplicate issued document reference }
         '422': { description: Invalid line or total overflow }
         '503': { description: Dependency unavailable }
+  # Simplified bearer-key merchant routes derive tenant and financial realm.
+  /v1/payment-intents:
+    get:
+      operationId: listKeyScopedPaymentIntents
+      summary: List up to 50 tenant/environment-scoped issued requests
+      tags: [Merchant]
+      security:
+        - MerchantBearer: []
+      responses:
+        '200':
+          description: Authorized list of actual financial records
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, environment]
+                properties:
+                  environment: { type: string, enum: [sandbox, live] }
+                  data: { type: array, items: { $ref: '#/components/schemas/Intent' } }
+        '401': { description: Not authenticated }
+        '403': { description: Read scope or business denied }
+        '503': { description: Financial database or live source unavailable }
+    post:
+      operationId: createKeyScopedPaymentIntent
+      summary: Issue an immutable standalone or order/invoice-linked BDT request
+      tags: [Merchant]
+      description: |
+        Server-side payments:write permission required. Linked requests include
+        only order_id OR invoice_id; the server resolves the exact amount from
+        its immutable tenant/environment-bound source. Caller-provided linked
+        amount is rejected. Same idempotency key plus identical payload returns
+        one original request; changed payload or duplicate reference conflicts.
+        No TrxID, payment screenshot, manual approval or client paid state.
+      security:
+        - MerchantBearer: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [merchant_reference, currency, expires_in_minutes]
+              oneOf:
+                - required: [amount_minor]
+                - required: [order_id]
+                - required: [invoice_id]
+              properties:
+                merchant_reference: { type: string, minLength: 1, maxLength: 128 }
+                amount_minor: { type: integer, minimum: 1, maximum: 100000000000 }
+                order_id: { type: string, format: uuid }
+                invoice_id: { type: string, format: uuid }
+                currency: { type: string, const: BDT }
+                expires_in_minutes: { type: integer, minimum: 5, maximum: 60 }
+      responses:
+        '201':
+          description: Issued standalone payment request, not paid
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Intent'
+                  - type: object
+                    required: [checkout_token]
+                    properties:
+                      checkout_token: { type: string, minLength: 43, maxLength: 43 }
+        '401': { description: Unauthenticated }
+        '403': { description: Write scope denied }
+        '409': { description: Duplicate reference or changed idempotency payload }
+        '404': { description: Linked source absent from authorized realm }
+        '422': { description: "Invalid amount, expiry, mixed source or caller-forged linked total" }
+        '503': { description: Finance or live source unavailable }
+  /v1/payment-intents/{intentID}:
+    get:
+      operationId: getKeyScopedPaymentIntent
+      tags: [Merchant]
+      summary: Read original issued terms, linked lines and immutable history
+      security:
+        - MerchantBearer: []
+      parameters:
+        - name: intentID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Masked payer, issued source lines and append-only events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, environment]
+                properties:
+                  environment: { type: string, enum: [sandbox, live] }
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Intent'
+                      - type: object
+                        properties:
+                          items:
+                            type: [array, 'null']
+                            items:
+                              type: object
+                              properties:
+                                title: { type: string }
+                                quantity: { type: integer }
+                                unit_amount_minor: { type: integer }
+                          attempt:
+                            type: [object, 'null']
+                            properties:
+                              payer_suffix: { type: string, pattern: '^[0-9]{4}$' }
+                              method: { type: string, enum: [bkash, nagad, rocket] }
+                              window_start: { type: string, format: date-time }
+                              window_end: { type: string, format: date-time }
+                          events:
+                            type: array
+                            items:
+                              type: object
+                              required: [event_type, reason, occurred_at]
+                              properties:
+                                event_type: { type: string, enum: [created, payer_locked, cancelled] }
+                                reason: { type: string }
+                                occurred_at: { type: string, format: date-time }
+        '401': { description: Not authenticated }
+        '403': { description: Tenant or read scope denied }
+        '404': { description: Request not found in authorized tenant/environment }
+        '429':
+          description: Per-process authenticated workspace budget exceeded
+          headers:
+            Retry-After:
+              schema: { type: integer, const: 60 }
+        '503': { description: Finance or live source unavailable }
+  /v1/payment-intents/{intentID}/cancel:
+    post:
+      operationId: cancelKeyScopedPaymentIntent
+      tags: [Merchant]
+      summary: Append-only cancellation for an unpaid unexpired request
+      description: No refund or paid-state mutation occurs. Verified evidence processing is separate.
+      security:
+        - MerchantBearer: []
+      parameters:
+        - name: intentID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Cancelled or previously cancelled }
+        '403': { description: Workspace permission denied }
+        '404': { description: Intent not found in authorized realm }
+        '409': { description: Intent already paid or expired }
+        '503': { description: Finance source unavailable }
   /v1/workspaces/{workspaceID}/payment-intents:
     parameters:
       - name: workspaceID
