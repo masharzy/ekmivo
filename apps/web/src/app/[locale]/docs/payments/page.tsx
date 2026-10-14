@@ -10,7 +10,7 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
  const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en;
  const fields=[
   ["merchant_reference","string",true,t("Your unique order reference (1–128 characters).","আপনার অর্ডারের নিজস্ব reference (১–১২৮ অক্ষর)।")],
-  ["amount_minor","integer",true,t("Amount in paisa, not taka. 12500 = ৳125.","টাকা নয়, পয়সায় পরিমাণ। ১২৫০০ = ১২৫ টাকা।")],
+  ["amount_minor","integer",false,t("Required for standalone payment. 12500 paisa = ৳125; linked orders/invoices calculate amounts on the server.","সাধারণ পেমেন্টে আবশ্যক: ১২৫০০ পয়সা = ১২৫ টাকা। Linked order/invoice-এর টাকা সার্ভার হিসাব করবে।")],
   ["currency","string",true,"BDT"],
   ["expires_in_minutes","integer",true,t("Validity window; 5–60 minutes.","মেয়াদ; ৫–৬০ মিনিট।")],
   ["order_id","UUID",false,t("Optional linked order; server calculates its due amount.","ঐচ্ছিক অর্ডার; সার্ভার বকেয়া হিসাব করে।")],
