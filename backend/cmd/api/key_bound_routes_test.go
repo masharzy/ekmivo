@@ -3,7 +3,6 @@ package main
 import (
  "encoding/base64"
  "encoding/json"
- "net/http"
  "net/http/httptest"
  "strings"
  "testing"
