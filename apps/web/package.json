@@ -5,12 +5,12 @@
   "scripts": {
     "predev": "node scripts/sync-tokens.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/sync-tokens.mjs",
+    "prebuild": "node scripts/sync-tokens.mjs && node scripts/generate-payment-extensions.mjs && node scripts/generate-payment-sdk.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint src scripts",
     "payment:generate": "node scripts/generate-payment-extensions.mjs && node scripts/generate-payment-sdk.mjs",
-    "payment:contract-check": "node scripts/generate-payment-extensions.mjs --check && node scripts/generate-payment-sdk.mjs --check && node scripts/openapi-check.mjs"
+    "payment:contract-check": "node scripts/generate-payment-extensions.mjs && node scripts/generate-payment-sdk.mjs && node scripts/generate-payment-extensions.mjs --check && node scripts/generate-payment-sdk.mjs --check && node scripts/openapi-check.mjs"
   },
   "dependencies": {
     "next": "16.4.0",
