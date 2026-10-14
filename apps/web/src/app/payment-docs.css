@@ -88,3 +88,13 @@
 @media(max-width:760px){.ek-cute-docs{display:block;margin-top:103px;padding-inline:15px}.ek-cute-docs .ek-doc-topline{display:block;padding-top:0}.ek-doc-top-actions{margin-top:14px}.ek-cute-docs .ek-doc-sidebar{position:static;max-height:none;margin-bottom:17px;border-radius:15px}.ek-cute-docs .ek-doc-content .ds-panel{padding:18px;border-radius:17px}.ek-cute-docs .ek-doc-code-rail{margin-top:22px}.ek-doc-color-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ek-cute-tile{display:flex;flex-direction:column;gap:8px;padding:14px;min-height:143px}.ek-cute-tile .ek-cute-icon{flex:none}.ek-doc-mode-grid{grid-template-columns:1fr}.ek-doc-note{flex-direction:column}.ek-doc-flow{gap:6px}.ek-doc-flow span{padding:9px}.ek-doc-topline h1{font-size:24px}}
 @media(max-width:360px){.ek-doc-color-grid{grid-template-columns:1fr 1fr;gap:9px}.ek-cute-tile{padding:11px}.ek-cute-tile strong{font-size:13px}.ek-cute-tile small{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.ek-cute-tile{transition:none}.ek-cute-tile:hover{transform:none}}
+
+.ek-doc-real-run{margin-top:17px;padding:16px;border-radius:15px;border:1px solid color-mix(in srgb,#8bd9ba 36%,var(--ek-pub-border));background:color-mix(in srgb,#91dfc0 11%,var(--ek-pub-paper))}
+.ek-doc-real-run h3{font-size:14px;line-height:1.4;margin:0 0 7px}
+.ek-doc-real-run p{font-size:11px;line-height:1.7;margin:0 0 10px;color:var(--ek-pub-muted)}
+.ek-doc-real-run label{font-size:11px}
+.ek-doc-real-run input{width:100%;border-radius:10px;padding:10px 12px;font:12px ui-monospace,monospace;background:var(--ek-pub-surface);border:1px solid var(--ek-pub-border);color:var(--ek-pub-ink)}
+.ek-doc-real-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.ek-cute-docs .ek-doc-real-actions button{border-radius:11px;font-size:11px;font-weight:750;padding:9px 13px;background:var(--ek-pub-ink);color:var(--ek-pub-paper)}
+.ek-cute-docs .ek-doc-real-actions button:first-child{background:#90dfc4;color:#164139;border-color:#5dbda0}
+.ek-cute-docs .ek-doc-real-actions button:disabled{opacity:.5;cursor:not-allowed}
