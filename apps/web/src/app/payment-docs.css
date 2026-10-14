@@ -110,3 +110,14 @@
 .ek-cute-docs .ek-mini-run button{border-radius:12px;font-size:12px;font-weight:750;padding:10px 13px}
 .ek-cute-docs .ek-mini-run button:nth-of-type(1){background:color-mix(in srgb,#83daba 82%,#fff);border-color:color-mix(in srgb,#83daba 72%,#fff);color:#114334}
 .ek-sandbox-checkout-link{display:inline-block;margin-top:12px;background:color-mix(in srgb,#a0ddf5 30%,var(--ek-pub-surface));border:1px solid var(--ek-pub-border);border-radius:12px;padding:11px 13px;font-size:12px;font-weight:800;text-decoration:none}
+
+.ek-cute-docs .ek-doc-base-url{flex:0 1 240px;min-width:0;display:flex;flex-direction:column;gap:5px;border:1px solid var(--ek-pub-border);border-radius:13px;padding:11px 13px;background:color-mix(in srgb,#9dbeff 13%,var(--ek-pub-surface))}
+.ek-doc-base-url strong{font-size:11px}.ek-doc-base-url code{font-size:12px;overflow-wrap:anywhere}.ek-doc-base-url small{font-size:10px;line-height:1.4;color:var(--ek-pub-muted)}
+.ek-doc-real-run{margin-top:15px;border:1px dashed color-mix(in srgb,#7dbeaa 55%,var(--ek-pub-border));border-radius:15px;padding:13px;background:color-mix(in srgb,#a2dfc5 9%,var(--ek-pub-surface))}
+.ek-doc-real-run>h3{font-size:14px;margin:0 0 6px}.ek-doc-real-run>p{font-size:11px;line-height:1.6}
+.ek-doc-real-run input{width:100%;padding:10px;border:1px solid var(--ek-pub-border);border-radius:10px;background:var(--ek-pub-paper);color:var(--ek-pub-ink)}
+.ek-doc-real-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.ek-doc-real-actions button{background:color-mix(in srgb,#86dac2 60%,var(--ek-pub-surface));color:var(--ek-pub-ink);border-radius:12px;border:1px solid var(--ek-pub-border);font-size:11px;font-weight:700;padding:9px}
+.ek-doc-real-actions button:disabled{opacity:.5;cursor:not-allowed}
+.ek-sandbox-checkout-link{display:inline-flex;font-size:11px;font-weight:750;line-height:1.5}
+@media(max-width:1150px){.ek-cute-docs .ek-doc-topline{flex-wrap:wrap}.ek-cute-docs .ek-doc-base-url{flex-basis:270px}}
+@media(max-width:760px){.ek-cute-docs .ek-doc-base-url{margin-top:14px}}
