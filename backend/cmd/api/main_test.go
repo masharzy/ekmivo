@@ -26,10 +26,10 @@ func TestHealthIsLiveButFinancialReadinessIsNot(t *testing.T){
 func TestPG03MerchantContextIsRealAuthorizationNotFakePayment(t *testing.T){
  handler:=newHandler()
  for _,tc:=range []struct{path string;status int;code string}{
-  {"/v1/merchant/context",400,"INVALID_ENVIRONMENT"},
-  {"/v1/merchant/context?environment=LIVE",400,"INVALID_ENVIRONMENT"},
-  {"/v1/merchant/context?environment=sandbox&environment=live",400,"INVALID_ENVIRONMENT"},
-  {"/v1/merchant/context?environment=live",503,"AUTH_SERVICE_UNAVAILABLE"},
+  {"/v1/merchant/context",401,"INVALID_API_KEY"},
+  {"/v1/merchant/context?environment=LIVE",400,"ENVIRONMENT_DERIVED_FROM_KEY"},
+  {"/v1/merchant/context?environment=sandbox&environment=live",400,"ENVIRONMENT_DERIVED_FROM_KEY"},
+  {"/v1/merchant/context?environment=live",400,"ENVIRONMENT_DERIVED_FROM_KEY"},
  }{
   recorder:=httptest.NewRecorder()
   handler.ServeHTTP(recorder,httptest.NewRequest(http.MethodGet,tc.path,nil))
@@ -38,5 +38,22 @@ func TestPG03MerchantContextIsRealAuthorizationNotFakePayment(t *testing.T){
   if err:=json.Unmarshal(recorder.Body.Bytes(),&response);err!=nil{t.Fatal(err)}
   if response.Error.Code!=tc.code{t.Fatalf("%s: got code %s expected %s",tc.path,response.Error.Code,tc.code)}
   if len(response.Error.CorrelationID)!=24{t.Fatalf("%s: missing request correlation ID",tc.path)}
+ }
+}
+
+// New public merchant routes intentionally have no workspace path or environment query.
+// With the financial service unconfigured they fail closed instead of 404/serving demo rows.
+func TestKeyScopedPaymentRoutesRegistered(t *testing.T){
+ handler:=newHandler()
+ for _,tc:=range []struct{method,path string}{
+  {http.MethodGet,"/v1/payment-intents"},
+  {http.MethodGet,"/v1/payment-intents/00000000-0000-4000-8000-000000000001"},
+  {http.MethodPost,"/v1/payment-intents"},
+  {http.MethodPost,"/v1/payment-intents/00000000-0000-4000-8000-000000000001/cancel"},
+ }{
+  r:=httptest.NewRequest(tc.method,tc.path,nil)
+  got:=httptest.NewRecorder()
+  handler.ServeHTTP(got,r)
+  if got.Code!=http.StatusServiceUnavailable {t.Fatalf("%s %s: HTTP %d, expected fail-closed 503",tc.method,tc.path,got.Code)}
  }
 }
