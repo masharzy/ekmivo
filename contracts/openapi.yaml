@@ -517,6 +517,7 @@ paths:
                     required: [checkout_token]
                     properties:
                       checkout_token: { type: string, minLength: 43, maxLength: 43 }
+                      checkout_url: { type: string, format: uri, description: Full hosted checkout URL generated from the server-configured HTTPS web origin }
         '401': { description: Unauthenticated }
         '403': { description: Write scope denied }
         '409': { description: Duplicate reference or changed idempotency payload }
@@ -684,6 +685,7 @@ paths:
                     required: [checkout_token]
                     properties:
                       checkout_token: { type: string, minLength: 43, maxLength: 43 }
+                      checkout_url: { type: string, format: uri, description: Full hosted checkout URL generated from the server-configured HTTPS web origin }
         '401': { description: Unauthenticated }
         '403': { description: Write scope denied }
         '409': { description: Duplicate reference or changed idempotency payload }
