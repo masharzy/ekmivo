@@ -270,11 +270,11 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
    <div className="pg05-topline">
     <div><p className="ds-eyebrow">{bn?"রিকোয়েস্ট ব্যবস্থাপনা":"REQUEST OPERATIONS"}</p>
      <h2>{bn?"পেমেন্ট রিকোয়েস্ট":"Payment requests"}</h2>
-     <p>{bn?"নির্দিষ্ট গ্রাহক বা একটি বিলের জন্য Payment Request তৈরি করুন। Payment Link বারবার ব্যবহার করা যায়, কিন্তু প্রতিটি Request-এর আলাদা সময়সীমা ও যাচাই থাকে।":"Create a payment request for one specific bill or customer. Unlike a reusable Payment Link, this request has its own amount, expiry and payer-verification window."}</p></div>
+     <p>{bn?"একটি নির্দিষ্ট পরিমাণের পেমেন্ট গ্রহণ করুন।":"Request a one-time payment with a set expiry."}</p></div>
     <button type="button" className="ek-action" onClick={()=>setExpanded(x=>!x)} aria-expanded={expanded} disabled={!canWrite||load==="forbidden"}>
      {expanded?(bn?"ফর্ম বন্ধ":"Close form"):(bn?"রিকোয়েস্ট তৈরি":"+ Create request")}</button>
    </div>
-   <p className="pg05-banner" role="note">{environment==="sandbox"?(bn?"Sandbox পরীক্ষা — আসল টাকা পাঠাবেন না; কোনো বাস্তব গ্রহণকারী নম্বর নেই।":"Sandbox test — no real money; no genuine receiving number is configured."):(bn?"Live request-এর জন্য subscription ও receiving device-এর অবস্থা server যাচাই করবে।":"Live request creation is checked against subscription and receiving-device readiness by the server.")}</p>
+   {environment==="sandbox"&&<p className="pg05-banner" role="note">{bn?"Sandbox: আসল টাকা পাঠাবেন না।":"Sandbox: no real money."}</p>}
    {!canWrite&&<p role="note">{bn?"শুধু দেখার অনুমতি আছে।":"Read-only access. An editor can issue or cancel requests."}</p>}
    {expanded&&<form onSubmit={create} className="pg05-form"><fieldset disabled={submitting||!canWrite}>
     <div className="pg05-two">
@@ -311,6 +311,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
     {dirty&&<p className="pg05-muted" role="status">{bn?"সংরক্ষণ না করা পরিবর্তন আছে।":"Unsaved changes."}</p>}
    </fieldset></form>}
   </section>
+  <details className="pg05-source-options"><summary>{bn?"Advanced: Source documents":"Advanced · Source documents"}</summary>
   <section className="ds-panel pg05-section">
    <div className="pg05-topline"><div>
     <p className="ds-eyebrow">{bn?"ইস্যু করা নথি":"ISSUED DOCUMENTS"}</p>
@@ -369,10 +370,9 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
        {bn?"এই নথির পেমেন্ট রিকোয়েস্ট":"Create payment request"} ↗</button></div>
      </article>)}
     </div>}
-  </section>
+  </section></details>
   <section className="ds-panel pg05-section">
-   <div className="pg05-topline"><div><h2>{bn?"ইস্যু করা রিকোয়েস্ট":"Issued requests"}</h2>
-    <p>{bn?"সর্বশেষ ৫০টি; প্রতিটি অবস্থা সার্ভার থেকে পড়া।":"Latest 50; states are derived by the server."}</p></div>
+   <div className="pg05-topline"><div><h2>{bn?"পেমেন্ট রিকোয়েস্টসমূহ":"Payment requests"}</h2></div>
     <button type="button" onClick={()=>void refresh()} disabled={load==="loading"}>{bn?"রিফ্রেশ":"Refresh"} ↻</button></div>
    <div className="pg05-two">
     <label>{bn?"রেফারেন্স খুঁজুন":"Find a reference"}<input value={search} onChange={e=>setSearch(e.target.value)} type="search" placeholder={bn?"রেফারেন্স লিখুন":"Search reference"}/></label>
@@ -390,7 +390,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
      return <article className="pg05-record" key={item.id}>
       <div className="pg05-record-main"><div><strong>{item.merchant_reference}</strong><small>{item.id}</small></div>
        <div className="pg05-total"><strong>{number(item.amount_minor,locale)}</strong><span className="pg05-state" data-state={item.state}>{statusLabel(item.state,bn)}</span></div></div>
-      <div className="pg05-record-meta">{item.source_reference&&<span>{item.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}: {item.source_reference}</span>}<span>{bn?"মেয়াদ":"Expires"}: {new Date(item.expires_at).toLocaleString(locale==="bn"?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",timeZoneName:"short"})}</span><span>{bn?"পরিবেশ":"Environment"}: Sandbox</span></div>
+      <div className="pg05-record-meta">{item.source_reference&&<span>{item.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}: {item.source_reference}</span>}<span>{bn?"মেয়াদ":"Expires"}: {new Date(item.expires_at).toLocaleString(locale==="bn"?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",timeZoneName:"short"})}</span></div>
       <div className="pg05-actions">
        <button type="button" onClick={()=>selectDetail(item.id)}>{bn?"তথ্য ও ইতিহাস":"Details and history"}</button>
        <Link href={checkout}>{bn?"চেকআউট খুলুন":"Open checkout"} ↗</Link>
