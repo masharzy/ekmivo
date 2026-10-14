@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {database} from "../lib/server/db";
 import {ApiKeyManager,type ApiKeyRow} from "./api-key-manager";
+import {ApiKeyEnvironmentTabs} from "./api-key-environment-tabs";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 import type {Workspace} from "../lib/server/auth";
 
@@ -44,5 +45,5 @@ export async function DeveloperConsole({locale,workspace,environment,userId}:{
    <h3>{bn?"Credential service পাওয়া যাচ্ছে না":"Credential service unavailable"}</h3>
    <p>{bn?"ডাটাবেস migration এবং service readiness নিশ্চিত করতে হবে। কোনো demo কী দেখানো হচ্ছে না।":"Database migration and service readiness must be checked. No demo keys are shown."}</p>
   </div>:<ApiKeyManager key={`${userId}:${workspace.id}:${realm}`} locale={locale} userId={userId} workspaceId={workspace.id} environment={realm} keys={keys[realm]}/>;
- return <section className="int-workspace"><header className="int-intro"><h1>{bn?"API Keys":"API Keys"}</h1><p>{bn?"নিজের সার্ভারের key তৈরি ও পরিচালনা করুন। Secret browser বা APK-তে রাখবেন না।":"Create and manage credentials for your server. Never embed secrets in browser code or an APK."}</p></header><div className="int-actions"><Link href={`/${locale}/docs`}>{bn?"API নির্দেশনা":"API docs"} ↗</Link><Link href={`/${locale}/w/${workspace.id}/payments/webhooks`}>{bn?"ওয়েবহুক":"Webhooks"} →</Link><Link href={`/${locale}/w/${workspace.id}/payments/apps`}>{bn?"অ্যাপ ও প্লাগইন":"Apps & Plugins"} →</Link></div>{availableEnvironments.includes(environment)?keyPanel(environment):<p role="alert">{bn?"এই environment চালু নেই।":"This environment is not active."}</p>}</section>;
+ return <section className="int-workspace"><header className="int-intro"><h1>{bn?"API Keys":"API Keys"}</h1><p>{bn?"নিজের সার্ভারের key তৈরি ও পরিচালনা করুন। Secret browser বা APK-তে রাখবেন না।":"Create and manage credentials for your server. Never embed secrets in browser code or an APK."}</p></header><div className="int-actions"><Link href={`/${locale}/docs`}>{bn?"API নির্দেশনা":"API docs"} ↗</Link><Link href={`/${locale}/w/${workspace.id}/payments/webhooks`}>{bn?"ওয়েবহুক":"Webhooks"} →</Link><Link href={`/${locale}/w/${workspace.id}/payments/apps`}>{bn?"অ্যাপ ও প্লাগইন":"Apps & Plugins"} →</Link></div><ApiKeyEnvironmentTabs locale={locale} sandbox={availableEnvironments.includes("sandbox")?keyPanel("sandbox"):null} live={availableEnvironments.includes("live")?keyPanel("live"):null}/></section>;
 }
