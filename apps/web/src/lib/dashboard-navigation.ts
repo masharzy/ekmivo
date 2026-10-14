@@ -15,7 +15,7 @@ export const navigation: Record<Service, NavigationGroup[]> = {
   ],
   payments: [
     { label: { en: "Overview", bn: "সারসংক্ষেপ" }, items: ["overview", "reports"] },
-    { label: { en: "Payments", bn: "পেমেন্ট" }, items: ["payments", "requests", "incoming", "payment-links", "invoices", "customers", "refunds"] },
+    { label: { en: "Payments", bn: "পেমেন্ট" }, items: ["transactions", "requests", "incoming", "payment-links", "invoices", "customers", "refunds"] },
     { label: { en: "Receiving & verification", bn: "টাকা গ্রহণ ও যাচাই" }, items: ["gateways", "devices", "reconciliation"] },
     { label: { en: "Commerce", bn: "পণ্য ও অর্ডার" }, items: ["orders", "products", "inventory", "coupons", "shipping", "returns"] },
     { label: { en: "Integrations & events", bn: "ইন্টিগ্রেশন ও ইভেন্ট" }, items: ["developers", "webhooks", "events", "integrations"] },
