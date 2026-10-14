@@ -249,6 +249,8 @@ func decodeLimit(w http.ResponseWriter, r *http.Request, into any, limit int64) 
 	return true
 }
 func (s *Service) merchant(r *http.Request, ws, realm, scope string) error {
+	// The key-only API route already validated and touched the credential.
+	if present, err := boundMerchant(r, ws, realm, scope); present { return err }
 	if realm != "sandbox" && (s.Pipeline == nil || s.Pipeline.Live == nil) {
 		return authz.ErrUnavailable
 	} // Live source adapter not yet onboarded.
