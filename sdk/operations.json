@@ -169,6 +169,31 @@
     "path": "/v1/workspaces/{workspaceID}/linked-sources",
     "public": false
   },
+  "listPaymentIntentsKey": {
+    "method": "GET",
+    "path": "/v1/payment-intents",
+    "public": false
+  },
+  "createPaymentIntentKey": {
+    "method": "POST",
+    "path": "/v1/payment-intents",
+    "public": false
+  },
+  "getPaymentIntentKey": {
+    "method": "GET",
+    "path": "/v1/payment-intents/{intentID}",
+    "public": false
+  },
+  "cancelPaymentIntentKey": {
+    "method": "POST",
+    "path": "/v1/payment-intents/{intentID}/cancel",
+    "public": false
+  },
+  "lookupVerifiedReceiptByTrxID": {
+    "method": "POST",
+    "path": "/v1/payment-intents/{intentID}/verify-transaction",
+    "public": false
+  },
   "listPaymentIntents": {
     "method": "GET",
     "path": "/v1/workspaces/{workspaceID}/payment-intents",
