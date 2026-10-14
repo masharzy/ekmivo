@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -114,6 +115,12 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/device/{action}", pay.HandleDevice)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/linked-sources", pay.HandleSources)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/linked-sources", pay.HandleSources)
+	// Public merchant integrations derive tenant and environment from the bearer key.
+	// Workspace-ID routes below remain for authenticated dashboard compatibility.
+	mux.HandleFunc("GET /v1/payment-intents", pay.HandleKeyScopedMerchant)
+	mux.HandleFunc("GET /v1/payment-intents/{intentID}", pay.HandleKeyScopedMerchant)
+	mux.HandleFunc("POST /v1/payment-intents", pay.HandleKeyScopedMerchant)
+	mux.HandleFunc("POST /v1/payment-intents/{intentID}/cancel", pay.HandleKeyScopedMerchant)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-intents", pay.HandleMerchant)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-intents/{intentID}", pay.HandleMerchant)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents", pay.HandleMerchant)
@@ -144,16 +151,25 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	// PG03: real credential verification, no simulated financial rows or writes.
 	// A valid key grants only its own environment and explicitly issued scope.
 	mux.HandleFunc("GET /v1/merchant/context", func(w http.ResponseWriter, r *http.Request) {
-		envs := r.URL.Query()["environment"]
-		if len(envs) != 1 || (envs[0] != "sandbox" && envs[0] != "live") {
-			merchantError(w, http.StatusBadRequest, "INVALID_ENVIRONMENT", "One explicit sandbox or live environment is required", false)
+		if r.URL.Query().Has("environment") {
+			merchantError(w, http.StatusBadRequest, "ENVIRONMENT_DERIVED_FROM_KEY", "Environment is determined by the API key", false)
+			return
+		}
+		bearer := r.Header.Get("Authorization")
+		if !strings.HasPrefix(bearer, "Bearer ") {
+			merchantError(w, http.StatusUnauthorized, "INVALID_API_KEY", "A valid server API key is required", false)
+			return
+		}
+		_, realm, _, valid := authz.ParseMerchantToken(strings.TrimPrefix(bearer, "Bearer "))
+		if !valid {
+			merchantError(w, http.StatusUnauthorized, "INVALID_API_KEY", "Invalid API key", false)
 			return
 		}
 		if repo == nil {
 			merchantError(w, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "Authorization unavailable", true)
 			return
 		}
-		credential, err := repo.AuthenticateMerchant(r.Context(), r.Header.Get("Authorization"), authz.Environment(envs[0]), "payments:read")
+		credential, err := repo.AuthenticateMerchant(r.Context(), bearer, realm, "payments:read")
 		if err != nil {
 			switch {
 			case errors.Is(err, authz.ErrUnauthorized):
