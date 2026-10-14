@@ -84,7 +84,7 @@ export function PaymentReportLedger({locale,workspaceId,environment,period,canRe
      <th scope="col">{t("Verified","যাচাই হয়েছে")}</th>
     </tr></thead><tbody>
      {rows.map(r=><tr key={r.id}>
-      <td><Link href={"/w/"+workspaceId+"/payments/payments/"+r.id}>{r.merchant_reference||r.id.slice(0,8)}</Link></td>
+      <td><Link href={"/w/"+workspaceId+"/payments/transactions/"+r.id}>{r.merchant_reference||r.id.slice(0,8)}</Link></td>
       <td><span className="er-payer-phone">{r.payer_number||t("Not recoverable","পাওয়া যাচ্ছে না")}</span></td>
       <td>{r.method||"—"}</td>
       <td className="er-num">{money(r.verified_amount_minor,locale)}</td>
