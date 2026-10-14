@@ -32,3 +32,47 @@
 .rf-confirm{display:flex;align-items:flex-start;gap:10px;line-height:1.5;font-size:12px}.rf-confirm input{width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:var(--color-primary)}
 .rf-action-buttons{margin-top:auto;display:flex;justify-content:flex-end;gap:8px}.rf-action-buttons button:last-child{background:var(--color-primary);color:var(--color-on-primary);border-color:var(--color-primary)}
 @media(max-width:990px){.rf-records{grid-template-columns:1fr}}@media(max-width:600px){.rf-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.rf-totals>div:last-child{grid-column:1/-1}.rf-card{padding:12px}.rf-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rf-card-bottom{align-items:stretch;flex-direction:column}.rf-filter>span{display:none}.rf-action-panel{padding:16px}.rf-workbench button,.rf-filter select{min-height:44px}}
+
+
+/* Customer, Invoice, Link refinements: financial dashboard, not forms-first UI. */
+.doc-workspace{gap:12px}
+.doc-intro{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+.doc-intro h1{margin:0;font-size:clamp(22px,2vw,27px);line-height:1.25;letter-spacing:-.03em;font-weight:650}
+.doc-intro p{font-size:12px;color:var(--color-text-secondary);margin:4px 0 0}
+.doc-workspace button.doc-primary{background:var(--color-primary);color:var(--color-on-primary);border-color:var(--color-primary);font-weight:650;font-size:12px;white-space:nowrap}
+.doc-workspace>.doc-controls{padding:11px 13px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-panel);margin:0;gap:9px}
+.doc-controls label{flex:1;max-width:420px;min-width:180px;font-size:11px;color:var(--color-text-secondary)}
+.doc-controls input{width:100%;box-sizing:border-box}
+.doc-workspace:not(.pl-workspace) .pg10-records{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.doc-workspace:not(.pl-workspace) .pg10-records>article{padding:16px;min-width:0;display:grid;gap:8px;align-content:start}
+.doc-workspace .pg10-records article .pg10-toolbar{margin:0;align-items:center}
+.doc-workspace .pg10-records article .pg10-toolbar h2{font-size:15px;font-weight:650;margin:0;line-height:1.3;min-width:0;overflow-wrap:anywhere}
+.doc-workspace .pg10-records article .pg10-toolbar h2 a{text-decoration:none}
+.doc-workspace .pg10-records article .pg10-toolbar h2 a:hover{text-decoration:underline}
+.doc-workspace .pg10-records article .pg10-toolbar>span{margin-inline-start:auto;font-size:11px;background:var(--color-surface-subtle);border:1px solid var(--color-border);padding:4px 7px;border-radius:5px}
+.doc-workspace .pg10-records article>p.doc-record-desc{font-size:12px;color:var(--color-text-secondary);margin:0;overflow-wrap:anywhere;line-height:1.4}
+.doc-workspace:not(.pl-workspace) .pg10-records dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start;margin:10px 0;min-width:0}
+.doc-workspace .pg10-records dl dt{font-size:10px;color:var(--color-text-secondary);margin:0 0 5px}
+.doc-workspace .pg10-records dl dd{font-size:14px;font-weight:650;overflow-wrap:anywhere;margin:0}
+.doc-workspace:not(.pl-workspace) .pg10-records .pg10-toolbar:last-child{border-top:1px solid var(--color-border);padding-top:12px;gap:7px;margin-top:auto;align-self:end;justify-content:flex-start}
+.doc-workspace .pg10-records .pg10-toolbar button{min-height:36px;font-size:11px;padding:6px 10px}
+.doc-workspace .pg10-records .pg10-toolbar a:not(:first-child){font-size:11px;min-height:36px;padding:7px 10px;border:1px solid var(--color-control-border);border-radius:var(--radius-control);text-decoration:none}
+.doc-workspace .pg10-records .pg10-toolbar a:hover{background:var(--color-hover)}
+.doc-workspace .pg10-form{margin:0;max-width:100%;width:100%;padding:18px;box-sizing:border-box;border:1px solid var(--color-control-border)}
+.doc-workspace .pg10-form h2{font-size:18px;margin:0 0 13px}
+.doc-import{padding:0!important;overflow:hidden}
+.doc-import>summary{padding:13px 16px;cursor:pointer;font-size:13px;font-weight:600}
+.doc-import>div{display:grid;gap:10px;padding:4px 16px 16px}
+.doc-import textarea{min-height:90px}
+.pl-intro{padding:4px 0 12px;gap:14px}
+.pl-intro h2{margin:4px 0 3px;font-size:clamp(20px,2.2vw,25px)}
+.pl-intro p{font-size:12px;max-width:520px;line-height:1.45}
+.pl-intro .pl-kicker{display:none}
+.pl-workspace>.pg10-toolbar{padding:10px 13px}
+.pl-cards{gap:10px}
+.pl-card{padding:15px}
+.pl-facts{margin:14px 0!important;gap:10px!important}
+.pl-card-actions{padding-top:12px;gap:6px}
+.pl-card-actions :is(a,button){font-size:12px!important;min-height:38px!important}
+@media(max-width:850px){.doc-workspace:not(.pl-workspace) .pg10-records{grid-template-columns:1fr}.doc-workspace:not(.pl-workspace) .pg10-records dl{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:540px){.doc-workspace:not(.pl-workspace) .pg10-records dl{grid-template-columns:repeat(2,minmax(0,1fr))}.doc-intro .doc-primary{width:100%}.doc-workspace button{min-height:44px}.doc-workspace .pg10-records article{padding:12px!important}.pl-cards{grid-template-columns:1fr}}
