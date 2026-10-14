@@ -8,7 +8,6 @@ import (
     "time"
 
     "github.com/jackc/pgx/v5"
-    "github.com/masharzy/ekmivo/backend/internal/authz"
     "github.com/masharzy/ekmivo/backend/internal/deviceevidence"
 )
 
