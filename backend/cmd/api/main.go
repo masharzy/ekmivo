@@ -136,7 +136,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 			return
 		}
 		scope := "payments:read"
-		if r.Method != http.MethodGet { scope = "payments:write" }
+		if r.Method != http.MethodGet && r.PathValue("action") != "verify-transaction" { scope = "payments:write" }
 		credential, err := repo.AuthenticateMerchant(r.Context(), authorization, realm, scope)
 		if err != nil {
 			switch {
@@ -157,6 +157,10 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		u.RawQuery = query.Encode()
 		next.URL = &u
 		next.SetPathValue("workspaceID", credential.WorkspaceID)
+		if next.PathValue("action") == "verify-transaction" {
+			pay.HandleTransactionLookup(w, next)
+			return
+		}
 		pay.HandleMerchant(w, next)
 	}
 	mux.HandleFunc("GET /v1/payment-intents", merchantByKey)
