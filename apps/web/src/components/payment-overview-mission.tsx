@@ -188,8 +188,8 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
    {showSteps&&<div className="em-completed-steps">{tasks.map(step=><Link key={step.id} href={go(step.target)}><span aria-hidden="true">{step.ok===true?"✓":step.ok===false?"○":"—"}</span>{t(step.en,step.bn)}</Link>)}</div>}
    {incompleteSource&&<p className="em-source-warning" role="status">{t("Some figures are unavailable. A dash means no verified source, not zero.","কিছু তথ্য পাওয়া যাচ্ছে না। ড্যাশ (—) মানে অজানা, শূন্য নয়।")}</p>}
    <div className="em-kpis">
-    <Link href={go("payments")} className="em-kpi"><span>{t("Verified volume","যাচাইকৃত পেমেন্ট")}</span><strong>{moneyOrDash(overview?.verified_minor)}</strong><small>{t("Server-verified · not settlement","সার্ভারে যাচাইকৃত · settlement নয়")}</small></Link>
-    <Link href={go("payments")} className="em-kpi"><span>{t("Recent verified","সাম্প্রতিক যাচাইকৃত")}</span><strong>{verified===null?"—":verified.length+(payments.value?.next_cursor?"+":"")}</strong><small>{t("Recent records, not lifetime total","সাম্প্রতিক রেকর্ড, মোট সংখ্যা নয়")}</small></Link>
+    <Link href={go("transactions")} className="em-kpi"><span>{t("Verified volume","যাচাইকৃত পেমেন্ট")}</span><strong>{moneyOrDash(overview?.verified_minor)}</strong><small>{t("Server-verified · not settlement","সার্ভারে যাচাইকৃত · settlement নয়")}</small></Link>
+    <Link href={go("transactions")} className="em-kpi"><span>{t("Recent verified","সাম্প্রতিক যাচাইকৃত")}</span><strong>{verified===null?"—":verified.length+(payments.value?.next_cursor?"+":"")}</strong><small>{t("Recent records, not lifetime total","সাম্প্রতিক রেকর্ড, মোট সংখ্যা নয়")}</small></Link>
     <Link href={go("requests")} className="em-kpi"><span>{t("Pending requests","অপেক্ষমাণ রিকোয়েস্ট")}</span><strong>{count(overview?.pending_requests)}</strong><small>{t("Awaiting payer or verification","গ্রাহক বা যাচাইয়ের অপেক্ষায়")}</small></Link>
     <Link href={go("incoming")} className="em-kpi"><span>{t("Receipt exceptions","Receipt সমস্যা")}</span><strong>{count(overview?.unmatched_receipts)}</strong><small>{t("Needs review","যাচাই করা প্রয়োজন")}</small></Link>
    </div>
@@ -216,7 +216,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
     </section>
    </div>
    <div className="em-bottom-grid">
-    <section className="em-panel em-recent"><div className="em-panel-top"><h2>{t("Recent verified payments","সাম্প্রতিক যাচাইকৃত পেমেন্ট")}</h2><Link href={go("payments")}>{t("View all","সব দেখুন")} ↗</Link></div>
+    <section className="em-panel em-recent"><div className="em-panel-top"><h2>{t("Recent verified payments","সাম্প্রতিক যাচাইকৃত পেমেন্ট")}</h2><Link href={go("transactions")}>{t("View all","সব দেখুন")} ↗</Link></div>
      {verified===null?<p className="em-inline-empty">{t("Transaction source unavailable","লেনদেনের তথ্য পাওয়া যাচ্ছে না")}</p>:recent.length===0?<p className="em-inline-empty">{t("No verified payments yet","এখনো যাচাইকৃত পেমেন্ট নেই")}</p>:
       <div className="em-transaction-list">{recent.map(row=><Link href={go("payments/"+row.id)} key={row.id} className="em-transaction"><span className="em-transaction-id">{row.merchant_reference}</span><strong>{moneyOrDash(row.verified_amount_minor)}</strong><time>{Number.isNaN(Date.parse(row.verified_at))?"—":new Intl.DateTimeFormat(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",dateStyle:"short",timeStyle:"short"}).format(new Date(row.verified_at))}</time></Link>)}</div>}
     </section>
