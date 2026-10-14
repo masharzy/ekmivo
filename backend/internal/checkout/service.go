@@ -310,11 +310,24 @@ func (s *Service) scoped(ctx context.Context, ws, realm string, fn func(pgx.Tx) 
 	}
 	return tx.Commit(ctx)
 }
+// checkoutURL returns an absolute buyer URL from the server's configured
+// HTTPS web origin, never from Host/X-Forwarded-Host request headers.
+func checkoutURL(token string) string {
+ origin := strings.TrimSuffix(getAllowedOrigin(), "/")
+ parsed, err := url.Parse(origin)
+ if err != nil || parsed.Scheme != "https" || parsed.Host == "" ||
+  parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" ||
+  (parsed.Path != "" && parsed.Path != "/") {
+  return ""
+ }
+ return origin + "/checkout/" + url.PathEscape(token)
+}
 func attachTokens(s *Service, ws, realm string, result any) {
 	switch v := result.(type) {
 	case map[string]any:
 		if key, ok := v["creation_key"].(string); ok {
 			v["checkout_token"] = s.token(ws, realm, key)
+			if destination := checkoutURL(v["checkout_token"].(string)); destination != "" { v["checkout_url"] = destination }
 			delete(v, "creation_key")
 		}
 	case []any:
@@ -446,6 +459,7 @@ func (s *Service) handleAuthorizedMerchant(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		data["checkout_token"] = token
+		if destination := checkoutURL(token); destination != "" { data["checkout_url"] = destination }
 		write(w, 201, data)
 	default:
 		fail(w, 405, "METHOD_NOT_ALLOWED")
