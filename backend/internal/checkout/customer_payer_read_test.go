@@ -17,7 +17,7 @@ func TestReadEncryptedPayerPhone(t *testing.T){
  if got:=readEncryptedPayerPhone(key,encoded,aad);got!="+8801712345678"{t.Fatalf("expected canonical phone, got %q",got)}
  if got:=readEncryptedPayerPhone(key,encoded,"wrong|live|refund-customer");got!=""{t.Fatalf("wrong associated data revealed phone")}
  if got:=readEncryptedPayerPhone(key,"not base64",aad);got!=""{t.Fatalf("invalid ciphertext revealed phone")}
- wrong:=[]byte("another-test-key-of-32-bytes-long!!")
+ wrong:=[]byte("abcdefghijklmnopqrstuvwxyzABCDEF")
  if got:=readEncryptedPayerPhone(wrong,encoded,aad);got!=""{t.Fatalf("wrong key revealed phone")}
 }
 func TestSetVerifiedPayerPhoneReplacesOnlySyntheticName(t *testing.T){
