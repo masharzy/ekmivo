@@ -147,7 +147,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
   <header className="em-heading">
    <div className="em-heading-copy">
     <div className="em-heading-title"><h1>{t("Overview","সারসংক্ষেপ")}</h1></div>
-    <p>{operational?t("Your payment operations, without the clutter.","পেমেন্টের গুরুত্বপূর্ণ সব তথ্য এক জায়গায়।"):t("A clear view of your payments.","আপনার পেমেন্ট, সংযোগ ও প্রয়োজনীয় কাজ এক নজরে।")}</p>
+
    </div>
    <div className="em-actions"><Link className="em-primary" href={go("payment-links")}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span aria-hidden="true">+</span></Link><button type="button" onClick={update} disabled={loading}>{t("Refresh","আপডেট")}</button></div>
   </header>
