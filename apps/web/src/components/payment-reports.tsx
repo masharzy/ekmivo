@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {FormEvent} from "react";
 import Link from "next/link";
 import {DashboardIcon} from "./dashboard-icon";
@@ -68,7 +68,7 @@ function escapeCSV(value:unknown){
  const raw=String(value??"");
  return '"'+( /^[\s]*[=+\-@\t\r]/.test(raw)?"'"+raw:raw ).replaceAll('"','""')+'"';
 }
-function exportReport(report:Report,period:Filters){
+function exportReport(report:Report,period:Filters,scope:"all"|"summary"="all"){
  const rows:(string|number)[][]=[
   ["section","reference","label","status","amount_minor","count","from","through","currency"],
   ["summary","","verified","",""+report.verified_gross_minor,report.payment_count,period.from,period.to,"BDT"],
@@ -83,7 +83,8 @@ function exportReport(report:Report,period:Filters){
   ...report.daily.map(r=>["daily",r.day,r.day+" UTC","",r.amount_minor,"","","","BDT"] as (string|number)[]),
   ["statement","merchant_import","","imported",report.statement_links.amount_minor,report.statement_links.count,"","","BDT"]
  ];
- const csv="\uFEFF"+rows.map(row=>row.map(escapeCSV).join(",")).join("\r\n")+"\r\n";
+ const exportRows=scope==="summary"?rows.filter((row,index)=>index===0||row[0]==="summary"):rows;
+ const csv="\uFEFF"+exportRows.map(row=>row.map(escapeCSV).join(",")).join("\r\n")+"\r\n";
  const uri=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
  const a=document.createElement("a");a.href=uri;a.download="ekmivo-report-"+period.from+"-"+period.to+".csv";document.body.append(a);a.click();a.remove();
  window.setTimeout(()=>URL.revokeObjectURL(uri),2000);
@@ -91,6 +92,9 @@ function exportReport(report:Report,period:Filters){
 export function PaymentReports({locale,workspaceId,environment,canReveal}:{locale:Locale;workspaceId:string;environment:string;canReveal:boolean}){
  const bn=locale==="bn",t=useCallback((en:string,bengali:string)=>bn?bengali:en,[bn]);
  const [draft,setDraft]=useState<Filters>(defaults);
+ const exportDialog=useRef<HTMLDialogElement|null>(null);
+ const [exportFormat,setExportFormat]=useState<"csv"|"pdf">("csv");
+ const [exportScope,setExportScope]=useState<"all"|"summary">("all");
  const [applied,setApplied]=useState<Filters>(defaults);
  const [preset,setPreset]=useState<Preset>("30");
  const [section,setSection]=useState<Section>(canReveal?"payers":"methods");
@@ -182,10 +186,18 @@ export function PaymentReports({locale,workspaceId,environment,canReveal}:{local
    <div><h1>{t("Reports","রিপোর্ট")}</h1><p>{t("Your payments at a glance.","এক নজরে পেমেন্টের হিসাব।")}</p></div>
    <div className="er-heading-actions">
     <button type="button" onClick={()=>setRefresh(n=>n+1)} disabled={loading} aria-label={t("Refresh report","রিপোর্ট রিফ্রেশ")}><DashboardIcon name="arrow" width={16} height={16}/> {t("Refresh","রিফ্রেশ")}</button>
-    <button type="button" disabled={!displayed||stale} onClick={()=>displayed&&exportReport(displayed,active)}><DashboardIcon name="reports" width={16} height={16}/> {t("Export","এক্সপোর্ট")}</button>
+    <button type="button" disabled={!displayed||stale} onClick={()=>exportDialog.current?.showModal()}><DashboardIcon name="reports" width={16} height={16}/> {t("Export","এক্সপোর্ট")}</button>
     <button type="button" disabled={!displayed||stale} onClick={()=>window.print()}>{t("Print","প্রিন্ট")}</button>
    </div>
   </header>
+  <dialog ref={exportDialog} className="ekv2-export-dialog" aria-label={t("Export report","রিপোর্ট এক্সপোর্ট")} onClick={e=>{if(e.target===e.currentTarget)exportDialog.current?.close()}}>
+   <div className="ekv2-detail-head"><h2>{t("Export report","রিপোর্ট এক্সপোর্ট")}</h2><button type="button" onClick={()=>exportDialog.current?.close()} aria-label={t("Close","বন্ধ করুন")}>×</button></div>
+   <div className="ekv2-export-fields">
+    <label>{t("Format","ফরম্যাট")}<select value={exportFormat} onChange={e=>setExportFormat(e.target.value as "csv"|"pdf")}><option value="csv">CSV</option><option value="pdf">{t("PDF (print)","PDF (প্রিন্ট)")}</option></select></label>
+    {exportFormat==="csv"&&<label>{t("Include","যা থাকবে")}<select value={exportScope} onChange={e=>setExportScope(e.target.value as "all"|"summary")}><option value="all">{t("Summary and details","সারাংশ ও বিস্তারিত")}</option><option value="summary">{t("Summary only","শুধু সারাংশ")}</option></select></label>}
+   </div>
+   <div className="ekv2-detail-actions"><button type="button" onClick={()=>exportDialog.current?.close()}>{t("Cancel","বাতিল")}</button><button type="button" className="ekv2-primary" disabled={!displayed||stale} onClick={()=>{exportDialog.current?.close();if(exportFormat==="csv"){if(displayed)exportReport(displayed,active,exportScope)}else window.print()}}>{t("Export","এক্সপোর্ট")}</button></div>
+  </dialog>
   <section className="er-filter-panel" aria-label={t("Report filters","রিপোর্টের ফিল্টার")}>
    <div className="er-period-buttons" role="group" aria-label={t("Date presets","সময়সীমা")}>
     {([7,30,90] as const).map(days=><button key={days} type="button" aria-pressed={preset===String(days)} onClick={()=>quick(days)}>{days} {t("days","দিন")}</button>)}
