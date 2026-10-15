@@ -396,3 +396,111 @@
 .ds-app[data-service="payments"] .ekv2-report-accounts{border-top:1px solid var(--color-border);padding-top:12px}
 .ds-app[data-service="payments"] .ekv2-report-accounts>summary{padding:8px 0;font-size:13px;font-weight:500;color:var(--color-text);cursor:pointer}
 .ds-app[data-service="payments"] .er-card-empty{font-size:13px;color:var(--color-text-muted);padding:32px 0;text-align:center}
+
+
+/* Customer/document drawer: one full-width row per field.
+   The older .pg10-workspace dl grid was placing pairs of records side-by-side. */
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail {
+  box-sizing:border-box;
+  min-height:100dvh;
+  padding:24px;
+  gap:0;
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-head {
+  padding:0 0 20px;
+  border-bottom:1px solid var(--color-border);
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-amount {
+  font-size:24px;
+  font-weight:600;
+  letter-spacing:-.02em;
+  line-height:1.4;
+  margin:24px 0 8px;
+  overflow-wrap:anywhere;
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .opw-status {
+  color:var(--color-success);
+  font-size:12px;
+  margin-bottom:12px;
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-list {
+  display:block;
+  grid-template-columns:none;
+  gap:0;
+  width:100%;
+  min-width:0;
+  margin:20px 0 0;
+  padding:0;
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-list > div {
+  box-sizing:border-box;
+  display:grid;
+  grid-template-columns:minmax(0,38%) minmax(0,1fr);
+  align-items:start;
+  gap:16px;
+  width:100%;
+  min-width:0;
+  min-height:48px;
+  padding:14px 0;
+  margin:0;
+  border-bottom:1px solid var(--color-border);
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-list dt {
+  min-width:0;
+  margin:0;
+  color:var(--color-text-muted);
+  font-size:12px;
+  font-weight:400;
+  line-height:1.55;
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-list dd {
+  min-width:0;
+  max-width:none;
+  margin:0;
+  text-align:right;
+  font-size:13px;
+  font-weight:500;
+  line-height:1.55;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  font-variant-numeric:tabular-nums;
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-customer-phone {
+  font-weight:600;
+  font-size:14px;
+  letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-actions {
+  position:sticky;
+  bottom:0;
+  z-index:1;
+  margin-top:auto;
+  padding:18px 0 0;
+  border-top:1px solid var(--color-border);
+  background:var(--color-surface);
+}
+.ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-actions button {
+  min-height:36px;
+}
+.ds-app[data-service="payments"] .doc-customers .doc-customer-phone {
+  display:block;
+  font-size:12px;
+  color:var(--color-text-muted);
+  margin-top:4px;
+  font-weight:400;
+  font-variant-numeric:tabular-nums;
+}
+.ds-app[data-service="payments"] .doc-customers .opw-status[data-status="active"] {
+  color:var(--color-success);
+}
+@media(max-width:440px) {
+  .ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail {
+    padding:20px 16px;
+  }
+  .ds-app[data-service="payments"] .doc-workspace .ekv2-record-dialog .ekv2-detail-list > div {
+    grid-template-columns:minmax(0,37%) minmax(0,1fr);
+    gap:12px;
+  }
+}
