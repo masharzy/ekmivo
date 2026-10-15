@@ -139,8 +139,6 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
  const raw=loaded(summary)&&Array.isArray(summary.value.items)?summary.value.items[0]:undefined;
  const overview=raw&&typeof raw.verified_minor==="number"&&Array.isArray(raw.daily_volume)?raw:null;
  const recent=verified?.slice(0,4)??[];
- const days=overview?.daily_volume.filter(isValidDay).slice(-7)??[];
- const peak=Math.max(1,...days.map(d=>Math.max(0,d.verified_minor)));
  const refundItems=loaded(refunds)&&Array.isArray(refunds.value.items)?refunds.value.items:null;
  const pendingRefunds=refundItems?refundItems.filter(r=>["requested","reviewing","approved"].includes(r.status)).length:null;
  const pendingRefundsLabel=pendingRefunds===null?"—":new Intl.NumberFormat(bn?"bn-BD":"en-BD").format(pendingRefunds)+(refunds.value?.next_cursor?"+":"");
@@ -150,7 +148,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
  return <div className="em-overview" aria-busy={loading}>
   <header className="em-heading">
    <div className="em-heading-copy">
-    <div className="em-heading-title"><h1>{t("Overview","সারসংক্ষেপ")}</h1><span className="em-realm">{environment==="live"?"LIVE":"SANDBOX"}</span></div>
+    <div className="em-heading-title"><h1>{t("Overview","সারসংক্ষেপ")}</h1></div>
     <p>{operational?t("Your payment operations, without the clutter.","পেমেন্টের গুরুত্বপূর্ণ সব তথ্য এক জায়গায়।"):t("A clear view of your payments.","আপনার পেমেন্ট, সংযোগ ও প্রয়োজনীয় কাজ এক নজরে।")}</p>
    </div>
    <div className="em-actions"><Link className="em-primary" href={go("payment-links")}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span aria-hidden="true">+</span></Link><button type="button" onClick={update} disabled={loading}>{t("Refresh","আপডেট")}</button></div>
@@ -194,14 +192,6 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
     <Link href={go("incoming")} className="em-kpi"><span>{t("Receipt exceptions","Receipt সমস্যা")}</span><strong>{count(overview?.unmatched_receipts)}</strong><small>{t("Needs review","যাচাই করা প্রয়োজন")}</small></Link>
    </div>
    <div className="em-main-grid">
-    <section className="em-panel em-chart">
-     <div className="em-panel-top"><h2>{t("7-day volume","৭ দিনের পেমেন্ট")}</h2><Link href={go("reports")}>{t("Reports","রিপোর্ট")} ↗</Link></div>
-     <p className="em-chart-label">{t("Daily verified amount · UTC buckets","দিনভিত্তিক যাচাইকৃত টাকা · UTC")}</p>
-     {overview===null?<p className="em-inline-empty">{t("Source unavailable","তথ্য পাওয়া যায়নি")}</p>:days.length===0?<p className="em-inline-empty">{t("No daily data yet","দিনভিত্তিক তথ্য নেই")}</p>:
-      <div className="em-bars" role="img" aria-label={t("Seven day verified volumes: ","সাত দিনের যাচাইকৃত টাকা: ")+days.map(d=>d.date+" "+moneyOrDash(d.verified_minor)).join(", ")}>
-       {days.map(d=><div className="em-bar-day" key={d.date}><div className="em-bar-track"><i style={{height:String(Math.max(0,Math.min(100,d.verified_minor/peak*100)))+"%"}}/></div><small>{d.date.slice(5)}</small></div>)}
-      </div>}
-    </section>
     <section className="em-panel em-attention">
      <div className="em-panel-top"><h2>{t("Action center","জরুরি কাজ")}</h2><span>{t("Live issues","সক্রিয় সমস্যা")}</span></div>
      <Link href={go("refunds")}><span>{t("Refund requests","রিফান্ড অনুরোধ")}</span><strong>{pendingRefundsLabel}</strong></Link>
@@ -222,8 +212,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
     </section>
     <section className="em-panel em-shortcuts"><div className="em-panel-top"><h2>{t("Quick actions","দ্রুত কাজ")}</h2></div>
      <Link href={go("payment-links")}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span>↗</span></Link>
-     <Link href={go("payment-links") }>{t("New payment request","নতুন পেমেন্ট রিকোয়েস্ট")} <span>↗</span></Link>
-     <Link href={go("reports")}>{t("View reports","রিপোর্ট দেখুন")} <span>↗</span></Link>
+      <Link href={go("reports")}>{t("View reports","রিপোর্ট দেখুন")} <span>↗</span></Link>
     </section>
    </div>
   </div>}
