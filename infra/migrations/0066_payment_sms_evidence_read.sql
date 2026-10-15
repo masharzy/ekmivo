@@ -122,7 +122,7 @@ BEGIN
  CASE WHEN item IS NULL THEN '[]'::jsonb WHEN d.body->>'source'='automatic_checkout' THEN jsonb_build_array(jsonb_build_object('intent_id',d.id,'state',pg05_intent_state(w,e,d.id))) ELSE (SELECT coalesce(jsonb_agg(jsonb_build_object('intent_id',l.intent_id,'state',pg05_intent_state(w,e,l.intent_id))), '[]') FROM pg10_document_intents l WHERE l.document_id=d.id) END payments,
  CASE WHEN item IS NULL THEN '[]'::jsonb ELSE (SELECT coalesce(jsonb_agg(to_jsonb(v) ORDER BY v.version),'[]') FROM pg10_versions v WHERE v.document_id=d.id) END history
  FROM pg64_document_catalog d WHERE d.workspace_id=w AND d.environment=e AND d.kind=res AND (item IS NULL OR d.id=item)
- AND NOT (res='invoices' AND d.body->>'source'='automatic_checkout')
+ AND (res<>'invoices' OR coalesce(d.body->>'source','')<>'automatic_checkout')
  AND (search IS NULL OR d.reference ILIKE '%'||search||'%' OR d.body->>'name' ILIKE '%'||search||'%')
  AND (after_id IS NULL OR (d.created_at,d.id)<(SELECT x.created_at,x.id FROM pg64_document_catalog x WHERE x.workspace_id=w AND x.environment=e AND x.kind=res AND x.id=after_id))
  ORDER BY d.created_at DESC,d.id DESC LIMIT 50) t;
