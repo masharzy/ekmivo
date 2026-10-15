@@ -122,3 +122,6 @@
 .wk2-header-controls{display:flex;align-items:center;gap:8px}
 .wk2-header-controls .wk2-button{height:34px;min-height:34px;padding:7px 12px}
 .wk2-header-controls .wk2-theme-button{width:36px;padding:7px;display:grid;place-items:center}
+
+.wk2-skeleton-control{width:68px;height:34px;border:1px solid var(--wk-border);border-radius:8px;background:var(--wk-card)}
+.wk2-skeleton-theme{width:36px}
