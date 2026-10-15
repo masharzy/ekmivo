@@ -37,3 +37,25 @@ Branch: `codex/simple-payment-api-docs-20261015` (from 5c6b662).
 - The accessible Render connector has no selected/confirmed workspace, and Render's database query operation is read-only. No independently verified Sandbox or Live finance migration connections were available in this session. **Neither physical finance database was modified.**
 - GitHub Foundation CI on head `44867a1` reported four failures, but Actions job steps were empty and log retrieval returned BlobNotFound; cannot establish failure cause or claim checks passed. Existing Vercel status reported success for that head.
 - Rollout order remains: obtain confirmed access to Sandbox and Live financial migration role/database; execute guarded runner with `PG62_SIMPLE_PAYMENT_ALLOW_MIGRATION=true` and file `/infra/migrations/0062_simple_payment_options.sql`; check table, three functions and delivery trigger in both realms; then activate/release new API. No production financial acceptance before this.
+
+## Applied migration 0062 — 2026-10-15 (CONFIRMED)
+
+The user confirmed the Ekmivo hosting workspace and three database names; inspection revealed that the **physical PostgreSQL databases reside in Neon project `sparkling-mountain-38618629`**, production branch `br-solitary-river-b3ztvg8j`, although the HTTP application is hosted on Render. Render's own Postgres list was empty. The following reflects actual privileged Neon SQL executions, not simulation:
+
+| Database | Financial realm | Transaction | Post-check |
+|---|---|---|---|
+| `ekmivo_sandbox_financial` | `sandbox` | 13 DDL statements committed as one SQL transaction | PASS |
+| `ekmivo_live_financial` | `live` | 13 DDL statements committed as one SQL transaction | PASS |
+
+The control database `ekmivo` was deliberately not altered. Both financial databases were independently preflighted: distinct database and owner, correct immutable `financial_realm`, `payment_intents`, `pg08_endpoints`, `pg07_events`, and no previous pg62 objects. Both were tested with the complete DDL plus intentionally failing `SELECT 1/0` to **roll back** without leaving schema changes before real deployment.
+
+The first Sandbox dry-run exposed a missing closing parenthesis in `pg62_checkout_redirects`; corrected by commit `ab9e764`, then complete dry-runs succeeded. A committed 13-statement SQL transaction was run on Sandbox, independently verified, then on Live, independently verified.
+
+**Verified true separately in each database**:
+- `pg62_intent_options` table exists, with forced row level security.
+- `pg62_store_intent_options(uuid,text,uuid,text,text,text,text,text,text,jsonb)`, `pg62_checkout_redirects(uuid,text,uuid)`, `pg62_merchant_options(uuid,text,uuid)`, and `pg62_route_payment_webhook()` functions exist.
+- `pg62_delivery_endpoint_selection` is installed as an enabled normal trigger.
+- Role `ekmivo_finance_reader` can execute the scoped store function but **cannot directly SELECT** the options table.
+- `pg62_intent_options` has **zero rows** immediately after migration on both realms; no existing payment records were rewritten.
+
+**Still unverified:** Actual Sandbox create-payment → hosted checkout → verified receipt → signed webhook callback, Live provider receipt match, production Go API deployment/health/contract, full Go/TypeScript CI, and browser responsive flows. Schema migration success does not equate to the payment API being production-accepted.
