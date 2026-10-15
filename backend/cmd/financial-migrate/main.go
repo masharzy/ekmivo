@@ -323,7 +323,16 @@ func main() {
 		if os.Getenv("PG63_AUTO_WEBHOOK_ALLOW_MIGRATION") != "true" || os.Getenv("PG64_DASHBOARD_READ_MODELS_ALLOW_MIGRATION") != "true" || os.Getenv("PG65_WORKSPACE_TEAM_ALLOW_MIGRATION") != "true" {
 			log.Fatal("dashboard-only release requires explicit 0063, 0064 and 0065 authorization flags")
 		}
-		if err := migrateDashboardUpgrade(ctx, sa, lv, control); err != nil {
+		if os.Getenv("PG66_PAYMENT_SMS_EVIDENCE_ALLOW_MIGRATION") == "true" {
+        file := os.Getenv("PG66_PAYMENT_SMS_EVIDENCE_MIGRATION_FILE")
+        for _, target := range []realmDSN{{"sandbox", sa}, {"live", lv}} {
+            if err := migratePaymentSMSEvidence(ctx, target.environment, target.raw, file); err != nil {
+                log.Fatalf("0066 SMS evidence migration blocked in %s: %v", target.environment, err)
+            }
+        }
+    }
+
+	if err := migrateDashboardUpgrade(ctx, sa, lv, control); err != nil {
 			log.Fatal(err)
 		}
 		log.Print("Dashboard-only migrations 0063/0064 financial and 0065 control verified; no base migrations executed")
