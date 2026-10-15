@@ -32,12 +32,6 @@ BEGIN
  length(extra::text)>2048 OR jsonb_typeof(extra) IS DISTINCT FROM 'object' THEN
  RAISE EXCEPTION 'invalid payment options or authority' USING ERRCODE='22023';
  END IF;
- -- A per-payment webhook URL may select only an already registered, active
- -- workspace/realm endpoint with its own signing secret and retry worker.
- -- Never dispatch to a request-provided arbitrary network host.
- IF hook<>'' AND NOT EXISTS(
- SELECT 1 FROM pg08_endpoints WHERE workspace_id=w AND environment=e AND url=hook AND active
- ) THEN RAISE EXCEPTION 'webhook URL must be an active registered endpoint' USING ERRCODE='22023'; END IF;
  SELECT * INTO existing_options FROM pg62_intent_options WHERE intent_id=intent;
  IF FOUND THEN
  IF (existing_options.redirect_url,existing_options.cancel_url,existing_options.webhook_url,existing_options.customer_name,
@@ -46,6 +40,12 @@ BEGIN
  THEN RAISE EXCEPTION 'payment options changed on retry' USING ERRCODE='23505'; END IF;
  RETURN true;
  END IF;
+ -- A per-payment webhook URL may select only an already registered, active
+ -- workspace/realm endpoint with its own signing secret and retry worker.
+ -- Never dispatch to a request-provided arbitrary network host.
+ IF hook<>'' AND NOT EXISTS(
+ SELECT 1 FROM pg08_endpoints WHERE workspace_id=w AND environment=e AND url=hook AND active
+ ) THEN RAISE EXCEPTION 'webhook URL must be an active registered endpoint' USING ERRCODE='22023'; END IF;
  INSERT INTO pg62_intent_options(workspace_id,environment,intent_id,redirect_url,cancel_url,webhook_url,customer_name,customer_email,customer_phone,merchant_metadata)
  VALUES(w,e,intent,redir,cancel,hook,cname,cemail,cphone,extra);
  RETURN true;

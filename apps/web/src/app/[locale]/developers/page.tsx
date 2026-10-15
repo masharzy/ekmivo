@@ -97,9 +97,15 @@ const timestamp = request.headers.get("x-ekmivo-timestamp") ?? "";
 const signature = (request.headers.get("x-ekmivo-signature") ?? "").replace(/^v1=/, "");
 const expected = createHmac("sha256", process.env.EKMIVO_WEBHOOK_SECRET!)
   .update(timestamp + "." + rawBody).digest("hex");
-const valid = /^[a-f0-9]{64}$/.test(signature) &&
+const eventTime = Number(timestamp);
+const fresh = Number.isSafeInteger(eventTime) &&
+  Math.abs(Date.now() / 1000 - eventTime) <= 300;
+const valid = fresh && /^[a-f0-9]{64}$/.test(signature) &&
   timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expected, "hex"));
-// Check timestamp, event ID and GET current payment state before fulfilment.`}</code></pre>
+if (!valid) return new Response("Invalid signature", {status: 401});
+const event = JSON.parse(rawBody);
+// Deduplicate event.id in durable storage, then GET the current intent status.
+// Only fulfil from verified server state and reply HTTP 200 quickly.`}</code></pre>
     <p className="ek-doc-footnote">{t("Webhook deliveries can retry or arrive out of order. Neither a redirect nor a checkout page proves payment.","Webhook retry/out-of-order হতে পারে। শুধু redirect বা success screen payment proof নয়।")}</p>
    </section>
    <section id="custom-verification" className="ds-panel">

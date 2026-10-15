@@ -613,3 +613,8 @@ Status: **manual pending**; not live-provider accepted. Test with a real authori
 - [ ] No email receipt / email consent / verification-code controls anywhere in the public checkout. Prior backend email records are retained.
 - [ ] Actual brand links never use invented contacts; close/back preserves payment record. POST loss/retry remains idempotent, payer lock irreversible, no browser-set paid state.
 - [ ] Repeat checks with device offline, receipt parser unavailable, expired link, wrong payer, active session, genuine provider receipts, and verified server/webhook settlement. Real payment acceptance remains OPEN.
+
+
+## Simple Payment API / Developer Guide (2026-10-15 — pending)
+
+All of the following are **MANUAL PENDING**, not passed: apply migration 0062 in Sandbox and Live finance databases before Go rollout; authorized Sandbox key minimal create→checkout→receipt scenario→GET verified status; live provider/device evidence; webhook signature/retries and configured URL; redirect/cancel routing; legacy integrations; EN/BN and Light/Dark mobile/desktop docs; production deploy parity. Details: docs/evidence/SIMPLE-PAYMENT-API-20261015.md.
