@@ -25,3 +25,7 @@ Branch: `codex/simple-payment-api-docs-20261015` (from 5c6b662).
 6. Confirm old `amount_minor` requests and linked invoice/order flows still work; retry idempotency unchanged request returns one intent; changed request returns conflict.
 7. Verify signed event retries + configured endpoint handling and no forged paid via redirect.
 8. EN/BN Light/Dark 320/768/1024/desktop docs, code copy and Sandbox form.
+
+## Documentation details
+- Added a minimal two-field body and a full optional-field body; HTTPS webhook example requires prior endpoint registration.
+- The downloadable JSON contract mirrors the new request fields and optional 201 checkout_url from OpenAPI YAML.

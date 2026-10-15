@@ -49,6 +49,19 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
     </tbody></table></div>
     <h3>{t("Smallest possible request","সবচেয়ে ছোট request")}</h3>
     <pre><code>{JSON.stringify({amount:150,redirect_url:"https://merchant.example/success"},null,2)}</code></pre>
+    <h3>{t("With optional details","Optional তথ্যসহ উদাহরণ")}</h3>
+    <pre><code>{JSON.stringify({
+      amount:150.50,
+      redirect_url:"https://merchant.example/success",
+      cancel_url:"https://merchant.example/cancel",
+      webhook_url:"https://merchant.example/webhook",
+      customer_name:"Alex",
+      customer_email:"alex@example.com",
+      customer_phone:"01700000000",
+      reference:"ORDER-123",
+      metadata:{order_id:"123"}
+    },null,2)}</code></pre>
+    <p className="ek-doc-footnote">{t("Register webhook_url in Workspace → Webhooks first. A supplied webhook URL routes this payment's events to that registered endpoint.","webhook_url আগে Workspace → Webhooks-এ registered থাকতে হবে। দিলে এই payment-এর event সেই endpoint-এ যাবে।")}</p>
     <p className="ek-doc-footnote">{t("Old integrations can continue using amount_minor and merchant_reference. New integrations should use amount in BDT. Order/invoice-linked requests still use their original source IDs.","পুরোনো integration-এর amount_minor ও merchant_reference চলবে। নতুন integration-এ amount ব্যবহার করুন।")}</p>
     <div className="ek-guide-examples" id="integration-examples"><h3>{t("Copy a working example or try Sandbox","কোড কপি অথবা Sandbox test করুন")}</h3><PaymentDocExamples locale={locale}/></div>
     <h3>{t("Example response · 201 Created","Response উদাহরণ · 201 Created")}</h3>

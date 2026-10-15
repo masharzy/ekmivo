@@ -59107,7 +59107,7 @@
       },
       "post": {
         "operationId": "createPaymentIntentKey",
-        "summary": "Issue an immutable standalone or order/invoice-linked BDT request",
+        "summary": "Create a payment using amount (BDT) and redirect_url; optional details",
         "tags": [
           "Merchant"
         ],
@@ -59333,6 +59333,11 @@
                           "type": "string",
                           "minLength": 43,
                           "maxLength": 43
+                        },
+                        "checkout_url": {
+                          "type": "string",
+                          "format": "uri",
+                          "description": "Provided when a public HTTPS origin is configured"
                         }
                       }
                     }
