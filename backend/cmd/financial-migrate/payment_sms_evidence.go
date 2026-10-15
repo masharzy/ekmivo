@@ -28,7 +28,7 @@ func migratePaymentSMSEvidence(ctx context.Context, realm, dsn, filename string)
  AND to_regclass('public.pg06_transport') IS NOT NULL
  AND to_regclass('public.financial_inbound_events') IS NOT NULL
  AND to_regprocedure('public.pg06_scope(uuid,text)') IS NOT NULL,
- to_regprocedure('public.pg66_payment_sms_evidence(uuid,text,text,jsonb)') IS NOT NULL
+ to_regprocedure('public.pg66_payment_sms_evidence(uuid,text,text,jsonb)') IS NOT NULL AND to_regprocedure('public.pg66_customer_payer_evidence(uuid,text,jsonb)') IS NOT NULL
  FROM financial_realm f WHERE f.singleton`).Scan(&actual,&dbname,&actor,&owner,&schema,&installed)
  if err!=nil||actual!=realm||dbname=="ekmivo"||!owner||!schema||actor=="ekmivo_financial_runtime"{
   return errors.New("0066 requires existing isolated owner financial realm")
@@ -41,7 +41,7 @@ func migratePaymentSMSEvidence(ctx context.Context, realm, dsn, filename string)
  defer conn.Release()
  if _,err=conn.Conn().PgConn().Exec(ctx,string(body)).ReadAll();err!=nil{return err}
  var ready bool
- if err=pool.QueryRow(ctx,`SELECT to_regprocedure('public.pg66_payment_sms_evidence(uuid,text,text,jsonb)') IS NOT NULL`).Scan(&ready);err!=nil{return err}
+ if err=pool.QueryRow(ctx,`SELECT to_regprocedure('public.pg66_payment_sms_evidence(uuid,text,text,jsonb)') IS NOT NULL AND to_regprocedure('public.pg66_customer_payer_evidence(uuid,text,jsonb)') IS NOT NULL`).Scan(&ready);err!=nil{return err}
  if !ready{return errors.New("0066 SQL function not installed")}
  return nil
 }
