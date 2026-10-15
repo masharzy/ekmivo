@@ -62,6 +62,6 @@ export function PaymentRefunds({locale,workspaceId,environment,canManage,detailI
    {action==="report-returned"&&<label>{t("Return transaction reference","ফেরতের লেনদেনের রেফারেন্স")}<input required maxLength={128} value={reference} onChange={e=>setReference(e.target.value)}/></label>}
    <label className="rf-confirm"><input type="checkbox" required checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/><span>{t("I confirm this action. No money is transferred automatically.","আমি সিদ্ধান্ত নিশ্চিত করছি। স্বয়ংক্রিয়ভাবে কোনো টাকা পাঠানো হবে না।")}</span></label>
    <div className="rf-action-buttons"><button type="button" disabled={busy} onClick={()=>setSelected(null)}>{t("Cancel","বাতিল")}</button><button type="submit" disabled={busy||!confirmed||note.trim().length<10}>{busy?t("Saving…","সংরক্ষণ হচ্ছে…"):t("Save decision","সিদ্ধান্ত সংরক্ষণ")}</button></div>
-  </form></div>}
+  </form>}</dialog>
  </div>;
 }
