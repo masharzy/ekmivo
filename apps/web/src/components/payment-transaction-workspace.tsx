@@ -1,5 +1,6 @@
 "use client";
 import {useSearchParams} from "next/navigation";
+import {PaymentLoadingSkeleton} from "./payment-loading-skeleton";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 type Item={id:string;device_name?:string;sms_text?:string;payer_number?:string;transaction_id?:string;balance_minor?:number;merchant_reference?:string;verified_amount_minor?:number;amount_minor?:number;method?:string;payer_suffix?:string;status?:string;reason?:string;parse_reason?:string;device_source?:string;original_transaction_at?:string;verified_at?:string;received_at?:string;webhook_status?:string;source_kind?:string;payment_id?:string};
@@ -114,10 +115,10 @@ export function PaymentTransactionWorkspace({locale,workspaceId,environment,reso
   </form>
   {filterError&&<p id="payment-filter-error" className="opw-error" role="alert">{filterError}</p>}
   {!online&&<p className="opw-notice">{t("You are offline. Data may be outdated.","ইন্টারনেট সংযোগ নেই; তথ্য পুরোনো হতে পারে।")}</p>}
-  {error&&<div className="opw-error" role="alert">{t("Unable to load records.","রেকর্ড পাওয়া যাচ্ছে না।")} ({error}) <button type="button" onClick={()=>setNonce(n=>n+1)}>{t("Retry","আবার চেষ্টা")}</button></div>}
+  {error&&<div className="opw-error" role="alert">{t("Unable to load records.","রেকর্ড পাওয়া যাচ্ছে না।")} <button type="button" onClick={()=>setNonce(n=>n+1)}>{t("Retry","আবার চেষ্টা")}</button></div>}
   {notice&&<p data-feedback="success" className="opw-notice" role="status">{notice}</p>}
   <div className="opw-list-head"><div><strong>{title}</strong><span>{new Intl.NumberFormat(locale).format(rows.length)}{cursor?"+":""} {t("records loaded","টি রেকর্ড")}{cursor?" · "+t("More available","আরও আছে"):""}</span></div>{!incoming&&rows.length>0&&<span>{t("Loaded verified value","লোড হওয়া মোট")}: <strong>{money(amountTotal,locale)}</strong></span>}</div>
-  {loading&&rows.length===0?<div className="opw-empty" role="status">{t("Loading records…","রেকর্ড লোড হচ্ছে…")}</div>:!error&&rows.length===0?<div className="opw-empty"><strong>{hasFilter?t("No matching records","মিল পাওয়া যায়নি"):incoming?t("No receipts yet","এখনও রসিদ নেই"):t("No verified transactions yet","এখনও যাচাইকৃত লেনদেন নেই")}</strong><p>{incoming?t("Forwarded provider SMS appears here after server receipt.","সার্ভারে রসিদ পৌঁছালে এখানে দেখা যাবে।"):t("Completed, server-verified payments appear here.","সার্ভারে যাচাই হওয়া পেমেন্ট এখানে দেখা যাবে।")}</p></div>:<div className="opw-scroll" role="region" tabIndex={0} aria-label={title}>
+  {loading&&rows.length===0?<PaymentLoadingSkeleton locale={locale} layout="document"/>:!error&&rows.length===0?<div className="opw-empty"><strong>{hasFilter?t("No matching records","মিল পাওয়া যায়নি"):incoming?t("No receipts yet","এখনও রসিদ নেই"):t("No verified transactions yet","এখনও যাচাইকৃত লেনদেন নেই")}</strong><p>{incoming?t("Forwarded provider SMS appears here after server receipt.","সার্ভারে রসিদ পৌঁছালে এখানে দেখা যাবে।"):t("Completed, server-verified payments appear here.","সার্ভারে যাচাই হওয়া পেমেন্ট এখানে দেখা যাবে।")}</p></div>:<div className="opw-scroll" role="region" tabIndex={0} aria-label={title}>
    <table><thead><tr>{columnLabels.map((label,i)=><th key={label} hidden={!columns[i]} scope="col">{label}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.id} tabIndex={0} onClick={()=>openDetail(r)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDetail(r)}}} aria-label={t("View payment","পেমেন্ট দেখুন")+" "+(r.merchant_reference||r.id)} className="ekv2-clickable-row">
     <td><span className="opw-reference">{incoming?(r.device_name||r.device_source||r.id.slice(0,12)):(r.merchant_reference||r.id.slice(0,12))}</span></td>
     <td hidden={!columns[1]} className="opw-phone">{r.payer_number||"—"}</td>
