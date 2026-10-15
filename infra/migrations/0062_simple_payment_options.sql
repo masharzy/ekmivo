@@ -17,7 +17,7 @@ CREATE TABLE pg62_intent_options (
 );
 ALTER TABLE pg62_intent_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pg62_intent_options FORCE ROW LEVEL SECURITY;
-CREATE POLICY pg62_intent_options_owner ON pg62_intent_options TO CURRENT_USER USING(true) WITH CHECK(true);
+DO $ BEGIN EXECUTE format('CREATE POLICY pg62_intent_options_owner ON pg62_intent_options TO %I USING(true) WITH CHECK(true)',current_user); END $;
 REVOKE ALL ON pg62_intent_options FROM PUBLIC,ekmivo_finance_reader,ekmivo_financial_worker;
 CREATE FUNCTION pg62_store_intent_options(w uuid,e text,intent uuid,redir text,cancel text,hook text,cname text,cemail text,cphone text,extra jsonb)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$

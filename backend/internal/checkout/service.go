@@ -70,57 +70,7 @@ type createRequest struct {
 // interpretation. Storage and matching continue using integer paisa.
 func parseBDT(raw json.RawMessage) (int64, bool) {
 	text := string(raw)
-	if !regexp.MustCompile(`^(0|[1-9][0-9]{0,9})(\\.[0-9]{1,2})?// Package checkout implements PG05 sandbox payment requests and customer checkout.
-// Neither customer input nor a browser redirect can mark money as verified.
-package checkout
-
-import (
-	"context"
-	"crypto/hmac"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
-	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
-)
-
-var (
-	uuidPattern      = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
-	referencePattern = regexp.MustCompile(`^[^\x00-\x1f]{1,128}$`)
-	tokenPattern     = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
-	keyPattern       = regexp.MustCompile(`^[A-Za-z0-9_.:-]{16,128}$`)
-)
-
-type Service struct {
-	NoticeSMTP   *receiptnotice.SMTPConfig
-	NoticeSchema bool
-	Pipeline     *Pipeline
-	limits       limiter
-	Auth         *authz.Repository
-	Sandbox      *pgxpool.Pool
-	PublicSandboxWorker *pgxpool.Pool
-	PublicSandboxCancel context.CancelFunc
-	TokenKey     []byte
-	PayerKey     []byte
-}
-).MatchString(text) { return 0,false }
+	if !regexp.MustCompile(`^(0|[1-9][0-9]{0,9})(\.[0-9]{1,2})?$`).MatchString(text) {return 0,false}
 	parts:=strings.SplitN(text,".",2)
 	whole,err:=strconv.ParseInt(parts[0],10,64);if err!=nil{return 0,false}
 	minor:=whole*100
@@ -130,7 +80,7 @@ type Service struct {
 		fraction,err:=strconv.ParseInt(cents,10,64);if err!=nil{return 0,false}
 		minor+=fraction
 	}
-	return minor,minor>=1&&minor<=100000000000
+	if minor<1||minor>100000000000{return 0,false};return minor,true
 }
 
 // prepareCreateRequest supports the simpler public contract without changing
@@ -542,7 +492,7 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 			var created struct{ID string `json:"id"`}
 			if json.Unmarshal(answer,&created)!=nil||!uuidPattern.MatchString(created.ID){return errors.New("invalid intent creation result")}
 			var stored bool
-			return tx.QueryRow(r.Context(),"SELECT pg62_store_intent_options($1::uuid,$2,$3::uuid,$4,$5,$6,$7,$8,$9::jsonb)",
+			return tx.QueryRow(r.Context(),"SELECT pg62_store_intent_options($1::uuid,$2,$3::uuid,$4,$5,$6,$7,$8,$9,$10::jsonb)",
 				ws,realm,created.ID,payload.RedirectURL,payload.CancelURL,payload.WebhookURL,payload.CustomerName,payload.CustomerEmail,payload.CustomerPhone,metadataOrEmpty(payload.Metadata)).Scan(&stored)
 		})
 		if err != nil {
