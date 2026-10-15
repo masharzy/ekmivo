@@ -378,3 +378,24 @@
 .ds-record-search-result span{font-size:.75rem;opacity:.75;text-align:end;flex-shrink:0}
 .ds-record-search [role="alert"]{font-size:.8rem}
 @media(max-width:480px){.ds-record-search-result{align-items:flex-start;flex-direction:column;gap:.25rem}.ds-record-search-result span{text-align:start}}
+
+/* Dashboard theme toggle: match the approved Ekmivo Pay header icon control.
+   Keep the three-choice selector on public pages; the dashboard toggles the
+   current effective light/dark palette while retaining existing preference storage. */
+.ds-topbar .ek-dashboard-theme-button{
+ display:inline-grid;place-items:center;flex:0 0 34px;width:34px;height:34px;padding:7px;
+ border:1px solid var(--color-border);border-radius:8px;
+ background:var(--color-surface);color:var(--color-text);cursor:pointer;
+}
+.ds-topbar .ek-dashboard-theme-button:hover{background:var(--color-hover)}
+.ds-topbar .ek-dashboard-theme-button svg{
+ display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;
+ stroke-linecap:round;stroke-linejoin:round;pointer-events:none;
+}
+.ds-topbar .ek-dashboard-theme-button .ek-theme-icon-sun{display:none}
+:root[data-theme="dark"] .ds-topbar .ek-dashboard-theme-button .ek-theme-icon-moon{display:none}
+:root[data-theme="dark"] .ds-topbar .ek-dashboard-theme-button .ek-theme-icon-sun{display:block}
+@media(prefers-color-scheme:dark){
+ :root:not([data-theme="light"]):not([data-theme="dark"]) .ds-topbar .ek-dashboard-theme-button .ek-theme-icon-moon{display:none}
+ :root:not([data-theme="light"]):not([data-theme="dark"]) .ds-topbar .ek-dashboard-theme-button .ek-theme-icon-sun{display:block}
+}

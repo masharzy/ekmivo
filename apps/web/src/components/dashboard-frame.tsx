@@ -297,7 +297,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
     </div>
     <div className="ds-topbar-tools">
      <button type="button" className="ds-global-search-button" aria-label={bn?"পৃষ্ঠা, ব্যবসা বা পেমেন্ট রেকর্ড খুঁজুন":"Search pages, businesses or payment records"} onClick={()=>{searchReturnFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setSearchOpen(true);setGlobalQuery("");setActiveResult(0);}}><Icon name="search"/><span>{bn?"খুঁজুন":"Search"}</span><kbd>⌘ K</kbd></button>
-     <SiteControls locale={locale} initialTheme={theme}/>
+     <SiteControls locale={locale} initialTheme={theme} compactThemeToggle/>
      <details className="ds-notifications" open={noticeOpen} onToggle={event=>setNoticeOpen(event.currentTarget.open)}>
       <summary className="ds-icon-button" aria-label={bn?"নোটিফিকেশন":"Notifications"}><Icon name="bell"/></summary>
       <div className="ds-notifications-menu">{service==="payments"&&paymentContext?<PaymentNotifications key={workspace.id+paymentContext.environment} locale={locale} workspaceId={workspace.id} environment={paymentContext.environment} open={noticeOpen}/>:<p>{bn?"এই সেবার নোটিফিকেশন এখনো সংযুক্ত হয়নি।":"Notifications for this service are not connected yet."}</p>}</div>
