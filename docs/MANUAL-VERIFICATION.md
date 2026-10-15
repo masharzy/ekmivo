@@ -638,3 +638,8 @@ All of the following are **MANUAL PENDING**, not passed: apply migration 0062 in
 ## Production migration rollout — 2026-10-15
 
 After explicit owner approval (push + migrations), existing financial-migrate runner with `EKMIVO_DASHBOARD_UPGRADE_ONLY=true` successfully applied only 0063/0064 to production Neon Sandbox/Live financial databases and 0065 to the control database at 2026-10-15 14:11 UTC. Runner confirmed no base migrations executed. Catalog probes confirm both financial migrations and the Team role fix. Before/after counts unchanged: Sandbox intents 15/payments 2/endpoints 1; Live intents 21/payments 3/endpoints 0. Runtime rollout and actual payment/browser E2E remain separate gates.
+
+
+## Developer portal — 2026-10-15
+
+Manual pending: finish the 11-page EN/BN × Light/Dark/System × 360/768/desktop browser matrix, search arrows/Enter/Escape and focus loop, copy toast and global code preference across navigation, reduced motion, marketing-to-portal shell swap and back. Browser tooling repeatedly timed out during this pass; only observed checks in the evidence README are passed. Use an owner-controlled Sandbox workspace/key for create → hosted checkout → real test receipt scenario → verify, plus signed payment alert delivery. Never paste a Live key into the tester. Provision the public custom API origin and publish an idempotency retention promise before removing those TODOs.

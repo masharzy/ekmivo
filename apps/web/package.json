@@ -13,10 +13,13 @@
     "payment:contract-check": "node scripts/generate-payment-extensions.mjs --check && node scripts/generate-payment-sdk.mjs --check && node scripts/openapi-check.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
     "next": "16.4.0",
     "postgres": "3.4.5",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "shiki": "^4.5.0"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "12.1.0",
