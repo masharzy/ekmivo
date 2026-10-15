@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import {DashboardConfirmDialog} from "./dashboard-confirm-dialog";
 import {useCallback,useEffect,useRef,useState} from "react";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 
@@ -14,6 +15,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const editDialog=useRef<HTMLDialogElement|null>(null);
  const [method,setMethod]=useState("bkash"),[number,setNumber]=useState(""),[label,setLabel]=useState("");
  const [edited,setEdited]=useState<string|null>(null),[newLabel,setNewLabel]=useState(""),[newNumber,setNewNumber]=useState("");
+ const [confirmAccount,setConfirmAccount]=useState<Account|null>(null);
  useEffect(()=>{const dialog=editDialog.current;if(!dialog)return;if(edited&&!dialog.open)dialog.showModal();else if(!edited&&dialog.open)dialog.close()},[edited]);
  const load=useCallback(async(signal?:AbortSignal)=>{
   setLoading(true);setError("");
@@ -58,13 +60,14 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
 
      <div className="pg-method-actions"><Link href={href}>{t("Manage connections","সংযোগ পরিচালনা")}</Link>
       {canManage&&<button type="button" onClick={()=>{setEdited(a.ID);setNewLabel(a.Label||"");setNewNumber(a.Number)}}>{t("Edit account","অ্যাকাউন্ট সম্পাদনা")}</button>}
-      {canManage&&<button type="button" disabled={busy} onClick={()=>{if(window.confirm(a.Disabled?t("Enable this account?","অ্যাকাউন্ট চালু করবেন?"):t("Disable this account for new payment requests?","নতুন পেমেন্টের জন্য account বন্ধ করবেন?")))void post("/operations/gateways/"+a.ID+"/"+(a.Disabled?"enable":"disable"),{})}}>{a.Disabled?t("Enable","চালু"):t("Disable","বন্ধ")}</button>}
+      {canManage&&<button type="button" disabled={busy} onClick={()=>setConfirmAccount(a)}>{a.Disabled?t("Enable","চালু"):t("Disable","বন্ধ")}</button>}
      </div>
 
     </article>})}
     {!accounts.length&&!error&&<div className="pg-phone-empty"><h3>{t("No receiving accounts","এখনো receiving account নেই")}</h3><p>{t("Add a bKash, Nagad or Rocket receiving number to begin setup.","সেটআপের জন্য bKash, Nagad বা Rocket receiving number যোগ করুন।")}</p></div>}
    </div>
   </>}
+  <DashboardConfirmDialog open={Boolean(confirmAccount)} title={confirmAccount?.Disabled?t("Enable account","অ্যাকাউন্ট চালু করুন"):t("Disable account","অ্যাকাউন্ট বন্ধ করুন")} message={confirmAccount?.Disabled?t("This receiving account will be available for payments.","এই অ্যাকাউন্টে পেমেন্ট গ্রহণ চালু হবে।"):t("New payments will no longer use this account.","নতুন পেমেন্টে এই অ্যাকাউন্ট ব্যবহার হবে না।")} confirmLabel={confirmAccount?.Disabled?t("Enable","চালু করুন"):t("Disable","বন্ধ করুন")} cancelLabel={t("Cancel","বাতিল")} disabled={busy} danger={!confirmAccount?.Disabled} onClose={()=>setConfirmAccount(null)} onConfirm={async()=>{if(confirmAccount)await post("/operations/gateways/"+confirmAccount.ID+"/"+(confirmAccount.Disabled?"enable":"disable"),{})}}/>
   <dialog ref={editDialog} className="pg-phone-dialog ekv2-account-dialog" aria-label={t("Edit account","অ্যাকাউন্ট সম্পাদনা")} onCancel={()=>setEdited(null)} onClose={()=>setEdited(null)} onClick={e=>{if(e.target===e.currentTarget)setEdited(null)}}>
   {edited&&accounts.filter(a=>a.ID===edited).map(a=><div key={a.ID}><div className="pg-phone-dialog-head"><h2>{t("Edit account","অ্যাকাউন্ট সম্পাদনা")}</h2><button type="button" onClick={()=>setEdited(null)} aria-label={t("Close","বন্ধ করুন")}>×</button></div>
   <form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void post("/phones/"+a.ID+"/edit-account",{label:newLabel,...(newNumber!==a.Number?{account_number:newNumber}:{})}).then(ok=>{if(ok)setEdited(null)})}}>
