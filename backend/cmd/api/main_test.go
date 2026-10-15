@@ -40,3 +40,35 @@ func TestPG03MerchantContextIsRealAuthorizationNotFakePayment(t *testing.T){
   if len(response.Error.CorrelationID)!=24{t.Fatalf("%s: missing request correlation ID",tc.path)}
  }
 }
+
+
+func TestKeyBoundMerchantRouteFailsClosedWithoutCredentialsOrRuntime(t *testing.T) {
+ handler := newHandler()
+ cases := []struct {
+  method string
+  path string
+  auth string
+  expected int
+  code string
+ }{
+  {http.MethodPost,"/v1/payment-intents?environment=live","",400,"ENVIRONMENT_FROM_KEY"},
+  {http.MethodGet,"/v1/payment-intents","",401,"INVALID_API_KEY"},
+  {http.MethodPost,"/v1/payment-intents","not-bearer",401,"INVALID_API_KEY"},
+  {http.MethodGet,"/v1/payment-intents/9a6f551e-e081-4b74-bcf8-73a5836ab3f4","",401,"INVALID_API_KEY"},
+  {http.MethodPost,"/v1/payment-intents/9a6f551e-e081-4b74-bcf8-73a5836ab3f4/verify-transaction","",401,"INVALID_API_KEY"},
+  {http.MethodPost,"/v1/payment-intents/9a6f551e-e081-4b74-bcf8-73a5836ab3f4/unknown","",404,"NOT_FOUND"},
+  {http.MethodPost,"/v1/payment-intents","Bearer ek_test_0123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",503,"AUTH_SERVICE_UNAVAILABLE"},
+ }
+ for _,tc:=range cases {
+  t.Run(tc.method+" "+tc.path,func(t *testing.T){
+   request:=httptest.NewRequest(tc.method,tc.path,nil)
+   if tc.auth!="" { request.Header.Set("Authorization",tc.auth) }
+   recorder:=httptest.NewRecorder()
+   handler.ServeHTTP(recorder,request)
+   if recorder.Code!=tc.expected {t.Fatalf("got HTTP %d want %d: %s",recorder.Code,tc.expected,recorder.Body.String())}
+   var result struct{Error struct{Code string `json:"code"`} `json:"error"`}
+   if err:=json.Unmarshal(recorder.Body.Bytes(),&result);err!=nil {t.Fatal(err)}
+   if result.Error.Code!=tc.code {t.Fatalf("got code %s want %s",result.Error.Code,tc.code)}
+  })
+ }
+}
