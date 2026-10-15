@@ -37,8 +37,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
  const draftKey=draftStorageKey(user.id);
  const active=rows.find(w=>w.id===selected)??null;
  const canManage=active?.role==="owner"||active?.role==="admin";
- const [refreshKey,setRefreshKey]=useState(0);
- useEffect(()=>{setRows(initialWorkspaces);setDefaultId(initialDefault)},[initialWorkspaces,initialDefault,refreshKey]);
+ useEffect(()=>{setRows(initialWorkspaces);setDefaultId(initialDefault)},[initialWorkspaces,initialDefault]);
  useEffect(()=>{try{const saved=parseSavedDraft(localStorage.getItem(draftKey));if(saved){setName(saved.name.slice(0,60));setMode(saved.mode)}}catch{/* browser storage is optional */}setDraftReady(true)},[draftKey]);
  useEffect(()=>{if(!draftReady)return;try{localStorage.setItem(draftKey,encodeSavedDraft({name,mode}))}catch{/* silent */}},[name,mode,draftKey,draftReady]);
  useEffect(()=>{if(!toast)return;const timer=window.setTimeout(()=>setToast(""),2400);return()=>clearTimeout(timer)},[toast]);
