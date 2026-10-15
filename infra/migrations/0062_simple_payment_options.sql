@@ -17,11 +17,11 @@ CREATE TABLE pg62_intent_options (
 );
 ALTER TABLE pg62_intent_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pg62_intent_options FORCE ROW LEVEL SECURITY;
-DO $ BEGIN EXECUTE format('CREATE POLICY pg62_intent_options_owner ON pg62_intent_options TO %I USING(true) WITH CHECK(true)',current_user); END $;
+DO $$ BEGIN EXECUTE format('CREATE POLICY pg62_intent_options_owner ON pg62_intent_options TO %I USING(true) WITH CHECK(true)',current_user); END $$;
 REVOKE ALL ON pg62_intent_options FROM PUBLIC,ekmivo_finance_reader,ekmivo_financial_worker;
 CREATE FUNCTION pg62_store_intent_options(w uuid,e text,intent uuid,redir text,cancel text,hook text,cname text,cemail text,cphone text,extra jsonb)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE current pg62_intent_options%ROWTYPE;
+DECLARE existing_options pg62_intent_options%ROWTYPE;
 BEGIN
  IF current_setting('ekmivo.workspace_id',true) IS DISTINCT FROM w::text OR
  current_setting('ekmivo.environment',true) IS DISTINCT FROM e OR
@@ -38,10 +38,10 @@ BEGIN
  IF hook<>'' AND NOT EXISTS(
  SELECT 1 FROM pg08_endpoints WHERE workspace_id=w AND environment=e AND url=hook AND active
  ) THEN RAISE EXCEPTION 'webhook URL must be an active registered endpoint' USING ERRCODE='22023'; END IF;
- SELECT * INTO current FROM pg62_intent_options WHERE intent_id=intent;
+ SELECT * INTO existing_options FROM pg62_intent_options WHERE intent_id=intent;
  IF FOUND THEN
- IF (current.redirect_url,current.cancel_url,current.webhook_url,current.customer_name,
-     current.customer_email,current.customer_phone,current.merchant_metadata)
+ IF (existing_options.redirect_url,existing_options.cancel_url,existing_options.webhook_url,existing_options.customer_name,
+     existing_options.customer_email,existing_options.customer_phone,existing_options.merchant_metadata)
     IS DISTINCT FROM (redir,cancel,hook,cname,cemail,cphone,extra)
  THEN RAISE EXCEPTION 'payment options changed on retry' USING ERRCODE='23505'; END IF;
  RETURN true;
