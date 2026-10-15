@@ -328,3 +328,10 @@
 .ds-app[data-service="payments"] .ekv2-row-actions button{font-size:12px;color:var(--color-primary);background:transparent;border:0;padding:5px 6px;font-weight:500}
 .ds-app[data-service="payments"] .ekv2-row-actions button:hover{background:var(--color-hover)}
 .ds-app[data-service="payments"] .ekv2-detail-actions{flex-wrap:wrap}
+
+.ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form{padding:0;grid-template-columns:minmax(0,1fr) auto auto;column-gap:8px}
+.ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form label,
+.ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form input{grid-column:1/-1}
+.ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form button:last-child{grid-row:auto;grid-column:2;order:1;margin:0}
+.ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form button.sd-primary{grid-column:3;order:2}
+.ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form button:not(.sd-primary){background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);padding:8px 12px;border-radius:8px}
