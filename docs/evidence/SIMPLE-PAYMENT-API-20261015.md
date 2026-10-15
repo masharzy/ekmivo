@@ -29,3 +29,11 @@ Branch: `codex/simple-payment-api-docs-20261015` (from 5c6b662).
 ## Documentation details
 - Added a minimal two-field body and a full optional-field body; HTTPS webhook example requires prior endpoint registration.
 - The downloadable JSON contract mirrors the new request fields and optional 201 checkout_url from OpenAPI YAML.
+
+## 2026-10-15 follow-up: guarded migration is implemented but NOT APPLIED
+- Added `backend/cmd/financial-migrate/simple_payment_options.go` and `PG62_SIMPLE_PAYMENT_ALLOW_MIGRATION` / `PG62_SIMPLE_PAYMENT_MIGRATION_FILE` opt-in in the existing migration command, requiring migration owner, isolated financial realm and installed event/endpoint schema.
+- Added pre-migration compatibility: legacy payment create/read/public checkout continue if pg62 is missing. New simple-payment input fails closed with `SIMPLE_PAYMENT_MIGRATION_REQUIRED` rather than inserting an incomplete payment.
+- Queried connected Neon project `Ekmivo`, primary branch `production`, database `ekmivo`: `financial_realm`, `payment_intents`, and `pg08_endpoints` do NOT exist. This is **control-plane**, never apply 0062 here.
+- The accessible Render connector has no selected/confirmed workspace, and Render's database query operation is read-only. No independently verified Sandbox or Live finance migration connections were available in this session. **Neither physical finance database was modified.**
+- GitHub Foundation CI on head `44867a1` reported four failures, but Actions job steps were empty and log retrieval returned BlobNotFound; cannot establish failure cause or claim checks passed. Existing Vercel status reported success for that head.
+- Rollout order remains: obtain confirmed access to Sandbox and Live financial migration role/database; execute guarded runner with `PG62_SIMPLE_PAYMENT_ALLOW_MIGRATION=true` and file `/infra/migrations/0062_simple_payment_options.sql`; check table, three functions and delivery trigger in both realms; then activate/release new API. No production financial acceptance before this.
