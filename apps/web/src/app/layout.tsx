@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
+import "@fontsource-variable/geist";
 import "./globals.css";
 import {InterfaceLocaleProvider} from "../components/interface-locale-provider";
 
@@ -24,5 +25,5 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const requestHeaders = await headers();
   const locale = requestHeaders.get("x-ekmivo-locale") === "en" ? "en" : "bn";
   const theme = requestHeaders.get("cookie")?.match(/(?:^|;\s*)ekmivo-theme=(light|dark)(?:;|$)/)?.[1];
-  return <html lang={locale} data-theme={theme} className={hindSiliguri.variable} suppressHydrationWarning><head><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/></head><body><InterfaceLocaleProvider locale={locale}>{children}</InterfaceLocaleProvider></body></html>;
+  return <html lang={locale} data-theme={theme} className={hindSiliguri.variable} suppressHydrationWarning><body><InterfaceLocaleProvider locale={locale}>{children}</InterfaceLocaleProvider></body></html>;
 }

@@ -26,3 +26,13 @@ Source of visual truth: user-approved `Ekmivo Pay · Overview.html` and three-pa
 - Product features intentionally not invented in a UI-only PR: server-backed payout list, saved reports, scheduled-report email, native XLSX download. The Payouts tab explicitly reports unavailable data rather than generating fake records.
 
 This remains an unmerged review branch until latest-SHA build, responsive browser and real-data verification pass; no production rollout has been claimed.
+
+
+## PR #61 integration verification — 2026-10-15
+
+Owner requested a safe merge into main. Isolated checkout merged main `cd03152` into PR head `d51ca99` without conflicts, preserving the standalone developer portal. Review confirmed UI-only changes with no backend/API/schema changes. Fixed the lint-blocking synchronous route-effect state update with a cancellable timer; switched the dashboard to the already bundled Geist font instead of external Google Fonts requests.
+
+- Full `npm run lint` after fixes: PASS, 0 errors / 23 warnings (warnings remain visible; not claimed clean).
+- First direct webpack attempt was invalid environment evidence: skipped token prebuild and a cross-drive dependency junction caused resolution failures. Normal isolated install/build replaces that attempt.
+- GitHub run 38772932493 did not start jobs: account payment/spending limit. Vercel status linked to build-rate-limit. These are infrastructure blockers, not passing CI evidence.
+- Responsive/theme/locale and authorized real-data mutation scenarios remain manual pending in the consolidated ledger. No production financial mutations were made for this review. No Docker or database changes.

@@ -13,7 +13,7 @@
  --color-info:#74767f;--color-info-bg:#f3f3f5;
  --radius-control:8px;--radius-panel:12px;--radius-dialog:12px;
  --sidebar-width:232px;--content-max:1120px;--table-row-height:44px;
- --font-ui:Geist,var(--font-hind-siliguri),"Hind Siliguri",system-ui,sans-serif;
+ --font-ui:"Geist Variable",var(--font-hind-siliguri),"Hind Siliguri",system-ui,sans-serif;
  background:var(--color-canvas);color:var(--color-text);
  font-family:var(--font-ui);font-size:14px;line-height:1.5;
 }

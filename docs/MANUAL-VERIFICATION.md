@@ -643,3 +643,8 @@ After explicit owner approval (push + migrations), existing financial-migrate ru
 ## Developer portal — 2026-10-15
 
 Manual pending: finish the 11-page EN/BN × Light/Dark/System × 360/768/desktop browser matrix, search arrows/Enter/Escape and focus loop, copy toast and global code preference across navigation, reduced motion, marketing-to-portal shell swap and back. Browser tooling repeatedly timed out during this pass; only observed checks in the evidence README are passed. Use an owner-controlled Sandbox workspace/key for create → hosted checkout → real test receipt scenario → verify, plus signed payment alert delivery. Never paste a Live key into the tester. Provision the public custom API origin and publish an idempotency retention promise before removing those TODOs.
+
+
+## Dashboard V2 / PR #61 — 2026-10-15
+
+Manual pending: authorized Sandbox/Live workspace data reconciliation; EN/BN and Light/Dark/System at 320/768/1024/desktop; modal focus/keyboard/escape and create=1 navigation; payment/SMS details and roles; customer CSV import/export; invoice cancellation; payment-link create/edit/publish/archive and redirect/expiry validation; seller-managed refund decision; method enable/disable; phone pairing/disconnect. Use owner-controlled test accounts/devices and Sandbox for mutating scenarios. Source/build verification is recorded in `docs/evidence/DASHBOARD-V2-UI-HANDOFF.md`; it does not prove real-provider or production financial acceptance.

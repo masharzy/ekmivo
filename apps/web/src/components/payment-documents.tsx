@@ -36,11 +36,14 @@ export function PaymentDocuments({kind,workspaceId,environment,locale,userId,can
   if(!isLinks||!canWrite||createFromLinkHandled.current)return;
   const url=new URL(window.location.href);
   if(url.searchParams.get("create")!=="1")return;
-  createFromLinkHandled.current=true;
-  url.searchParams.delete("create");
-  window.history.replaceState(window.history.state,"",url.pathname+url.search+url.hash);
-  setBody(empty());
-  setEditing(null);
+  const timer=setTimeout(()=>{
+   createFromLinkHandled.current=true;
+   url.searchParams.delete("create");
+   window.history.replaceState(window.history.state,"",url.pathname+url.search+url.hash);
+   setBody(empty());
+   setEditing(null);
+  },0);
+  return()=>clearTimeout(timer);
  },[isLinks,canWrite]);
   const detailDialog=useRef<HTMLDialogElement|null>(null);
   const [selectedDocument,setSelectedDocument]=useState<RecordRow|null>(null);
