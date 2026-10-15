@@ -23,5 +23,6 @@ Source of visual truth: user-approved `Ekmivo Pay · Overview.html` and three-pa
 - Actual Live/Sandbox real-data loads, authorization and amount reconciliation; no dummy records introduced.
 - End-to-end create/edit/publish payment link, server validation of redirect URL/expiry, CSV import, refund decision and device pairing.
 - Pending pre-existing Customer Details 404 and One-time Request workspace error remain separate from UI work.
+- Product features intentionally not invented in a UI-only PR: server-backed payout list, saved reports, scheduled-report email, native XLSX download. The Payouts tab explicitly reports unavailable data rather than generating fake records.
 
 This remains an unmerged review branch until latest-SHA build, responsive browser and real-data verification pass; no production rollout has been claimed.
