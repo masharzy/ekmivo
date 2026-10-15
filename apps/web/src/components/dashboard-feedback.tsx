@@ -18,11 +18,11 @@ export function DashboardFeedback({locale}:{locale:"en"|"bn"}){
     const kind=node.getAttribute("role")==="alert"?"error":"success";
     setToast({text,kind,id:Date.now()});
     if(timer.current)clearTimeout(timer.current);
-    timer.current=setTimeout(()=>setToast(null),8000);
+    timer.current=setTimeout(()=>setToast(null),root.closest('[data-service="payments"]')?3000:8000);
    });
   };
   const observer=new MutationObserver(scan);observer.observe(root,{subtree:true,childList:true,characterData:true});scan();
   return()=>{observer.disconnect();if(timer.current)clearTimeout(timer.current)};
  },[]);
- return <div className="ref-toast-region" aria-live="polite" aria-atomic="true">{toast&&<div className="ref-toast" data-kind={toast.kind} key={toast.id}><span className="ref-toast-icon" aria-hidden="true">{toast.kind==="error"?"!":"✓"}</span><div><strong>{toast.kind==="error"?(locale==="bn"?"সম্পন্ন করা যায়নি":"Could not complete"):(locale==="bn"?"আপডেট":"Update")}</strong><p>{toast.text}</p></div><button type="button" onClick={()=>setToast(null)} aria-label={locale==="bn"?"বন্ধ করুন":"Dismiss notification"}>×</button></div>}</div>;
+ return <div className="ref-toast-region" aria-live="polite" aria-atomic="true">{toast&&<div className="ref-toast" data-kind={toast.kind} key={toast.id}><span className="ref-toast-icon" aria-hidden="true">{toast.kind==="error"?"!":"✓"}</span><div><p>{toast.text}</p></div><button type="button" onClick={()=>setToast(null)} aria-label={locale==="bn"?"বন্ধ করুন":"Dismiss notification"}>×</button></div>}</div>;
 }
