@@ -204,3 +204,22 @@
  .ws-form :is(input,textarea,select),.ws-member-actions :is(select,button),.ws-workbench button{min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){.ws-workbench button{transition:none}}
+
+/* Compact dashboard forms: native accessible modals, no inline forms below tables. */
+.doc-heading-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.doc-search-label{flex:1 1 220px;min-width:190px}
+.doc-search-label input{width:100%;min-width:0}
+.doc-edit-dialog,.doc-import-dialog{position:fixed;margin:auto;inset:0;width:min(720px,calc(100vw - 24px));max-height:min(90dvh,900px);overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-panel);background:var(--color-surface);color:var(--color-text);box-shadow:0 22px 85px #0004;padding:0}
+.doc-edit-dialog::backdrop,.doc-import-dialog::backdrop{background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
+.doc-edit-dialog .pg10-form{max-width:none;width:100%;margin:0;box-sizing:border-box;border:0;padding:22px;box-shadow:none}
+.doc-import-dialog{width:min(560px,calc(100vw - 24px))}
+.doc-import-dialog .doc-import{padding:22px;display:grid;gap:14px}
+.doc-import-dialog .doc-import>div:last-child{display:grid;gap:12px}
+.doc-import-dialog h2{font-size:19px;margin:0}
+.doc-dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.doc-import-dialog .doc-dialog-heading>button{font-size:20px;min-width:40px;padding:5px}
+.doc-import-dialog textarea{width:100%;min-height:135px}
+.doc-import-dialog label{font-size:12px;gap:7px}
+.doc-import-dialog .doc-import>div>p{font-family:ui-monospace,monospace;font-size:12px;color:var(--color-text-secondary);margin:0}
+.doc-customer-phone{display:block;font-size:12px;color:var(--color-text-secondary);font-variant-numeric:tabular-nums;user-select:text}
+@media(max-width:600px){.doc-heading-actions{width:100%;justify-content:flex-end}.doc-edit-dialog .pg10-form,.doc-import-dialog .doc-import{padding:16px}.doc-edit-dialog,.doc-import-dialog{max-height:96dvh}}
