@@ -343,3 +343,30 @@
 .ds-app[data-service="payments"] .ref-toast strong,.ds-app[data-service="payments"] .ref-toast-icon{display:none}
 .ds-app[data-service="payments"] .ref-toast button{font-size:16px;color:inherit}
 .ds-app[data-service="payments"] .doc-workspace>p[data-feedback="success"]{position:static;transform:none;background:transparent;color:var(--color-success);border:0;padding:0;margin:0;border-radius:0;font-weight:400;box-shadow:none;z-index:auto}
+
+/* Semantic statuses: a tiny dot and short text; never a colored pill. */
+.ds-app[data-service="payments"] :is(.opw-status,.pl-status,.rf-badge,.sd-state){display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:12px;font-weight:500;letter-spacing:0;line-height:1.4}
+.ds-app[data-service="payments"] :is(.opw-status,.pl-status,.rf-badge,.sd-state)::before{content:"";width:6px;height:6px;flex:none;border-radius:50%;background:currentColor}
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="verified"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="paid"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="approved"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="seller_reported_returned"],
+.ds-app[data-service="payments"] .sd-state[data-state="online"]{color:var(--color-success)}
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="pending"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="requested"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="reviewing"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="unmatched"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="ambiguous"],
+.ds-app[data-service="payments"] .sd-state[data-state="delayed"]{color:var(--color-warning)}
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="cancelled"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="rejected"],
+.ds-app[data-service="payments"] :is(.opw-status,.rf-badge)[data-status="failed"],
+.ds-app[data-service="payments"] .sd-state[data-state="offline"]{color:var(--color-danger)}
+.ds-app[data-service="payments"] .opw-scroll table{min-width:700px}
+.ds-app[data-service="payments"] .ref-document-table table{min-width:600px}
+.ds-app[data-service="payments"] .ekv2-refund-table table{min-width:690px}
+.ds-app[data-service="payments"] :is(.opw-scroll,.ekv2-links-table,.ekv2-refund-table,.ref-document-table){overscroll-behavior-x:contain}
+.ds-app[data-service="payments"] .ds-mobile-dialog{width:min(280px,85vw);background:var(--color-surface);color:var(--color-text);border:0;border-right:1px solid var(--color-border);padding:16px 12px}
+.ds-app[data-service="payments"] .ds-mobile-dialog::backdrop{background:rgba(0,0,0,.45)}
+.ds-app[data-service="payments"] .ds-mobile-dialog .ds-nav-section a{border-radius:8px;padding:8px 10px;color:var(--color-text-muted)}
+.ds-app[data-service="payments"] .ds-mobile-dialog .ds-nav-section a.is-current{background:var(--color-primary-soft);color:var(--color-primary)}
