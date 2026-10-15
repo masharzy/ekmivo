@@ -74,7 +74,7 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_tem
  AND current_setting('ekmivo.environment',true)=e AND
  e=(SELECT environment FROM financial_realm WHERE singleton)
  THEN COALESCE((SELECT jsonb_strip_nulls(jsonb_build_object(
- 'return_url',NULLIF(redirect_url,''),'cancel_url',NULLIF(cancel_url,''))
+ 'return_url',NULLIF(redirect_url,''),'cancel_url',NULLIF(cancel_url,'')))
  FROM pg62_intent_options WHERE workspace_id=w AND environment=e AND intent_id=intent),'{}'::jsonb)
  ELSE '{}'::jsonb END
 $$;
