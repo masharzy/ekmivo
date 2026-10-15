@@ -86,7 +86,7 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
    <section id="webhooks" className="ds-panel">
     <span className="ek-doc-step">05 · WEBHOOKS</span>
     <h2><PublicIcon name="bell"/> {t("Receive signed payment updates","Signed payment updates পান")}</h2>
-    <p>{t("Workspace → Webhooks → Add an HTTPS endpoint. Save its signing secret. The optional webhook_url in Create Payment must match an active registered endpoint; Ekmivo delivers signed events to configured active endpoints.","Workspace → Webhooks থেকে HTTPS endpoint যোগ করুন ও signing secret রাখুন। Create Payment-এর optional webhook_url অবশ্যই আগে registered active endpoint হতে হবে।")}</p>
+    <p>{t("Workspace → Webhooks → Add an HTTPS endpoint. Save its signing secret. The optional webhook_url in Create Payment must match an active registered endpoint. When supplied, this payment's events go to that endpoint; otherwise all configured active endpoints receive events.","Workspace → Webhooks থেকে HTTPS endpoint যোগ করুন ও signing secret রাখুন। Create Payment-এর optional webhook_url অবশ্যই registered active endpoint হতে হবে। সেটি দিলে এই payment-এর events সেই endpoint-এ যাবে; না দিলে সব active endpoint-এ যাবে।")}</p>
     <div className="ek-doc-flow"><span><PublicIcon name="phone"/> Receipt</span><b>→</b><span><PublicIcon name="shield"/> Verified</span><b>→</b><span><PublicIcon name="bell"/> Webhook</span><b>→</b><span><PublicIcon name="check"/> GET status</span></div>
     <h3>{t("Example event","Webhook event উদাহরণ")}</h3>
     <pre><code>{JSON.stringify({id:"EVENT_UUID",type:"payment.verified",environment:"sandbox",data:{payment_intent_id:"INTENT_UUID",amount_minor:15000,verification_status:"verified"}},null,2)}</code></pre>
