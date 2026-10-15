@@ -335,3 +335,11 @@
 .ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form button:last-child{grid-row:auto;grid-column:2;order:1;margin:0}
 .ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form button.sd-primary{grid-column:3;order:2}
 .ds-app[data-service="payments"] .sd-workspace .ekv2-create-dialog .sd-create-form button:not(.sd-primary){background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);padding:8px 12px;border-radius:8px}
+
+/* Reference demo: one-line bottom-center toasts, three-second dismissal. */
+.ds-app[data-service="payments"] .ref-toast-region{left:50%;right:auto;bottom:24px;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);z-index:180}
+.ds-app[data-service="payments"] .ref-toast{display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--color-text);color:var(--color-canvas);border:0;border-radius:8px;box-shadow:0 6px 22px rgba(0,0,0,.14)}
+.ds-app[data-service="payments"] .ref-toast p{font-size:13px;line-height:1.5;margin:0;max-height:none}
+.ds-app[data-service="payments"] .ref-toast strong,.ds-app[data-service="payments"] .ref-toast-icon{display:none}
+.ds-app[data-service="payments"] .ref-toast button{font-size:16px;color:inherit}
+.ds-app[data-service="payments"] .doc-workspace>p[data-feedback="success"]{position:static;transform:none;background:transparent;color:var(--color-success);border:0;padding:0;margin:0;border-radius:0;font-weight:400;box-shadow:none;z-index:auto}
