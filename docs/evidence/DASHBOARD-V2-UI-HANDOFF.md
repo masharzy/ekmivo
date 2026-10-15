@@ -10,7 +10,7 @@ Source of visual truth: user-approved `Ekmivo Pay · Overview.html` and three-pa
 - Customers and invoices: table row details drawers; create/edit modal; customer CSV drag-and-drop/template + existing preview/import; CSV Export runs from a modal and uses the existing queued export API. Invoice cancellation uses shared one-sentence confirmation.
 - Payment links: six-column table, details drawer with publish/archive/copy/edit actions; native archive confirmation; create/edit modal preserves reference, description, amount, optional redirect URL, expiry, max uses, quantity, image URL and custom checkout fields. Overview Create opens the modal via create=1 route state.
 - Refunds: compact table, details drawer, native seller-decision dialog; original refund POST contract remains.
-- Reports: merchant-facing labels and compact financial layout; existing reconciliation calculations remain. Export opens a native modal, with real CSV full/summary export or browser Print/Save PDF (no fake Excel file).
+- Reports: the six requested Summary / Payments / Methods / Customers / Refunds / Payouts tabs, merchant-facing labels, compact financial layout, and existing calculations. Payouts clearly show data unavailable because no payout report source is in this scope. Export opens a native modal, with real CSV full/summary export or browser Print/Save PDF (no fake Excel file).
 - Payment methods: receiving-account add/edit modals and native enable/disable confirmation; existing source of accounts and management POSTs.
 - SMS devices: pairing form modal, details drawer, confirmation before disconnect, existing signed QR pairing and management calls.
 
