@@ -133,7 +133,7 @@ export async function createWorkspaceOnListAction(localeParam:string,nameRaw:str
  if(mode!=="ai"&&mode!=="commerce"&&mode!=="both")return {status:"error",message:t.mode};
  try{
   const id=await insertUserWorkspace(user.id,name,mode);
-  if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,id);
+  try{if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,id);}catch(e){report("set initial workspace default",e);}
   revalidatePath(`/${locale}/workspaces`);
   return {status:"success",message:"",workspace:{id,name,mode}};
  }catch(e){report("createWorkspaceOnList",e);return {status:"error",message:t.generic};}
