@@ -61,6 +61,7 @@ export default async function PaymentGuide({params}:{params:Promise<{locale:stri
     <div className="ek-endpoint"><span className="ek-http-method get">GET</span><code>/v1/payment-intents/{'{intentID}'}</code><span>payments:read</span></div>
     <p>{t("Ekmivo matches trusted transaction receipts automatically. Call GET from your backend and check data.state. HTTP 200 means the lookup worked, not that money was received.","Ekmivo নিজে receipt match করে। Backend থেকে GET করে data.state দেখুন। HTTP 200 মানে payment success নয়।")}</p>
     <div className="ek-doc-flow"><span><PublicIcon name="cart"/> Create</span><b>→</b><span><PublicIcon name="phone"/> {t("Customer pays","Customer pays")}</span><b>→</b><span><PublicIcon name="shield"/> Verify</span><b>→</b><span><PublicIcon name="check"/> {t("Complete order","Order complete")}</span></div>
+    <p>{t("For the payment intent details, GET also returns your stored optional customer fields and metadata in data.options. Public checkout never exposes those details.","Payment details-এর GET response-এ customer fields ও metadata data.options-এ পাবেন। Public checkout-এ এগুলো দেখা যাবে না।")}</p>
     <p><strong>{t("Only fulfil the order when","Order deliver করবেন শুধু যখন")} <code>data.state === &quot;completed&quot;</code>.</strong> {t("Match the intent ID and amount against your order.","Intent ID ও amount নিজের order-এর সঙ্গে মিলিয়ে নিন।")}</p>
     <PaymentEndpointSamples kind="status" locale={locale}/>
    </section>

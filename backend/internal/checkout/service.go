@@ -448,6 +448,16 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		attachTokens(s, ws, realm, data)
+		if id:=r.PathValue("intentID");id!="" {
+			var options []byte
+			if err:=s.scoped(r.Context(),ws,realm,func(tx pgx.Tx) error {
+				return tx.QueryRow(r.Context(),"SELECT pg62_merchant_options($1::uuid,$2,$3::uuid)",ws,realm,id).Scan(&options)
+			});err!=nil{mapped(w,err);return}
+			if detail,ok:=data.(map[string]any);ok {
+				var merchantOptions map[string]any
+				if json.Unmarshal(options,&merchantOptions)==nil&&len(merchantOptions)>0{detail["options"]=merchantOptions}
+			}
+		}
 		write(w, 200, map[string]any{"data": data, "environment": realm})
 	case "POST":
 		if r.PathValue("intentID") != "" {

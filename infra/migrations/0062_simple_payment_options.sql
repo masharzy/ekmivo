@@ -50,6 +50,20 @@ BEGIN
  VALUES(w,e,intent,redir,cancel,hook,cname,cemail,cphone,extra);
  RETURN true;
 END $$;
+-- Merchant-only PII and metadata, never included in token/public checkout.
+CREATE FUNCTION pg62_merchant_options(w uuid,e text,intent uuid)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+ SELECT CASE WHEN current_setting('ekmivo.workspace_id',true)=w::text
+ AND current_setting('ekmivo.environment',true)=e AND
+ e=(SELECT environment FROM financial_realm WHERE singleton)
+ THEN COALESCE((SELECT jsonb_build_object(
+ 'redirect_url',redirect_url,'cancel_url',cancel_url,
+ 'webhook_url',webhook_url,'customer_name',customer_name,
+ 'customer_email',customer_email,'customer_phone',customer_phone,
+ 'metadata',merchant_metadata)
+ FROM pg62_intent_options WHERE workspace_id=w AND environment=e AND intent_id=intent),'{}'::jsonb)
+ ELSE '{}'::jsonb END
+$$;
 CREATE FUNCTION pg62_checkout_redirects(w uuid,e text,intent uuid)
 RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT CASE WHEN current_setting('ekmivo.workspace_id',true)=w::text
@@ -60,6 +74,6 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_tem
  FROM pg62_intent_options WHERE workspace_id=w AND environment=e AND intent_id=intent),'{}'::jsonb)
  ELSE '{}'::jsonb END
 $$;
-REVOKE ALL ON FUNCTION pg62_store_intent_options(uuid,text,uuid,text,text,text,text,text,text,jsonb),pg62_checkout_redirects(uuid,text,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION pg62_store_intent_options(uuid,text,uuid,text,text,text,text,text,text,jsonb),pg62_checkout_redirects(uuid,text,uuid) TO ekmivo_finance_reader;
+REVOKE ALL ON FUNCTION pg62_store_intent_options(uuid,text,uuid,text,text,text,text,text,text,jsonb),pg62_checkout_redirects(uuid,text,uuid),pg62_merchant_options(uuid,text,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION pg62_store_intent_options(uuid,text,uuid,text,text,text,text,text,text,jsonb),pg62_checkout_redirects(uuid,text,uuid),pg62_merchant_options(uuid,text,uuid) TO ekmivo_finance_reader;
 COMMIT;
