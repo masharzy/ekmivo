@@ -35,3 +35,12 @@ Scope: owner-approved cute developer entrance/docs redesign; server-side API-key
 - The public **shared-key** sandbox configuration already exists but was disabled in Neon and was not enabled, rotated or repurposed. Use individual Workspace Sandbox keys as the owner requested.
 - Original automatic verification without TrxID remains the standard flow; TrxID-assisted lookup is optional and intentionally cannot bypass existing receipt matching.
 - No automatic refunds or money movement are implemented by these developer API changes. This work does not close existing device pairing and receipt-report issues.
+
+## Final branch review (post-code-checkpoint)
+
+- Contract drift addressed in later branch commits: `contracts/openapi.yaml`, `apps/web/src/lib/payment-api-contract.json`, `sdk/operations.json`, generator script and payment API reference now include the key-bound paths. This was a static source consistency check; no downstream SDK runtime execution was performed in this review.
+- Public developer entrance now includes desktop-fixed topic sidebar, adapting into a horizontal scrollable nav on smaller screens, without a full marketing hero. Visual appearance remains browser-manual-pending.
+- Added Go route-level fail-closed cases for missing/invalid Bearer keys, caller-controlled `environment` query, unknown actions and missing auth service. **These new cases were added after the recorded independent Go PASS and were not rerun locally** due to absent repository checkout/dependencies. They must not be counted as passing tests yet.
+- Read-only Neon verification: `pg61_transaction_lookup` is installed in both financial databases; the control `pg13_billing_allowed` function checks subscription `grace_until>now()`; live/sandbox keys remain separated in control DB.
+- No CI run was triggered by this assistant; GitHub Actions quota unavailable by owner report. Merge of code does **not** imply production deployment or complete payment E2E acceptance.
+- Explicit follow-up: inspect actual Go deployment and real signed-in Sandbox create→checkout→verify/webhook, plus responsive browser screenshots. TrxID lookup is read-only; a standalone consume/confirm API for unverified TrxIDs was **not** implemented and must not be advertised.
