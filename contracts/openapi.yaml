@@ -480,18 +480,24 @@ paths:
       summary: Issue an immutable standalone or order/invoice-linked BDT request
       tags: [Merchant]
       description: |
-        Server-side payments:write permission required. Linked requests include
-        only order_id OR invoice_id; the server resolves the exact amount from
-        its immutable tenant/environment-bound source. Caller-provided linked
-        amount is rejected. Same idempotency key plus identical payload returns
-        one original request; changed payload or duplicate reference conflicts.
-        No TrxID, payment screenshot, manual approval or client paid state.
+        Simple standalone payments require only amount (BDT) and redirect_url
+        (HTTPS). The server derives BDT/paisa, merchant_reference, currency BDT
+        and default expiry (30 minutes). Existing integrations may continue
+        sending amount_minor, merchant_reference, currency and expiry.
+        Linked order/invoice requests still resolve the amount from the
+        frozen tenant source. Supplying amount and amount_minor together is
+        invalid. Idempotency-Key is optional but strongly recommended: reuse
+        the same key and body to get a single intent on retries.
+        webhook_url must match an active registered workspace webhook;
+        signed webhook delivery is handled by the normal endpoint worker.
+        A redirect or unsigned callback never proves payment.
       security:
         - MerchantBearer: []
       parameters:
         - name: Idempotency-Key
           in: header
-          required: true
+          required: false
+          description: Recommended stable identifier for safe server retries.
           schema: { type: string, minLength: 16, maxLength: 128 }
       requestBody:
         required: true
@@ -500,18 +506,27 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [merchant_reference, currency, expires_in_minutes]
               oneOf:
+                - required: [amount, redirect_url]
                 - required: [amount_minor]
                 - required: [order_id]
                 - required: [invoice_id]
               properties:
-                merchant_reference: { type: string, minLength: 1, maxLength: 128 }
-                amount_minor: { type: integer, minimum: 1, maximum: 100000000000 }
+                amount: { type: number, minimum: 0.01, maximum: 1000000000, multipleOf: 0.01, description: "Amount in BDT, max two decimal places. No floats are used for server money arithmetic." }
+                redirect_url: { type: string, format: uri, maxLength: 2048, description: "Public HTTPS return page; not payment proof." }
+                cancel_url: { type: string, format: uri, maxLength: 2048 }
+                webhook_url: { type: string, format: uri, maxLength: 2048, description: "Must be an existing active workspace endpoint. Use Webhooks to register and obtain its signing secret." }
+                customer_name: { type: string, maxLength: 160 }
+                customer_email: { type: string, format: email, maxLength: 254 }
+                customer_phone: { type: string, maxLength: 32 }
+                metadata: { type: object, description: "Merchant-only JSON object, maximum 2048 bytes." }
+                reference: { type: string, minLength: 1, maxLength: 128 }
+                merchant_reference: { type: string, minLength: 1, maxLength: 128, deprecated: true }
+                amount_minor: { type: integer, minimum: 1, maximum: 100000000000, deprecated: true }
                 order_id: { type: string, format: uuid }
                 invoice_id: { type: string, format: uuid }
-                currency: { type: string, const: BDT }
-                expires_in_minutes: { type: integer, minimum: 5, maximum: 60 }
+                currency: { type: string, const: BDT, default: BDT }
+                expires_in_minutes: { type: integer, minimum: 5, maximum: 60, default: 30 }
       responses:
         '201':
           description: Issued standalone payment request, not paid

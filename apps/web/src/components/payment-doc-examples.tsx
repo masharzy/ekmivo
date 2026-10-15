@@ -56,19 +56,29 @@ func main() {
   if err != nil { panic(err) }
   defer res.Body.Close()
 }`,
- C:`// Requires libcurl. Compile: cc payment.c -lcurl -o payment
+ C:`// Server-only libcurl example: cc payment.c -lcurl -o payment
 #include <curl/curl.h>
+#include <stdio.h>
 #include <stdlib.h>
 int main(void) {
-  CURL *c = curl_easy_init();
-  struct curl_slist *h = NULL;
-  h = curl_slist_append(h, "Content-Type: application/json");
-  // Add the Bearer API key server-side; never compile secrets into your app.
-  curl_easy_setopt(c, CURLOPT_URL, getenv("EKMIVO_PAYMENT_ENDPOINT"));
-  curl_easy_setopt(c, CURLOPT_HTTPHEADER, h);
-  curl_easy_setopt(c, CURLOPT_POSTFIELDS, "{\\"amount\\":125,\\"redirect_url\\":\\"https://merchant.example/success\\"}");
-  curl_easy_perform(c);
+  const char *origin=getenv("EKMIVO_API_ORIGIN"), *key=getenv("EKMIVO_API_KEY");
+  if(!origin||!key) return 1;
+  char url[1024], auth[1024];
+  if(snprintf(url,sizeof url,"%s/v1/payment-intents",origin)>=(int)sizeof url ||
+     snprintf(auth,sizeof auth,"Authorization: Bearer %s",key)>=(int)sizeof auth) return 1;
+  CURL *c=curl_easy_init();
+  if(!c) return 1;
+  struct curl_slist *h=NULL;
+  h=curl_slist_append(h,auth);
+  h=curl_slist_append(h,"Content-Type: application/json");
+  h=curl_slist_append(h,"Idempotency-Key: my-order-123-payment");
+  curl_easy_setopt(c,CURLOPT_URL,url);
+  curl_easy_setopt(c,CURLOPT_HTTPHEADER,h);
+  curl_easy_setopt(c,CURLOPT_POSTFIELDS,"{\\"amount\\":125,\\"redirect_url\\":\\"https://merchant.example/success\\"}");
+  curl_easy_setopt(c,CURLOPT_TIMEOUT,15L);
+  CURLcode result=curl_easy_perform(c);
   curl_slist_free_all(h); curl_easy_cleanup(c);
+  return result==CURLE_OK?0:1;
 }`
 };
 export function PaymentDocExamples({locale}:{locale:"en"|"bn"}){

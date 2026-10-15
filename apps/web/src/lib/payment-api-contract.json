@@ -59111,7 +59111,7 @@
         "tags": [
           "Merchant"
         ],
-        "description": "Server-side payments:write permission required. Linked requests include\nonly order_id OR invoice_id; the server resolves the exact amount from\nits immutable tenant/environment-bound source. Caller-provided linked\namount is rejected. Same idempotency key plus identical payload returns\none original request; changed payload or duplicate reference conflicts.\nNo TrxID, payment screenshot, manual approval or client paid state.\n",
+        "description": "Simple payments take amount in BDT and redirect_url; optional cancel_url, webhook_url (registered active endpoint only), customer details, metadata and reference. Older amount_minor and linked-source forms remain supported. Use a stable Idempotency-Key on retries. Redirects are not payment proof.",
         "security": [
           {
             "MerchantBearer": []
@@ -59121,12 +59121,13 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "minLength": 16,
               "maxLength": 128
-            }
+            },
+            "description": "Optional but recommended to deduplicate retries"
           }
         ],
         "requestBody": {
@@ -59136,12 +59137,14 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "merchant_reference",
-                  "currency",
-                  "expires_in_minutes"
-                ],
+                "required": [],
                 "oneOf": [
+                  {
+                    "required": [
+                      "amount",
+                      "redirect_url"
+                    ]
+                  },
                   {
                     "required": [
                       "amount_minor"
@@ -59159,15 +59162,64 @@
                   }
                 ],
                 "properties": {
-                  "merchant_reference": {
+                  "amount": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 1000000000,
+                    "multipleOf": 0.01,
+                    "description": "BDT, not paisa. Up to two decimal places."
+                  },
+                  "redirect_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048,
+                    "description": "Public HTTPS navigation URL, not proof of payment"
+                  },
+                  "cancel_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048
+                  },
+                  "webhook_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048,
+                    "description": "Must match an active registered endpoint"
+                  },
+                  "customer_name": {
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "customer_email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254
+                  },
+                  "customer_phone": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Merchant-only JSON object, max 2048 bytes"
+                  },
+                  "reference": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "merchant_reference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "deprecated": true
+                  },
                   "amount_minor": {
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 100000000000
+                    "maximum": 100000000000,
+                    "deprecated": true
                   },
                   "order_id": {
                     "type": "string",
@@ -59179,12 +59231,14 @@
                   },
                   "currency": {
                     "type": "string",
-                    "const": "BDT"
+                    "const": "BDT",
+                    "default": "BDT"
                   },
                   "expires_in_minutes": {
                     "type": "integer",
                     "minimum": 5,
-                    "maximum": 60
+                    "maximum": 60,
+                    "default": 30
                   }
                 }
               }
@@ -59193,7 +59247,7 @@
         },
         "responses": {
           "201": {
-            "description": "Issued standalone payment request, not paid",
+            "description": "Payment created (requires payer, not yet verified)",
             "content": {
               "application/json": {
                 "schema": {
@@ -59300,7 +59354,7 @@
             "description": "Duplicate reference or changed idempotency payload"
           },
           "422": {
-            "description": "Invalid amount, expiry, mixed source or caller-forged linked total"
+            "description": "Invalid amount/URL; webhook URL not registered; invalid data"
           },
           "503": {
             "description": "Finance or live source unavailable"
