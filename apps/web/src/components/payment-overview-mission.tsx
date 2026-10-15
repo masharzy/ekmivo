@@ -34,9 +34,6 @@ function loaded<T>(value:Read<T>):value is {value:T;error:null}{return value.val
 function amount(minor:number,locale:Locale){
  return new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT",maximumFractionDigits:2}).format(minor/100);
 }
-function isValidDay(item:unknown):item is ReceiptDay{
- return object(item)&&typeof item.date==="string"&&typeof item.verified_minor==="number"&&Number.isFinite(item.verified_minor);
-}
 function isValidPayment(item:unknown):item is Payment{
  return object(item)&&typeof item.id==="string"&&typeof item.merchant_reference==="string"&&typeof item.verified_amount_minor==="number"&&typeof item.verified_at==="string";
 }
