@@ -337,3 +337,18 @@
 
 @media(max-width:1200px){.opw-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.opw-filter-actions{grid-column:1/-1}}
 @media(max-width:600px){.opw-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Payment Methods: top action, short heading and a true modal form. */
+.pg-phone-hero{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pg-phone-hero>h1{margin:0;font-size:clamp(22px,2vw,27px);letter-spacing:-.03em}
+.pg-phone-header-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pg-phone-dialog{position:fixed;inset:0;margin:auto;max-width:calc(100vw - 24px);width:min(490px,100%);max-height:90dvh;overflow:auto;padding:20px;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-panel);box-shadow:0 24px 80px #0004}
+.pg-phone-dialog::backdrop{background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
+.pg-phone-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.pg-phone-dialog-head h2{margin:0;font-size:19px}
+.pg-phone-dialog-head button{min-width:38px;min-height:38px;font-size:20px}
+.pg-phone-dialog .pg-phone-setup{display:grid;gap:14px;padding:0}
+.pg-phone-dialog .pg-phone-setup label{display:grid;gap:6px}
+.pg-phone-dialog .pg-phone-setup :is(input,select){width:100%;min-height:42px}
+.pg-phone-dialog .pg-phone-actions{display:flex;justify-content:flex-end;gap:8px}
+@media(max-width:600px){.pg-phone-header-actions{width:100%;justify-content:flex-end}.pg-phone-dialog{max-height:96dvh;padding:16px}}
