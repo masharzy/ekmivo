@@ -16,6 +16,7 @@
 @import "./sms-devices.css";
 @import "./integrations.css";
 @import "./dashboard-refinement.css";
+@import "./dashboard-v2.css";
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 100px; }
