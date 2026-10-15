@@ -29,6 +29,17 @@ export function PaymentDocuments({kind,workspaceId,environment,locale,userId,can
  const editorRef=useRef<HTMLFormElement|null>(null);
  const editorDialog=useRef<HTMLDialogElement|null>(null);
  const importDialog=useRef<HTMLDialogElement|null>(null);
+ const createFromLinkHandled=useRef(false);
+ useEffect(()=>{
+  if(!isLinks||!canWrite||createFromLinkHandled.current)return;
+  const url=new URL(window.location.href);
+  if(url.searchParams.get("create")!=="1")return;
+  createFromLinkHandled.current=true;
+  url.searchParams.delete("create");
+  window.history.replaceState(window.history.state,"",url.pathname+url.search+url.hash);
+  setBody(empty());
+  setEditing(null);
+ },[isLinks,canWrite]);
   const detailDialog=useRef<HTMLDialogElement|null>(null);
   const [selectedDocument,setSelectedDocument]=useState<RecordRow|null>(null);
   const openDocument=(row:RecordRow)=>{setSelectedDocument(row);detailDialog.current?.showModal()};
