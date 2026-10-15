@@ -7,12 +7,12 @@ Source of visual truth: user-approved `Ekmivo Pay · Overview.html` and three-pa
 - Keep navigation content while loading, 2px top route progress, sidebar link prefetch on hover/focus; global payment toast is bottom-center and auto-dismisses after 3 seconds.
 - Overview: compact setup notice + checklist modal, real-data 7-day volume chart, compact stats and action center; alert-only connection panel.
 - Payments and incoming SMS: modal/drawer details, up to six columns, payer number and TrxID sourced from existing approved reads.
-- Customers and invoices: table row details drawers; create/edit modal; customer CSV drag-and-drop/template + existing preview/import; CSV Export runs from a modal and uses the existing queued export API.
-- Payment links: six-column table, details drawer with publish/archive/copy/edit actions; create/edit modal preserves reference, description, amount, optional redirect URL, expiry, max uses, quantity, image URL and custom checkout fields. Overview Create opens the modal via create=1 route state.
+- Customers and invoices: table row details drawers; create/edit modal; customer CSV drag-and-drop/template + existing preview/import; CSV Export runs from a modal and uses the existing queued export API. Invoice cancellation uses shared one-sentence confirmation.
+- Payment links: six-column table, details drawer with publish/archive/copy/edit actions; native archive confirmation; create/edit modal preserves reference, description, amount, optional redirect URL, expiry, max uses, quantity, image URL and custom checkout fields. Overview Create opens the modal via create=1 route state.
 - Refunds: compact table, details drawer, native seller-decision dialog; original refund POST contract remains.
 - Reports: merchant-facing labels and compact financial layout; existing reconciliation calculations remain. Export opens a native modal, with real CSV full/summary export or browser Print/Save PDF (no fake Excel file).
-- Payment methods: receiving-account add/edit modals; existing source of accounts and management POSTs.
-- SMS devices: pairing form modal, details drawer, existing signed QR pairing and management calls.
+- Payment methods: receiving-account add/edit modals and native enable/disable confirmation; existing source of accounts and management POSTs.
+- SMS devices: pairing form modal, details drawer, confirmation before disconnect, existing signed QR pairing and management calls.
 
 ## Verification evidence and blockers
 - Vercel preview deployment READY at commit `9bac1d4483` (earlier code state). The latest branch commit is **not** verified by a fresh build.
