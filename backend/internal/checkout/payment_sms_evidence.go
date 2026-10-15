@@ -4,6 +4,7 @@ import (
     "encoding/base64"
     "encoding/json"
     "net/http"
+    "strings"
 
     "github.com/jackc/pgx/v5"
     "github.com/masharzy/ekmivo/backend/internal/deviceevidence"
@@ -48,6 +49,7 @@ func (s *Service) supplementAuthorizedPaymentEvidence(r *http.Request, ws, realm
         EvidenceB64 string `json:"evidence_b64"`
         AAD string `json:"aad"`
         PayerCipherB64 string `json:"payer_cipher_b64"`
+        Sender string `json:"sender"`
     }
     if json.Unmarshal(evidenceRaw, &entries) != nil { return }
     for _, entry := range entries {
@@ -71,13 +73,18 @@ func (s *Service) supplementAuthorizedPaymentEvidence(r *http.Request, ws, realm
                 if clear, err := merchantwebhook.Decrypt(s.Pipeline.Key, cipher, entry.AAD); err == nil {
                     sms := string(clear)
                     if detailID != "" { row["sms_text"] = sms }
-                    for _, rule := range builtinSMSRules() {
-                        receipt, err := rule.Parse(rule.Source, realm, sms)
-                        if err != nil { continue }
-                        if canonicalPayer != "" && receipt.Payer != canonicalPayer { continue }
-                        if canonicalPayer == "" { canonicalPayer = receipt.Payer }
-                        if receipt.Reference != "" { row["transaction_id"] = receipt.Reference }
-                        break
+                    var parsed *deviceevidence.ParsedReceipt
+                    for _, rule := range s.Pipeline.Rules {
+                        if !rule.Approved || (rule.SandboxOnly && realm!="sandbox") ||
+                          !strings.EqualFold(rule.Source,entry.Sender) {continue}
+                        receipt,err:=rule.Parse(rule.Source,realm,sms)
+                        if err!=nil {continue}
+                        if parsed!=nil {parsed=nil;break} // ambiguous; don't show a guessed TrxID
+                        parsed=&receipt
+                    }
+                    if parsed!=nil && (canonicalPayer=="" || parsed.Payer==canonicalPayer) {
+                        if canonicalPayer=="" {canonicalPayer=parsed.Payer}
+                        if parsed.Reference!="" {row["transaction_id"]=parsed.Reference}
                     }
                 }
             }
