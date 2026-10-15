@@ -29,14 +29,15 @@ BEGIN
     encode(coalesce(f.ciphertext, ie.encrypted_evidence),'base64') AS evidence_b64,
     CASE WHEN f.id IS NOT NULL THEN f.phone_id::text||'|'||f.event_id
          WHEN t.id IS NOT NULL THEN t.device_id::text||'|'||t.event_id END AS aad,
-    encode(f.payer_cipher,'base64') AS payer_cipher_b64
+    encode(f.payer_cipher,'base64') AS payer_cipher_b64,
+    coalesce(f.sender,(SELECT d.source FROM pg06_devices d WHERE d.id=t.device_id AND d.workspace_id=w AND d.environment=e)) AS sender
    FROM financial_payments p
    JOIN financial_receipt_observations o ON o.id=p.observation_id
      AND o.workspace_id=w AND o.environment=e
    LEFT JOIN financial_inbound_events ie ON ie.id=o.inbound_event_id
      AND ie.workspace_id=w AND ie.environment=e
    LEFT JOIN LATERAL (
-    SELECT f2.id,f2.ciphertext,f2.phone_id,f2.event_id,f2.payer_cipher
+    SELECT f2.id,f2.ciphertext,f2.phone_id,f2.event_id,f2.payer_cipher,f2.sender
     FROM pg06_phone_forwarded f2
     WHERE f2.workspace_id=w AND f2.environment=e AND f2.observation_id=o.id
     ORDER BY f2.received_at DESC,f2.id DESC LIMIT 1
@@ -54,14 +55,15 @@ BEGIN
   SELECT coalesce(jsonb_agg(to_jsonb(s)),'[]'::jsonb) INTO result FROM (
    SELECT f.id,encode(f.ciphertext,'base64') AS evidence_b64,
     f.phone_id::text||'|'||f.event_id AS aad,
-    encode(f.payer_cipher,'base64') AS payer_cipher_b64
+    encode(f.payer_cipher,'base64') AS payer_cipher_b64,f.sender
    FROM pg06_phone_forwarded f
    WHERE f.workspace_id=w AND f.environment=e
      AND f.id::text IN (SELECT value FROM jsonb_array_elements_text(ids))
    UNION ALL
    SELECT t.id,encode(ie.encrypted_evidence,'base64') AS evidence_b64,
     t.device_id::text||'|'||t.event_id AS aad,
-    NULL::text AS payer_cipher_b64
+    NULL::text AS payer_cipher_b64,
+    (SELECT d.source FROM pg06_devices d WHERE d.id=t.device_id AND d.workspace_id=w AND d.environment=e) AS sender
    FROM pg06_transport t
    LEFT JOIN financial_receipt_observations o ON o.id=t.observation_id
      AND o.workspace_id=w AND o.environment=e
