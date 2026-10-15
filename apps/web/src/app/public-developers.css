@@ -87,3 +87,15 @@
 @media(max-width:970px){.ek-dev-friendly-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ek-dev-friendly-card{min-height:160px}.ek-dev-howto-list{grid-template-columns:1fr}}
 @media(max-width:630px){.ek-dev-public.ek-dev-cozy{padding:115px 17px 45px}.ek-dev-cozy .ek-dev-mini-header{display:block}.ek-dev-cozy .ek-dev-mini-header .ek-dev-primary{display:inline-flex;margin-top:16px}.ek-dev-friendly-grid{gap:10px}.ek-dev-friendly-card{padding:15px;min-height:183px;border-radius:18px}.ek-dev-friendly-card strong{font-size:14px}.ek-dev-friendly-card small{font-size:11px}.ek-dev-custom-box{padding:18px;flex-direction:column}.ek-dev-custom-box>span{width:46px;height:46px}}
 @media(prefers-reduced-motion:reduce){.ek-dev-friendly-card{transition:none}.ek-dev-friendly-card:hover{transform:none}}
+
+/* Developer home: compact sticky sidebar; the page itself has no marketing hero. */
+@media(min-width:1051px){
+ .ek-dev-public.ek-dev-with-sidebar{padding-left:max(260px,calc((100vw - 1020px)/2 + 162px));padding-right:max(24px,calc((100vw - 1350px)/2));}
+ .ek-dev-with-sidebar .ek-dev-side-nav{position:fixed;z-index:4;left:max(20px,calc((100vw - 1350px)/2));top:110px;width:208px;max-height:calc(100dvh - 135px);overflow:auto;border:1px solid var(--ek-pub-border);border-radius:20px;padding:16px 12px;background:var(--ek-pub-surface);box-shadow:0 8px 28px rgb(20 28 60 / 5%);}
+}
+.ek-dev-side-nav{display:flex;flex-direction:column;gap:5px}
+.ek-dev-side-nav strong{font-size:12px;padding:8px 11px 14px;color:var(--ek-pub-muted)}
+.ek-dev-side-nav a{display:block;padding:10px 11px;font-size:12px;font-weight:650;text-decoration:none;border-radius:11px;color:var(--ek-pub-ink)}
+.ek-dev-side-nav a:hover,.ek-dev-side-nav a:focus-visible{background:color-mix(in srgb,#bca9ff 24%,var(--ek-pub-surface));outline-offset:2px}
+.ek-dev-with-sidebar [id^="developer-"]{scroll-margin-top:110px}
+@media(max-width:1050px){.ek-dev-side-nav{flex-direction:row;align-items:center;overflow:auto;white-space:nowrap;padding:10px 0;border-bottom:1px solid var(--ek-pub-border)}.ek-dev-side-nav strong{display:none}.ek-dev-side-nav a{flex:none;background:var(--ek-pub-surface);border:1px solid var(--ek-pub-border)}}
