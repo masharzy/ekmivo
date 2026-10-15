@@ -8,6 +8,7 @@ BEGIN
     OR to_regclass('public.pg06_phone_forwarded') IS NULL
     OR to_regclass('public.pg06_transport') IS NULL
     OR to_regclass('public.financial_inbound_events') IS NULL
+    OR to_regclass('public.pg64_document_catalog') IS NULL
  THEN RAISE EXCEPTION '0066 requires existing payment evidence schema'; END IF;
 END $preflight$;
 
