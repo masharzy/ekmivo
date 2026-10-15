@@ -618,3 +618,8 @@ Status: **manual pending**; not live-provider accepted. Test with a real authori
 ## Simple Payment API / Developer Guide (2026-10-15 — pending)
 
 All of the following are **MANUAL PENDING**, not passed: apply migration 0062 in Sandbox and Live finance databases before Go rollout; authorized Sandbox key minimal create→checkout→receipt scenario→GET verified status; live provider/device evidence; webhook signature/retries and configured URL; redirect/cancel routing; legacy integrations; EN/BN and Light/Dark mobile/desktop docs; production deploy parity. Details: docs/evidence/SIMPLE-PAYMENT-API-20261015.md.
+
+
+## Simple Payment API migration 0062 — operator update (2026-10-15)
+
+**DB SCHEMA APPLIED / VERIFIED** in both physical Neon finance databases `ekmivo_sandbox_financial` and `ekmivo_live_financial` (production branch); 13-statement atomic transaction each. Owner, realm, SQL objects, RLS and grants checked; existing payment rows untouched. Control database `ekmivo` unchanged. Prior ledger entries saying migration pending are superseded by this statement only. Still MANUAL PENDING: actual verified Sandbox/Live payment + provider device, signed webhook callback/retries, Go runtime smoke, checkout redirects and responsive EN/BN browser checks. See `docs/evidence/SIMPLE-PAYMENT-API-20261015.md`.
