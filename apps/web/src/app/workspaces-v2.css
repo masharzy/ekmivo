@@ -117,3 +117,8 @@
 @media(prefers-reduced-motion:reduce){.wk2-root *{transition:none!important;animation:none!important}}
 @media(prefers-reduced-motion:no-preference){.wk2-dialog[open]{animation:wk2-modal-in .14s ease-out}}
 @keyframes wk2-modal-in{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+
+/* Exact reference header control pairing, independent of marketing chrome. */
+.wk2-header-controls{display:flex;align-items:center;gap:8px}
+.wk2-header-controls .wk2-button{height:34px;min-height:34px;padding:7px 12px}
+.wk2-header-controls .wk2-theme-button{width:36px;padding:7px;display:grid;place-items:center}
