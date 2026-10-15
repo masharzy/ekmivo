@@ -2,7 +2,6 @@
 import Link from "next/link";
 import {useRouter} from "next/navigation";
 import {useEffect,useRef,useState,useTransition} from "react";
-import {SiteControls} from "./site-controls";
 import {createWorkspaceOnListAction,setDefaultWorkspaceOnListAction} from "../actions/account";
 import {setWorkspaceProduct} from "../actions/workspace-products";
 import {draftStorageKey,parseSavedDraft,encodeSavedDraft} from "../lib/onboarding-draft.mjs";
@@ -22,6 +21,40 @@ const copy={
  bn:{title:"ওয়ার্কস্পেস",subtitle:"সাইন-ইনের পর আপনার ডিফল্ট ওয়ার্কস্পেস খুলবে।",new:"নতুন ওয়ার্কস্পেস",open:"খুলুন",manage:"পরিচালনা",default:"ডিফল্ট",name:"ওয়ার্কস্পেসের নাম",example:"যেমন: নর্থ স্টুডিও",ai:"AI যোগাযোগ",aiHint:"ইনবক্স, নলেজ ও ফলো-আপ।",pay:"কমার্স ও পেমেন্ট",payHint:"অর্ডার, পেমেন্ট যাচাই ও ডিভাইস।",both:"দুটোই",bothHint:"একই ওয়ার্কস্পেসে দুটি সেবা।",payProduct:"পেমেন্ট গেটওয়ে",payProductHint:"লিংক, ইনভয়েস ও চেকআউট।",aiProduct:"AI ওয়ার্কস্পেস",aiProductHint:"গ্রাহকের কথোপকথন।",create:"ওয়ার্কস্পেস তৈরি করুন",cancel:"বাতিল",done:"সম্পন্ন",noPlan:"কোনো পেইড প্ল্যান শুরু হবে না।",access:"শুধু অ্যাক্সেস বদলাবে।",makeDefault:"ডিফল্ট করুন",created:"ওয়ার্কস্পেস তৈরি হয়েছে",saved:"সংরক্ষিত",changed:"ডিফল্ট ওয়ার্কস্পেস বদলেছে",empty:"এখনো কোনো ওয়ার্কস্পেস নেই।",noProduct:"কোনো সেবা নেই",role:{owner:"মালিক",admin:"অ্যাডমিন",editor:"সম্পাদক",viewer:"দর্শক"},close:"বন্ধ করুন",confirmTitle:"সেবা বন্ধ করবেন?",confirmMessage:"এই ওয়ার্কস্পেসের সবার সেবা ব্যবহারের অনুমতি বদলাবে।",turnOff:"বন্ধ করুন",tryAgain:"আবার চেষ্টা করুন",loading:"ওয়ার্কস্পেস লোড হচ্ছে…"}
 } as const;
 
+function WorkspaceHeaderControls({locale,initialTheme}:{locale:Locale;initialTheme:Theme}){
+ const [theme,setTheme]=useState<Theme>(initialTheme);
+ const [systemDark,setSystemDark]=useState(false);
+ useEffect(()=>{
+  const preference=window.matchMedia("(prefers-color-scheme: dark)");
+  const update=()=>setSystemDark(preference.matches);
+  update();preference.addEventListener("change",update);
+  const sync=(e:StorageEvent)=>{
+   if(e.key!=="ekmivo-theme-preference")return;
+   const next=e.newValue==="light"||e.newValue==="dark"?e.newValue:"system";
+   setTheme(next);if(next==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.dataset.theme=next;
+  };
+  window.addEventListener("storage",sync);
+  return()=>{preference.removeEventListener("change",update);window.removeEventListener("storage",sync)};
+ },[]);
+ const dark=theme==="dark"||(theme==="system"&&systemDark);
+ function toggleTheme(){
+  const next:Theme=dark?"light":"dark";setTheme(next);
+  document.documentElement.dataset.theme=next;
+  document.cookie=`ekmivo-theme=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  try{localStorage.setItem("ekmivo-theme-preference",next)}catch{/* cookie remains authoritative */}
+ }
+ function toggleLocale(){
+  const next=locale==="bn"?"en":"bn";
+  document.cookie=`ekmivo-locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  window.location.reload();
+ }
+ return <div className="wk2-header-controls">
+  <button type="button" className="wk2-button" onClick={toggleLocale} lang={locale==="bn"?"en":"bn"} aria-label={locale==="bn"?"Switch to English":"বাংলা ভাষায় দেখুন"}>{locale==="bn"?"English":"বাংলা"}</button>
+  <button type="button" className="wk2-button wk2-theme-button" onClick={toggleTheme} aria-label={dark?(locale==="bn"?"লাইট মোড":"Light mode"):(locale==="bn"?"ডার্ক মোড":"Dark mode")} title={dark?(locale==="bn"?"লাইট মোড":"Light mode"):(locale==="bn"?"ডার্ক মোড":"Dark mode")}>
+   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{dark?<><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></>:<path d="M21 13A9 9 0 0 1 11 3a7 7 0 0 0 10 10z"/>}</svg>
+  </button>
+ </div>;
+}
 export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initialTheme}:{locale:Locale;user:{id:string;name:string};initialWorkspaces:Workspace[];initialDefault:string|null;initialTheme:Theme}){
  const t=copy[locale];const router=useRouter();
  const [rows,setRows]=useState(initialWorkspaces),[defaultId,setDefaultId]=useState(initialDefault);
@@ -91,7 +124,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
   {navigating&&<div className="wk2-progress" role="progressbar" aria-label={locale==="bn"?"ওয়ার্কস্পেস খোলা হচ্ছে":"Opening workspace"}/>}
   <header className="wk2-header">
    <Link href={`/${locale}/workspaces`} className="wk2-logo">ekmivo</Link>
-   <div className="wk2-header-right"><SiteControls locale={locale} initialTheme={initialTheme}/><span className="wk2-user-name">{user.name}</span><span className="wk2-avatar">{user.name.trim().charAt(0).toUpperCase()}</span></div>
+   <div className="wk2-header-right"><WorkspaceHeaderControls locale={locale} initialTheme={initialTheme}/><span className="wk2-user-name">{user.name}</span><span className="wk2-avatar">{user.name.trim().charAt(0).toUpperCase()}</span></div>
   </header>
   <div className="wk2-content">
    <div className="wk2-titlebar"><h1>{t.title}</h1><button type="button" className="wk2-button wk2-primary" onClick={openCreate}><Icon name="plus"/>{t.new}</button><p>{t.subtitle}</p></div>
