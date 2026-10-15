@@ -149,7 +149,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
     <div className="em-heading-title"><h1>{t("Overview","সারসংক্ষেপ")}</h1></div>
 
    </div>
-   <div className="em-actions"><Link className="em-primary" href={go("payment-links")}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span aria-hidden="true">+</span></Link><button type="button" onClick={update} disabled={loading}>{t("Refresh","আপডেট")}</button></div>
+   <div className="em-actions"><Link className="em-primary" href={go("payment-links")+"?create=1"}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span aria-hidden="true">+</span></Link><button type="button" onClick={update} disabled={loading}>{t("Refresh","আপডেট")}</button></div>
   </header>
   {loading&&!snapshot?<section className="em-panel em-loading" role="status"><span className="em-shimmer"/><span className="em-shimmer"/><span className="em-shimmer"/>{t("Checking setup and payments…","সেটআপ ও পেমেন্ট যাচাই হচ্ছে…")}</section>:null}
   {snapshot&&!ready&&<div className="ekv2-setup-note"><span className="ekv2-setup-dot"/><strong>{count(tasks.filter(step=>step.ok===false).length)} {t("setup steps left","টি সেটআপ বাকি")}</strong><button type="button" onClick={()=>setShowSteps(true)}>{t("Finish setup","সেটআপ সম্পূর্ণ করুন")}</button></div>}
@@ -190,7 +190,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
       <div className="em-transaction-list">{recent.map(row=><Link href={go("transactions/"+row.id)} key={row.id} className="em-transaction"><span className="em-transaction-id">{row.merchant_reference}</span><strong>{moneyOrDash(row.verified_amount_minor)}</strong><time>{Number.isNaN(Date.parse(row.verified_at))?"—":new Intl.DateTimeFormat(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",dateStyle:"short",timeStyle:"short"}).format(new Date(row.verified_at))}</time></Link>)}</div>}
     </section>
     <section className="em-panel em-shortcuts"><div className="em-panel-top"><h2>{t("Quick actions","দ্রুত কাজ")}</h2></div>
-     <Link href={go("payment-links")}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span>↗</span></Link>
+     <Link href={go("payment-links")+"?create=1"}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span>↗</span></Link>
       <Link href={go("reports")}>{t("View reports","রিপোর্ট দেখুন")} <span>↗</span></Link>
     </section>
    </div>
