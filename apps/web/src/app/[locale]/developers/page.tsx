@@ -2,106 +2,132 @@ import {PublicIcon} from "../../../components/public-icon";
 import Link from "next/link";
 import {notFound} from "next/navigation";
 import {goOrigin} from "../../../lib/server/go-origin";
+import {DocsNavigation} from "../../../components/docs-navigation";
 import {PaymentDocExamples} from "../../../components/payment-doc-examples";
 import {PaymentEndpointSamples} from "../../../components/payment-endpoint-samples";
-import {DocsNavigation} from "../../../components/docs-navigation";
 
-export const metadata={title:"Developers — Ekmivo",description:"Payment API guide, code examples and Sandbox testing."};
+export const metadata={title:"Payment API Docs — Ekmivo",description:"Create and verify payments with a simple, documented API."};
+
 export default async function PaymentGuide({params}:{params:Promise<{locale:string}>}){
  const {locale}=await params;
  if(locale!=="en"&&locale!=="bn")notFound();
  const bn=locale==="bn",t=(en:string,বাংলা:string)=>bn?বাংলা:en;
- const configuredBaseURL=goOrigin()?.origin;
  const fields=[
-  ["merchant_reference","string","Yes",t("Your unique order reference, 1–128 characters","নিজস্ব order reference, ১–১২৮ অক্ষর")],
-  ["amount_minor","integer","Yes*",t("BDT in paisa: 12500 means ৳125","পয়সায় হিসাব: ১২৫০০ মানে ১২৫ টাকা")],
-  ["currency","string","Yes","BDT"],
-  ["expires_in_minutes","integer","Yes",t("5–60 minutes","৫–৬০ মিনিট")],
-  ["order_id","UUID","No",t("Linked order; omit amount_minor or use zero","লিংক করা order; amount_minor শূন্য রাখুন")],
-  ["invoice_id","UUID","No",t("Linked invoice; mutually exclusive with order_id","লিংক করা invoice; order_id একসঙ্গে নয়")]
+  ["amount","number","Yes",t("Amount in BDT: 150 or 150.50. Not paisa.","টাকায় amount: 150 অথবা 150.50; পয়সায় নয়।")],
+  ["redirect_url","URL","Yes",t("HTTPS page to open after a verified payment.","Verified payment-এর পর খোলার HTTPS URL।")],
+  ["cancel_url","URL","No",t("HTTPS URL after cancellation.","Payment বাতিল হলে HTTPS URL।")],
+  ["webhook_url","URL","No",t("Active HTTPS webhook already registered in your workspace.","Workspace-এ আগে registered active HTTPS webhook।")],
+  ["customer_name","string","No",t("Customer name.","Customer-এর নাম।")],
+  ["customer_email","string","No",t("Customer email.","Customer-এর ইমেইল।")],
+  ["customer_phone","string","No",t("Customer contact number, not payment proof.","Customer contact number, payment proof নয়।")],
+  ["metadata","object","No",t("Extra order details (no secrets).","Extra order details (secret নয়)।")],
+  ["reference","string","No",t("Your order reference; auto-generated when omitted.","Order reference; না দিলে নিজে তৈরি হবে।")],
+  ["expires_in_minutes","integer","No",t("Default 30; choose from 5 to 60.","Default 30; ৫ থেকে ৬০ মিনিট।")]
  ];
  return <main className="ek-payment-docs ek-cute-docs ek-unified-guide">
   <div className="ek-doc-topline">
-   <div><span className="ek-doc-kicker"><PublicIcon name="code"/> EKMiVO / DEVELOPERS</span><h1>{t("Payment API guide","পেমেন্ট API নির্দেশনা")}</h1>
-   <p>{t("Small steps, working examples and clear responses. One API key identifies your workspace and Sandbox or Live automatically.","সহজ ধাপ, কোডের উদাহরণ আর পরিষ্কার response। API key থেকেই workspace ও Sandbox/Live নির্ধারিত হবে।")}</p></div>
-   <div className="ek-doc-base-url"><strong>{t("API base URL","API-এর মূল URL")}</strong><code>{configuredBaseURL||t("Not configured","কনফিগার করা নেই")}</code><small>{t("Same URL for Sandbox & Live; your API key selects the environment.","Sandbox এবং Live-এর জন্য একই URL; API key থেকেই environment নির্ধারিত হয়।")}</small></div><div className="ek-doc-top-actions"><Link href="/workspaces">{t("My API keys","আমার API keys")} ↗</Link><a href="/api/payment-contract" download="ekmivo-openapi.json">OpenAPI ↓</a></div>
+   <div><span className="ek-doc-kicker"><PublicIcon name="code"/> EKMIVO / DEVELOPERS</span><h1>{t("Payment API documentation","পেমেন্ট API ডকুমেন্টেশন")}</h1><p>{t("Create a payment, verify it and receive signed updates. Simple steps and working examples.","পেমেন্ট তৈরি, যাচাই এবং signed updates—সহজ ধাপে, কাজের উদাহরণে।")}</p></div>
+   <div className="ek-doc-base-url"><strong>{t("API Base URL","API Base URL")}</strong><code>{goOrigin()?.origin||t("Not configured","কনফিগার করা নেই")}</code><small>{t("Sandbox and Live use the same URL. Your key selects the environment.","একই URL; API key থেকেই Sandbox/Live নির্ধারিত হয়।")}</small></div>
+   <div className="ek-doc-top-actions"><Link href="/workspaces">{t("Get API keys","API keys নিন")} ↗</Link><a href="/api/payment-contract" download="ekmivo-openapi.json">OpenAPI ↓</a></div>
   </div>
   <DocsNavigation locale={locale}/>
   <div className="ek-doc-content">
-   <section id="overview" className="ek-doc-intro">
-    <div className="ek-doc-color-grid">
-     <a href="#authentication" className="ek-cute-tile lavender"><span className="ek-cute-icon"><PublicIcon name="key"/></span><strong>{t("Get a key","API key নিন")}</strong><small>{t("Your workspace. Your environment.","নিজের workspace, নিজের environment")}</small></a>
-     <a href="#create-checkout" className="ek-cute-tile peach"><span className="ek-cute-icon"><PublicIcon name="cart"/></span><strong>{t("Create payment","পেমেন্ট তৈরি")}</strong><small>POST /v1/payment-intents</small></a>
-     <a href="#checkout-flow" className="ek-cute-tile mint"><span className="ek-cute-icon"><PublicIcon name="link"/></span><strong>{t("Open checkout","চেকআউট খুলুন")}</strong><small>{t("Get a URL, then redirect","URL নিন, গ্রাহককে পাঠান")}</small></a>
-     <a href="#payment-status" className="ek-cute-tile sky"><span className="ek-cute-icon"><PublicIcon name="shield"/></span><strong>{t("Verify safely","নিরাপদ যাচাই")}</strong><small>{t("Automatic and server-authoritative","স্বয়ংক্রিয় ও নির্ভরযোগ্য")}</small></a>
-    </div>
-   </section>
-   <section id="authentication" className="ds-panel">
-    <span className="ek-doc-step">01 · {t("BEFORE YOU START","শুরু করার আগে")}</span><h2><PublicIcon name="key"/> {t("One key. Your workspace.","একটি key, আপনার workspace।")}</h2>
-    <p>{t("Sign in → Payment workspace → API Keys → Create Sandbox key. Select payments:write and payments:read. Store the secret on your own backend, never inside a browser, public bot or mobile application.","লগইন → Payment workspace → API Keys → Sandbox key তৈরি করুন। payments:write ও payments:read permission দিন। Secret শুধু নিজের backend-এ রাখুন, ব্রাউজার বা অ্যাপে নয়।")}</p>
-    <div className="ek-doc-note"><strong><PublicIcon name="flask"/> Sandbox</strong><span>{t("Test credentials work with the isolated test database. No real money moves. A Live key requires an eligible active payment plan.","Sandbox key আলাদা পরীক্ষামূলক database-এ কাজ করে, আসল টাকা লাগে না। Live key পেতে উপযুক্ত সক্রিয় payment plan প্রয়োজন।")}</span></div>
-    <p><code>Authorization: Bearer ek_test_…</code> {t("or","অথবা")} <code>ek_live_…</code></p>
-    <p>{t("The public API URL has no workspace ID and no environment query. The key's immutable binding decides both.","Public API URL-এ workspace ID বা environment query থাকবে না। Key-এর binding থেকেই দুটো নির্ধারিত হয়।")}</p>
-   </section>
    <section id="create-checkout" className="ds-panel">
-    <span className="ek-doc-step">02 · {t("CREATE PAYMENT","পেমেন্ট তৈরি")}</span><h2><PublicIcon name="receipt"/> {t("Create your first payment","প্রথম পেমেন্ট তৈরি করুন")}</h2>
-    <div className="ek-endpoint"><span className="ek-http-method">POST</span><code>/v1/payment-intents</code><span>{t("API key required","API key লাগবে")}</span></div>
-    <p>{t("Send a JSON request from your server. Include a stable Idempotency-Key header so retries never create a second payment.","নিজের সার্ভার থেকে JSON পাঠান। একই request retry করলে একই Idempotency-Key ব্যবহার করুন, যেন দ্বিতীয় পেমেন্ট না তৈরি হয়।")}</p>
-    <h3 id="request-fields">{t("Request fields","Request-এর তথ্য")}</h3>
-    <div className="ek-docs-table"><table><thead><tr><th>Field</th><th>Type</th><th>{t("Required","প্রয়োজন")}</th><th>{t("Details","বিবরণ")}</th></tr></thead><tbody>{fields.map(([field,type,needed,description])=><tr key={field}><td><code>{field}</code></td><td>{type}</td><td>{needed==="Yes"||needed==="Yes*"?(bn?"হ্যাঁ":"Yes"):(bn?"না":"No")}</td><td>{description}</td></tr>)}</tbody></table></div>
-    <p className="ek-doc-footnote">{t("* Amount is required for standalone payments. Linked order/invoice amounts are server-calculated. Do not supply both order_id and invoice_id.","* সাধারণ payment-এ amount লাগবে। Linked order/invoice-এ সার্ভার amount নির্ধারণ করে। order_id ও invoice_id একসঙ্গে দেওয়া যাবে না।")}</p>
-    <div id="integration-examples" className="ek-guide-examples"><h3>{t("Code & Sandbox testing","কোড ও Sandbox পরীক্ষা")}</h3><PaymentDocExamples locale={locale}/></div>
-    <h3>{t("Possible responses","সম্ভাব্য response")}</h3>
-    <div className="ek-http-outcomes"><span>201 · {t("Created","তৈরি হয়েছে")}</span><span>401 · {t("Invalid key","ভুল key")}</span><span>403 · {t("Plan / scope","Plan / অনুমতি")}</span><span>409 · {t("Conflict","Conflict")}</span><span>422 · {t("Invalid request","ভুল request")}</span><span>429 · {t("Rate limit","Rate limit")}</span><span>503 · {t("Unavailable","সেবা বন্ধ")}</span></div>
-    <p>{t("Use the VS Code-style examples and Run simulation panel in this section. The preview never sends money or executes your supplied code.","এই section-এর code examples ও Run simulation দেখুন। Preview আসল টাকা পাঠায় না বা কোড execute করে না।")}</p>
-   </section>
-   <section id="checkout-flow" className="ds-panel">
-    <span className="ek-doc-step">03 · {t("HOSTED CHECKOUT","হোস্টেড চেকআউট")}</span><h2><PublicIcon name="cart"/> {t("Open the returned checkout URL","পাওয়া Checkout URL খুলুন")}</h2>
-    <p>{t("A successful create returns an intent ID, checkout_token and (when the public web origin is configured) checkout_url. Open that URL for the customer. For compatibility, /en/checkout/{token} and /bn/checkout/{token} remain available.","সফল Create response-এ intent ID, checkout_token এবং public web origin configured থাকলে checkout_url আসবে। Customer-কে সেই URL-এ পাঠান। /en/checkout/{token} ও /bn/checkout/{token} আগের মতো থাকবে।")}</p>
-    <div className="ek-doc-flow"><span><PublicIcon name="inbox"/> {t("Create","Create")}</span><b>→</b><span><PublicIcon name="cart"/> {t("Checkout","Checkout")}</span><b>→</b><span><PublicIcon name="phone"/> {t("SMS receipt","SMS receipt")}</span><b>→</b><span><PublicIcon name="check"/> {t("Verify","Verify")}</span></div>
-    <p>{t("Sandbox can simulate success/pending/expired/cancelled states; the payment source is simulated, not real bKash/Nagad/Rocket money.","Sandbox-এ success/pending/expired/cancelled পরীক্ষা করা যায়; কোনো আসল bKash/Nagad/Rocket টাকা পাঠানো হয় না।")}</p>
+    <span className="ek-doc-step">01 · {t("CREATE PAYMENT","পেমেন্ট তৈরি")}</span>
+    <h2><PublicIcon name="cart"/> {t("Create a payment","পেমেন্ট তৈরি করুন")}</h2>
+    <p>{t("Call this endpoint from your backend. Only amount and redirect_url are required for a new payment.","নিজের backend থেকে request পাঠান। নতুন payment-এর জন্য শুধু amount ও redirect_url required।")}</p>
+    <div className="ek-endpoint"><span className="ek-http-method">POST</span><code>/v1/payment-intents</code><span>payments:write</span></div>
+    <h3>{t("Headers","Headers")}</h3>
+    <div className="ek-docs-table"><table><thead><tr><th>Header</th><th>Required</th><th>{t("Value","Value")}</th></tr></thead><tbody>
+     <tr><td><code>Authorization</code></td><td>Yes</td><td><code>Bearer YOUR_API_KEY</code></td></tr>
+     <tr><td><code>Content-Type</code></td><td>Yes</td><td><code>application/json</code></td></tr>
+     <tr><td><code>Idempotency-Key</code></td><td>No</td><td>{t("Recommended. Keep the same value for safe retries.","Recommended। Retry করলে একই value দিন।")}</td></tr>
+    </tbody></table></div>
+    <h3 id="request-fields">{t("Request body","Request body")}</h3>
+    <div className="ek-docs-table"><table><thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>{t("Description","Description")}</th></tr></thead><tbody>
+     {fields.map(([name,type,required,desc])=><tr key={name}><td><code>{name}</code></td><td>{type}</td><td><strong>{required==="Yes"?(bn?"হ্যাঁ":"Yes"):(bn?"না":"No")}</strong></td><td>{desc}</td></tr>)}
+    </tbody></table></div>
+    <h3>{t("Smallest possible request","সবচেয়ে ছোট request")}</h3>
+    <pre><code>{JSON.stringify({amount:150,redirect_url:"https://merchant.example/success"},null,2)}</code></pre>
+    <p className="ek-doc-footnote">{t("Old integrations can continue using amount_minor and merchant_reference. New integrations should use amount in BDT. Order/invoice-linked requests still use their original source IDs.","পুরোনো integration-এর amount_minor ও merchant_reference চলবে। নতুন integration-এ amount ব্যবহার করুন।")}</p>
+    <div className="ek-guide-examples" id="integration-examples"><h3>{t("Copy a working example or try Sandbox","কোড কপি অথবা Sandbox test করুন")}</h3><PaymentDocExamples locale={locale}/></div>
+    <h3>{t("Example response · 201 Created","Response উদাহরণ · 201 Created")}</h3>
+    <pre><code>{JSON.stringify({id:"550e8400-e29b-41d4-a716-446655440000",state:"requires_payer",merchant_reference:"EK-123456",amount_minor:15000,currency:"BDT",checkout_url:"https://checkout.example/en/checkout/TOKEN"},null,2)}</code></pre>
+    <p className="ek-doc-footnote">{t("Example values only. checkout_url is included when the public origin is configured. Created does NOT mean paid.","এটি নমুনা response। Public origin configured থাকলে checkout_url পাওয়া যায়। Created মানে paid নয়।")}</p>
    </section>
    <section id="payment-status" className="ds-panel">
-    <span className="ek-doc-step">04 · {t("CHECK STATUS","অবস্থা যাচাই")}</span><h2><PublicIcon name="shield"/> {t("Trust verified server state","শুধু সার্ভারের যাচাইকৃত অবস্থাকে বিশ্বাস করুন")}</h2>
+    <span className="ek-doc-step">02 · {t("VERIFY PAYMENT","পেমেন্ট যাচাই")}</span>
+    <h2><PublicIcon name="shield"/> {t("Verify payment status","পেমেন্টের অবস্থা যাচাই করুন")}</h2>
     <div className="ek-endpoint"><span className="ek-http-method get">GET</span><code>/v1/payment-intents/{'{intentID}'}</code><span>payments:read</span></div>
-    <p>{t("Use your own backend and a read-scoped API key. Match intent, amount and reference before granting an order. HTTP 200 confirms a successful lookup, not successful payment.","Read-scoped API key দিয়ে নিজের backend থেকে status দেখুন। Order deliver করার আগে intent, amount ও reference মিলান। HTTP 200 মানে query সফল—টাকা পাওয়া নয়।")}</p>
-    <p>{t("Automatic receipt matching uses provider, full payer number, amount and original transaction time. Customers do not enter a TrxID in this hosted flow.","স্বয়ংক্রিয় matching-এ provider, পূর্ণ payer number, amount ও original transaction time লাগে। Hosted flow-তে কাস্টমার TrxID লিখবেন না।")}</p>
+    <p>{t("Ekmivo matches trusted transaction receipts automatically. Call GET from your backend and check data.state. HTTP 200 means the lookup worked, not that money was received.","Ekmivo নিজে receipt match করে। Backend থেকে GET করে data.state দেখুন। HTTP 200 মানে payment success নয়।")}</p>
+    <div className="ek-doc-flow"><span><PublicIcon name="cart"/> Create</span><b>→</b><span><PublicIcon name="phone"/> {t("Customer pays","Customer pays")}</span><b>→</b><span><PublicIcon name="shield"/> Verify</span><b>→</b><span><PublicIcon name="check"/> {t("Complete order","Order complete")}</span></div>
+    <p><strong>{t("Only fulfil the order when","Order deliver করবেন শুধু যখন")} <code>data.state === &quot;completed&quot;</code>.</strong> {t("Match the intent ID and amount against your order.","Intent ID ও amount নিজের order-এর সঙ্গে মিলিয়ে নিন।")}</p>
     <PaymentEndpointSamples kind="status" locale={locale}/>
    </section>
-   <section id="webhooks" className="ds-panel">
-    <span className="ek-doc-step">05 · {t("EVENTS","ইভেন্ট")}</span><h2><PublicIcon name="bell"/> {t("Get signed payment updates","স্বাক্ষরযুক্ত পেমেন্ট আপডেট নিন")}</h2>
-    <p>{t("Configure Webhooks in your workspace. Verify the HMAC on the original raw body, reject old timestamps, deduplicate event IDs, then query current payment state before fulfilment.","Workspace থেকে Webhook যুক্ত করুন। আসল raw body-তে HMAC যাচাই, পুরনো timestamp ও duplicate event বাদ দিয়ে current payment state query করে order সম্পন্ন করুন।")}</p>
-    <code>v1 = HMAC-SHA256(secret, timestamp + &quot;.&quot; + raw_body)</code>
+   <section id="authentication" className="ds-panel">
+    <span className="ek-doc-step">03 · PREFERRED AUTHENTICATION</span>
+    <h2><PublicIcon name="key"/> {t("Use a Bearer key","Bearer key ব্যবহার করুন")}</h2>
+    <p>{t("Send the secret key in the Authorization header, from your backend only. The key automatically identifies both your workspace and Sandbox/Live environment.","Authorization header-এ API key দিন। Secret শুধু backend-এ থাকবে। Key থেকেই workspace ও Sandbox/Live নির্ধারিত হয়।")}</p>
+    <pre><code>{'Authorization: Bearer ek_test_YOUR_SANDBOX_KEY\nContent-Type: application/json'}</code></pre>
+    <p>{t("Never expose your API key in browser JavaScript, a mobile app or a public repository. No workspace ID or environment query is required.","Browser, mobile app বা public repo-তে API key রাখবেন না। Workspace ID বা environment query লাগবে না।")}</p>
    </section>
-   <section id="custom-verification" className="ds-panel ek-custom-verification">
-    <span className="ek-doc-step"><PublicIcon name="code"/> {t("CUSTOM PAYMENT VERIFICATION","নিজস্ব পেমেন্ট যাচাই")}</span>
-    <h2>{t("Your checkout UI, our receipt verification.","চেকআউট আপনার, যাচাই আমাদের।")}</h2>
-    <p>{t("Build your own interface. No Ekmivo checkout screen is required for these integration patterns. Both still need an authenticated payment intent and trustworthy server-side receipt evidence.","নিজের checkout UI নিজে তৈরি করুন। এই integration-এ Ekmivo-র checkout UI লাগবে না। তবে API key, payment intent ও আসল server-side receipt evidence প্রয়োজন।")}</p>
-    <div className="ek-doc-mode-grid">
-     <article className="ek-mode-auto"><span className="ek-cute-icon"><PublicIcon name="link"/></span><h3>{t("Automatic verification","Automatic Verification")}</h3><p>{t("No customer TrxID. Create the intent, let the customer pay, then poll status or receive a signed webhook.","কাস্টমারের TrxID লাগবে না। Intent তৈরি করে নিজের UI-তে payment instructions দেখান, API/Webhook থেকে verified status নিন।")}</p><code>GET /v1/payment-intents/{'{intentID}'}</code></article>
-     <article className="ek-mode-trx"><span className="ek-cute-icon"><PublicIcon name="search"/></span><h3>{t("TrxID-assisted verification","TrxID দিয়ে যাচাই")}</h3><p>{t("Your UI may collect the provider TrxID. This read-only lookup reports verified only when that receipt is already securely matched to this exact intent; a guessed TrxID cannot mark any payment as paid.","নিজের UI-তে TrxID নিতে পারেন। সেই receipt ইতিমধ্যে নির্দিষ্ট intent-এর সঙ্গে নিরাপদে match হলে তবেই verified দেখাবে; শুধু TrxID লিখে payment verified করা যায় না।")}</p><code>POST /v1/payment-intents/{'{intentID}'}/verify-transaction</code></article>
-    </div>
-    <h3>{t("Required setup for your own checkout UI","নিজের Checkout UI-এর জন্য প্রয়োজনীয় setup")}</h3>
-    <p>{t("After creating the intent, use the returned checkout capability to lock the payer and provider with POST /v1/public/checkout/{token}/lock. Send payer_number and method (bkash/nagad/rocket); show the server-provided receiving instructions, then read authoritative payment status. This binding is mandatory for automatic matching; simply creating an intent does not verify money.","Intent তৈরি করে পাওয়া checkout capability দিয়ে POST /v1/public/checkout/{token}/lock-এ payer_number ও method (bkash/nagad/rocket) পাঠিয়ে attempt lock করুন। Server-এর দেওয়া receiving instructions নিজের UI-তে দেখান, তারপর authoritative payment status নিন। Matching-এর জন্য এই ধাপটি জরুরি; শুধু Intent তৈরি করলেই টাকা যাচাই হয় না।")}</p>
+   <section id="api-keys" className="ds-panel">
+    <span className="ek-doc-step">04 · GET API KEYS</span>
+    <h2><PublicIcon name="key"/> {t("Get Sandbox and Live keys","Sandbox ও Live API key সংগ্রহ")}</h2>
+    <h3>{t("Sandbox key","Sandbox key")}</h3>
+    <p>{t("Sign in → Payment workspace → API Keys → Create key → Sandbox → Select payments:write and payments:read → Copy the key. It starts with ek_test_.","লগইন → Payment workspace → API Keys → Create key → Sandbox → payments:write এবং payments:read → Key copy করুন। ek_test_ দিয়ে শুরু হবে।")}</p>
+    <div className="ek-doc-note"><strong><PublicIcon name="flask"/> Sandbox</strong><span>{t("This is a real isolated test API, not a demo payment. No real funds move.","এটি isolated test API, আসল টাকা লেনদেন নয়।")}</span></div>
+    <h3>{t("Live key","Live key")}</h3>
+    <p>{t("Activate an eligible payment plan → Return to API Keys → Select Live → Create key and grant the needed scopes. Live keys start with ek_live_.","যোগ্য payment plan চালু করুন → API Keys → Live → Create key। Live key ek_live_ দিয়ে শুরু হবে।")}</p>
+    <p>{t("The full secret is displayed once. Keep it secure; rotate or revoke in your workspace.","Secret একবারই দেখানো হয়। নিরাপদে রাখুন; Workspace থেকে rotate/revoke করুন।")}</p>
+    <div className="ek-doc-actions"><Link href="/workspaces">{t("Open workspace →","Workspace খুলুন →")}</Link></div>
+   </section>
+   <section id="webhooks" className="ds-panel">
+    <span className="ek-doc-step">05 · WEBHOOKS</span>
+    <h2><PublicIcon name="bell"/> {t("Receive signed payment updates","Signed payment updates পান")}</h2>
+    <p>{t("Workspace → Webhooks → Add an HTTPS endpoint. Save its signing secret. The optional webhook_url in Create Payment must match an active registered endpoint; Ekmivo delivers signed events to configured active endpoints.","Workspace → Webhooks থেকে HTTPS endpoint যোগ করুন ও signing secret রাখুন। Create Payment-এর optional webhook_url অবশ্যই আগে registered active endpoint হতে হবে।")}</p>
+    <div className="ek-doc-flow"><span><PublicIcon name="phone"/> Receipt</span><b>→</b><span><PublicIcon name="shield"/> Verified</span><b>→</b><span><PublicIcon name="bell"/> Webhook</span><b>→</b><span><PublicIcon name="check"/> GET status</span></div>
+    <h3>{t("Example event","Webhook event উদাহরণ")}</h3>
+    <pre><code>{JSON.stringify({id:"EVENT_UUID",type:"payment.verified",environment:"sandbox",data:{payment_intent_id:"INTENT_UUID",amount_minor:15000,verification_status:"verified"}},null,2)}</code></pre>
+    <h3>{t("Verify the signature","Signature যাচাই")}</h3>
+    <p>{t("Read the exact raw body. Calculate HMAC-SHA256(secret, timestamp + '.' + rawBody) and compare with X-Ekmivo-Signature (v1=hex) using a timing-safe comparison. Reject timestamps beyond five minutes; deduplicate event IDs; respond 2xx quickly.","Exact raw body-তে HMAC-SHA256 যাচাই করুন। ৫ মিনিটের পুরোনো timestamp ও duplicate event reject করুন। দ্রুত 2xx response দিন।")}</p>
+    <pre><code>{`import {createHmac, timingSafeEqual} from "node:crypto";
+const rawBody = await request.text();
+const timestamp = request.headers.get("x-ekmivo-timestamp") ?? "";
+const signature = (request.headers.get("x-ekmivo-signature") ?? "").replace(/^v1=/, "");
+const expected = createHmac("sha256", process.env.EKMIVO_WEBHOOK_SECRET!)
+  .update(timestamp + "." + rawBody).digest("hex");
+const valid = /^[a-f0-9]{64}$/.test(signature) &&
+  timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expected, "hex"));
+// Check timestamp, event ID and GET current payment state before fulfilment.`}</code></pre>
+    <p className="ek-doc-footnote">{t("Webhook deliveries can retry or arrive out of order. Neither a redirect nor a checkout page proves payment.","Webhook retry/out-of-order হতে পারে। শুধু redirect বা success screen payment proof নয়।")}</p>
+   </section>
+   <section id="custom-verification" className="ds-panel">
+    <span className="ek-doc-step">06 · CUSTOM CHECKOUT</span>
+    <h2><PublicIcon name="code"/> {t("Use your own checkout","নিজের Checkout UI ব্যবহার করুন")}</h2>
+    <p>{t("Create an intent on your server. Use its checkout capability to lock the full payer number and provider. Show receiving instructions from Ekmivo; read verified status or signed events. Your UI cannot mark an intent paid.","Backend থেকে intent তৈরি করে checkout capability দিয়ে payer number ও provider lock করুন। Ekmivo-র receiving details দেখান এবং verified status নিন।")}</p>
+    <div className="ek-endpoint"><span className="ek-http-method">POST</span><code>/v1/public/checkout/{'{token}'}/lock</code></div>
     <pre><code>{JSON.stringify({payer_number:"01XXXXXXXXX",method:"bkash"},null,2)}</code></pre>
-    <p className="ek-doc-footnote">{t("Checkout capability is a short-lived, per-intent token; it is not your merchant API key. Do not allow a browser to control amounts or invent verified states.","Checkout capability অল্প সময়ের জন্য নির্দিষ্ট intent-এ কার্যকর; এটি merchant API key নয়। Browser থেকে amount বা verified state বদলানোর সুযোগ দেবেন না।")}</p>
-    <h3>{t("TrxID lookup body","TrxID lookup-এর body")}</h3>
-    <pre><code>{JSON.stringify({transaction_id:"TXN123456789",provider:"bkash",amount_minor:12500},null,2)}</code></pre>
-    <p>{t("Required: transaction_id (4–128 supported characters), provider (bkash/nagad/rocket), amount_minor (positive integer), URL intentID, Bearer API key with payments:read. Returns verified:true plus payment_id/time, or verified:false with pending. No raw sender number or SMS is exposed.","প্রয়োজন: transaction_id, provider (bkash/nagad/rocket), amount_minor, URL-এ intentID এবং payments:read API key। Result-এ verified ও payment ID/time অথবা pending আসবে। Sender-এর পূর্ণ নম্বর বা SMS প্রকাশ করা হবে না।")}</p>
-    <p className="ek-doc-footnote">{t("This is not a transaction-consumption/credit-deduction API, and it never triggers a new payment confirmation. A matching verified payment must already exist.","এটি credit কাটা বা নতুন করে payment confirm করার API নয়। আগে থেকেই বিশ্বস্ত receipt দিয়ে payment verified থাকতে হবে।")}</p>
-    <PaymentEndpointSamples kind="trx" locale={locale}/>
+    <p>{t("Optional TrxID lookup only finds already verified receipts; it cannot confirm a new payment. It is not needed for hosted checkout.","Optional TrxID lookup শুধু আগের verified receipt খুঁজতে পারে; নতুন payment confirm করে না।")}</p>
    </section>
    <section id="sandbox" className="ds-panel">
-    <span className="ek-doc-step"><PublicIcon name="flask"/> {t("PRACTICE","পরীক্ষা")}</span><h2>{t("Practice as much as you need","নিশ্চিন্তে পরীক্ষা করুন")}</h2>
-    <p>{t("Create your own Sandbox key after signing in. The example panel in Create Payment has two separate actions: Run simulation previews an example without network access; Create test payment sends a genuine key-scoped request to the isolated Sandbox database. Existing workspace Sandbox tools run detailed receipt scenarios. Never send real money.","লগইন করে নিজের Sandbox key নিন। Create Payment-এর Run simulation শুধু নমুনা দেখায়; Create test payment সত্যিকারের API request দিয়ে আলাদা Sandbox database-এ test record তৈরি করে। বিস্তারিত receipt scenario Workspace-এর Sandbox tools-এ চালানো যায়। আসল টাকা পাঠাবেন না।")}</p>
-    <div className="ek-doc-actions"><Link href="/workspaces">{t("Open my workspace →","আমার workspace খুলুন →")}</Link><a href="#create-checkout">{t("Back to Create Payment","Create Payment-এ ফিরুন")}</a></div>
+    <span className="ek-doc-step">07 · SANDBOX</span><h2><PublicIcon name="flask"/> {t("Try the real Sandbox API","Sandbox API পরীক্ষা করুন")}</h2>
+    <p>{t("Use your own ek_test_ key in the Create Payment tester above. Open the returned checkout_url and run approved receipt scenarios from your workspace. Never send real money.","Create Payment tester-এ নিজের ek_test_ key দিন। checkout_url খুলে workspace থেকে receipt scenarios চালান। আসল টাকা পাঠাবেন না।")}</p>
+    <div className="ek-doc-actions"><a href="#integration-examples">{t("Go to test form ↑","Test form দেখুন ↑")}</a><Link href="/workspaces">{t("Open workspace","Workspace খুলুন")}</Link></div>
    </section>
    <section id="errors" className="ds-panel">
-    <h2><PublicIcon name="shield"/> {t("When something goes wrong","সমস্যা হলে কী করবেন")}</h2>
-    <p>{t("401: replace invalid key · 403: check scope or Live subscription · 409: retry with original idempotency key and unchanged body · 422: correct inputs · 429: obey Retry-After · 503: retry safely with backoff.","401: key ঠিক করুন · 403: permission/Live plan দেখুন · 409: আগের একই idempotency key ও body ব্যবহার করুন · 422: input ঠিক করুন · 429: Retry-After মানুন · 503: বিরতি দিয়ে নিরাপদে retry করুন।")}</p>
+    <h2><PublicIcon name="shield"/> {t("Common errors","সাধারণ errors")}</h2>
+    <div className="ek-docs-table"><table><thead><tr><th>HTTP</th><th>{t("Meaning","কারণ")}</th><th>{t("Fix","সমাধান")}</th></tr></thead><tbody>
+    {[
+     ["401",t("Invalid key","ভুল key"),t("Use a valid Bearer key.","সঠিক key দিন।")],
+     ["403",t("Plan or permissions","Plan/permission"),t("Check scopes and Live subscription.","Scope ও plan দেখুন।")],
+     ["409",t("Request conflict","Request conflict"),t("Retry using the same key and body.","একই key ও body দিয়ে retry করুন।")],
+     ["422",t("Invalid field","ভুল field"),t("Check amount, HTTPS URLs and registered webhooks.","Amount, HTTPS URL ও webhook দেখুন।")],
+     ["429",t("Rate limited","Rate limit"),t("Follow Retry-After.","Retry-After মানুন।")],
+     ["503",t("Service unavailable","সেবা বন্ধ"),t("Check status and retry safely.","Status দেখে retry করুন।")]
+    ].map(([code,meaning,fix])=><tr key={code}><td>{code}</td><td>{meaning}</td><td>{fix}</td></tr>)}
+    </tbody></table></div>
    </section>
-
   </div>
-
  </main>;
 }

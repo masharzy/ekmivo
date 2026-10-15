@@ -14,7 +14,7 @@ type Checkout={
  environment:string;created_at:string;expires_at:string;server_time:string;state:string;
  payer_suffix:string|null;method:string|null;methods:string[];
  destination:string|null;verification_available:boolean;
- verification?:{method:string;verified_at:string;original_transaction_at:string;time_precision:string;amount_minor:number;currency:string;receipt_method:string;receiving_suffix:string};return_url?:string;notice_available?:boolean;
+ verification?:{method:string;verified_at:string;original_transaction_at:string;time_precision:string;amount_minor:number;currency:string;receipt_method:string;receiving_suffix:string};return_url?:string;cancel_url?:string;notice_available?:boolean;
  source_online?:boolean;phone_connected?:boolean;
  notice_delivery_available?:boolean;
 };
@@ -156,14 +156,14 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
   }catch(e){setCode(e instanceof Error?e.message:"CHECKOUT_SERVICE_UNAVAILABLE")}
   finally{setCancelling(false)}
  }
- function leave(){if(info?.return_url){window.location.assign(info.return_url);return}if(window.history.length>1)router.back();else router.push("/")}
+ function leave(){const target=state==="cancelled"?info?.cancel_url:info?.return_url;if(target){window.location.assign(target);return}if(window.history.length>1)router.back();else router.push("/")}
  async function copyReceiving(){if(!info?.destination)return;try{await navigator.clipboard.writeText(info.destination);setDestinationCopied(true)}catch{setCode("COPY_FAILED")}}
  if(info&&status==="ready"&&state==="completed")return <PaymentSuccess method={selectedMethod} returnUrl={info.return_url} bn={bn}/>;
  if(info&&status==="ready"&&state==="cancelled")return <main data-customer-checkout="true" className="provider-checkout pg05-checkout pg05-standalone" lang={locale}>
   <section className="provider-result" role="status" style={{minHeight:"100dvh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",textAlign:"center",gap:16,padding:32,background:"#faf9f6",color:"#2a2625"}}>
    <div aria-hidden="true" style={{width:70,height:70,borderRadius:"50%",border:"3px solid #bd3838",color:"#bd3838",display:"grid",placeItems:"center",fontSize:35}}>×</div>
    <h1 style={{fontSize:"clamp(23px,5vw,34px)",lineHeight:1.35,margin:0}}>{bn?"এই পেমেন্ট রিকোয়েস্টটি বাতিল করা হয়েছে":"This payment request has been cancelled"}</h1>
-   <p style={{maxWidth:470,lineHeight:1.7,fontSize:17,margin:0}}>{bn?"নতুন পেমেন্ট লিংকের জন্য বিক্রেতার সঙ্গে যোগাযোগ করুন। এই রিকোয়েস্টে আর টাকা পাঠাবেন না।":"Please contact the merchant for a new payment link. Do not send money using this request."}</p>
+   <p style={{maxWidth:470,lineHeight:1.7,fontSize:17,margin:0}}>{bn?"নতুন পেমেন্ট লিংকের জন্য বিক্রেতার সঙ্গে যোগাযোগ করুন। এই রিকোয়েস্টে আর টাকা পাঠাবেন না।":"Please contact the merchant for a new payment link. Do not send money using this request."}</p>{info.cancel_url&&<a href={info.cancel_url} rel="noreferrer" style={{padding:"12px 20px",borderRadius:12,background:"#292625",color:"#fff"}}>{bn?"বিক্রেতার ওয়েবসাইটে ফিরুন":"Return to merchant"}</a>}
   </section>
  </main>;
  return <main data-customer-checkout="true" className="provider-checkout pg05-checkout pg05-standalone" data-method={isFlow?selectedMethod:"selection"} lang={locale}>

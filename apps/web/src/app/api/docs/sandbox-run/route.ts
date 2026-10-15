@@ -28,7 +28,7 @@ export async function POST(request:Request){
   const response=await fetch(target,{method:data.action==="create"?"POST":"GET",
    headers,cache:"no-store",redirect:"error",signal:AbortSignal.timeout(15000),
    ...(data.action==="create"?{body:JSON.stringify({merchant_reference:data.reference,
-      amount_minor:12500,currency:"BDT",expires_in_minutes:30})}:{})});
+      amount:125,redirect_url:"https://merchant.example/success"})}:{})});
   const raw=await boundedBody(response,65536);
   if(raw===null)return Response.json({error:{code:"SANDBOX_RESPONSE_TOO_LARGE"}},{status:502});
   let result:unknown;
