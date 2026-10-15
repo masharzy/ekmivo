@@ -179,10 +179,10 @@ export function PaymentReports({locale,workspaceId,environment,canReveal}:{local
  const countDelta=matchedCompare&&displayed?changePercent(displayed.payment_count,matchedCompare.report.payment_count):null;
  return <div className="er-reports">
   <header className="er-heading">
-   <div><h1>{t("Reports","রিপোর্ট")}</h1><p>{t("Review actual payer transactions, reconcile amounts and export records.","প্রেরকের নম্বরসহ প্রকৃত লেনদেন, হিসাব মিল ও রিপোর্ট।")}</p></div>
+   <div><h1>{t("Reports","রিপোর্ট")}</h1><p>{t("Your payments at a glance.","এক নজরে পেমেন্টের হিসাব।")}</p></div>
    <div className="er-heading-actions">
     <button type="button" onClick={()=>setRefresh(n=>n+1)} disabled={loading} aria-label={t("Refresh report","রিপোর্ট রিফ্রেশ")}><DashboardIcon name="arrow" width={16} height={16}/> {t("Refresh","রিফ্রেশ")}</button>
-    <button type="button" disabled={!displayed||stale} onClick={()=>displayed&&exportReport(displayed,active)}><DashboardIcon name="reports" width={16} height={16}/> {t("Export summary","সারাংশ ডাউনলোড")}</button>
+    <button type="button" disabled={!displayed||stale} onClick={()=>displayed&&exportReport(displayed,active)}><DashboardIcon name="reports" width={16} height={16}/> {t("Export","এক্সপোর্ট")}</button>
     <button type="button" disabled={!displayed||stale} onClick={()=>window.print()}>{t("Print","প্রিন্ট")}</button>
    </div>
   </header>
@@ -210,13 +210,13 @@ export function PaymentReports({locale,workspaceId,environment,canReveal}:{local
    <div className="er-result-period"><span>{active.from} — {active.to}{active.account?" · "+t("Selected account","নির্বাচিত অ্যাকাউন্ট"):""}</span>{generated&&<span>{t("Updated","আপডেট")}: {generated}</span>}</div>
    <section className="er-period-analysis" aria-label={t("Period analysis","সময়সীমার বিশ্লেষণ")}>
     <div className="er-analysis-total">
-     <span className="er-eyebrow">{t("VERIFIED COLLECTION · SELECTED PERIOD","যাচাইকৃত টাকা · নির্বাচিত সময়")}</span>
+     <span className="er-eyebrow">{t("Verified volume","যাচাইকৃত পরিমাণ")}</span>
      <strong>{cash(displayed.verified_gross_minor,locale)}</strong>
      <span className="er-analysis-context">{numeric(displayed.payment_count,locale)} {t("verified transactions","টি যাচাইকৃত লেনদেন")}</span>
     </div>
     <div className="er-analysis-metrics">
-     <div><span>{t("Average transaction","প্রতি লেনদেনে গড়")}</span><strong>{avg===null?"—":cash(avg,locale)}</strong></div>
-     <div><span>{t("Compared with previous period","আগের সময়ের তুলনায়")}</span><strong>{matchedCompare?(delta??t("No previous baseline","আগে লেনদেন নেই")):compareLoading?t("Loading…","লোড হচ্ছে…"):compareError?"—":t("Not compared","তুলনা বন্ধ")}</strong></div>
+     <div><span>{t("Average payment","গড় পেমেন্ট")}</span><strong>{avg===null?"—":cash(avg,locale)}</strong></div>
+     <div><span>{t("Change","পরিবর্তন")}</span><strong>{matchedCompare?(delta??t("No previous baseline","আগে লেনদেন নেই")):compareLoading?t("Loading…","লোড হচ্ছে…"):compareError?"—":t("Not compared","তুলনা বন্ধ")}</strong></div>
      <label className="er-comparison-toggle"><input type="checkbox" checked={compare} onChange={e=>{setCompare(e.target.checked);setCompareError("")}}/>{t("Compare previous period","আগের সময়ের সঙ্গে তুলনা")}</label>
     </div>
     {compare&&<div className="er-comparison-detail" role="status">
@@ -226,17 +226,17 @@ export function PaymentReports({locale,workspaceId,environment,canReveal}:{local
     </div>}
    </section>
    <section className="er-allocation-analysis">
-    <div className="er-allocation-head"><div><h2>{t("Allocation & reconciliation","বরাদ্দ ও হিসাব মিল")}</h2><span>{t("Verified payment allocation, not bank settlement","যাচাইকৃত পেমেন্টের বরাদ্দ, ব্যাংক settlement নয়")}</span></div><Link href={root+"reconciliation"}>{t("Reconciliation","হিসাব মিল")} ↗</Link></div>
+    <div className="er-allocation-head"><div><h2>{t("Payment breakdown","পেমেন্টের হিসাব")}</h2><span>{t("","")}</span></div><Link href={root+"reconciliation"}>{t("Reconciliation","হিসাব মিল")} ↗</Link></div>
     
     <div className="er-allocation-values">
-     <div><span>{t("Allocated","বরাদ্দ")}</span><strong>{cash(displayed.allocated_minor,locale)}</strong></div>
-     <div><span>{t("Unallocated","অবরাদ্দ")}</span><strong>{cash(displayed.unallocated_minor,locale)}</strong></div>
-     <div><span>{t("Statement linked","স্টেটমেন্টে সংযুক্ত")}</span><strong>{cash(displayed.statement_links.amount_minor,locale)}</strong></div>
+     <div><span>{t("Matched","মিলেছে")}</span><strong>{cash(displayed.allocated_minor,locale)}</strong></div>
+     <div><span>{t("Not matched","মেলেনি")}</span><strong>{cash(displayed.unallocated_minor,locale)}</strong></div>
+     <div><span>{t("Statement matches","স্টেটমেন্টে মিলেছে")}</span><strong>{cash(displayed.statement_links.amount_minor,locale)}</strong></div>
     </div>
    </section>
   </div>}
   <section className="er-card er-details">
-    <div className="er-details-heading"><h2>{t("Detailed breakdown","বিস্তারিত হিসাব")}</h2><span>{t("BDT · verified amounts","BDT · যাচাইকৃত পরিমাণ")}</span></div>
+    <div className="er-details-heading"><h2>{t("Breakdown","বিভাগভিত্তিক হিসাব")}</h2><span>{t("","")}</span></div>
     <div className="er-tabs" role="group" aria-label={t("Report breakdown","রিপোর্টের বিভাগ")}>
      {sections.filter(id=>id!=="payers"||canReveal).map(id=><button type="button" key={id} aria-pressed={section===id} onClick={()=>setSection(id)}>{labels[id]}</button>)}
     </div>
@@ -246,7 +246,7 @@ export function PaymentReports({locale,workspaceId,environment,canReveal}:{local
     {!displayed&&section!=="payers"&&<p className="er-card-empty" role="status">{error||t("Loading breakdown…","বিস্তারিত হিসাব লোড হচ্ছে…")}</p>}
     {displayed&&section==="methods"&&<BreakdownTable locale={locale} headings={[t("Method","মাধ্যম"),t("Transactions","লেনদেন"),t("Verified amount","যাচাইকৃত টাকা")]} rows={displayed.methods.map(r=>[r.method,numeric(r.payment_count,locale),cash(r.amount_minor,locale)])} empty={t("No verified method transactions.","এই সময়ে মাধ্যমভিত্তিক লেনদেন নেই।")}/>}
     {displayed&&section==="accounts"&&<BreakdownTable locale={locale} headings={[t("Receiving account","গ্রহণকারী অ্যাকাউন্ট"),t("Transactions","লেনদেন"),t("Verified amount","যাচাইকৃত টাকা")]} rows={displayed.accounts.map(r=>[r.method+" ••••"+r.display_suffix,numeric(r.payment_count,locale),cash(r.amount_minor,locale)])} empty={t("No receiving-account payments.","গ্রহণকারী অ্যাকাউন্টে পেমেন্ট নেই।")}/>}
-    {displayed&&section==="customers"&&<><BreakdownTable locale={locale} headings={[t("Invoice-linked customer","ইনভয়েস-সংযুক্ত গ্রাহক"),t("Payments","পেমেন্ট"),t("Allocated","বরাদ্দ")]} rows={displayed.customers.map(r=>[r.name||r.reference,numeric(r.payment_count,locale),cash(r.amount_minor,locale)])} empty={t("No invoice-linked customer payments.","ইনভয়েস-সংযুক্ত গ্রাহকের পেমেন্ট নেই।")}/><p className="er-fineprint">{t("Top 100 invoice-linked contacts; not necessarily the actual payer.","ইনভয়েস-সংযুক্ত সর্বোচ্চ ১০০ জন; তাঁরা প্রকৃত প্রেরক নাও হতে পারেন।")}</p></>}
+    {displayed&&section==="customers"&&<><BreakdownTable locale={locale} headings={[t("Invoice-linked customer","ইনভয়েস-সংযুক্ত গ্রাহক"),t("Payments","পেমেন্ট"),t("Matched","মিলেছে")]} rows={displayed.customers.map(r=>[r.name||r.reference,numeric(r.payment_count,locale),cash(r.amount_minor,locale)])} empty={t("No invoice-linked customer payments.","ইনভয়েস-সংযুক্ত গ্রাহকের পেমেন্ট নেই।")}/><p className="er-fineprint">{t("Top 100 invoice-linked contacts; not necessarily the actual payer.","ইনভয়েস-সংযুক্ত সর্বোচ্চ ১০০ জন; তাঁরা প্রকৃত প্রেরক নাও হতে পারেন।")}</p></>}
     {displayed&&section==="refunds"&&<><BreakdownTable locale={locale} headings={[t("Status","অবস্থা"),t("Requests","অনুরোধ"),t("Amount","পরিমাণ")]} rows={displayed.refunds.map(r=>[refundLabels[r.status]||r.status,numeric(r.request_count,locale),cash(r.amount_minor,locale)])} empty={t("No refund requests in this period.","এই সময়ে রিফান্ড অনুরোধ নেই।")}/><p className="er-fineprint">{t("Refunds are managed by the seller. Reported returns are not provider-confirmed.","রিফান্ড বিক্রেতা পরিচালনা করেন। ফেরতের রিপোর্ট provider-যাচাইকৃত নয়।")}</p><Link className="er-detail-link" href={root+"refunds"}>{t("Manage refunds","রিফান্ড পরিচালনা করুন")} ↗</Link></>}
     {displayed&&section==="statements"&&<div className="er-statement-box"><span>{t("Merchant-imported statement links","বিক্রেতার স্টেটমেন্ট সংযোগ")}</span><strong>{cash(displayed.statement_links.amount_minor,locale)}</strong><small>{numeric(displayed.statement_links.count,locale)} {t("linked records","সংযুক্ত রেকর্ড")}</small><p>{t("Statement matches do not confirm provider settlement.","স্টেটমেন্টে মিল পাওয়া মানেই provider settlement নিশ্চিত নয়।")}</p><Link href={root+"reconciliation"}>{t("Open reconciliation","Reconciliation খুলুন")} ↗</Link></div>}
     {displayed&&section==="daily"&&<BreakdownTable locale={locale} headings={[t("Day (UTC)","দিন (UTC)"),t("Verified amount","যাচাইকৃত টাকা")]} rows={displayed.daily.map(r=>[r.day,cash(r.amount_minor,locale)])} empty={t("No verified payments during this period.","এই সময়ে যাচাইকৃত পেমেন্ট নেই।")}/>}
