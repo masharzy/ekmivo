@@ -36,3 +36,10 @@ Owner requested a safe merge into main. Isolated checkout merged main `cd03152` 
 - First direct webpack attempt was invalid environment evidence: skipped token prebuild and a cross-drive dependency junction caused resolution failures. Normal isolated install/build replaces that attempt.
 - GitHub run 38772932493 did not start jobs: account payment/spending limit. Vercel status linked to build-rate-limit. These are infrastructure blockers, not passing CI evidence.
 - Responsive/theme/locale and authorized real-data mutation scenarios remain manual pending in the consolidated ledger. No production financial mutations were made for this review. No Docker or database changes.
+
+
+### Confirmed merge gate — 2026-10-16
+
+Vercel deployment `dpl_9bveeJ3hZWun2ijef8gbbQZao1Df` is READY for exact source head `9b06830b309e0622e0d3ec0289dc11e834c531dd`. Its logs confirm `npm run build`, canonical token sync, successful Next.js compilation, TypeScript completion (20.2s), all 8 static pages and deployment completion. Preview: https://ekmivo-i0sqrwrpc-masharzys-projects.vercel.app . This is the successful production-build evidence; the slow local dependency install was superseded by this cloud build, not claimed passed.
+
+Latest Foundation CI run `38782304211` still has zero executed steps in all four jobs; check annotations explicitly report account payments/spending limit. No protection override or admin bypass is authorized by this evidence. Browser/real-data checks above remain manual pending; this merge is source integration, not full payment acceptance.
