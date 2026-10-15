@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 
 type Account={ID:string;Method:string;Number:string;Label:string;Disabled:boolean};
@@ -10,7 +10,8 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const bn=locale==="bn";const t=useCallback((e:string,b:string)=>bn?b:e,[bn]);
  const base="/api/go/workspaces/"+workspaceId,href="/"+locale+"/w/"+workspaceId+"/payments/devices?env="+environment;
  const [accounts,setAccounts]=useState<Account[]>([]),[phones,setPhones]=useState<Phone[]>([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
- const [step,setStep]=useState(0),[method,setMethod]=useState("bkash"),[number,setNumber]=useState(""),[label,setLabel]=useState("");
+ const createDialog=useRef<HTMLDialogElement|null>(null);
+ const [method,setMethod]=useState("bkash"),[number,setNumber]=useState(""),[label,setLabel]=useState("");
  const [edited,setEdited]=useState<string|null>(null),[newLabel,setNewLabel]=useState(""),[newNumber,setNewNumber]=useState("");
  const load=useCallback(async(signal?:AbortSignal)=>{
   setLoading(true);setError("");
@@ -38,11 +39,11 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   if(!data)return;
   const accountId=data.id||data.account_id;
   if(label.trim()&&accountId)await post("/phones/"+accountId+"/edit-account",{label:label.trim()});
-  setNumber("");setLabel("");setStep(3);
+  setNumber("");setLabel("");createDialog.current?.close();
  }
  const paired=phones.filter(p=>p.claimed_at&&!p.revoked_at);
  return <section className="pg-phone-panel" aria-busy={loading||busy}>
-  <div className="pg-phone-hero"><div><p className="pg-device-kicker">{t("Receiving & verification","টাকা গ্রহণ ও যাচাই")} / {environment.toUpperCase()}</p><h2>{t("Payment methods","পেমেন্ট মাধ্যম")}</h2><p>{t("Your receiving numbers are saved here. Pair a phone once to forward relevant payment SMS; the server verifies the receiving identity separately.","আপনার receiving number এখানেই সংরক্ষিত। একটি ফোন একবার pair করে payment SMS forward করুন; receiving identity server আলাদাভাবে যাচাই করবে।")}</p></div><button type="button" onClick={()=>void load()} disabled={loading||busy}>{t("Refresh","Refresh")}</button></div>
+  <div className="pg-phone-hero"><h1>{t("Payment Methods","পেমেন্ট মাধ্যম")}</h1><div className="pg-phone-header-actions">{canManage&&<button type="button" className="pg-phone-primary" onClick={()=>createDialog.current?.showModal()}>{t("+ Add Receiving Account","+ রিসিভিং অ্যাকাউন্ট যোগ করুন")}</button>}<button type="button" onClick={()=>void load()} disabled={loading||busy}>{t("Refresh","রিফ্রেশ")}</button></div></div>
   {error&&<div className="pg-phone-warning" role="alert"><strong>{t("Connection needs attention","সংযোগে সমস্যা")}</strong><p>{error}</p><button onClick={()=>void load()}>{t("Retry","আবার চেষ্টা")}</button></div>}
   {notice&&<p data-feedback="success" role="status" className="pg-phone-notice">{notice}</p>}
   {loading?<div className="pg-phone-placeholder" role="status">{t("Loading receiving accounts…","Receiving account লোড হচ্ছে…")}</div>:<>
@@ -61,16 +62,15 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
     </article>})}
     {!accounts.length&&!error&&<div className="pg-phone-empty"><h3>{t("No receiving accounts","এখনো receiving account নেই")}</h3><p>{t("Add a bKash, Nagad or Rocket receiving number to begin setup.","সেটআপের জন্য bKash, Nagad বা Rocket receiving number যোগ করুন।")}</p></div>}
    </div>
-   {canManage&&<section className="pg-phone-box"><h3>{t("Add receiving account","Receiving account যোগ করুন")}</h3>
-    <div className="pg-phone-steps"><span>{t("1. Method","১. মাধ্যম")}</span><span>{t("2. Number & label","২. নম্বর ও নাম")}</span><span>{t("3. Connect phone","৩. ফোন সংযোগ")}</span></div>
-    {step===0?<div className="pg-method-picker">{Object.keys(methodName).map(m=><button key={m} type="button" className={m===method?"is-selected":""} onClick={()=>setMethod(m)}>{methodName[m]}</button>)}<button className="pg-phone-primary" type="button" onClick={()=>setStep(1)}>{t("Continue","পরবর্তী")}</button></div>
-    :step===1?<form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void create()}}>
-     <label>{t("Full receiving number","সম্পূর্ণ receiving নম্বর")}<input required type="tel" inputMode="tel" autoComplete="off" value={number} onChange={e=>setNumber(e.target.value)} placeholder="+8801XXXXXXXXX"/></label>
-     <label>{t("Account label (optional)","অ্যাকাউন্টের নাম (ঐচ্ছিক)")}<input value={label} maxLength={100} onChange={e=>setLabel(e.target.value)} placeholder={t("e.g. Main shop","যেমন: মূল দোকান")}/></label>
-     <p className="pg-phone-muted">{t("The receiving number cannot be silently replaced after payment history is created. To change it, disable this account and add a new receiving number.","পেমেন্টের ইতিহাস তৈরি হলে এই নম্বর গোপনে পরিবর্তন করা যাবে না। বদলাতে আগের account বন্ধ করে নতুন নম্বর যুক্ত করুন।")}</p>
-     <div className="pg-phone-actions"><button type="button" onClick={()=>setStep(0)}>{t("Back","পেছনে")}</button><button type="submit" disabled={busy||!number}>{t("Save account","অ্যাকাউন্ট সংরক্ষণ")}</button></div>
-    </form>:<div className="pg-phone-setup"><p>{t("Pair your phone once in SMS Devices. No more numbers or technical source IDs needed.","SMS Devices-এ একবার ফোন pair করুন। আবার নম্বর বা technical source ID দিতে হবে না।")}</p><Link href={href}>{t("Go to SMS Devices","SMS Devices-এ যান")}</Link><button onClick={()=>setStep(0)}>{t("Add another account","আরেকটি account যোগ করুন")}</button></div>}
-   </section>}
   </>}
+  <dialog ref={createDialog} className="pg-phone-dialog" aria-labelledby="pg-add-account-title">
+   <div className="pg-phone-dialog-head"><h2 id="pg-add-account-title">{t("Add Receiving Account","রিসিভিং অ্যাকাউন্ট যোগ করুন")}</h2><button type="button" onClick={()=>createDialog.current?.close()} aria-label={t("Close","বন্ধ করুন")}>×</button></div>
+   <form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void create()}}>
+    <label>{t("Payment method","পেমেন্ট মাধ্যম")}<select value={method} onChange={e=>setMethod(e.target.value)}>{Object.keys(methodName).map(m=><option key={m} value={m}>{methodName[m]}</option>)}</select></label>
+    <label>{t("Receiving number","রিসিভিং নম্বর")}<input required type="tel" inputMode="tel" autoComplete="off" value={number} onChange={e=>setNumber(e.target.value)} placeholder="+8801XXXXXXXXX"/></label>
+    <label>{t("Account label (optional)","অ্যাকাউন্টের নাম (ঐচ্ছিক)")}<input value={label} maxLength={100} onChange={e=>setLabel(e.target.value)}/></label>
+    <div className="pg-phone-actions"><button type="button" onClick={()=>createDialog.current?.close()}>{t("Cancel","বাতিল")}</button><button type="submit" className="pg-phone-primary" disabled={busy||!number}>{t("Add account","অ্যাকাউন্ট যোগ করুন")}</button></div>
+   </form>
+  </dialog>
  </section>;
 }
