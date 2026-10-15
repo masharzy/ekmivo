@@ -36,10 +36,10 @@ func (s *Service) supplementAuthorizedPaymentEvidence(r *http.Request, ws, realm
     var evidenceRaw []byte
     if err := s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
         return tx.QueryRow(r.Context(),
-            "SELECT pg63_payment_sms_evidence($1::uuid,$2,$3,$4::jsonb)",
+            "SELECT pg66_payment_sms_evidence($1::uuid,$2,$3,$4::jsonb)",
             ws, realm, resource, string(idsJSON)).Scan(&evidenceRaw)
     }); err != nil {
-        // On a realm where migration 0063 has not been installed, preserve
+        // On a realm where migration 0066 has not been installed, preserve
         // the existing payment listing instead of returning a false zero.
         return
     }
