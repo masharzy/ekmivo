@@ -24,8 +24,8 @@ export function PaymentTransactionWorkspace({locale,workspaceId,environment,reso
  const [error,setError]=useState(""),[notice,setNotice]=useState(""),[nonce,setNonce]=useState(0);
  const [filterError,setFilterError]=useState("");
  const [filtersOpen,setFiltersOpen]=useState(false);
- const [columns,setColumns]=useState([true,true,true,true,true,true,true]);
- const columnLabels=[incoming?t("Receipt / Device","রসিদ / ডিভাইস"):t("Reference / Payer","রেফারেন্স / প্রেরক"),t("Method","মাধ্যম"),t("Amount","পরিমাণ"),t("Status","অবস্থা"),t("Transaction time","লেনদেনের সময়"),incoming?t("Received","প্রাপ্তির সময়"):t("Verified at","যাচাইয়ের সময়"),t("Action","অ্যাকশন")];
+ const [columns,setColumns]=useState([true,true,true,true,true,true,true,true,true]);
+ const columnLabels=[incoming?t("Received device","প্রাপ্তির ডিভাইস"):t("Reference","রেফারেন্স"),t("Payer number","প্রেরকের নম্বর"),t("TrxID","ট্রানজেকশন আইডি"),t("Method","মাধ্যম"),t("Amount","পরিমাণ"),t("Status","অবস্থা"),t("Transaction time","লেনদেনের সময়"),incoming?t("Received","প্রাপ্তির সময়"):t("Verified at","যাচাইয়ের সময়"),t("Action","অ্যাকশন")];
  const [accounts,setAccounts]=useState<{id:string;method?:string;display_suffix?:string}[]>([]);
  const [accountError,setAccountError]=useState(false);
  const [online,setOnline]=useState(true);
@@ -117,11 +117,14 @@ export function PaymentTransactionWorkspace({locale,workspaceId,environment,reso
   <div className="opw-list-head"><div><strong>{title}</strong><span>{new Intl.NumberFormat(locale).format(rows.length)}{cursor?"+":""} {t("records loaded","টি রেকর্ড")}{cursor?" · "+t("More available","আরও আছে"):""}</span></div>{!incoming&&rows.length>0&&<span>{t("Loaded verified value","লোড হওয়া মোট")}: <strong>{money(amountTotal,locale)}</strong></span>}</div>
   {loading&&rows.length===0?<div className="opw-empty" role="status">{t("Loading records…","রেকর্ড লোড হচ্ছে…")}</div>:!error&&rows.length===0?<div className="opw-empty"><strong>{hasFilter?t("No matching records","মিল পাওয়া যায়নি"):incoming?t("No receipts yet","এখনও রসিদ নেই"):t("No verified transactions yet","এখনও যাচাইকৃত লেনদেন নেই")}</strong><p>{incoming?t("Forwarded provider SMS appears here after server receipt.","সার্ভারে রসিদ পৌঁছালে এখানে দেখা যাবে।"):t("Completed, server-verified payments appear here.","সার্ভারে যাচাই হওয়া পেমেন্ট এখানে দেখা যাবে।")}</p></div>:<div className="opw-scroll" role="region" tabIndex={0} aria-label={title}>
    <table><thead><tr>{columnLabels.map((label,i)=><th key={label} hidden={!columns[i]} scope="col">{label}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.id}>
-    <td><Link className="opw-reference" href={"/w/"+workspaceId+"/payments/"+(incoming?"incoming":"transactions")+"/"+r.id}>{r.merchant_reference||r.device_name||r.device_source||r.id.slice(0,12)}</Link>{r.payer_number?<small>{r.payer_number}</small>:r.payer_suffix&&<small>••••{r.payer_suffix}</small>}{r.transaction_id&&<small>{r.transaction_id}</small>}{r.sms_text&&<details className="ref-sms-text"><summary>{t("View SMS","SMS দেখুন")}</summary><p>{r.sms_text}</p>{typeof r.balance_minor==="number"&&<p>{t("Balance","ব্যালেন্স")}: {money(r.balance_minor,locale)}</p>}</details>}{r.reason&&incoming&&<small>{r.reason}</small>}</td>
-    <td hidden={!columns[1]}>{r.method==="bkash"?"bKash":r.method==="nagad"?"Nagad":r.method==="rocket"?"Rocket":r.method||"—"}</td><td hidden={!columns[2]} className="opw-num">{money(r.verified_amount_minor??r.amount_minor,locale)}</td>
-    <td hidden={!columns[3]}><span className="opw-status" data-status={r.status||"verified"}>{statusName(r.status||(incoming?"pending":"verified"),bn)}</span></td>
-    <td hidden={!columns[4]}>{dt(r.original_transaction_at,locale)}</td><td hidden={!columns[5]}>{dt(incoming?r.received_at:r.verified_at,locale)}</td>
-    <td hidden={!columns[6]}>{incoming&&canManage&&["unmatched","ambiguous"].includes(r.status||"")?<button type="button" disabled={Boolean(busy)||!online} onClick={()=>void reprocess(r.id)}>{busy===r.id?t("Checking…","যাচাই হচ্ছে…"):t("Recheck","যাচাই করুন")}</button>:<Link href={"/w/"+workspaceId+"/payments/"+(incoming?"incoming":"transactions")+"/"+r.id}>{t("Details","বিস্তারিত")} ↗</Link>}</td>
+    <td><Link className="opw-reference" href={"/w/"+workspaceId+"/payments/"+(incoming?"incoming":"transactions")+"/"+r.id}>{incoming?(r.device_name||r.device_source||r.id.slice(0,12)):(r.merchant_reference||r.id.slice(0,12))}</Link>{r.sms_text&&<details className="ref-sms-text"><summary>{t("View SMS","SMS দেখুন")}</summary><p>{r.sms_text}</p>{typeof r.balance_minor==="number"&&<p>{t("Balance","ব্যালেন্স")}: {money(r.balance_minor,locale)}</p>}</details>}{r.reason&&incoming&&<small>{r.reason}</small>}</td>
+    <td hidden={!columns[1]} className="opw-phone">{r.payer_number||"—"}</td>
+    <td hidden={!columns[2]} className="opw-trx">{r.transaction_id||"—"}</td>
+    <td hidden={!columns[3]}>{r.method==="bkash"?"bKash":r.method==="nagad"?"Nagad":r.method==="rocket"?"Rocket":r.method||"—"}</td>
+    <td hidden={!columns[4]} className="opw-num">{money(r.verified_amount_minor??r.amount_minor,locale)}</td>
+    <td hidden={!columns[5]}><span className="opw-status" data-status={r.status||"verified"}>{statusName(r.status||(incoming?"pending":"verified"),bn)}</span></td>
+    <td hidden={!columns[6]}>{dt(r.original_transaction_at,locale)}</td><td hidden={!columns[7]}>{dt(incoming?r.received_at:r.verified_at,locale)}</td>
+    <td hidden={!columns[8]}>{incoming&&canManage&&["unmatched","ambiguous"].includes(r.status||"")?<button type="button" disabled={Boolean(busy)||!online} onClick={()=>void reprocess(r.id)}>{busy===r.id?t("Checking…","যাচাই হচ্ছে…"):t("Recheck","যাচাই করুন")}</button>:<Link href={"/w/"+workspaceId+"/payments/"+(incoming?"incoming":"transactions")+"/"+r.id}>{t("Details","বিস্তারিত")} ↗</Link>}</td>
    </tr>)}</tbody></table>
   </div>}
   {cursor&&<div className="opw-pagination"><span>{rows.length} {t("loaded","লোড হয়েছে")}</span><button type="button" disabled={moreLoading} onClick={()=>void loadMore()}>{moreLoading?t("Loading…","লোড হচ্ছে…"):t("Load more","আরও দেখুন")}</button></div>}
