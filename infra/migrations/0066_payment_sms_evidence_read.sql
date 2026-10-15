@@ -79,42 +79,37 @@ REVOKE ALL ON FUNCTION public.pg66_payment_sms_evidence(uuid,text,text,jsonb) FR
 GRANT EXECUTE ON FUNCTION public.pg66_payment_sms_evidence(uuid,text,text,jsonb)
  TO ekmivo_finance_reader;
 
--- Full customer phone evidence for the existing synthetic verified payer groups.
--- The encrypted contact is scoped by real payment/attempt ownership, never
--- inferred from a saved customer contact or from the last four digits.
-CREATE FUNCTION public.pg66_customer_payer_evidence(w uuid,e text,ids jsonb)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path=public,pg_temp AS $
+-- Full customer phone evidence for verified payer-group customer rows.
+CREATE FUNCTION pg66_customer_payer_evidence(w uuid,e text,ids jsonb)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE result jsonb;
 BEGIN
  PERFORM pg06_scope(w,e);
  IF ids IS NULL OR jsonb_typeof(ids)<>'array' OR jsonb_array_length(ids)>50
- OR EXISTS (SELECT 1 FROM jsonb_array_elements_text(ids) z(v)
-  WHERE z.v !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
-)
+ OR EXISTS (SELECT 1 FROM jsonb_array_elements_text(ids) z(v) WHERE
+  z.v !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
  THEN RAISE EXCEPTION 'invalid customer evidence lookup' USING ERRCODE='22023'; END IF;
  SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO result FROM (
   SELECT ('64'||substr(md5(a.workspace_id::text||':'||a.environment||':'||a.payer_hmac),3))::uuid AS id,
-   max(encode(f.payer_cipher,'base64')) AS payer_cipher_b64
+    max(encode(f.payer_cipher,'base64')) AS payer_cipher_b64
   FROM payment_attempts a
   JOIN financial_payments p ON p.attempt_id=a.id AND p.workspace_id=w AND p.environment=e
   JOIN pg06_phone_forwarded f ON f.observation_id=p.observation_id
    AND f.workspace_id=w AND f.environment=e AND f.payer_cipher IS NOT NULL
   WHERE a.workspace_id=w AND a.environment=e
    AND (('64'||substr(md5(a.workspace_id::text||':'||a.environment||':'||a.payer_hmac),3))::uuid)::text
-       IN (SELECT value FROM jsonb_array_elements_text(ids))
+      IN (SELECT value FROM jsonb_array_elements_text(ids))
   GROUP BY a.workspace_id,a.environment,a.payer_hmac
   LIMIT 50
  ) x;
  RETURN result;
-END $;
-REVOKE ALL ON FUNCTION public.pg66_customer_payer_evidence(uuid,text,jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.pg66_customer_payer_evidence(uuid,text,jsonb) TO ekmivo_finance_reader;
+END $$;
+REVOKE ALL ON FUNCTION pg66_customer_payer_evidence(uuid,text,jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION pg66_customer_payer_evidence(uuid,text,jsonb) TO ekmivo_finance_reader;
+-- Do not turn every checkout payment into a merchant-created invoice.
 
--- An invoice is a merchant-authored billing document. Ordinary payment intents
--- are tracked as payments, not automatically manufactured into invoice rows.
--- Keep the existing materialized source untouched; change only the scoped reads.
 CREATE OR REPLACE FUNCTION pg10_read(w uuid,e text,res text,item uuid,after_id uuid,search text) RETURNS jsonb
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE result jsonb;
 BEGIN
  PERFORM pg06_scope(w,e);IF after_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM pg64_document_catalog WHERE workspace_id=w AND environment=e AND kind=res AND id=after_id) THEN RAISE EXCEPTION 'invalid document cursor' USING ERRCODE='22023';END IF;
@@ -129,12 +124,12 @@ BEGIN
  AND (after_id IS NULL OR (d.created_at,d.id)<(SELECT x.created_at,x.id FROM pg64_document_catalog x WHERE x.workspace_id=w AND x.environment=e AND x.kind=res AND x.id=after_id))
  ORDER BY d.created_at DESC,d.id DESC LIMIT 50) t;
  RETURN jsonb_build_object('items',result,'next_cursor',CASE WHEN jsonb_array_length(result)=50 THEN result->49->>'id' ELSE NULL END);
-END $;
+END $$;
 
 
 
 CREATE OR REPLACE FUNCTION pg10_customer_activity(w uuid,e text,customer uuid) RETURNS jsonb
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
  PERFORM pg06_scope(w,e);
  IF NOT EXISTS(SELECT 1 FROM pg64_document_catalog WHERE workspace_id=w AND environment=e AND id=customer AND kind='customers') THEN RAISE EXCEPTION 'customer missing' USING ERRCODE='P0002';END IF;
@@ -142,6 +137,7 @@ BEGIN
  'paid_minor',CASE WHEN d.body->>'source'='automatic_checkout' THEN (SELECT coalesce(sum(a.amount_minor),0) FROM financial_allocations a WHERE a.workspace_id=w AND a.environment=e AND a.intent_id=d.id)
  ELSE coalesce((SELECT sum(a.amount_minor) FROM pg10_document_intents l JOIN financial_allocations a ON a.intent_id=l.intent_id AND a.workspace_id=w AND a.environment=e WHERE l.document_id=d.id AND l.workspace_id=w AND l.environment=e),0) END))
  FROM pg64_document_catalog d WHERE d.workspace_id=w AND d.environment=e AND d.customer_id=customer AND d.kind='invoices' AND d.body->>'source' IS DISTINCT FROM 'automatic_checkout'),'[]'::jsonb));
-END $;
+END $$;
+
 
 COMMIT;
