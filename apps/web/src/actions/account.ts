@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { mailReady, sendCode, verificationEnabled } from "../lib/server/email";
 import { database } from "../lib/server/db";
@@ -100,20 +101,53 @@ export async function createWorkspaceAction(localeParam:string,_previous:FormErr
  if(!validatedName(name))return fail(t.name,{name:t.name});
  if(!["ai","commerce","both"].includes(mode))return fail(t.mode,{mode:t.mode});
  let workspaceId:string;
- try{
-  const db=database();
-  workspaceId=await db.begin(async sql=>{
-   const w=await sql`INSERT INTO workspaces (name,service_mode,created_by)
-   VALUES (${name},${mode},${user.id}::uuid) RETURNING id`;
-   await sql`INSERT INTO workspace_members (workspace_id,user_id,role)
-   VALUES (${w[0].id}::uuid,${user.id}::uuid,'owner')`;
-   return String(w[0].id);
-  });
- }catch(e){report("createWorkspace",e);return fail(t.generic);}
- // New users get their first workspace as their default automatically.
+ try{workspaceId=await insertUserWorkspace(user.id,name,mode as "ai"|"commerce"|"both")}
+ catch(e){report("createWorkspace",e);return fail(t.generic);}
+ // First created workspace is automatically the default, as before.
  try{if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,workspaceId);}
  catch(e){report("set initial workspace default",e);}
  redirect(`/w/${workspaceId}/dashboard`);
+}
+
+
+type WorkspaceListCreateState={
+ status:"idle"|"error"|"success";message:string;workspace?:{id:string;name:string;mode:"ai"|"commerce"|"both"};
+};
+async function insertUserWorkspace(userId:string,name:string,mode:"ai"|"commerce"|"both"):Promise<string>{
+ return database().begin(async sql=>{
+  const w=await sql`INSERT INTO workspaces (name,service_mode,created_by)
+   VALUES (${name},${mode},${userId}::uuid) RETURNING id`;
+  await sql`INSERT INTO workspace_members (workspace_id,user_id,role)
+   VALUES (${w[0].id}::uuid,${userId}::uuid,'owner')`;
+  return String(w[0].id);
+ });
+}
+// Same permission, validation and persistence as createWorkspaceAction; unlike
+// the older onboarding route this variant returns to the workspace list.
+export async function createWorkspaceOnListAction(localeParam:string,nameRaw:string,modeRaw:string):Promise<WorkspaceListCreateState>{
+ const locale=safeLocale(localeParam),t=strings[locale];
+ const user=await currentUser();
+ if(!user)return {status:"error",message:t.unauthorized};
+ const name=nameRaw.trim(),mode=modeRaw;
+ if(!validatedName(name)||name.length>60)return {status:"error",message:locale==="bn"?"নাম ২–৬০ অক্ষরের হতে হবে।":"Use 2–60 characters for the name."};
+ if(mode!=="ai"&&mode!=="commerce"&&mode!=="both")return {status:"error",message:t.mode};
+ try{
+  const id=await insertUserWorkspace(user.id,name,mode);
+  if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,id);
+  revalidatePath(`/${locale}/workspaces`);
+  return {status:"success",message:"",workspace:{id,name,mode}};
+ }catch(e){report("createWorkspaceOnList",e);return {status:"error",message:t.generic};}
+}
+export async function setDefaultWorkspaceOnListAction(localeParam:string,id:string):Promise<{status:"success"|"error";message:string}>{
+ const locale=safeLocale(localeParam);
+ const user=await currentUser();
+ if(!user)return {status:"error",message:locale==="bn"?"আবার লগইন করুন।":"Please sign in again."};
+ if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))return {status:"error",message:locale==="bn"?"ওয়ার্কস্পেস পাওয়া যায়নি।":"Workspace not found."};
+ try{
+  if(!await selectDefaultWorkspace(user.id,id))return {status:"error",message:locale==="bn"?"এই ওয়ার্কস্পেসে আপনার অ্যাক্সেস নেই।":"You don't have access to this workspace."};
+  revalidatePath(`/${locale}/workspaces`);
+  return {status:"success",message:""};
+ }catch(e){report("setDefaultWorkspaceOnList",e);return {status:"error",message:locale==="bn"?"ডিফল্ট বদলানো যায়নি।":"Could not change default."};}
 }
 
 
