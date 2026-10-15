@@ -324,6 +324,9 @@ func (s *Service) HandleDocuments(w http.ResponseWriter, r *http.Request) {
 			data["delivery"] = values
 		}
 	}
+	if !mutation && res == "customers" {
+        s.supplementCustomerPayerNumbers(r,ws,realm,result,role)
+    }
 	attachDocumentTokens(s, ws, realm, result)
 	if role == "viewer" {
 		maskContacts(result)
