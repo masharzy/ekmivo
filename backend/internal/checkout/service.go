@@ -268,6 +268,16 @@ func mapped(w http.ResponseWriter, err error) {
 	}
 	fail(w, 503, "FINANCIAL_SERVICE_UNAVAILABLE")
 }
+func hasSimplePaymentOptions(body createRequest) bool {
+ return len(body.AmountBDT)>0||body.RedirectURL!=""||body.CancelURL!=""||body.WebhookURL!=""||
+ body.SimpleReference!=""||body.CustomerName!=""||body.CustomerEmail!=""||
+ body.CustomerPhone!=""||len(body.Metadata)>0
+}
+func pg62OptionsAvailable(ctx context.Context, tx pgx.Tx) (bool,error) {
+ var available bool
+ err:=tx.QueryRow(ctx,"SELECT to_regprocedure('pg62_store_intent_options(uuid,text,uuid,text,text,text,text,text,text,jsonb)') IS NOT NULL").Scan(&available)
+ return available,err
+}
 func metadataOrEmpty(raw json.RawMessage) string {
 	if len(raw)==0{return "{}"}
 	return string(raw)
@@ -451,9 +461,12 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 		if id:=r.PathValue("intentID");id!="" {
 			var options []byte
 			if err:=s.scoped(r.Context(),ws,realm,func(tx pgx.Tx) error {
+				var installed bool
+				if err:=tx.QueryRow(r.Context(),"SELECT to_regprocedure('pg62_merchant_options(uuid,text,uuid)') IS NOT NULL").Scan(&installed);err!=nil{return err}
+				if !installed{return nil} // Legacy reads remain available before optional migration.
 				return tx.QueryRow(r.Context(),"SELECT pg62_merchant_options($1::uuid,$2,$3::uuid)",ws,realm,id).Scan(&options)
 			});err!=nil{mapped(w,err);return}
-			if detail,ok:=data.(map[string]any);ok {
+			if detail,ok:=data.(map[string]any);ok&&len(options)>0 {
 				var merchantOptions map[string]any
 				if json.Unmarshal(options,&merchantOptions)==nil&&len(merchantOptions)>0{detail["options"]=merchantOptions}
 			}
@@ -481,6 +494,16 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 			fail(w, 422, "INVALID_REQUEST")
 			return
 		}
+		var optionsReady bool
+		if err:=s.scoped(r.Context(),ws,realm,func(tx pgx.Tx) error {
+			var checkErr error
+			optionsReady,checkErr=pg62OptionsAvailable(r.Context(),tx)
+			return checkErr
+		});err!=nil{mapped(w,err);return}
+		if !optionsReady&&hasSimplePaymentOptions(payload){
+			fail(w,503,"SIMPLE_PAYMENT_MIGRATION_REQUIRED")
+			return
+		}
 		raw, _ := json.Marshal(payload)
 		token := s.token(ws, realm, key)
 		var answer []byte
@@ -501,6 +524,7 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 			if issueErr!=nil{return issueErr}
 			var created struct{ID string `json:"id"`}
 			if json.Unmarshal(answer,&created)!=nil||!uuidPattern.MatchString(created.ID){return errors.New("invalid intent creation result")}
+			if !optionsReady {return nil} // Legacy request, before schema 0062 rollout.
 			var stored bool
 			return tx.QueryRow(r.Context(),"SELECT pg62_store_intent_options($1::uuid,$2,$3::uuid,$4,$5,$6,$7,$8,$9,$10::jsonb)",
 				ws,realm,created.ID,payload.RedirectURL,payload.CancelURL,payload.WebhookURL,payload.CustomerName,payload.CustomerEmail,payload.CustomerPhone,metadataOrEmpty(payload.Metadata)).Scan(&stored)
@@ -889,6 +913,9 @@ func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byt
 		realm:=checkoutRealm(raw)
 		var redirects []byte
 		if err:=s.scoped(r.Context(),ws,realm,func(tx pgx.Tx) error {
+			var installed bool
+			if err:=tx.QueryRow(r.Context(),"SELECT to_regprocedure('pg62_checkout_redirects(uuid,text,uuid)') IS NOT NULL").Scan(&installed);err!=nil{return err}
+			if !installed{return nil}
 			return tx.QueryRow(r.Context(),"SELECT pg62_checkout_redirects($1::uuid,$2,$3::uuid)",ws,realm,intentID).Scan(&redirects)
 		});err!=nil{fail(w,503,"CHECKOUT_OPTIONS_UNAVAILABLE");return}
 		var options map[string]any

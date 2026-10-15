@@ -466,6 +466,15 @@ func main() {
   }
  }
 
+ if os.Getenv("PG62_SIMPLE_PAYMENT_ALLOW_MIGRATION") == "true" {
+   file:=os.Getenv("PG62_SIMPLE_PAYMENT_MIGRATION_FILE")
+   for _,target:=range []realmDSN{{"sandbox",sa},{"live",lv}} {
+      if err:=migrateSimplePaymentOptions(ctx,target.environment,target.raw,file);err!=nil {
+        log.Fatalf("0062 payment options blocked in %s: %v",target.environment,err)
+      }
+   }
+ }
+ 
  if os.Getenv("PG60_PUBLIC_RECEIVER_ALLOW_MIGRATION") == "true" {
   if err:=migratePublicSandboxReceiver(ctx,sa,os.Getenv("PG60_PUBLIC_RECEIVER_MIGRATION_FILE"),os.Getenv("PG14_PUBLIC_SANDBOX_WORKSPACE"));err!=nil{log.Fatal("0060 public receiver migration blocked: ",err)}
  }
