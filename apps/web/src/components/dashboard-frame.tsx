@@ -56,6 +56,18 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
  const draftDialog=useRef<HTMLDialogElement>(null);
  const serviceMenu=useRef<HTMLDetailsElement>(null);
  const businessMenu=useRef<HTMLDetailsElement>(null);
+ const scrollableNav=useRef<HTMLElement|null>(null);
+ const [navHasMore,setNavHasMore]=useState(false);
+ useEffect(()=>{
+  const el=scrollableNav.current;if(!el)return;
+  const update=()=>setNavHasMore(el.scrollTop+el.clientHeight+3<el.scrollHeight);
+  update();
+  const observer=new ResizeObserver(update);observer.observe(el);
+  Array.from(el.children).forEach(child=>observer.observe(child));
+  el.addEventListener("scroll",update,{passive:true});
+  return()=>{observer.disconnect();el.removeEventListener("scroll",update)};
+ },[service,workspace.id]);
+
  useEffect(()=>{
   const onEscape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&businessMenu.current?.open){businessMenu.current.open=false;businessMenu.current.querySelector("summary")?.focus()}};
   const onOutside=(event:MouseEvent)=>{if(businessMenu.current?.open&&!businessMenu.current.contains(event.target as Node))businessMenu.current.open=false};
@@ -248,10 +260,10 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
    </div>
   </details>
   </div>
-  <nav className="ds-navigation" aria-label={bn?`${serviceNames[service].bn} নেভিগেশন`:`${serviceNames[service].en} navigation`}>
+  <nav ref={mobile?undefined:scrollableNav} className={"ds-navigation"+(navHasMore&&!mobile?" has-more":"")} aria-label={bn?`${serviceNames[service].bn} নেভিগেশন`:`${serviceNames[service].en} navigation`}>
    {groups.map(group=><section className="ds-nav-section" key={group.label.en}>
     {service==="payments"&&group.label.en==="Commerce"?<details className="ds-unreleased-nav"><summary>{group.label[locale]} <small>{bn?"নির্মাণাধীন":"In development"}</small></summary><p>{bn?"কমার্সের এই কাজগুলো Payment phase-এর পরে চালু হবে।":"Commerce operations will follow the verified payment phase."}</p></details>:<h2>{group.label[locale]}</h2>}
-    {!(service==="payments"&&group.label.en==="Commerce")&&group.items.map(key=><Link key={key} href={key==="api-docs"?"/developers":contextHref(key)} target={key==="api-docs"?"_blank":undefined} rel={key==="api-docs"?"noopener noreferrer":undefined} className={section===key?"is-current":undefined} aria-current={section===key?"page":undefined} prefetch={key!=="api-docs"} onMouseEnter={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onFocus={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onClick={event=>{if(key!=="api-docs"){event.preventDefault();nav(key);}}}>
+    {!(service==="payments"&&group.label.en==="Commerce")&&group.items.filter(key=>!(service==="payments"&&key==="requests")).map(key=><Link key={key} href={key==="api-docs"?"/developers":contextHref(key)} target={key==="api-docs"?"_blank":undefined} rel={key==="api-docs"?"noopener noreferrer":undefined} className={section===key?"is-current":undefined} aria-current={section===key?"page":undefined} prefetch={key!=="api-docs"} onMouseEnter={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onFocus={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onClick={event=>{if(key!=="api-docs"){event.preventDefault();nav(key);}}}>
      <Icon name={key}/><span>{sections[key][locale]}</span>{key==="api-docs"&&<span aria-hidden="true">↗</span>}{section===key&&<span className="ds-active-mark"/>}</Link>)}
    </section>)}
   </nav>
@@ -305,7 +317,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
      </details>
      <Link className="ds-help-link" href={contextHref("help")} aria-label={bn?"সহায়তা":"Help"}><Icon name="help"/></Link>
      <details className="ds-profile-menu">
-      <summary aria-label={bn?"অ্যাকাউন্ট মেনু":"Account menu"} title={userName}><span className="ds-person-avatar">{userName.slice(0,1).toUpperCase()}</span></summary>
+      <summary aria-label={bn?"অ্যাকাউন্ট মেনু":"Account menu"} title={userName}><span className="ds-person-avatar">{userName.trim().charAt(0).toUpperCase()||"?"}</span></summary>
       <div className="ds-profile-popover">
        <strong>{userName}</strong>
        <Link href="/account"><Icon name="settings"/>{bn?"অ্যাকাউন্ট ও নিরাপত্তা":"Account & security"}</Link>
