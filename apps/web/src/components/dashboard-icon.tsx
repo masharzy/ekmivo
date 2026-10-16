@@ -1,6 +1,9 @@
 import type { SVGProps } from "react";
 const paths: Record<string, string> = {
  overview:"M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
+ transactions:"M4 6h16 M4 12h16 M4 18h16 M7 4v4 M13 10v4 M18 16v4",
+ "api-docs":"M8 4l-5 8 5 8 M16 4l5 8-5 8 M14 3L10 21",
+ "api-keys":"M14 9a5 5 0 1 0-5 5h3l2 2 2-2 2 2 3-3-3-3a5 5 0 0 0-4-1z",
  inbox:"M4 4h16v16H4z M4 13h5l2 3h2l2-3h5",
  bell:"M6 17V9a6 6 0 0 1 12 0v8l2 2H4z M10 22h4",
  notifications:"M6 17V9a6 6 0 0 1 12 0v8l2 2H4z M10 22h4",
