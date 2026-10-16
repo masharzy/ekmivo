@@ -1,4 +1,5 @@
 "use client";
+import {merchantStatusLabel} from "../lib/dashboard-status-labels";
 
 export type PaymentLinkRow={id:string;reference:string;status:string;version:number;amount_minor:number;paid_minor:number;public_token?:string;body:{description?:string;expires_at?:string;max_uses?:number}};
 export function LinkIcon({type="link"}:{type?:"link"|"plus"|"copy"|"open"}){
@@ -7,7 +8,6 @@ export function LinkIcon({type="link"}:{type?:"link"|"plus"|"copy"|"open"}){
 export function paymentLinkState(row:PaymentLinkRow,now:number){return row.status==="active"&&row.body.expires_at&&Date.parse(row.body.expires_at)<=now?"expired":row.status}
 export function PaymentLinkCards({rows,now,locale,busy,onCopy,onView}:{rows:PaymentLinkRow[];now:number;locale:"en"|"bn";workspaceId:string;environment:string;busy:boolean;canWrite:boolean;onEdit:(row:PaymentLinkRow)=>void;onPublish:(row:PaymentLinkRow)=>void;onArchive:(row:PaymentLinkRow)=>void;onCopy:(url:string)=>void;onView?:(row:PaymentLinkRow)=>void}){
  const t=(en:string,bn:string)=>locale==="bn"?bn:en;
- const labels:Record<string,string>={active:t("Active","সক্রিয়"),expired:t("Expired","মেয়াদ শেষ"),archived:t("Archived","আর্কাইভ"),draft:t("Draft","খসড়া")};
  const money=(v:number)=>new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(v/100);
  return <div className="ekv2-links-table opw-scroll" role="region" tabIndex={0} aria-label={t("Payment links","পেমেন্ট লিংক")}>
   <table><thead><tr><th>{t("Reference","রেফারেন্স")}</th><th>{t("Amount","পরিমাণ")}</th><th>{t("Received","প্রাপ্ত")}</th><th>{t("Status","অবস্থা")}</th><th>{t("Expires","মেয়াদ")}</th><th>{t("Action","অ্যাকশন")}</th></tr></thead>
@@ -15,7 +15,7 @@ export function PaymentLinkCards({rows,now,locale,busy,onCopy,onView}:{rows:Paym
     <td><strong className="ekv2-table-name" title={row.reference}>{row.reference.length>30?row.reference.slice(0,26)+"…":row.reference}</strong>{row.body.description&&<small className="ekv2-row-meta">{row.body.description}</small>}</td>
     <td className="opw-num">{money(row.amount_minor)}</td>
     <td className="opw-num">{money(row.paid_minor)}</td>
-    <td><span className="pl-status" data-state={state}>{labels[state]||state}</span></td>
+    <td><span className="pl-status" data-state={state}>{merchantStatusLabel("link",state,locale)}</span></td>
     <td>{row.body.expires_at?new Date(row.body.expires_at).toLocaleDateString(locale==="bn"?"bn-BD":"en-BD",{day:"numeric",month:"short",year:"numeric"}):t("No expiry","মেয়াদ নেই")}</td>
     <td className="ekv2-row-actions"><details className="ekv3-row-menu" onClick={e=>e.stopPropagation()}><summary title={t("More","আরও")} aria-label={t("Link actions","লিংকের অ্যাকশন")}>⋯</summary><div className="ekv3-row-popover">{publicPath&&state==="active"&&<><a href={publicPath} target="_blank" rel="noopener noreferrer">{t("Open checkout","চেকআউট খুলুন")}</a><button type="button" disabled={busy} onClick={()=>onCopy(publicPath)}>{t("Copy link","লিংক কপি")}</button></>}{!publicPath&&<button type="button" onClick={()=>onView?.(row)}>{t("Details","বিস্তারিত")}</button>}</div></details></td>
    </tr>})}</tbody>
