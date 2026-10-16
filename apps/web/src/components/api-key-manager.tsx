@@ -1,6 +1,7 @@
 "use client";
 import {useActionState,useEffect,useRef,useState} from "react";
 import {registerDraft} from "../lib/client/draft-navigation";
+import {DashboardIcon} from "./dashboard-icon";
 import {useFormStatus} from "react-dom";
 import {createMerchantKey,rotateMerchantKey,revokeMerchantKey,type KeyActionState} from "../actions/merchant-keys";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
@@ -26,7 +27,7 @@ function SecretOnce({secret,locale}:{secret:string;locale:Locale}){
  const bn=locale==="bn";
  if(hidden)return <p role="status">{bn?"গোপন কীটি বন্ধ করা হয়েছে। পৃষ্ঠা ছাড়ার পর আর দেখা যাবে না।":"Secret hidden. It cannot be recovered after leaving this page."}</p>;
  return <div className="ds-key-secret" role="status">
-  <strong>{bn?"এখনই সংরক্ষণ করুন — শুধু একবার দেখানো হচ্ছে":"Save now — shown once only"}</strong>
+  <strong>{bn?"এই কী আর কখনো দেখানো হবে না।":"You will not see this key again."}</strong>
   <code>{secret}</code>
   <div className="ds-key-actions">
    <button type="button" onClick={async()=>{try{await navigator.clipboard.writeText(secret);setCopied(true);}catch{setCopied(false);}}}>{copied?(bn?"কপি হয়েছে":"Copied"):(bn?"কপি করুন":"Copy key")}</button>
@@ -164,7 +165,7 @@ export function ApiKeyManager({locale,userId,workspaceId,environment,keys}:{
   {!keys.length?<div className="ekv3-empty" role="status">{bn?"এই পরিবেশে কোনো key নেই।":"No API keys yet."}</div>:<div className="ekv3-table-scroller ek-key-table"><table className="ekv3-table"><thead><tr><th>{bn?"নাম":"Name"}</th><th>Key</th><th>{bn?"অনুমতি":"Scopes"}</th><th>{bn?"মেয়াদ":"Expires"}</th><th>{bn?"শেষ ব্যবহার":"Last used"}</th><th>{bn?"অবস্থা":"Status"}</th><th aria-label="Actions"/></tr></thead><tbody>
    {keys.map(keyItem=><tr key={keyItem.id} className="ekv3-clickable" tabIndex={0} onClick={()=>openDetails(keyItem)} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openDetails(keyItem)}}}>
     <td><strong>{keyItem.name}</strong></td>
-    <td><code className="ek-key-ref">{environment==="sandbox"?"ek_test_":"ek_live_"}{keyItem.publicId.slice(0,8)}…{keyItem.publicId.slice(-4)}</code><button type="button" className="ekv3-copy" aria-label={bn?"Public reference কপি":"Copy public reference"} title={bn?"এটি secret নয়":"Not the secret"} onClick={e=>{e.stopPropagation();void navigator.clipboard.writeText(keyItem.publicId)}}>⧉</button></td>
+    <td><code className="ek-key-ref">{environment==="sandbox"?"ek_test_":"ek_live_"}{keyItem.publicId.slice(0,8)}…{keyItem.publicId.slice(-4)}</code><button type="button" className="ekv3-copy" aria-label={bn?"Public reference কপি":"Copy public reference"} title={bn?"এটি secret নয়":"Not the secret"} onClick={e=>{e.stopPropagation();void navigator.clipboard.writeText(keyItem.publicId)}}><DashboardIcon name="copy" width={16} height={16}/></button></td>
     <td title={keyItem.scopes.join(", ")}>{keyItem.scopes.length} {bn?"স্কোপ":"scopes"}</td><td>{showDate(keyItem.expiresAt)}</td><td>{keyItem.lastUsedAt?showDate(keyItem.lastUsedAt):"—"}</td>
     <td><span className="ekv3-status" data-tone={keyItem.revokedAt||keyItem.expired?"neutral":"success"}>{keyItem.revokedAt?(bn?"বাতিল":"Revoked"):keyItem.expired?(bn?"মেয়াদ শেষ":"Expired"):(bn?"সক্রিয়":"Active")}</span></td>
     <td onClick={e=>e.stopPropagation()}><KeyControls locale={locale} workspaceId={workspaceId} environment={environment} keyItem={keyItem}/></td>
