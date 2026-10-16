@@ -152,3 +152,15 @@
  .ds-app[data-service="payments"] :is(.ekv3-request-modal,.ekv3-form-modal,.ekv3-pair-dialog)[open]{animation:ekv2-modal-in .15s ease-out}
 }
 @media(prefers-reduced-motion:reduce){.ds-app[data-service="payments"] :is(.ekv3-request-modal,.ekv3-form-modal,.ekv3-pair-dialog,.ekv3-drawer){animation:none!important;transition:none!important}}
+
+/* Shell navigation fade only when there is additional content to scroll. */
+.ds-app[data-service="payments"] .ds-navigation.has-more{
+ -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 calc(100% - 25px),transparent 100%);
+ mask-image:linear-gradient(to bottom,#000 0%,#000 calc(100% - 25px),transparent 100%);
+}
+.ds-app[data-service="payments"] .ds-nav-section a{scroll-margin-bottom:20px}
+/* Shared text-only page anatomy on the other payment workspace routes. */
+.ds-app[data-service="payments"] .ds-page-heading>.ds-eyebrow,
+.ds-app[data-service="payments"] .ds-page-heading .ds-eyebrow{display:none}
+.ds-app[data-service="payments"] .ds-page-heading h1{font-size:24px;line-height:1.3;letter-spacing:-.02em;font-weight:600}
+.ds-app[data-service="payments"] .ds-page-heading p{font-size:12.5px;color:var(--color-text-muted);margin:5px 0 0}
