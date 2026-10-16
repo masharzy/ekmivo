@@ -56,6 +56,12 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
  const draftDialog=useRef<HTMLDialogElement>(null);
  const serviceMenu=useRef<HTMLDetailsElement>(null);
  const businessMenu=useRef<HTMLDetailsElement>(null);
+ useEffect(()=>{
+  const onEscape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&businessMenu.current?.open){businessMenu.current.open=false;businessMenu.current.querySelector("summary")?.focus()}};
+  const onOutside=(event:MouseEvent)=>{if(businessMenu.current?.open&&!businessMenu.current.contains(event.target as Node))businessMenu.current.open=false};
+  document.addEventListener("keydown",onEscape);document.addEventListener("mousedown",onOutside);
+  return()=>{document.removeEventListener("keydown",onEscape);document.removeEventListener("mousedown",onOutside)};
+ },[]);
  const groups=navigation[service];
  const foundGroups=searchableNavigation(service,globalQuery);
  const foundKeys=foundGroups.flatMap(group=>group.items);
@@ -233,15 +239,15 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
   <div className="ds-business-block"><details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
-   <summary><span className="ds-business-avatar">{workspace.name.slice(0,1).toUpperCase()}</span><span><small>{bn?"বর্তমান ব্যবসা":"Current business"}</small><strong>{workspace.name}</strong></span><Icon name="chevron"/></summary>
-   <div className="ds-business-menu">
+   <summary aria-label={bn?"ওয়ার্কস্পেস পরিবর্তন":"Switch workspace"} title={workspace.name}><span className="ds-business-avatar">{workspace.name.slice(0,1).toUpperCase()}</span><strong className="ds-business-current-name">{workspace.name}</strong><Icon name="chevron"/></summary>
+   <div className="ds-business-menu" role="group" aria-label={bn?"ওয়ার্কস্পেস":"Workspaces"}>
     <label className="ds-switch-search"><span className="sr-only">{bn?"ব্যবসা খুঁজুন":"Find business"}</span><input value={businessQuery} onChange={event=>setBusinessQuery(event.target.value)} placeholder={bn?"ব্যবসা খুঁজুন…":"Search businesses…"} /></label>
-    {visibleBusinesses.map(space=><button key={space.id} type="button" aria-current={space.id===workspace.id?"true":undefined} onClick={()=>switchBusiness(space)}><span className="ds-business-avatar">{space.name.slice(0,1).toUpperCase()}</span><span><strong>{space.name}</strong><small>{roleNames[space.role][locale]}{space.id===workspace.id?(bn?" · বর্তমান":" · Current"):""}</small></span>{space.id===workspace.id&&<Icon name="check"/>}</button>)}
+    {visibleBusinesses.map(space=><button key={space.id} type="button" aria-current={space.id===workspace.id?"true":undefined} onClick={()=>switchBusiness(space)}><span className="ds-business-avatar">{space.name.slice(0,1).toUpperCase()}</span><span><strong>{space.name}</strong><small>{roleNames[space.role][locale]}</small></span>{space.id===workspace.id&&<Icon name="check"/>}</button>)}
     {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No businesses match"}</p>}
-    <Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"ব্যবসা পরিচালনা / নতুন ব্যবসা":"Manage / create businesses"}</Link>
+    <div className="ds-business-actions"><Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"ওয়ার্কস্পেস পরিচালনা":"Manage workspaces"}</Link><Link href="/workspaces?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন ওয়ার্কস্পেস":"New workspace"}</Link></div>
    </div>
   </details>
-  <Link className="ds-workspace-settings" href={contextHref("billing")} aria-label={bn?"ওয়ার্কস্পেস সেটিংস খুলুন":"Open workspace settings"}><Icon name="settings"/><span className="sr-only">{bn?"ওয়ার্কস্পেস সেটিংস":"Workspace settings"}</span></Link></div>
+  </div>
   <nav className="ds-navigation" aria-label={bn?`${serviceNames[service].bn} নেভিগেশন`:`${serviceNames[service].en} navigation`}>
    {groups.map(group=><section className="ds-nav-section" key={group.label.en}>
     {service==="payments"&&group.label.en==="Commerce"?<details className="ds-unreleased-nav"><summary>{group.label[locale]} <small>{bn?"নির্মাণাধীন":"In development"}</small></summary><p>{bn?"কমার্সের এই কাজগুলো Payment phase-এর পরে চালু হবে।":"Commerce operations will follow the verified payment phase."}</p></details>:<h2>{group.label[locale]}</h2>}
@@ -249,11 +255,6 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
      <Icon name={key}/><span>{sections[key][locale]}</span>{key==="api-docs"&&<span aria-hidden="true">↗</span>}{section===key&&<span className="ds-active-mark"/>}</Link>)}
    </section>)}
   </nav>
-  <div className="ds-sidebar-foot">
-   {platformAdmin&&<Link href="/admin"><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
-   {logout}
-   <div className="ds-signed-in"><span className="ds-person-avatar">{userName.slice(0,1).toUpperCase()}</span><span><strong>{userName}</strong><small>{bn?"আপনার অ্যাকাউন্ট":"Your account"}</small></span></div>
-  </div>
  </>;
  return <div className="ds-app" data-service={service} data-environment={environment}><DashboardFeedback locale={locale}/>
   <a className="ds-skip" href="#dashboard-content">{bn?"মূল অংশে যান":"Skip to content"}</a>
@@ -306,10 +307,8 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
      <details className="ds-profile-menu">
       <summary aria-label={bn?"অ্যাকাউন্ট মেনু":"Account menu"} title={userName}><span className="ds-person-avatar">{userName.slice(0,1).toUpperCase()}</span></summary>
       <div className="ds-profile-popover">
-       <strong>{userName}</strong><small>{workspace.name}</small>
+       <strong>{userName}</strong>
        <Link href="/account"><Icon name="settings"/>{bn?"অ্যাকাউন্ট ও নিরাপত্তা":"Account & security"}</Link>
-       <Link href={contextHref("settings")}><Icon name="settings"/>{bn?"ওয়ার্কস্পেস সেটিংস":"Workspace settings"}</Link>
-       <Link href={contextHref("help")}><Icon name="help"/>{bn?"সাহায্য":"Help"}</Link>
        {platformAdmin&&<Link href="/admin"><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
        {logout}
       </div>
