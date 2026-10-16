@@ -4,6 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {DashboardConfirmDialog} from "./dashboard-confirm-dialog";
 import {pairingSvg} from "../lib/pairing-qr.mjs";
 import {DeviceIcon} from "./sms-device-icons";
+import {merchantStatusLabel} from "../lib/dashboard-status-labels";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 type Phone={id:string;name:string;created_at?:string;claimed_at?:string|null;revoked_at?:string|null;model?:string;app_version?:string;heartbeat_at?:string|null;permission_ok:boolean;backlog:number;last_queue_error?:string};
 type Props={locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;detailId?:string};
@@ -20,7 +21,7 @@ function ScopedDevices({locale,workspaceId,environment,canManage,detailId}:Props
  const [reconnectAfterDisconnect,setReconnectAfterDisconnect]=useState(false);
  const [pairId,setPairId]=useState<string|null>(null),[token,setToken]=useState(""),[expiry,setExpiry]=useState(0),[now,setNow]=useState(0),[offline,setOffline]=useState(false);
  const nameRef=useRef<HTMLInputElement>(null),pairRef=useRef<HTMLDialogElement>(null),detailsRef=useRef<HTMLDialogElement>(null),createDialog=useRef<HTMLDialogElement>(null),request=useRef(0);
- const labels:Record<string,string>={online:t("Online","সক্রিয়"),delayed:t("Sync delayed","সিঙ্কে দেরি হচ্ছে"),offline:t("Offline","অফলাইন"),permission:t("SMS permission needed","SMS অনুমতি প্রয়োজন"),pairing:t("Waiting for pairing","ফোন যুক্ত করার অপেক্ষায়"),expired:t("Pairing expired","পেয়ারিংয়ের মেয়াদ শেষ"),waiting:t("Waiting for first sync","প্রথম সিঙ্কের অপেক্ষায়"),revoked:t("Disconnected","সংযোগ বাতিল")};
+ const labels=Object.fromEntries(["online","delayed","offline","permission","pairing","expired","waiting","revoked"].map(key=>[key,merchantStatusLabel("phone",key,locale)])) as Record<string,string>;
  const safeError=useCallback((code:string)=>code==="FORBIDDEN"?t("Only workspace owners and admins can manage these phones.","শুধু ওয়ার্কস্পেসের মালিক ও অ্যাডমিন ফোন পরিচালনা করতে পারবেন।"):code==="PHONE_PROJECTION_STALE"?t("Workspace access is still syncing. Keep your existing phone and retry shortly.","ওয়ার্কস্পেসের অনুমতি সিঙ্ক হচ্ছে। আগের ফোনটি রাখুন; একটু পরে আবার চেষ্টা করুন।"):t("Could not confirm this action. Refresh the phone list before trying again.","কাজটি নিশ্চিত হয়নি। আবার চেষ্টা করার আগে ফোনের তালিকা রিফ্রেশ করুন।"),[t]);
  const refresh=useCallback(async(silent=false,signal?:AbortSignal)=>{
   const generation=++request.current;if(!silent)setLoading(true);
