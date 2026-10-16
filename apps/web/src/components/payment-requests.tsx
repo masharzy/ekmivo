@@ -69,6 +69,9 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
  const [fields,setFields]=useState<Fields>(empty);
  const [draftBase,setDraftBase]=useState<Fields>(empty);
  const [expanded,setExpanded]=useState(false);
+ const [sourceOpen,setSourceOpen]=useState(false);
+ const [visibleLimit,setVisibleLimit]=useState(20);
+ const createDialog=useRef<HTMLDialogElement|null>(null),sourceDialog=useRef<HTMLDialogElement|null>(null),detailDialog=useRef<HTMLDialogElement|null>(null);
  const [search,setSearch]=useState("");
  const [statusFilter,setStatusFilter]=useState("all");
  const [submitting,setSubmitting]=useState(false);
@@ -80,6 +83,10 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
  const sourceRef=useRef({draft:sourceDraft,lines:extraLines,base:sourceBase});
  useEffect(()=>{stateRef.current={fields,base:draftBase,expanded}},[fields,draftBase,expanded]);
  useEffect(()=>{sourceRef.current={draft:sourceDraft,lines:extraLines,base:sourceBase}},[sourceDraft,extraLines,sourceBase]);
+ useEffect(()=>{const dialog=createDialog.current;if(!dialog)return;if(expanded&&!dialog.open)dialog.showModal();else if(!expanded&&dialog.open)dialog.close()},[expanded]);
+ useEffect(()=>{const dialog=sourceDialog.current;if(!dialog)return;if(sourceOpen&&!dialog.open)dialog.showModal();else if(!sourceOpen&&dialog.open)dialog.close()},[sourceOpen]);
+ useEffect(()=>{const dialog=detailDialog.current;if(!dialog)return;if(selected&&!dialog.open)dialog.showModal();else if(!selected&&dialog.open)dialog.close()},[selected]);
+ useEffect(()=>{if(!notice&&!copied)return;const timer=setTimeout(()=>{setNotice("");setCopied("")},2400);return()=>clearTimeout(timer)},[notice,copied]);
  const draftKey="ekmivo:pg05-request:v1:"+userId+":"+workspaceId+":"+environment;
  const api="/api/go/workspaces/"+workspaceId+"/payment-intents?environment="+environment;
  const sourcesApi="/api/go/workspaces/"+workspaceId+(environment==="live"?"/documents/invoices":"/linked-sources")+"?environment="+environment;
@@ -256,7 +263,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
    try{sessionStorage.removeItem(draftKey+":source")}catch{}
    keyRef.current="";
    setFields(prev=>({...prev,sourceKind:issued.source_kind,sourceId:issued.id}));
-   setExpanded(true);
+   setSourceOpen(false);setExpanded(true);
    setNotice(bn?"সার্ভার নথির মোট হিসাব করেছে; কোনো পেমেন্ট হয়নি।":"Server-priced document issued; no payment occurred.");
    await refreshSources();
   }catch(reason){setSourceError(short((reason as {code?:string}).code||"",bn));}
@@ -264,19 +271,24 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
  }
  const visible=data.filter(item=>(statusFilter==="all"||item.state===statusFilter)
    &&(item.merchant_reference||"").toLowerCase().includes(search.trim().toLowerCase()));
- return <div className="pg05-merchant">
-  {selected&&<PaymentRequestDetail key={selected} id={selected} workspaceId={workspaceId} environment={environment} locale={locale} onClose={()=>selectDetail("")}/>}
-  <section className="ds-panel pg05-section">
-   <div className="pg05-topline">
-    <div><p className="ds-eyebrow">{bn?"রিকোয়েস্ট ব্যবস্থাপনা":"REQUEST OPERATIONS"}</p>
-     <h2>{bn?"পেমেন্ট রিকোয়েস্ট":"Payment requests"}</h2>
-     <p>{bn?"একটি নির্দিষ্ট পরিমাণের পেমেন্ট গ্রহণ করুন।":"Request a one-time payment with a set expiry."}</p></div>
-    <button type="button" className="ek-action" onClick={()=>setExpanded(x=>!x)} aria-expanded={expanded} disabled={!canWrite||load==="forbidden"}>
-     {expanded?(bn?"ফর্ম বন্ধ":"Close form"):(bn?"রিকোয়েস্ট তৈরি":"+ Create request")}</button>
-   </div>
-   {environment==="sandbox"&&<p className="pg05-banner" role="note">{bn?"Sandbox: আসল টাকা পাঠাবেন না।":"Sandbox: no real money."}</p>}
-   {!canWrite&&<p role="note">{bn?"শুধু দেখার অনুমতি আছে।":"Read-only access. An editor can issue or cancel requests."}</p>}
-   {expanded&&<form onSubmit={create} className="pg05-form"><fieldset disabled={submitting||!canWrite}>
+ return <section className="pg05-merchant ekv3-requests">
+  <header className="ekv3-page-header"><div><h1>{bn?"পেমেন্ট লিংক":"Payment links"}</h1><p>{bn?"একবারের পেমেন্ট অনুরোধ তৈরি ও পরিচালনা করুন।":"Create and manage one-time payments."}</p></div><div className="ekv3-head-actions"><button type="button" className="ekv3-icon-button" disabled={load==="loading"} aria-label={bn?"রিফ্রেশ":"Refresh"} title={bn?"রিফ্রেশ":"Refresh"} onClick={()=>void refresh()}>↻</button>{canWrite&&<button type="button" className="ekv3-primary" onClick={()=>setExpanded(true)}>{bn?"নতুন রিকোয়েস্ট":"New request"}</button>}</div></header>
+  <div className="ekv3-requests-toolbar"><input type="search" aria-label={bn?"রেফারেন্স খুঁজুন":"Search reference"} placeholder={bn?"রেফারেন্স খুঁজুন":"Search reference"} value={search} onChange={event=>{setSearch(event.target.value);setVisibleLimit(20)}}/><select aria-label={bn?"অবস্থা":"Status"} value={statusFilter} onChange={event=>{setStatusFilter(event.target.value);setVisibleLimit(20)}}><option value="all">{bn?"সব":"All"}</option>{["completed","requires_payer","awaiting_payment","expired","cancelled"].map(key=><option value={key} key={key}>{statusLabel(key,bn)}</option>)}</select></div>
+  {error&&<div className="ekv3-page-error" role="alert">{error}<button type="button" onClick={()=>void refresh()}>{bn?"আবার চেষ্টা করুন":"Try again"}</button></div>}
+  <div className="ekv3-table-scroller" role="region" tabIndex={0} aria-label={bn?"একবারের রিকোয়েস্ট":"One-time requests"}><table className="ekv3-table"><thead><tr><th>{bn?"রেফারেন্স":"Reference"}</th><th className="ekv3-numeric">{bn?"পরিমাণ":"Amount"}</th><th>{bn?"অবস্থা":"Status"}</th><th>{bn?"মেয়াদ":"Expires"}</th><th><span className="sr-only">{bn?"অ্যাকশন":"Actions"}</span></th></tr></thead>
+   <tbody>{load==="loading"&&!data.length?[0,1,2].map(n=><tr className="ekv3-loading-row" key={n}><td colSpan={5}><div className="ekv3-skeleton-row"><i/><span/><b/></div></td></tr>):visible.slice(0,visibleLimit).map(item=>{const checkout="/"+locale+"/checkout/"+item.checkout_token;return <tr key={item.id} className="ekv3-clickable" tabIndex={0} onClick={()=>selectDetail(item.id)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectDetail(item.id)}}}>
+    <td><strong title={item.merchant_reference}>{item.merchant_reference.length>28?item.merchant_reference.slice(0,24)+"…":item.merchant_reference}</strong></td>
+    <td className="ekv3-numeric">{number(item.amount_minor,locale)}</td>
+    <td><span className="ekv3-status" data-tone={item.state==="completed"?"success":item.state==="expired"||item.state==="cancelled"?"neutral":"warning"}>{statusLabel(item.state,bn)}</span></td>
+    <td><time dateTime={item.expires_at} title={new Date(item.expires_at).toLocaleString(locale==="bn"?"bn-BD":"en-BD")}>{new Date(item.expires_at).toLocaleDateString(locale==="bn"?"bn-BD":"en-BD",{day:"numeric",month:"short"})}</time></td>
+    <td><details className="ekv3-row-menu" onClick={event=>event.stopPropagation()}><summary aria-label={bn?"রিকোয়েস্ট অ্যাকশন":"Request actions"} title={bn?"আরও":"More"}>⋯</summary><div className="ekv3-row-popover"><Link href={checkout}>{bn?"চেকআউট খুলুন":"Open checkout"}</Link><button type="button" onClick={()=>void navigator.clipboard.writeText(location.origin+checkout).then(()=>setCopied(item.id)).catch(()=>setError(bn?"লিংক কপি হয়নি।":"Unable to copy link."))}>{bn?"লিংক কপি":"Copy link"}</button>{canWrite&&["requires_payer","awaiting_payment"].includes(item.state)&&<button type="button" disabled={acting===item.id} onClick={()=>void cancel(item.id)}>{bn?"বাতিল করুন":"Cancel request"}</button>}</div></details></td>
+   </tr>})}</tbody></table>
+   {load!=="loading"&&visible.length===0&&<p className="ekv3-empty">{bn?"কোনো রিকোয়েস্ট পাওয়া যায়নি।":"No requests found."}</p>}
+  </div>
+  {visible.length>visibleLimit&&<div className="ekv3-load-more"><button type="button" onClick={()=>setVisibleLimit(v=>v+20)}>{bn?"আরও দেখুন":"Load more"}</button></div>}
+  <dialog ref={createDialog} className="ekv3-request-modal" aria-labelledby="ekv3-request-title" onCancel={()=>setExpanded(false)} onClose={()=>setExpanded(false)} onClick={e=>{if(e.target===e.currentTarget)setExpanded(false)}}>
+   <div className="ekv3-modal-heading"><h2 id="ekv3-request-title">{bn?"নতুন রিকোয়েস্ট":"New request"}</h2><button type="button" aria-label={bn?"বন্ধ":"Close"} onClick={()=>setExpanded(false)}>×</button></div>
+   <form onSubmit={create} className="pg05-form"><fieldset disabled={submitting||!canWrite}>
     <div className="pg05-two">
      <label>{bn?"ব্যবসার রেফারেন্স":"Merchant reference"}
       <input required maxLength={128} value={fields.reference} onChange={e=>edit("reference",e.target.value)} placeholder="ORDER-1024"/></label>
@@ -288,36 +300,30 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
       </select></label>
      {fields.sourceKind==="standalone"?<label>{bn?"পরিমাণ (BDT)":"Amount (BDT)"}
       <input required inputMode="decimal" value={fields.amount} onChange={e=>edit("amount",e.target.value)} placeholder="500.00" aria-describedby="pg05-amount-hint"/>
-      <small id="pg05-amount-hint">{bn?"নির্দিষ্ট পরিমাণ; পরবর্তী সময়ে বদলানো যাবে না।":"Exact amount; cannot be edited after issuance."}</small></label>:
+      </label>:
       <label>{bn?"ইস্যু করা নথি":"Issued source document"}
        <select required value={fields.sourceId} onChange={e=>edit("sourceId",e.target.value)}>
         <option value="">{bn?"নথি নির্বাচন করুন":"Select document"}</option>
         {sources.filter(x=>x.source_kind===fields.sourceKind).map(x=><option key={x.id} value={x.id}>{x.source_reference} — {number(x.amount_minor,locale)}</option>)}
        </select>
-       <small>{sourceLoad==="loading"?(bn?"নথি লোড হচ্ছে…":"Loading documents…"):sourceLoad==="error"?(bn?"নথি লোড হয়নি":"Documents unavailable"):
-        (bn?"পরিমাণ সার্ভার নির্ধারণ করে; ফর্ম দিয়ে বদলানো যায় না।":"Source amount is resolved by the server, not by the form.")}</small>
+       
       </label>}
      <label>{bn?"মেয়াদ":"Expires in"}
       <select value={fields.expiry} onChange={e=>edit("expiry",e.target.value)}>{[5,10,15,30,60].map(value=><option key={value} value={value}>{value} {bn?"মিনিট":"minutes"}</option>)}</select></label>
-     <div className="pg05-disabled-field"><strong>{bn?"নথির মোট অপরিবর্তনীয়":"Immutable document total"}</strong>
-       <small>{bn?"নথির লাইন থেকে সার্ভার মোট হিসাব করে। সংশোধন করতে নতুন নথি ইস্যু করুন।":"The server computes totals from document lines. Issue a new source to make a correction."}</small></div>
+     
     </div>
-    <div className="pg05-actions">
-     <button type="submit" className="ek-action" disabled={submitting}>{submitting?(bn?"তৈরি হচ্ছে…":"Creating…"):(bn?"রিকোয়েস্ট তৈরি":"Create request")}</button>
-     <button type="button" onClick={saveDraft}>{bn?"খসড়া রাখুন":"Save draft"}</button>
-     <button type="button" onClick={restoreDraft}>{bn?"খসড়া ফিরিয়ে আনুন":"Restore draft"}</button>
-     <button type="button" onClick={()=>{setFields(empty);setDraftBase(empty);keyRef.current="";try{sessionStorage.removeItem(draftKey);sessionStorage.removeItem(draftKey+":key")}catch{}}}>{bn?"মুছে ফেলুন":"Discard"}</button>
+    <div className="pg05-actions ekv3-modal-footer"><button type="button" onClick={()=>setExpanded(false)}>{bn?"বাতিল":"Cancel"}</button>
+     <button type="submit" className="ekv3-primary" disabled={submitting}>{submitting?(bn?"তৈরি হচ্ছে…":"Creating…"):(bn?"রিকোয়েস্ট তৈরি":"Create request")}</button>
+     
+     
+     
     </div>
-    {dirty&&<p className="pg05-muted" role="status">{bn?"সংরক্ষণ না করা পরিবর্তন আছে।":"Unsaved changes."}</p>}
-   </fieldset></form>}
-  </section>
-  <details className="pg05-source-options"><summary>{bn?"Advanced: Source documents":"Advanced · Source documents"}</summary>
-  <section className="ds-panel pg05-section">
-   <div className="pg05-topline"><div>
-    <p className="ds-eyebrow">{bn?"ইস্যু করা নথি":"ISSUED DOCUMENTS"}</p>
-    <h2>{bn?"অর্ডার / ইনভয়েসের উৎস":"Order and invoice sources"}</h2>
-    <p>{bn?"একটি নথির লাইন থেকে BDT মোট হিসাব করে সার্ভার ইস্যু করবে। এটি যাচাইকৃত পেমেন্ট বা পূর্ণ ইনভয়েস ম্যানেজমেন্ট নয়।":"Issue a minimal immutable order or invoice snapshot. The server calculates the BDT total from lines. This is not a paid invoice or full commerce management."}</p>
-   </div><button type="button" onClick={()=>void refreshSources()} disabled={sourceLoad==="loading"}>{bn?"নথি রিফ্রেশ":"Refresh sources"}</button></div>
+    
+   </fieldset></form>
+   <div className="ekv3-source-link"><button type="button" onClick={()=>{setExpanded(false);setSourceOpen(true)}}>{bn?"নতুন ইনভয়েস বা অর্ডার তৈরি":"Issue source document"}</button></div>
+  </dialog>
+  <dialog ref={sourceDialog} className="ekv3-request-modal ekv3-request-large" aria-labelledby="ekv3-source-title" onCancel={()=>setSourceOpen(false)} onClose={()=>setSourceOpen(false)} onClick={e=>{if(e.target===e.currentTarget)setSourceOpen(false)}}>
+   <div className="ekv3-modal-heading"><h2 id="ekv3-source-title">{bn?"নথি তৈরি":"Issue document"}</h2><button type="button" aria-label={bn?"বন্ধ":"Close"} onClick={()=>setSourceOpen(false)}>×</button></div>
    <form className="pg05-form" onSubmit={createSource}><fieldset disabled={sourceBusy||!canWrite||environment==="live"}>
     <div className="pg05-two">
      <label>{bn?"নথির ধরন":"Document type"}
@@ -348,60 +354,14 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
     <button type="button" disabled={sourceBusy||extraLines.length>=19} onClick={()=>setExtraLines(rows=>[...rows,{title:"",quantity:"1",unitPrice:""}])}>
      {bn?"আরেকটি লাইন যোগ করুন":"Add another line"} ({extraLines.length+1}/20)
     </button>
-    <p className="pg05-muted">{bn?"সর্বোচ্চ ২০টি লাইন; সার্ভারই মোট মূল্য হিসাব করবে এবং ইস্যু করা নথি পরিবর্তন করা যাবে না।":"Up to 20 lines. The server computes and locks the issued document total, regardless of any client preview."}</p>
-    <button className="ek-action" type="submit" disabled={sourceBusy||environment==="live"}>{sourceBusy?(bn?"ইস্যু হচ্ছে…":"Issuing…"):(bn?"নথি ইস্যু করুন":"Issue document")}</button>
+    
+    <button className="ekv3-primary" type="submit" disabled={sourceBusy||environment==="live"}>{sourceBusy?(bn?"ইস্যু হচ্ছে…":"Issuing…"):(bn?"নথি ইস্যু করুন":"Issue document")}</button>
     {sourceError&&<p role="alert" className="ek-form-error">{sourceError}</p>}
-    {dirty&&<p role="status" className="pg05-muted">{bn?"নথি বা রিকোয়েস্টে সংরক্ষণ না করা পরিবর্তন আছে।":"Unsaved document or request changes."}</p>}
-   </fieldset></form>
-   {sourceLoad==="loading"?<p role="status">{bn?"ইস্যু করা নথি লোড হচ্ছে…":"Loading issued documents…"}</p>:
-    sourceLoad==="error"?<div className="ds-empty" role="alert"><p>{sourceError|| (bn?"নথির তালিকা পাওয়া যাচ্ছে না।":"Issued documents unavailable.")}</p>
-     <button type="button" onClick={()=>void refreshSources()}>{bn?"আবার চেষ্টা করুন":"Retry"}</button></div>:
-    sources.length===0?<p className="pg05-muted">{bn?"এখনো কোনো ইস্যু করা নথি নেই।":"No issued source documents yet."}</p>:
-    <div className="pg05-records" aria-label={bn?"ইস্যু করা নথি":"Issued documents"}>
-     {sources.map(source=><article key={source.id} className="pg05-record">
-      <div className="pg05-record-main"><div><strong>{source.source_reference}</strong>
-       <small>{source.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}</small></div>
-       <div className="pg05-total"><strong>{number(source.amount_minor,locale)}</strong></div></div>
-      <div className="pg05-record-meta"><span>{bn?"ইস্যুর সময়":"Issued"}: {new Date(source.issued_at).toLocaleString(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",timeZoneName:"short"})}</span></div>
-      <details><summary>{bn?"ইস্যু করা লাইন দেখুন":"View issued line items"}</summary><ul>{source.items.map((line,index)=><li key={index}>{line.title} — {line.quantity} × {number(line.unit_amount_minor,locale)}</li>)}</ul></details>
-      <div className="pg05-actions"><button type="button" disabled={!canWrite||load==="forbidden"}
-       onClick={()=>{setFields(prev=>({...prev,sourceKind:source.source_kind,sourceId:source.id,reference:prev.reference||source.source_reference+"-pay"}));
-        keyRef.current="";setExpanded(true);setNotice("");}}>
-       {bn?"এই নথির পেমেন্ট রিকোয়েস্ট":"Create payment request"} ↗</button></div>
-     </article>)}
-    </div>}
-  </section></details>
-  <section className="ds-panel pg05-section">
-   <div className="pg05-topline"><div><h2>{bn?"পেমেন্ট রিকোয়েস্টসমূহ":"Payment requests"}</h2></div>
-    <button type="button" onClick={()=>void refresh()} disabled={load==="loading"}>{bn?"রিফ্রেশ":"Refresh"} ↻</button></div>
-   <div className="pg05-two">
-    <label>{bn?"রেফারেন্স খুঁজুন":"Find a reference"}<input value={search} onChange={e=>setSearch(e.target.value)} type="search" placeholder={bn?"রেফারেন্স লিখুন":"Search reference"}/></label>
-    <label>{bn?"অবস্থা":"Status"}<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-     <option value="all">{bn?"সব":"All"}</option>
-     {["requires_payer","awaiting_payment","completed","expired","cancelled"].map(key=><option value={key} key={key}>{statusLabel(key,bn)}</option>)}
-    </select></label>
-   </div>
-   {load!=="ready"&&data.length>0&&<p role="status" className="pg05-banner">{bn?"সর্বশেষ পাওয়া তথ্য দেখানো হচ্ছে।":"Showing the last loaded records."} {error}</p>}
-   {load==="loading"&&data.length===0?<p role="status" aria-live="polite">{bn?"আসল রিকোয়েস্ট লোড হচ্ছে…":"Loading actual requests…"}</p>:
-    load!=="ready"&&data.length===0?<div className="ds-empty" role={load==="forbidden"?"alert":"status"}><h3>{load==="forbidden"?(bn?"অনুমতি নেই":"Access denied"):(bn?"ডেটার উৎস উপলব্ধ নয়":"Data source unavailable")}</h3><p>{error}</p><button type="button" onClick={()=>void refresh()}>{bn?"আবার চেষ্টা করুন":"Retry"}</button></div>:
-    visible.length===0?<div className="ds-empty"><h3>{bn?"কোনো মিল পাওয়া যায়নি":"No matching requests"}</h3><p>{data.length===0?(bn?"এই sandbox-এ এখনো কোনো বাস্তব request record নেই।":"No issued request records in this sandbox yet."):(bn?"অন্য ফিল্টার দিয়ে দেখুন।":"Try another filter.")}</p></div>:
-    <div className="pg05-records">{visible.map(item=>{
-     const checkout="/"+locale+"/checkout/"+item.checkout_token;
-     return <article className="pg05-record" key={item.id}>
-      <div className="pg05-record-main"><div><strong>{item.merchant_reference}</strong><small>{item.id}</small></div>
-       <div className="pg05-total"><strong>{number(item.amount_minor,locale)}</strong><span className="pg05-state" data-state={item.state}>{statusLabel(item.state,bn)}</span></div></div>
-      <div className="pg05-record-meta">{item.source_reference&&<span>{item.source_kind==="invoice"?(bn?"ইনভয়েস":"Invoice"):(bn?"অর্ডার":"Order")}: {item.source_reference}</span>}<span>{bn?"মেয়াদ":"Expires"}: {new Date(item.expires_at).toLocaleString(locale==="bn"?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",timeZoneName:"short"})}</span></div>
-      <div className="pg05-actions">
-       <button type="button" onClick={()=>selectDetail(item.id)}>{bn?"তথ্য ও ইতিহাস":"Details and history"}</button>
-       <Link href={checkout}>{bn?"চেকআউট খুলুন":"Open checkout"} ↗</Link>
-       <button type="button" onClick={async()=>{
-        try{await navigator.clipboard.writeText(location.origin+checkout);setCopied(item.id);}
-        catch{setError(bn?"লিংক কপি করা যায়নি।":"Could not copy link.")}
-       }}>{copied===item.id?(bn?"কপি হয়েছে":"Copied"):(bn?"লিংক কপি":"Copy link")}</button>
-       {canWrite&&["requires_payer","awaiting_payment"].includes(item.state)&&<button disabled={acting===item.id} type="button" onClick={()=>void cancel(item.id)}>{acting===item.id?(bn?"বাতিল হচ্ছে…":"Cancelling…"):(bn?"বাতিল করুন":"Cancel request")}</button>}
-      </div></article>})}</div>}
-   {error&&load==="ready"&&<p role="alert" className="ek-form-error">{error}</p>}
-   {notice&&<p data-feedback="success" role="status" className="ek-account-success">{notice}</p>}
-  </section>
- </div>;
+    {dirty&&}
+   <div className="ekv3-modal-footer"><button type="button" onClick={()=>setSourceOpen(false)}>{bn?"বাতিল":"Cancel"}</button></div></fieldset></form>
+  </dialog>
+  <dialog ref={detailDialog} className="ekv3-drawer" aria-label={bn?"রিকোয়েস্টের বিস্তারিত":"Request details"} onCancel={()=>selectDetail("")} onClose={()=>selectDetail("")} onClick={e=>{if(e.target===e.currentTarget)selectDetail("")}}>{selected&&<div className="ekv3-drawer-content"><PaymentRequestDetail key={selected} id={selected} workspaceId={workspaceId} environment={environment} locale={locale} onClose={()=>selectDetail("")}/></div>}</dialog>
+  {(notice||copied)&&<div role="status" className="ekv3-toast">{notice||(bn?"লিংক কপি হয়েছে":"Link copied")}</div>}
+ </section>;
+}
 }
