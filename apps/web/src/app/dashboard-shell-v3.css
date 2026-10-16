@@ -151,4 +151,4 @@
 @media(prefers-reduced-motion:no-preference){
  .ds-app[data-service="payments"] :is(.ekv3-request-modal,.ekv3-form-modal,.ekv3-pair-dialog)[open]{animation:ekv2-modal-in .15s ease-out}
 }
-@media(prefers-reduced-motion:reduce){.ds-app[data-service="payments"] .ekv3-*{animation:none!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){.ds-app[data-service="payments"] :is(.ekv3-request-modal,.ekv3-form-modal,.ekv3-pair-dialog,.ekv3-drawer){animation:none!important;transition:none!important}}
