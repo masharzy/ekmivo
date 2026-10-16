@@ -69,6 +69,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
  const [fields,setFields]=useState<Fields>(empty);
  const [draftBase,setDraftBase]=useState<Fields>(empty);
  const [expanded,setExpanded]=useState(false);
+ useEffect(()=>{const url=new URL(window.location.href);if(url.searchParams.get("create")==="1"){url.searchParams.delete("create");window.history.replaceState(window.history.state,"",url.pathname+url.search+url.hash);setExpanded(true)}},[]);
  const [sourceOpen,setSourceOpen]=useState(false);
  const [visibleLimit,setVisibleLimit]=useState(20);
  const createDialog=useRef<HTMLDialogElement|null>(null),sourceDialog=useRef<HTMLDialogElement|null>(null),detailDialog=useRef<HTMLDialogElement|null>(null);
