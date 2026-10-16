@@ -66,6 +66,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
  const [toast,setToast]=useState(""),[navigating,setNavigating]=useState(false);
  const [,transition]=useTransition();
  const createDialog=useRef<HTMLDialogElement>(null),manageDialog=useRef<HTMLDialogElement>(null),confirmDialog=useRef<HTMLDialogElement>(null);
+ useEffect(()=>{if(new URLSearchParams(window.location.search).get("create")==="1"){setCreateOpen(true);window.history.replaceState(window.history.state,"",window.location.pathname+window.location.hash)}},[]);
  const createName=useRef<HTMLInputElement>(null),previousFocus=useRef<HTMLElement|null>(null);
  const draftKey=draftStorageKey(user.id);
  const active=rows.find(w=>w.id===selected)??null;
