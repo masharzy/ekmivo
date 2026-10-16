@@ -1,8 +1,0 @@
-import type {Metadata} from "next";
-import {notFound,permanentRedirect} from "next/navigation";
-import {resolvePortalPage} from "../../../../../lib/developer-portal";
-import {developerConfig} from "../../../../../lib/server/developer-config";
-import {PortalPage} from "../../../../../components/developer-portal/portal-page";
-type Props={params:Promise<{locale:string;slug?:string[]}>};
-export async function generateMetadata({params}:Props):Promise<Metadata>{const {locale,slug}=await params;const page=resolvePortalPage(slug);if(!page||(locale!=="en"&&locale!=="bn"))return {};const bn=locale==="bn",title=(page.id==="home"?(bn?"Ekmivo দিয়ে তৈরি করুন":"Build with Ekmivo"):page[locale])+" · Ekmivo",description=page.description[bn?1:0],origin=developerConfig.portalOrigin||developerConfig.siteOrigin,url=origin+"/developers"+page.path;return {title,description,alternates:{canonical:url,languages:{en:origin+"/en/developers"+page.path,bn:origin+"/bn/developers"+page.path}},openGraph:{title,description,url,type:"website",siteName:"Ekmivo Developers",locale:bn?"bn_BD":"en_US",alternateLocale:bn?"en_US":"bn_BD"}};}
-export default async function DeveloperPage({params}:Props){const {locale,slug}=await params;if(locale!=="bn"&&locale!=="en")notFound();const legacy:Record<string,string>={api:"api-reference",guides:"quickstart","guides/verify-a-payment":"payments/verify","guides/payment-alerts":"webhooks","guides/your-own-checkout":"payments/create","guides/go-live":"go-live","guides/keep-keys-safe":"authentication","guides/fix-errors":"errors"};const joined=slug?.join("/")||"";if(legacy[joined])permanentRedirect("/developers/"+legacy[joined]);const page=resolvePortalPage(slug);if(!page)notFound();return <PortalPage id={page.id} locale={locale}/>;}

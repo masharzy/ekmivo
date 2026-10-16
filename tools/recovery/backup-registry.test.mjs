@@ -1,5 +1,0 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {expiryPlan,validBackupRecord} from './backup-registry.mjs';
-const now=Date.now(),record=(realm,created,expires,letter)=>({realm,file:letter+'.enc',sha256:letter.repeat(64),created_at:new Date(now+created).toISOString(),expires_at:new Date(now+expires).toISOString(),review_reference:'operator-reviewed policy',status:'available'});
-test('last backup and another realm cannot authorize expiration',()=>{assert.equal(expiryPlan([record('live',-30000,-10000,'a'),record('sandbox',-10000,30000,'b')],now)[0].can_expire,false)});
-test('newer retained backup in same realm permits source expiry planning',()=>{assert.equal(expiryPlan([record('live',-30000,-10000,'a'),record('live',-10000,30000,'b')],now)[0].can_expire,true)});
-test('traversal, missing review and invalid time fail closed',()=>{assert.equal(validBackupRecord({...record('live',-10000,30000,'a'),file:'../other.enc'}),false);assert.equal(validBackupRecord({...record('live',-10000,30000,'a'),review_reference:''}),false);assert.throws(()=>expiryPlan([{realm:'live'}],now))});

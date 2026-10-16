@@ -1,3 +1,0 @@
-import {goOrigin} from "../../../lib/server/go-origin";
-export const dynamic="force-dynamic";
-export async function GET(){try{const origin=goOrigin();if(!origin)throw Error("Unavailable origin");const response=await fetch(new URL("/readyz",origin),{cache:"no-store",redirect:"error",signal:AbortSignal.timeout(4000)});return Response.json({payment_service:response.ok?"operational":"unavailable",release_verified:false,observed_at:new Date().toISOString()},{headers:{"Cache-Control":"no-store"}})}catch{return Response.json({payment_service:"unknown",release_verified:false,observed_at:new Date().toISOString()},{headers:{"Cache-Control":"no-store"}})}}
