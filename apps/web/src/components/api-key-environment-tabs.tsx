@@ -7,8 +7,8 @@ export function ApiKeyEnvironmentTabs({locale,sandbox,live}:{
  const [selected,setSelected]=useState<"sandbox"|"live">(sandbox?"sandbox":"live");
  return <div className="ek-key-environments">
   <div className="ek-key-environment-tabs" role="group" aria-label={bn?"API key-এর পরিবেশ":"API key environment"}>
-   {sandbox&&<button type="button" aria-pressed={selected==="sandbox"} onClick={()=>setSelected("sandbox")}>🧪 Sandbox</button>}
-   {live&&<button type="button" aria-pressed={selected==="live"} onClick={()=>setSelected("live")}>🔒 Live</button>}
+   {sandbox&&<button type="button" aria-pressed={selected==="sandbox"} onClick={()=>setSelected("sandbox")}>Sandbox</button>}
+   {live&&<button type="button" aria-pressed={selected==="live"} onClick={()=>setSelected("live")}>Live</button>}
   </div>
   <p className="ek-key-environment-message" role="status">{selected==="sandbox"?
    (bn?"Sandbox key দিয়ে আলাদা পরীক্ষামূলক ডাটাবেজে payment পরীক্ষা করুন। আসল টাকা লাগে না।":"Sandbox keys use the isolated test database. No real money is involved."):

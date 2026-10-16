@@ -9,7 +9,7 @@ type LedgerRow={
  payer_number:string|null;method:string;original_transaction_at?:string|null;verified_at:string
 };
 type Page={items:LedgerRow[];next_cursor:string|null};
-const money=(n:number,locale:Locale)=>new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(n/100);
+const money=(n:number,locale:Locale)=>"BDT "+new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-GB",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n/100);
 const date=(s:string|null|undefined,locale:Locale)=>s&&!Number.isNaN(Date.parse(s))?
  new Intl.DateTimeFormat(locale==="bn"?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",dateStyle:"medium",timeStyle:"short"}).format(new Date(s)):"—";
 function downloadCsv(rows:LedgerRow[],period:Filters){

@@ -246,8 +246,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
  };
  const sidebar=(mobile=false)=><>
   <div className="ds-brand-row">
-   <Link href="/" className="ek-wordmark">ekmivo<span>.</span></Link>
-   <span className="ds-product-tag">{service==="ai"?"AI":"PAY"}</span>
+   <Link href="/" className="ek-wordmark">ekmivo<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small></Link>
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
   <div className="ds-business-block"><details className="ds-business-picker" ref={mobile?undefined:businessMenu}>

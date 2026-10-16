@@ -181,3 +181,13 @@
 /* Workspace switcher occupies the same full sidebar row as navigation. */
 .ds-business-block{grid-template-columns:minmax(0,1fr);width:100%}
 .ds-business-block .ds-business-picker{width:100%;min-width:0}
+
+/* Pass 2 link action menus: readable left-aligned actions, no native marker. */
+.ds-app[data-service="payments"] .ekv3-row-trigger{display:grid;place-items:center;width:32px;height:30px;border:0;border-radius:7px;background:transparent;color:var(--color-text);font-size:19px}
+.ds-app[data-service="payments"] .ekv3-row-trigger:hover{background:var(--color-hover)}
+.ds-app[data-service="payments"] .ekv3-row-menu{position:relative}
+.ds-app[data-service="payments"] .ekv3-row-popover{min-width:184px;max-height:none;overflow:visible}
+.ds-app[data-service="payments"] .ekv3-row-popover hr{margin:5px 0;border:0;border-top:1px solid var(--color-border)}
+.ds-app[data-service="payments"] .ekv3-row-popover .ekv3-danger-menu{color:var(--color-danger)}
+.ds-app[data-service="payments"] .ekv3-row-popover :is(button,a){justify-content:flex-start;text-align:left}
+.ds-app[data-service="payments"] .ekv2-links-table{overflow:visible}

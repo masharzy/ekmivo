@@ -2,6 +2,7 @@
 import {useDashboardInitialData} from "./dashboard-initial-data";
 import Link from "next/link";
 import {DashboardConfirmDialog} from "./dashboard-confirm-dialog";
+import {DashboardIcon} from "./dashboard-icon";
 import {useCallback,useEffect,useRef,useState} from "react";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 
@@ -10,6 +11,7 @@ type Phone={id:string;name:string;claimed_at?:string|null;revoked_at?:string|nul
 const methodName:Record<string,string>={bkash:"bKash",nagad:"Nagad",rocket:"Rocket"};
 export function PaymentMethodManagement({locale,workspaceId,environment,canManage}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean}){
  const bn=locale==="bn",t=useCallback((en:string,bd:string)=>bn?bd:en,[bn]);
+ const formattedAccount=(value:string)=>{const digits=value.replace(/\D/g,"");const local=digits.startsWith("880")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;return local.length===10?"+880 "+local.slice(0,4)+" "+local.slice(4):value};
  const base="/api/go/workspaces/"+workspaceId,deviceHref="/"+locale+"/w/"+workspaceId+"/payments/devices?env="+environment;
  const seed=useDashboardInitialData<{accounts:Account[];items:Phone[]}>("phones");
  const [accounts,setAccounts]=useState<Account[]>(seed?.data?.accounts??[]),[phones,setPhones]=useState<Phone[]>(seed?.data?.items??[]),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(seed?.error??""),[notice,setNotice]=useState("");
@@ -57,7 +59,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const closeDetails=()=>setSelected(null);
  return <section className="pg-phone-panel ekv3-methods" aria-busy={loading||busy}>
   <header className="ekv3-page-header"><div><h1>{t("Payment methods","পেমেন্ট মাধ্যম")}</h1><p>{t("Accounts customers can pay into.","গ্রাহকের পেমেন্ট গ্রহণের অ্যাকাউন্টগুলো।")}</p></div><div className="ekv3-head-actions">
-   <button type="button" className="ekv3-icon-button" aria-label={t("Refresh","রিফ্রেশ")} title={t("Refresh","রিফ্রেশ")} disabled={loading||busy} onClick={()=>void load()}>↻</button>
+   <button type="button" className="ekv3-icon-button" aria-label={t("Refresh","রিফ্রেশ")} title={t("Refresh","রিফ্রেশ")} disabled={loading||busy} onClick={()=>void load()}><DashboardIcon name="refresh" width={16} height={16}/></button>
    {canManage&&<button type="button" className="ekv3-primary" onClick={()=>{setError("");createDialog.current?.showModal()}}>{t("Add account","অ্যাকাউন্ট যোগ করুন")}</button>}
   </div></header>
   {error&&<div className="ekv3-page-error" role="alert">{error}<button type="button" onClick={()=>void load()}>{t("Try again","আবার চেষ্টা করুন")}</button></div>}
@@ -66,7 +68,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
    {accounts.map(a=><div key={a.ID} className="ekv3-account-row">
     <span className="ekv3-method-avatar" aria-hidden="true">{(methodName[a.Method]||a.Method).slice(0,1).toUpperCase()}</span>
     <div className="ekv3-account-name"><strong>{a.Label||methodName[a.Method]||a.Method}</strong>{a.Label&&<small>{methodName[a.Method]||a.Method}</small>}</div>
-    <div className="ekv3-account-number"><span>{a.Number}</span><button type="button" className="ekv3-copy" onClick={()=>numberCopy(a.Number)} title={t("Copy number","নম্বর কপি")} aria-label={t("Copy number","নম্বর কপি")}>⧉</button></div>
+    <div className="ekv3-account-number"><span>{formattedAccount(a.Number)}</span><button type="button" className="ekv3-copy" onClick={()=>numberCopy(a.Number)} title={t("Copy number","নম্বর কপি")} aria-label={t("Copy number","নম্বর কপি")}><DashboardIcon name="copy" width={15} height={15}/></button></div>
     <span className={paired.length?"ekv3-account-phones":"ekv3-account-phones ekv3-warning"}>{paired.length?paired.map(phone=>phone.name).join(", "):t("No phone connected","কোনো ফোন যুক্ত নেই")}</span>
     <span className="ekv3-status" data-tone={a.Disabled?"neutral":!paired.length?"warning":"success"}>{status(a)}</span>
     <button type="button" className="ekv3-secondary" onClick={()=>setSelected(a.ID)}>{t("Manage","পরিচালনা")}</button>
@@ -76,7 +78,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   <dialog ref={detailsDialog} className="ekv3-drawer" aria-label={t("Account details","অ্যাকাউন্টের বিবরণ")} onCancel={closeDetails} onClose={closeDetails} onClick={event=>{if(event.target===event.currentTarget)closeDetails()}}>
    {current&&<div className="ekv3-drawer-content">
     <div className="ekv3-drawer-heading"><h2>{current.Label||methodName[current.Method]||current.Method}</h2><button type="button" aria-label={t("Close","বন্ধ করুন")} onClick={closeDetails}>×</button></div>
-    <div className="ekv3-drawer-list"><div><span>{t("Payment method","পেমেন্ট মাধ্যম")}</span><strong>{methodName[current.Method]||current.Method}</strong></div><div><span>{t("Receiving number","রিসিভিং নম্বর")}</span><strong>{current.Number}<button type="button" aria-label={t("Copy number","নম্বর কপি")} className="ekv3-copy" onClick={()=>numberCopy(current.Number)}>⧉</button></strong></div><div><span>{t("Status","অবস্থা")}</span><strong>{status(current)}</strong></div></div>
+    <div className="ekv3-drawer-list"><div><span>{t("Payment method","পেমেন্ট মাধ্যম")}</span><strong>{methodName[current.Method]||current.Method}</strong></div><div><span>{t("Receiving number","রিসিভিং নম্বর")}</span><strong>{formattedAccount(current.Number)}<button type="button" aria-label={t("Copy number","নম্বর কপি")} className="ekv3-copy" onClick={()=>numberCopy(current.Number)}><DashboardIcon name="copy" width={15} height={15}/></button></strong></div><div><span>{t("Status","অবস্থা")}</span><strong>{status(current)}</strong></div></div>
     <div className="ekv3-drawer-section"><h3>{t("Phones","ফোন")}</h3>{paired.length?paired.map(phone=><div className="ekv3-device-name" key={phone.id}>{phone.name}</div>):<p>{t("No phone connected","কোনো ফোন যুক্ত নেই")}</p>}<Link className="ekv3-secondary" href={deviceHref}>{t("Manage phones","ফোন পরিচালনা")}</Link></div>
     <div className="ekv3-drawer-footer">{canManage&&<><button type="button" className="ekv3-danger" onClick={()=>setConfirmAccount(current)}>{current.Disabled?t("Enable","চালু করুন"):t("Disable","বন্ধ করুন")}</button><button type="button" className="ekv3-secondary" onClick={()=>edit(current)}>{t("Edit account","অ্যাকাউন্ট পরিবর্তন")}</button></>}<button type="button" className="ekv3-primary" onClick={closeDetails}>{t("Done","সম্পন্ন")}</button></div>
    </div>}

@@ -1,5 +1,5 @@
 "use client";
-import {useActionState,useEffect,useState} from "react";
+import {useActionState,useEffect,useRef,useState} from "react";
 import {registerDraft} from "../lib/client/draft-navigation";
 import {useFormStatus} from "react-dom";
 import {createMerchantKey,rotateMerchantKey,revokeMerchantKey,type KeyActionState} from "../actions/merchant-keys";
@@ -43,27 +43,24 @@ function KeyControls({locale,workspaceId,environment,keyItem}:{locale:Locale;wor
  const [rotate,rotateAction]=useActionState(rotateMerchantKey.bind(null,locale),initial);
  const [revoke,revokeAction]=useActionState(revokeMerchantKey.bind(null,locale),initial);
  const [operation,setOperation]=useState<"rotate"|"revoke"|null>(null);
- const bn=locale==="bn",isRevoked=!!keyItem.revokedAt||keyItem.expired;
- if(isRevoked)return <span className="ds-availability">{keyItem.revokedAt?(bn?"বাতিল":"Revoked"):(bn?"মেয়াদ শেষ":"Expired")}</span>;
+ const dialog=useRef<HTMLDialogElement>(null),bn=locale==="bn";
+ const inactive=!!keyItem.revokedAt||keyItem.expired;
+ useEffect(()=>{const d=dialog.current;if(operation&&!d?.open)d?.showModal();if(!operation&&d?.open)d.close()},[operation]);
+ if(inactive)return <span className="ek-key-inactive">—</span>;
  const chosen=operation==="rotate"?rotateAction:revokeAction;
  const state=operation==="rotate"?rotate:revoke;
- return <div className="ds-key-management">
-  <div className="ds-key-actions">
-   <button type="button" aria-expanded={operation==="rotate"} onClick={()=>setOperation(operation==="rotate"?null:"rotate")}>{bn?"কী পরিবর্তন":"Rotate"}</button>
-   <button type="button" aria-expanded={operation==="revoke"} onClick={()=>setOperation(operation==="revoke"?null:"revoke")}>{bn?"বাতিল করুন":"Revoke"}</button>
-  </div>
-  {operation&&<form action={chosen} className="ds-key-confirm">
-   <input type="hidden" name="workspaceId" value={workspaceId}/>
-   <input type="hidden" name="environment" value={environment}/>
-   <input type="hidden" name="keyId" value={keyItem.id}/>
-   <label>{bn?"বর্তমান পাসওয়ার্ড":"Current password"}
-    <input name="password" type="password" required autoComplete="current-password" maxLength={256}/>
-   </label>
-   <p>{operation==="revoke"?(bn?"কীটি তাৎক্ষণিকভাবে অকার্যকর হবে।":"This key stops working immediately."):
-    (bn?"আগের কীটি বাতিল হবে; নতুন কী শুধু একবার দেখানো হবে।":"The old key will be revoked; the replacement is shown once.")}</p>
-   <SaveButton label={operation==="revoke"?(bn?"কী বাতিল নিশ্চিত করুন":"Confirm revoke"):(bn?"নতুন কী তৈরি করুন":"Rotate key")}/>
-   <Result state={state} locale={locale}/>
-  </form>}
+ return <div className="ek-key-row-actions">
+  <details className="ekv3-row-menu"><summary aria-label={bn?"Key-এর অপশন":"Key actions"} title={bn?"অপশন":"Actions"}>⋯</summary><div className="ekv3-row-popover"><button type="button" onClick={e=>{e.currentTarget.closest("details")?.removeAttribute("open");setOperation("rotate")}}>{bn?"রোটেট":"Rotate"}</button><button type="button" className="ekv3-danger-menu" onClick={e=>{e.currentTarget.closest("details")?.removeAttribute("open");setOperation("revoke")}}>{bn?"বাতিল করুন":"Revoke"}</button></div></details>
+  <dialog ref={dialog} className="ekv2-export-dialog ek-key-confirm-dialog" aria-label={bn?"নিশ্চিত করুন":"Confirm key action"} onClose={()=>setOperation(null)} onClick={e=>{if(e.target===e.currentTarget)setOperation(null)}}>
+   {operation&&<form action={chosen} className="ds-key-confirm">
+    <h2>{operation==="rotate"?(bn?"Key রোটেট করুন":"Rotate key"):(bn?"Key বাতিল করুন":"Revoke key")}</h2>
+    <p>{operation==="rotate"?(bn?"আগের key বাতিল হবে এবং নতুন key একবার দেখানো হবে।":"The old key will be revoked. A new key is shown once."):(bn?"এই key ব্যবহারকারী অ্যাপগুলো সঙ্গে সঙ্গে কাজ করা বন্ধ করবে।":"Applications using this key stop working immediately.")}</p>
+    <input type="hidden" name="workspaceId" value={workspaceId}/><input type="hidden" name="environment" value={environment}/><input type="hidden" name="keyId" value={keyItem.id}/>
+    <label>{bn?"বর্তমান পাসওয়ার্ড":"Current password"}<input name="password" type="password" required autoComplete="current-password" maxLength={256}/></label>
+    <div className="ek-key-confirm-actions"><button type="button" onClick={()=>setOperation(null)}>{bn?"বাতিল":"Cancel"}</button><SaveButton label={operation==="revoke"?(bn?"Key বাতিল নিশ্চিত":"Confirm revoke"):(bn?"Key রোটেট করুন":"Rotate key")}/></div>
+    <Result state={state} locale={locale}/>
+   </form>}
+  </dialog>
  </div>;
 }
 export function ApiKeyManager({locale,userId,workspaceId,environment,keys}:{
@@ -71,6 +68,8 @@ export function ApiKeyManager({locale,userId,workspaceId,environment,keys}:{
 }){
  const [state,action]=useActionState(createMerchantKey.bind(null,locale),initial);
  const [showCreate,setShowCreate]=useState(false),bn=locale==="bn";
+ const createDialog=useRef<HTMLDialogElement>(null),detailsDialog=useRef<HTMLDialogElement>(null);
+ const [selected,setSelected]=useState<ApiKeyRow|null>(null);
  const [draftName,setDraftName]=useState("");
  const [draftExpiry,setDraftExpiry]=useState("30");
  const [draftScopes,setDraftScopes]=useState<string[]>(["payments:read"]);
@@ -122,15 +121,16 @@ export function ApiKeyManager({locale,userId,workspaceId,environment,keys}:{
    discard:discardDraft
   });
  });
+ useEffect(()=>{const d=createDialog.current;if(showCreate&&!d?.open)d?.showModal();if(!showCreate&&d?.open)d.close()},[showCreate]);
+ const openDetails=(keyItem:ApiKeyRow)=>{setSelected(keyItem);detailsDialog.current?.showModal()};
  const showDate=(raw:string)=>new Intl.DateTimeFormat(bn?"bn-BD-u-nu-latn":"en-US",{timeZone:"Asia/Dhaka",dateStyle:"medium"}).format(new Date(raw));
  return <div className="ds-api-key-manager">
-  <div className="ds-panel-heading">
-   <h3>{bn?"এই পরিবেশের API keys":"API keys in this environment"}</h3>
+  <div className="ds-panel-heading ek-key-toolbar">
    <button className="ek-action" type="button" onClick={()=>setShowCreate(!showCreate)} aria-expanded={showCreate}>
     {showCreate?(bn?"ফর্ম বন্ধ":"Close form"):(bn?"নতুন API key":"Create API key")}
    </button>
   </div>
-  {showCreate&&<form className="ds-key-create" action={action}>
+  <dialog ref={createDialog} className="ekv2-export-dialog ek-key-create-dialog" aria-label={bn?"API key তৈরি করুন":"Create API key"} onClose={()=>setShowCreate(false)} onClick={event=>{if(event.target===event.currentTarget)setShowCreate(false)}}>{showCreate&&<form className="ds-key-create" action={action}>
    <input type="hidden" name="workspaceId" value={workspaceId}/>
    <input type="hidden" name="environment" value={environment}/>
    <label>{bn?"Key-এর নাম":"Key name"}
@@ -160,18 +160,15 @@ export function ApiKeyManager({locale,userId,workspaceId,environment,keys}:{
    </div>
    {draftNotice&&<p data-feedback="success" role="status">{draftNotice}</p>}
    <Result state={state} locale={locale}/>
-  </form>}
-  {!keys.length?<div className="ds-empty" role="status">
-   <h3>{bn?"এই পরিবেশে কোনো API key নেই":"No API keys in this environment"}</h3>
-   <p>{bn?"প্রথম key তৈরি করলে শুধু এই ব্যবসা এবং নির্বাচিত পরিবেশে কাজ করবে।":"Create a key for this business and this environment only."}</p>
-  </div>:<div className="ds-key-list">{keys.map(keyItem=><article key={keyItem.id} className="ds-key-card">
-   <div className="ds-key-card-head"><div><h4>{keyItem.name}</h4>
-    <code>{environment==="sandbox"?"ek_test_":"ek_live_"}{keyItem.publicId}_••••</code></div>
-    <span>{keyItem.revokedAt?(bn?"বাতিল":"Revoked"):keyItem.expired?(bn?"মেয়াদ শেষ":"Expired"):(bn?"সক্রিয়":"Active")}</span>
-   </div>
-   <p>{bn?"অনুমতি":"Scopes"}: {keyItem.scopes.join(" · ")}</p>
-   <small>{bn?"তৈরি":"Created"}: {showDate(keyItem.createdAt)} · {bn?"মেয়াদ":"Expires"}: {showDate(keyItem.expiresAt)} · {bn?"শেষ ব্যবহার":"Last used"}: {keyItem.lastUsedAt?showDate(keyItem.lastUsedAt):"—"}</small>
-   <KeyControls locale={locale} workspaceId={workspaceId} environment={environment} keyItem={keyItem}/>
-  </article>)}</div>}
+  </form>}</dialog>
+  {!keys.length?<div className="ekv3-empty" role="status">{bn?"এই পরিবেশে কোনো key নেই।":"No API keys yet."}</div>:<div className="ekv3-table-scroller ek-key-table"><table className="ekv3-table"><thead><tr><th>{bn?"নাম":"Name"}</th><th>Key</th><th>{bn?"অনুমতি":"Scopes"}</th><th>{bn?"মেয়াদ":"Expires"}</th><th>{bn?"শেষ ব্যবহার":"Last used"}</th><th>{bn?"অবস্থা":"Status"}</th><th aria-label="Actions"/></tr></thead><tbody>
+   {keys.map(keyItem=><tr key={keyItem.id} className="ekv3-clickable" tabIndex={0} onClick={()=>openDetails(keyItem)} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openDetails(keyItem)}}}>
+    <td><strong>{keyItem.name}</strong></td>
+    <td><code className="ek-key-ref">{environment==="sandbox"?"ek_test_":"ek_live_"}{keyItem.publicId.slice(0,8)}…{keyItem.publicId.slice(-4)}</code><button type="button" className="ekv3-copy" aria-label={bn?"Public reference কপি":"Copy public reference"} title={bn?"এটি secret নয়":"Not the secret"} onClick={e=>{e.stopPropagation();void navigator.clipboard.writeText(keyItem.publicId)}}>⧉</button></td>
+    <td title={keyItem.scopes.join(", ")}>{keyItem.scopes.length} {bn?"স্কোপ":"scopes"}</td><td>{showDate(keyItem.expiresAt)}</td><td>{keyItem.lastUsedAt?showDate(keyItem.lastUsedAt):"—"}</td>
+    <td><span className="ekv3-status" data-tone={keyItem.revokedAt||keyItem.expired?"neutral":"success"}>{keyItem.revokedAt?(bn?"বাতিল":"Revoked"):keyItem.expired?(bn?"মেয়াদ শেষ":"Expired"):(bn?"সক্রিয়":"Active")}</span></td>
+    <td onClick={e=>e.stopPropagation()}><KeyControls locale={locale} workspaceId={workspaceId} environment={environment} keyItem={keyItem}/></td>
+   </tr>)}</tbody></table></div>}
+  <dialog ref={detailsDialog} className="ekv3-drawer" aria-label={bn?"Key-এর বিবরণ":"Key details"} onClose={()=>setSelected(null)} onClick={e=>{if(e.target===e.currentTarget)e.currentTarget.close()}}>{selected&&<div className="ekv3-drawer-content"><div className="ekv3-drawer-heading"><h2>{selected.name}</h2><button type="button" aria-label="Close" onClick={()=>detailsDialog.current?.close()}>×</button></div><div className="ekv3-drawer-list"><div><span>{bn?"অবস্থা":"Status"}</span><strong>{selected.revokedAt?"Revoked":selected.expired?"Expired":"Active"}</strong></div><div><span>{bn?"মেয়াদ":"Expires"}</span><strong>{showDate(selected.expiresAt)}</strong></div></div><h3>{bn?"অনুমতিসমূহ":"Scopes"}</h3><div className="ek-key-scope-tags">{selected.scopes.map(scope=><span key={scope}>{scope}</span>)}</div></div>}</dialog>
  </div>;
 }
