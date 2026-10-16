@@ -111,7 +111,18 @@ export function PaymentReports({locale,workspaceId,environment,canReveal}:{local
  const [response,setResponse]=useState<ViewState|null>(seed?.data&&validateReport(seed.data)?{report:seed.data,filters:initialFilters}:null);
  const [loading,setLoading]=useState(!seed),[error,setError]=useState(seed?.error??""),[refresh,setRefresh]=useState(0);
  const [accounts,setAccounts]=useState<AccountOption[]>(accountSeed?.data?.receiving?.items??[]),[accountError,setAccountError]=useState(false);
+ const [accountNumbers,setAccountNumbers]=useState<Record<string,string>>({});
  const root="/w/"+workspaceId+"/payments/";
+ useEffect(()=>{
+  if(!canReveal)return;
+  const controller=new AbortController();
+  void fetch("/api/go/workspaces/"+workspaceId+"/phones?environment="+encodeURIComponent(environment),{cache:"no-store",credentials:"same-origin",signal:controller.signal})
+   .then(async response=>{if(!response.ok)throw Error(String(response.status));return response.json()})
+   .then(data=>{if(controller.signal.aborted||!Array.isArray(data?.accounts))return;const full:Record<string,string>={};for(const item of data.accounts){if(typeof item?.ID==="string"&&typeof item?.Number==="string"){const digits=item.Number.replace(/\\D/g,"");const local=digits.startsWith("880")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;full[item.ID]=local.length===10?"+880 "+local.slice(0,4)+" "+local.slice(4):item.Number}}setAccountNumbers(full)})
+   .catch(()=>{/* Receiving account detail is permission-gated; never invent a full number. */});
+  return()=>controller.abort();
+ },[canReveal,workspaceId,environment]);
+
  const applies=draft.from===applied.from&&draft.to===applied.to&&draft.account===applied.account;
  const pending=useMemo(()=>dateRange(draft),[draft]);
  const labels:Record<Section,string>={summary:t("Summary","সারাংশ"),payments:t("Payments","পেমেন্ট"),methods:t("Methods","মাধ্যম"),customers:t("Customers","গ্রাহক"),refunds:t("Refunds","রিফান্ড"),payouts:t("Payouts","পেআউট")};
@@ -214,7 +225,7 @@ export function PaymentReports({locale,workspaceId,environment,canReveal}:{local
    <form onSubmit={apply} className="er-filter-fields">
     <DashboardDateRangePicker locale={locale} from={draft.from} to={draft.to} onChange={(from,to)=>{setPreset("custom");setDraft(v=>({...v,from,to}))}}/>
     <label className="er-account-filter"><span>{t("Account","অ্যাকাউন্ট")}</span><select value={draft.account} disabled={accountError} onChange={e=>setDraft(v=>({...v,account:e.target.value}))}>
-      <option value="">{t("All accounts","সব অ্যাকাউন্ট")}</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.method} · ••••{a.display_suffix}</option>)}
+      <option value="">{t("All accounts","সব অ্যাকাউন্ট")}</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.method}{accountNumbers[a.id]?" · "+accountNumbers[a.id]:""}</option>)}
      </select></label>
     <button type="submit" className="er-apply" disabled={loading}>{t("Apply","প্রয়োগ করুন")}</button>
    </form>
