@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import {PaymentRequestDetail} from "./payment-request-detail";
+import {merchantStatusLabel} from "../lib/dashboard-status-labels";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {registerDraft} from "../lib/client/draft-navigation";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
@@ -36,18 +37,7 @@ function minor(value:string):number|null{
  return Number.isSafeInteger(n)&&n>0&&n<=100000000000?n:null;
 }
 const number=(amount:number,locale:Locale)=>new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(amount/100);
-function statusLabel(status:string,bn:boolean){
- const labels:Record<string,[string,string]>={
- requires_payer:["Awaiting payer","প্রেরকের নম্বর বাকি"],
- awaiting_payment:["Awaiting verification","যাচাইয়ের অপেক্ষায়"],
- completed:["Verified","যাচাইকৃত"],
- expired:["Expired","মেয়াদোত্তীর্ণ"],
- cancelled:["Cancelled","বাতিল"],
- processing:["Processing","প্রক্রিয়াধীন"]
- };
- const pair=labels[status]||["Pending","অপেক্ষমাণ"];
- return bn?pair[1]:pair[0];
-}
+function statusLabel(status:string,bn:boolean){return merchantStatusLabel("request",status,bn?"bn":"en")}
 export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}:{
  locale:Locale;userId:string;workspaceId:string;environment:PaymentEnvironment;canWrite:boolean;
 }){
