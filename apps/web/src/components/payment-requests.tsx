@@ -300,7 +300,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
        <option value="invoice">{bn?"ইস্যু করা ইনভয়েস":"Issued invoice"}</option>
       </select></label>
      {fields.sourceKind==="standalone"?<label>{bn?"পরিমাণ (BDT)":"Amount (BDT)"}
-      <input required inputMode="decimal" value={fields.amount} onChange={e=>edit("amount",e.target.value)} placeholder="500.00" aria-describedby="pg05-amount-hint"/>
+      <input required inputMode="decimal" value={fields.amount} onChange={e=>edit("amount",e.target.value)} placeholder="500.00"/>
       </label>:
       <label>{bn?"ইস্যু করা নথি":"Issued source document"}
        <select required value={fields.sourceId} onChange={e=>edit("sourceId",e.target.value)}>
@@ -358,11 +358,10 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
     
     <button className="ekv3-primary" type="submit" disabled={sourceBusy||environment==="live"}>{sourceBusy?(bn?"ইস্যু হচ্ছে…":"Issuing…"):(bn?"নথি ইস্যু করুন":"Issue document")}</button>
     {sourceError&&<p role="alert" className="ek-form-error">{sourceError}</p>}
-    {dirty&&}
+    
    <div className="ekv3-modal-footer"><button type="button" onClick={()=>setSourceOpen(false)}>{bn?"বাতিল":"Cancel"}</button></div></fieldset></form>
   </dialog>
   <dialog ref={detailDialog} className="ekv3-drawer" aria-label={bn?"রিকোয়েস্টের বিস্তারিত":"Request details"} onCancel={()=>selectDetail("")} onClose={()=>selectDetail("")} onClick={e=>{if(e.target===e.currentTarget)selectDetail("")}}>{selected&&<div className="ekv3-drawer-content"><PaymentRequestDetail key={selected} id={selected} workspaceId={workspaceId} environment={environment} locale={locale} onClose={()=>selectDetail("")}/></div>}</dialog>
   {(notice||copied)&&<div role="status" className="ekv3-toast">{notice||(bn?"লিংক কপি হয়েছে":"Link copied")}</div>}
  </section>;
-}
 }
