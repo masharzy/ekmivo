@@ -21,12 +21,12 @@ Scope: presentation-focused. API contracts, permission decisions, server actions
 
 ## NOT accepted / still TODO (requires implementation or evidence)
 1. **Backend security (high priority)**: owner/admin vs editor/viewer reveal eligibility, audited reveal endpoint, full-number response redaction for unauthorized users, field-level encryption + keyed hash + stored last four. UI-only masking is **not** server data protection; do not count as done.
-2. **Full account number in Reports filter**: existing account DTO supplies only `display_suffix`. API must provide full receiving number to authorized users; do not manufacture it.
-3. **Payment link Duplicate/Delete**: no existing verified API operations. Menu entries deliberately disabled. Need authorized backend actions, idempotency and Delete confirmation before enabling.
+2. **Full account number in Reports filter**: owner/admin now load full receiving numbers through the existing authorized phones endpoint. Restricted/failed responses never synthesize a number. Browser QA still pending.
+3. **Payment link Duplicate/Delete**: Duplicate now reuses authorized link details and the existing Create endpoint through a prefilled editor. Delete remains disabled because `pg10_write` has no delete action; backend authorization and one-sentence confirmation are needed before enabling.
 4. **API key last four**: current server key list exposes `public_id`, not a secure raw key suffix. Table copies public reference, **not secret**. Need explicit backend-safe metadata if a genuine suffix is required.
 5. **Audit other signed-in routes** for remaining native controls, duplicate titles and emojis beyond the affected components; broader reference parity not established.
 6. **Browser acceptance QA pending**: 360px/mobile, tablet/desktop, EN/BN, Light/Dark/System, OS theme change, keyboard modal focus trap, route navigation, requests/filters, export, real reports, genuine API key creation/rotation and real devices.
-7. **TypeScript/Next.js build and CI pending** (owner asked to conserve CI minutes). No pass asserted. Do not merge to production without verification.
+7. **TypeScript/Next.js builds**: historical Vercel preview commit `4f1f44ddd0cf7039390479c9a07f5db475ef7faa` built READY after fixing the customer combobox compile error. Final branch head was not rebuild-verified: Vercel API returned `402 api-deployments-free-per-day` (100 free deployments/24h) on 2026-10-16. GitHub CI was not run. Do not claim the newest commit built or passed browser QA.
 8. **Form validation and usability**: verify inline field errors (instead of native validation bubbles); test invoice and link modal focus/scroll on mobile; monitor table overlay positioning and portal menus.
 9. **Sensitive-number privacy switch synchronization**: per-workspace local browser preference only, not a globally audited reveal session. Screen-sharing masking is visual only.
 10. **Data/status meaning**: no invented statuses; existing backend meanings must be checked before changing labels. Some operational filters still expose internal terms.
@@ -35,3 +35,11 @@ Scope: presentation-focused. API contracts, permission decisions, server actions
 - GitHub changes were committed on isolated branch; diff/audit review performed.
 - No real Android devices, wallet providers, webhooks, production accounts, manual screenshots, mobile browsers or production deployment were tested in this work.
 - Never label an untested flow 'passed'.
+
+## 2026-10-16 subsequent changes
+- Reusable `DashboardDateTimePicker` replaced native receipt and operations time filters.
+- Payment link Duplicate now opens prefilled New Link editor; not a destructive server call.
+- API key Copy uses a 16px SVG line icon; create/rotate once-only instruction made explicit.
+- Invoice modal focuses its first input when opened.
+- Receiving-account filter reveals the full formatted number only when existing session permissions allow the `phones` API response.
+- Fresh preview deployment blocked by Vercel 402 daily deployment quota. Latest code still needs actual build and browser testing.
