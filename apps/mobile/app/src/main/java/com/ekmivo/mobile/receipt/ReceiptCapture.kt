@@ -20,7 +20,7 @@ object ReceiptCapture {
    // physical phone endpoint. Financial payer and account stay unknown here.
    // Never collect arbitrary SMS, notifications, logins or OTPs.
    if(kind=="device_sms"&&store.phone()!=null){
-    if(!store.canForward(source)||!ReceiptForwardPolicy.likelyPayment(source,text))return
+    if(!store.canForward(source)||!ReceiptForwardPolicy.likelyPayment(source,text,store.allowedSources()))return
     val version=store.forwardVersion()
     if(version<0)return
     val phone=store.phone()?:return
@@ -31,7 +31,7 @@ object ReceiptCapture {
      .put("kind","device_sms").put("evidence",text)
      .put("configuration_version",version)
      .put("observed_at",Instant.now().toString())
-    if(store.enqueue(body))ReceiptSyncWorker.scheduleNow(context)
+    if(ReceiptStageRepository(context).capture(store,body))ReceiptSyncWorker.scheduleNow(context)
     return
    }
    val collection=store.collectionEnrollments()
@@ -50,7 +50,7 @@ object ReceiptCapture {
    val payload=JSONObject().put("enrollment_id",enrollment.getString("id"))
     .put("environment",environment).put("source",source).put("binding",binding)
     .put("kind",kind).put("evidence",text).put("observed_at",Instant.now().toString())
-   if(store.enqueue(payload))ReceiptSyncWorker.schedule(context)
+   if(ReceiptStageRepository(context).capture(store,payload))ReceiptSyncWorker.schedule(context)
   }
  }
 }
@@ -83,11 +83,15 @@ class ReceiptSmsReceiver:BroadcastReceiver(){
  }
 }
 class ReceiptNotificationListener:NotificationListenerService(){
+ companion object { private val notificationExecutor=Executors.newSingleThreadExecutor() }
  override fun onListenerConnected(){ReceiptSyncWorker.schedule(this)}
  override fun onNotificationPosted(sbn:StatusBarNotification){
   val extras=sbn.notification.extras
   val text=(extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
     ?:extras.getCharSequence(Notification.EXTRA_TEXT))?.toString()?:return
-  ReceiptCapture.accept(this,sbn.packageName,"package:"+sbn.packageName,"device_notification",text)
+  val appContext=applicationContext
+  notificationExecutor.execute{
+   runCatching{ReceiptCapture.accept(appContext,sbn.packageName,"package:"+sbn.packageName,"device_notification",text)}
+  }
  }
 }

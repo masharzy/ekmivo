@@ -16,6 +16,8 @@ object ReceiptInboxRecovery {
   if(ContextCompat.checkSelfPermission(context,Manifest.permission.READ_SMS)!=PackageManager.PERMISSION_GRANTED)
    throw SecurityException("READ_SMS permission is required for optional inbox recovery")
   ReceiptStore(context).use{if(!it.enabled()||it.phone()==null)return 0}
+  val sources=ReceiptStore(context).use { it.allowedSources().toList() }
+  if(sources.isEmpty())return 0
   val cutoff=System.currentTimeMillis()-72L*60*60*1000
   val known=ReceiptStore(context).use{store->
    store.recent(60).map{it.optString("source").lowercase()+"|"+it.optString("evidence")}.toMutableSet()
@@ -23,9 +25,9 @@ object ReceiptInboxRecovery {
   var inserted=0
   val projection=arrayOf(Telephony.Sms.ADDRESS,Telephony.Sms.BODY,Telephony.Sms.DATE)
   // Apply the allowlist in the content provider itself: no generic inbox dump.
-  val origins=arrayOf("bKash","BKASH","bkash","NAGAD","nagad","Rocket","ROCKET","rocket")
-  val selection="${Telephony.Sms.DATE} >= ? AND ${Telephony.Sms.ADDRESS} IN (${origins.joinToString(","){"?"}})"
-  val selectionArgs=arrayOf(cutoff.toString(),*origins)
+  val origins=sources
+  val selection="${Telephony.Sms.DATE} >= ? AND LOWER(${Telephony.Sms.ADDRESS}) IN (${origins.joinToString(","){"?"}})"
+  val selectionArgs=arrayOf(cutoff.toString(),*origins.toTypedArray())
   context.contentResolver.query(Telephony.Sms.Inbox.CONTENT_URI,projection,
    selection,selectionArgs,"${Telephony.Sms.DATE} DESC")?.use{cursor->
    val address=cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
@@ -35,8 +37,7 @@ object ReceiptInboxRecovery {
     val sender=cursor.getString(address)?:continue
     val body=cursor.getString(text)?:continue
     val source=sender.trim().lowercase()
-    if(source !in setOf("bkash","nagad","rocket") ||
-       !ReceiptForwardPolicy.likelyPayment(sender,body))continue
+    if(!ReceiptForwardPolicy.likelyPayment(sender,body,sources.toSet()))continue
     val key=source+"|"+body
     if(key in known)continue
     val before=ReceiptStore(context).use{it.count()}
