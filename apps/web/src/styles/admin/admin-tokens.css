@@ -1,0 +1,10 @@
+/* LOCKED: colors copied exactly from docs/design/ekmivo-admin-reference.html.
+   Admin-only. Do not import the marketing/dashboard theme to re-skin this scope. */
+html body .pa-root.pa-admin-design,html body .pa-mfa-screen.pa-admin-design{
+--bg:#fafafa;--sf:#fff;--s2:#f5f5f5;--s3:#ebebeb;--bd:#e6e6e6;--tx:#0a0a0a;--t2:#404040;--mu:#8a8a8a;--ac:#2f5bea;--ok:#12a150;--wa:#d98a00;--ba:#e5372b;--ink:#0a0a0a;--onink:#fff;--sh:0 16px 48px rgba(0,0,0,.14);color-scheme:light;
+--card:var(--sf);--hover:var(--s2);--border:var(--bd);--fg:var(--tx);--muted:var(--mu);--accent:var(--ac);--tint:var(--s3);--good:var(--ok);
+--color-text:var(--tx);--color-text-secondary:var(--t2);--color-text-muted:var(--mu);--color-border:var(--bd);--color-control-border:var(--bd);--color-surface:var(--sf);--color-surface-subtle:var(--s2);--color-primary:var(--ink);--color-on-primary:var(--onink);--color-focus:var(--ac);--color-success:var(--ok);--color-danger:var(--ba);
+--admin-sidebar-width:212px;--admin-header-height:48px;--admin-content-width:1180px;--admin-page-padding:28px;--admin-modal-width:480px;--admin-drawer-width:460px;--admin-control-height:28px;--admin-radius:6px;--admin-card-radius:10px;--admin-font-size:13px;--admin-line-height:1.45;
+}
+html body .pa-root.pa-admin-design[data-admin-theme="dark"],html body .pa-mfa-screen.pa-admin-design[data-admin-theme="dark"]{--bg:#0a0a0a;--sf:#111;--s2:#171717;--s3:#242424;--bd:#222;--tx:#ededed;--t2:#b8b8b8;--mu:#7d7d7d;--ac:#7b9bff;--ok:#3ecf7a;--wa:#f2b134;--ba:#ff6b5e;--ink:#ededed;--onink:#0a0a0a;--sh:0 16px 48px rgba(0,0,0,.6);color-scheme:dark}
+@media(prefers-color-scheme:dark){html body .pa-root.pa-admin-design:not([data-admin-theme="light"]):not([data-admin-theme="dark"]),html body .pa-mfa-screen.pa-admin-design:not([data-admin-theme="light"]):not([data-admin-theme="dark"]){--bg:#0a0a0a;--sf:#111;--s2:#171717;--s3:#242424;--bd:#222;--tx:#ededed;--t2:#b8b8b8;--mu:#7d7d7d;--ac:#7b9bff;--ok:#3ecf7a;--wa:#f2b134;--ba:#ff6b5e;--ink:#ededed;--onink:#0a0a0a;--sh:0 16px 48px rgba(0,0,0,.6);color-scheme:dark}}
