@@ -77,3 +77,26 @@ export async function adjustAdminAiCredits(_previous:AdminCatalogState,form:Form
   return result("success","Credit adjustment saved to the immutable ledger.");
  }catch(e){console.error("[admin/credits]",e instanceof Error?e.message:"unknown");return result("error","Could not adjust credits. Check the balance, permissions or migration.");}
 }
+
+/** Super Admin can provision a workspace for an already-verified merchant, using the same
+    workspaces/workspace_members schema as the normal onboarding action. */
+export async function createAdminWorkspace(_previous:AdminCatalogState,form:FormData):Promise<AdminCatalogState>{
+ const actor=await requireFreshSuperAdmin();if(!actor)return result("error","Fresh Super Admin MFA is required.");
+ const name=field(form,"name"),email=field(form,"owner_email").toLowerCase(),mode=field(form,"mode"),reason=field(form,"reason");
+ if(name.length<2||name.length>60||!/^\S+@\S+\.\S+$/.test(email)||!["commerce","ai","both"].includes(mode)||reason.length<10||reason.length>500)
+  return result("error","Enter a name (2–60), existing owner email, product and audit reason.");
+ try{
+  await database().begin(async tx=>{
+   const roles=await tx`SELECT 1 FROM platform_administrators WHERE user_id=${actor.user.id}::uuid AND role='super_admin' FOR UPDATE`;
+   if(!roles.length)throw Error("PERMISSION");
+   const owners=await tx`SELECT id FROM app_users WHERE lower(email)=${email} AND email_verified_at IS NOT NULL AND disabled_at IS NULL LIMIT 1`;
+   if(!owners.length)throw Error("OWNER_NOT_VERIFIED");
+   const w=await tx`INSERT INTO workspaces(name,service_mode,created_by) VALUES (${name},${mode},${owners[0].id}::uuid) RETURNING id`;
+   await tx`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES (${w[0].id}::uuid,${owners[0].id}::uuid,'owner')`;
+   await tx`INSERT INTO platform_admin_audit(actor_id,action,subject_id,description)
+    VALUES(${actor.user.id}::uuid,'workspace.admin_created',${w[0].id}::uuid,${"name="+name+"; owner="+email+"; mode="+mode+" | "+reason})`;
+  });
+  for(const locale of ["en","bn"])revalidatePath("/"+locale+"/admin/workspaces");
+  return result("success","Workspace created for the verified owner.");
+ }catch(e){console.error("[admin/workspace create]",e instanceof Error?e.name:"unknown");return result("error","Could not create workspace. Confirm the owner's email is verified and enabled.");}
+}
