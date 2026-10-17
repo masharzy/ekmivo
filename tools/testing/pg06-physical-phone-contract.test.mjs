@@ -51,7 +51,7 @@ test("one physical phone card pairs once without merchant parser or SIM binding 
  const page=await source("apps/web/src/components/sms-devices.tsx");
  assert.match(page,/active\.map\(p=>/);
  assert.match(page,/phones\.filter\(p=>!p\.revoked_at\)/);
- assert.match(page,/p\.account_count/);
+ assert.doesNotMatch(page,/p\.account_count|account_count\??:/);
  assert.match(page,/Create pairing QR|একটি ফোন একবারই পেয়ার করুন/);
  assert.doesNotMatch(page,/accounts\.filter\(permitted\)|parser_id|sms:1 \/ package|Save selected account bindings/);
  const forwarder=await source("backend/internal/checkout/phone_forward.go");
