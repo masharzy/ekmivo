@@ -141,22 +141,59 @@ function OfflineList({locale,kind,sub}:{locale:AdminLocale;kind:string;sub:strin
 
 function Stat({title,value,unavailable=false}:{title:string;value:string|number;unavailable?:boolean}){return <div className="pa-stat"><span>{title}</span><strong>{value}</strong>{unavailable&&<small>Not connected</small>}</div>;}
 async function Overview({locale,isSuper}:{locale:AdminLocale;isSuper:boolean}){
- const [r,activities]=await Promise.all([
- database()`SELECT (SELECT count(*) FROM workspaces)::int AS workspaces,(SELECT count(*) FROM app_users)::int AS users,(SELECT count(*) FROM workspaces WHERE created_at>=now()-interval '7 days')::int AS recent,
- (SELECT count(*) FROM workspace_product_access WHERE product='payments' AND enabled)::int AS payments_enabled,
- (SELECT count(*) FROM workspace_product_access WHERE product='ai' AND enabled)::int AS ai_enabled,
- (SELECT count(*) FROM pg13_support WHERE status IN ('submitted','reviewing'))::int AS open_support,
- (SELECT count(*) FROM workspace_environments WHERE environment='live' AND status='suspended')::int AS suspended_live,
- (SELECT count(*) FROM pg13_platform_invoices WHERE status='issued' AND created_at<now()-interval '7 days')::int AS older_invoices`,
- isSuper?database()`SELECT a.action,a.occurred_at,u.display_name FROM platform_admin_audit a LEFT JOIN app_users u ON u.id=a.actor_id ORDER BY a.occurred_at DESC LIMIT 5`:Promise.resolve([])
+ const [counts,activities,revenue,plans,attention]=await Promise.all([
+ database()`SELECT
+  (SELECT count(*) FROM workspaces)::int AS workspaces,
+  (SELECT count(*) FROM pg13_subscriptions WHERE paid_until>now())::int AS active_subscriptions,
+  (SELECT count(*) FROM pg13_platform_invoices WHERE status='issued' AND created_at<now()-interval '7 days')::int AS overdue,
+  (SELECT count(*) FROM pg13_support WHERE status IN ('submitted','reviewing'))::int AS open_cases,
+  (SELECT coalesce(sum(amount_minor),0) FROM pg13_platform_invoices WHERE status='paid' AND paid_at>=now()-interval '30 days')::bigint AS collected_minor`,
+ isSuper?database()`SELECT a.action,a.occurred_at,u.display_name FROM platform_admin_audit a LEFT JOIN app_users u ON u.id=a.actor_id ORDER BY a.occurred_at DESC LIMIT 5`:Promise.resolve([]),
+ database()`SELECT to_char(m.month_start,'Mon') AS label,coalesce(sum(i.amount_minor),0)::bigint AS revenue_minor FROM
+  (SELECT date_trunc('month',now()) - n*interval '1 month' AS month_start FROM generate_series(11,0,-1) n) m
+  LEFT JOIN pg13_platform_invoices i ON i.status='paid' AND i.paid_at>=m.month_start AND i.paid_at<m.month_start+interval '1 month'
+  GROUP BY m.month_start ORDER BY m.month_start`,
+ database()`SELECT s.plan_id,count(*)::int AS workspaces FROM pg13_subscriptions s WHERE s.paid_until>now() GROUP BY s.plan_id ORDER BY workspaces DESC LIMIT 8`,
+ database()`SELECT i.id,w.name,i.amount_minor,i.created_at,w.id AS workspace_id
+  FROM pg13_platform_invoices i JOIN workspaces w ON w.id=i.workspace_id
+  WHERE i.status='issued' AND i.created_at<now()-interval '7 days' ORDER BY i.created_at ASC LIMIT 6`
  ]);
- const c=r[0];
- return <><PageHead title={label(locale,"Overview","ওভারভিউ")} action={<span className="pa-date-label">{label(locale,"Last 7 days","শেষ ৭ দিন")}</span>}/>
+ const stats=counts[0],r=revenue.map(v=>({label:String(v.label),value:Number(v.revenue_minor)/100})),maximum=Math.max(1,...r.map(v=>v.value));
+ const x=(i:number)=>30+i*(550/Math.max(r.length-1,1)),y=(v:number)=>140-(v/maximum)*112;
+ const points=r.map((v,i)=>x(i)+","+y(v.value)).join(" ");
+ const money=(n:number)=>"৳"+n.toLocaleString("en-BD",{maximumFractionDigits:2});
+ const root="/"+locale+"/admin";
+ return <>
+ <PageHead title={label(locale,"Overview","ওভারভিউ")} description="Sales and account health."/>
  <section className="pa-surface pa-stats-strip">
- <Stat title="Total workspaces" value={Number(c.workspaces)}/><Stat title="New (7 days)" value={Number(c.recent)}/><Stat title="Total users" value={Number(c.users)}/><Stat title="Payment workspaces" value={Number(c.payments_enabled)}/><Stat title="AI Bot workspaces" value={Number(c.ai_enabled)}/><Stat title="Open support tickets" value={Number(c.open_support)}/></section>
- <div className="pa-overview-grid"><section className="pa-surface pa-chart-panel"><h2>Verified volume</h2><Offline locale={locale}/></section><section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Needs attention</h2><Link href={"/"+locale+"/admin/support"}>Support →</Link></div>{[["Open support tickets",Number(c.open_support)],["Suspended live environments",Number(c.suspended_live)],["Unpaid invoices older than 7 days",Number(c.older_invoices)]].map(([item,count])=><div className="pa-attention-row" key={item}><span>{item}</span><strong>{count}</strong></div>)}</section></div>
- <div className="pa-overview-grid"><section className="pa-surface pa-chart-panel"><h2>Signups & activation</h2><Offline locale={locale}/></section><section className="pa-surface pa-chart-panel"><h2>Top workspaces by volume</h2><Offline locale={locale}/></section></div>
- <div className="pa-overview-grid"><section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Recent admin activity</h2><Link href={"/"+locale+"/admin/audit"}>View all →</Link></div>{!isSuper?<p className="pa-subtle">Access restricted</p>:!activities.length?<p className="pa-subtle">No activity yet.</p>:activities.map((v,i)=><div className="pa-attention-row" key={i}><span>{titleCase(String(v.action))} <small>{v.display_name?String(v.display_name):""}</small></span><span>{formatDate(v.occurred_at,locale)}</span></div>)}</section><section className="pa-surface pa-chart-panel"><h2>System status</h2>{["API","Checkout","Webhooks","Workers"].map(n=><div className="pa-attention-row" key={n}><span>{n}</span><span>—</span></div>)}<p className="pa-subtle">Not connected</p></section></div>
+ <Stat title="Revenue collected (30 days)" value={money(Number(stats.collected_minor)/100)}/>
+ <Stat title="Active subscriptions" value={Number(stats.active_subscriptions)}/>
+ <Stat title="Overdue invoices" value={Number(stats.overdue)}/>
+ <Stat title="Open support cases" value={Number(stats.open_cases)}/></section>
+ <div className="pa-overview-grid">
+  <div>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Revenue</h2><span className="pa-subtle">Last 12 months · paid platform invoices</span></div>
+    <svg viewBox="0 0 620 165" width="100%" role="img" aria-label="Collected subscription revenue by month">
+     {[20,80,140].map(n=><line key={n} x1="20" x2="610" y1={n} y2={n} stroke="var(--bd)" strokeWidth="1"/>)}
+     {points&&<polyline points={points} fill="none" stroke="var(--ink)" strokeWidth="1.6" strokeLinejoin="round"/>}
+     {r.map((v,i)=><text key={i} x={x(i)} y="160" fontSize="10" fill="var(--mu)" textAnchor="middle">{v.label}</text>)}
+    </svg>
+   </section>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Needs follow-up</h2><Link href={root+"/billing/invoices"}>View invoices</Link></div>
+    {attention.length?attention.map(a=><div className="pa-attention-row" key={String(a.id)}><span><Link href={root+"/workspaces/"+a.workspace_id+"/billing"}>{String(a.name)}</Link> <small>Overdue platform invoice</small></span><strong>{money(Number(a.amount_minor)/100)}</strong></div>):<p className="pa-subtle">No overdue invoices.</p>}
+   </section>
+  </div>
+  <div>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Workspaces by plan</h2><Link href={root+"/subscriptions"}>View subscriptions</Link></div>
+    {plans.map(p=><div key={String(p.plan_id)} className="pa-attention-row"><span>{String(p.plan_id)}</span><strong>{Number(p.workspaces)}</strong></div>)}
+    {!plans.length&&<p className="pa-subtle">No active paid plans yet.</p>}
+   </section>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Latest admin actions</h2><Link href={root+"/audit"}>View all</Link></div>
+    {!isSuper?<p className="pa-subtle">Access restricted.</p>:activities.map((a,i)=><div className="pa-attention-row" key={i}><span>{titleCase(String(a.action))}<small> {String(a.display_name||"System")}</small></span><span>{formatDate(a.occurred_at,locale)}</span></div>)}
+    {isSuper&&!activities.length&&<p className="pa-subtle">No admin actions recorded.</p>}
+   </section>
+  </div>
+ </div>
  </>;
 }
 export async function PlatformAdminConsole({locale,segments=[],query="",after=""}:Props){
