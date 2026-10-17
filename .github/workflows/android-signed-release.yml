@@ -1,0 +1,76 @@
+name: Signed Android production APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed_release:
+    name: Release APK (secure signing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          sdk_manager="$(find "$sdk_root/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -n "$sdk_manager"
+          "$sdk_manager" 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Load release keystore from encrypted GitHub Actions secrets
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.EKMIVO_ANDROID_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.EKMIVO_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$RELEASE_KEYSTORE_B64" || -z "$RELEASE_KEYSTORE_PASSWORD" ]]; then
+            echo 'Add EKMIVO_ANDROID_KEYSTORE_B64 and EKMIVO_ANDROID_KEYSTORE_PASSWORD as GitHub Actions secrets.' >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/ekmivo-production-release.p12"
+          test -s "$RUNNER_TEMP/ekmivo-production-release.p12"
+      - name: Assemble signed release APK
+        working-directory: apps/mobile
+        env:
+          EKMIVO_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/ekmivo-production-release.p12
+          EKMIVO_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.EKMIVO_ANDROID_KEYSTORE_PASSWORD }}
+        run: gradle --no-daemon --console=plain :app:assembleRelease
+      - name: Verify APK signature and expected production certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk='apps/mobile/app/build/outputs/apk/release/app-release.apk'
+          test -s "$apk"
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          verifier="$sdk_root/build-tools/35.0.0/apksigner"
+          test -x "$verifier"
+          "$verifier" verify --verbose --print-certs "$apk"
+          actual="$("$verifier" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':' | tr '[:upper:]' '[:lower:]' | head -1)"
+          expected='52f54eef5bfeb351a0c2d615e1191048e30f1701b29f36aaa825359ca97276d9'
+          if [[ "$actual" != "$expected" ]]; then
+            echo 'Unexpected APK signing certificate — refusing release.' >&2
+            exit 1
+          fi
+          sha256sum "$apk"
+      - name: Save signed APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekmivo-production-release-apk
+          path: apps/mobile/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
