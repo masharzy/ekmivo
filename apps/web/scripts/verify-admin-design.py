@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import sys
 
-root = Path(__file__).resolve().parents[4]  # repository root
+root = Path(__file__).resolve().parents[3]  # repository root
 html = (root / "docs/design/ekmivo-admin-reference.html").read_text(encoding="utf-8")
 css = (root / "apps/web/src/styles/admin/admin-tokens.css").read_text(encoding="utf-8")
 adapter = (root / "apps/web/src/styles/admin/admin-components.css").read_text(encoding="utf-8")
