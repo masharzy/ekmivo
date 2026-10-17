@@ -83,13 +83,20 @@ See audit for exact files and evidence.
 - Gradle app module: Room runtime + kapt compiler added; Kotlin 2.0.21 and Room 2.6.1. New JVM unit tests: ConnectionStateTest, ReceiptAuthInterceptorTest, updated ReceiptForwardPolicyTest.
 
 ### Phase 1 tests & known manual gates
-- JVM tests authored but **not executed successfully** (local Android SDK/Gradle not installed; GitHub workflow run 39022485840 ended before steps in all four jobs, as with Phase 0).
+- JVM tests authored but **not executed successfully** (local Android SDK/Gradle not installed; GitHub workflow runs 39022485840 and 39022772191 ended before steps in all four jobs, as with Phase 0).
 - Room database schema creation / Keystore encryption / preexisting outbox v2 preservation need actual Android emulator instrumentation. No screenshots required for this no-UI phase.
 - 401/403 from an authenticated device quarantines credentials. Distinguish transport 403 and temporary 503. Finer-grained legacy-binding 403 vs physical-device revocation remains a **backend contract question**.
 - Worker process death at Room insert/mirror/ACK boundaries and >500-receipt backpressure require simulated/device stress tests.
 - A Room staged or pending message from a revoked/different seller is **held and never re-signed under another identity**. Restoring the same original enrollment requires explicit authenticated operator recovery; no untrusted automatic replay.
 - Notifications/battery/OEM health checks intentionally wait for Phase 3; only RECEIVE_SMS state is currently evaluated, with no invented permission claims.
 - Next steps Phase 2 only after acceptance decision. No UI changes this phase.
+
+## Phase 1 latest verification
+- Implementation commits: b0be7d9, 9a48133, f6ae7bb (draft stacked PR #73).
+- Last CI: https://github.com/masharzy/ekmivo/actions/runs/39022772191 — **FAILED before jobs executed steps** (all 4 jobs had 0 steps; ~2–3 seconds each). Cannot assert Kotlin compile, Room schema generation or JVM tests have passed.
+- No emulator instrumentation evidence; no binary release, deployment or production migration.
+- Phase 1 implementation is on a review branch, NOT merged to main and NOT accepted.
+- Phase 2/3/4/5/6 remain not started.
 
 ## Next
 Phase 0 follow-up: full typography-scale preview, Section 5 topHairline, exact type line heights, neutral Material surface roles and a static reduced-motion pulse. No new shipping screen.
