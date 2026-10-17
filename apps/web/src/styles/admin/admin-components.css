@@ -1,0 +1,116 @@
+/* Admin-only production component adapter.
+   Exact measurements/colors from Ekmivo_Admin.html; no public token dependency.
+   Existing .pa-* JSX/Go/SQL behavior remains untouched. */
+.pa-root.pa-admin-design{display:grid;grid-template-columns:212px minmax(0,1fr);grid-template-rows:48px minmax(0,1fr);min-width:0;align-items:stretch}
+.pa-root.pa-admin-design .pa-layout{display:contents}
+.pa-root.pa-admin-design .pa-sidebar{grid-column:1;grid-row:1/3;position:sticky;top:0;bottom:auto;flex:none;width:212px;min-height:100dvh;max-height:100dvh;overflow-y:auto;scrollbar-width:thin;padding:16px 10px 20px;border-right:1px solid var(--bd);background:var(--bg);box-shadow:none}
+.pa-root.pa-admin-design .pa-sidebar-brand{display:flex;align-items:center;gap:9px;padding:0 8px 18px;font-size:14px;font-weight:600;letter-spacing:-.01em}
+.pa-root.pa-admin-design .pa-sidebar-brand-mark{width:22px;height:22px;border-radius:6px;background:var(--ink);color:var(--onink);display:grid;place-items:center;font-size:12px;font-weight:700}
+.pa-root.pa-admin-design .pa-nav-group{margin:0}
+.pa-root.pa-admin-design .pa-nav-group h2{margin:18px 0 4px;padding:0 8px;color:var(--mu);font-size:12px;font-weight:450;line-height:1.45}
+.pa-root.pa-admin-design .pa-nav-link{display:flex;align-items:center;gap:9px;height:28px;min-height:28px;margin:0 0 1px;padding:0 8px;border-radius:6px;color:var(--t2)!important;font-size:13px;font-weight:400}
+.pa-root.pa-admin-design .pa-nav-link svg{height:15px;width:15px;color:var(--mu)}
+.pa-root.pa-admin-design .pa-nav-link:hover{background:var(--s2);color:var(--tx)!important}
+.pa-root.pa-admin-design .pa-nav-link.is-active{background:var(--s3);color:var(--tx)!important;font-weight:550}
+.pa-root.pa-admin-design .pa-nav-link.is-active svg{color:var(--tx)}
+.pa-root.pa-admin-design .pa-topbar{grid-column:2;grid-row:1;position:sticky;top:0;z-index:70;height:48px;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 28px;border-bottom:1px solid var(--bd);background:var(--bg)}
+.pa-root.pa-admin-design .pa-topbar .pa-brand{display:none}
+.pa-root.pa-admin-design .pa-topbar-end{margin-left:auto;gap:8px}
+.pa-root.pa-admin-design .pa-search-launch{height:28px;min-height:28px;max-width:340px;width:min(340px,35vw);min-width:180px;padding:0 9px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--mu);font-size:13px}
+.pa-root.pa-admin-design .pa-search-launch:hover{background:var(--s2)}
+.pa-root.pa-admin-design .pa-search-launch kbd{margin-left:auto;border:0;font-size:11px;color:var(--mu)}
+.pa-root.pa-admin-design .pa-toolbar-select{height:28px;min-height:28px;max-width:none;padding:0 24px 0 9px;border:1px solid var(--bd);border-radius:6px;background-color:var(--sf);color:var(--tx);font-size:13px;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mu) 50%),linear-gradient(135deg,var(--mu) 50%,transparent 50%);background-position:calc(100% - 13px) 12px,calc(100% - 9px) 12px;background-size:4px 4px;background-repeat:no-repeat}
+.pa-root.pa-admin-design .pa-environment{font-size:12px;color:var(--t2)}
+.pa-root.pa-admin-design .pa-status-dot{width:6px;height:6px}.pa-root.pa-admin-design .pa-status-dot.green{background:var(--ok)}
+.pa-root.pa-admin-design .pa-account-menu summary{width:28px;height:28px;border-color:var(--bd);border-radius:6px}
+.pa-root.pa-admin-design .pa-account-popover{background:var(--sf);border-color:var(--bd);border-radius:10px}
+.pa-root.pa-admin-design .pa-main{grid-column:2;grid-row:2;min-width:0;width:100%;background:var(--bg)}
+.pa-root.pa-admin-design .pa-content{display:grid;gap:20px;width:100%;max-width:1180px;margin:0 auto;padding:28px 28px 48px}
+.pa-root.pa-admin-design h1{font-size:18px;line-height:1.45;font-weight:600;letter-spacing:-.02em;margin:0}
+.pa-root.pa-admin-design h2{font-size:13px;line-height:1.45;font-weight:600}
+.pa-root.pa-admin-design .pa-page-head{display:flex;align-items:flex-end;gap:12px;min-height:0;margin:0}
+.pa-root.pa-admin-design .pa-page-head p{font-size:13px;margin:3px 0 0;color:var(--mu)}
+.pa-root.pa-admin-design .pa-page-actions{gap:8px}
+.pa-root.pa-admin-design .pa-surface{background:var(--sf);border:1px solid var(--bd);border-radius:10px}
+.pa-root.pa-admin-design .pa-stats-strip{grid-template-columns:repeat(4,minmax(0,1fr));overflow:hidden}
+.pa-root.pa-admin-design .pa-stat{gap:0;padding:16px 18px;border-left:1px solid var(--bd)}
+.pa-root.pa-admin-design .pa-stat span{min-height:0;color:var(--mu);font-size:13px}
+.pa-root.pa-admin-design .pa-stat strong{margin:4px 0 2px;font-size:24px;font-weight:550;line-height:1.45;letter-spacing:-.03em}
+.pa-root.pa-admin-design .pa-stat small{color:var(--mu);font-size:12px}
+.pa-root.pa-admin-design .pa-overview-grid{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px}
+.pa-root.pa-admin-design .pa-chart-panel{padding:16px;min-height:0}
+.pa-root.pa-admin-design .pa-chart-panel h2{margin:0 0 8px}
+.pa-root.pa-admin-design .pa-not-connected{font-size:13px;color:var(--mu)}
+.pa-root.pa-admin-design .pa-attention-row{padding:10px 0;min-height:0;border-bottom:1px solid var(--bd);font-size:13px}
+.pa-root.pa-admin-design .pa-subtle{color:var(--mu);font-size:12px}
+.pa-root.pa-admin-design .pa-tabs{display:flex;gap:20px;padding:0 16px;border-bottom:1px solid var(--bd);overflow-x:auto}
+.pa-root.pa-admin-design .pa-tabs a{padding:11px 0 10px;color:var(--mu);font-size:13px;font-weight:500;border-bottom:2px solid transparent}
+.pa-root.pa-admin-design .pa-tabs a[aria-current=page]{color:var(--tx);border-color:var(--ink)}
+.pa-root.pa-admin-design .pa-button{display:inline-flex;align-items:center;gap:6px;height:28px;min-height:28px;padding:0 10px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--tx)!important;font-size:13px;font-weight:500;white-space:nowrap}
+.pa-root.pa-admin-design .pa-button:hover:not(:disabled){background:var(--s2)}
+.pa-root.pa-admin-design .pa-button-primary{background:var(--ink);border-color:var(--ink);color:var(--onink)!important}
+.pa-root.pa-admin-design .pa-button-primary:hover:not(:disabled){background:var(--ink);opacity:.88}
+.pa-root.pa-admin-design .pa-date-label{border:1px solid var(--bd);border-radius:6px;padding:5px 9px;color:var(--mu)}
+.pa-root.pa-admin-design :is(input[type=search],input[type=text],input[type=password],input[type=url],input[type=number],input[type=email],select,textarea){min-height:28px;height:28px;padding:0 9px;background:var(--sf);border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-size:13px}
+.pa-root.pa-admin-design textarea{height:auto;min-height:64px;padding:7px 9px;resize:vertical}
+.pa-root.pa-admin-design :is(input,select,textarea):focus{border-color:var(--ink);outline:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--ink) 10%,transparent)}
+.pa-root.pa-admin-design .pa-table-card{overflow:hidden}
+.pa-root.pa-admin-design .pa-table-wrap{overflow-x:auto}
+.pa-root.pa-admin-design .pa-table-wrap table{width:100%;min-width:620px;border-collapse:collapse;font-size:13px}
+.pa-root.pa-admin-design .pa-table-wrap th{text-align:left;padding:9px 16px;background:var(--sf);color:var(--mu);font-size:13px;font-weight:450;border-bottom:1px solid var(--bd)}
+.pa-root.pa-admin-design .pa-table-wrap td{height:44px;padding:0 16px;border-top:1px solid var(--bd);border-bottom:0;color:var(--tx);font-size:13px}
+.pa-root.pa-admin-design .pa-table-wrap tbody tr:first-child td{border-top:0}
+.pa-root.pa-admin-design .pa-table-wrap tbody tr:hover td{background:var(--s2)}
+.pa-root.pa-admin-design .pa-table-footer{padding:8px 16px;border-top:1px solid var(--bd);color:var(--mu);font-size:12px}
+.pa-root.pa-admin-design .pa-description{padding:16px}
+.pa-root.pa-admin-design .pa-description-row{grid-template-columns:96px minmax(0,1fr);gap:8px 10px;min-height:0;padding:8px 0;border:0}
+.pa-root.pa-admin-design .pa-description-row dt{color:var(--mu);font-size:13px}
+.pa-root.pa-admin-design .pa-description-row dd{color:var(--tx);font-size:13px}
+.pa-root.pa-admin-design .pa-settings-grid{padding:16px}
+.pa-root.pa-admin-design .pa-dialog{width:min(480px,calc(100vw - 32px));max-height:90dvh;padding:0;background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh)}
+.pa-root.pa-admin-design .pa-dialog-head{padding:18px 20px 2px;border:0}
+.pa-root.pa-admin-design .pa-dialog-head h2{margin:0;font-size:15px;font-weight:600}
+.pa-root.pa-admin-design .pa-dialog-body{padding:6px 20px 16px}
+.pa-root.pa-admin-design .pa-dialog-foot{padding:0 20px 18px;border:0}
+.pa-root.pa-admin-design .pa-icon-button{min-width:28px;width:28px;height:28px;padding:0;border-radius:6px;color:var(--mu)}
+.pa-root.pa-admin-design .pa-icon-button:hover{background:var(--s2);color:var(--tx)}
+.pa-root.pa-admin-design .pa-palette-backdrop{background:rgba(0,0,0,.4)}
+.pa-root.pa-admin-design .pa-palette{background:var(--sf);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh)}
+.pa-root.pa-admin-design .pa-palette-results button:hover{background:var(--s2)}
+/* Payment-plan management inherits admin, NEVER public plan card styling. */
+.pa-root.pa-admin-design .mp-admin{color:var(--tx);gap:20px}
+.pa-root.pa-admin-design .mp-admin p{line-height:1.45;color:var(--t2)}
+.pa-root.pa-admin-design .mp-admin :is(input:not([type=checkbox]),select){min-height:28px;height:28px;border-color:var(--bd);border-radius:6px;background:var(--sf);color:var(--tx);padding:0 9px}
+.pa-root.pa-admin-design .mp-admin textarea{min-height:64px;height:auto;border-color:var(--bd);background:var(--sf);color:var(--tx);padding:7px 9px}
+.pa-root.pa-admin-design .mp-admin button{min-height:28px;height:28px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--tx);padding:0 10px}
+.pa-root.pa-admin-design .mp-admin button.pa-button-primary{background:var(--ink);border-color:var(--ink);color:var(--onink)}
+.pa-root.pa-admin-design .mp-table{border-color:var(--bd);border-radius:10px}
+.pa-root.pa-admin-design .mp-table table{font-size:13px}
+.pa-root.pa-admin-design .mp-table :is(th,td){padding:9px 16px;border-bottom:1px solid var(--bd)}
+.pa-root.pa-admin-design .mp-editor{gap:20px}
+.pa-root.pa-admin-design .mp-editor form,.pa-root.pa-admin-design .mp-workspace{padding:16px 20px;border-color:var(--bd);border-radius:10px;background:var(--sf)}
+.pa-root.pa-admin-design .mp-toolbar label,.pa-root.pa-admin-design .mp-field{font-size:13px;font-weight:500}
+.pa-root.pa-admin-design .mp-fields{gap:16px}
+.pa-root.pa-admin-design .mp-admin fieldset{border-color:var(--bd)}
+.pa-root.pa-admin-design .mp-metrics>div{background:var(--s2)}
+.pa-root.pa-admin-design .mp-toast{border-color:var(--ok);background:var(--s2);color:var(--ok)}
+.pa-root.pa-admin-design .mp-toast.mp-error{border-color:var(--ba);color:var(--ba)}
+.pa-root.pa-admin-design .mp-message{background:var(--s2);border-color:var(--bd)}
+@media(max-width:1100px){.pa-root.pa-admin-design .pa-stats-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.pa-root.pa-admin-design .pa-stat:nth-child(odd){border-left:0}.pa-root.pa-admin-design .pa-stat:nth-child(n+3){border-top:1px solid var(--bd)}}
+@media(max-width:900px){.pa-root.pa-admin-design .pa-overview-grid{grid-template-columns:1fr}}
+@media(max-width:820px){.pa-root.pa-admin-design{display:block}.pa-root.pa-admin-design .pa-layout{display:contents}.pa-root.pa-admin-design .pa-sidebar{position:fixed;top:0;bottom:0;left:0;z-index:90;max-height:none;min-height:0;transform:translateX(-110%);transition:transform .2s;padding-top:calc(16px + env(safe-area-inset-top,0px));background:var(--sf);box-shadow:var(--sh)}.pa-root.pa-admin-design .pa-sidebar.is-open{transform:translateX(0)}.pa-root.pa-admin-design .pa-topbar{position:sticky;top:0;padding:0 12px;gap:10px}.pa-root.pa-admin-design .pa-topbar .pa-brand{display:flex;font-size:13px}.pa-root.pa-admin-design .pa-mobile-backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:85}.pa-root.pa-admin-design .pa-content{padding:18px 14px 40px}.pa-root.pa-admin-design .pa-search-launch{min-width:0;width:auto}.pa-root.pa-admin-design .pa-search-launch span,.pa-root.pa-admin-design .pa-search-launch kbd{display:none}}
+@media(max-width:600px){.pa-root.pa-admin-design .pa-stats-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.pa-root.pa-admin-design .pa-stat{padding:14px}.pa-root.pa-admin-design .mp-editor{grid-template-columns:1fr}.pa-root.pa-admin-design .mp-fields{grid-template-columns:1fr}}
+@media(max-width:480px){.pa-root.pa-admin-design .pa-page-head{align-items:flex-start;flex-direction:column}.pa-root.pa-admin-design .pa-topbar-end{gap:3px}.pa-root.pa-admin-design .pa-toolbar-select{max-width:58px}.pa-root.pa-admin-design .pa-stats-strip{grid-template-columns:1fr 1fr}}
+
+
+/* Admin auth surfaces share the Admin palette/Inter, not the legacy Geist dark rules. */
+.pa-mfa-screen.pa-admin-design .pa-mfa-card{background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:12px;box-shadow:none;max-width:480px;padding:20px}
+.pa-mfa-screen.pa-admin-design .pa-mfa-logo{font-size:14px;letter-spacing:-.01em}
+.pa-mfa-screen.pa-admin-design .pa-mfa-logo small{border-color:var(--bd);color:var(--mu)}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card h1{font-size:18px;letter-spacing:-.02em}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card p{font-size:13px;color:var(--mu)}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card label{font-size:13px;color:var(--t2)}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card input{font:inherit;min-height:28px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--tx);padding:0 9px}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card button[type=submit]:not(.pa-mfa-link){min-height:28px;border:1px solid var(--ink);border-radius:6px;background:var(--ink);color:var(--onink);font-size:13px}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card .pa-mfa-errors{color:var(--ba)}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card .pa-mfa-codes{border-color:var(--bd);border-radius:8px;background:var(--s2)}

@@ -46,6 +46,8 @@ jobs:
       - name: Lint all web sources
         working-directory: apps/web
         run: npm run lint
+      - name: Verify locked Admin design tokens and theme isolation
+        run: python3 apps/web/scripts/verify-admin-design.py
       - name: Strict OpenAPI contract and schema references
         working-directory: apps/web
         run: npm run payment:contract-check

@@ -171,7 +171,7 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  const extra=segments[0]==="gateway"?segments.slice(2):segments.slice(1);
  const sub=extra[0]||"",base="/"+locale+"/admin"+(key?"/"+key:"");
  const t=names[key][locale==="bn"?1:0],isSuper=admin.role==="super_admin",q=query.trim().slice(0,80);
- const cookie=await cookies();const rawTheme=cookie.get("ekmivo-theme")?.value;const theme=rawTheme==="light"||rawTheme==="dark"?rawTheme:"system";
+ const cookie=await cookies();const rawTheme=cookie.get("ekmivo-admin-theme")?.value;const theme=rawTheme==="light"||rawTheme==="dark"?rawTheme:"system";
  let body:ReactNode;
  if(!key){body=<Overview locale={locale} isSuper={isSuper}/>;}
  else if((key==="workspaces"||key==="users")&&extra[0]){

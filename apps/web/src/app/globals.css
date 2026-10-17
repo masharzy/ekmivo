@@ -22,6 +22,10 @@
 @import "./workspaces-v2.css";
 @import "./admin-console.css";
 @import "./managed-plans.css";
+/* Admin styles load last so marketing/merchant defaults cannot re-skin Admin. */
+@import "../styles/admin/admin-tokens.css";
+@import "../styles/admin/admin-theme.css";
+@import "../styles/admin/admin-components.css";
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 100px; }
