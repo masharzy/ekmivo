@@ -54,3 +54,38 @@ export async function AdminSubscriptionsPage({locale,query}:{locale:AdminLocale;
  <form className="pa-filter-bar" method="get"><input type="search" name="q" defaultValue={q} placeholder="Search workspaces or plans" maxLength={80}/><button type="submit" className="pa-button">Search</button></form>
  <AdminTableView table={table} empty="No subscriptions match your search."/></>;
 }
+
+export async function AdminBillingPage({locale,query}:{locale:AdminLocale;query:string}){
+ const base="/"+locale+"/admin",q=query.trim().slice(0,80),term="%"+q+"%";
+ const [stats,invoices]=await Promise.all([
+  database()`SELECT
+    (SELECT coalesce(sum(amount_minor),0) FROM pg13_platform_invoices WHERE status='paid' AND paid_at>=now()-interval '30 days') AS collected_minor,
+    (SELECT count(*)::int FROM pg13_subscriptions WHERE paid_until>now()) AS active_subscriptions,
+    (SELECT coalesce(sum(amount_minor),0) FROM pg13_platform_invoices WHERE status='issued' AND created_at<now()-interval '7 days') AS overdue_minor`,
+  database()`SELECT i.id,i.plan_id,i.amount_minor,i.status,i.created_at,i.paid_at,w.name AS workspace,w.id AS workspace_id
+    FROM pg13_platform_invoices i JOIN workspaces w ON w.id=i.workspace_id
+    WHERE (${q}='' OR w.name ILIKE ${term} OR i.id::text ILIKE ${term})
+    ORDER BY i.created_at DESC LIMIT 100`
+ ]);
+ const s=stats[0],money=(minor:unknown)=>"৳"+(Number(minor)/100).toLocaleString("en-BD",{minimumFractionDigits:2,maximumFractionDigits:2});
+ const timestamp=(v:unknown)=>v?new Date(String(v)).toLocaleDateString("en-GB"):"—";
+ return <>
+  <div className="pa-page-head"><div><h1>Billing & Revenue</h1><p>Ekmivo subscription invoices and collected revenue, not merchant payment volume.</p></div>
+   <a className="pa-button" href={base+"/exports?"+new URLSearchParams({kind:"invoices",q}).toString()}>Export invoices CSV</a>
+  </div>
+  <section className="pa-surface pa-stats-strip" style={{gridTemplateColumns:"repeat(3,minmax(0,1fr))"}}>
+   <div className="pa-stat"><span>Collected (30 days)</span><strong>{money(s.collected_minor)}</strong><small>Paid platform invoices</small></div>
+   <div className="pa-stat"><span>Active subscriptions</span><strong>{Number(s.active_subscriptions)}</strong><small>Payment Gateway product</small></div>
+   <div className="pa-stat"><span>Overdue invoices</span><strong>{money(s.overdue_minor)}</strong><small>Issued more than 7 days ago</small></div>
+  </section>
+  <div className="pa-inline-actions" style={{paddingTop:0}}>
+   <Link href={base+"/billing/revenue"} className="pa-button">Revenue by plan</Link>
+   <Link href={base+"/subscriptions"} className="pa-button">Subscriptions</Link>
+  </div>
+  <form method="get" className="pa-filter-bar"><input type="search" name="q" defaultValue={q} placeholder="Find invoice, business or ID" maxLength={80}/><button className="pa-button" type="submit">Search</button></form>
+  <AdminTableView empty="No platform invoices match." table={{headers:["Invoice","Workspace","Plan","Amount","Created","Status","Paid at"],rows:invoices.map(x=>[
+    String(x.id),<Link key={String(x.workspace_id)} href={base+"/workspaces/"+x.workspace_id+"/billing"} className="pa-action-link">{String(x.workspace)}</Link>,
+    String(x.plan_id),money(x.amount_minor),timestamp(x.created_at),String(x.status),timestamp(x.paid_at)
+  ])}}/>
+ </>;
+}
