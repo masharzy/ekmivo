@@ -1,7 +1,6 @@
 package com.ekmivo.mobile.ui
 
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.StartOffsetType
@@ -18,13 +17,11 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -34,6 +31,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -44,6 +43,9 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
 
 /** Pure custom components for the design preview and later screen phases. */
+fun Modifier.topHairline(color: Color) = this.drawBehind {
+    drawLine(color, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
+}
 @Composable
 fun EkmivoPrimaryButton(
     label: String,
@@ -148,7 +150,7 @@ fun EkmivoScannerFrame(modifier: Modifier = Modifier) {
     }
 }
 
-/** Animation may be disabled by the host for reduced motion; preview is static. */
+/** Preview/reduced-motion rings are static; no transition is started. */
 @Composable
 fun EkmivoPulseRing(
     modifier: Modifier = Modifier,
@@ -157,35 +159,39 @@ fun EkmivoPulseRing(
 ) {
     val palette = LocalEkmivoPalette.current
     val static = reducedMotion || LocalInspectionMode.current
-    val transition = rememberInfiniteTransition(label = "live pulse")
-    val progressA by transition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            tween(2800, easing = CubicBezierEasing(.25f, .1f, .25f, 1f)), RepeatMode.Restart
-        ),
-        label = "first ring"
-    )
-    val progressB by transition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            tween(2800, easing = CubicBezierEasing(.25f, .1f, .25f, 1f)),
-            RepeatMode.Restart,
-            initialStartOffset = StartOffset(1400, StartOffsetType.FastForward)
-        ),
-        label = "second ring"
-    )
     Box(modifier.size(EkmivoTokens.Measure.heroRing), contentAlignment = Alignment.Center) {
-        for (p in listOf(progressA, progressB)) {
+        if (static) {
             Box(
                 Modifier.fillMaxSize()
-                    .graphicsLayer {
-                        val scale = if (static) 1f else .8f + .45f * p
-                        scaleX = scale
-                        scaleY = scale
-                        alpha = if (static) .18f else .5f * (1f - p)
-                    }
+                    .graphicsLayer { alpha = .18f }
                     .border(1.dp, palette.success, CircleShape)
             )
+        } else {
+            val transition = rememberInfiniteTransition(label = "live pulse")
+            @Composable
+            fun Ring(offset: Int) {
+                val progress by transition.animateFloat(
+                    initialValue = 0f, targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        tween(2800, easing = CubicBezierEasing(.25f, .1f, .25f, 1f)),
+                        RepeatMode.Restart,
+                        initialStartOffset = StartOffset(offset, StartOffsetType.FastForward)
+                    ),
+                    label = "pulse $offset"
+                )
+                Box(
+                    Modifier.fillMaxSize()
+                        .graphicsLayer {
+                            val scale = .8f + .45f * progress
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = .5f * (1f - progress)
+                        }
+                        .border(1.dp, palette.success, CircleShape)
+                )
+            }
+            Ring(0)
+            Ring(1400)
         }
         core()
     }

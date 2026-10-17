@@ -124,6 +124,34 @@ private fun TokenPreview(dark: Boolean) {
                     }
                 })
             }
+            // Each size/weight/line-height role from design spec section 2.
+            val scale = listOf(
+                "Shop 14/500" to EkmivoType.shop,
+                "Meta 11/400" to EkmivoType.meta,
+                "Hero 22/500" to EkmivoType.heroAmount,
+                "Hero note 12" to EkmivoType.heroNote,
+                "Stat 17/500" to EkmivoType.statNumber,
+                "Section 11" to EkmivoType.section,
+                "Row 14/500" to EkmivoType.rowAmount,
+                "Tag 11" to EkmivoType.tag,
+                "Nav 11" to EkmivoType.nav,
+                "Button 15/500" to EkmivoType.button,
+                "Link 13" to EkmivoType.link,
+                "Center 19/500" to EkmivoType.centerTitle,
+                "Body 13" to EkmivoType.body,
+                "Settings row 13" to EkmivoType.settingsRow,
+                "Segment 12" to EkmivoType.segment,
+                "Settings title 17" to EkmivoType.settingsTitle
+            )
+            scale.forEach { (role, font) ->
+                Row(
+                    Modifier.fillMaxWidth().topHairline(p.border).padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(role, style = EkmivoType.meta, color = p.secondary)
+                    Text("বাংলা English", style = font, color = p.text)
+                }
+            }
             Spacer(Modifier.height(8.dp))
         }
     }
