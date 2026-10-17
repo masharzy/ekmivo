@@ -14,6 +14,7 @@ import {AdminShell,type AdminLocale} from "./platform-admin-shell";
 import {AdminModal,AdminCopy} from "./platform-admin-widgets";
 import {AdminPaymentPlansPage} from "./admin-payment-plans-page";
 import {AdminProvidersPage,AdminCreditsPage,AdminSubscriptionsPage} from "./admin-catalog-page";
+import {AdminWorkspaceCreationForm} from "./admin-catalog-management";
 import {AdminWorkspaceDetail,AdminUserDetail,AdminGlobalInventory,AdminHealthView,AdminSupportDetail} from "./platform-admin-inventory";
 
 type RecordRow={id:string;cells:string[];href?:string};
@@ -216,7 +217,7 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  body=!isSuper?<><PageHead title={t}/><Denied locale={locale}/></>:key==="workspaces"&&extra[1]==="products-plan"?<AdminPaymentPlansPage locale={locale} actor={admin.user.id} workspace={extra[0]}/>:key==="workspaces"?<><AdminWorkspaceDetail locale={locale} id={extra[0]} sub={extra[1]||""}/>{extra[1]==="billing"&&<AdminPaymentPlansPage locale={locale} actor={admin.user.id} workspace={extra[0]}/>}</>:!extra[1]?<AdminUserDetail locale={locale} id={extra[0]}/>:notFound();
  }else if(key==="workspaces"||key==="users"||key==="audit"){
  const page=isSuper?(key==="workspaces"?await workspaces(locale,q,after):key==="users"?await users(locale,q,after):await audit(locale,q,after)):null;
- body=<><PageHead title={t}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
+ body=<><PageHead title={t} action={key==="workspaces"&&isSuper?<AdminModal title="New workspace" label="Add workspace"><AdminWorkspaceCreationForm/></AdminModal>:undefined}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
  }else if(key==="subscriptions"){
  body=isSuper?<AdminSubscriptionsPage locale={locale} query={q}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="providers"){
