@@ -7,6 +7,8 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 
 type Account={ID:string;Method:string;Number:string;Label:string;Disabled:boolean};
+type CatalogProvider={code:string;name:string;logo:string;checkout:boolean;live:boolean};
+const legacyProviders:CatalogProvider[]=paymentProviderKeys.map(code=>({code,name:paymentProviderAppearance[code].name,logo:paymentProviderAppearance[code].logo,checkout:true,live:true}));
 const methodName:Record<string,string>=Object.fromEntries(paymentProviderKeys.map(key=>[key,paymentProviderAppearance[key].name]));
 export function PaymentMethodManagement({locale,workspaceId,environment,canManage}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean}){
  const bn=locale==="bn",t=useCallback((en:string,bd:string)=>bn?bd:en,[bn]);
@@ -18,8 +20,29 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const [method,setMethod]=useState(""),[number,setNumber]=useState(""),[label,setLabel]=useState("");
  const normalizeNumber=(raw:string)=>{const digits=raw.replace(/\D/g,"");return digits.startsWith("880")?("0"+digits.slice(3)):digits.startsWith("01")?digits:""};
  const [query,setQuery]=useState(""),[filter,setFilter]=useState<"all"|"active"|"disabled">("all"),[providerQuery,setProviderQuery]=useState("");
- const visibleAccounts=accounts.filter(a=>(filter==="all"||(filter==="active"?!a.Disabled:a.Disabled))&&[a.Label,a.Number,formattedAccount(a.Number),methodName[a.Method]||a.Method].join(" ").toLowerCase().includes(query.trim().toLowerCase()));
- const openAdd=()=>{setMethod("");setNumber("");setLabel("");setProviderQuery("");setError("");createDialog.current?.showModal()};
+ const [providerItems,setProviderItems]=useState<CatalogProvider[]>(legacyProviders);
+ const [providerError,setProviderError]=useState("");
+ const [providerLoading,setProviderLoading]=useState(false);
+ const providerName=(code:string)=>providerItems.find(p=>p.code===code)?.name||methodName[code]||code;
+ const providerLogo=(code:string)=>providerItems.find(p=>p.code===code)?.logo||(isPaymentProvider(code)?paymentProviderAppearance[code].logo:"");
+ const loadProviderCatalog=useCallback(async()=>{
+  setProviderLoading(true);setProviderError("");
+  try{
+   const r=await fetch("/api/payment-providers",{cache:"no-store"});
+   if(!r.ok)throw Error(String(r.status));
+   const data:unknown=await r.json();
+   if(!data||typeof data!=="object"||!("providers" in data)||!Array.isArray(data.providers))throw Error("Invalid catalog");
+   const p:CatalogProvider[]=data.providers.filter((x:unknown)=>!!x&&typeof x==="object"&&"code" in x&&typeof x.code==="string"&&"name" in x&&typeof x.name==="string"&&isPaymentProvider(x.code)).map((x:{code:string;name:string;logo?:string;checkout?:boolean;live?:boolean})=>({code:x.code,name:x.name,logo:typeof x.logo==="string"?x.logo:"",checkout:x.checkout===true,live:x.live===true}));
+   setProviderItems(p);
+  }catch{
+   // Preserve existing three-provider account creation if control DB migration has not been applied.
+   setProviderItems(legacyProviders);
+   setProviderError(t("Catalog could not be refreshed; showing existing supported methods.","ক্যাটালগ আপডেট হয়নি; পূর্বের সমর্থিত মাধ্যমগুলো দেখানো হচ্ছে।"));
+  }finally{setProviderLoading(false)}
+ },[t]);
+
+ const visibleAccounts=accounts.filter(a=>(filter==="all"||(filter==="active"?!a.Disabled:a.Disabled))&&[a.Label,a.Number,formattedAccount(a.Number),providerName(a.Method)].join(" ").toLowerCase().includes(query.trim().toLowerCase()));
+ const openAdd=()=>{setMethod("");setNumber("");setLabel("");setProviderQuery("");setError("");createDialog.current?.showModal();void loadProviderCatalog()};
  const [selected,setSelected]=useState<string|null>(null),[edited,setEdited]=useState<string|null>(null),[newLabel,setNewLabel]=useState(""),[newNumber,setNewNumber]=useState("");
  const [confirmAccount,setConfirmAccount]=useState<Account|null>(null);
  const current=accounts.find(account=>account.ID===selected)||null;
@@ -83,8 +106,8 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   <p className="ek-ref-count">{t("Showing","দেখানো হচ্ছে")} {visibleAccounts.length} {t("of","টি /")} {accounts.length} {t("accounts","অ্যাকাউন্ট")}</p>
   <dialog ref={detailsDialog} className="ekv3-drawer" aria-label={t("Account details","অ্যাকাউন্টের বিবরণ")} onCancel={closeDetails} onClose={closeDetails} onClick={event=>{if(event.target===event.currentTarget)closeDetails()}}>
    {current&&<div className="ekv3-drawer-content">
-    <div className="ekv3-drawer-heading"><h2>{current.Label||methodName[current.Method]||current.Method}</h2><button type="button" aria-label={t("Close","বন্ধ করুন")} onClick={closeDetails}>×</button></div>
-    <div className="ekv3-drawer-list"><div><span>{t("Payment method","পেমেন্ট মাধ্যম")}</span><strong>{methodName[current.Method]||current.Method}</strong></div><div><span>{t("Receiving number","রিসিভিং নম্বর")}</span><strong>{formattedAccount(current.Number)}<button type="button" aria-label={t("Copy number","নম্বর কপি")} className="ekv3-copy" onClick={()=>numberCopy(current.Number)}><DashboardIcon name="copy" width={15} height={15}/></button></strong></div><div><span>{t("Status","অবস্থা")}</span><strong>{status(current)}</strong></div></div>
+    <div className="ekv3-drawer-heading"><h2>{current.Label||providerName(current.Method)}</h2><button type="button" aria-label={t("Close","বন্ধ করুন")} onClick={closeDetails}>×</button></div>
+    <div className="ekv3-drawer-list"><div><span>{t("Payment method","পেমেন্ট মাধ্যম")}</span><strong>{providerName(current.Method)||current.Method}</strong></div><div><span>{t("Receiving number","রিসিভিং নম্বর")}</span><strong>{formattedAccount(current.Number)}<button type="button" aria-label={t("Copy number","নম্বর কপি")} className="ekv3-copy" onClick={()=>numberCopy(current.Number)}><DashboardIcon name="copy" width={15} height={15}/></button></strong></div><div><span>{t("Status","অবস্থা")}</span><strong>{status(current)}</strong></div></div>
     
     <div className="ekv3-drawer-footer">{canManage&&<><button type="button" className="ekv3-danger" onClick={()=>setConfirmAccount(current)}>{current.Disabled?t("Enable","চালু করুন"):t("Disable","বন্ধ করুন")}</button><button type="button" className="ekv3-secondary" onClick={()=>edit(current)}>{t("Edit account","অ্যাকাউন্ট পরিবর্তন")}</button></>}<button type="button" className="ekv3-primary" onClick={closeDetails}>{t("Done","সম্পন্ন")}</button></div>
    </div>}
@@ -101,7 +124,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   <dialog ref={createDialog} className="pg-phone-dialog ekv3-form-modal ek-ref-modal" aria-labelledby="ekv3-add-account" onClick={event=>{if(event.target===event.currentTarget)createDialog.current?.close()}}>
    <div className="pg-phone-dialog-head"><div><h2 id="ekv3-add-account">{t("Add account","অ্যাকাউন্ট যোগ করুন")}</h2><p>{method?t("Enter the account customers will pay into.","গ্রাহক যে অ্যাকাউন্টে পেমেন্ট করবেন সেটি দিন।"):t("Choose a provider.","একটি মাধ্যম বেছে নিন।")}</p></div><button type="button" aria-label={t("Close","বন্ধ করুন")} onClick={()=>createDialog.current?.close()}>×</button></div>
    <form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void create()}}>
-    {!method?<><label className="ek-ref-search ek-ref-provider-search"><DashboardIcon name="search" width={16} height={16}/><input aria-label={t("Search providers","মাধ্যম খুঁজুন")} placeholder={t("Search providers","মাধ্যম খুঁজুন")} value={providerQuery} onChange={e=>setProviderQuery(e.target.value)}/></label><div className="ek-ref-providers">{paymentProviderKeys.map(key=>[key,paymentProviderAppearance[key].name] as const).filter(([,name])=>name.toLowerCase().includes(providerQuery.toLowerCase())).map(([key,name])=><button type="button" key={key} className="ek-ref-provider ek-provider-surface wc" style={providerSurfaceStyle(key)} onClick={()=>setMethod(key)}><span className={"ek-ref-logo ek-ref-"+key}>{isPaymentProvider(key)?<img className="ek-ref-provider-image" src={paymentProviderAppearance[key as keyof typeof paymentProviderAppearance].logo} width={80} height={40} alt={name+" logo"}/>:name}</span><span className="ek-ref-provider-name">{name}</span></button>)}{!Object.values(methodName).some(name=>name.toLowerCase().includes(providerQuery.toLowerCase()))&&<div className="ek-ref-empty">{t("No provider found.","কোনো মাধ্যম পাওয়া যায়নি।")}</div>}</div></>:<div className="ek-ref-selected-provider ek-provider-surface" style={providerSurfaceStyle(method)}><span className={"ek-ref-logo ek-ref-"+method}>{isPaymentProvider(method)?<img className="ek-ref-provider-image" src={paymentProviderAppearance[method as keyof typeof paymentProviderAppearance]?.logo??""} width={84} height={42} alt={methodName[method]+" logo"}/>:methodName[method]}</span><span className="ek-ref-provider-title">{methodName[method]}</span><button type="button" onClick={()=>setMethod("")}>{t("Change","পরিবর্তন")}</button></div>}
+    {!method?<><label className="ek-ref-search ek-ref-provider-search"><DashboardIcon name="search" width={16} height={16}/><input aria-label={t("Search providers","মাধ্যম খুঁজুন")} placeholder={t("Search providers","মাধ্যম খুঁজুন")} value={providerQuery} onChange={e=>setProviderQuery(e.target.value)}/></label>{providerError&&<p className="ekv3-page-error" role="status">{providerError}<button type="button" onClick={()=>void loadProviderCatalog()}>{t("Retry","আবার চেষ্টা")}</button></p>}{providerLoading&&<p className="ek-ref-help">{t("Refreshing providers…","মাধ্যম লোড হচ্ছে…")}</p>}<div className="ek-ref-providers">{providerItems.filter(p=>p.name.toLowerCase().includes(providerQuery.toLowerCase())).map(({code:key,name,logo})=><button type="button" key={key} className="ek-ref-provider ek-provider-surface wc" style={providerSurfaceStyle(key)} onClick={()=>setMethod(key)}><span className={"ek-ref-logo ek-ref-"+key}>{isPaymentProvider(key)?<img className="ek-ref-provider-image" src={logo||providerLogo(key)} width={80} height={40} alt={name+" logo"}/>:name}</span><span className="ek-ref-provider-name">{name}</span></button>)}{!providerItems.some(p=>p.name.toLowerCase().includes(providerQuery.toLowerCase()))&&<div className="ek-ref-empty">{t("No provider found.","কোনো মাধ্যম পাওয়া যায়নি।")}</div>}</div></>:<div className="ek-ref-selected-provider ek-provider-surface" style={providerSurfaceStyle(method)}><span className={"ek-ref-logo ek-ref-"+method}>{isPaymentProvider(method)?<img className="ek-ref-provider-image" src={providerLogo(method)} width={84} height={42} alt={providerName(method)+" logo"}/>:methodName[method]}</span><span className="ek-ref-provider-title">{methodName[method]}</span><button type="button" onClick={()=>setMethod("")}>{t("Change","পরিবর্তন")}</button></div>}
     {method&&<><label className="ek-ref-field">{t("Account number","অ্যাকাউন্ট নম্বর")}<input required type="tel" inputMode="tel" autoComplete="off" value={number} onChange={e=>setNumber(e.target.value)} placeholder="+880 1XXX XXXXXX"/></label>
     <label className="ek-ref-field">{t("Label","লেবেল")}<span className="ek-ref-help">{t("Optional, only you see this","ঐচ্ছিক, শুধু আপনি দেখবেন")}</span><input value={label} maxLength={100} placeholder={t("e.g. Main shop","যেমন: মূল দোকান")} onChange={e=>setLabel(e.target.value)}/></label>
     </>}<div className="pg-phone-actions"><button type="button" onClick={()=>createDialog.current?.close()}>{t("Cancel","বাতিল")}</button><button type="submit" className="ekv3-primary" disabled={busy||!method||!/^01[3-9][0-9]{8}$/.test(normalizeNumber(number))}>{t("Add account","অ্যাকাউন্ট যোগ করুন")}</button></div>
