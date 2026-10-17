@@ -48,8 +48,8 @@ for(const product of ["ai","payments"]){
   for(const item of key.items)assert.ok(all.has(item));
  }
 }
-assert.ok(nav.searchableNavigation("payments","receipts").length>0);
-assert.ok(nav.searchableNavigation("payments","আসা").length>0);
+assert.ok(nav.searchableNavigation("payments","SMS").length>0);
+assert.ok(nav.searchableNavigation("payments","পেমেন্ট").length>0);
 assert.equal(nav.searchableNavigation("payments","inbox").length,0,"Record/product search must not escape active product");
 
 const memberships=[
@@ -60,5 +60,5 @@ assert.equal(nav.searchableBusinesses(memberships,"").length,0,"Blank global que
 assert.equal(nav.searchableBusinesses(memberships,"north")[0].id,memberships[1].id,"Search is constrained to supplied memberships");
 assert.equal(nav.searchableBusinesses(memberships,"অগ্র")[0].id,memberships[0].id,"Bengali authorized business names must be searchable");
 assert.equal(nav.searchableBusinesses(memberships,"outside-tenant").length,0,"No unauthorized business can be inferred");
-console.log("PG02 PASS: payment-first default, authorized products, locale-neutral URL and server-controlled live default, invalid query denial, EN/BN navigation and product-limited search");
+console.log("PG02 PASS: current locale-neutral links, live default and product-scoped EN/BN navigation/search");
 import "./pg02-loading-smoke.mjs";
