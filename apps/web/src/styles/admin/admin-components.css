@@ -101,3 +101,16 @@
 @media(max-width:820px){.pa-root.pa-admin-design{display:block}.pa-root.pa-admin-design .pa-layout{display:contents}.pa-root.pa-admin-design .pa-sidebar{position:fixed;top:0;bottom:0;left:0;z-index:90;max-height:none;min-height:0;transform:translateX(-110%);transition:transform .2s;padding-top:calc(16px + env(safe-area-inset-top,0px));background:var(--sf);box-shadow:var(--sh)}.pa-root.pa-admin-design .pa-sidebar.is-open{transform:translateX(0)}.pa-root.pa-admin-design .pa-topbar{position:sticky;top:0;padding:0 12px;gap:10px}.pa-root.pa-admin-design .pa-topbar .pa-brand{display:flex;font-size:13px}.pa-root.pa-admin-design .pa-mobile-backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:85}.pa-root.pa-admin-design .pa-content{padding:18px 14px 40px}.pa-root.pa-admin-design .pa-search-launch{min-width:0;width:auto}.pa-root.pa-admin-design .pa-search-launch span,.pa-root.pa-admin-design .pa-search-launch kbd{display:none}}
 @media(max-width:600px){.pa-root.pa-admin-design .pa-stats-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.pa-root.pa-admin-design .pa-stat{padding:14px}.pa-root.pa-admin-design .mp-editor{grid-template-columns:1fr}.pa-root.pa-admin-design .mp-fields{grid-template-columns:1fr}}
 @media(max-width:480px){.pa-root.pa-admin-design .pa-page-head{align-items:flex-start;flex-direction:column}.pa-root.pa-admin-design .pa-topbar-end{gap:3px}.pa-root.pa-admin-design .pa-toolbar-select{max-width:58px}.pa-root.pa-admin-design .pa-stats-strip{grid-template-columns:1fr 1fr}}
+
+
+/* Admin auth surfaces share the Admin palette/Inter, not the legacy Geist dark rules. */
+.pa-mfa-screen.pa-admin-design .pa-mfa-card{background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:12px;box-shadow:none;max-width:480px;padding:20px}
+.pa-mfa-screen.pa-admin-design .pa-mfa-logo{font-size:14px;letter-spacing:-.01em}
+.pa-mfa-screen.pa-admin-design .pa-mfa-logo small{border-color:var(--bd);color:var(--mu)}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card h1{font-size:18px;letter-spacing:-.02em}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card p{font-size:13px;color:var(--mu)}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card label{font-size:13px;color:var(--t2)}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card input{font:inherit;min-height:28px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--tx);padding:0 9px}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card button[type=submit]:not(.pa-mfa-link){min-height:28px;border:1px solid var(--ink);border-radius:6px;background:var(--ink);color:var(--onink);font-size:13px}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card .pa-mfa-errors{color:var(--ba)}
+.pa-mfa-screen.pa-admin-design .pa-mfa-card .pa-mfa-codes{border-color:var(--bd);border-radius:8px;background:var(--s2)}
