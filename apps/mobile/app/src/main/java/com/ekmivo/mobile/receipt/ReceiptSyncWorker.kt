@@ -87,8 +87,10 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
     // Send with the ORIGINAL immutable enrollment ID from encrypted outbox.
     // Never replace it with a newly selected account.
     val action=if(queued.optBoolean("physical_forward"))"phone-events" else "events"
-    val response=ReceiptTransport.post(action,boundID,next.first,next.second)
-    if(response.first==403){
+    inFlightId=next.first
+    stage.sending(next.first)
+    val response=ReceiptTransport.post(applicationContext,action,boundID,next.first,next.second)
+    if(response.first==401 || response.first==403){
      store.setQueueError("QUEUED_ASSOCIATION_REVOKED")
      stage.failed(next.first,"QUEUED_ASSOCIATION_REVOKED")
      return Result.failure() // Keep the encrypted evidence until operator recovery.
@@ -117,7 +119,7 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
    }
    if(phone!=null){
     val payload=JSONObject().put("enrollment_id",parentId).put("environment",environment)
-    val config=ReceiptTransport.post("configuration",parentId,UUID.randomUUID().toString(),payload.toString().toByteArray())
+    val config=ReceiptTransport.post(applicationContext,"configuration",parentId,UUID.randomUUID().toString(),payload.toString().toByteArray())
     if(config.first==401 || config.first==403){
      store.setQueueError("DEVICE_AUTHORIZATION_DENIED");return Result.failure()
     }
@@ -138,7 +140,7 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
     .put("permission_ok",permission).put("backlog",store.count())
     .put("overflow_count",store.overflowCount()).put("queue_error",store.queueError())
     .put("model",Build.MODEL).put("app_version",BuildConfig.VERSION_NAME)
-   val heartbeat=ReceiptTransport.post(if(phone!=null)"phone-heartbeat" else "heartbeat",
+   val heartbeat=ReceiptTransport.post(applicationContext,if(phone!=null)"phone-heartbeat" else "heartbeat",
     parentId,UUID.randomUUID().toString(),health.toString().toByteArray())
    if(heartbeat.first==401 || heartbeat.first==403){
     store.setQueueError("DEVICE_AUTHORIZATION_DENIED");return Result.failure()

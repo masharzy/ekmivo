@@ -33,7 +33,7 @@ class ReceiptStageRepository(private val context: Context) {
    return false
   }
   when (store.deliveryDisposition(id)) {
-   2 -> { dao.acknowledged(id); return true } // ACK survived a process crash
+   2 -> { dao.acknowledged(id, System.currentTimeMillis()); return true } // ACK survived a process crash
    1 -> { dao.mirrored(id); return true }      // already mirrored to outbox
   }
   val ok = store.enqueue(body, id)
@@ -43,7 +43,7 @@ class ReceiptStageRepository(private val context: Context) {
  }
 
  fun recover(store: ReceiptStore) {
-  for (entry in dao.unacknowledged()) {
+  for (entry in dao.unacknowledged(500)) {
    if (entry.status == "sent") continue
    try { mirrorOne(store, entry.id, entry.encryptedBody) }
    catch (_: Exception) { dao.failed(entry.id, "ENCRYPTED_STAGE_RECOVERY_FAILED") }
@@ -52,7 +52,7 @@ class ReceiptStageRepository(private val context: Context) {
 
  fun sending(id: String) = dao.sending(id)
  fun acknowledge(id: String) {
-  dao.acknowledged(id)
+  dao.acknowledged(id,System.currentTimeMillis())
   dao.pruneSent()
  }
  fun failed(id: String, safeCode: String) {

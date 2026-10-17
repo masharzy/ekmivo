@@ -38,7 +38,7 @@ interface ReceivedSmsDao {
  fun insert(receipt: ReceivedSms): Long
 
  @Query("SELECT * FROM received_sms WHERE status != 'sent' ORDER BY created_at, id LIMIT :limit")
- fun unacknowledged(limit: Int = 500): List<ReceivedSms>
+ fun unacknowledged(limit: Int): List<ReceivedSms>
 
  @Query("SELECT count(*) FROM received_sms WHERE status != 'sent'")
  fun countUnacknowledged(): Int
@@ -53,7 +53,7 @@ interface ReceivedSmsDao {
  fun failed(id: String, safeCode: String)
 
  @Query("UPDATE received_sms SET status='sent',sent_at=:at,last_error='' WHERE id=:id")
- fun acknowledged(id: String, at: Long = System.currentTimeMillis())
+ fun acknowledged(id: String, at: Long)
 
  @Query("DELETE FROM received_sms WHERE status='sent' AND id NOT IN (SELECT id FROM received_sms WHERE status='sent' ORDER BY sent_at DESC,id DESC LIMIT 60)")
  fun pruneSent()
