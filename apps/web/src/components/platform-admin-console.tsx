@@ -258,7 +258,7 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  }else{
  const op=offlineActions[key];
  const inventory=isSuper?await AdminGlobalInventory({locale,kind:key,sub,query:q}):null;
- body=<><PageHead title={t} action={op&&!inventory?<button type="button" disabled className="pa-button pa-button-secondary">{op}</button>:undefined}/>
+ body=<><PageHead title={t} action={key==="billing"&&isSuper?<a className="pa-button" href={"/"+locale+"/admin/exports?"+new URLSearchParams({kind:"invoices",q}).toString()}>Export invoices CSV</a>:op&&!inventory?<button type="button" disabled className="pa-button pa-button-secondary">{op}</button>:undefined}/>
  {tabs[key]&&<PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>}
  {!isSuper?<Denied locale={locale}/>:inventory||<OfflineList locale={locale} kind={key} sub={sub}/>}</>;
  }
