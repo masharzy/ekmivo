@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 fun EkmivoBrandHeader(bn:Boolean,onLanguageChange:(Boolean)->Unit) {
  val p=LocalEkmivoPalette.current
  Row(
-  Modifier.fillMaxWidth().padding(start=16.dp,end=16.dp,top=16.dp,bottom=8.dp),
+  Modifier.fillMaxWidth().statusBarsPadding().padding(start=16.dp,end=16.dp,top=16.dp,bottom=8.dp),
   verticalAlignment=Alignment.CenterVertically,
   horizontalArrangement=Arrangement.spacedBy(10.dp)
  ) {

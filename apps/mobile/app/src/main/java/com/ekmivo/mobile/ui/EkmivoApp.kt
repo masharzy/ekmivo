@@ -109,9 +109,10 @@ fun EkmivoApp(preferences:AppPreferences, incomingPairingLink:String?=null){
   owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
    while(isActive){
     val now=System.currentTimeMillis()
-    val previous=DeviceHeartbeat.lastAttempt(appContext)?:0L
-    if(paired && now-previous>=30_000L) DeviceHeartbeat.check(appContext)
-    delay(45_000L)
+    // Direct signed check while visible; never wait for a process restart
+    // or stale persisted heartbeat attempt. Background service stays 2 min.
+    if(paired) DeviceHeartbeat.check(appContext)
+    delay(12_000L)
    }
   }
  }

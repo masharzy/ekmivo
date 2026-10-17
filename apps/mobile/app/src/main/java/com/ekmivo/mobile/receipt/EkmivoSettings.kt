@@ -36,6 +36,8 @@ import com.ekmivo.mobile.R
 import com.ekmivo.mobile.data.Appearance
 import com.ekmivo.mobile.data.Language
 import com.ekmivo.mobile.ui.*
+import com.ekmivo.mobile.receipt.ReceiptTransport
+import com.ekmivo.mobile.receipt.ReceivedSmsRoom
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -169,6 +171,9 @@ fun EkmivoSettingsScreen(
       }
      })
      Entry(w(R.string.settings_diag),Icons.Outlined.Description,"›",onClick={diagnostics=true})
+     Box(Modifier.fillMaxWidth().topHairline(p.border)) {
+      com.ekmivo.mobile.update.SettingsUpdateRow(bn)
+     }
     }
    }
    item{
@@ -200,12 +205,32 @@ fun EkmivoSettingsScreen(
      .background(p.danger).clickable(enabled=!busy){
       busy=true
       scope.launch {
-       val ok=withContext(Dispatchers.IO){
-        runCatching{ReceiptStore(app).use{it.disconnect()}}.getOrDefault(false)
+       val outcome=withContext(Dispatchers.IO){
+        // Never destroy the signing key before server acknowledges revocation.
+        // Preserve Room/SQLite queued evidence if any message remains unsent.
+        runCatching {
+         ReceiptStore(app).use { store ->
+          val stage=ReceivedSmsRoom.get(app).messages().countUnacknowledged()
+          if(store.count()>0 || stage>0) return@use "pending"
+          val identity=store.phone()?:store.enrollment()?:return@use "server"
+          val id=identity.optString("id")
+          val environment=identity.optString("environment")
+          if(id.isBlank()||environment !in setOf("sandbox","live")) return@use "server"
+          val payload=org.json.JSONObject().put("enrollment_id",id)
+           .put("environment",environment).toString().toByteArray(Charsets.UTF_8)
+          val response=ReceiptTransport.post(app,"phone-disconnect",id,
+           java.util.UUID.randomUUID().toString(),payload)
+          if(response.first!=200) return@use "server"
+          if(store.disconnect()) "done" else "pending"
+         }
+        }.getOrDefault("server")
        }
        busy=false;confirm=false
-       if(ok){ReceiptForwardingService.stop(app);com.ekmivo.mobile.inbox.InboxPushTokenRegistry.clear(app);onDisconnected()}
-       else warning=w(R.string.settings_blocked)
+       if(outcome=="done"){
+        ReceiptForwardingService.stop(app)
+        com.ekmivo.mobile.inbox.InboxPushTokenRegistry.clear(app)
+        onDisconnected()
+       }else warning=w(if(outcome=="pending")R.string.settings_blocked else R.string.settings_failed)
       }
      },contentAlignment=Alignment.Center){
      Text(w(R.string.settings_confirm),style=EkmivoType.button,color=p.onPrimary)

@@ -193,6 +193,16 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter,r *http.Request,raw
  if e!=nil||se!=nil||!deviceevidence.TimestampWithinSkew(r.Header.Get("X-Ekmivo-Timestamp"),time.Now())||!deviceevidence.VerifyP256DER(key,canonical,signature){
   fail(w,403,"PHONE_SIGNATURE_REJECTED");return
  }
+ // The key and signature are checked above. A handset disconnect must revoke
+ // the same server row the dashboard lists, BEFORE Android destroys its key.
+ if r.PathValue("action")=="phone-disconnect" {
+  var revoked bool
+  if e:=pool.QueryRow(r.Context(),"SELECT pg06_phone_self_revoke($1::uuid)",id).Scan(&revoked);e!=nil{
+   fail(w,503,"PHONE_DISCONNECT_UNAVAILABLE");return
+  }
+  if !revoked {fail(w,403,"PHONE_REVOKED");return}
+  write(w,200,map[string]bool{"disconnected":true});return
+ }
  if r.PathValue("action")=="phone-events"{
   s.handlePhoneForward(w,r,raw,id,ws,realm,version);return
  }

@@ -12,8 +12,8 @@ android {
   applicationId = "com.ekmivo.mobile"
   minSdk = 26
   targetSdk = 35
-  versionCode = 3
-  versionName = "0.2.1"
+  versionCode = 4
+  versionName = "0.2.2"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   // Public origin only: never embed credentials or a payment authority in a mobile binary.
   buildConfigField("String", "API_BASE_URL",
