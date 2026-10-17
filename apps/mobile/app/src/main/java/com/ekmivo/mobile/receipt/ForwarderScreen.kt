@@ -97,7 +97,7 @@ fun ForwarderScreen(bn:Boolean){
   val response=withContext(Dispatchers.IO){runCatching{
    val payload=JSONObject().put("enrollment_id",active.getString("id"))
     .put("environment",active.getString("environment")).toString().toByteArray()
-   ReceiptTransport.post("configuration",active.getString("id"),UUID.randomUUID().toString(),payload)
+   ReceiptTransport.post(context,"configuration",active.getString("id"),UUID.randomUUID().toString(),payload)
   }.getOrNull()}
   if(response?.first==200){
    ReceiptStore(context).use{
@@ -275,7 +275,7 @@ fun ForwarderScreen(bn:Boolean){
           val key=AndroidKeystoreSigner("ekmivo-receipt-device").ensurePublicKey()
           val body=JSONObject().put("pairing_token",requestCode)
            .put("public_key",Base64.encodeToString(key,Base64.NO_WRAP)).toString().toByteArray()
-          ReceiptTransport.post("claim","",UUID.randomUUID().toString(),body)
+          ReceiptTransport.post(context,"claim","",UUID.randomUUID().toString(),body)
          }
          if(answer.first!=200)throw IllegalArgumentException("PAIR_FAILED")
          val paired=JSONObject(answer.second)
