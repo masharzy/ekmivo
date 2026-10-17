@@ -45,7 +45,7 @@ export async function AdminSubscriptionsPage({locale,query}:{locale:AdminLocale;
  <Link key={"manage"+s.workspace_id} href={base+"/workspaces/"+s.workspace_id+"/products-plan"} className="pa-button">Manage</Link>
  ]})};
  return <><div className="pa-page-head"><div><h1>Subscriptions</h1><p>Real plan assignments and renewal dates from the control database.</p></div>
- <Link href={base+"/plans"} className="pa-button pa-button-primary">Manage plans & assignments</Link></div>
+ <div className="pa-page-actions"><a className="pa-button" href={base+"/exports?"+new URLSearchParams({kind:"subscriptions",q}).toString()}>Export CSV</a><Link href={base+"/plans"} className="pa-button pa-button-primary">Manage plans & assignments</Link></div></div>
  <form className="pa-filter-bar" method="get"><input type="search" name="q" defaultValue={q} placeholder="Search workspaces or plans" maxLength={80}/><button type="submit" className="pa-button">Search</button></form>
  <AdminTableView table={table} empty="No subscriptions match your search."/></>;
 }
