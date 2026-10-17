@@ -34,8 +34,8 @@ for filename in ["admin-tokens.css","admin-theme.css","admin-components.css"]:
     if f'admin/{filename}' not in globals_css:
         errors.append("Production import missing: "+filename)
 expected_nav=["","workspaces","subscriptions","billing","plans","providers","credits","support","health","audit","settings"]
-match=re.search(r"const groups=\\[(.*?)\\] as const;",shell,re.S)
-actual_nav=re.findall(r'\\["[^"]+","([^"]*)","[^"]+"\\]',match.group(1)) if match else []
+match=re.search(r"const groups=\[(.*?)\] as const;",shell,re.S)
+actual_nav=re.findall(r'\["[^"]+","([^"]*)","[^"]+"\]',match.group(1)) if match else []
 if actual_nav!=expected_nav:
     errors.append(f"Admin sidebar drift: expected 11 approved paths {expected_nav!r}, got {actual_nav!r}")
 if errors:
