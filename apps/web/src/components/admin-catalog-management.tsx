@@ -1,6 +1,6 @@
 "use client";
 import {useActionState,useState} from "react";
-import {adjustAdminAiCredits,saveAdminProvider,type AdminCatalogState} from "../actions/admin-catalog";
+import {adjustAdminAiCredits,saveAdminProvider,createAdminWorkspace,type AdminCatalogState} from "../actions/admin-catalog";
 type Provider={code:string;display_name:string;logo_url:string;provider_type:string;status:string;visible_in_add_account:boolean;checkout_enabled:boolean;live_enabled:boolean;verification_supported:boolean;sort_order:number};
 type Workspace={id:string;name:string;balance:number};
 type CreditEntry={id:string;workspace:string;delta:number;balance_after:number;reason:string;actor:string;created_at:string};
@@ -85,4 +85,16 @@ export function AdminAiCreditsManager({workspaces,entries,canEdit}:{workspaces:W
    </tbody></table></div>
   </section>
  </>;
+}
+
+export function AdminWorkspaceCreationForm(){
+ const [state,run,pending]=useActionState(createAdminWorkspace,empty);
+ return <form action={run} className="pa-admin-fields">
+  <label>Workspace name<input name="name" type="text" minLength={2} maxLength={60} required placeholder="Merchant business name"/></label>
+  <label>Verified owner email<input name="owner_email" type="email" required placeholder="owner@example.com"/></label>
+  <label>Products<select name="mode" defaultValue="commerce"><option value="commerce">Payment Gateway</option><option value="ai">AI Bot</option><option value="both">Both products</option></select></label>
+  <label>Audit reason<textarea name="reason" minLength={10} maxLength={500} required placeholder="Why this workspace is being created"/></label>
+  {state.status!=="idle"&&<p role="status" className={state.status==="error"?"pa-action-error":"pa-action-success"}>{state.message}</p>}
+  <button className="pa-button pa-button-primary" type="submit" disabled={pending}>{pending?"Creating…":"Create workspace"}</button>
+ </form>;
 }
