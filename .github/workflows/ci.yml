@@ -49,6 +49,9 @@ jobs:
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json
+      - name: Production build (no application credentials)
+        working-directory: apps/web
+        run: npm run build
       - name: Verify locked Admin design tokens and theme isolation
         run: python3 apps/web/scripts/verify-admin-design.py
       - name: Strict OpenAPI contract and schema references
@@ -138,9 +141,6 @@ jobs:
       - name: TypeScript compile
         working-directory: apps/web
         run: npx tsc --noEmit
-      - name: Production build (no application credentials)
-        working-directory: apps/web
-        run: npm run build
 
   backend:
     name: Go compile and unit tests
