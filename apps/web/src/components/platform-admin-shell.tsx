@@ -65,10 +65,10 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
   return ()=>{clearTimeout(timer);abort.abort()};
  },[search,role,term,locale]);
 
- useEffect(()=>{document.documentElement.dataset.theme=mode==="system"?"":mode;document.cookie="ekmivo-theme="+mode+";path=/;max-age=31536000;samesite=lax";},[mode]);
+ useEffect(()=>{document.cookie="ekmivo-admin-theme="+mode+";path=/;max-age=31536000;samesite=lax";},[mode]);
  const goLocale=(next:AdminLocale)=>{if(next!==locale)go(pathname.replace(/^\/(en|bn)(?=\/)/,"/"+next));};
  const jump=(path:string)=>go(root+(path?"/"+path:""));
- return <div className={"pa-root"+(production?" pa-production":"")} lang={locale}>
+ return <div className={"pa-root pa-admin-design"+(production?" pa-production":"")} data-admin-theme={mode} lang={locale}>
   <div className={"pa-route-progress"+(pending?" is-visible":"")} aria-hidden="true"/>
   <header className="pa-topbar">
    <button type="button" className="pa-icon-button pa-mobile-toggle" aria-label={isBn?"মেনু খুলুন":"Open navigation"} onClick={()=>setMobile(true)}><AdminIcon name="grid"/></button>
@@ -85,7 +85,7 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
   </header>
   {mobile&&<button className="pa-mobile-backdrop" onClick={()=>setMobile(false)} aria-label="Close navigation"/>}
   <div className="pa-layout"><aside className={"pa-sidebar"+(mobile?" is-open":"")} aria-label="Admin navigation">
-   <nav>{groups.map(group=><section key={group.group} className="pa-nav-group"><h2>{isBn?bnNames[group.group]:group.group}</h2>{group.items.map(item=>{const path=item[1];return <Link key={path} href={root+(path?"/"+path:"")} prefetch onMouseEnter={()=>router.prefetch(root+(path?"/"+path:""))} onClick={e=>{e.preventDefault();jump(path);}} className={"pa-nav-link"+(active(path)?" is-active":"")} aria-current={active(path)?"page":undefined}><AdminIcon name={item[2]}/><span>{isBn?bnNames[item[0]]:item[0]}</span></Link>})}</section>)}</nav>
+   <Link href={root} className="pa-sidebar-brand" onClick={e=>{e.preventDefault();jump("");}}><span className="pa-sidebar-brand-mark">e</span>Ekmivo</Link><nav>{groups.map(group=><section key={group.group} className="pa-nav-group"><h2>{isBn?bnNames[group.group]:group.group}</h2>{group.items.map(item=>{const path=item[1];return <Link key={path} href={root+(path?"/"+path:"")} prefetch onMouseEnter={()=>router.prefetch(root+(path?"/"+path:""))} onClick={e=>{e.preventDefault();jump(path);}} className={"pa-nav-link"+(active(path)?" is-active":"")} aria-current={active(path)?"page":undefined}><AdminIcon name={item[2]}/><span>{isBn?bnNames[item[0]]:item[0]}</span></Link>})}</section>)}</nav>
   </aside><main id="main" className="pa-main"><div className="pa-content">{children}</div></main></div>
   {search&&<div className="pa-palette-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSearch(false);}}><div className="pa-palette" role="dialog" aria-modal="true" aria-label={isBn?"দ্রুত খুঁজুন":"Quick navigation"}><div className="pa-palette-input"><AdminIcon name="search"/><input ref={queryRef} placeholder={isBn?"পেজের নাম লিখুন":"Search admin pages"} value={term} onChange={e=>{setTerm(e.target.value);setEntities([]);setEntitySearching(e.target.value.trim().length>=2)}} onKeyDown={e=>{if(e.key==="Enter"){if(options[0])jump(options[0].path);else if(entities[0])jump(entities[0].path);}}}/><button type="button" onClick={()=>setSearch(false)} aria-label="Close">Esc</button></div><div className="pa-palette-results">{options.map(item=><button key={item.path} onClick={()=>jump(item.path)}><AdminIcon name={item.icon}/><span>{isBn?bnNames[item.name]:item.name}</span></button>)}{role==="super_admin"&&term.trim().length>=2&&<><span className="pa-palette-section">{isBn?"ওয়ার্কস্পেস ও ব্যবহারকারী":"Workspaces & users"}</span>{entities.map(item=><button key={item.kind+item.id} onClick={()=>jump(item.path)}><AdminIcon name={item.kind==="workspace"?"grid":"users"}/><span>{item.label}<small>{item.kind} · {item.id.slice(0,8)}</small></span></button>)}</>}{!options.length&&!entities.length&&!entitySearching&&<p>{isBn?"কোনো ফল পাওয়া যায়নি":"No matching pages or records"}</p>}</div></div></div>}
  </div>;
