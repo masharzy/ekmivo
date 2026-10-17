@@ -46,6 +46,9 @@ jobs:
       - name: Lint all web sources
         working-directory: apps/web
         run: npm run lint
+      - name: Typecheck Next.js application before long-running integration tests
+        working-directory: apps/web
+        run: npx tsc --noEmit -p tsconfig.json
       - name: Verify locked Admin design tokens and theme isolation
         run: python3 apps/web/scripts/verify-admin-design.py
       - name: Strict OpenAPI contract and schema references
