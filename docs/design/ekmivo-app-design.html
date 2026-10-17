@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ekmivo Android app: design reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--pg:#F4F3EE;--tx:#1B1B19;--mu:#6B6A64;--cb:#fff;--cbd:#D9D8D1;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--pg:#121211;--tx:#F1F0EA;--mu:#9A988F;--cb:#1E1E1C;--cbd:#34332F}}
+:root[data-theme="dark"]{--pg:#121211;--tx:#F1F0EA;--mu:#9A988F;--cb:#1E1E1C;--cbd:#34332F}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--tx);font-family:"Hind Siliguri",system-ui,sans-serif;padding:20px 16px 40px;min-height:100vh}
+h1{font-size:20px;font-weight:500;margin:0 0 4px;text-align:center}
+.lead{font-size:14px;color:var(--mu);text-align:center;margin:0 0 16px}
+.row2{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px}
+.row2 button{font:inherit;font-size:14px;padding:7px 14px;border-radius:99px;border:1px solid var(--cbd);background:var(--cb);color:var(--tx);cursor:pointer}
+.row2 button.on{background:var(--tx);color:var(--pg);border-color:var(--tx)}
+button:focus-visible{outline:2px solid #3DDC97;outline-offset:2px}
+#cap{text-align:center;font-size:16px;font-weight:500;margin:4px 0 4px}
+#note{text-align:center;font-size:13px;color:var(--mu);max-width:320px;margin:0 auto 16px;line-height:1.6;min-height:42px}
+.ph{--bg:#0F0F0E;--s1:#181817;--s2:#222220;--bd:#2C2C29;--tx:#F1F0EA;--mu:#8D8B84;--ok:#3DDC97;--wr:#F5B544;--er:#F2685B;width:300px;max-width:100%;height:620px;margin:0 auto;background:var(--bg);color:var(--tx);border-radius:34px;border:6px solid #2C2C29;overflow:hidden;display:flex;flex-direction:column}
+.ph .top{display:flex;align-items:center;gap:10px;padding:16px 16px 8px}
+.ph .logo{width:34px;height:34px;border-radius:10px;background:var(--tx);color:#111;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:16px;flex:none}
+.ph .shop{font-size:14px;font-weight:500;line-height:1.2}
+.ph .sub{font-size:11px;color:var(--mu)}
+.ph .chip{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border-radius:99px;border:1px solid var(--bd);background:var(--s1)}
+.ph .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:bl 1.6s infinite}
+@keyframes bl{50%{opacity:.35}}
+@keyframes rp{0%{transform:scale(.8);opacity:.5}100%{transform:scale(1.25);opacity:0}}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ph .dot,.ph .ring i.r,.ph .spin{animation:none}}
+.ph .hero{display:flex;flex-direction:column;align-items:center;padding:10px 16px 6px}
+.ph .ring{position:relative;width:136px;height:136px;display:flex;align-items:center;justify-content:center;margin:10px 0 12px}
+.ph .ring i.r{position:absolute;inset:0;border-radius:50%;border:1px solid var(--ok);animation:rp 2.8s infinite}
+.ph .ring i.r2{animation-delay:1.4s}
+.ph .core{width:112px;height:112px;border-radius:50%;background:var(--s1);border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ph .amt{font-size:22px;font-weight:500}
+.ph .lab{font-size:11px;color:var(--mu);margin-top:2px}
+.ph .note{font-size:12px;color:var(--mu);text-align:center}
+.ph .stats{display:flex;gap:8px;padding:12px 16px 4px}
+.ph .st{flex:1;background:var(--s1);border-radius:12px;padding:9px 10px}
+.ph .st b{display:block;font-size:17px;font-weight:500}
+.ph .st span{font-size:11px;color:var(--mu)}
+.ph .sec{font-size:11px;color:var(--mu);padding:12px 16px 6px}
+.ph .row{display:flex;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--bd)}
+.ph .pv{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#fff}
+.ph .rm{flex:1;min-width:0}.ph .rm b{font-size:14px;font-weight:500;display:block;line-height:1.25}.ph .rm span{font-size:11px;color:var(--mu)}
+.ph .tag{font-size:11px;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.ph .t-ok{background:#12301F;color:var(--ok)}.ph .t-wr{background:#33260D;color:var(--wr)}.ph .t-er{background:#3A1B18;color:var(--er)}.ph .t-n{background:var(--s2);color:var(--mu)}
+.ph .nav{margin-top:auto;display:flex;border-top:1px solid var(--bd);padding:8px 24px 14px;justify-content:space-around}
+.ph .ni{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--mu);padding:4px 18px;border-radius:12px}
+.ph .ni.on{color:var(--tx);background:var(--s2)}
+.ph svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ph .btn{display:flex;align-items:center;justify-content:center;height:46px;border-radius:14px;font-size:15px;font-weight:500;width:100%;background:var(--tx);color:#111}
+.ph .lnk{font-size:13px;color:var(--mu);text-align:center;padding:10px}
+.ph .bot{padding:0 20px 24px}
+.ph .ctr{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px}
+.ph .ic{width:76px;height:76px;border-radius:24px;background:var(--s1);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.ph .ic svg.i{width:32px;height:32px}
+.ph h3{font-size:19px;font-weight:500;margin:0 0 8px;line-height:1.5}
+.ph p{font-size:13px;color:var(--mu);margin:0;line-height:1.7}
+.ph .card{background:var(--s1);border-radius:14px;margin:0 16px 10px;overflow:hidden}
+.ph .li{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;border-top:1px solid var(--bd)}
+.ph .li:first-child{border-top:0}.ph .li .v{margin-left:auto;color:var(--mu);font-size:12px}
+.ph .li svg.i{width:17px;height:17px;color:var(--mu)}
+.ph .seg{display:flex;gap:6px;margin-left:auto}.ph .seg b{font-weight:400;font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--bd);color:var(--mu)}.ph .seg b.on{background:var(--tx);color:#111;border-color:var(--tx)}
+.ph .dots{display:flex;gap:6px;justify-content:center;padding:18px 0 0}.ph .dots b{width:22px;height:4px;border-radius:2px;background:var(--bd)}.ph .dots b.on{background:var(--tx)}
+.ph .scan{flex:1;margin:10px 16px;border-radius:20px;background:#0A0A09;border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:relative}
+.ph .scan.dim .fr{opacity:.55}
+.ph .fr{width:150px;height:150px;position:relative}.ph .fr i{position:absolute;width:26px;height:26px;border:2.5px solid var(--tx)}
+.ph .hint{font-size:12px;color:var(--mu)}
+.ph .torch{position:absolute;top:12px;right:12px;font-size:11px;padding:4px 10px;border-radius:99px;border:1px solid var(--bd);background:var(--s1);color:var(--mu)}
+.ph .sheet{background:var(--s2);border-radius:24px 24px 0 0;padding:18px 18px 22px;margin-top:auto;border-top:1px solid var(--bd)}
+.ph .stp{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px;text-align:left;border-top:1px solid var(--bd)}
+.ph .stp:first-child{border-top:0}
+.ph .n{width:20px;height:20px;border-radius:50%;border:1px solid var(--bd);font-size:11px;display:flex;align-items:center;justify-content:center;color:var(--mu);flex:none}
+.ph .cells{display:flex;gap:6px;justify-content:center;align-items:center;margin:20px 0 6px}
+.ph .cell{width:26px;height:38px;border-radius:8px;border:1px solid var(--bd);background:var(--s1);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500}
+.ph .cell.on{border-color:var(--tx)}
+.ph .spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--bd);border-top-color:var(--tx);animation:sp 1s linear infinite}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="act" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+<symbol id="set" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="bat" viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/></symbol>
+<symbol id="off" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+<symbol id="sto" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5M3 9h18M4 9v11h16V9"/></symbol>
+<symbol id="ref" viewBox="0 0 24 24"><path d="M20 11a8 8 0 10-2.3 5.7M20 4v7h-7"/></symbol>
+<symbol id="msg" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+<symbol id="bel" viewBox="0 0 24 24"><path d="M6 17v-6a6 6 0 1112 0v6l1.5 2h-15zM10 21h4"/></symbol>
+<symbol id="doc" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7zM14 3v5h5"/></symbol>
+<symbol id="phn" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></symbol>
+<symbol id="cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+<symbol id="chk" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+</svg>
+
+<h1>Ekmivo Android app</h1>
+<p class="lead">ডিজাইন রেফারেন্স</p>
+<div class="row2" id="modes"></div>
+<div id="cap"></div>
+<div id="note"></div>
+<div id="stage"></div>
+<div class="row2" id="nv" style="margin-top:16px"></div>
+<div class="row2" id="chips" style="margin-top:16px"></div>
+
+<script>
+const I=n=>`<svg class="i" aria-hidden="true"><use href="#${n}"/></svg>`;
+const bn=n=>String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[d]);
+const nav=a=>`<div class="nav"><div class="ni ${a==0?'on':''}">${I('act')}লাইভ</div><div class="ni ${a==1?'on':''}">${I('set')}সেটিংস</div></div>`;
+const hdr=`<div class="top"><div class="logo">e.</div><div><div class="shop">রহিম ফ্যাশন</div><div class="sub">Galaxy A54</div></div>`;
+const hdrG=`<div class="top"><div class="logo">e.</div><div><div class="shop">ফোন যুক্ত করুন</div><div class="sub">ড্যাশবোর্ডের QR স্ক্যান করুন</div></div></div>`;
+const frame=`<div class="fr"><i style="top:0;left:0;border-right:0;border-bottom:0;border-radius:10px 0 0 0"></i><i style="top:0;right:0;border-left:0;border-bottom:0;border-radius:0 10px 0 0"></i><i style="bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 10px"></i><i style="bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 10px 0"></i></div>`;
+const tg=(l,s)=>`<span class="tag ${s==2?'t-ok':'t-n'}">${l}${s==2?' ✓':''}</span>`;
+const W=(k,ic,t,p,tags,btn,lnk)=>`<div class="dots">${[1,2,3,4].map(i=>`<b class="${i<=k?'on':''}"></b>`).join('')}</div>
+<div class="ctr"><div class="ic">${I(ic)}</div><h3>${t}</h3><p>${p}</p><div style="display:flex;gap:8px;margin-top:18px">${tags}</div></div>
+<div class="bot"><div class="btn">${btn}</div><div class="lnk">${lnk}</div></div>`;
+const S={
+welcome:`<div class="top"><div class="logo">e.</div><div class="shop">Ekmivo</div></div>
+<div class="ctr"><div class="ic">${I('phn')}</div><h3>ফোনটি Ekmivo-র সাথে যুক্ত করুন</h3><p>bKash ও Nagad-এর পেমেন্ট SMS নিজে থেকে যাচাই হবে। আপনাকে কিছু মেলাতে হবে না।</p>
+<div class="card" style="margin:20px 0 0;width:100%"><div class="stp"><span class="n">১</span>ড্যাশবোর্ডে ‘ফোন যুক্ত করুন’ খুলুন</div><div class="stp"><span class="n">২</span>এই ফোনে QR স্ক্যান করুন</div><div class="stp"><span class="n">৩</span>প্রয়োজনীয় অনুমতিগুলো দিন</div></div></div>
+<div class="bot"><div class="btn">QR স্ক্যান করুন</div><div class="lnk">কোড দিয়ে যুক্ত করুন</div></div>`,
+cam:`${hdrG}<div class="scan"><div class="ic" style="margin:0">${I('cam')}</div><div style="text-align:center;padding:0 22px"><h3 style="margin-bottom:6px">ক্যামেরা চালু করুন</h3><p>QR কোড স্ক্যান করতে ক্যামেরা লাগবে। কোনো ছবি তোলা বা রাখা হবে না।</p></div></div>
+<div class="bot"><div class="btn">অনুমতি দিন</div><div class="lnk">কোড দিয়ে যুক্ত করুন</div></div>`,
+scan:`${hdrG}<div class="scan"><span class="torch">টর্চ</span>${frame}<div class="hint">ড্যাশবোর্ডের QR কোড ফ্রেমে ধরুন</div></div>
+<div class="bot"><div class="lnk">কোড দিয়ে যুক্ত করুন</div></div>`,
+confirm:`${hdrG}<div class="scan dim">${frame}</div>
+<div class="sheet"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="logo" style="background:#D12053;color:#fff;font-size:13px">রি</div><div><div class="shop">রহিম ফ্যাশন</div><div class="sub">স্ক্যান সফল হয়েছে</div></div></div>
+<p style="margin-bottom:14px">Ekmivo এই ফোনের bKash ও Nagad পেমেন্ট SMS পড়ে <b style="font-weight:500;color:var(--tx)">রহিম ফ্যাশন</b>-এ পাঠাবে। অন্য কোনো SMS পড়া হবে না।</p>
+<div class="btn">নিশ্চিত করে যুক্ত করুন</div><div class="lnk" style="padding:10px 0 0">বাতিল</div></div>`,
+conn:`${hdrG}<div class="ctr"><div class="ic"><div class="spin"></div></div><h3>যুক্ত হচ্ছে…</h3><p>রহিম ফ্যাশন-এর সাথে নিরাপদ সংযোগ তৈরি হচ্ছে।</p></div>`,
+p1:W(1,'msg','পেমেন্ট SMS পড়তে দিন','bKash ও Nagad-এর পেমেন্ট SMS ধরার জন্য এই অনুমতি দরকার। অন্য কোনো SMS পাঠানো হবে না।',tg('SMS',1)+tg('নোটিফিকেশন',1)+tg('ব্যাটারি',1),'অনুমতি দিন','কেন দরকার?'),
+p2:W(2,'bel','নোটিফিকেশন চালু করুন','ফরওয়ার্ডিং চালু আছে কি না, আর কোনো SMS ব্যর্থ হলে সেটা জানাতে নোটিফিকেশন দরকার।',tg('SMS',2)+tg('নোটিফিকেশন',1)+tg('ব্যাটারি',1),'অনুমতি দিন','কেন দরকার?'),
+p3:W(3,'bat','ব্যাকগ্রাউন্ডে চালু রাখুন','স্ক্রিন বন্ধ থাকলেও যেন কোনো পেমেন্ট SMS মিস না হয়, তাই ব্যাটারি সীমাবদ্ধতা থেকে Ekmivo-কে ছাড় দিন।',tg('SMS',2)+tg('নোটিফিকেশন',2)+tg('ব্যাটারি',1),'অনুমতি দিন','কেন দরকার?'),
+p4:W(4,'phn','স্লিপিং অ্যাপ তালিকা থেকে সরান','Samsung ফোনের ব্যাটারি সেটিংসে Ekmivo-কে ‘স্লিপিং অ্যাপ’ ও ‘ডিপ স্লিপিং অ্যাপ’ তালিকা থেকে সরিয়ে রাখুন। নইলে স্ক্রিন বন্ধ থাকলে SMS থেমে যেতে পারে।',tg('SMS',2)+tg('নোটিফিকেশন',2)+tg('ব্যাটারি',2),'সেটিংস খুলুন','করেছি, এগিয়ে যান'),
+done:`<div class="top"><div class="logo">e.</div><div class="shop">রহিম ফ্যাশন</div></div><div class="ctr"><div class="ic" style="color:var(--ok)">${I('chk')}</div><h3>সব ঠিক আছে</h3><p>রহিম ফ্যাশনের পেমেন্ট SMS এখন থেকে নিজে থেকে যাচাই হবে।</p></div>
+<div class="bot"><div class="btn">শুরু করুন</div></div>`,
+home:`${hdr}<div class="chip"><i class="dot"></i>লাইভ</div></div>
+<div class="hero"><div class="ring"><i class="r"></i><i class="r r2"></i><div class="core"><div class="amt">৳১২,৪৫০</div><div class="lab">আজ যাচাই হয়েছে</div></div></div><div class="note">শেষ SMS ২ মিনিট আগে পাঠানো হয়েছে</div></div>
+<div class="stats"><div class="st"><b>১৮</b><span>পাঠানো</span></div><div class="st"><b>১</b><span>অপেক্ষায়</span></div><div class="st"><b style="color:var(--er)">১</b><span>ব্যর্থ</span></div></div>
+<div class="sec">সাম্প্রতিক পেমেন্ট</div>
+<div class="row"><div class="pv" style="background:#D12053">bK</div><div class="rm"><b>৳১,২০০</b><span>••••৪৮২১, ২ মি আগে</span></div><span class="tag t-ok">পাঠানো হয়েছে</span></div>
+<div class="row"><div class="pv" style="background:#E2262D">Ng</div><div class="rm"><b>৳৮৫০</b><span>••••৯৩০৭, ১১ মি আগে</span></div><span class="tag t-wr">পাঠানো হচ্ছে</span></div>
+<div class="row"><div class="pv" style="background:#D12053">bK</div><div class="rm"><b>৳২,৩০০</b><span>••••১২৫৫, ২৪ মি আগে</span></div><span class="tag t-er">আবার চেষ্টা</span></div>
+${nav(0)}`,
+code:`${hdrG.replace('ড্যাশবোর্ডের QR স্ক্যান করুন','কোড দিয়ে')}<div class="ctr" style="justify-content:flex-start;padding-top:36px"><h3>পেয়ারিং কোড লিখুন</h3><p>ড্যাশবোর্ডের ‘ফোন যুক্ত করুন’ পেজে কোডটি দেখাবে।</p>
+<div class="cells"><span class="cell">K</span><span class="cell">7</span><span class="cell">M</span><span class="cell">2</span><span class="hint">-</span><span class="cell">9</span><span class="cell">Q</span><span class="cell on"></span><span class="cell"></span></div></div>
+<div class="bot"><div class="btn">কোড যাচাই করুন</div><div class="lnk">QR স্ক্যান করুন</div></div>`,
+off:`<div class="top"><div class="logo">e.</div><div class="shop">Ekmivo</div><div class="chip" style="color:var(--er)">বিচ্ছিন্ন</div></div>
+<div class="ctr"><div class="ic" style="color:var(--er)">${I('off')}</div><h3>এই ফোন ড্যাশবোর্ড থেকে বিচ্ছিন্ন</h3><p>ওয়েব থেকে ডিভাইসটি সরানো হয়েছে। আবার যুক্ত করলেই SMS পাঠানো শুরু হবে।</p></div>
+<div class="bot"><div class="btn">আবার যুক্ত করুন</div><div class="lnk">২টি অপ্রেরিত SMS দেখুন</div></div>`,
+set:`<div class="top"><div class="logo">e.</div><div class="shop" style="font-size:17px">সেটিংস</div></div>
+<div class="card" style="margin-top:6px"><div class="li">${I('sto')}রহিম ফ্যাশন<span class="v">Galaxy A54</span></div><div class="li">${I('ref')}শেষ সিঙ্ক<span class="v">২ মিনিট আগে</span></div></div>
+<div class="sec" style="padding-top:6px">নির্ভরযোগ্যতা</div>
+<div class="card"><div class="li">${I('msg')}SMS অনুমতি<span class="v" style="color:var(--ok)">চালু</span></div><div class="li">${I('bel')}নোটিফিকেশন<span class="v" style="color:var(--ok)">চালু</span></div><div class="li">${I('bat')}ব্যাটারি ছাড়<span class="v" style="color:var(--wr)">ঠিক করুন ›</span></div></div>
+<div class="sec" style="padding-top:2px">অ্যাপ</div>
+<div class="card"><div class="li">ভাষা<div class="seg"><b class="on">বাংলা</b><b>English</b></div></div><div class="li">থিম<div class="seg"><b class="on">সিস্টেম</b><b>লাইট</b><b>ডার্ক</b></div></div><div class="li">${I('doc')}ডায়াগনস্টিক ও লগ<span class="v">›</span></div></div>
+<div class="card"><div class="li" style="color:var(--er);justify-content:center">ফোন বিচ্ছিন্ন করুন</div></div>
+${nav(1)}`
+};
+const flow=[
+['welcome','ওয়েলকাম','অ্যাপ প্রথমবার খুললে, পেয়ার করা না থাকলে এই স্ক্রিন আসে। এখনো অ্যাপ জানে না কোন দোকান।'],
+['cam','ক্যামেরা অনুমতি','‘QR স্ক্যান করুন’ চাপলে ক্যামেরার অনুমতি না থাকলে এটি আসে। আগে দেওয়া থাকলে এই ধাপ বাদ।'],
+['scan','QR স্ক্যান','এখনো দোকানের নাম জানা নেই, তাই স্ক্রিনে কোনো দোকানের নাম নেই। QR পড়া হলে পরের ধাপ নিজে থেকে আসে।'],
+['confirm','নিশ্চিত করুন','QR থেকে (বা কোড যাচাই করে সার্ভার থেকে) দোকানের নাম পাওয়ার পরেই এটি দেখায়। এই বাটনে চাপাই সম্মতি।'],
+['conn','সংযোগ','সার্ভারে পেয়ারিং হচ্ছে। ব্যবহারকারীকে কিছু করতে হয় না।'],
+['p1','অনুমতি ১: SMS','পেয়ারিং শেষ হতেই অনুমতির ধাপ শুরু। একটা স্ক্রিনে একটা অনুমতি।'],
+['p2','অনুমতি ২: নোটিফিকেশন','আগের অনুমতি পেলে নিজে থেকেই এই স্ক্রিনে আসে।'],
+['p3','অনুমতি ৩: ব্যাটারি','সিস্টেম ডায়ালগে ‘অনুমতি’ দিলে পরের ধাপ।'],
+['p4','অনুমতি ৪: Samsung গাইড','সেটিংস অ্যাপে করতে হয়, অ্যাপ নিজে করতে পারে না। ফোন Samsung না হলে এই ধাপ বাদ।'],
+['done','শেষ','সব অনুমতি ঠিক থাকলে। ‘শুরু করুন’ চাপলে হোম।']
+];
+const others=[['home','হোম','সেটআপের পর রোজকার স্ক্রিন।'],['code','কোড দিয়ে','QR না চাইলে। কোড দিলে সার্ভার দোকানের নাম এনে একই নিশ্চিতকরণ শিট দেখায়।'],['off','বিচ্ছিন্ন','ওয়েব থেকে ফোন সরালে। শুধু একটাই বাটন: আবার যুক্ত করুন।'],['set','সেটিংস','নির্ভরযোগ্যতা, অ্যাপ, ও বিচ্ছিন্ন করার অপশন।']];
+let mode='flow',idx=0,oth=0;
+const el=id=>document.getElementById(id);
+function btn(p,t,fn,on){const b=document.createElement('button');b.textContent=t;if(on)b.className='on';b.onclick=fn;p.appendChild(b)}
+function draw(){
+  const list=mode==='flow'?flow:others,i=mode==='flow'?idx:oth,it=list[i];
+  el('stage').innerHTML='<div class="ph">'+S[it[0]]+'</div>';
+  el('cap').textContent=mode==='flow'?`ধাপ ${bn(i+1)} / ${bn(flow.length)}: ${it[1]}`:it[1];
+  el('note').textContent=it[2];
+  el('modes').innerHTML='';btn(el('modes'),'প্রথমবার সেটআপ',()=>{mode='flow';draw()},mode==='flow');btn(el('modes'),'অন্যান্য স্ক্রিন',()=>{mode='other';draw()},mode!=='flow');
+  el('nv').innerHTML='';el('chips').innerHTML='';
+  if(mode==='flow'){
+    btn(el('nv'),'‹ আগের',()=>{if(idx>0){idx--;draw()}});
+    btn(el('nv'),idx===flow.length-1?'হোমে যান ›':'পরের ›',()=>{if(idx<flow.length-1){idx++}else{mode='other';oth=0}draw()},true);
+  }else others.forEach((o,k)=>btn(el('chips'),o[1],()=>{oth=k;draw()},k===oth));
+}
+draw();
+</script>
+</body>
+</html>
