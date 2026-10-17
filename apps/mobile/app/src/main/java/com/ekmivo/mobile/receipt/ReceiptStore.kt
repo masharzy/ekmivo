@@ -243,6 +243,35 @@ class ReceiptStore(private val appContext: Context): SQLiteOpenHelper(appContext
   if(!it.moveToFirst())return null
   val id=it.getString(0);val encrypted=it.getBlob(1);val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,encrypted.copyOfRange(0,12)));cipher.updateAAD(id.toByteArray());id to cipher.doFinal(encrypted.copyOfRange(12,encrypted.size))
  }
+ /**
+  * Keep revoked/other-shop rows encrypted in-place without starving
+  * legitimate new receipts after a different shop is paired.
+  * Each candidate is decrypted locally to read its immutable enrollment;
+  * no metadata/identity is guessed from the SIM or provider.
+  */
+ fun nextEligible():Pair<String,ByteArray>? {
+  val activeIds=buildSet<String>{
+   phone()?.optString("id")?.takeIf{it.isNotBlank()}?.let{add(it)}
+   enrollment()?.optString("id")?.takeIf{it.isNotBlank()}?.let{add(it)}
+   if(phone()!=null)bindings().forEach{binding->
+    binding.optString("id").takeIf{it.isNotBlank()}?.let{add(it)}
+   }
+  }
+  if(activeIds.isEmpty())return null
+  readableDatabase.rawQuery("SELECT id,body FROM pending ORDER BY created,id LIMIT 500",null).use{cursor->
+   while(cursor.moveToNext()){
+    val id=cursor.getString(0)
+    val blob=cursor.getBlob(1)
+    val cipher=Cipher.getInstance("AES/GCM/NoPadding")
+    cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,blob.copyOfRange(0,12)))
+    cipher.updateAAD(id.toByteArray())
+    val bytes=cipher.doFinal(blob.copyOfRange(12,blob.size))
+    if(JSONObject(String(bytes,Charsets.UTF_8)).optString("enrollment_id") in activeIds)
+     return id to bytes
+   }
+  }
+  return null
+ }
  fun recent(limit:Int=20):List<JSONObject>{
   val results=mutableListOf<JSONObject>()
   readableDatabase.rawQuery("SELECT id,body,created,sent FROM recent ORDER BY sent ASC,created DESC,id DESC LIMIT ?",arrayOf(limit.coerceIn(1,500).toString())).use{cursor->

@@ -74,7 +74,7 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
    // Each signed receipt is independently authenticated by Go; revocation
    // and stale source configuration still fail closed on the server.
    for(batchIndex in 0 until 30){
-    val next=store.next()?:break
+    val next=store.nextEligible()?:break
     val queued=JSONObject(next.second.toString(Charsets.UTF_8))
     val boundID=queued.optString("enrollment_id")
     if(boundID.isEmpty()) {store.setQueueError("QUEUED_ASSOCIATION_UNKNOWN");return Result.failure()}
@@ -145,8 +145,9 @@ class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,
    }
    if(heartbeat.first !in 200..299)return Result.retry()
 
-   if(store.count()>0){
-    // A successful batch with more pending evidence is NOT a transport error.
+   if(store.nextEligible()!=null){
+    // Only schedule immediate next batches for eligible receipts.
+    // Another shop's held evidence remains encrypted, never resent or lost.
     // Queue the next constrained batch instead of exponential retry backoff.
     continueQueued(applicationContext)
     Result.success()
