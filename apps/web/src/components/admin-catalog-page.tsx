@@ -22,7 +22,7 @@ export async function AdminCreditsPage({isSuper}:{isSuper:boolean}){
  try{
  const [all,entries]=await Promise.all([
  database()`SELECT w.id,w.name,coalesce(c.balance,0) AS balance FROM workspaces w
-  LEFT JOIN platform_ai_credit_balances c ON c.workspace_id=w.id ORDER BY w.name LIMIT 500`,
+  LEFT JOIN platform_ai_credit_balances c ON c.workspace_id=w.id WHERE EXISTS (SELECT 1 FROM workspace_product_access p WHERE p.workspace_id=w.id AND p.product='ai' AND p.enabled=true) ORDER BY w.name LIMIT 500`,
  database()`SELECT l.id,w.name AS workspace,l.delta,l.balance_after,l.reason,l.created_at,u.display_name AS actor
   FROM platform_ai_credit_ledger l JOIN workspaces w ON w.id=l.workspace_id JOIN app_users u ON u.id=l.actor_id
   ORDER BY l.created_at DESC LIMIT 100`
