@@ -114,3 +114,40 @@
 .pa-mfa-screen.pa-admin-design .pa-mfa-card button[type=submit]:not(.pa-mfa-link){min-height:28px;border:1px solid var(--ink);border-radius:6px;background:var(--ink);color:var(--onink);font-size:13px}
 .pa-mfa-screen.pa-admin-design .pa-mfa-card .pa-mfa-errors{color:var(--ba)}
 .pa-mfa-screen.pa-admin-design .pa-mfa-card .pa-mfa-codes{border-color:var(--bd);border-radius:8px;background:var(--s2)}
+
+/* Catalog UI: mapped directly to the original reference's .md/.fl/.sw/.pk/.tl component dimensions. */
+.pa-root.pa-admin-design .pa-admin-modal-backdrop{position:fixed;inset:0;z-index:140;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}
+.pa-root.pa-admin-design .pa-admin-modal{width:100%;max-width:480px;max-height:90vh;overflow:auto;box-shadow:var(--sh);position:relative;margin:0}
+.pa-root.pa-admin-design .pa-admin-fields{display:grid;gap:12px}
+.pa-root.pa-admin-design .pa-admin-fields>label{display:grid;gap:5px;color:var(--t2);font-size:13px;font-weight:500}
+.pa-root.pa-admin-design .pa-admin-fields input:not([type=checkbox]):not([type=file]),.pa-root.pa-admin-design .pa-admin-fields select{height:28px;width:100%;border-radius:6px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);padding:0 9px}
+.pa-root.pa-admin-design .pa-admin-fields input[type=file]{max-width:100%;font-weight:400}
+.pa-root.pa-admin-design .pa-admin-fields textarea{width:100%;min-height:64px;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--tx);font:inherit}
+.pa-root.pa-admin-design .pa-admin-form-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pa-root.pa-admin-design .pa-admin-form-pair label{display:grid;gap:5px}
+.pa-root.pa-admin-design .pa-admin-switches{border:1px solid var(--bd);border-radius:8px}
+.pa-root.pa-admin-design .pa-admin-switches label{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;gap:12px;border-top:1px solid var(--bd);font-weight:400}
+.pa-root.pa-admin-design .pa-admin-switches label:first-child{border-top:0}
+.pa-root.pa-admin-design .pa-admin-switches input[type=checkbox]{appearance:none;width:30px;height:18px;border:0;border-radius:99px;background:var(--s3);position:relative;flex:none;margin:0;cursor:pointer}
+.pa-root.pa-admin-design .pa-admin-switches input[type=checkbox]:after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.pa-root.pa-admin-design .pa-admin-switches input[type=checkbox]:checked{background:var(--ink)}
+.pa-root.pa-admin-design .pa-admin-switches input[type=checkbox]:checked:after{left:14px;background:var(--onink)}
+.pa-root.pa-admin-design .pa-admin-table-search{padding:10px 16px;border-bottom:1px solid var(--bd)}
+.pa-root.pa-admin-design .pa-admin-provider-row{display:flex;align-items:center;gap:11px;min-width:0}
+.pa-root.pa-admin-design .pa-admin-provider-row img{width:30px;height:30px;object-fit:contain;background:#fff;border-radius:7px;flex:none}
+.pa-root.pa-admin-design .pa-admin-provider-row strong{font-weight:500}
+.pa-root.pa-admin-design .pa-admin-provider-row small{display:block;color:var(--mu);font-size:12px}
+.pa-root.pa-admin-design .pa-admin-provider-letter{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;background:var(--s3);color:var(--t2)}
+.pa-root.pa-admin-design .pa-admin-catalog-preview{padding:12px 16px 16px}
+.pa-root.pa-admin-design .pa-admin-provider-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px auto 0;max-width:440px}
+.pa-root.pa-admin-design .pa-admin-provider-tile{border:1px solid var(--bd);border-radius:10px;padding:14px 8px 10px;text-align:center;font-weight:500;display:grid;justify-items:center;gap:8px}
+.pa-root.pa-admin-design .pa-admin-provider-tile img{width:40px;height:40px;object-fit:contain;background:#fff;border-radius:7px}
+.pa-root.pa-admin-design .pa-admin-two-col{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px}
+.pa-root.pa-admin-design .pa-admin-credit-form{padding:16px;align-self:start}
+.pa-root.pa-admin-design .pa-admin-credit-form h2{margin:0 0 12px;font-size:13px;font-weight:600}
+.pa-root.pa-admin-design .pa-admin-section-head{padding:12px 16px}
+.pa-root.pa-admin-design .pa-admin-section-head h2{font-size:13px;font-weight:600}
+.pa-root.pa-admin-design .pa-admin-credit-form form{margin-bottom:12px}
+.pa-root.pa-admin-design .pa-dialog-foot{gap:8px}
+@media(max-width:900px){.pa-root.pa-admin-design .pa-admin-two-col{grid-template-columns:1fr}}
+@media(max-width:480px){.pa-root.pa-admin-design .pa-admin-form-pair{grid-template-columns:1fr}}
