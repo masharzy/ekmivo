@@ -13,6 +13,7 @@ import {VerificationSettings,RoleControls} from "./admin-controls";
 import {AdminShell,type AdminLocale} from "./platform-admin-shell";
 import {AdminModal,AdminCopy} from "./platform-admin-widgets";
 import {AdminPaymentPlansPage} from "./admin-payment-plans-page";
+import {AdminProvidersPage,AdminCreditsPage,AdminSubscriptionsPage} from "./admin-catalog-page";
 import {AdminWorkspaceDetail,AdminUserDetail,AdminGlobalInventory,AdminHealthView,AdminSupportDetail} from "./platform-admin-inventory";
 
 type RecordRow={id:string;cells:string[];href?:string};
@@ -20,15 +21,15 @@ type RecordPage={columns:string[];rows:RecordRow[];next?:string};
 type Props={locale:AdminLocale;segments?:string[];query?:string;after?:string};
 const names:Record<string,[string,string]>={
  "":["Overview","ওভারভিউ"],workspaces:["Workspaces","ওয়ার্কস্পেস"],users:["Users","ব্যবহারকারী"],
- payments:["Payments","পেমেন্ট"],billing:["Billing","বিলিং"],credits:["API credits","এপিআই ক্রেডিট"],
- plans:["Plans","প্ল্যান"],"gateway/providers":["Providers","প্রোভাইডার"],"gateway/devices":["Receipt devices","রিসিপ্ট ডিভাইস"],
+ payments:["Payments","পেমেন্ট"],subscriptions:["Subscriptions","সাবস্ক্রিপশন"],billing:["Billing & Revenue","বিলিং ও আয়"],credits:["AI Credits","এআই ক্রেডিট"],providers:["Payment Providers","পেমেন্ট প্রোভাইডার"],
+ plans:["Plans & Pricing","প্ল্যান ও মূল্য"],"gateway/providers":["Providers","প্রোভাইডার"],"gateway/devices":["Receipt devices","রিসিপ্ট ডিভাইস"],
  "gateway/webhooks":["Webhooks & jobs","ওয়েবহুক ও জব"],ai:["AI Bot","এআই বট"],
  api:["API & sandbox","এপিআই ও স্যান্ডবক্স"],health:["Platform health","প্ল্যাটফর্মের অবস্থা"],
  staff:["Staff & security","স্টাফ ও নিরাপত্তা"],audit:["Audit log","অডিট লগ"],support:["Support tickets","সাপোর্ট টিকিট"],privacy:["Privacy requests","গোপনীয়তার আবেদন"],settings:["Settings","সেটিংস"]
 };
 const tabs:Record<string,string[]>={
  payments:["Payments","Exceptions","Disputes","Refunds","Reconciliation"],
- billing:["Subscriptions","Invoices","Revenue","Coupons"],
+ billing:["Subscriptions","Invoices","Revenue"],
  credits:["Balances","Ledger","Packs","Rules"],
  plans:["Payment gateway","AI Bot"],
  "gateway/webhooks":["Deliveries","Endpoints","Queues"],
@@ -179,6 +180,12 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  }else if(key==="workspaces"||key==="users"||key==="audit"){
  const page=isSuper?(key==="workspaces"?await workspaces(locale,q,after):key==="users"?await users(locale,q,after):await audit(locale,q,after)):null;
  body=<><PageHead title={t}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
+ }else if(key==="subscriptions"){
+ body=isSuper?<AdminSubscriptionsPage locale={locale} query={q}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ }else if(key==="providers"){
+ body=isSuper?<AdminProvidersPage isSuper/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ }else if(key==="credits"){
+ body=isSuper?<AdminCreditsPage isSuper/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="plans"){
  body=isSuper?<AdminPaymentPlansPage locale={locale} actor={admin.user.id}/>:<Denied locale={locale}/>;
  }else if(key==="staff"){
@@ -189,7 +196,20 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  body=<><PageHead title={t} action={isSuper&&(page||sub==="roles")?<AdminModal title="Staff roles" label="Manage roles"><RoleControls locale={locale} users={list}/></AdminModal>:undefined}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{!isSuper?<Denied locale={locale}/>:page?<><Search locale={locale} query={q} kind="staff"/><Records locale={locale} base={base} query={q} page={page}/></>:staffInventory||<Offline locale={locale}/>}</>;
  }else if(key==="settings"){
  const settings=isSuper?await platformSettings():null;
- body=<><PageHead title={t}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{!isSuper?<Denied locale={locale}/>:(!sub||sub==="authentication-email")&&settings?<section className="pa-surface pa-settings-grid"><div><h2>Email verification</h2><p>{settings.emailVerification?"Required":"Off"}</p><span className="pa-status-text"><span className={"pa-status-dot "+(mailReady()?"green":"grey")}/>Resend: {mailReady()?"Connected":"Not connected"}</span></div><AdminModal label="Edit settings" title="Authentication & email"><VerificationSettings locale={locale} enabled={settings.emailVerification} providerReady={mailReady()}/></AdminModal></section>:<Offline locale={locale}/>}</>;
+ let staff:Array<{id:string;name:string;email:string;verified:boolean;role:string|null}>=[];
+ if(isSuper){const rows=await database()`SELECT u.id,u.display_name,u.email,u.email_verified_at,p.role
+ FROM app_users u LEFT JOIN platform_administrators p ON p.user_id=u.id ORDER BY u.created_at DESC LIMIT 150`;
+ staff=rows.map(x=>({id:String(x.id),name:String(x.display_name),email:String(x.email),verified:!!x.email_verified_at,role:x.role?String(x.role):null}));}
+ const roles=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"roles",query:""}):null;
+ const sessions=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"sessions",query:""}):null;
+ body=<><PageHead title={t}/>{!isSuper?<Denied locale={locale}/>:<>
+ <section className="pa-surface pa-settings-grid"><div><h2>Email verification</h2><p>{settings?.emailVerification?"Required":"Off"}</p>
+ <span className="pa-status-text"><span className={"pa-status-dot "+(mailReady()?"green":"grey")}/>Email service: {mailReady()?"Configured":"Configuration required"}</span>
+ </div><AdminModal label="Manage verification" title="Email verification"><VerificationSettings locale={locale} enabled={!!settings?.emailVerification} providerReady={mailReady()}/></AdminModal></section>
+ <div className="pa-page-head"><h2>Admin team</h2><AdminModal title="Admin roles" label="Manage roles"><RoleControls locale={locale} users={staff}/></AdminModal></div>
+ {roles}
+ <div className="pa-page-head"><h2>Admin sessions</h2></div>{sessions}
+ </>}</>;
  }else if(key==="support"&&extra[0]){
  body=isSuper?<AdminSupportDetail locale={locale} id={extra[0]}/>:<Denied locale={locale}/>;
  }else if(key==="health"){
