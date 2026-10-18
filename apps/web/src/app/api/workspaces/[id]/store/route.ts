@@ -22,7 +22,7 @@ async function handle(request:Request,{params}:{params:Promise<{id:string}>}){
   let input:unknown;try{input=JSON.parse(raw)}catch{return reply({code:"INVALID_BODY"},422)}
   const value=input as {body?:unknown;version?:unknown}|null;
   if(!validStoreProfile(value?.body)||!Number.isInteger(value?.version)||(value?.version as number)<1)return reply({code:"INVALID_STORE"},422);
-  const body={...value.body,name:value.body.name.trim()};
+  const body={...value.body,name:value.body.name.trim(),statement_name:value.body.statement_name.toUpperCase()};
   let digest:string|null=null,png:Buffer|null=null;
   if(body.logo.startsWith("data:image/png;base64,")){
    png=Buffer.from(body.logo.slice(22),"base64");
