@@ -1,3 +1,4 @@
+import {workspacePlanFeatures,sectionPlanFeature} from "../../../../../../../lib/server/plan-access";
 import {notFound,redirect} from "next/navigation";
 import {requireWorkspace} from "../../../../../../../lib/server/auth";
 import {paymentContextFor} from "../../../../../../../lib/server/workspace-context";
@@ -16,6 +17,9 @@ export default async function PaymentDetail({params,searchParams}:{params:Promis
  if(query.env!==undefined)redirect(`/w/${workspace.id}/payments/${p.serviceSection}/${p.resourceID}`);
  const context=await paymentContextFor(workspace,user.id,undefined);
  if(p.serviceSection==="refunds")return <PaymentRefunds locale={locale} workspaceId={workspace.id} environment={context.environment} detailId={p.resourceID} canManage={["owner","admin"].includes(workspace.role)}/>;
- if(document)return <PaymentDocuments userId={user.id} locale={locale} workspaceId={workspace.id} environment={context.environment} kind={p.serviceSection as "customers"|"invoices"|"payment-links"} detailId={p.resourceID} canWrite={workspace.role!=="viewer"} canManage={["owner","admin"].includes(workspace.role)}/>;
+ const features=await workspacePlanFeatures(workspace.id,context.environment);
+ const feature=sectionPlanFeature[p.serviceSection];
+ if(feature&&!features[feature])notFound();
+ if(document)return <PaymentDocuments canExport={features.exports} userId={user.id} locale={locale} workspaceId={workspace.id} environment={context.environment} kind={p.serviceSection as "customers"|"invoices"|"payment-links"} detailId={p.resourceID} canWrite={workspace.role!=="viewer"} canManage={["owner","admin"].includes(workspace.role)}/>;
  return <div className={["transactions","incoming"].includes(p.serviceSection)?"opw-detail":"opw-other-detail"}><header className="opw-detail-heading"><h1>{p.serviceSection==="transactions"?(locale==="bn"?"লেনদেনের বিস্তারিত":"Transaction details"):p.serviceSection==="incoming"?(locale==="bn"?"রসিদের বিস্তারিত":"Receipt details") :p.serviceSection==="webhooks"?(locale==="bn"?"ওয়েবহুকের বিস্তারিত":"Webhook details"):p.serviceSection==="events"?(locale==="bn"?"ইভেন্টের বিস্তারিত":"Event details"):(locale==="bn"?"রেকর্ডের বিস্তারিত":"Record details")}</h1></header><PaymentOperations key={user.id+workspace.id+context.environment+p.resourceID} locale={locale} workspaceId={workspace.id} userId={user.id} environment={context.environment} resource={(p.serviceSection==="transactions"?"payments":p.serviceSection) as "payments"|"incoming"|"gateways"|"devices"|"webhooks"|"events"} detailId={p.resourceID} canManage={["owner","admin"].includes(workspace.role)}/></div>;
 }

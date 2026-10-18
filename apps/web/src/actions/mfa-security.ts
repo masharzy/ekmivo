@@ -42,14 +42,16 @@ async function change(localeParam:string, operation:"recover"|"rotate"|"reset", 
     if(typeof code!=="string"||! /^[A-Za-z0-9_-]{32}$/.test(code.trim()))return fail();
     const consumed=await tx`UPDATE platform_admin_recovery_codes SET consumed_at=now() WHERE user_id=${user.id}::uuid AND code_hash=${digest(code.trim())} AND consumed_at IS NULL RETURNING code_hash`;
     if(!consumed.length)return fail();
+    await tx`UPDATE platform_admin_trusted_devices SET revoked_at=now() WHERE user_id=${user.id}::uuid AND revoked_at IS NULL`;
     await tx`UPDATE auth_sessions SET mfa_verified_at=NULL,revoked_at=CASE WHEN id=${sessionId}::uuid THEN revoked_at ELSE now() END WHERE user_id=${user.id}::uuid`;
     await tx`UPDATE auth_sessions SET mfa_verified_at=now() WHERE id=${sessionId}::uuid`;
    } else {
     const verified=session[0].mfa_verified_at?new Date(session[0].mfa_verified_at).getTime():0;
-    if(verified<Date.now()-300000||verified>Date.now()+60000||verified<new Date(mfa[0].confirmed_at).getTime())return "fresh";
+    if(!verified||verified>Date.now()+60000||verified<new Date(mfa[0].confirmed_at).getTime())return "fresh";
     await tx`DELETE FROM platform_admin_recovery_codes WHERE user_id=${user.id}::uuid`;
     if(operation==="rotate")for(const value of generated)await tx`INSERT INTO platform_admin_recovery_codes(user_id,code_hash) VALUES(${user.id}::uuid,${digest(value)})`;
     else {
+     await tx`UPDATE platform_admin_trusted_devices SET revoked_at=now() WHERE user_id=${user.id}::uuid AND revoked_at IS NULL`;
      await tx`DELETE FROM platform_admin_mfa WHERE user_id=${user.id}::uuid`;
      await tx`UPDATE auth_sessions SET mfa_verified_at=NULL,revoked_at=CASE WHEN id=${sessionId}::uuid THEN revoked_at ELSE now() END WHERE user_id=${user.id}::uuid`;
     }

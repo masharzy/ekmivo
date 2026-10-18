@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { database } from "../lib/server/db";
 import { mailReady } from "../lib/server/email";
-import { requireFreshSuperAdmin, type PlatformRole } from "../lib/server/platform-admin";
+import { requireFreshSuperAdmin } from "../lib/server/platform-admin";
 import { asText, safeLocale } from "../lib/server/validation";
 
 export type AdminActionState={status:"idle"|"error"|"success";message:string};
@@ -61,6 +61,8 @@ export async function setPlatformRoleAction(localeParam:string,_previous:AdminAc
      VALUES (${id}::uuid,${role},${admin.user.id}::uuid)
      ON CONFLICT (user_id) DO UPDATE SET role=EXCLUDED.role,granted_by=EXCLUDED.granted_by`;
    }
+   await tx`UPDATE auth_sessions SET mfa_verified_at=NULL,revoked_at=now() WHERE user_id=${id}::uuid AND revoked_at IS NULL`;
+   await tx`UPDATE platform_admin_trusted_devices SET revoked_at=now() WHERE user_id=${id}::uuid AND revoked_at IS NULL`;
    await tx`INSERT INTO platform_admin_audit(actor_id,action,subject_id,description)
     VALUES (${admin.user.id}::uuid,'admin.role_changed',${id}::uuid,${"Role "+before+" -> "+role+" | "+reason})`;
    return true;

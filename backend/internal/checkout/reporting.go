@@ -30,7 +30,7 @@ func (s *Service) HandleReports(w http.ResponseWriter, r *http.Request) {
 	}
 	var raw []byte
 	var refundRaw []byte
-	e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+	e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(r.Context(), "SELECT pg13_reports($1::uuid,$2,$3,$4,$5::uuid)",
 			ws, realm, start, end, nullableID(account)).Scan(&raw); err != nil {
 			return err

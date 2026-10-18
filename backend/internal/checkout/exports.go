@@ -34,11 +34,11 @@ func (s *Service) HandleExports(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if !s.planFeature(w, r, ws, realm, "exports") {
+		return
+	}
 	var raw []byte
 	if r.Method == "POST" {
-		if !s.planFeature(w, r, ws, realm, "exports") {
-			return
-		}
 		if !originAllowed(r) {
 			fail(w, 403, "ORIGIN_DENIED")
 			return
@@ -56,7 +56,7 @@ func (s *Service) HandleExports(w http.ResponseWriter, r *http.Request) {
 			fail(w, 400, "IDEMPOTENCY_KEY_REQUIRED")
 			return
 		}
-		e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+		e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 			return tx.QueryRow(r.Context(), "SELECT pg10_export_enqueue($1::uuid,$2,$3::uuid,$4,$5)", ws, realm, actor, b.Resource, key).Scan(&result)
 		})
 		if e != nil {
@@ -71,7 +71,7 @@ func (s *Service) HandleExports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	download := r.PathValue("exportAction") == "download"
-	e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+	e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 		return tx.QueryRow(r.Context(), "SELECT pg10_export_get($1::uuid,$2,$3::uuid,$4::uuid,$5)", ws, realm, id, actor, download).Scan(&raw)
 	})
 	if e != nil {

@@ -67,7 +67,7 @@ export async function AdminBillingPage({locale,query}:{locale:AdminLocale;query:
     WHERE (${q}='' OR w.name ILIKE ${term} OR i.id::text ILIKE ${term})
     ORDER BY i.created_at DESC LIMIT 100`
  ]);
- const s=stats[0],money=(minor:unknown)=>"৳"+(Number(minor)/100).toLocaleString("en-BD",{minimumFractionDigits:2,maximumFractionDigits:2});
+ const s=stats[0],money=(minor:unknown)=>"৳"+(Number(minor)/100).toLocaleString("en-BD",{minimumFractionDigits:0,maximumFractionDigits:2});
  const timestamp=(v:unknown)=>v?new Date(String(v)).toLocaleDateString("en-GB"):"—";
  return <>
   <div className="pa-page-head"><div><h1>Billing & Revenue</h1><p>Ekmivo subscription invoices and collected revenue, not merchant payment volume.</p></div>

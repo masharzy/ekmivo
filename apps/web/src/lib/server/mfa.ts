@@ -40,7 +40,7 @@ export async function sessionMfaValid(userId:string):Promise<boolean>{
  WHERE s.token_hash=${hashToken(token)} AND s.user_id=${userId}::uuid
  AND u.disabled_at IS NULL AND s.revoked_at IS NULL AND s.expires_at>now()
  AND m.confirmed_at IS NOT NULL AND s.mfa_verified_at>=m.confirmed_at
- AND s.mfa_verified_at>now()-interval '12 hours' AND s.mfa_verified_at<=now()+interval '1 minute'
+ AND s.mfa_verified_at<=now()+interval '1 minute'
  LIMIT 1`;
  return rows.length>0;
 }

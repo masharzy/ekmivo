@@ -1,5 +1,5 @@
 /* Explicit Admin typography and scoped resets, values from Ekmivo_Admin.html. */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600&display=swap");
+@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url("../../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");unicode-range:U+0000-00FF,U+0100-024F,U+2000-206F,U+20A0-20CF}
 .pa-root.pa-admin-design,.pa-mfa-screen.pa-admin-design{background:var(--bg);color:var(--tx);font:13px/1.45 Inter,var(--font-hind-siliguri),system-ui,-apple-system,"Segoe UI",sans-serif;font-feature-settings:"cv11","ss01";font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;min-height:100dvh}
 .pa-root.pa-admin-design *,.pa-mfa-screen.pa-admin-design *{box-sizing:border-box}
 .pa-root.pa-admin-design :focus-visible,.pa-mfa-screen.pa-admin-design :focus-visible{outline:2px solid var(--ac);outline-offset:1px}

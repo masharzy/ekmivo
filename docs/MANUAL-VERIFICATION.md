@@ -720,3 +720,12 @@ Manual pending as before: frontend build, lint, TypeScript checks, all Go unit t
 **Actual rollback Neon Sandbox DB contract PASSES:** existing verified Sandbox allocation was connected to a temporary invoice inside a rollback subtransaction; its public projection reported paid_minor=5500, due_minor=0, exactly one verified receipt and no private_notes. Separately, an invalid combination of receipt/attempt was refused by immutable financial proof constraints. Control DB scheduled-Free downgrade preserved current paid entitlements, Undo cleared schedule, and forced expiry applied the scheduled Free plan, all rolled back with original state restored. **None** of this proves a production provider→browser transaction.
 
 **Remaining verification:** Next lint/type-check/build (Vercel plan build-rate-limit), GitHub Actions runner start, interactive 320/768/1024/1440 browser and keyboard/focus regression, authenticated Sandbox API key lifecycle, SMS device evidence delivery, SMTP inbox acceptance, live paid verification and billing renewal/replay. No Docker used and no production payment/financial test writes.
+
+## Admin trusted devices / plan audit — 2026-10-18
+
+Owner requested code-level verification only for this pass and will verify physical devices.
+
+- On an untrusted device, ordinary dashboard login must not grant Admin access; complete MFA once, then keep using the same valid session without periodic prompts.
+- Trust a private device for 30 days; sign out/in and verify remembered access. Remove it from Settings and confirm linked sessions lose access. Clearing device storage or using another browser requires MFA again.
+- After a role change or MFA recovery/reset, old trust and sessions must no longer authorize Admin operations.
+- Production deploy/migrations and authenticated production API integration remain unverified. Isolated Neon/code checks are recorded in `docs/evidence/ADMIN-SECURITY-PLANS-20261018/README.md`.

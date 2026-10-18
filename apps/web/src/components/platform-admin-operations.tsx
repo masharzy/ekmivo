@@ -38,7 +38,7 @@ export function UserSessionsAction({locale,userId,active}:{locale:"en"|"bn";user
   <Submit text={locale==="bn"?"সেশন প্রত্যাহার করুন":"Revoke all active sessions"}/><Status state={state}/>
  </form>;
 }
-export function AdminStepUpLink({locale}:{locale:"bn"|"en"}){return <p className="pa-subtle">{locale==="bn"?"সংবেদনশীল পরিবর্তনের আগে ১০ মিনিটের মধ্যে অথেন্টিকেটর যাচাই করুন।":"Sensitive operations require an authenticator verification within the past 10 minutes."} <a href={"/"+locale+"/admin/verify?reauth=1"} className="pa-action-link">{locale==="bn"?"আবার যাচাই করুন":"Reverify now"} →</a></p>}
+export function AdminStepUpLink({locale}:{locale:"bn"|"en"}){void locale;return null;}
 
 export function UserStatusAction({locale,userId,disabled,protectedUser=false}:{locale:"en"|"bn";userId:string;disabled:boolean;protectedUser?:boolean}){
  const [state,action]=useActionState(changeAdminUserStatusAction.bind(null,locale),initial);

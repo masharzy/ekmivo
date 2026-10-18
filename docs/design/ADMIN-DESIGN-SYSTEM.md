@@ -30,7 +30,7 @@
 | `--sh` | `0 16px 48px rgba(0,0,0,.14)` | `0 16px 48px rgba(0,0,0,.6)` |
 
 ## Exact dimensions and typography
-- Font: `Inter, system-ui, -apple-system, "Segoe UI", "Noto Sans Bengali", sans-serif`; Google Fonts weights 400, 450, 500, 600, `font-feature-settings:"cv11","ss01"`. Do not use Geist or Hind Siliguri in the Admin Panel.
+- Font: `Inter, system-ui, -apple-system, "Segoe UI", "Noto Sans Bengali", sans-serif`; Google Fonts weights 400, 450, 500, 600, `font-feature-settings:"cv11","ss01"`. Use Inter for English and Hind Siliguri for Bengali, per the owner’s latest instruction.
 - Body: `13px/1.45`; page title `18px / 600`; cards/panels `10px` radius; controls `28px` high and `6px` radius.
 - Sidebar `212px`, vertical padding `16px 10px 20px`; nav rows `28px`, active `--s3`, no decorative gradient.
 - Header `48px` high, horizontal padding `28px`; content maximum `1180px`, padding `28px 28px 48px`.

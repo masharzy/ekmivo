@@ -1,0 +1,8 @@
+import {database} from "../lib/server/db";
+import {revokeAdminDevice} from "../actions/admin-devices";
+export async function AdminTrustedDevices({locale,userId,isSuper}:{locale:"en"|"bn";userId:string;isSuper:boolean}){
+ const bn=locale==="bn";
+ const rows=await database()`SELECT d.id,d.name,d.last_used_at,d.expires_at,u.email FROM platform_admin_trusted_devices d JOIN app_users u ON u.id=d.user_id WHERE (${isSuper} OR d.user_id=${userId}::uuid) AND d.revoked_at IS NULL AND d.expires_at>now() ORDER BY d.last_used_at DESC LIMIT 100`.catch(()=>null);
+ if(!rows)return <p role="status">{bn?"বিশ্বস্ত ডিভাইসের তথ্য পাওয়া যায়নি।":"Trusted device details are unavailable."}</p>;
+ return <section className="pa-surface"><div className="pa-panel-head"><h2>{bn?"বিশ্বস্ত ডিভাইস":"Trusted devices"}</h2></div><div className="pa-table-wrap"><table className="pa-table"><thead><tr>{[bn?"ডিভাইস":"Device",bn?"অ্যাকাউন্ট":"Account",bn?"সর্বশেষ ব্যবহার":"Last used",bn?"মেয়াদ":"Expires",bn?"কাজ":"Action"].map(v=><th key={v}>{v}</th>)}</tr></thead><tbody>{rows.map(d=><tr key={String(d.id)}><td>{String(d.name)}</td><td>{String(d.email)}</td><td>{new Date(d.last_used_at).toLocaleString(bn?"bn-BD":"en-BD")}</td><td>{new Date(d.expires_at).toLocaleDateString(bn?"bn-BD":"en-BD")}</td><td><form action={revokeAdminDevice}><input type="hidden" name="deviceId" value={String(d.id)}/><button className="pa-button" type="submit">{bn?"সাইন আউট ও বাদ দিন":"Sign out & remove"}</button></form></td></tr>)}</tbody></table>{!rows.length&&<p className="pa-empty">{bn?"কোনো বিশ্বস্ত ডিভাইস নেই।":"No trusted devices."}</p>}</div></section>;
+}

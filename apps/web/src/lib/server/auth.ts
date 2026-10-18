@@ -5,6 +5,7 @@ import { randomBytes, createHash, scrypt as scryptCallback, timingSafeEqual } fr
 import { database } from "./db";
 import { verificationEnabled } from "./email";
 import { cache } from "react";
+import {rememberedAdminDevice} from "./admin-trusted-devices";
 
 function derive(password: string, salt: Buffer): Promise<Buffer> {
  return new Promise((resolve,reject)=>{
@@ -36,7 +37,15 @@ export async function passwordMatches(password: string, stored: string) {
 export async function createSession(userId: string) {
  const token = randomBytes(32).toString("base64url");
  const expiresAt = new Date(Date.now()+THIRTY_DAYS);
- await database()`INSERT INTO auth_sessions (user_id,token_hash,expires_at) VALUES (${userId},${hashToken(token)},${expiresAt})`;
+ const trusted=await rememberedAdminDevice(userId);
+ const remembered=trusted?await database()`INSERT INTO auth_sessions (user_id,token_hash,expires_at,mfa_verified_at,trusted_device_id)
+ SELECT ${userId}::uuid,${hashToken(token)},${expiresAt},now(),d.id
+ FROM platform_admin_trusted_devices d JOIN platform_admin_mfa m ON m.user_id=d.user_id
+ JOIN platform_administrators a ON a.user_id=d.user_id
+ WHERE d.id=${trusted}::uuid AND d.user_id=${userId}::uuid AND d.revoked_at IS NULL
+ AND d.expires_at>now() AND m.confirmed_at IS NOT NULL AND d.verified_at>=m.confirmed_at
+ FOR UPDATE OF d,m,a RETURNING id`:[];
+ if(!remembered.length)await database()`INSERT INTO auth_sessions (user_id,token_hash,expires_at) VALUES (${userId},${hashToken(token)},${expiresAt})`;
  (await cookies()).set(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",expires:expiresAt,priority:"high"});
 }
 export async function revokeSession() {

@@ -70,7 +70,8 @@ func (s *Service) planFeature(w http.ResponseWriter, r *http.Request, ws, realm,
 		return false
 	}
 	if !installed {
-		return true
+		fail(w, 503, "PLAN_UNAVAILABLE")
+		return false
 	}
 	var raw []byte
 	if s.Auth.DB.QueryRowContext(r.Context(), "SELECT payment_plan_effective($1::uuid)", ws).Scan(&raw) != nil {
@@ -149,5 +150,30 @@ func (s *Service) HandleAdminPlanUsage(w http.ResponseWriter, r *http.Request) {
 		mapped(w, err)
 		return
 	}
+	resources := map[string]any{}
+	var keys, members int64
+	if err := s.Auth.DB.QueryRowContext(r.Context(), "SELECT (SELECT count(*) FROM merchant_api_keys WHERE workspace_id=$1::uuid AND environment='live' AND revoked_at IS NULL AND expires_at>now()),(SELECT count(*) FROM workspace_members WHERE workspace_id=$1::uuid)", ws).Scan(&keys, &members); err != nil {
+		data["resource_usage_error"] = true
+	} else {
+		resources["api_keys"] = keys
+		resources["team_members"] = members
+	}
+	var financialResources []byte
+	if err := s.scoped(r.Context(), ws, "live", func(tx pgx.Tx) error {
+		return tx.QueryRow(r.Context(), "SELECT payment_plan_resource_usage($1::uuid,'live')", ws).Scan(&financialResources)
+	}); err != nil {
+		data["resource_usage_error"] = true
+	} else {
+		var counts map[string]any
+		if json.Unmarshal(financialResources, &counts) != nil {
+			data["resource_usage_error"] = true
+		} else {
+			for k, v := range counts {
+				resources[k] = v
+			}
+		}
+	}
+	data["resources"] = resources
+
 	write(w, 200, data)
 }

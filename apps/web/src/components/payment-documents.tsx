@@ -26,7 +26,7 @@ function DocumentActions({row,kind,canWrite,canManage,busy,t,onEdit:edit,onDupli
   {kind==="invoices"&&row.public_token&&<Link className="ib" href={publicPath(row)+"?print=1"} target="_blank" rel="noopener noreferrer">{t("Print","প্রিন্ট")}</Link>}
  </>}
 
-export function PaymentDocuments({kind,workspaceId,environment,locale,userId,canWrite,canManage,detailId}:{kind:Kind;workspaceId:string;environment:string;locale:"en"|"bn";userId:string;canWrite:boolean;canManage:boolean;detailId?:string}){
+export function PaymentDocuments({kind,workspaceId,environment,locale,userId,canWrite,canManage,detailId,canExport=false}:{kind:Kind;workspaceId:string;environment:string;locale:"en"|"bn";userId:string;canWrite:boolean;canManage:boolean;detailId?:string;canExport?:boolean}){
  const [expiryMode,setExpiryMode]=useState<"none"|"24"|"7"|"custom">("none");
  const [hideNumbers,setHideNumbers]=useState(true);
  const bn=locale==="bn",t=useCallback((en:string,bnText:string)=>bn?bnText:en,[bn]),base=`/api/go/workspaces/${workspaceId}/documents/${kind}`;
@@ -152,6 +152,7 @@ export function PaymentDocuments({kind,workspaceId,environment,locale,userId,can
  }
  function field(key:keyof Body,label:string,type="text"){const money=key.endsWith("_minor");const required=(key==="reference"&&kind!=="invoices")||(kind==="payment-links"&&key==="amount_minor");if(type==="datetime-local")return <div className="fld"><label>{label}</label><DashboardDateTimePicker locale={locale} value={String(body[key]||"")} min={new Date(now-new Date(now).getTimezoneOffset()*60000).toISOString().slice(0,10)} label={label} onChange={value=>setBody(old=>({...old,[key]:value}))}/></div>;return <div className="fld"><label htmlFor={"doc-"+key}>{label}</label><input id={"doc-"+key} className="in w" type={type} required={required} disabled={key==="reference"&&kind==="invoices"&&Boolean(editing)} step={money?"0.01":undefined} value={String(money?Number(body[key]??0)/100:body[key]??"")} onChange={e=>setBody(old=>({...old,[key]:type==="number"?(money?Math.round(Number(e.target.value)*100):Number(e.target.value)):e.target.value}))} maxLength={type==="text"?2000:undefined} min={type==="number"?(required&&money?0.01:0):undefined}/></div>}
  async function exportCSV(){
+  if(!canExport)return;
   exportAbort.current?.abort();const abort=new AbortController();exportAbort.current=abort;setBusy(true);setError("");
   const slot=`ekmivo-export:${userId}:${workspaceId}:${environment}:${kind}`;
   try{
@@ -187,7 +188,7 @@ export function PaymentDocuments({kind,workspaceId,environment,locale,userId,can
   <div className="card">
    <div className={isLinks?"bar2":"toolbar"}><input className="in searchbox" aria-label={t("Search","খুঁজুন")} placeholder={isLinks?t("Search links","লিংক খুঁজুন"):kind==="customers"?t("Search customers…","গ্রাহক খুঁজুন…"):t("Search invoices…","ইনভয়েস খুঁজুন…")} value={search} onChange={e=>setSearch(e.target.value)}/>
     {isLinks?<div className="seg">{["all","active","draft","expired","archived"].map(value=><button key={value} className={linkFilter===value?"on":""} onClick={()=>setLinkFilter(value)}>{value==="all"?t("All","সব"):label(value)}</button>)}</div>:<select className="in" aria-label={t("Filter records","রেকর্ড ফিল্টার")} value={documentFilter} onChange={e=>setDocumentFilter(e.target.value)}>{(kind==="customers"?["all","checkout","manual"]:["all","paid","issued","draft","unpaid","cancelled"]).map(v=><option key={v} value={v}>{v==="all"?t("All","সব"):v==="checkout"?t("Checkout payers","চেকআউটের প্রেরক"):v==="manual"?t("Saved contacts","সংরক্ষিত গ্রাহক"):v==="unpaid"?t("Unpaid","অপরিশোধিত"):label(v)}</option>)}</select>}
-    <div className="sp"/><button className="ib i" aria-label={t("Refresh","রিফ্রেশ")} disabled={loading} onClick={()=>void load()}><RefIcon name="refresh"/></button><button className="ib" disabled={busy} onClick={()=>void exportCSV()}><RefIcon name="download"/>{t("Export","এক্সপোর্ট")}</button>
+    <div className="sp"/><button className="ib i" aria-label={t("Refresh","রিফ্রেশ")} disabled={loading} onClick={()=>void load()}><RefIcon name="refresh"/></button>{canExport&&<button className="ib" disabled={busy} onClick={()=>void exportCSV()}><RefIcon name="download"/>{t("Export","এক্সপোর্ট")}</button>}
    </div>
    <div className="tw" role="region" aria-label={t("Records","রেকর্ড")} tabIndex={0}><table><thead><tr>
     <th>{kind==="customers"?t("Customer","গ্রাহক"):isLinks?t("Reference","রেফারেন্স"):t("Invoice","ইনভয়েস")}</th><th className={kind!=="customers"?"num":undefined}>{kind==="customers"?t("Phone","ফোন"):t("Amount","পরিমাণ")}</th><th className="num">{kind==="customers"?t("Payments","পেমেন্ট"):isLinks?t("Received","প্রাপ্ত"):t("Paid / Due","পরিশোধিত / বাকি")}</th>

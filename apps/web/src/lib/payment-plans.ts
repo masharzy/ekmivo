@@ -12,4 +12,4 @@ export const newPlanTerms=():PlanTerms=>({name:"",name_bn:"",description:"",desc
 export const featureLabels={invoices:["Invoices","ইনভয়েস"],payment_links:["Payment links","পেমেন্ট লিংক"],reports:["Reports","রিপোর্ট"],exports:["Exports","এক্সপোর্ট"]} as const;
 export const limitLabels={api_keys:["Active Live API keys","সক্রিয় Live API চাবি"],team_members:["Team members, including owner","মালিকসহ টিম সদস্য"],devices:["Connected devices","সংযুক্ত ডিভাইস"],payment_methods:["Receiving accounts","টাকা গ্রহণের অ্যাকাউন্ট"]} as const;
 export function planName(t:PlanTerms,bn:boolean){return bn&&t.name_bn?t.name_bn:t.name}
-export function planPrice(t:PlanTerms,bn:boolean){return t.kind==="custom"?(bn?"আলোচনা করুন":"Let’s talk"):new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",maximumFractionDigits:2}).format(t.amount_minor/100)}
+export function planPrice(t:PlanTerms,bn:boolean){return t.kind==="custom"?(bn?"আলোচনা করুন":"Let’s talk"):new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(t.amount_minor/100)}

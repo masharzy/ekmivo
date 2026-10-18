@@ -1,4 +1,5 @@
 "use client";
+import type {PlanTerms} from "../lib/payment-plans";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
@@ -13,7 +14,8 @@ import { activeDrafts,saveActiveDrafts,discardActiveDrafts } from "../lib/client
 
 type Space = { id: string; name: string; mode: "ai" | "commerce" | "both" | "off"; role: "owner" | "admin" | "editor" | "viewer" };
 type PaymentContext = { environment: PaymentEnvironment; status: "active" | "suspended"; availableEnvironments: PaymentEnvironment[]; liveOperational: false };
-type Props = { locale: Locale; service: Service; section: SectionKey; workspace: Space; spaces: Space[]; userName: string; platformAdmin: boolean; theme: "light" | "dark" | "system"; paymentContext?: PaymentContext; children: React.ReactNode; logout: React.ReactNode };
+const featureSections:Record<string,keyof PlanTerms["features"]>={invoices:"invoices","payment-links":"payment_links",reports:"reports"};
+type Props = { planFeatures?:PlanTerms["features"]; locale: Locale; service: Service; section: SectionKey; workspace: Space; spaces: Space[]; userName: string; platformAdmin: boolean; theme: "light" | "dark" | "system"; paymentContext?: PaymentContext; children: React.ReactNode; logout: React.ReactNode };
 const memoryKey=(workspaceId:string,service:Service)=>`ekmivo-last:${workspaceId}:${service}`;
 // Paused: Sandbox/Live preference in merchant UI.
 // const environmentKey=(workspaceId:string)=>`ekmivo-last-env:${workspaceId}`;
@@ -28,7 +30,7 @@ function rememberedSection(workspaceId:string,service:Service): SectionKey {
  }catch{ /* Browser storage unavailable: safe overview fallback. */ }
  return "overview";
 }
-export function DashboardFrame({ locale, service, section:initialSection, workspace, spaces, userName, platformAdmin, theme, paymentContext, children, logout }: Props) {
+export function DashboardFrame({ locale, service, section:initialSection, workspace, spaces, userName, platformAdmin, theme, paymentContext, planFeatures, children, logout }: Props) {
  const bn=locale==="bn",router=useRouter(),pathname=usePathname();
  // Locale-neutral visible URL, with tolerance for old prefixed URLs.
  const requestedSection=pathname.match(/\/(?:bn\/|en\/)?w\/[^/]+\/(?:ai|payments)\/([^/?#]+)/)?.[1];
@@ -89,8 +91,9 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
   return()=>cancelAnimationFrame(frame);
  },[mobileOpen,section,workspace.id]);
 
- const groups=navigation[service];
- const foundGroups=searchableNavigation(service,globalQuery);
+ const allowed=(key:string)=>service!=="payments"||!featureSections[key]||planFeatures?.[featureSections[key]]===true;
+ const groups=navigation[service].map(g=>({...g,items:g.items.filter(allowed)})).filter(g=>g.items.length);
+ const foundGroups=searchableNavigation(service,globalQuery).map(g=>({...g,items:g.items.filter(allowed)})).filter(g=>g.items.length);
  const foundKeys=foundGroups.flatMap(group=>group.items);
  const foundBusinesses=searchableBusinesses(spaces,globalQuery);
  const resultCount=foundKeys.length+foundBusinesses.length;

@@ -30,6 +30,7 @@ export function AdminMfaForm({locale,ready,enrolled=false}:{locale:Locale;ready:
   </div>}
   {(view==="verify"||view==="setup"&&!!setup.setupKey)&&<form ref={verifyRef} action={confirm}>
    <label>{bn?"৬ সংখ্যার কোড":"6-digit code"}<input autoFocus name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} placeholder="000000" required disabled={!ready||checking} onChange={e=>{if(/^\d{6}$/.test(e.target.value))verifyRef.current?.requestSubmit();}}/></label>
+   <label className="pa-trust-choice"><input type="checkbox" name="trustDevice"/>{bn?"এই ব্যক্তিগত ডিভাইস ৩০ দিনের জন্য বিশ্বস্ত রাখুন":"Trust this private device for 30 days"}</label>
    <button type="submit" disabled={!ready||checking}>{checking?"…":view==="setup"?(bn?"চালু করুন":"Turn on"):(bn?"যাচাই করুন":"Verify")}</button>
    {confirmed.status==="error"&&<p className="pa-mfa-errors" role="alert">{confirmed.message}</p>}
   </form>}

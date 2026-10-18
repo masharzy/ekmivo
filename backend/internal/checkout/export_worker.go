@@ -71,8 +71,47 @@ func (w *ExportWorker) Work(ctx context.Context, job *river.Job[ExportArgs]) (wo
 	_ = writer.Write([]string{"id", "reference", "name", "email", "phone", "status", "amount_minor", "paid_minor", "currency"})
 	cursor := ""
 	for page := 0; page < 200; page++ {
-		if e := w.Pool.QueryRow(ctx, "SELECT pg10_export_rows($1::uuid,$2::uuid,$3::uuid)", j.ID, j.Lease, nullableID(cursor)).Scan(&raw); e != nil {
+		var snapshot []byte
+		if w.Realm == "live" {
+			if err := w.Control.QueryRow(ctx, "SELECT payment_plan_effective($1::uuid)", j.Workspace).Scan(&snapshot); err != nil {
+				return errors.New("export plan unavailable")
+			}
+			var p map[string]any
+			if json.Unmarshal(snapshot, &p) != nil {
+				return errors.New("invalid export plan")
+			}
+			terms, _ := p["terms"].(map[string]any)
+			features, _ := terms["features"].(map[string]any)
+			feature := ""
+			if j.Resource == "invoices" {
+				feature = "invoices"
+			}
+			if j.Resource == "payment-links" {
+				feature = "payment_links"
+			}
+			if features["exports"] != true || feature != "" && features[feature] != true {
+				return finish(nil, "PLAN_FEATURE_REQUIRED")
+			}
+			p["workspace_id"] = j.Workspace
+			p["fetched_at"] = time.Now().UTC()
+			snapshot, _ = json.Marshal(p)
+		}
+		tx, err := w.Pool.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		if len(snapshot) > 0 {
+			_, err = tx.Exec(ctx, "SELECT set_config('ekmivo.payment_plan',$1,true)", string(snapshot))
+		}
+		if err == nil {
+			err = tx.QueryRow(ctx, "SELECT pg10_export_rows($1::uuid,$2::uuid,$3::uuid)", j.ID, j.Lease, nullableID(cursor)).Scan(&raw)
+		}
+		if err != nil {
+			tx.Rollback(ctx)
 			return errors.New("export page unavailable")
+		}
+		if err = tx.Commit(ctx); err != nil {
+			return err
 		}
 		var data struct {
 			Items []map[string]any `json:"items"`

@@ -2,7 +2,7 @@ import "server-only";
 import { currentUser } from "./auth";
 import { database } from "./db";
 import { verificationEnabled } from "./email";
-import { sessionMfaValid,sessionIdForMfa } from "./mfa";
+import { sessionMfaValid } from "./mfa";
 export type PlatformRole="super_admin"|"admin"|"support"|"analyst";
 export async function platformRole(userId:string):Promise<PlatformRole|null> {
  const rows=await database()`SELECT role FROM platform_administrators WHERE user_id=${userId}::uuid LIMIT 1`;
@@ -27,10 +27,5 @@ export async function platformSettings(){
   :{emailVerification:false,provider:"resend",updated:""};
 }
 
-/** Only use for platform writes; the standard 12h session MFA is insufficient. */
-export async function requireFreshSuperAdmin(){
- const admin=await requireSuperAdmin();if(!admin)return null;
- const session=await sessionIdForMfa(admin.user.id);if(!session)return null;
- const r=await database()`SELECT 1 FROM auth_sessions WHERE id=${session}::uuid AND user_id=${admin.user.id}::uuid AND revoked_at IS NULL AND expires_at>now() AND mfa_verified_at>now()-interval '10 minutes' LIMIT 1`;
- return r.length?admin:null;
-}
+/** Compatibility alias: admin writes use the same verified, revocable login session. */
+export async function requireFreshSuperAdmin(){return requireSuperAdmin();}

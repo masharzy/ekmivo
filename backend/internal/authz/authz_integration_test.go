@@ -127,7 +127,7 @@ func TestPostgresSessionMembershipAndEnvironment(t *testing.T) {
 	if role, err := repo.AuthorizePlatform(ctx, principal, true); err != nil || role != "super_admin" {
 		t.Fatalf("fresh MFA platform admin was rejected: %v", err)
 	}
-	_, err = admin.ExecContext(ctx, "UPDATE auth_sessions SET mfa_verified_at=now()-interval '13 hours' WHERE token_hash=$1", hex.EncodeToString(hash[:]))
+	_, err = admin.ExecContext(ctx, "WITH enrolled AS (UPDATE platform_admin_mfa SET confirmed_at=now()-interval '14 hours' WHERE user_id=$2::uuid) UPDATE auth_sessions SET mfa_verified_at=now()-interval '13 hours' WHERE token_hash=$1", hex.EncodeToString(hash[:]), ids[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,8 +135,8 @@ func TestPostgresSessionMembershipAndEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = repo.AuthorizePlatform(ctx, principal, true); !errors.Is(err, ErrMFANeeded) {
-		t.Fatalf("stale MFA session was authorized: %v", err)
+	if _, err = repo.AuthorizePlatform(ctx, principal, true); err != nil {
+		t.Fatalf("verified active login must not require periodic MFA: %v", err)
 	}
 	_, err = admin.ExecContext(ctx, "UPDATE auth_sessions SET mfa_verified_at=now() WHERE token_hash=$1", hex.EncodeToString(hash[:]))
 	if err != nil {

@@ -1,23 +1,14 @@
 "use server";
 import {revalidatePath} from "next/cache";
 import {database} from "../lib/server/db";
-import {requireSuperAdmin} from "../lib/server/platform-admin";
-import {sessionIdForMfa} from "../lib/server/mfa";
+import {verifiedAdmin,requireSuperAdmin} from "../lib/server/platform-admin";
 import {safeLocale,asText} from "../lib/server/validation";
 
 export type AdminOperationState={status:"idle"|"success"|"error";message:string};
 const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const denied=(locale:"bn"|"en"):AdminOperationState=>({status:"error",message:locale==="bn"?"অনুমতি নেই বা সাম্প্রতিক MFA যাচাই প্রয়োজন। My security থেকে আবার যাচাই করুন।":"Permission denied or fresh MFA required. Reverify your authenticator at Admin / Verify."});
+const denied=(locale:"bn"|"en"):AdminOperationState=>({status:"error",message:locale==="bn"?"এই কাজের অনুমতি নেই বা সাইন ইনের মেয়াদ শেষ।":"Permission denied or your sign-in has expired."});
 const invalid=(locale:"bn"|"en"):AdminOperationState=>({status:"error",message:locale==="bn"?"অনুরোধের তথ্য সঠিক নয়।":"Invalid request or confirmation."});
-async function freshActor(){
- const admin=await requireSuperAdmin();if(!admin)return null;
- const session=await sessionIdForMfa(admin.user.id);if(!session)return null;
- const rows=await database()`SELECT 1 FROM auth_sessions
- WHERE id=${session}::uuid AND user_id=${admin.user.id}::uuid
- AND revoked_at IS NULL AND expires_at>now()
- AND mfa_verified_at>now()-interval '10 minutes' LIMIT 1`;
- return rows.length?admin:null;
-}
+async function freshActor(){return requireSuperAdmin();}
 function reasonFrom(form:FormData){
  const reason=asText(form.get("reason")).trim();
  return reason.length>=10&&reason.length<=500?reason:null;
@@ -151,12 +142,12 @@ export async function revokeAdminApiKeyAction(localeInput:string,_previous:Admin
 
 
 export async function replyAdminSupportAction(localeInput:string,_previous:AdminOperationState,form:FormData):Promise<AdminOperationState>{
- const locale=safeLocale(localeInput),admin=await freshActor();if(!admin)return denied(locale);
+ const locale=safeLocale(localeInput),admin=await verifiedAdmin();if(!admin||!["super_admin","admin","support"].includes(admin.role))return denied(locale);
  const ticket=asText(form.get("ticketId")),message=asText(form.get("message")).trim(),status=asText(form.get("status")),confirm=asText(form.get("confirm"));
  if(!UUID.test(ticket)||message.length<10||message.length>4000||!["reviewing","resolved"].includes(status)||confirm!=="SEND")return invalid(locale);
  try{
   const response=await database().begin(async tx=>{
-   const actor=await tx`SELECT 1 FROM platform_administrators WHERE user_id=${admin.user.id}::uuid AND role='super_admin' FOR UPDATE`;
+   const actor=await tx`SELECT 1 FROM platform_administrators WHERE user_id=${admin.user.id}::uuid AND role IN ('super_admin','admin','support') FOR UPDATE`;
    if(!actor.length)return false;
    const rows=await tx`SELECT pg13_support_reply(${admin.user.id}::uuid,${ticket}::uuid,${message},${status}) AS value`;
    if(!rows.length)return false;

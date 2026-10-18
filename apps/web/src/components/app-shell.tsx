@@ -1,3 +1,4 @@
+import {workspacePlanFeatures} from "../lib/server/plan-access";
 import { cookies } from "next/headers";
 import { logoutAction } from "../actions/account";
 import { type User, type Workspace, workspacesFor, isPlatformAdmin } from "../lib/server/auth";
@@ -15,5 +16,6 @@ export async function AppShell({locale,user,workspace,section,service=defaultSer
  const platformAdmin=(user.verified || !verification) && adminRole;
  const value=jar.get("ekmivo-theme")?.value;
  const theme=value==="light"||value==="dark"?value:"system";
- return <DashboardFrame locale={locale} userName={user.name} workspace={workspace} spaces={spaces} service={service} section={section} platformAdmin={platformAdmin} theme={theme} paymentContext={paymentContext} logout={<form action={logoutAction.bind(null,locale)}><button type="submit"><DashboardIcon name="logout"/>{locale==="bn"?"লগ আউট":"Sign out"}</button></form>}>{children}</DashboardFrame>;
+ const planFeatures=service==="payments"?await workspacePlanFeatures(workspace.id,paymentContext?.environment||"live"):undefined;
+ return <DashboardFrame planFeatures={planFeatures} locale={locale} userName={user.name} workspace={workspace} spaces={spaces} service={service} section={section} platformAdmin={platformAdmin} theme={theme} paymentContext={paymentContext} logout={<form action={logoutAction.bind(null,locale)}><button type="submit"><DashboardIcon name="logout"/>{locale==="bn"?"লগ আউট":"Sign out"}</button></form>}>{children}</DashboardFrame>;
 }

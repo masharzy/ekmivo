@@ -1,3 +1,4 @@
+import {AdminWorkspaceUsage} from "./admin-workspace-usage";
 import Link from "next/link";
 import type {ReactNode} from "react";
 import {notFound} from "next/navigation";
@@ -87,7 +88,7 @@ export async function AdminWorkspaceDetail({locale,id,sub="",actor=""}:{locale:A
        t("Invoice","ইনভয়েস"),t("Plan","প্ল্যান"),t("Amount (BDT)","পরিমাণ (টাকা)"),
        t("Status","অবস্থা"),t("Created","তৈরির সময়"),t("Paid at","পেমেন্টের সময়")
      ].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>
-      {invoices.map(x=><tr key={String(x.id)}><td>{text(x.id)}</td><td>{text(x.plan_id)}</td><td>{(Number(x.amount_minor)/100).toFixed(2)}</td><td>{text(x.status)}</td><td>{format(x.created_at,locale)}</td><td>{format(x.paid_at,locale)}</td></tr>)}
+      {invoices.map(x=><tr key={String(x.id)}><td>{text(x.id)}</td><td>{text(x.plan_id)}</td><td>{(Number(x.amount_minor)/100).toLocaleString(locale==="bn"?"bn-BD":"en-BD",{maximumFractionDigits:2})}</td><td>{text(x.status)}</td><td>{format(x.created_at,locale)}</td><td>{format(x.paid_at,locale)}</td></tr>)}
       {!invoices.length&&<tr><td colSpan={6} className="pa-empty-row">{t("No invoices yet.","এখনো কোনো ইনভয়েস নেই।")}</td></tr>}
      </tbody></table></div>
     </section>
@@ -100,22 +101,7 @@ export async function AdminWorkspaceDetail({locale,id,sub="",actor=""}:{locale:A
  }else if(sub==="devices"){
   content=<AdminWorkspaceFinance locale={locale} workspaceId={id} resource="devices"/>;
  }else{
-  const [credit,ledger]=await Promise.all([
-    database()`SELECT balance,updated_at FROM platform_ai_credit_balances WHERE workspace_id=${id}::uuid LIMIT 1`,
-    database()`SELECT l.id,l.delta,l.balance_after,l.reason,l.created_at,u.display_name
-      FROM platform_ai_credit_ledger l JOIN app_users u ON u.id=l.actor_id WHERE l.workspace_id=${id}::uuid
-      ORDER BY l.created_at DESC LIMIT 100`
-   ]);
-   content=<><section className="pa-surface pa-description"><h2>AI credit balance</h2><dl>
-     <div className="pa-description-row"><dt>Current balance</dt><dd>{Number(credit[0]?.balance||0).toLocaleString()}</dd></div>
-     <div className="pa-description-row"><dt>Last adjusted</dt><dd>{format(credit[0]?.updated_at,locale)}</dd></div>
-     <div className="pa-description-row"><dt>AI product</dt><dd>{on("ai")?"Enabled":"Disabled"}</dd></div>
-   </dl><div className="pa-inline-actions"><Link href={"/"+locale+"/admin/credits"} className="pa-button pa-button-primary">Manage AI credits</Link>
-   <Link href={base+"/products-plan"} className="pa-button">Payment allowances</Link></div></section>
-   <AdminTableView table={{headers:["When","Adjustment","Balance after","By","Reason"],
-    rows:ledger.map(l=>[format(l.created_at,locale),Number(l.delta)>0?"+"+l.delta:text(l.delta),
-    Number(l.balance_after).toLocaleString(),text(l.display_name),text(l.reason)])}} empty="No AI credit adjustments yet."/>;
-   <p className="pa-subtle">This is the manual adjustment ledger, not metered AI model usage.</p></>;
+  content=<AdminWorkspaceUsage locale={locale} workspaceId={id} payments={on("payments")} ai={on("ai")}/>;
  }
  return <><Title name={text(w.name)} back={"/"+locale+"/admin/workspaces"}/><SubNav base={base} items={workspaceTabs.map(([name,path])=>[locale==="bn"?({"Overview":"ওভারভিউ","Products":"প্রোডাক্ট","Payment plans":"পেমেন্ট প্ল্যান","Members":"সদস্য","Environments":"পরিবেশ","API keys":"এপিআই কী","Payments":"পেমেন্ট","Devices":"ডিভাইস","Usage & credits":"ব্যবহার ও ক্রেডিট","Billing":"বিলিং","Activity":"অ্যাক্টিভিটি"} as Record<string,string>)[name]||name:name,path])} active={sub}/>{content}</>;
 }
@@ -139,14 +125,14 @@ export async function AdminGlobalInventory({locale,kind,sub="",query=""}:{locale
  if(kind==="billing"&&sub!=="revenue"){
   if(sub==="invoices"){
    const r=await database()`SELECT i.id,i.workspace_id,w.name,i.plan_id,i.amount_minor,i.status,i.created_at,i.paid_at FROM pg13_platform_invoices i JOIN workspaces w ON w.id=i.workspace_id WHERE (${q}='' OR w.name ILIKE ${term} OR i.id::text ILIKE ${term}) ORDER BY i.created_at DESC LIMIT 100`;
-   table={headers:["Invoice","Workspace","Plan","Amount (BDT)","Status","Created","Paid at"],rows:r.map(x=>[text(x.id),text(x.name),text(x.plan_id),(Number(x.amount_minor)/100).toFixed(2),text(x.status),format(x.created_at,locale),format(x.paid_at,locale)])};
+   table={headers:["Invoice","Workspace","Plan","Amount (BDT)","Status","Created","Paid at"],rows:r.map(x=>[text(x.id),text(x.name),text(x.plan_id),(Number(x.amount_minor)/100).toLocaleString(locale==="bn"?"bn-BD":"en-BD",{maximumFractionDigits:2}),text(x.status),format(x.created_at,locale),format(x.paid_at,locale)])};
   }else if(sub==="subscriptions"||!sub){
    const r=await database()`SELECT w.id,w.name,s.plan_id,s.paid_until::text,s.grace_until::text FROM pg13_subscriptions s JOIN workspaces w ON w.id=s.workspace_id WHERE (${q}='' OR w.name ILIKE ${term}) ORDER BY s.paid_until DESC LIMIT 100`;
    table={headers:["Workspace","Plan","Paid until","Grace until","State"],rows:r.map(x=>[<Link key={String(x.id)} className="pa-action-link" href={"/"+locale+"/admin/workspaces/"+String(x.id)+"/billing"}>{text(x.name)}</Link>,text(x.plan_id),format(x.paid_until,locale),format(x.grace_until,locale),x.paid_until==="infinity"||new Date(String(x.paid_until))>new Date()?"Active":x.grace_until==="infinity"||new Date(String(x.grace_until))>new Date()?"Grace":"Expired"])};
   }else return null;
  }else if(kind==="billing"&&sub==="revenue"){
   const r=await database()`SELECT i.plan_id,count(*)::int AS paid_count,coalesce(sum(i.amount_minor),0)::bigint AS paid_minor,max(i.paid_at) AS last_paid FROM pg13_platform_invoices i WHERE i.status='paid' AND i.paid_at>=now()-interval '30 days' GROUP BY i.plan_id ORDER BY paid_minor DESC LIMIT 100`;
-  table={headers:["Plan","Paid invoices (30 days)","Collected BDT (30 days)","Most recent payment"],rows:r.map(x=>[text(x.plan_id),Number(x.paid_count),(Number(x.paid_minor)/100).toFixed(2),format(x.last_paid,locale)])};
+  table={headers:["Plan","Paid invoices (30 days)","Collected BDT (30 days)","Most recent payment"],rows:r.map(x=>[text(x.plan_id),Number(x.paid_count),(Number(x.paid_minor)/100).toLocaleString(locale==="bn"?"bn-BD":"en-BD",{maximumFractionDigits:2}),format(x.last_paid,locale)])};
  }else if(kind==="support"){
   const r=await database()`SELECT t.id,t.workspace_id,w.name AS workspace,t.subject,t.status,t.created_at,u.email AS opened_by FROM pg13_support t JOIN workspaces w ON w.id=t.workspace_id JOIN app_users u ON u.id=t.actor_id
   WHERE (${q}='' OR t.subject ILIKE ${term} OR w.name ILIKE ${term} OR t.id::text ILIKE ${term}) ORDER BY t.created_at DESC LIMIT 100`;

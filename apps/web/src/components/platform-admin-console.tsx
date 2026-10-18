@@ -1,4 +1,6 @@
 
+import {AdminTrustedDevices} from "./admin-trusted-devices";
+import {canReadAdmin} from "../lib/admin-permissions";
 import Link from "next/link";
 import type {ReactNode} from "react";
 import {cookies} from "next/headers";
@@ -207,23 +209,25 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  if(!admin||admin.user.id!==user.id)notFound();
  const key=segments[0]==="gateway"?"gateway/"+(segments[1]||""):segments[0]||"";
  if(!Object.prototype.hasOwnProperty.call(names,key))notFound();
+ if(!key&&admin.role==="support")redirect("/"+locale+"/admin/support");
  const extra=segments[0]==="gateway"?segments.slice(2):segments.slice(1);
  const sub=extra[0]||"",base="/"+locale+"/admin"+(key?"/"+key:"");
- const t=names[key][locale==="bn"?1:0],isSuper=admin.role==="super_admin",q=query.trim().slice(0,80);
+ const t=names[key][locale==="bn"?1:0],isSuper=admin.role==="super_admin",canRead=canReadAdmin(admin.role,key),q=query.trim().slice(0,80);
  const cookie=await cookies();const rawTheme=cookie.get("ekmivo-admin-theme")?.value;const theme=rawTheme==="light"||rawTheme==="dark"?rawTheme:"system";
  let body:ReactNode;
- if(!key){body=<Overview locale={locale} isSuper={isSuper}/>;}
+ if(!canRead&&key!=="settings"){body=<><PageHead title={t}/><Denied locale={locale}/></>;}
+ else if(!key){body=<Overview locale={locale} isSuper={isSuper}/>;}
  else if((key==="workspaces"||key==="users")&&extra[0]){
- body=!isSuper?<><PageHead title={t}/><Denied locale={locale}/></>:key==="workspaces"?<AdminWorkspaceDetail locale={locale} id={extra[0]} sub={extra[1]||""} actor={admin.user.id}/>:!extra[1]?<AdminUserDetail locale={locale} id={extra[0]}/>:notFound();
+ body=!canRead?<><PageHead title={t}/><Denied locale={locale}/></>:key==="workspaces"?<AdminWorkspaceDetail locale={locale} id={extra[0]} sub={extra[1]||""} actor={admin.user.id}/>:!extra[1]?<AdminUserDetail locale={locale} id={extra[0]}/>:notFound();
  }else if(key==="workspaces"||key==="users"||key==="audit"){
- const page=isSuper?(key==="workspaces"?await workspaces(locale,q,after):key==="users"?await users(locale,q,after):await audit(locale,q,after)):null;
+ const page=canRead?(key==="workspaces"?await workspaces(locale,q,after):key==="users"?await users(locale,q,after):await audit(locale,q,after)):null;
  body=<><PageHead title={t} action={key==="workspaces"&&isSuper?<AdminModal title="New workspace" label="Add workspace"><AdminWorkspaceCreationForm locale={locale}/></AdminModal>:undefined}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
  }else if(key==="subscriptions"){
- body=isSuper?<AdminSubscriptionsPage locale={locale} query={q}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ body=canRead?<AdminSubscriptionsPage locale={locale} query={q}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="providers"){
- body=isSuper?<AdminProvidersPage isSuper locale={locale}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ body=canRead?<AdminProvidersPage isSuper={isSuper} locale={locale}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="credits"){
- body=isSuper?<AdminCreditsPage isSuper locale={locale}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ body=canRead?<AdminCreditsPage isSuper={isSuper} locale={locale}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="plans"){
  body=isSuper?<AdminPaymentPlansPage locale={locale} actor={admin.user.id}/>:<Denied locale={locale}/>;
  }else if(key==="staff"){
@@ -240,28 +244,28 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  staff=rows.map(x=>({id:String(x.id),name:String(x.display_name),email:String(x.email),verified:!!x.email_verified_at,role:x.role?String(x.role):null}));}
  const roles=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"roles",query:""}):null;
  const sessions=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"sessions",query:""}):null;
- body=<><PageHead title={t}/>{!isSuper?<Denied locale={locale}/>:<>
+ body=<><PageHead title={t}/>{isSuper?<>
  <section className="pa-surface pa-settings-grid"><div><h2>Email verification</h2><p>{settings?.emailVerification?"Required":"Off"}</p>
  <span className="pa-status-text"><span className={"pa-status-dot "+(mailReady()?"green":"grey")}/>Email service: {mailReady()?"Configured":"Configuration required"}</span>
  </div><AdminModal label="Manage verification" title="Email verification"><VerificationSettings locale={locale} enabled={!!settings?.emailVerification} providerReady={mailReady()}/></AdminModal></section>
  <div className="pa-page-head"><h2>Admin team</h2><AdminModal title="Admin roles" label="Manage roles"><RoleControls locale={locale} users={staff}/></AdminModal></div>
  {roles}
  <div className="pa-page-head"><h2>Admin sessions</h2></div>{sessions}
- </>}</>;
+ </>:null}<AdminTrustedDevices locale={locale} userId={admin.user.id} isSuper={isSuper}/></>;
  }else if(key==="support"&&extra[0]){
- body=isSuper?<AdminSupportDetail locale={locale} id={extra[0]}/>:<Denied locale={locale}/>;
+ body=canRead?<AdminSupportDetail locale={locale} id={extra[0]}/>:<Denied locale={locale}/>;
  }else if(key==="health"){
- body=<><PageHead title={t}/>{isSuper?<AdminHealthView locale={locale}/>:<Denied locale={locale}/>}</>;
+ body=<><PageHead title={t}/>{canRead?<AdminHealthView locale={locale}/>:<Denied locale={locale}/>}</>;
  }else if(key==="api"){
  let config:Awaited<ReturnType<typeof publicSandboxConfig>>=null;
  if(isSuper&&sub==="sandbox"){try{config=await publicSandboxConfig();}catch{config=null;}}
  body=<><PageHead title={t}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{!isSuper?<Denied locale={locale}/>:sub==="sandbox"&&config?<section className="pa-surface pa-description"><h2>Public sandbox</h2><p className="pa-subtle">Test data only. Never use real customer data.</p><dl><div className="pa-description-row"><dt>Shared test key</dt><dd className="pa-mono">{config.testKey.slice(0,12)+"••••"+config.testKey.slice(-4)}</dd></div><div className="pa-description-row"><dt>Workspace</dt><dd>{short(config.workspaceId)}<AdminCopy value={config.workspaceId} label="Copy workspace ID"/></dd></div><div className="pa-description-row"><dt>Sandbox API URL</dt><dd>{config.apiOrigin||"—"}</dd></div><div className="pa-description-row"><dt>Status</dt><dd>{config.enabled?"Enabled":"Disabled"}</dd></div></dl><div className="pa-inline-actions"><button className="pa-button pa-button-secondary" disabled>Check service</button><button className="pa-button pa-button-secondary" disabled>Rotate key</button><button className="pa-button pa-button-secondary" disabled>Revoke key</button></div><p className="pa-subtle">Audited step-up operations not connected.</p></section>:<Offline locale={locale}/>}</>;
  }else{
  const op=offlineActions[key];
- const inventory=isSuper?await AdminGlobalInventory({locale,kind:key,sub,query:q}):null;
+ const inventory=canRead?await AdminGlobalInventory({locale,kind:key,sub,query:q}):null;
  body=<><PageHead title={t} action={key==="billing"&&isSuper?<a className="pa-button" href={"/"+locale+"/admin/exports?"+new URLSearchParams({kind:"invoices",q}).toString()}>Export invoices CSV</a>:op&&!inventory?<button type="button" disabled className="pa-button pa-button-secondary">{op}</button>:undefined}/>
  {tabs[key]&&<PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>}
- {!isSuper?<Denied locale={locale}/>:inventory||<OfflineList locale={locale} kind={key} sub={sub}/>}</>;
+ {!canRead?<Denied locale={locale}/>:inventory||<OfflineList locale={locale} kind={key} sub={sub}/>}</>;
  }
  return <AdminShell locale={locale} role={admin.role} name={user.name} theme={theme} production={process.env.NODE_ENV==="production"}>{body}</AdminShell>;
 }

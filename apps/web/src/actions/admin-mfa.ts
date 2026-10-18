@@ -1,4 +1,5 @@
 "use server";
+import {trustAdminDevice} from "../lib/server/admin-trusted-devices";
 import { redirect } from "next/navigation";
 import { database } from "../lib/server/db";
 import { currentUser,passwordMatches } from "../lib/server/auth";
@@ -95,6 +96,9 @@ export async function confirmAdminMfaAction(localeParam:string,_previous:MfaActi
   console.error("[mfa confirm]",e instanceof Error?e.name:"unknown");
   return {status:"error",message:t.failed};
  }
- if(outcome==="ok")redirect(`/${locale}/admin`);
+ if(outcome==="ok"){
+  if(form.get("trustDevice")==="on")await trustAdminDevice(user.id,sessionId);
+  redirect(`/${locale}/admin`);
+ }
  return {status:"error",message:outcome==="locked"?t.cooldown:t.badCode};
 }

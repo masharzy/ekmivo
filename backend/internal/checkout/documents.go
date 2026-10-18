@@ -218,7 +218,7 @@ func (s *Service) HandleDocuments(w http.ResponseWriter, r *http.Request) {
 	w, finishActivity := s.observeAPI(w, r, ws, realm)
 	defer finishActivity()
 	id, action := r.PathValue("documentID"), r.PathValue("documentAction")
-	if mutation && id == "" && (res == "invoices" || res == "payment-links") {
+	if res == "invoices" || res == "payment-links" {
 		feature := "invoices"
 		if res == "payment-links" {
 			feature = "payment_links"
@@ -266,7 +266,7 @@ func (s *Service) HandleDocuments(w http.ResponseWriter, r *http.Request) {
 			fail(w, 400, "INVALID_FILTER")
 			return
 		}
-		e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+		e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 			return tx.QueryRow(r.Context(), "SELECT pg10_read($1::uuid,$2,$3,$4::uuid,$5::uuid,$6)", ws, realm, res, nullableID(id), nullableID(cursor), nullableID(q)).Scan(&raw)
 		})
 	} else {
@@ -303,7 +303,7 @@ func (s *Service) HandleDocuments(w http.ResponseWriter, r *http.Request) {
 		body, _ := json.Marshal(b)
 		token := s.token(ws, realm, "document:"+res+":"+key)
 		requestHash := digest(res+"|"+id+"|"+action+"|"+string(body))
-		e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+		e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 			if autoReference {
 				return tx.QueryRow(r.Context(), "SELECT pg10_invoice_auto_create($1::uuid,$2,$3::jsonb,$4,$5,$6,$7::uuid)", ws, realm, string(body), key, requestHash, digest(token), nullableID(actor)).Scan(&raw)
 			}
@@ -321,7 +321,7 @@ func (s *Service) HandleDocuments(w http.ResponseWriter, r *http.Request) {
 	}
 	if !mutation && res == "customers" && id != "" {
 		var activityRaw []byte
-		if e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+		if e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 			return tx.QueryRow(r.Context(), "SELECT pg10_customer_activity($1::uuid,$2,$3::uuid)", ws, realm, id).Scan(&activityRaw)
 		}); e != nil {
 			mapped(w, e)
@@ -335,7 +335,7 @@ func (s *Service) HandleDocuments(w http.ResponseWriter, r *http.Request) {
 	}
 	if !mutation && res == "invoices" && id != "" {
 		var delivery []byte
-		if e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+		if e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 			return tx.QueryRow(r.Context(), "SELECT pg10_invoice_delivery($1::uuid,$2,$3::uuid)", ws, realm, id).Scan(&delivery)
 		}); e != nil {
 			mapped(w, e)
@@ -447,7 +447,7 @@ func (s *Service) importCustomers(w http.ResponseWriter, r *http.Request, ws, re
 	}
 	encoded, _ := json.Marshal(rows)
 	var result []byte
-	e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+	e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 		return tx.QueryRow(r.Context(), "SELECT pg10_import($1::uuid,$2,$3::uuid,$4,$5,$6::jsonb)", ws, realm, nullableID(actor), key, digest(b.CSV), string(encoded)).Scan(&result)
 	})
 	if e != nil {
@@ -474,7 +474,7 @@ func (s *Service) exportDocuments(w http.ResponseWriter, r *http.Request, ws, re
 	cursor := ""
 	for page := 0; page < 200; page++ {
 		var raw []byte
-		e := s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+		e := s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 			return tx.QueryRow(r.Context(), "SELECT pg10_read($1::uuid,$2,$3,NULL,$4::uuid,NULL)", ws, realm, res, nullableID(cursor)).Scan(&raw)
 		})
 		if e != nil {
