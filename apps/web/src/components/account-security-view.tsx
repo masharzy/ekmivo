@@ -23,7 +23,7 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme}:{locale:"bn
  const key="ekmivo:account-name-draft:v1:"+user.id;
  const savedName=profile.status==="success"?profile.savedName||user.name:user.name,dirty=name!==savedName;
  useEffect(()=>{if(!dirty)return;const leave=(e:BeforeUnloadEvent)=>{try{sessionStorage.setItem(key,name)}catch{}e.preventDefault()};window.addEventListener("beforeunload",leave);return()=>window.removeEventListener("beforeunload",leave)},[dirty,key,name]);
- useEffect(()=>{if(profile.status==="success"){setName(profile.savedName||user.name);try{sessionStorage.removeItem(key)}catch{}}},[profile.status,profile.savedName,key,user.name]);
+ useEffect(()=>{if(profile.status!=="success")return;let alive=true;void Promise.resolve().then(()=>{if(!alive)return;setName(profile.savedName||user.name);try{sessionStorage.removeItem(key)}catch{}});return()=>{alive=false}},[profile.status,profile.savedName,key,user.name]);
  useEffect(()=>{if(revoked.status==="success")router.refresh()},[revoked.status,router]);
  useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current)},[]);
  const stamp=(value:string)=>new Intl.DateTimeFormat(bn?"bn-BD":"en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Dhaka"}).format(new Date(value));
