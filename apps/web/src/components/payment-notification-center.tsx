@@ -12,7 +12,8 @@ type Category=typeof categories[number];
 type Status="all"|"unread"|"read";
 const fmt=(v:string,bn:boolean,dateOnly=false)=>new Intl.DateTimeFormat(bn?"bn-BD":"en-GB",{timeZone:"Asia/Dhaka",...(dateOnly?{dateStyle:"medium" as const}:{dateStyle:"medium" as const,timeStyle:"short" as const})}).format(new Date(v));
 export function PaymentNotificationCenter({locale,workspaceId,environment}:{locale:"en"|"bn";workspaceId:string;environment:string}){
- const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en,router=useRouter();
+ const bn=locale==="bn",router=useRouter();
+ const t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const base=`/api/go/workspaces/${workspaceId}/notifications`;
  const [data,setData]=useState<Result>(initial),[search,setSearch]=useState(""),[query,setQuery]=useState("");
  const [category,setCategory]=useState<Category>("all"),[status,setStatus]=useState<Status>("all");
@@ -32,7 +33,7 @@ export function PaymentNotificationCenter({locale,workspaceId,environment}:{loca
   }catch(e){
    if(!signal?.aborted){setError(t("Notifications couldn't be loaded. Please retry.","নোটিফিকেশন লোড হয়নি। আবার চেষ্টা করুন।"));setData(initial);console.error("NOTIFICATION_LIST_UNAVAILABLE",e instanceof Error?e.message:"UNKNOWN")}
   }finally{if(!signal?.aborted)setLoading(false)}
- },[base,environment,page,pageSize,category,status,query,refresh,locale]);
+ },[base,environment,page,pageSize,category,status,query,refresh,t]);
  useEffect(()=>{const controller=new AbortController();void Promise.resolve().then(()=>{if(!controller.signal.aborted)return load(controller.signal)});return()=>controller.abort()},[load]);
  const reload=()=>setRefresh(x=>x+1);
  async function mark(id:string){
