@@ -750,3 +750,6 @@ Owner requested code-level verification only for this pass and will verify physi
 
 ### Plan feature UI — 2026-10-18
 Owner manual pending: for a workspace plan with invoices/payment links/reports/exports disabled, check sidebar/search, overview shortcuts, one-time requests, direct list/detail URLs and upgrade CTA to Billing > Plans in EN/BN, mobile/desktop and light/dark. Code tests/build evidence: `docs/evidence/PLAN-FEATURE-UX-20261018/README.md`.
+
+### System workspace unlimited — 2026-10-18
+Manual pending: selected system workspace Billing shows all features/unlimited/no renewal; Usage and invoices remain accessible. Check EN/BN, light/dark, mobile/desktop. Automated switching/removal/expiry/no-subscription tests passed on isolated Neon. Evidence: `docs/evidence/SYSTEM-UNLIMITED-20261018/README.md`.
