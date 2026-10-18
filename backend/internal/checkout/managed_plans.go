@@ -18,9 +18,9 @@ func (s *Service) planSnapshot(ctx context.Context, ws, realm string) ([]byte, e
 		return nil, nil
 	}
 	var system bool
-	if s.Auth.DB.QueryRowContext(ctx, "SELECT platform_billing_system_workspace($1::uuid)", ws).Scan(&system) == nil && system {
-		b, _ := json.Marshal(map[string]any{"workspace_id": ws, "platform_billing": true, "fetched_at": time.Now().UTC()})
-		return b, nil
+	// Quota exemption must not replace the feature snapshot used by private SQL guards.
+	if err := s.Auth.DB.QueryRowContext(ctx, "SELECT platform_billing_system_workspace($1::uuid)", ws).Scan(&system); err != nil {
+		return nil, err
 	}
 	var installed bool
 	if err := s.Auth.DB.QueryRowContext(ctx, "SELECT to_regprocedure('payment_plan_effective(uuid)') IS NOT NULL").Scan(&installed); err != nil {
@@ -39,6 +39,9 @@ func (s *Service) planSnapshot(ctx context.Context, ws, realm string) ([]byte, e
 	var p map[string]any
 	if json.Unmarshal(raw, &p) != nil || p == nil {
 		return nil, errors.New("invalid plan snapshot")
+	}
+	if system {
+		p["platform_billing"] = true
 	}
 	p["workspace_id"] = ws
 	p["fetched_at"] = time.Now().UTC()
