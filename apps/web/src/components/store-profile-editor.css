@@ -1,0 +1,14 @@
+/* Dashboard-only Store screen. Reuses dashboard's ws-* controls and spacing. */
+.store-page{max-width:100%;font:inherit}.store-page .store-panel{max-width:680px;padding:24px}
+.store-page .store-logo-row{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+.store-page .store-logo-preview{width:72px;height:72px;flex:none;display:grid;place-items:center;overflow:hidden;border:1px solid var(--ds-border,var(--line,#e9e9ed));border-radius:12px;background:var(--ds-surface,#f6f6f8);font-weight:600}
+.store-page .store-logo-preview img{max-width:100%;max-height:100%;object-fit:contain}
+.store-page .store-logo-actions{display:grid;gap:10px}
+.store-page .store-buttons{display:flex;gap:8px;align-items:center}
+.store-page .store-upload,.store-page .store-buttons button,.store-page .store-footer button{font:inherit;cursor:pointer;border:1px solid var(--ds-border,#e0e0e6);border-radius:8px;padding:8px 12px;color:inherit;background:transparent}
+.store-page .store-upload input{display:none}.store-page .store-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.store-page .store-fields label:last-child{grid-column:1/-1}
+.store-page .store-footer{display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-top:24px}
+.store-page .store-footer .ws-primary{border-color:transparent}
+.store-page :is(button,input):disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:620px){.store-page .store-panel{padding:16px}.store-page .store-fields{grid-template-columns:1fr}}

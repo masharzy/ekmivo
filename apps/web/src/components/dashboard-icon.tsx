@@ -1,5 +1,6 @@
 import type { SVGProps } from "react";
 const paths: Record<string, string> = {
+ store:"M3 9l9-6 9 6v12H3z M9 21v-9h6v9 M3 9h18",
  "checkout-themes":"M12 3a9 9 0 1 0 0 18h1.4a1.8 1.8 0 0 0 1.5-2.8 1.8 1.8 0 0 1 1.5-2.8h1.1A3.5 3.5 0 0 0 21 10a9 9 0 0 0-9-7z M7.4 10h.01 M10 6.8h.01 M14.7 7.1h.01 M17.5 10.5h.01",
  refresh:"M20 11a8 8 0 0 0-14-5L3 9 M3 3v6h6 M4 13a8 8 0 0 0 14 5l3-3 M21 21v-6h-6",
  copy:"M8 8h12v12H8z M16 8V4H4v12h4",

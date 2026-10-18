@@ -138,6 +138,19 @@ export async function createWorkspaceOnListAction(localeParam:string,nameRaw:str
   return {status:"success",message:"",workspace:{id,name,mode}};
  }catch(e){report("createWorkspaceOnList",e);return {status:"error",message:t.generic};}
 }
+export async function renameWorkspaceOnListAction(localeParam:string,id:string,nameRaw:string):Promise<{status:"success"|"error";message:string;name?:string}>{
+ const locale=safeLocale(localeParam),user=await currentUser();
+ if(!user)return {status:"error",message:locale==="bn"?"আবার লগইন করুন।":"Please sign in again."};
+ const name=nameRaw.trim();
+ if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)||name.length<2||name.length>60||/[\u0000-\u001f]/.test(name))
+  return {status:"error",message:locale==="bn"?"নাম ২–৬০ অক্ষরের হতে হবে।":"Use 2–60 characters."};
+ try{
+  const rows=await database()`SELECT dashboard_workspace_rename(${id}::uuid,${user.id}::uuid,${name}) AS name`;
+  revalidatePath(`/${locale}/workspaces`);
+  return {status:"success",message:"",name:String(rows[0].name)};
+ }catch(e){report("renameWorkspace",e);return {status:"error",message:locale==="bn"?"নাম পরিবর্তন করা যায়নি।":"Could not rename workspace."};}
+}
+
 export async function setDefaultWorkspaceOnListAction(localeParam:string,id:string):Promise<{status:"success"|"error";message:string}>{
  const locale=safeLocale(localeParam);
  const user=await currentUser();

@@ -125,3 +125,5 @@
 
 .wk2-skeleton-control{width:68px;height:34px;border:1px solid var(--wk-border);border-radius:8px;background:var(--wk-card)}
 .wk2-skeleton-theme{width:36px}
+
+.wk2-rename{padding:14px 0;border-bottom:1px solid var(--wk-border);margin-bottom:10px}.wk2-rename-row{display:flex;align-items:center;gap:8px}.wk2-rename-row .wk2-input{flex:1;min-width:0}.wk2-rename-row .wk2-button{flex:none}

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import {useRouter} from "next/navigation";
 import {useEffect,useRef,useState,useTransition} from "react";
-import {createWorkspaceOnListAction,setDefaultWorkspaceOnListAction} from "../actions/account";
+import {createWorkspaceOnListAction,setDefaultWorkspaceOnListAction,renameWorkspaceOnListAction} from "../actions/account";
 import {setWorkspaceProduct} from "../actions/workspace-products";
 import {draftStorageKey,parseSavedDraft,encodeSavedDraft} from "../lib/onboarding-draft.mjs";
 
@@ -59,7 +59,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
  const t=copy[locale];const router=useRouter();
  const [rows,setRows]=useState(initialWorkspaces),[defaultId,setDefaultId]=useState(initialDefault);
  const [createOpen,setCreateOpen]=useState(false),[selected,setSelected]=useState<string|null>(null);
- const [name,setName]=useState(""),[mode,setMode]=useState<"ai"|"commerce"|"both">("both");
+ const [name,setName]=useState(""),[rename,setRename]=useState(""),[mode,setMode]=useState<"ai"|"commerce"|"both">("both");
  const [loadedDraftKey,setLoadedDraftKey]=useState(""),[createError,setCreateError]=useState(""),[manageError,setManageError]=useState("");
  const [creating,setCreating]=useState(false),[busy,setBusy]=useState<string|null>(null);
  const [confirmProduct,setConfirmProduct]=useState<Product|null>(null);
@@ -81,7 +81,8 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
  function closeCreate(){if(creating)return;setCreateOpen(false);setCreateError("")}
  function closeManage(){if(busy)return;setSelected(null);setManageError("");setConfirmProduct(null)}
  const openCreate=()=>{setCreateError("");setCreateOpen(true)};
- const openManage=(id:string)=>{setManageError("");setSelected(id)};
+ const openManage=(id:string)=>{setManageError("");setSelected(id);setRename(rows.find(w=>w.id===id)?.name??"")};
+ function saveRename(){if(!active||!canManage||busy||rename.trim().length<2||rename.trim()===active.name)return;setBusy("rename");setManageError("");transition(async()=>{try{const result=await renameWorkspaceOnListAction(locale,active.id,rename);if(result.status==="success"&&result.name){setRows(old=>old.map(w=>w.id===active.id?{...w,name:result.name!}:w));setToast(t.saved);router.refresh()}else setManageError(result.message)}catch{setManageError(t.tryAgain)}finally{setBusy(null)}})}
  function meta(w:Workspace){const products=[...(w.mode==="both"||w.mode==="commerce"?[t.payProduct]:[]),...(w.mode==="both"||w.mode==="ai"?[t.aiProduct]:[])];return (products.join(" · ")||t.noProduct)+" · "+t.role[w.role]}
  function onNewSubmit(event:React.FormEvent<HTMLFormElement>){event.preventDefault();if(creating||name.trim().length<2)return;
   setCreating(true);setCreateError("");
@@ -152,6 +153,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
   </dialog>
   <dialog ref={manageDialog} className="wk2-dialog" aria-labelledby="wk2-manage-title" onCancel={event=>{if(busy)event.preventDefault();else closeManage()}} onClose={()=>{setSelected(null);setManageError("")}} onClick={event=>clickAway(event,closeManage)}>
    {active&&<div><div className="wk2-modal-header"><h2 id="wk2-manage-title">{active.name}</h2><button type="button" aria-label={t.close} onClick={closeManage}><Icon name="x"/></button></div>
+    <div className="wk2-rename"><label className="wk2-field-label" htmlFor="wk2-rename">{t.name}</label><div className="wk2-rename-row"><input className="wk2-input" id="wk2-rename" value={rename} maxLength={60} disabled={!canManage||Boolean(busy)} onChange={event=>setRename(event.target.value)}/><button className="wk2-button" type="button" onClick={saveRename} disabled={!canManage||Boolean(busy)||rename.trim().length<2||rename.trim()===active.name}>{t.saved}</button></div></div>
     {([{key:"payments" as const,label:t.payProduct,desc:t.payProductHint},{key:"ai" as const,label:t.aiProduct,desc:t.aiProductHint}]).map(product=>{
      const checked=product.key==="payments"?(active.mode==="both"||active.mode==="commerce"):(active.mode==="both"||active.mode==="ai");
      return <div className="wk2-product" key={product.key}><div><strong>{product.label}</strong><small>{product.desc}</small></div><button type="button" role="switch" className="wk2-switch" aria-label={product.label} aria-checked={checked} disabled={!canManage||Boolean(busy)} onClick={()=>toggle(product.key)}/></div>;
