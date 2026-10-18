@@ -736,6 +736,8 @@ Owner requested code-level verification only for this pass and will verify physi
 - Code/database checks are recorded in WORKSPACE-SAVE-DIAGNOSIS-20261018. Visual and physical-device checks are manual pending.
 
 ### 2026-10-18 mobile dashboard and system billing
-- Admin Settings: select a payment-enabled workspace you manage, containing only active super admins. Save with a reason and confirmation; confirm ordinary Admin/support/analyst cannot change it.
+- Admin Settings: select a payment-enabled workspace you manage, containing only active super admins. Save the selection; confirm ordinary Admin/support/analyst cannot change it.
 - In the selected workspace, add system receiving numbers and connect the real SMS device. Purchase a plan from a different workspace; check the correct number, exact plan price, verified payment and one entitlement renewal. Do not use the system workspace as its own purchaser.
 - At 320/375/390/768px EN/BN light/dark: mobile menu opens/closes; sidebar does not take page width; header controls fit; Billing stacks, its tables scroll internally; account delete/actions and dialogs fit. Desktop layout remains intact. Browser/physical verification is pending; source cascade and database/code checks are recorded in SYSTEM-BILLING-MOBILE-20261018.
+
+- System workspace Settings regression: save a different eligible workspace; selection remains visible and Save becomes disabled. Reload/navigate away and back: saved workspace remains selected. A rejected change retains the last confirmed saved destination. Setup links and instructional paragraphs are absent.

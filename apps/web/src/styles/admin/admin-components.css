@@ -265,6 +265,11 @@
  .pa-root.pa-admin-design .pa-usage-table :is(th,td):first-child{width:37%}
 }
 
-/* System receiving uses the reference panel padding and existing form spacing. */
-.pa-root.pa-admin-design .pa-system-receiving{grid-template-columns:minmax(0,1fr);padding:16px 18px}
-.pa-root.pa-admin-design .pa-system-receiving .pa-page-actions{display:flex;flex-wrap:wrap;gap:8px}
+/* Compact settings row: reference 28px controls, 8px action gap, 16px panel padding. */
+.pa-root.pa-admin-design .pa-system-receiving{padding:16px;gap:16px}
+.pa-root.pa-admin-design .pa-system-receiving h2{font-size:13px;font-weight:600;white-space:nowrap}
+.pa-root.pa-admin-design .pa-system-receiving-form{display:grid;grid-template-columns:minmax(0,280px) auto;align-items:center;gap:8px;min-width:0;margin:0}
+.pa-root.pa-admin-design .pa-system-receiving-form .pa-toolbar-select{width:100%;max-width:none;min-width:0}
+.pa-root.pa-admin-design .pa-system-receiving-form .pa-button{justify-content:center;align-self:center}
+.pa-root.pa-admin-design .pa-system-receiving-form p{grid-column:1/-1;margin:0;font-size:12px}
+@media(max-width:600px){.pa-root.pa-admin-design .pa-system-receiving{align-items:stretch;flex-direction:column}.pa-root.pa-admin-design .pa-system-receiving-form{width:100%;grid-template-columns:minmax(0,1fr) auto}}

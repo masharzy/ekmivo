@@ -17,3 +17,6 @@ Owner requested mobile dashboard fixes and Admin selection of Ekmivo's system re
 
 ## Activation
 Admin > Settings > System receiving workspace: select an eligible workspace and save. Add Ekmivo's own numbers under that workspace's Payment methods, then connect the real verification phone under SMS devices. This destination serves every paid plan. Until those steps are complete, paid purchase correctly remains unavailable. No real plan purchase or payment was performed in this task.
+
+## Settings correction after owner review
+The saved production workspace was present in the database; the uncontrolled form could reset its select to the original empty default and the action revalidated the Admin root rather than Settings. The control now uses a controlled selection, returns the database-confirmed workspace from the save transaction, preserves the last saved value through later failures and revalidates the canonical/localized Settings routes. The settings UI is a compact reference row with a styled select and 28px Save button. Setup links, instructional paragraphs, reason/confirmation fields and repeated selected labels were removed. A server-generated audit description preserves the existing SQL audit and super-admin restrictions. Receiving methods and SMS devices stay in the workspace. No migration or system destination change was made.

@@ -73,14 +73,22 @@ export async function setPlatformRoleAction(localeParam:string,_previous:AdminAc
  }catch(e){console.error("[admin role]",e instanceof Error?e.name:"unknown");return {status:"error",message:t.failed};}
 }
 
-export async function setPlatformReceivingAction(localeParam:string,_previous:AdminActionState,form:FormData):Promise<AdminActionState>{
+export type PlatformReceivingState=AdminActionState & {workspace?:{id:string;name:string}};
+export async function setPlatformReceivingAction(localeParam:string,_previous:PlatformReceivingState,form:FormData):Promise<PlatformReceivingState>{
  const locale=safeLocale(localeParam),bn=locale==='bn',admin=await requireFreshSuperAdmin();
- if(!admin)return {status:'error',message:emailLabels[locale].denied};
- const workspace=asText(form.get('workspaceId')),reason=asText(form.get('reason')).trim();
- if(!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(workspace)||reason.length<10||reason.length>500||asText(form.get('confirm'))!=='CHANGE')return {status:'error',message:emailLabels[locale].bad};
+ const failure=(message:string):PlatformReceivingState=>({status:'error',message,workspace:_previous.workspace});
+ if(!admin)return failure(emailLabels[locale].denied);
+ const workspace=asText(form.get('workspaceId'));
+ if(!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(workspace))return failure(emailLabels[locale].bad);
  try{
-  await database()`SELECT platform_billing_set(${admin.user.id}::uuid,${workspace}::uuid,${reason})`;
-  revalidatePath(`/${locale}/admin`);
-  return {status:'success',message:bn?'System receiving workspace সংরক্ষিত হয়েছে। নম্বর ও SMS device প্রস্তুত করুন।':'System receiving workspace saved. Configure its receiving numbers and SMS device.'};
- }catch{return {status:'error',message:bn?'Workspace সংরক্ষণ হয়নি। আপনি owner/admin এবং সব সদস্য সক্রিয় super admin হতে হবে; Payment gateway চালু থাকতে হবে।':'Could not save. You must manage this workspace; all members must be active super admins and Payment gateway must be enabled.'};}
+  const saved=await database().begin(async tx=>{
+   await tx`SELECT platform_billing_set(${admin.user.id}::uuid,${workspace}::uuid,'System receiving workspace selected in Admin Settings')`;
+   const rows=await tx`SELECT w.id,w.name FROM platform_billing_settings s JOIN workspaces w ON w.id=s.workspace_id WHERE s.singleton`;
+   if(!rows[0]||String(rows[0].id)!==workspace)throw Error('Receiving workspace not confirmed');
+   return {id:String(rows[0].id),name:String(rows[0].name)};
+  });
+  revalidatePath(`/${locale}/admin/settings`);
+  revalidatePath('/admin/settings');
+  return {status:'success',message:bn?'সংরক্ষিত':'Saved',workspace:saved};
+ }catch{return failure(bn?'সংরক্ষণ হয়নি। শুধু সক্রিয় super admin সদস্যসহ workspace বেছে নিন।':'Could not save. Choose a workspace with only active super admin members.');}
 }
