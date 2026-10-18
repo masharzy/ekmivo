@@ -58,14 +58,18 @@ console.log("PG02 PASS: dirty onboarding blocks locale routing and opens Save/Di
 // props (including browser back) must synchronize the persistent root layout.
 const controlsSource=await readFile(new URL("../src/components/site-controls.tsx",import.meta.url),"utf8");
 const controlsCompiled=ts.transpileModule(controlsSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-let currentLocale="en",block=false;
-const pushed=[],nodes=[];
-const documentState={documentElement:{lang:"en",dataset:{},removeAttribute(){}},cookie:""};
-const controlsSandbox={exports:{},document:documentState,CustomEvent:class{constructor(name,options){this.type=name;Object.assign(this,options);}},window:{
- location:{search:"?env=sandbox",hash:"#keys"},addEventListener(){},removeEventListener(){},
- dispatchEvent(){return !block;},localStorage:{setItem(){}}
-},require(id){
- if(id==="next/navigation")return {usePathname:()=>`/${currentLocale}/workspaces`,useRouter:()=>({push:href=>pushed.push(href)})};
+let currentLocale="en",block=false,reloaded=0,dispatched=[];
+const nodes=[];
+const documentState={documentElement:{lang:"en",dataset:{},removeAttribute(){},getAttribute(){return null}},cookie:""};
+const controlsSandbox={exports:{},document:documentState,
+ CustomEvent:class{constructor(name,options){this.type=name;Object.assign(this,options);}},
+ window:{
+ location:{search:"?env=sandbox",hash:"#keys",reload:()=>{reloaded++}},
+ addEventListener(){},removeEventListener(){},
+ dispatchEvent(event){dispatched.push(event);return !block;},
+ localStorage:{setItem(){}}
+ },require(id){
+ if(id==="next/navigation")return {usePathname:()=>"/"+currentLocale+"/workspaces"};
  if(id==="react")return {useState:initial=>[initial,()=>{}],useEffect:fn=>fn()};
  if(id==="react/jsx-runtime")return {jsx:(type,props)=>{const node={type,props};nodes.push(node);return node;},jsxs:(type,props)=>{const node={type,props};nodes.push(node);return node;}};
  throw Error("Unexpected controls dependency "+id);
@@ -73,13 +77,18 @@ const controlsSandbox={exports:{},document:documentState,CustomEvent:class{const
 vm.runInNewContext(controlsCompiled,controlsSandbox,{timeout:3000});
 function renderControls(locale){currentLocale=locale;nodes.length=0;controlsSandbox.exports.SiteControls({locale,initialTheme:"system"});}
 renderControls("en");
-const select=nodes.find(node=>node.type==="select"&&node.props.id==="site-locale");
-block=true;select.props.onChange({target:{value:"bn"}});
-assert.equal(documentState.documentElement.lang,"en");assert.equal(pushed.length,0);
-assert.ok(documentState.cookie.startsWith("ekmivo-locale=en;"));
-block=false;select.props.onChange({target:{value:"bn"}});
-assert.equal(pushed[0],"/bn/workspaces?env=sandbox#keys");
-assert.equal(documentState.documentElement.lang,"en","Language changes only when new route commits");
+const languageButton=nodes.find(node=>node.type==="button"&&node.props.className==="ek-language-switch");
+assert.ok(languageButton,"language switch is a button in the current public controls");
+block=true;languageButton.props.onClick();
+assert.equal(documentState.documentElement.lang,"en");
+assert.equal(reloaded,0,"blocked locale intent must not reload the page");
+assert.equal(documentState.cookie,"","blocked locale switch must not mutate preference");
+assert.equal(dispatched.at(-1).detail.href,"/workspaces?env=sandbox#keys",
+ "language action preserves query/hash while canonicalizing legacy prefix");
+block=false;languageButton.props.onClick();
+assert.equal(reloaded,1,"successful locale change must reload for server-chosen locale");
+assert.ok(documentState.cookie.startsWith("ekmivo-locale=bn;"));
+assert.equal(documentState.documentElement.lang,"en","language only changes after server render");
 renderControls("bn");assert.equal(documentState.documentElement.lang,"bn");
 renderControls("en");assert.equal(documentState.documentElement.lang,"en");
-console.log("PG02 PASS: committed EN/BN language, browser-back props, blocked navigation and query/hash preservation");
+console.log("PG02 PASS: EN/BN server preference reload, guarded intent, and query/hash preservation");
