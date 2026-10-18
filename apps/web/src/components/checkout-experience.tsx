@@ -211,7 +211,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
      <div className="provider-pay-headline">{bn?"মোবাইল ব্যাংকিং":"Mobile Banking"}</div>
      <div className="provider-checkout-options pg05-method-options">
       {tiles.map(tile=><button key={tile.id||tile.method} type="button" aria-pressed={method===tile.method&&selectedAccountId===tile.id}
-       onClick={()=>{setMethod(tile.method);setSelectedAccountId(tile.id);setMethodChosen(true)}} data-method={tile.method}><ProviderMark method={tile.method} bn={bn}/>{tileIndex(tile.id,tile.method)>1&&<span className="pg05-account-index">{String(tileIndex(tile.id,tile.method)).padStart(2,"0")}</span>}</button>)}
+       onClick={()=>{setMethod(tile.method);setSelectedAccountId(tile.id);setMethodChosen(true)}} data-method={tile.method}><WalletToken method={tile.method}/>{tileIndex(tile.id,tile.method)>1&&<span className="pg05-account-index">{String(tileIndex(tile.id,tile.method)).padStart(2,"0")}</span>}</button>)}
      </div>
      {canLock&&!!info.methods?.length?<button type="button" className="provider-primary-action pg05-pay" disabled={!availableSelected||!methodChosen} onClick={()=>setStep("payer")}>
       {bn?"পরিশোধ করুন ":"Pay "}{amount} BDT
