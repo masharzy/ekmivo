@@ -63,7 +63,14 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
  },[search,role,term,locale]);
 
  useEffect(()=>{document.cookie="ekmivo-admin-theme="+mode+";path=/;max-age=31536000;samesite=lax";},[mode]);
- const goLocale=(next:AdminLocale)=>{if(next!==locale)go(pathname.replace(/^\/(en|bn)(?=\/)/,"/"+next));};
+ const goLocale=(next:AdminLocale)=>{
+  if(next===locale)return;
+  document.cookie="ekmivo-locale="+next+";path=/;max-age=31536000;samesite=lax";
+  const prefixed=/^\/(en|bn)(?=\/|$)/.test(pathname);
+  const nextPath=prefixed?pathname.replace(/^\/(en|bn)(?=\/|$)/,"/"+next):"/"+next+pathname;
+  setMobile(false);setSearch(false);
+  startTransition(()=>{router.replace(nextPath);router.refresh()});
+ };
  const jump=(path:string)=>go(root+(path?"/"+path:""));
  return <div className={"pa-root pa-admin-design"+(production?" pa-production":"")} data-admin-theme={mode} lang={locale}>
   <div className={"pa-route-progress"+(pending?" is-visible":"")} aria-hidden="true"/>
