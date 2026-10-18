@@ -6,6 +6,7 @@ import type {InitialReads} from "../../components/dashboard-initial-data";
 export async function dashboardInitialData(workspaceId:string,environment:string,section:string,query:Record<string,string|string[]|undefined>={}):Promise<InitialReads>{
  const root="workspaces/"+workspaceId,qs="?environment="+encodeURIComponent(environment);
  const paths:Record<string,string>={};
+ if(["gateways","devices","developers","team","requests"].includes(section))paths.resourceLimits=root+"/billing/limits"+qs;
  if(["customers","invoices","payment-links"].includes(section))paths.documents=root+"/documents/"+section+qs;
  if(["transactions","incoming"].includes(section)){
   const filters=new URLSearchParams({environment});

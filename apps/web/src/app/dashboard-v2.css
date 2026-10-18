@@ -947,3 +947,9 @@
  .ds-app[data-service="payments"] .ekv3-methods{padding:0!important}
  .ds-app[data-service="payments"] .ekv3-form-modal{max-height:calc(100dvh - 24px);overflow-y:auto}
 }
+
+.ds-app[data-service="payments"] .pg-plan-limit{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:0 0 16px;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;color:var(--color-text-muted);font-size:13px;line-height:1.5;background:var(--color-surface)}
+.ds-app[data-service="payments"] .pg-plan-limit[data-blocked]{color:var(--color-warning)}
+.ds-app[data-service="payments"] .pg-plan-limit :is(a,button){font:inherit;font-weight:500;color:var(--color-primary);border:0;background:transparent;padding:0;cursor:pointer;white-space:nowrap}
+
+.ds-app[data-service="payments"] .pg-plan-limit-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}

@@ -48,6 +48,10 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 	}
 	var raw []byte
 	if r.Method == "GET" {
+		if r.PathValue("billingAction") == "limits" {
+			s.billingResourceLimits(w, r, ws, actor.UserID)
+			return
+		}
 		e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_billing_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
 		if e != nil {
 			mapped(w, e)

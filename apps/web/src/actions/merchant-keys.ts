@@ -69,8 +69,8 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
    const product=await tx`SELECT enabled FROM workspace_product_access
     WHERE workspace_id=${workspace}::uuid AND product='payments' FOR SHARE`;
    if(realm.length!==1||product.length!==1||!product[0].enabled)return {code:"denied" as const};
-   if(operation==="create" && environment==="live" && workspace!==process.env.PLATFORM_BILLING_WORKSPACE_ID){
-    const entitlement=await tx`SELECT pg13_billing_allowed(${workspace}::uuid) AS allowed`;
+   if(operation==="create" && environment==="live"){
+    const entitlement=await tx`SELECT (platform_billing_system_workspace(${workspace}::uuid) OR pg13_billing_allowed(${workspace}::uuid)) AS allowed`;
     if(entitlement.length!==1 || entitlement[0].allowed!==true)return {code:"plan" as const};
    }
    if(!await passwordMatches(password,String(session[0].password_hash)))return {code:"reauth" as const};
@@ -102,6 +102,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
    const publicId=randomBytes(8).toString("hex");
    const raw=`ek_${environment==="sandbox"?"test":"live"}_${publicId}_${randomBytes(32).toString("base64url")}`;
    const digest=createHash("sha256").update(raw).digest("hex");
+   if(operation==="rotate")await tx`SELECT set_config('ekmivo.key_rotation_id',${oldId},true)`;
    const rows=await tx`INSERT INTO merchant_api_keys
     (workspace_id,environment,public_id,secret_digest,name,scopes,created_by,expires_at)
     VALUES(${workspace}::uuid,${environment},${publicId},${digest},
@@ -117,6 +118,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
   if(result.code==="revoked")return {status:"success",message:bn?"কীটি বাতিল করা হয়েছে।":"API key revoked."};
   return {status:"success",message:bn?"গোপন কীটি এখনই কপি করুন। এটি আর দেখানো হবে না।":"Copy this secret now. It will never be shown again.",rawSecret:result.raw,keyId:result.keyId};
  }catch(e){
+  if(e&&typeof e==="object"&&"code" in e&&e.code==="P6802")return error(bn,"plan");
   if(e&&typeof e==="object"&&"code" in e&&e.code==="P6806")return error(bn,"planLimit");
   console.error("[pg03 key mutation]",e instanceof Error?e.name:"unknown");
   return error(bn,"offline");
