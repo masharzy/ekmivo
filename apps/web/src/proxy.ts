@@ -11,12 +11,14 @@ export function proxy(request:NextRequest){
  const legacy=path.match(/^\/(bn|en)(?=\/|$)/);
  const preference=request.cookies.get("ekmivo-locale")?.value;
  const locale=preference==="en"||preference==="bn"?preference:(legacy?.[1]==="en"?"en":"bn");
+ // The internally rewritten /<locale>/... path can traverse this proxy again.
+ // Redirecting it to the original unprefixed URL loops forever (307 to self).
+ // Accept legacy /en and /bn URLs as-is; our generated links stay locale neutral.
  if(legacy){
-  const target=request.nextUrl.clone();
-  target.pathname=path.slice(legacy[0].length)||"/";
-  const redirect=NextResponse.redirect(target,307);
-  if(preference!=="en"&&preference!=="bn")redirect.cookies.set("ekmivo-locale",locale,{path:"/",maxAge:31536000,sameSite:"lax"});
-  return redirect;
+  const response=NextResponse.next();
+  if(preference!=="en"&&preference!=="bn")
+   response.cookies.set("ekmivo-locale",locale,{path:"/",maxAge:31536000,sameSite:"lax"});
+  return response;
  }
  const target=request.nextUrl.clone();
  target.pathname="/"+locale+path;
