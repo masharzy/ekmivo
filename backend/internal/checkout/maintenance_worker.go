@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/masharzy/ekmivo/backend/internal/financial"
 	"github.com/riverqueue/river"
-	"os"
 	"strings"
 	"time"
 )
@@ -69,8 +68,7 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 			}
 		}
 	}
-	platform := os.Getenv("PLATFORM_BILLING_WORKSPACE_ID")
-	if w.Realm != "live" || !uuidPattern.MatchString(platform) || len(w.TokenKey) < 32 {
+	if w.Realm != "live" || len(w.TokenKey) < 32 {
 		return nil
 	}
 	var raw []byte
@@ -78,6 +76,7 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 		return errors.New("billing reconciliation unavailable")
 	}
 	var invoices []struct {
+		Receiver  string `json:"receiving_workspace_id"`
 		ID        string `json:"id"`
 		Workspace string `json:"workspace_id"`
 		Amount    int64  `json:"amount_minor"`
@@ -87,6 +86,10 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 	}
 	s := &Service{TokenKey: w.TokenKey}
 	for _, i := range invoices {
+		platform := i.Receiver
+		if !uuidPattern.MatchString(platform) {
+			return errors.New("billing receiving workspace missing")
+		}
 		if i.Workspace == platform {
 			return errors.New("platform and merchant identity overlap")
 		}

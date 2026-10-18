@@ -264,3 +264,7 @@
  .pa-root.pa-admin-design .pa-usage-table :is(th,td){white-space:normal;overflow-wrap:anywhere;padding:9px 8px;height:auto}
  .pa-root.pa-admin-design .pa-usage-table :is(th,td):first-child{width:37%}
 }
+
+/* System receiving uses the reference panel padding and existing form spacing. */
+.pa-root.pa-admin-design .pa-system-receiving{grid-template-columns:minmax(0,1fr);padding:16px 18px}
+.pa-root.pa-admin-design .pa-system-receiving .pa-page-actions{display:flex;flex-wrap:wrap;gap:8px}

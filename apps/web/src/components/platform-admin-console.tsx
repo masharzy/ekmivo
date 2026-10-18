@@ -11,6 +11,7 @@ import {platformRole,platformSettings,verifiedAdmin} from "../lib/server/platfor
 import {sessionMfaValid} from "../lib/server/mfa";
 import {mailReady} from "../lib/server/email";
 import {publicSandboxConfig} from "../lib/server/public-sandbox";
+import {AdminPlatformReceiving} from "./admin-platform-receiving";
 import {VerificationSettings,RoleControls} from "./admin-controls";
 import {AdminShell,type AdminLocale} from "./platform-admin-shell";
 import {AdminModal,AdminCopy} from "./platform-admin-widgets";
@@ -238,6 +239,8 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  body=<><PageHead title={t} action={isSuper&&(page||sub==="roles")?<AdminModal title="Staff roles" label="Manage roles"><RoleControls locale={locale} users={list}/></AdminModal>:undefined}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{!isSuper?<Denied locale={locale}/>:page?<><Search locale={locale} query={q} kind="staff"/><Records locale={locale} base={base} query={q} page={page}/></>:staffInventory||<Offline locale={locale}/>}</>;
  }else if(key==="settings"){
  const settings=isSuper?await platformSettings():null;
+ const receiving=isSuper?await database()`SELECT w.id,w.name FROM platform_billing_settings s JOIN workspaces w ON w.id=s.workspace_id WHERE s.singleton`:[];
+ const receivingOptions=isSuper?await database()`SELECT w.id,w.name FROM workspaces w JOIN workspace_members mine ON mine.workspace_id=w.id AND mine.user_id=${admin.user.id}::uuid AND mine.role IN ('owner','admin') WHERE EXISTS(SELECT 1 FROM workspace_product_access p WHERE p.workspace_id=w.id AND p.product='payments' AND p.enabled) AND EXISTS(SELECT 1 FROM workspace_members m WHERE m.workspace_id=w.id AND m.role='owner') AND NOT EXISTS(SELECT 1 FROM workspace_members m LEFT JOIN platform_administrators p ON p.user_id=m.user_id JOIN app_users u ON u.id=m.user_id WHERE m.workspace_id=w.id AND (p.role IS DISTINCT FROM 'super_admin' OR u.disabled_at IS NOT NULL)) ORDER BY w.name,w.id LIMIT 200`:[];
  let staff:Array<{id:string;name:string;email:string;verified:boolean;role:string|null}>=[];
  if(isSuper){const rows=await database()`SELECT u.id,u.display_name,u.email,u.email_verified_at,p.role
  FROM app_users u LEFT JOIN platform_administrators p ON p.user_id=u.id ORDER BY u.created_at DESC LIMIT 150`;
@@ -245,6 +248,7 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  const roles=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"roles",query:""}):null;
  const sessions=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"sessions",query:""}):null;
  body=<><PageHead title={t}/>{isSuper?<>
+ <AdminPlatformReceiving locale={locale} current={receiving[0]?{id:String(receiving[0].id),name:String(receiving[0].name)}:null} options={receivingOptions.map(w=>({id:String(w.id),name:String(w.name)}))}/>
  <section className="pa-surface pa-settings-grid"><div><h2>Email verification</h2><p>{settings?.emailVerification?"Required":"Off"}</p>
  <span className="pa-status-text"><span className={"pa-status-dot "+(mailReady()?"green":"grey")}/>Email service: {mailReady()?"Configured":"Configuration required"}</span>
  </div><AdminModal label="Manage verification" title="Email verification"><VerificationSettings locale={locale} enabled={!!settings?.emailVerification} providerReady={mailReady()}/></AdminModal></section>

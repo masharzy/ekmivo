@@ -734,3 +734,8 @@ Owner requested code-level verification only for this pass and will verify physi
 - In EN/BN and light/dark, add a provider+number already in another workspace: red consent dialog, no other workspace identity disclosed; Cancel does not create; unchecked submit disabled; Help & security opens workspace help; checked submit creates once. Same-workspace duplicate remains blocked.
 - Hover/focus an account: right-side delete icon appears; touch shows it without hover. Cancel preserves it; confirm removes active/disabled account, leaves historical payments, and re-add checks consent/plan again.
 - Code/database checks are recorded in WORKSPACE-SAVE-DIAGNOSIS-20261018. Visual and physical-device checks are manual pending.
+
+### 2026-10-18 mobile dashboard and system billing
+- Admin Settings: select a payment-enabled workspace you manage, containing only active super admins. Save with a reason and confirmation; confirm ordinary Admin/support/analyst cannot change it.
+- In the selected workspace, add system receiving numbers and connect the real SMS device. Purchase a plan from a different workspace; check the correct number, exact plan price, verified payment and one entitlement renewal. Do not use the system workspace as its own purchaser.
+- At 320/375/390/768px EN/BN light/dark: mobile menu opens/closes; sidebar does not take page width; header controls fit; Billing stacks, its tables scroll internally; account delete/actions and dialogs fit. Desktop layout remains intact. Browser/physical verification is pending; source cascade and database/code checks are recorded in SYSTEM-BILLING-MOBILE-20261018.

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -18,7 +17,8 @@ func (s *Service) billingAllowsNew(ctx context.Context, workspace, realm string)
 	if realm != "live" || s == nil || s.Auth == nil {
 		return false
 	}
-	if workspace == os.Getenv("PLATFORM_BILLING_WORKSPACE_ID") {
+	var system bool
+	if s.Auth.DB.QueryRowContext(ctx, "SELECT platform_billing_system_workspace($1::uuid)", workspace).Scan(&system) == nil && system {
 		return true
 	}
 	var allowed bool
@@ -148,7 +148,12 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "NOT_FOUND")
 		return
 	}
-	platform := os.Getenv("PLATFORM_BILLING_WORKSPACE_ID")
+	var configured sql.NullString
+	if s.Auth.DB.QueryRowContext(r.Context(), "SELECT platform_billing_workspace()").Scan(&configured) != nil {
+		fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
+		return
+	}
+	platform := configured.String
 	if !s.pipelineReady() || s.Pipeline.Live == nil || !uuidPattern.MatchString(platform) || platform == ws {
 		fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
 		return
@@ -183,6 +188,12 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 			fail(w, 404, "NOT_FOUND")
 			return
 		}
+		var receiver sql.NullString
+		if s.Auth.DB.QueryRowContext(r.Context(), "SELECT platform_billing_invoice_receiver($1::uuid,$2::uuid)", ws, invoice.ID).Scan(&receiver) != nil || !uuidPattern.MatchString(receiver.String) {
+			fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
+			return
+		}
+		platform = receiver.String
 		cap := s.token(platform, "live", "billing:"+invoice.ID)
 		var proofRaw []byte
 		e = s.Pipeline.Live.QueryRow(r.Context(), "SELECT pg13_platform_payment($1)", digest(cap)).Scan(&proofRaw)
@@ -206,6 +217,22 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		write(w, 200, map[string]any{"renewed": saved})
+		return
+	}
+	// Reject unavailable destinations before issuing a merchant invoice.
+	var sourcesRaw []byte
+	if err := s.pipelineScoped(r.Context(), platform, "live", func(tx pgx.Tx) error {
+		return tx.QueryRow(r.Context(), "SELECT pg10_public_payment_sources($1::uuid,'live')", platform).Scan(&sourcesRaw)
+	}); err != nil {
+		fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
+		return
+	}
+	var sources struct {
+		Methods []string          `json:"configured_methods"`
+		Sources []json.RawMessage `json:"sources"`
+	}
+	if json.Unmarshal(sourcesRaw, &sources) != nil || len(sources.Methods) == 0 || len(sources.Sources) == 0 {
+		fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
 		return
 	}
 	var b struct {
@@ -239,6 +266,12 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = json.Unmarshal(raw, &invoice)
+	var pinned sql.NullString
+	if s.Auth.DB.QueryRowContext(r.Context(), "SELECT platform_billing_invoice_receiver($1::uuid,$2::uuid)", ws, invoice.ID).Scan(&pinned) != nil || !uuidPattern.MatchString(pinned.String) {
+		fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
+		return
+	}
+	platform = pinned.String
 	cap := s.token(platform, "live", "billing:"+invoice.ID)
 	e = s.creationScoped(r.Context(), platform, "live", func(tx pgx.Tx) error {
 		var result []byte

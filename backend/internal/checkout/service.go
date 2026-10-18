@@ -298,6 +298,9 @@ func mapped(w http.ResponseWriter, err error) {
 			return
 		}
 		switch pg.Code {
+		case "P6902":
+			fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
+			return
 		case "P6901":
 			fail(w, 409, "RECEIVING_ACCOUNT_CONSENT_REQUIRED")
 			return

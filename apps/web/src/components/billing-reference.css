@@ -30,3 +30,26 @@
 .ref-billing dialog.billing-native{width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;border:0;color:var(--txt);background:transparent;overflow:hidden}.ref-billing dialog.billing-native:not([open]){display:none}.ref-billing dialog.billing-native::backdrop{background:rgba(10,11,14,.45)}.ref-billing button:disabled{opacity:.5;cursor:not-allowed}.ref-billing a.ib{text-decoration:none}
 
 @media(prefers-color-scheme:dark){html:not([data-theme="light"]):not([data-theme="dark"]) .ref-billing{--bg:#0a0b0e;--panel:#131418;--hover:#1a1b21;--line:#24262d;--txt:#ececf0;--mut:#8b8d97;--acc:#8b87ff;--accb:#1f2040;--ok:#4ade80;--warn:#fbbf24;--gry:#6b6d77;color-scheme:dark}}
+
+/* Keep breakpoints after their desktop rules. Tables scroll within their own card. */
+.ref-billing,.ref-billing .wrap,.ref-billing .bl-g>*,.ref-billing .card{min-width:0;max-width:100%}
+.ref-billing .notice>span,.ref-billing .bl-row>b{min-width:0;overflow-wrap:anywhere}
+@media(max-width:900px){
+ .ref-billing .bl-g{grid-template-columns:minmax(0,1fr)}
+ .ref-billing .bl-k{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ref-billing .bl-pl{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+}
+@media(max-width:520px){
+ .ref-billing .wrap{padding:0;gap:16px}
+ .ref-billing .bl-p,.ref-billing .tile{padding:16px}
+ .ref-billing .tabs{gap:16px;overflow-x:auto;max-width:100%}
+ .ref-billing .tabs button{flex:none;white-space:nowrap}
+ .ref-billing .notice{flex-wrap:wrap}
+ .ref-billing .bl-ls div{grid-template-columns:minmax(70px,1fr) minmax(0,1fr) auto;gap:8px}
+ .ref-billing .bl-row{align-items:flex-start;padding-block:10px}
+ .ref-billing .bl-row>b{text-align:right;max-width:60%}
+ .ref-billing .md{padding:18px;max-height:calc(100dvh - 32px)}
+ .ref-billing .ov.dr .md{width:100%;max-width:100%}
+ .ref-billing .mf{flex-wrap:wrap}
+ .ref-billing .tw{max-width:100%;overflow-x:auto}
+}

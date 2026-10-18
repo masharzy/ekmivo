@@ -72,3 +72,15 @@ export async function setPlatformRoleAction(localeParam:string,_previous:AdminAc
   return {status:"success",message:t.changed};
  }catch(e){console.error("[admin role]",e instanceof Error?e.name:"unknown");return {status:"error",message:t.failed};}
 }
+
+export async function setPlatformReceivingAction(localeParam:string,_previous:AdminActionState,form:FormData):Promise<AdminActionState>{
+ const locale=safeLocale(localeParam),bn=locale==='bn',admin=await requireFreshSuperAdmin();
+ if(!admin)return {status:'error',message:emailLabels[locale].denied};
+ const workspace=asText(form.get('workspaceId')),reason=asText(form.get('reason')).trim();
+ if(!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(workspace)||reason.length<10||reason.length>500||asText(form.get('confirm'))!=='CHANGE')return {status:'error',message:emailLabels[locale].bad};
+ try{
+  await database()`SELECT platform_billing_set(${admin.user.id}::uuid,${workspace}::uuid,${reason})`;
+  revalidatePath(`/${locale}/admin`);
+  return {status:'success',message:bn?'System receiving workspace সংরক্ষিত হয়েছে। নম্বর ও SMS device প্রস্তুত করুন।':'System receiving workspace saved. Configure its receiving numbers and SMS device.'};
+ }catch{return {status:'error',message:bn?'Workspace সংরক্ষণ হয়নি। আপনি owner/admin এবং সব সদস্য সক্রিয় super admin হতে হবে; Payment gateway চালু থাকতে হবে।':'Could not save. You must manage this workspace; all members must be active super admins and Payment gateway must be enabled.'};}
+}

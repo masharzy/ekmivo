@@ -918,3 +918,32 @@
 .ds-app[data-service="payments"] .ek-ref-shared-warning .ekv2-confirm-actions{flex-wrap:wrap;align-items:center;gap:10px}
 .ds-app[data-service="payments"] .ek-ref-shared-warning a{font-size:13px;color:var(--pm-muted);text-decoration:underline;text-underline-offset:3px}
 @media(hover:none){.ds-app[data-service="payments"] .ekv3-methods .ek-ref-delete{opacity:1}}
+
+/* Final shell breakpoints must outrank the desktop payment reference. */
+@media(max-width:800px){
+ .ds-app[data-service="payments"]{width:100%;min-width:0}
+ .ds-app[data-service="payments"]>.ds-sidebar{display:none}
+ .ds-app[data-service="payments"]>.ds-main{width:100%;min-width:0;max-width:100%}
+ .ds-app[data-service="payments"] .ds-mobile-trigger{display:grid}
+ .ds-app[data-service="payments"] .ds-topbar{height:auto;min-height:57px;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 16px}
+ .ds-app[data-service="payments"] .ds-topbar-leading{min-width:0;flex:1 1 auto;width:auto}
+ .ds-app[data-service="payments"] .ds-topbar-tools{flex:0 1 auto;width:auto;min-width:0;flex-wrap:wrap;justify-content:flex-end}
+ .ds-app[data-service="payments"] .ds-content{width:100%;max-width:100%;padding:20px 16px 32px}
+ .ds-app[data-service="payments"] .ds-content>*,.ds-app[data-service="payments"] .ekv3-table-scroller{min-width:0;max-width:100%}
+ .ds-app[data-service="payments"] .ds-footnote{flex-wrap:wrap;gap:8px}
+ .ds-app[data-service="payments"] dialog:not(.billing-native){max-width:calc(100vw - 24px)}
+ .ds-app[data-service="payments"] .ds-mobile-dialog{max-width:min(300px,88vw);height:100dvh;max-height:100dvh}
+ .ds-app[data-service="payments"] :is(.ekv3-page-error,.ekv3-head-actions){flex-wrap:wrap}
+ .ds-app[data-service="payments"] :is(.ekv3-page-error,.ekv3-drawer-list strong){overflow-wrap:anywhere}
+}
+@media(max-width:520px){
+ .ds-app[data-service="payments"] .ds-topbar-leading{flex-basis:100%;justify-content:flex-start}
+ .ds-app[data-service="payments"] .ds-topbar-tools{flex-basis:100%;justify-content:flex-end}
+ .ds-app[data-service="payments"] .ds-service-picker summary strong{max-width:180px}
+ .ds-app[data-service="payments"] .ek-ref-account{flex-wrap:wrap;gap:12px}
+ .ds-app[data-service="payments"] .ek-ref-account .ek-ref-account-identity{flex:1 1 140px}
+ .ds-app[data-service="payments"] .ek-ref-account .ek-ref-actions{margin-left:auto}
+ .ds-app[data-service="payments"] .ek-ref-number{font-size:16px;overflow-wrap:anywhere}
+ .ds-app[data-service="payments"] .ekv3-methods{padding:0!important}
+ .ds-app[data-service="payments"] .ekv3-form-modal{max-height:calc(100dvh - 24px);overflow-y:auto}
+}

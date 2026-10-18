@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,7 +17,8 @@ func (s *Service) planSnapshot(ctx context.Context, ws, realm string) ([]byte, e
 	if realm == "sandbox" {
 		return nil, nil
 	}
-	if ws == os.Getenv("PLATFORM_BILLING_WORKSPACE_ID") {
+	var system bool
+	if s.Auth.DB.QueryRowContext(ctx, "SELECT platform_billing_system_workspace($1::uuid)", ws).Scan(&system) == nil && system {
 		b, _ := json.Marshal(map[string]any{"workspace_id": ws, "platform_billing": true, "fetched_at": time.Now().UTC()})
 		return b, nil
 	}
