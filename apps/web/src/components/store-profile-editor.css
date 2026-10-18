@@ -1,14 +1,40 @@
-/* Dashboard-only Store screen. Reuses dashboard's ws-* controls and spacing. */
-.store-page{max-width:100%;font:inherit}.store-page .store-panel{max-width:680px;padding:24px}
-.store-page .store-logo-row{display:flex;align-items:center;gap:16px;margin-bottom:22px}
-.store-page .store-logo-preview{width:72px;height:72px;flex:none;display:grid;place-items:center;overflow:hidden;border:1px solid var(--ds-border,var(--line,#e9e9ed));border-radius:12px;background:var(--ds-surface,#f6f6f8);font-weight:600}
-.store-page .store-logo-preview img{max-width:100%;max-height:100%;object-fit:contain}
-.store-page .store-logo-actions{display:grid;gap:10px}
-.store-page .store-buttons{display:flex;gap:8px;align-items:center}
-.store-page .store-upload,.store-page .store-buttons button,.store-page .store-footer button{font:inherit;cursor:pointer;border:1px solid var(--ds-border,#e0e0e6);border-radius:8px;padding:8px 12px;color:inherit;background:transparent}
-.store-page .store-upload input{display:none}.store-page .store-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.store-page .store-fields label:last-child{grid-column:1/-1}
-.store-page .store-footer{display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-top:24px}
-.store-page .store-footer .ws-primary{border-color:transparent}
-.store-page :is(button,input):disabled{opacity:.55;cursor:not-allowed}
-@media(max-width:620px){.store-page .store-panel{padding:16px}.store-page .store-fields{grid-template-columns:1fr}}
+/* Scoped Store Settings reference surface: never borrow marketing globals. */
+.store-settings-page{--ss-bg:#fafafa;--ss-card:#fff;--ss-soft:#f5f6f8;--ss-line:#e8e9ed;--ss-line2:#d9dbe1;--ss-tx:#0b0c0f;--ss-mut:#6b7280;--ss-err:#d92d20;--ss-ac:#0b0c0f;--ss-on:#fff;max-width:860px;margin:0 auto;padding:28px 20px 110px;color:var(--ss-tx);font:400 14px/1.5 Inter,var(--font-hind-siliguri),"Hind Siliguri",system-ui,sans-serif}
+:root[data-theme=dark] .store-settings-page{--ss-bg:#08090c;--ss-card:#101216;--ss-soft:#171a1f;--ss-line:#1f232a;--ss-line2:#2c313a;--ss-tx:#f4f5f7;--ss-mut:#8b929e;--ss-err:#f97066;--ss-ac:#f4f5f7;--ss-on:#08090c}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]):not([data-theme=dark]) .store-settings-page{--ss-bg:#08090c;--ss-card:#101216;--ss-soft:#171a1f;--ss-line:#1f232a;--ss-line2:#2c313a;--ss-tx:#f4f5f7;--ss-mut:#8b929e;--ss-err:#f97066;--ss-ac:#f4f5f7;--ss-on:#08090c}}
+.store-settings-page *{box-sizing:border-box}.store-settings-page h1,.store-settings-page h2,.store-settings-page p{margin:0}
+.store-settings-page .ss-header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}
+.store-settings-page h1{font-size:28px;font-weight:700;line-height:1.2;letter-spacing:-.02em}
+.store-settings-page .ss-header p{font-size:14px;color:var(--ss-mut);margin-top:5px}
+.store-settings-page .ss-btn,.store-settings-page .ss-unsaved button{border:1px solid var(--ss-line);background:var(--ss-card);color:var(--ss-tx);border-radius:10px;min-height:36px;padding:0 14px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.store-settings-page .ss-btn:hover{border-color:var(--ss-line2)}.store-settings-page button:disabled,.store-settings-page input:disabled,.store-settings-page select:disabled,.store-settings-page textarea:disabled{opacity:.55;cursor:not-allowed}
+.store-settings-page :is(button,input,select,textarea):focus-visible{outline:2px solid var(--ss-tx);outline-offset:2px}
+.store-settings-page .ss-panel{border:1px solid var(--ss-line);background:var(--ss-card);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px -12px rgba(16,24,40,.08)}
+.store-settings-page .ss-section{padding:24px}.store-settings-page .ss-section+.ss-section{border-top:1px solid var(--ss-line)}
+.store-settings-page .ss-section h2{font-size:15px;line-height:1.5;font-weight:600}
+.store-settings-page .ss-description{font-size:13px;color:var(--ss-mut);margin-top:2px;margin-bottom:18px}
+.store-settings-page .ss-logo-line{display:flex;gap:18px;align-items:center;margin-bottom:22px}
+.store-settings-page .ss-logo-box{width:88px;height:88px;flex:none;border:1.5px dashed var(--ss-line2);border-radius:20px;background:var(--ss-soft);display:grid;place-items:center;overflow:hidden;font-size:30px;font-weight:700}
+.store-settings-page .ss-logo-box img{display:block;width:100%;height:100%;object-fit:contain}
+.store-settings-page .ss-logo-line p{margin:6px 0 10px;font-size:12px;color:var(--ss-mut)}
+.store-settings-page .ss-actions{display:flex;align-items:center;gap:8px}.store-settings-page .ss-upload input{display:none}
+.store-settings-page .ss-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.store-settings-page .ss-field{display:flex;flex-direction:column;min-width:0;gap:6px;color:var(--ss-tx);font-size:12.5px;font-weight:500}
+.store-settings-page .ss-field>span:first-child{display:flex;justify-content:space-between;gap:8px}.store-settings-page .ss-field small{font-size:12px;font-weight:400;color:var(--ss-mut)}
+.store-settings-page .ss-full{grid-column:1/-1}.store-settings-page .ss-field>input,.store-settings-page .ss-field select,.store-settings-page .ss-field textarea{background:var(--ss-card);border:1px solid var(--ss-line);border-radius:10px;color:var(--ss-tx);font:inherit;font-size:14px;line-height:1.5;padding:0 12px;width:100%;min-width:0;height:40px}
+.store-settings-page .ss-field textarea{height:76px;min-height:76px;padding:10px 12px;resize:vertical}
+.store-settings-page .ss-field>input:focus,.store-settings-page .ss-field select:focus,.store-settings-page .ss-field textarea:focus{border-color:var(--ss-tx);box-shadow:0 0 0 3px color-mix(in srgb,var(--ss-tx) 10%,transparent);outline:none}
+.store-settings-page .ss-field input::placeholder,.store-settings-page .ss-field textarea::placeholder{color:var(--ss-mut)}
+.store-settings-page .ss-field .ss-phone{display:flex;width:100%;height:40px;border:1px solid var(--ss-line);border-radius:10px;overflow:hidden;background:var(--ss-card);gap:0;align-items:stretch}
+.store-settings-page .ss-phone i{display:grid;place-items:center;background:var(--ss-soft);border-right:1px solid var(--ss-line);padding:0 12px;color:var(--ss-mut);font-style:normal;font-size:13px}
+.store-settings-page .ss-phone input{flex:1;min-width:0;border:0!important;border-radius:0!important;color:var(--ss-tx);background:transparent;font:inherit;padding:0 12px;outline:none}
+.store-settings-page .ss-swatches{display:flex;gap:10px;padding:3px}.store-settings-page .ss-swatches button{position:relative;width:30px;height:30px;border-radius:50%;border:2px solid var(--ss-card);box-shadow:0 0 0 1px var(--ss-line2);cursor:pointer}
+.store-settings-page .ss-swatches button.selected{box-shadow:0 0 0 2px var(--ss-tx)}
+.store-settings-page .ss-error{color:var(--ss-err);font-size:13px;margin:0 0 12px}
+.store-settings-page .ss-loading{padding:24px;color:var(--ss-mut)}
+.store-settings-page .ss-toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:60;border:1px solid var(--ss-line);padding:10px 16px;border-radius:12px;background:var(--ss-card);box-shadow:0 10px 30px #0002}
+.store-settings-page .ss-unsaved{position:fixed;z-index:55;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translate(-50%,140%);transition:transform .3s cubic-bezier(.2,.8,.2,1);display:flex;align-items:center;gap:14px;border-radius:14px;padding:10px 10px 10px 18px;background:var(--ss-tx);color:var(--ss-bg);box-shadow:0 12px 32px #0004;pointer-events:none;white-space:nowrap}
+.store-settings-page .ss-unsaved.is-visible{transform:translate(-50%,0);pointer-events:auto}
+.store-settings-page .ss-unsaved button{background:transparent;border:0;color:var(--ss-bg)}.store-settings-page .ss-unsaved button.ss-save{background:var(--ss-card);color:var(--ss-tx);border-color:var(--ss-card)}
+@media(max-width:560px){.store-settings-page{padding:20px 12px 100px}.store-settings-page h1{font-size:24px}.store-settings-page .ss-grid{grid-template-columns:1fr}.store-settings-page .ss-section{padding:18px}.store-settings-page .ss-unsaved{left:12px;right:12px;transform:translateY(140%);justify-content:space-between;gap:8px}.store-settings-page .ss-unsaved.is-visible{transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.store-settings-page *{transition:none!important}}

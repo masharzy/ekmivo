@@ -41,7 +41,7 @@ export const sections={
  "api-docs":{en:"API Docs",bn:"API নির্দেশনা",detail:{en:"Integration guides and API reference.",bn:"সংযোগের নির্দেশনা ও API reference।"},group:"commerce"},
  apps:{en:"Apps & Plugins",bn:"অ্যাপ ও প্লাগইন",detail:{en:"Android downloads and plugin availability.",bn:"Android অ্যাপ ডাউনলোড ও প্লাগইনের অবস্থা।"},group:"commerce"},
  reports:{en:"Reports",bn:"রিপোর্ট",detail:{en:"Operations analytics and exports once activity begins.",bn:"কার্যক্রম চালু হলে রিপোর্ট ও export এখানে থাকবে।"},group:"common"},
- team:{en:"Team & access",bn:"টিম ও অনুমতি",detail:{en:"Members, roles and workspace membership.",bn:"টিম সদস্য, role ও access control।"},group:"common"},
+ team:{en:"Team & permissions",bn:"টিম ও অনুমতি",detail:{en:"Members, roles and workspace membership.",bn:"টিম সদস্য, role ও access control।"},group:"common"},
  store:{en:"Store",bn:"স্টোর",detail:{en:"Customer-facing store information and logo.",bn:"গ্রাহকের জন্য স্টোরের তথ্য ও লোগো।"},group:"commerce"},
  settings:{en:"Workspace settings",bn:"সেটিংস",detail:{en:"Profile, security, service configuration and preferences.",bn:"প্রোফাইল, নিরাপত্তা, সেবার ধরন ও পছন্দ।"},group:"common"},
 } as const;
