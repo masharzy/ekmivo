@@ -49,8 +49,8 @@ export function CheckoutThemes({workspaceId,storeName,canManage,initialTheme,loc
    <div className="logo-brand-copy"><strong>{config.store.name}</strong><span>{t("Logo uploaded in Store")}</span></div>
   </div>
   <div className="logo-control">
-   <label className="logo-slider"><span className="logo-control-title"><strong>{t("Logo size")}</strong><output>{config.store.size}px</output></span><input type="range" min={24} max={96} step={2} value={config.store.size} aria-label={t("Logo size")} disabled={!canManage||loading} onChange={e=>store({size:Number(e.target.value)})}/></label>
-   <label className="logo-slider"><span className="logo-control-title"><strong>{t("Logo radius")}</strong><output>{config.store.radius}px</output></span><input type="range" min={0} max={48} step={2} value={config.store.radius} aria-label={t("Logo radius")} disabled={!canManage||loading} onChange={e=>store({radius:Number(e.target.value)})}/></label>
+   <label className="logo-slider"><span className="logo-control-title"><strong>{t("Logo size")}</strong><output>{config.store.size}px</output></span><input type="range" min={24} max={96} step={2} value={config.store.size} aria-label={t("Logo size")} style={{"--fill":`${Math.round((config.store.size-24)/72*100)}%`} as CSSProperties} disabled={!canManage||loading} onChange={e=>store({size:Number(e.target.value)})}/></label>
+   <label className="logo-slider"><span className="logo-control-title"><strong>{t("Logo radius")}</strong><output>{config.store.radius}px</output></span><input type="range" min={0} max={48} step={2} value={config.store.radius} aria-label={t("Logo radius")} style={{"--fill":`${Math.round(config.store.radius/48*100)}%`} as CSSProperties} disabled={!canManage||loading} onChange={e=>store({radius:Number(e.target.value)})}/></label>
   </div>
   <div className="logo-placement">
    <span className="logo-control-title"><strong>{t("Logo position")}</strong></span>
