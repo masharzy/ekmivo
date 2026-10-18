@@ -27,7 +27,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   assert.ok(ready,"Next server did not start: "+logs);
   browser=await chromium.launch({headless:true});
   const context=await browser.newContext({viewport:{width:1280,height:900},permissions:["clipboard-read","clipboard-write"]});
-  await context.addCookies([{name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"}]);
+  await context.addCookies([{name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},{name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
   const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   // Capture only public URL paths/statuses; never log session headers/tokens.
   const redirectTrace=[];
@@ -124,7 +124,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   record("expired real server record retains summary and removes payer/payment actions");
   await context.close();
   const viewer=await browser.newContext();
-  await viewer.addCookies([{name:"ekmivo-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"}]);
+  await viewer.addCookies([{name:"ekmivo-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"},{name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
   const viewerPage=await viewer.newPage();await viewerPage.goto(origin+path);
   await viewerPage.getByText(/Read-only access/).waitFor();
   assert.ok(await viewerPage.getByRole("button",{name:"Issue document",exact:true}).isDisabled());
@@ -133,8 +133,8 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   await viewer.close();
   for(const width of [320,768,1024,1440])for(const locale of ["en","bn"])for(const theme of ["light","dark"]){
    const c=await browser.newContext({viewport:{width,height:900}});
-   await c.addCookies([{name:"ekmivo-theme",value:theme,url:origin}]);
-   const p=await c.newPage();await p.goto(`${origin}/checkout/${token}`);
+   await c.addCookies([{name:"ekmivo-theme",value:theme,url:origin},{name:"ekmivo-locale",value:locale,url:origin}]);
+   const p=await c.newPage();await p.goto(`${origin}/${locale}/checkout/${token}`);
    await p.locator(".pg05-amount strong").waitFor();
    assert.equal(await p.locator("html").getAttribute("lang"),locale);
    assert.equal(await p.locator("html").getAttribute("data-theme"),theme);
