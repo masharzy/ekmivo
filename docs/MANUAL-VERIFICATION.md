@@ -753,3 +753,6 @@ Owner manual pending: for a workspace plan with invoices/payment links/reports/e
 
 ### System workspace unlimited — 2026-10-18
 Manual pending: selected system workspace Billing shows all features/unlimited/no renewal; Usage and invoices remain accessible. Check EN/BN, light/dark, mobile/desktop. Automated switching/removal/expiry/no-subscription tests passed on isolated Neon. Evidence: `docs/evidence/SYSTEM-UNLIMITED-20261018/README.md`.
+
+### System subscription cleanup — 2026-10-18
+After Vercel build quota allows frontend rollout: verify workspace overview shows System workspace/Unlimited, subscription management is absent, and Usage opens in EN/BN without server error. Production subscription assignment already detached with audit retained; unlimited access active. Evidence: `docs/evidence/SYSTEM-SUBSCRIPTION-CLEANUP-20261018/README.md`.

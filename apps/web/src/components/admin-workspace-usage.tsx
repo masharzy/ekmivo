@@ -5,7 +5,7 @@ import {planName,type PlanTerms} from "../lib/payment-plans";
 type PaymentUsage={effective?:{terms?:PlanTerms;active?:boolean;extra_payments?:number;period_start?:string;period_end?:string};usage?:{used:number;reserved:number};resources?:Record<string,number>;usage_error?:boolean;resource_usage_error?:boolean};
 export async function AdminWorkspaceUsage({locale,workspaceId,payments,ai}:{locale:"en"|"bn";workspaceId:string;payments:boolean;ai:boolean}){
  const bn=locale==="bn",t=(en:string,bd:string)=>bn?bd:en;
- const n=(v:number|undefined)=>v===undefined?"—":v.toLocaleString(bn?"bn-BD":"en-BD");
+ const n=(v:number|null|undefined)=>v===null?t("Unlimited","সীমাহীন"):v===undefined?"—":v.toLocaleString(bn?"bn-BD":"en-BD");
  const paymentRead=async():Promise<PaymentUsage|null>=>{if(!payments)return null;try{
   const origin=goOrigin(),token=(await cookies()).get("ekmivo-session")?.value;if(!origin||!token)return null;
   const r=await fetch(new URL(`/v1/platform/workspaces/${workspaceId}/payment-usage`,origin),{headers:{Cookie:`ekmivo-session=${token}`},cache:"no-store",redirect:"error",signal:AbortSignal.timeout(12000)});

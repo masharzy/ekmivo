@@ -5,7 +5,7 @@ import {managePaymentPlan} from "../actions/payment-plans";
 import {planName,type AdminPaymentPlan,type PlanTerms} from "../lib/payment-plans";
 
 type Locale="bn"|"en";
-type Effective={active?:boolean;terms?:PlanTerms;access_until?:string;next_version_id?:string;extra_payments?:number};
+type Effective={platform_billing?:boolean;active?:boolean;terms?:PlanTerms;access_until?:string;next_version_id?:string;extra_payments?:number};
 type WorkspacePlan={effective?:Effective;subscription?:unknown;history?:Array<{id:string;action:string;reason:string;created_at:string}>;override?:unknown;usage?:{used:number;reserved:number};usage_error?:boolean};
 export function AdminWorkspacePlanPanel({locale,workspaceId,workspaceName,plans}:{locale:Locale;workspaceId:string;workspaceName:string;plans:AdminPaymentPlan[]}){
  const bn=locale==="bn",t=(en:string,bd:string)=>bn?bd:en;
@@ -39,13 +39,14 @@ export function AdminWorkspacePlanPanel({locale,workspaceId,workspaceName,plans}
   }catch(e){setError(t("Change was not saved: ","পরিবর্তন সংরক্ষিত হয়নি: ")+(e instanceof Error?e.message:""));}
   finally{setBusy(false)}
  }
- const eff=data?.effective;
+ const eff=data?.effective,system=eff?.platform_billing===true;
  const chosen=plans.find(p=>p.current_version===version);
  const money=(n:number)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(n/100);
  const date=(s:string|undefined)=>!s?"—":s==="infinity"?t("No expiry","মেয়াদহীন"):new Date(s).toLocaleDateString(bn?"bn-BD":"en-GB");
  return <div className="pa-workspace-plan">
-  <div className="pa-page-head"><div><h2>{t("Payment plan","পেমেন্ট প্ল্যান")}</h2><p>{workspaceName}</p></div><div className="pa-page-actions"><button className="pa-button" onClick={()=>void reload()} disabled={busy}>{t("Refresh","রিফ্রেশ")}</button><button className="pa-button pa-button-primary" onClick={()=>setOpen(true)} disabled={busy}>{t("Manage subscription","সাবস্ক্রিপশন পরিচালনা")}</button></div></div>
+  <div className="pa-page-head"><div><h2>{t("Payment plan","পেমেন্ট প্ল্যান")}</h2><p>{workspaceName}</p></div><div className="pa-page-actions"><button className="pa-button" onClick={()=>void reload()} disabled={busy}>{t("Refresh","রিফ্রেশ")}</button>{!system&&<button className="pa-button pa-button-primary" onClick={()=>setOpen(true)} disabled={busy}>{t("Manage subscription","সাবস্ক্রিপশন পরিচালনা")}</button>}</div></div>
   {error&&<p role="alert" className="pa-action-error">{error}</p>}
+  {system&&<p className="pa-subtle">{t("All features and usage are unlimited. No subscription required.","সব সুবিধা ও ব্যবহার সীমাহীন। সাবস্ক্রিপশন প্রয়োজন নেই।")}</p>}
   <div className="pa-workspace-plan-metrics">
    <div><span>{t("Current plan","বর্তমান প্ল্যান")}</span><strong>{eff?.terms?planName(eff.terms,bn):busy?t("Loading…","লোড হচ্ছে…"):"—"}</strong></div>
    <div><span>{t("Access","অ্যাক্সেস")}</span><strong>{eff?.active?t("Active","সক্রিয়"):t("Inactive","নিষ্ক্রিয়")}</strong></div>
@@ -64,7 +65,7 @@ export function AdminWorkspacePlanPanel({locale,workspaceId,workspaceName,plans}
   <section className="pa-surface pa-table-card"><div className="pa-workspace-plan-subhead"><h2>{t("Subscription history","সাবস্ক্রিপশন ইতিহাস")}</h2></div>
    <div className="pa-table-wrap"><table><thead><tr><th>{t("Action","কাজ")}</th><th>{t("Date","তারিখ")}</th><th>{t("Audit reason","Audit-এর কারণ")}</th></tr></thead><tbody>{(data?.history||[]).map(x=><tr key={x.id}><td>{x.action}</td><td>{date(x.created_at)}</td><td>{x.reason}</td></tr>)}{!data?.history?.length&&<tr><td colSpan={3}>{t("No changes recorded.","কোনো পরিবর্তন নেই।")}</td></tr>}</tbody></table></div>
   </section>
-  {open&&<div className="pa-admin-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setOpen(false)}}><section className="pa-dialog pa-workspace-sub-modal" role="dialog" aria-modal="true" aria-label={t("Manage subscription","সাবস্ক্রিপশন পরিচালনা")}>
+  {open&&!system&&<div className="pa-admin-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setOpen(false)}}><section className="pa-dialog pa-workspace-sub-modal" role="dialog" aria-modal="true" aria-label={t("Manage subscription","সাবস্ক্রিপশন পরিচালনা")}>
    <div className="pa-dialog-head"><h2>{t("Manage subscription","সাবস্ক্রিপশন পরিচালনা")}</h2><button type="button" className="pa-icon-button" aria-label={t("Close","বন্ধ")} onClick={()=>setOpen(false)}>×</button></div>
    <div className="pa-dialog-body pa-admin-fields">
     <label>{t("Published plan version","প্রকাশিত প্ল্যান version")}<select value={version} onChange={e=>{setVersion(e.target.value);setForever(false)}}><option value="">{t("Choose plan","প্ল্যান নির্বাচন")}</option>{plans.filter(p=>p.status==="published").map(p=><option key={p.plan_id} value={p.current_version}>{planName(p.terms,bn)} · v{p.version} · {p.terms.kind==="paid"?money(p.terms.amount_minor):p.terms.kind}</option>)}</select></label>

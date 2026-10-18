@@ -37,7 +37,7 @@ export async function AdminWorkspaceDetail({locale,id,sub="",actor=""}:{locale:A
  if(sub===""){
   const [members,subscription,invoice]=await Promise.all([
    database()`SELECT count(*)::int AS count FROM workspace_members WHERE workspace_id=${id}::uuid`,
-   database()`SELECT plan_id,paid_until::text AS paid_until FROM pg13_subscriptions WHERE workspace_id=${id}::uuid LIMIT 1`,
+   database()`SELECT payment_plan_effective(${id}::uuid) AS effective`,
    database()`SELECT count(*)::int AS count FROM pg13_platform_invoices WHERE workspace_id=${id}::uuid`
   ]);
   content=<>
@@ -47,7 +47,7 @@ export async function AdminWorkspaceDetail({locale,id,sub="",actor=""}:{locale:A
      <div className="pa-surface"><span>{t("AI Bot","এআই বট")}</span><strong>{status(on("ai"))}</strong></div>
      <div className="pa-surface"><span>{t("Platform invoices","প্ল্যাটফর্ম ইনভয়েস")}</span><strong>{Number(invoice[0]?.count||0)}</strong></div>
     </div>
-    <div className="pa-description pa-surface"><dl>{[[t("Workspace ID","ওয়ার্কস্পেস আইডি"),id],[t("Created","তৈরির তারিখ"),format(w.created_at,locale)],[t("Service mode","সেবার ধরন"),text(w.service_mode)],[t("Current plan","বর্তমান প্ল্যান"),subscription[0]?text(subscription[0].plan_id):t("No subscription","কোনো সাবস্ক্রিপশন নেই")],[t("Plan expires","প্ল্যানের মেয়াদ"),format(subscription[0]?.paid_until,locale)]].map(([k,v])=><div className="pa-description-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+    <div className="pa-description pa-surface"><dl>{[[t("Workspace ID","ওয়ার্কস্পেস আইডি"),id],[t("Created","তৈরির তারিখ"),format(w.created_at,locale)],[t("Service mode","সেবার ধরন"),text(w.service_mode)],[t("Current plan","বর্তমান প্ল্যান"),subscription[0]?.effective?.platform_billing?t("System workspace · Unlimited","সিস্টেম ওয়ার্কস্পেস · সীমাহীন"):subscription[0]?.effective?.terms?text(subscription[0].effective.terms[locale==="bn"?"name_bn":"name"]||subscription[0].effective.terms.name):t("No subscription","কোনো সাবস্ক্রিপশন নেই")],[t("Plan expires","প্ল্যানের মেয়াদ"),subscription[0]?.effective?.access_until==="infinity"?t("No expiry","মেয়াদহীন"):format(subscription[0]?.effective?.access_until,locale)]].map(([k,v])=><div className="pa-description-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
     <div className="pa-inline-actions"><Link className="pa-button" href={base+"/products"}>{t("Manage products","প্রোডাক্ট পরিচালনা")}</Link><Link className="pa-button pa-button-primary" href={base+"/products-plan"}>{t("Manage subscription","সাবস্ক্রিপশন পরিচালনা")}</Link></div></div>
    </>;
  }else if(sub==="products"){
