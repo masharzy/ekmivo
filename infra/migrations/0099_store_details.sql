@@ -58,4 +58,26 @@ BEGIN
  INSERT INTO pg13_control_audit(workspace_id,actor_id,action,resource_id) VALUES(w,a,'store.updated',w);
  RETURN dashboard_store_read(w,a);
 END $$;
+-- Public checkout receives saved Store contact details instead of stale Workspace settings.
+CREATE OR REPLACE FUNCTION pg13_public_checkout(w uuid,e text) RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+ SELECT jsonb_build_object('merchant_name',coalesce(nullif(store.body->>'name',''),wsp.name),
+ 'brand',jsonb_strip_nulls(jsonb_build_object(
+ 'logo_url',coalesce(nullif(store.body->>'logo',''),setting.body->>'logo_url'),
+ 'title',setting.body->>'checkout_title',
+ 'description',coalesce(nullif(store.body->>'description',''),setting.body->>'checkout_description'),
+ 'support_url',coalesce(nullif(store.body->>'website',''),setting.body->>'support_url'),
+ 'support_email',coalesce(nullif(store.body->>'support_email',''),setting.body->>'support_email'),
+ 'legal_url',coalesce(nullif(store.body->>'refund_url',''),setting.body->>'legal_url'),
+ 'locale',setting.body->>'locale',
+ 'checkout_theme',CASE WHEN theme.body IS NULL THEN NULL ELSE
+ jsonb_set(theme.body,'{store}',jsonb_build_object('name',coalesce(store.body->>'name',wsp.name),
+ 'logo',coalesce(store.body->>'logo',''),'size',coalesce((theme.body->'store'->>'size')::integer,40)),true)::text END)))
+ FROM workspaces wsp JOIN workspace_environments env ON env.workspace_id=wsp.id AND env.environment=e AND env.status='active'
+ JOIN workspace_product_access prod ON prod.workspace_id=wsp.id AND prod.product='payments' AND prod.enabled
+ LEFT JOIN pg13_business_settings setting ON setting.workspace_id=wsp.id
+ LEFT JOIN checkout_theme_settings theme ON theme.workspace_id=wsp.id
+ LEFT JOIN dashboard_store_profiles store ON store.workspace_id=wsp.id
+ WHERE wsp.id=w AND e IN ('live','sandbox')
+$$;
 COMMIT;
