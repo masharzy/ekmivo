@@ -27,7 +27,7 @@ export function AdminWorkspacePlanPanel({locale,workspaceId,workspaceName,plans}
   }catch(e){setError(t("Unable to read this workspace subscription.","এই ওয়ার্কস্পেসের সাবস্ক্রিপশন পাওয়া যায়নি।")+" "+(e instanceof Error?e.message:""));}
   finally{setBusy(false)}
  },[workspaceId,bn]);
- useEffect(()=>{void reload();},[reload]);
+ useEffect(()=>{void Promise.resolve().then(()=>reload());},[reload]);
  async function mutate(op:string,payload:Record<string,unknown>){
   if(reason.trim().length<5){setError(t("Enter an audit reason (at least 5 characters).","Audit-এর কারণ কমপক্ষে ৫ অক্ষরে লিখুন।"));return;}
   setBusy(true);setError("");
