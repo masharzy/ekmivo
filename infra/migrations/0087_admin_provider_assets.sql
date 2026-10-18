@@ -1,3 +1,4 @@
+-- 0087: Control-plane provider image assets (0086 is reserved for financial phone reconnect). 
 -- Durable, content-addressed provider logos. Original uploaded bytes live in Neon
 -- Postgres; provider catalog references immutable /api/provider-logos/<sha256> URLs.
 BEGIN;

@@ -722,6 +722,9 @@ try{
     "Missing physical-device schema in "+realm);
   const forwardSQL=await readFile(new URL("../../../infra/migrations/0047_pg06_phone_forwarder.sql",import.meta.url),"utf8");
   await dbs[realm].unsafe(forwardSQL).simple();
+  // Replay the same additive 0088 repair against both disposable finance realms.
+  const forwardRepair=await readFile(new URL("../../../infra/migrations/0088_financial_phone_forward_column.sql",import.meta.url),"utf8");
+  await dbs[realm].unsafe(forwardRepair).simple();
   ok((await dbs[realm].unsafe("SELECT to_regclass('public.pg06_phone_forwarded') IS NOT NULL AS installed"))[0].installed,
     "Missing phone forwarder schema in "+realm);
  }
