@@ -1442,6 +1442,12 @@ try{
    PG04_PROVISIONER_SANDBOX_URL:ds("ekmivo_pg04_sandbox","ekmivo_financial_provisioner_sandbox","pg04-sandbox-provision-only"),
    PG04_PROVISIONER_LIVE_URL:ds("ekmivo_pg04_live","ekmivo_financial_provisioner_live","pg04-live-provision-only"),
    PG04_WORKSPACE_ID:pg07WS,PG04_ENVIRONMENT:"sandbox"}});
+  // Current Go gateway creation uses the post-0095 consent-aware function.
+  // Apply it to both disposable realms before the signed HTTP fixture.
+  for(const realm of names){
+   const consentSQL=await readFile(new URL("../../../infra/migrations/0095_receiving_account_consent_delete.sql",import.meta.url),"utf8");
+   await dbs[realm].unsafe(consentSQL).simple();
+  }
   const fixtureVersion=Number((await pg07DB.unsafe("SELECT entitlement_version version FROM financial_workspace_registry WHERE workspace_id=$1::uuid AND environment='sandbox'",[pg07WS]))[0].version);
   const fixturePayer="+8801700000001",fixtureReceiving="+8801700000002";
   const newAccount=await fetch(route+"gateways?environment=sandbox",{method:"POST",headers:head("owner"),body:JSON.stringify({method:"bkash",account_number:fixtureReceiving})});
@@ -1535,6 +1541,14 @@ try{
  console.log("PG08 customer notice SQL PASS: verified consent, same-intent capabilities, atomic receipt enqueue, lease, unknown outcome, withdrawal, secret isolation (FICTIONAL)");
  const extensionEnv={...process.env,...pg06Env,PG10_ALLOW_MIGRATION:"true",PG10_MIGRATION_DIRECTORY:new URL("../../../infra/migrations/",import.meta.url).pathname};
  execFileSync("go",["run","./cmd/financial-migrate"],{cwd:new URL("../../../backend/",import.meta.url),env:extensionEnv,stdio:"pipe",timeout:90000});
+ // Both financial realms must expose the account-specific route; no SIM/phone account assignment.
+ for(const realm of names){
+  const accountSQL=await readFile(new URL("../../../infra/migrations/0098_checkout_account_tiles.sql",import.meta.url),"utf8");
+  await dbs[realm].unsafe(accountSQL).simple();
+  const capability=(await dbs[realm].unsafe("SELECT to_regprocedure('pg98_lock_account(text,text,text,text,uuid)') IS NOT NULL AS installed"))[0].installed;
+  ok(capability,"Account-specific checkout migration missing in "+realm);
+ }
+
  // Disposable finance test databases: install the new additive invoice contracts
  // after the PG10 base migration, without touching shared/prod data.
  for(const realm of ["sandbox","live"]){
