@@ -9,6 +9,7 @@
 .ref-checkout-editor :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .ref-checkout-editor svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .ref-checkout-editor aside{width:232px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:14px;position:sticky;top:0;height:100vh;z-index:30}
+.ref-checkout-editor .wl img{width:22px;height:22px;object-fit:contain}
 .ref-checkout-editor .logo{font-weight:600;font-size:18px;letter-spacing:-.02em;padding:2px 8px}.ref-checkout-editor .logo small{font-size:11px;color:var(--mut);margin-left:6px}
 .ref-checkout-editor .ws{display:flex;align-items:center;gap:10px;height:40px;padding:0 8px;border:1px solid var(--line);border-radius:10px;font-weight:500}
 .ref-checkout-editor .wa{width:24px;height:24px;border-radius:7px;background:var(--accb);color:var(--acc);display:grid;place-items:center;font-weight:600;font-size:12px}

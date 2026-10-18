@@ -16,9 +16,9 @@ export const navigation: Record<Service, NavigationGroup[]> = {
   payments: [
     { label: { en: "Workspace", bn: "ওয়ার্কস্পেস" }, items: ["overview", "transactions", "customers", "invoices", "payment-links", "reports", "refunds"] },
     { label: { en: "Devices & methods", bn: "ডিভাইস ও মাধ্যম" }, items: ["gateways", "devices", "incoming"] },
-    { label: { en: "Checkout", bn: "চেকআউট" }, items: ["checkout-themes"] },
+    { label: { en: "Checkout", bn: "চেকআউট" }, items: ["checkout-themes", "store"] },
     { label: { en: "Developers", bn: "ডেভেলপার" }, items: ["developers", "api-docs"] },
-    { label: { en: "Account", bn: "অ্যাকাউন্ট" }, items: ["billing"] },
+    { label: { en: "Account", bn: "অ্যাকাউন্ট" }, items: ["team", "billing"] },
   ],
 };
 export function serviceEnabled(service: Service, mode: "ai" | "commerce" | "both" | "off") {

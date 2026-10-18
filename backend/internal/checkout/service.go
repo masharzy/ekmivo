@@ -881,6 +881,7 @@ func (s *Service) HandlePublic(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			Payer           string            `json:"payer_number"`
 			Method          string            `json:"method"`
+			ReceivingAccountID string        `json:"receiving_account_id"`
 			CustomerDetails map[string]string `json:"customer_details"`
 		}
 		if !decode(w, r, &body) {
@@ -913,8 +914,18 @@ func (s *Service) HandlePublic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer tx.Rollback(r.Context())
-		err = tx.QueryRow(r.Context(), lockSQL,
-			digest(token), hex.EncodeToString(mac(s.PayerKey, payer)), payer[len(payer)-4:], body.Method).Scan(&raw)
+		if body.ReceivingAccountID != "" {
+			if !uuidPattern.MatchString(body.ReceivingAccountID) {
+				fail(w, 422, "INVALID_RECEIVING_ACCOUNT")
+				return
+			}
+			lockSQL = "SELECT pg98_lock_account($1,$2,$3,$4,$5::uuid)"
+			err = tx.QueryRow(r.Context(), lockSQL,
+				digest(token), hex.EncodeToString(mac(s.PayerKey, payer)), payer[len(payer)-4:], body.Method, body.ReceivingAccountID).Scan(&raw)
+		} else {
+			err = tx.QueryRow(r.Context(), lockSQL,
+				digest(token), hex.EncodeToString(mac(s.PayerKey, payer)), payer[len(payer)-4:], body.Method).Scan(&raw)
+		}
 		if err == nil && len(body.CustomerDetails) > 0 {
 			encoded, _ := json.Marshal(body.CustomerDetails)
 			_, err = tx.Exec(r.Context(), "SELECT pg75_checkout_details($1,$2::jsonb)", digest(token), string(encoded))
@@ -937,7 +948,7 @@ func (s *Service) HandlePublic(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		s.publicResult(w, r, raw)
+		s.publicResult(w, r, raw, pool)
 		return
 	}
 	if r.Method != "GET" || r.PathValue("action") != "" {
@@ -953,7 +964,7 @@ func (s *Service) HandlePublic(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "NOT_FOUND")
 		return
 	}
-	s.publicResult(w, r, raw)
+	s.publicResult(w, r, raw, pool)
 }
 
 // Capability authorizes only this checkout's public business identity. Current
@@ -995,7 +1006,7 @@ func (s *Service) publicBusinessInfo(r *http.Request, raw []byte) (PublicBusines
 	return info, err
 }
 
-func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byte) {
+func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byte, pool *pgxpool.Pool) {
 	var data map[string]any
 	if json.Unmarshal(raw, &data) != nil {
 		fail(w, 503, "INVALID_FINANCIAL_RESULT")
@@ -1048,6 +1059,23 @@ func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byt
 		}
 		data["methods"] = list
 		data["verification_available"] = len(list) > 0
+		if pool != nil && data["state"] == "requires_payer" {
+			var installed bool
+			if err := pool.QueryRow(r.Context(), "SELECT to_regprocedure('pg98_checkout_accounts(text)') IS NOT NULL").Scan(&installed); err == nil && installed {
+				var accounts []map[string]any
+				var encoded []byte
+				if err = pool.QueryRow(r.Context(), "SELECT pg98_checkout_accounts($1)", digest(r.PathValue("token"))).Scan(&encoded); err == nil && json.Unmarshal(encoded, &accounts) == nil {
+					allowed := make(map[string]bool, len(list))
+					for _, method := range list { allowed[method] = true }
+					filtered := make([]map[string]any, 0, len(accounts))
+					for _, account := range accounts {
+						method, _ := account["method"].(string)
+						if allowed[method] { filtered = append(filtered, account) }
+					}
+					data["receiving_accounts"] = filtered
+				}
+			}
+		}
 	} else if s.pipelineReady() {
 		for _, rule := range s.Pipeline.Rules {
 			if rule.Approved && (!rule.SandboxOnly || checkoutRealm(raw) == "sandbox") {
