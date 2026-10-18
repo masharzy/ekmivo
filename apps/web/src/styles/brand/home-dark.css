@@ -1,0 +1,49 @@
+/* Home-only dark presentation. Never applies to product routes or Light. */
+:root[data-theme="dark"] .em .em-audience-card{box-shadow:var(--brand-shadow)}
+:root[data-theme="dark"] .em .mp-badge{font-size:12px}
+:root[data-theme="dark"] .em .em-step-number{color:var(--brand-accent-contrast)}
+:root[data-theme="dark"] .em .em-avatar{background:var(--brand-accent);color:var(--brand-accent-contrast)}
+:root[data-theme="dark"] .em :is(.em-demo-button,.em-workflow-switch button.is-current){background:var(--brand-action);color:var(--brand-action-contrast)}
+:root[data-theme="dark"] .em :is(.em-kicker,.em-hero-eyebrow,.em-scroll-link,.em-service-card-top,.em-service-status,.em-benefit-index,.em-audience-card>span:not(.em-audience-arrow),.em-pricing-band small){font-size:12px}
+:root[data-theme="dark"] .em :is(.em-payment-demo>small,.em-chat-header small){font-size:12px}
+:root[data-theme="dark"] .em :is(.em-service-card li,.em-step p,.em-audience-card p,.em-demo-subtitle,.em-demo-methods,.em-demo-button,.em-chat-bubble,.em-chat-handoff,.em-receipt-note){font-size:14px}
+:root[data-theme="dark"] body:has(main.em) :is(.ek-public-header,.ek-public-footer){
+ --ek-pub-paper:var(--brand-bg);--ek-pub-surface:var(--brand-surface-raised);
+ --ek-pub-ink:var(--brand-text);--ek-pub-muted:var(--brand-text-muted);
+ --ek-pub-border:var(--brand-border);--ek-pub-blue:var(--brand-tint-blue);
+ --ek-pub-yellow:var(--brand-accent);--ek-pub-focus:var(--brand-accent);
+ --ek-pub-shadow:var(--brand-shadow);
+}
+:root[data-theme="dark"] body:has(main.em) .ek-public-header .header-cta.ek-signin{color:var(--brand-accent-contrast)}
+:root[data-theme="dark"] body:has(main.em) .ek-public-footer :is(p,nav a,.footer-bottom,.footer-bottom a){font-size:13px}
+:root[data-theme="dark"] .em .mp-public{
+ --color-text:var(--brand-text);--color-text-secondary:var(--brand-text-muted);--color-text-muted:var(--brand-text-muted);
+ --color-canvas:var(--brand-bg);--color-surface:var(--brand-surface-raised);--color-surface-subtle:var(--brand-tint-cream);
+ --color-border:var(--brand-border);--color-accent-soft:var(--brand-tint-yellow);--color-primary:var(--brand-accent);--color-on-primary:var(--brand-accent-contrast);
+}
+:root[data-theme="dark"] .em .mp-public :is(.mp-fine,.mp-price-grid small,.mp-price-grid li,.mp-resources){font-size:14px}
+@media(prefers-color-scheme:dark){
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em .em-audience-card{box-shadow:var(--brand-shadow)}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em .mp-badge{font-size:12px}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em .em-step-number{color:var(--brand-accent-contrast)}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em .em-avatar{background:var(--brand-accent);color:var(--brand-accent-contrast)}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em :is(.em-demo-button,.em-workflow-switch button.is-current){background:var(--brand-action);color:var(--brand-action-contrast)}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em :is(.em-kicker,.em-hero-eyebrow,.em-scroll-link,.em-service-card-top,.em-service-status,.em-benefit-index,.em-audience-card>span:not(.em-audience-arrow),.em-pricing-band small){font-size:12px}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em :is(.em-payment-demo>small,.em-chat-header small){font-size:12px}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em :is(.em-service-card li,.em-step p,.em-audience-card p,.em-demo-subtitle,.em-demo-methods,.em-demo-button,.em-chat-bubble,.em-chat-handoff,.em-receipt-note){font-size:14px}
+:root:not([data-theme="light"]):not([data-theme="dark"]) body:has(main.em) :is(.ek-public-header,.ek-public-footer){
+ --ek-pub-paper:var(--brand-bg);--ek-pub-surface:var(--brand-surface-raised);
+ --ek-pub-ink:var(--brand-text);--ek-pub-muted:var(--brand-text-muted);
+ --ek-pub-border:var(--brand-border);--ek-pub-blue:var(--brand-tint-blue);
+ --ek-pub-yellow:var(--brand-accent);--ek-pub-focus:var(--brand-accent);
+ --ek-pub-shadow:var(--brand-shadow);
+}
+:root:not([data-theme="light"]):not([data-theme="dark"]) body:has(main.em) .ek-public-header .header-cta.ek-signin{color:var(--brand-accent-contrast)}
+:root:not([data-theme="light"]):not([data-theme="dark"]) body:has(main.em) .ek-public-footer :is(p,nav a,.footer-bottom,.footer-bottom a){font-size:13px}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em .mp-public{
+ --color-text:var(--brand-text);--color-text-secondary:var(--brand-text-muted);--color-text-muted:var(--brand-text-muted);
+ --color-canvas:var(--brand-bg);--color-surface:var(--brand-surface-raised);--color-surface-subtle:var(--brand-tint-cream);
+ --color-border:var(--brand-border);--color-accent-soft:var(--brand-tint-yellow);--color-primary:var(--brand-accent);--color-on-primary:var(--brand-accent-contrast);
+}
+:root:not([data-theme="light"]):not([data-theme="dark"]) .em .mp-public :is(.mp-fine,.mp-price-grid small,.mp-price-grid li,.mp-resources){font-size:14px}
+}
