@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const requestHeaders = await headers();
-  const locale = requestHeaders.get("x-ekmivo-locale") === "en" ? "en" : "bn";
+  const cookieLocale = requestHeaders.get("cookie")?.match(/(?:^|;\\s*)ekmivo-locale=(en|bn)(?:;|$)/)?.[1];\n  const locale = requestHeaders.get("x-ekmivo-locale") === "en" ? "en" : requestHeaders.get("x-ekmivo-locale") === "bn" ? "bn" : cookieLocale === "en" ? "en" : "bn";
   const theme = requestHeaders.get("cookie")?.match(/(?:^|;\s*)ekmivo-theme=(light|dark)(?:;|$)/)?.[1];
   return <html lang={locale} data-theme={theme} className={hindSiliguri.variable} suppressHydrationWarning><body><InterfaceLocaleProvider locale={locale}>{children}</InterfaceLocaleProvider></body></html>;
 }
