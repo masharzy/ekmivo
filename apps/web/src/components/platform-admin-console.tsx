@@ -165,33 +165,33 @@ async function Overview({locale,isSuper}:{locale:AdminLocale;isSuper:boolean}){
  const money=(n:number)=>"৳"+n.toLocaleString("en-BD",{maximumFractionDigits:2});
  const root="/"+locale+"/admin";
  return <>
- <PageHead title={label(locale,"Overview","ওভারভিউ")} description="Sales and account health."/>
+ <PageHead title={label(locale,"Overview","ওভারভিউ")} description={label(locale,"Sales and account health.","আয়, সাবস্ক্রিপশন ও সার্ভিসের অবস্থা।")}/>
  <section className="pa-surface pa-stats-strip">
- <Stat title="Revenue collected (30 days)" value={money(Number(stats.collected_minor)/100)}/>
- <Stat title="Active subscriptions" value={Number(stats.active_subscriptions)}/>
- <Stat title="Overdue invoices" value={Number(stats.overdue)}/>
- <Stat title="Open support cases" value={Number(stats.open_cases)}/></section>
+ <Stat title={label(locale,"Revenue collected (30 days)","গত ৩০ দিনে আয়")} value={money(Number(stats.collected_minor)/100)}/>
+ <Stat title={label(locale,"Active subscriptions","সক্রিয় সাবস্ক্রিপশন")} value={Number(stats.active_subscriptions)}/>
+ <Stat title={label(locale,"Overdue invoices","বকেয়া ইনভয়েস")} value={Number(stats.overdue)}/>
+ <Stat title={label(locale,"Open support cases","খোলা সাপোর্ট টিকিট")} value={Number(stats.open_cases)}/></section>
  <div className="pa-overview-grid">
   <div>
-   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Revenue</h2><span className="pa-subtle">Last 12 months · paid platform invoices</span></div>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>{label(locale,"Revenue","আয়")}</h2><span className="pa-subtle">{label(locale,"Last 12 months · paid platform invoices","গত ১২ মাস · পরিশোধিত ইনভয়েস")}</span></div>
     <svg viewBox="0 0 620 165" width="100%" role="img" aria-label="Collected subscription revenue by month">
      {[20,80,140].map(n=><line key={n} x1="20" x2="610" y1={n} y2={n} stroke="var(--bd)" strokeWidth="1"/>)}
      {points&&<polyline points={points} fill="none" stroke="var(--ink)" strokeWidth="1.6" strokeLinejoin="round"/>}
      {r.map((v,i)=><text key={i} x={x(i)} y="160" fontSize="10" fill="var(--mu)" textAnchor="middle">{v.label}</text>)}
     </svg>
    </section>
-   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Needs follow-up</h2><Link href={root+"/billing/invoices"}>View invoices</Link></div>
-    {attention.length?attention.map(a=><div className="pa-attention-row" key={String(a.id)}><span><Link href={root+"/workspaces/"+a.workspace_id+"/billing"}>{String(a.name)}</Link> <small>Overdue platform invoice</small></span><strong>{money(Number(a.amount_minor)/100)}</strong></div>):<p className="pa-subtle">No overdue invoices.</p>}
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>{label(locale,"Needs follow-up","যা দেখতে হবে")}</h2><Link href={root+"/billing/invoices"}>{label(locale,"View invoices","ইনভয়েস দেখুন")}</Link></div>
+    {attention.length?attention.map(a=><div className="pa-attention-row" key={String(a.id)}><span><Link href={root+"/workspaces/"+a.workspace_id+"/billing"}>{String(a.name)}</Link> <small>{label(locale,"Overdue platform invoice","বকেয়া প্ল্যাটফর্ম ইনভয়েস")}</small></span><strong>{money(Number(a.amount_minor)/100)}</strong></div>):<p className="pa-subtle">{label(locale,"No overdue invoices.","কোনো বকেয়া ইনভয়েস নেই।")}</p>}
    </section>
   </div>
   <div>
-   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Workspaces by plan</h2><Link href={root+"/subscriptions"}>View subscriptions</Link></div>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>{label(locale,"Workspaces by plan","প্ল্যান অনুযায়ী ওয়ার্কস্পেস")}</h2><Link href={root+"/subscriptions"}>{label(locale,"View subscriptions","সাবস্ক্রিপশন দেখুন")}</Link></div>
     {plans.map(p=><div key={String(p.plan_id)} className="pa-attention-row"><span>{String(p.plan_id)}</span><strong>{Number(p.workspaces)}</strong></div>)}
-    {!plans.length&&<p className="pa-subtle">No active paid plans yet.</p>}
+    {!plans.length&&<p className="pa-subtle">{label(locale,"No active paid plans yet.","কোনো সক্রিয় প্ল্যান নেই।")}</p>}
    </section>
-   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Latest admin actions</h2><Link href={root+"/audit"}>View all</Link></div>
-    {!isSuper?<p className="pa-subtle">Access restricted.</p>:activities.map((a,i)=><div className="pa-attention-row" key={i}><span>{titleCase(String(a.action))}<small> {String(a.display_name||"System")}</small></span><span>{formatDate(a.occurred_at,locale)}</span></div>)}
-    {isSuper&&!activities.length&&<p className="pa-subtle">No admin actions recorded.</p>}
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>{label(locale,"Latest admin actions","সাম্প্রতিক অ্যাডমিন কাজ")}</h2><Link href={root+"/audit"}>{label(locale,"View all","সব দেখুন")}</Link></div>
+    {!isSuper?<p className="pa-subtle">{label(locale,"Access restricted.","অ্যাক্সেস সীমিত।")}</p>:activities.map((a,i)=><div className="pa-attention-row" key={i}><span>{titleCase(String(a.action))}<small> {String(a.display_name||"System")}</small></span><span>{formatDate(a.occurred_at,locale)}</span></div>)}
+    {isSuper&&!activities.length&&<p className="pa-subtle">{label(locale,"No admin actions recorded.","অ্যাডমিন কাজের কোনো রেকর্ড নেই।")}</p>}
    </section>
   </div>
  </div>
