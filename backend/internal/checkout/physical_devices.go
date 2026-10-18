@@ -93,6 +93,7 @@ func (s *Service) HandlePhones(w http.ResponseWriter,r *http.Request) {
  }
  var body struct{
   Name string `json:"name"`
+  PhoneID string `json:"phone_id"`
   AccountID string `json:"account_id"`
   Source string `json:"source"`
   Binding string `json:"binding"`
@@ -102,6 +103,11 @@ func (s *Service) HandlePhones(w http.ResponseWriter,r *http.Request) {
   Number string `json:"account_number"`
  }
  if e:=decodeBounded(w,r,&body,4096);e!=nil{fail(w,422,"INVALID_REQUEST");return}
+ // The targeted phone must be explicit and agree with the route, not just
+ // inferred from a path that the browser may have stale after a refresh.
+ if id!=""&&(action=="reconnect"||action=="delete")&&body.PhoneID!=id{
+  fail(w,422,"PHONE_ID_MISMATCH");return
+ }
  var raw []byte
  token:=""
  e:=s.creationScoped(r.Context(),ws,realm,func(tx pgx.Tx)error{
