@@ -85,7 +85,8 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
     await p.locator('[data-customer-checkout="true"]').waitFor();
     assert.equal(await p.locator("html").getAttribute("lang"),locale);
     assert.equal(await p.locator("html").getAttribute("data-theme"),theme);
-    assert.ok((await p.locator('[data-customer-checkout="true"]').innerText()).includes("123.45"),"amount changed in locale/theme");
+    const shown=(await p.locator('[data-customer-checkout="true"]').innerText()).replace(/[০-৯]/g,d=>String("০১২৩৪৫৬৭৮৯".indexOf(d))).replace(/,/g,"");
+    assert.ok(shown.includes("123.45"),"checkout did not show the exact authoritative BDT amount");
     assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),
      "horizontal checkout overflow at "+width+"px "+locale+" "+theme);
     assert.equal(await p.getByRole("button",{name:/mark.*paid|approve.*payment/i}).count(),0);
