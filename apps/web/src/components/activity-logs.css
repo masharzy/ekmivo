@@ -50,3 +50,5 @@
 .activity-logs .al-empty strong{font-size:14px}.activity-logs .al-empty p{color:var(--al-muted);font-size:12.5px}
 .activity-logs .al-footer{display:flex;justify-content:center;padding:15px;border-top:1px solid var(--al-line)}
 @media(max-width:650px){.activity-logs{padding:20px 12px 50px}.activity-logs .al-heading{align-items:flex-start;flex-direction:column}.activity-logs h1{font-size:24px}.activity-logs .al-toolbar{align-items:stretch;flex-direction:column}.activity-logs .al-controls{width:100%}.activity-logs .al-search{flex:1;min-width:0}.activity-logs .al-search input{width:100%}.activity-logs .al-record{padding:14px 13px}.activity-logs .al-tabs button{padding:10px 9px}}
+
+.activity-logs .al-event-icon svg{width:17px;height:17px;display:block}

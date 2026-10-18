@@ -3,6 +3,7 @@ import Link from "next/link";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useSearchParams} from "next/navigation";
 import {safeIntegrationPayload} from "../lib/integration-safe-payload";
+import {DashboardIcon} from "./dashboard-icon";
 import {CopyValue,IntegrationRequestError,IntegrationFeedback,IntegrationStatus,IntegrationSkeleton,integrationDate,integrationHref,setIntegrationTab,useIntegrationTransport,type ActivityRow,type IntegrationScope} from "./integration-ui";
 import "./activity-logs.css";
 
@@ -101,12 +102,12 @@ function ActivityLogs(scope:IntegrationScope&{detailId?:string}){
      const href=tab==="audit"?resourceHref(row.resource,row.resource_id):null;
      const failed=tab==="api"&&Number(row.http_status)>=400;
      return <article className="al-record" key={row.id}>
-      <span className={"al-event-icon "+(failed?"al-failed":"")} aria-hidden="true">{tab==="events"?"↗":tab==="api"?"⌁":tab==="audit"?"✓":"↓"}</span>
+      <span className={"al-event-icon "+(failed?"al-failed":"")} aria-hidden="true"><DashboardIcon name={tab==="events"?"events":tab==="api"?"developers":tab==="audit"?"shield":"invoices"}/></span>
       <div className="al-main">
        <div className="al-record-head"><strong>{heading}</strong>{failed&&<span className="al-error-state">{t("Error","ত্রুটি")}</span>}</div>
        <time>{integrationDate(row.created_at,locale)}</time>
        {tab==="events"&&<div className="al-meta"><span>{t("Event ID","ইভেন্ট আইডি")}</span><CopyValue value={row.id} locale={locale}/></div>}
-       {tab==="events"&&<div className="al-row-actions">{!detailId&&<Link href={integrationHref(scope,"events",row.id)}>{t("View event","ইভেন্ট দেখুন")}</Link>}{row.payment_id&&<Link href={integrationHref(scope,"transactions",String(row.payment_id))}>{t("Open payment","পেমেন্ট দেখুন")}</Link>}</div>}
+       {tab==="events"&&<div className="al-row-actions">{!detailId&&<Link href={integrationHref(scope,"events",row.id)}>{t("View event","ইভেন্ট দেখুন")}</Link>}{row.payment_id?<Link href={integrationHref(scope,"transactions",String(row.payment_id))}>{t("Open payment","পেমেন্ট দেখুন")}</Link>:null}</div>}
        {tab==="events"&&<details className="al-payload" open={!!detailId}><summary>{t("Event details","ইভেন্টের তথ্য")}</summary><pre>{JSON.stringify(safeIntegrationPayload(row.payload),null,2)}</pre></details>}
        {tab==="api"&&<div className="al-facts"><span>{value(row,"route")}</span><span>{value(row,"duration_ms")} ms</span><CopyValue value={value(row,"correlation_id")} locale={locale}/></div>}
        {tab==="audit"&&<div className="al-facts"><span>{t("Resource","বিষয়")}: {value(row,"resource")}</span><CopyValue value={value(row,"resource_id")} locale={locale}/>{href&&<Link href={href}>{t("Open record","রেকর্ড দেখুন")}</Link>}</div>}

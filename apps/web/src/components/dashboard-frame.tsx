@@ -340,7 +340,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
       <div className="ds-profile-popover">
        <strong>{userName}</strong>
        <Link href="/account"><Icon name="settings"/>{bn?"অ্যাকাউন্ট সেটিংস":"Account settings"}</Link>
-       {service==="payments"&&<Link href={dashboardHref(locale,workspace.id,"payments","events",environment)}><Icon name="activity"/>{bn?"কার্যক্রমের ইতিহাস":"Activity logs"}</Link>}
+       {service==="payments"&&<Link href={dashboardHref(locale,workspace.id,"payments","events",environment)}><Icon name="events"/>{bn?"কার্যক্রমের ইতিহাস":"Activity logs"}</Link>}
        {platformAdmin&&<Link href="/admin"><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
        {logout}
       </div>
