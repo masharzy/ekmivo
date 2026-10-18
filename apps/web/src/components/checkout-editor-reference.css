@@ -63,3 +63,7 @@
 .ref-checkout-editor .fi{width:100%;height:38px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:14px}.ref-checkout-editor .lgp{width:36px;height:36px;border-radius:9px;background:var(--accb);color:var(--acc);display:grid;place-items:center;font-weight:600;overflow:hidden}.ref-checkout-editor .lgp img{width:100%;height:100%;object-fit:contain}
 .ref-checkout-editor{display:block;min-height:0;padding:0;color:var(--txt,var(--t));} .ref-checkout-editor button{cursor:pointer} .ref-checkout-editor button:disabled{cursor:not-allowed}
 .ref-checkout-editor .ref-theme-page{display:flex;flex-direction:column;gap:20px}.ref-checkout-editor button:disabled{opacity:.45;cursor:not-allowed}
+
+/* Frame size is explicit: browser default iframe height (150px) clips the preview. */
+.ref-checkout-editor .pvw iframe{height:760px;min-height:500px;max-height:calc(100dvh - 70px);display:block}
+@media(max-width:640px){.ref-checkout-editor .pvw iframe{height:690px;max-height:none}}
