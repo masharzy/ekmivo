@@ -1,4 +1,6 @@
 "use client";
+import {dashboardHref} from "../lib/dashboard-navigation";
+import {DeviceIcon} from "./sms-device-icons";
 import {paymentMethodError} from "../lib/client/payment-method-errors";
 import {useDashboardInitialData} from "./dashboard-initial-data";
 import {DashboardConfirmDialog} from "./dashboard-confirm-dialog";
@@ -17,6 +19,8 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const seed=useDashboardInitialData<{accounts:Account[]}>("phones");
  const [accounts,setAccounts]=useState<Account[]>(seed?.data?.accounts??[]),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(seed?.error??""),[notice,setNotice]=useState("");
  const posting=useRef(false);
+ const sharedDialog=useRef<HTMLDialogElement>(null);
+ const [consent,setConsent]=useState(false),[deleteAccount,setDeleteAccount]=useState<Account|null>(null);
  const createDialog=useRef<HTMLDialogElement>(null),editDialog=useRef<HTMLDialogElement>(null),detailsDialog=useRef<HTMLDialogElement>(null);
  const [method,setMethod]=useState(""),[number,setNumber]=useState(""),[label,setLabel]=useState("");
  const normalizeNumber=(raw:string)=>{const digits=raw.replace(/\D/g,"");return digits.startsWith("880")?("0"+digits.slice(3)):digits.startsWith("01")?digits:""};
@@ -68,19 +72,21 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   setBusy(true);setError("");
   try{
    const response=await fetch(base+path+(path.includes("?")?"":"?environment="+environment),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-   const data=await response.json().catch(()=>null);if(!response.ok)throw Error(paymentMethodError(response.status,data?.error?.code||data?.code||"",bn,response.headers.get("X-Correlation-ID")||data?.error?.correlation_id));
+   const data=await response.json().catch(()=>null);
+   if(response.status===409&&data?.error?.code==="RECEIVING_ACCOUNT_CONSENT_REQUIRED"){setConsent(false);sharedDialog.current?.showModal();return null}
+   if(!response.ok)throw Error(paymentMethodError(response.status,data?.error?.code||data?.code||"",bn,response.headers.get("X-Correlation-ID")||data?.error?.correlation_id));
    if(!data||typeof data!=="object"||path==="/operations/gateways"&&typeof (data.id||data.account_id)!=="string")throw Error(paymentMethodError(502,"INVALID_SERVICE_RESPONSE",bn));
    await load();setNotice(t("Saved","সংরক্ষিত"));return data;
   }catch(e){setError(e instanceof Error&&e.name!=="TypeError"&&e.name!=="TimeoutError"?e.message:paymentMethodError(0,"NETWORK_UNCONFIRMED",bn));return null}
   finally{posting.current=false;setBusy(false)}
  }
- async function create(){
+ async function create(sharedConsent=false){
   if(!/^01[3-9][0-9]{8}$/.test(normalizeNumber(number))){setError(t("Enter a valid Bangladesh mobile number.","সঠিক বাংলাদেশি মোবাইল নম্বর দিন।"));return}
-  const data=await post("/operations/gateways",{method,account_number:normalizeNumber(number)});
+  const data=await post("/operations/gateways",{method,account_number:normalizeNumber(number),shared_number_consent:sharedConsent});
   if(!data)return;
   const id=data.id||data.account_id;
   if(label.trim()&&id&&!await post("/phones/"+id+"/edit-account",{label:label.trim()}))setError(t("Account added, but its name was not saved. Use Manage to update the name.","অ্যাকাউন্ট যোগ হয়েছে, কিন্তু নাম সংরক্ষিত হয়নি। Manage থেকে নাম পরিবর্তন করুন।"));
-  setNumber("");setLabel("");createDialog.current?.close();
+  setNumber("");setLabel("");sharedDialog.current?.close();createDialog.current?.close();
  }
  function edit(account:Account){setNewLabel(account.Label||"");setNewNumber(account.Number);setEdited(account.ID)}
  const status=(a:Account)=>a.Disabled?t("Disabled","বন্ধ"):t("Active","সক্রিয়");
@@ -101,7 +107,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   {loading&&accounts.length===0?<div className="ekv3-rows-skeleton" role="status" aria-label={t("Loading accounts","অ্যাকাউন্ট লোড হচ্ছে")}>{[0,1,2].map(i=><div key={i} className="ekv3-skeleton-row"><i/><span/><b/></div>)}</div>:
   <div className="ek-ref-cards">
    {visibleAccounts.map(a=><article className="ek-ref-account ek-provider-surface wc" style={providerSurfaceStyle(a.Method)} key={a.ID} data-disabled={a.Disabled}>
-    <span className="ek-ref-orb" aria-hidden="true"/><div className={"ek-ref-logo ek-ref-"+a.Method}>{isPaymentProvider(a.Method)?<img className="ek-ref-provider-image" src={providerLogo(a.Method)} width={88} height={44} alt={providerName(a.Method)+" logo"}/>:<span>{a.Method}</span>}</div><div className="ek-ref-account-identity"><span className="ek-ref-state"><i data-on={!a.Disabled}/>{status(a)}<span className="ek-ref-caption">{a.Label||t("Account number","অ্যাকাউন্ট নম্বর")}</span></span><span className="ek-ref-number">{formattedAccount(a.Number)} <button type="button" onClick={()=>numberCopy(a.Number)} aria-label={t("Copy number","নম্বর কপি")} title={t("Copy number","নম্বর কপি")}><DashboardIcon name="copy" width={14} height={14}/></button></span></div><div className="ek-ref-actions">{canManage&&<button type="button" role="switch" aria-checked={!a.Disabled} className="ek-ref-switch" disabled={busy} onClick={()=>setConfirmAccount(a)} aria-label={a.Disabled?t("Enable account","অ্যাকাউন্ট চালু করুন"):t("Disable account","অ্যাকাউন্ট বন্ধ করুন")}><span/></button>}<button type="button" className="ek-ref-manage" onClick={()=>setSelected(a.ID)}>{t("Manage","পরিচালনা")}</button></div>
+    <span className="ek-ref-orb" aria-hidden="true"/><div className={"ek-ref-logo ek-ref-"+a.Method}>{isPaymentProvider(a.Method)?<img className="ek-ref-provider-image" src={providerLogo(a.Method)} width={88} height={44} alt={providerName(a.Method)+" logo"}/>:<span>{a.Method}</span>}</div><div className="ek-ref-account-identity"><span className="ek-ref-state"><i data-on={!a.Disabled}/>{status(a)}<span className="ek-ref-caption">{a.Label||t("Account number","অ্যাকাউন্ট নম্বর")}</span></span><span className="ek-ref-number">{formattedAccount(a.Number)} <button type="button" onClick={()=>numberCopy(a.Number)} aria-label={t("Copy number","নম্বর কপি")} title={t("Copy number","নম্বর কপি")}><DashboardIcon name="copy" width={14} height={14}/></button></span></div><div className="ek-ref-actions">{canManage&&<button type="button" role="switch" aria-checked={!a.Disabled} className="ek-ref-switch" disabled={busy} onClick={()=>setConfirmAccount(a)} aria-label={a.Disabled?t("Enable account","অ্যাকাউন্ট চালু করুন"):t("Disable account","অ্যাকাউন্ট বন্ধ করুন")}><span/></button>}<button type="button" className="ek-ref-manage" onClick={()=>setSelected(a.ID)}>{t("Manage","পরিচালনা")}</button>{canManage&&<button type="button" className="ek-ref-delete" disabled={busy} onClick={()=>setDeleteAccount(a)} aria-label={t("Delete account","অ্যাকাউন্ট মুছুন")} title={t("Delete account","অ্যাকাউন্ট মুছুন")}><DeviceIcon name="trash"/></button>}</div>
    </article>)}
    {canManage&&<button type="button" className="ek-ref-add-card" onClick={openAdd}><span><DashboardIcon name="plus" width={16} height={16}/></span>{t("Add account","অ্যাকাউন্ট যোগ করুন")}</button>}
    {!loading&&visibleAccounts.length===0&&<div className="ek-ref-empty">{accounts.length?t("No accounts match your search.","অনুসন্ধানে কোনো অ্যাকাউন্ট পাওয়া যায়নি।"):t("No payment methods yet.","এখনো কোনো পেমেন্ট মাধ্যম নেই।")}</div>}
@@ -116,6 +122,18 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
    </div>}
   </dialog>
   <DashboardConfirmDialog open={Boolean(confirmAccount)} title={confirmAccount?.Disabled?t("Enable account","অ্যাকাউন্ট চালু করুন"):t("Disable account","অ্যাকাউন্ট বন্ধ করুন")} message={confirmAccount?.Disabled?t("This account will accept new payments.","এই অ্যাকাউন্টে নতুন পেমেন্ট গ্রহণ চালু হবে।"):t("New payments will no longer use this account.","নতুন পেমেন্টে এই অ্যাকাউন্ট ব্যবহার হবে না।")} confirmLabel={confirmAccount?.Disabled?t("Enable","চালু করুন"):t("Disable","বন্ধ করুন")} cancelLabel={t("Cancel","বাতিল")} disabled={busy} danger={!confirmAccount?.Disabled} onClose={()=>setConfirmAccount(null)} onConfirm={async()=>{if(confirmAccount)await post("/operations/gateways/"+confirmAccount.ID+"/"+(confirmAccount.Disabled?"enable":"disable"),{})}}/>
+  <DashboardConfirmDialog open={Boolean(deleteAccount)} title={t("Delete account?","অ্যাকাউন্ট মুছে ফেলবেন?")} message={t("This account will be removed from your list and new checkouts. Previous payment records will be kept.","অ্যাকাউন্টটি তালিকা ও নতুন checkout থেকে সরিয়ে দেওয়া হবে। আগের পেমেন্টের তথ্য সংরক্ষিত থাকবে।")} confirmLabel={t("Delete account","অ্যাকাউন্ট মুছুন")} cancelLabel={t("Cancel","বাতিল")} disabled={busy} danger onClose={()=>setDeleteAccount(null)} onConfirm={async()=>{if(deleteAccount){const ok=await post("/operations/gateways/"+deleteAccount.ID+"/delete",{});if(ok&&selected===deleteAccount.ID)setSelected(null)}}}/>
+  <dialog ref={sharedDialog} className="ekv2-confirm-dialog ek-ref-shared-warning" aria-labelledby="shared-number-title" onCancel={e=>{if(busy)e.preventDefault()}}>
+   <div className="ekv2-confirm-content">
+    <span className="ek-ref-warning-icon" aria-hidden="true">!</span>
+    <h2 id="shared-number-title">{t("This number is connected to another workspace","এই নম্বরটি অন্য workspace-এ যুক্ত আছে")}</h2>
+    <p>{t("This number is already connected to another workspace. If it belongs to you or you have permission to use it, you may add it to this workspace at your own responsibility.","এই নম্বরটি ইতিমধ্যে অন্য একটি workspace-এর সঙ্গে যুক্ত আছে। নম্বরটি আপনার হলে অথবা এটি ব্যবহারের অনুমতি থাকলে, নিজ দায়িত্বে এই workspace-এ যোগ করতে পারেন।")}</p>
+    <p>{t("If you are unsure or suspect a security issue, contact an admin.","নম্বরটি সম্পর্কে নিশ্চিত না হলে বা কোনো নিরাপত্তা সমস্যা মনে হলে অ্যাডমিনকে জানান।")}</p>
+    <label className="ek-ref-consent"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/><span>{t("I have the right to use this number and agree to add it.","নম্বরটি ব্যবহারের অধিকার আমার আছে এবং আমি যোগ করতে সম্মত।")}</span></label>
+    {error&&<p role="alert">{error}</p>}
+    <div className="ekv2-confirm-actions"><button type="button" disabled={busy} onClick={()=>sharedDialog.current?.close()}>{t("Cancel","বাতিল")}</button><a href={dashboardHref(locale,workspaceId,"payments","help",environment)}>{t("Help & security","সাহায্য ও নিরাপত্তা")}</a><button type="button" data-danger disabled={busy||!consent} onClick={()=>{if(consent)void create(true)}}>{t("Agree and add","সম্মতি দিয়ে যোগ করুন")}</button></div>
+   </div>
+  </dialog>
   <dialog ref={editDialog} className="pg-phone-dialog ekv2-account-dialog ekv3-form-modal" aria-label={t("Edit account","অ্যাকাউন্ট পরিবর্তন")} onCancel={()=>setEdited(null)} onClose={()=>setEdited(null)} onClick={event=>{if(event.target===event.currentTarget)setEdited(null)}}>
    {edited&&accounts.filter(a=>a.ID===edited).map(a=><div key={a.ID}><div className="pg-phone-dialog-head"><h2>{t("Edit account","অ্যাকাউন্ট পরিবর্তন")}</h2><button type="button" aria-label={t("Close","বন্ধ করুন")} onClick={()=>setEdited(null)}>×</button></div>
    <form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void post("/phones/"+a.ID+"/edit-account",{label:newLabel,...(newNumber!==a.Number?{account_number:newNumber}:{})}).then(ok=>{if(ok)setEdited(null)})}}>

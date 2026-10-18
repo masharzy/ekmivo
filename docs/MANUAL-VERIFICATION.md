@@ -729,3 +729,8 @@ Owner requested code-level verification only for this pass and will verify physi
 - Trust a private device for 30 days; sign out/in and verify remembered access. Remove it from Settings and confirm linked sessions lose access. Clearing device storage or using another browser requires MFA again.
 - After a role change or MFA recovery/reset, old trust and sessions must no longer authorize Admin operations.
 - Production deploy/migrations and authenticated production API integration remain unverified. Isolated Neon/code checks are recorded in `docs/evidence/ADMIN-SECURITY-PLANS-20261018/README.md`.
+
+### 2026-10-18 receiving account sharing/removal
+- In EN/BN and light/dark, add a provider+number already in another workspace: red consent dialog, no other workspace identity disclosed; Cancel does not create; unchecked submit disabled; Help & security opens workspace help; checked submit creates once. Same-workspace duplicate remains blocked.
+- Hover/focus an account: right-side delete icon appears; touch shows it without hover. Cancel preserves it; confirm removes active/disabled account, leaves historical payments, and re-add checks consent/plan again.
+- Code/database checks are recorded in WORKSPACE-SAVE-DIAGNOSIS-20261018. Visual and physical-device checks are manual pending.

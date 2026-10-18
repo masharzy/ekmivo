@@ -276,6 +276,7 @@ func (s *Service) HandleOperations(w http.ResponseWriter, r *http.Request) {
 			return tx.QueryRow(r.Context(), "SELECT pg09_read($1::uuid,$2,$3,$4::uuid,$5::uuid,$6,$7::uuid,$8,$9::timestamptz,$10::timestamptz,$11::text)", ws, realm, resource, nullableID(id), nullableID(cursor), nullableID(query.Get("status")), nullableID(account), nullableID(query.Get("method")), from, to, nullableID(search)).Scan(&raw)
 		}
 		var body struct {
+			Consent   bool   `json:"shared_number_consent"`
 			Reason    string `json:"reason"`
 			Method    string `json:"method"`
 			Number    string `json:"account_number"`
@@ -304,7 +305,10 @@ func (s *Service) HandleOperations(w http.ResponseWriter, r *http.Request) {
 			if e != nil {
 				return e
 			}
-			return tx.QueryRow(r.Context(), "SELECT pg06_account($1::uuid,$2,$3,$4,$5,$6)", ws, realm, body.Method, deviceevidence.Identity(s.PayerKey, "account|"+body.Method+"|"+number), number[len(number)-4:], encrypted).Scan(&raw)
+			return tx.QueryRow(r.Context(), "SELECT pg06_account_add($1::uuid,$2,$3,$4,$5,$6,$7)", ws, realm, body.Method, deviceevidence.Identity(s.PayerKey, "account|"+body.Method+"|"+number), number[len(number)-4:], encrypted, body.Consent).Scan(&raw)
+		}
+		if resource == "gateways" && id != "" && action == "delete" {
+			return tx.QueryRow(r.Context(), "SELECT pg06_account_delete($1::uuid,$2,$3::uuid)", ws, realm, id).Scan(&raw)
 		}
 		if resource == "devices" && id == "" && action == "" {
 			rule, ok := s.Pipeline.Rules[body.ParserID]

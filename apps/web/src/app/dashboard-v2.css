@@ -903,3 +903,18 @@
  display:flex!important;flex-direction:row!important;align-items:center!important;
  justify-content:flex-end!important;gap:8px!important;
 }
+
+/* Receiving account actions follow the existing payment-method surface. */
+.ds-app[data-service="payments"] .ekv3-methods .ek-ref-delete{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--pm-line2);border-radius:8px;background:var(--pm-surface);color:var(--color-danger);opacity:0;transition:opacity .15s}
+.ds-app[data-service="payments"] .ekv3-methods .ek-ref-delete svg{width:16px;height:16px}
+.ds-app[data-service="payments"] .ek-ref-account:hover .ek-ref-delete,.ds-app[data-service="payments"] .ek-ref-account:focus-within .ek-ref-delete{opacity:1}
+.ds-app[data-service="payments"] .ek-ref-shared-warning{border-color:var(--color-danger);max-width:480px;color:var(--pm-text);background:var(--pm-surface)}
+.ds-app[data-service="payments"] .ek-ref-shared-warning h2{color:var(--color-danger)}
+.ds-app[data-service="payments"] .ek-ref-warning-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--color-danger-bg);color:var(--color-danger);font-size:24px;font-weight:700}
+.ds-app[data-service="payments"] .ek-ref-consent{display:flex;align-items:flex-start;gap:10px;margin:20px 0;font-size:14px;line-height:1.6}
+.ds-app[data-service="payments"] .ek-ref-consent input{appearance:none;width:20px;height:20px;min-width:20px;border:1px solid var(--color-danger);border-radius:4px;margin:2px 0 0;display:grid;place-content:center}
+.ds-app[data-service="payments"] .ek-ref-consent input:checked{background:var(--color-danger)}
+.ds-app[data-service="payments"] .ek-ref-consent input:checked:after{content:"";width:10px;height:6px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg)}
+.ds-app[data-service="payments"] .ek-ref-shared-warning .ekv2-confirm-actions{flex-wrap:wrap;align-items:center;gap:10px}
+.ds-app[data-service="payments"] .ek-ref-shared-warning a{font-size:13px;color:var(--pm-muted);text-decoration:underline;text-underline-offset:3px}
+@media(hover:none){.ds-app[data-service="payments"] .ekv3-methods .ek-ref-delete{opacity:1}}

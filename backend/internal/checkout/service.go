@@ -298,6 +298,9 @@ func mapped(w http.ResponseWriter, err error) {
 			return
 		}
 		switch pg.Code {
+		case "P6901":
+			fail(w, 409, "RECEIVING_ACCOUNT_CONSENT_REQUIRED")
+			return
 		case "23505":
 			if pg.ConstraintName == "financial_exclusive_receiving_identity" {
 				fail(w, 409, "RECEIVING_ACCOUNT_IN_USE")
