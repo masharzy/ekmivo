@@ -7,25 +7,59 @@ import {resendEmailCodeAction,type RecoveryState} from "../actions/recovery";
 import {logoutAction} from "../actions/account";
 import {RefIcon} from "./reference-ui";
 import {SiteControls} from "./site-controls";
-import "./account-reference.css";
+import "./account-dashboard.css";
+
 type Session={id:string;created_at:string;expires_at:string;is_current:boolean};
 const initial:ProfileActionState={status:"idle",message:""};
+
 export function AccountSecurityView({locale,user,sessions,mfa,theme}:{locale:"bn"|"en";user:{id:string;name:string;email:string;verified:boolean};sessions:Session[];mfa:boolean;theme:"light"|"dark"|"system"}){
- const bn=locale==='bn',t=(en:string,be:string)=>bn?be:en,router=useRouter();
- const [profile,save,pending]=useActionState(saveDisplayName.bind(null,locale),initial),[revoked,revoke,revoking]=useActionState(revokeOtherSessions.bind(null,locale),initial),[verification,verify,sending]=useActionState(resendEmailCodeAction.bind(null,locale),{status:'idle',message:''} as RecoveryState);
- const [name,setName]=useState(user.name),[message,setMessage]=useState(''),[busy,setBusy]=useState(''),[confirm,setConfirm]=useState(false);
- const timer=useRef<ReturnType<typeof setTimeout>|null>(null),key=`ekmivo:account-name-draft:v1:${user.id}`,savedName=profile.status==='success'?profile.savedName||user.name:user.name,dirty=name!==savedName;
- useEffect(()=>{if(!dirty)return;const leave=(e:BeforeUnloadEvent)=>{try{sessionStorage.setItem(key,name)}catch{}e.preventDefault()};window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave)},[dirty,key,name]);
- useEffect(()=>{if(profile.status==='success')try{sessionStorage.removeItem(key)}catch{}},[profile.status,key]);
- useEffect(()=>{if(revoked.status==='success')router.refresh()},[revoked,router]);
+ const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en,router=useRouter();
+ const [profile,save,saving]=useActionState(saveDisplayName.bind(null,locale),initial);
+ const [revoked,revoke,revoking]=useActionState(revokeOtherSessions.bind(null,locale),initial);
+ const [verification,verify,verifying]=useActionState(resendEmailCodeAction.bind(null,locale),{status:"idle",message:""} as RecoveryState);
+ const [name,setName]=useState(user.name),[message,setMessage]=useState(""),[busy,setBusy]=useState(""),[confirm,setConfirm]=useState(false);
+ const [restored,setRestored]=useState(false);
+ const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const key="ekmivo:account-name-draft:v1:"+user.id;
+ const savedName=profile.status==="success"?profile.savedName||user.name:user.name,dirty=name!==savedName;
+ useEffect(()=>{if(!dirty)return;const leave=(e:BeforeUnloadEvent)=>{try{sessionStorage.setItem(key,name)}catch{}e.preventDefault()};window.addEventListener("beforeunload",leave);return()=>window.removeEventListener("beforeunload",leave)},[dirty,key,name]);
+ useEffect(()=>{if(profile.status==="success"){setName(profile.savedName||user.name);try{sessionStorage.removeItem(key)}catch{}}},[profile.status,profile.savedName,key,user.name]);
+ useEffect(()=>{if(revoked.status==="success")router.refresh()},[revoked.status,router]);
  useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current)},[]);
- const stamp=(value:string)=>new Intl.DateTimeFormat(bn?'bn-BD':'en-GB',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Asia/Dhaka'}).format(new Date(value));
- const notification=message||profile.message||revoked.message||verification.message;
- return <div className="ref-account"><header className="top"><Link className="logo" href="/workspaces" style={{textDecoration:'none',color:'inherit'}}>ekmivo<small>Pay</small></Link><div className="sp"/><SiteControls locale={locale} initialTheme={theme} compactThemeToggle/><div className="av">{savedName.charAt(0).toUpperCase()}</div></header><main className="main"><div className="cr">ekmivo / {t('Account security','অ্যাকাউন্ট নিরাপত্তা')}</div><h1>{t('Account & security','অ্যাকাউন্ট ও নিরাপত্তা')}</h1><p className="sub">{t('Real profile, authentication and session records.','প্রোফাইল, লগইন ও সেশনের প্রকৃত তথ্য।')}</p>
-  <section className="card hero"><div className="big">{savedName.charAt(0).toUpperCase()}</div><div><b>{savedName}</b><small>{user.email}</small></div><div className="pl"><span className={`pill ${user.verified?'pg':'pa'}`}>{user.verified?t('Email verified','ইমেইল যাচাইকৃত'):t('Email not verified','ইমেইল যাচাই হয়নি')}</span><span className={`pill ${mfa?'pg':'pm'}`}>{mfa?t('MFA enabled','MFA সক্রিয়'):t('MFA not enabled','MFA চালু নয়')}</span></div></section>
-  <div className="g2"><section className="card"><h2 style={{marginBottom:12}}>{t('Account details','অ্যাকাউন্টের বিবরণ')}</h2><div className="dl"><div><span>{t('Email','ইমেইল')}</span>{user.email}</div><div><span>{t('Email verification','ইমেইল যাচাই')}</span><em className={`pill ${user.verified?'pg':'pa'}`} style={{fontStyle:'normal'}}>{user.verified?t('Verified','যাচাইকৃত'):t('Not verified','যাচাই হয়নি')}</em>{!user.verified&&<form action={verify} style={{marginLeft:'auto'}}><button className="btn sm" disabled={sending||verification.status==='sent'}>{t('Verify','যাচাই')}</button></form>}</div><div><span>{t('Administrator MFA','অ্যাডমিন MFA')}</span><em className={`pill ${mfa?'pg':'pm'}`} style={{fontStyle:'normal'}}>{mfa?t('Enabled','সক্রিয়'):t('Not enrolled','চালু নয়')}</em></div></div></section>
-  <section className="card"><h2 style={{marginBottom:12}}>{t('Edit profile','প্রোফাইল পরিবর্তন')}</h2><form action={save}><div className="fg"><label htmlFor="ref-display-name">{t('Display name','প্রদর্শিত নাম')}</label><input className="inp" id="ref-display-name" name="name" required minLength={2} maxLength={100} value={name} onChange={e=>setName(e.target.value)} autoComplete="name"/></div><div className="row2"><button className="btn pri" disabled={pending||!dirty||name.trim().length<2}>{t('Save name','নাম সংরক্ষণ')}</button><button className="btn" type="button" onClick={()=>{try{const value=sessionStorage.getItem(key);if(value===null||value.length>100)throw Error();setName(value);setMessage(t('Restored the saved draft in this tab.','এই ট্যাবের খসড়া ফিরিয়ে আনা হয়েছে।'))}catch{setMessage(t('No valid draft is available in this tab.','এই ট্যাবে বৈধ খসড়া নেই।'))}}}>{t('Restore tab draft','এই ট্যাবের খসড়া ফিরিয়ে আনুন')}</button></div></form></section></div>
-  <section className="card"><div className="sh"><h2>{t('Active sessions','সক্রিয় সেশন')}</h2><span>{sessions.length} {t('active','সক্রিয়')}</span><form action={revoke} style={{marginLeft:'auto'}} onSubmit={e=>{if(!confirm){e.preventDefault();setConfirm(true);timer.current=setTimeout(()=>setConfirm(false),3000)}else setConfirm(false)}}><button className="btn sm dng" disabled={revoking||sessions.filter(s=>!s.is_current).length===0}>{confirm?t('Click again to confirm','নিশ্চিত করতে আবার চাপুন'):t('Revoke other sessions','অন্য সেশনগুলো বন্ধ করুন')}</button></form></div><p className="sd">{t('Revoking keeps this session signed in.','সেশন বাতিল করলেও বর্তমান সেশনে লগইন থাকবে।')}</p><div className="sl">{sessions.map(s=><div className={`ss ${s.is_current?'cur':''}`} key={s.id}><span className="si"><RefIcon name="monitor" className="ic"/></span><div><b>{s.is_current?t('This session','এই সেশন'):t('Other session','অন্য সেশন')}</b><small>{t('Started','শুরু')} {stamp(s.created_at)} · {t('Expires','মেয়াদ')} {stamp(s.expires_at)}</small></div>{s.is_current?<span className="pill pg">{t('Current','বর্তমান')}</span>:<button className="btn sm" disabled={busy===s.id} onClick={async()=>{setBusy(s.id);const result=await revokeAccountSession(locale,s.id);setMessage(result.message);setBusy('');if(result.status==='success')router.refresh()}}>{t('Revoke','বাতিল')}</button>}</div>)}</div><p className="fn">{t('Device and IP details are not collected or fabricated.','ডিভাইস ও IP তথ্য সংগ্রহ বা অনুমান করে দেখানো হয় না।')}</p></section>
-  <div className="acts"><Link className="btn" href="/forgot-password">{t('Password recovery','পাসওয়ার্ড পুনরুদ্ধার')}</Link><Link className="btn" href="/workspaces" onClick={()=>{if(dirty)try{sessionStorage.setItem(key,name)}catch{}}}>{t('Back to workspaces','ওয়ার্কস্পেসে ফিরুন')}</Link><form action={logoutAction.bind(null,locale)}><button className="btn">{t('Sign out','সাইন আউট')}</button></form></div>{notification&&<p className="account-result" role={profile.status==='error'||revoked.status==='error'||verification.status==='error'?'alert':'status'}>{notification}</p>}
- </main></div>;
+ const stamp=(value:string)=>new Intl.DateTimeFormat(bn?"bn-BD":"en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Dhaka"}).format(new Date(value));
+ const alert=message||profile.message||revoked.message||verification.message;
+ const error=profile.status==="error"||revoked.status==="error"||verification.status==="error";
+ const others=sessions.filter(session=>!session.is_current);
+ const initials=savedName.trim().slice(0,1).toUpperCase()||"?";
+ const restore=()=>{try{const value=sessionStorage.getItem(key);if(value===null||value.length>100)throw Error("NO_DRAFT");setName(value);setRestored(true);setMessage(t("Restored your draft in this tab.","এই ট্যাবের খসড়া ফিরিয়ে আনা হয়েছে।"))}catch{setMessage(t("No saved draft in this tab.","এই ট্যাবে কোনো খসড়া নেই।"))}};
+ return <div className="account-page" lang={locale}>
+  <header className="ac-top"><Link href="/workspaces" className="ac-brand">ekmivo</Link><div className="ac-top-actions"><Link href="/workspaces" className="ac-back">{t("Workspaces","ওয়ার্কস্পেস")}</Link><SiteControls locale={locale} initialTheme={theme} compactThemeToggle/><span className="ac-mini-avatar" aria-label={savedName}>{initials}</span></div></header>
+  <main className="ac-main">
+   <div className="ac-page-head"><h1>{t("Account settings","অ্যাকাউন্ট সেটিংস")}</h1><p>{t("Your profile, sign-in and active sessions.","আপনার প্রোফাইল, লগইন ও সক্রিয় সেশন।")}</p></div>
+   <section className="ac-identity" aria-label={t("Account summary","অ্যাকাউন্ট পরিচিতি")}><span className="ac-avatar">{initials}</span><div className="ac-identify"><strong>{savedName}</strong><span>{user.email}</span></div><span className={"ac-status "+(user.verified?"ac-positive":"ac-warning")}>{user.verified?t("Email verified","ইমেইল যাচাইকৃত"):t("Verification needed","যাচাই প্রয়োজন")}</span></section>
+   {alert&&<p className={"ac-alert "+(error?"ac-alert-error":"")} role={error?"alert":"status"}>{alert}</p>}
+   <div className="ac-grid">
+    <section className="ac-panel"><div className="ac-panel-heading"><h2>{t("Personal details","ব্যক্তিগত তথ্য")}</h2></div>
+     <form action={save} className="ac-form"><label htmlFor="account-name">{t("Display name","প্রদর্শিত নাম")}</label><input id="account-name" type="text" autoComplete="name" name="name" minLength={2} maxLength={100} required value={name} onChange={e=>setName(e.target.value)}/>
+     <span className="ac-field-note">{t("Visible to your workspace teammates.","ওয়ার্কস্পেসের সহকর্মীরা এই নাম দেখতে পাবেন।")}</span>
+     <div className="ac-form-actions"><button className="ac-primary" type="submit" disabled={!dirty||name.trim().length<2||saving}>{saving?t("Saving…","সংরক্ষণ হচ্ছে…"):t("Save changes","সংরক্ষণ")}</button><button type="button" className="ac-secondary" onClick={restore}>{t("Restore draft","খসড়া ফিরিয়ে আনুন")}</button></div>
+     {dirty&&<p className="ac-draft-note" role="status">{restored?t("Restored draft is not yet saved.","ফিরিয়ে আনা খসড়া এখনো সংরক্ষিত নয়।"):t("You have unsaved changes.","আপনার পরিবর্তন সংরক্ষিত হয়নি।")}</p>}
+     </form>
+    </section>
+    <section className="ac-panel"><div className="ac-panel-heading"><h2>{t("Sign-in & security","লগইন ও নিরাপত্তা")}</h2></div>
+     <div className="ac-setting-row"><div><strong>{t("Email address","ইমেইল ঠিকানা")}</strong><span>{user.email}</span></div><span className={"ac-status "+(user.verified?"ac-positive":"ac-warning")}>{user.verified?t("Verified","যাচাইকৃত"):t("Unverified","যাচাই হয়নি")}</span></div>
+     {!user.verified&&<form action={verify} className="ac-verify"><button className="ac-secondary" disabled={verifying||verification.status==="sent"}>{verifying?t("Sending…","পাঠানো হচ্ছে…"):t("Send verification email","যাচাইয়ের ইমেইল পাঠান")}</button></form>}
+     <div className="ac-setting-row"><div><strong>{t("Multi-factor authentication","দুই ধাপের নিরাপত্তা")}</strong><span>{t("Additional protection for administrator access.","অ্যাডমিন অ্যাক্সেসের অতিরিক্ত সুরক্ষা।")}</span></div><span className={"ac-status "+(mfa?"ac-positive":"ac-neutral")}>{mfa?t("Enabled","সক্রিয়"):t("Not set up","চালু নয়")}</span></div>
+     <div className="ac-setting-row"><div><strong>{t("Password","পাসওয়ার্ড")}</strong><span>{t("Recover access securely by email.","ইমেইলের মাধ্যমে নিরাপদে অ্যাক্সেস ফিরিয়ে নিন।")}</span></div><Link className="ac-secondary" href="/forgot-password">{t("Recovery","পুনরুদ্ধার")}</Link></div>
+    </section>
+   </div>
+   <section className="ac-panel ac-sessions"><header className="ac-panel-heading ac-session-header"><div><h2>{t("Active sessions","সক্রিয় সেশন")}</h2><p>{t("Review and revoke signed-in sessions.","সক্রিয় লগইনগুলো দেখুন ও প্রয়োজনমতো বন্ধ করুন।")}</p></div><form action={revoke} onSubmit={e=>{if(!confirm){e.preventDefault();setConfirm(true);if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setConfirm(false),4500)}else setConfirm(false)}}><button className="ac-secondary ac-danger" disabled={revoking||others.length===0}>{revoking?t("Revoking…","বন্ধ হচ্ছে…"):confirm?t("Confirm revoke","বাতিল নিশ্চিত করুন"):t("Revoke other sessions","অন্য সেশন বন্ধ করুন")}</button></form></header>
+    <div className="ac-session-list">{sessions.length===0?<div className="ac-empty">{t("No active sessions found.","সক্রিয় সেশন পাওয়া যায়নি।")}</div>:sessions.map(session=><div className="ac-session" key={session.id}>
+     <span className="ac-device"><RefIcon name="monitor" className="ac-icon"/></span><div className="ac-session-content"><strong>{session.is_current?t("Current session","বর্তমান সেশন"):t("Other session","অন্য সেশন")}</strong><span>{t("Started","শুরু")}: {stamp(session.created_at)} · {t("Expires","মেয়াদ")}: {stamp(session.expires_at)}</span></div>
+     {session.is_current?<span className="ac-status ac-positive">{t("Current","বর্তমান")}</span>:<button type="button" className="ac-secondary ac-danger" disabled={busy===session.id} onClick={async()=>{setBusy(session.id);try{const result=await revokeAccountSession(locale,session.id);setMessage(result.message);if(result.status==="success")router.refresh()}finally{setBusy("")}}}>{busy===session.id?t("Working…","অপেক্ষা করুন…"):t("Revoke","বন্ধ করুন")}</button>}
+    </div>)}</div><p className="ac-note">{t("We only show actual recorded sessions. Device and IP information is not collected.","শুধু সংরক্ষিত সেশন দেখানো হয়; ডিভাইস বা IP তথ্য অনুমান করে দেখানো হয় না।")}</p>
+   </section>
+   <footer className="ac-footer"><Link href="/workspaces" className="ac-secondary">{t("Back to workspaces","ওয়ার্কস্পেসে ফিরুন")}</Link><form action={logoutAction.bind(null,locale)}><button className="ac-secondary" type="submit">{t("Sign out","সাইন আউট")}</button></form></footer>
+  </main>
+ </div>;
 }

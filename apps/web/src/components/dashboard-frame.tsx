@@ -339,7 +339,8 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
       <summary aria-label={bn?"অ্যাকাউন্ট মেনু":"Account menu"} title={userName}><span className="ds-person-avatar">{userName.trim().charAt(0).toUpperCase()||"?"}</span></summary>
       <div className="ds-profile-popover">
        <strong>{userName}</strong>
-       <Link href="/account"><Icon name="settings"/>{bn?"অ্যাকাউন্ট ও নিরাপত্তা":"Account & security"}</Link>
+       <Link href="/account"><Icon name="settings"/>{bn?"অ্যাকাউন্ট সেটিংস":"Account settings"}</Link>
+       {service==="payments"&&<Link href={dashboardHref(locale,workspace.id,"payments","events",environment)}><Icon name="activity"/>{bn?"কার্যক্রমের ইতিহাস":"Activity logs"}</Link>}
        {platformAdmin&&<Link href="/admin"><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
        {logout}
       </div>

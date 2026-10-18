@@ -16,7 +16,7 @@ export const sections={
  coupons:{en:"Coupons",bn:"কুপন",detail:{en:"Discounts, eligible customers and expiry dates.",bn:"ছাড়ের পরিমাণ, যোগ্য গ্রাহক ও মেয়াদ।"},group:"commerce"},
  returns:{en:"Returns & exchanges",bn:"রিটার্ন ও এক্সচেঞ্জ",detail:{en:"Return requests, inspection and exchange fulfilment.",bn:"ফেরতের রিকোয়েস্ট, পণ্য পরীক্ষা ও এক্সচেঞ্জ।"},group:"commerce"},
  webhooks:{en:"Payment alerts",bn:"পেমেন্ট নোটিফিকেশন",detail:{en:"Messages sent to your connected store.",bn:"সংযুক্ত স্টোরে পাঠানো পেমেন্ট নোটিফিকেশন।"},group:"commerce"},
- events:{en:"Payment activity",bn:"পেমেন্টের কার্যক্রম",detail:{en:"Payment status changes.",bn:"পেমেন্টের অবস্থা পরিবর্তনের তালিকা।"},group:"commerce"},
+ events:{en:"Activity logs",bn:"কার্যক্রমের ইতিহাস",detail:{en:"Payment events, API logs and changes.",bn:"পেমেন্ট, API লগ ও পরিবর্তনের ইতিহাস।"},group:"commerce"},
  integrations:{en:"Apps & integrations",bn:"অ্যাপ ও ইন্টিগ্রেশন",detail:{en:"Connect your store and commerce tools.",bn:"আপনার স্টোর ও ব্যবসার টুল সংযুক্ত করুন।"},group:"commerce"},
  billing:{en:"Billing & usage",bn:"বিল ও ব্যবহার",detail:{en:"Your service plan, invoices and usage costs.",bn:"সেবার প্ল্যান, বিল ও ব্যবহারের খরচ।"},group:"common"},
  help:{en:"Help & feedback",bn:"সহায়তা ও মতামত",detail:{en:"Setup help and product feedback.",bn:"সেটআপ সহায়তা ও প্রোডাক্ট নিয়ে মতামত।"},group:"common"},
