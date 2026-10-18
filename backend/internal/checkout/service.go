@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -283,6 +284,7 @@ func getAllowedOrigin() string  { return allowedOrigin }
 func mapped(w http.ResponseWriter, err error) {
 	var pg *pgconn.PgError
 	if errors.As(err, &pg) {
+		log.Printf("Financial database failure sqlstate=%s routine=%s table=%s", pg.Code, pg.Routine, pg.TableName)
 		if strings.HasPrefix(pg.Code, "P680") {
 			status := http.StatusForbidden
 			if pg.Code == "P6801" {

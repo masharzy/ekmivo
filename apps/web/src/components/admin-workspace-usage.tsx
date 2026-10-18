@@ -28,7 +28,7 @@ export async function AdminWorkspaceUsage({locale,workspaceId,payments,ai}:{loca
  {!payment&&<p role="status">{t("Payment usage is unavailable. Retry using Refresh.","পেমেন্ট ব্যবহারের তথ্য পাওয়া যায়নি। রিফ্রেশ করে আবার দেখুন।")}</p>}
  {payment&&!terms&&<p role="status">{t("No current payment plan is available.","বর্তমান পেমেন্ট প্ল্যান পাওয়া যায়নি।")}</p>}
  {(payment?.usage_error||payment?.resource_usage_error)&&<p role="status">{t("Some usage is unavailable; unknown values are shown as —.","কিছু ব্যবহারের তথ্য পাওয়া যায়নি; অজানা সংখ্যা — দিয়ে দেখানো হয়েছে।")}</p>}
- </div><div className="pa-table-wrap"><table><thead><tr>{[t("Resource","সুবিধা"),t("Used","ব্যবহৃত"),t("Plan limit","প্ল্যানের সীমা"),t("Remaining","অবশিষ্ট")].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(([label,used,limit])=>{
+ </div><div className="pa-table-wrap"><table className="pa-usage-table"><thead><tr>{[t("Resource","সুবিধা"),t("Used","ব্যবহৃত"),t("Plan limit","প্ল্যানের সীমা"),t("Remaining","অবশিষ্ট")].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(([label,used,limit])=>{
  const held=label===rows[0][0]?payment?.usage?.reserved??0:0;
  return <tr key={label}><td>{label}</td><td>{n(used)}{held>0?` (+${n(held)} ${t("reserved","অপেক্ষমাণ")})`:""}</td><td>{limit===null?t("Unlimited","সীমাহীন"):n(limit)}</td><td>{limit===null?t("Unlimited","সীমাহীন"):limit===undefined||used===undefined?"—":n(Math.max(0,limit-used-held))}</td></tr>;
  })}</tbody></table></div>{terms&&<p className="pa-description pa-subtle">{t("New payments allowed per minute","প্রতি মিনিটে নতুন পেমেন্টের সীমা")}: {n(terms.create_per_minute)}</p>}</section>}

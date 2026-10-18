@@ -27,3 +27,14 @@ assert.equal(discardActiveDrafts(),true);
 offFail();off();
 assert.equal(activeDrafts().length,0,"Unmount cleanup must remove registration");
 console.log("PG02 PASS: dirty guard, save-success, save-failure-stays, explicit discard, registration cleanup");
+
+let deferredDirty=true;let applyDiscard;
+const offDeferred=registerDraft({id:"react-deferred-discard",isDirty:()=>deferredDirty,save:async()=>false,discard:()=>{applyDiscard=()=>{deferredDirty=false}}});
+assert.equal(discardActiveDrafts(),true,"React setState must not need a second discard click");
+applyDiscard();assert.equal(activeDrafts().length,0);offDeferred();
+const offThrow=registerDraft({id:"failed-discard",isDirty:()=>true,save:async()=>false,discard:()=>{throw Error("storage failure")}});
+assert.equal(discardActiveDrafts(),false,"A thrown discard must still block navigation");offThrow();
+
+let pendingSaved=true;let applySave;
+const offSaved=registerDraft({id:"react-deferred-save",isDirty:()=>pendingSaved,save:async()=>{applySave=()=>{pendingSaved=false};return true},discard:()=>{pendingSaved=false}});
+assert.equal(await saveActiveDrafts(),true,"Successful save must not fail while React state is pending");applySave();offSaved();

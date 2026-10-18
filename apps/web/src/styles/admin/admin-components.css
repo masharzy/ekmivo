@@ -257,3 +257,10 @@
 .pa-root.pa-admin-design .pa-provider-status{display:grid;gap:6px;border-top:1px solid var(--bd);padding-top:16px}
 .pa-root.pa-admin-design .pa-provider-status>div{display:flex;justify-content:space-between;gap:10px}
 .pa-root.pa-admin-design .pa-provider-status span{color:var(--mu)}
+
+/* Keep usage labels visible without horizontally scrolling a phone screen. */
+@media(max-width:600px){
+ .pa-root.pa-admin-design .pa-usage-table{min-width:0;table-layout:fixed}
+ .pa-root.pa-admin-design .pa-usage-table :is(th,td){white-space:normal;overflow-wrap:anywhere;padding:9px 8px;height:auto}
+ .pa-root.pa-admin-design .pa-usage-table :is(th,td):first-child{width:37%}
+}

@@ -192,6 +192,8 @@ func (s *Service) HandleOperations(w http.ResponseWriter, r *http.Request) {
 		authError(w, e)
 		return
 	}
+	w, finishActivity := s.observeAPI(w, r, ws, realm)
+	defer finishActivity()
 	actorID := ""
 	if r.Method != "GET" {
 		cookie, _ := r.Cookie("ekmivo-session")

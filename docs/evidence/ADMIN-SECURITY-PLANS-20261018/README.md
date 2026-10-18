@@ -33,3 +33,9 @@ Usage & credits now renders sections only for enabled products. Payment gateway 
 - Production web build and targeted lint passed (one existing unused-variable warning in inventory).
 - New migration 0093 tested on the isolated Neon live financial branch: aggregate fields present, receiving-account count equals the underlying active count, cross-workspace scope rejected. The existing migration runner includes 0093 for both financial realms.
 - Production migration/deploy is separate from this source push and is not claimed here.
+
+## Production activation — 2026-10-18
+
+Owner explicitly requested activation after the deployment inspection. Applied 0089/0090 to production control and 0091/0092/0093 to production sandbox and live financial databases on `br-solitary-river-b3ztvg8j`, using per-realm transactions, a five-second lock timeout, the existing advisory migration lock, and exact source SHA-256 entries in `dashboard_reference_migrations`. Post-apply checks verified the trusted-device table and session link, support role guard, both financial feature/usage functions, finance-reader execution permission, and all eight per-realm ledger entries. No payment records were deleted or modified.
+
+Vercel production alias was READY on `3a7bf701a8f511f2cc695b8f1adfd3df5df7551e`; Render deploy `dep-dba6vmh42hec73dad1ag` was live on the same commit. Authenticated end-user interactions and physical-device checks remain owner verification. Render error-log inspection was unavailable because the connector had no selected workspace; no clean-log claim is made.

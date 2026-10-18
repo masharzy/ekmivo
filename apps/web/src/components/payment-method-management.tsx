@@ -1,4 +1,5 @@
 "use client";
+import {paymentMethodError} from "../lib/client/payment-method-errors";
 import {useDashboardInitialData} from "./dashboard-initial-data";
 import {DashboardConfirmDialog} from "./dashboard-confirm-dialog";
 import {DashboardIcon} from "./dashboard-icon";
@@ -15,6 +16,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const base="/api/go/workspaces/"+workspaceId;
  const seed=useDashboardInitialData<{accounts:Account[]}>("phones");
  const [accounts,setAccounts]=useState<Account[]>(seed?.data?.accounts??[]),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(seed?.error??""),[notice,setNotice]=useState("");
+ const posting=useRef(false);
  const createDialog=useRef<HTMLDialogElement>(null),editDialog=useRef<HTMLDialogElement>(null),detailsDialog=useRef<HTMLDialogElement>(null);
  const [method,setMethod]=useState(""),[number,setNumber]=useState(""),[label,setLabel]=useState("");
  const normalizeNumber=(raw:string)=>{const digits=raw.replace(/\D/g,"");return digits.startsWith("880")?("0"+digits.slice(3)):digits.startsWith("01")?digits:""};
@@ -62,20 +64,22 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  },[base,environment,t]);
  useEffect(()=>{if(seed)return;const controller=new AbortController();void Promise.resolve().then(()=>{if(!controller.signal.aborted)void load(controller.signal)});return()=>controller.abort()},[load,seed]);
  async function post(path:string,body:unknown){
+  if(posting.current)return null;posting.current=true;
   setBusy(true);setError("");
   try{
-   const response=await fetch(base+path+(path.includes("?")?"":"?environment="+environment),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-   const data=await response.json();if(!response.ok)throw Error(data.error?.code||data.code||String(response.status));
+   const response=await fetch(base+path+(path.includes("?")?"":"?environment="+environment),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
+   const data=await response.json().catch(()=>null);if(!response.ok)throw Error(paymentMethodError(response.status,data?.error?.code||data?.code||"",bn,response.headers.get("X-Correlation-ID")||data?.error?.correlation_id));
+   if(!data||typeof data!=="object"||path==="/operations/gateways"&&typeof (data.id||data.account_id)!=="string")throw Error(paymentMethodError(502,"INVALID_SERVICE_RESPONSE",bn));
    await load();setNotice(t("Saved","সংরক্ষিত"));return data;
-  }catch{setError(t("Unable to save changes.","পরিবর্তন সংরক্ষণ করা যায়নি।"));return null}
-  finally{setBusy(false)}
+  }catch(e){setError(e instanceof Error&&e.name!=="TypeError"&&e.name!=="TimeoutError"?e.message:paymentMethodError(0,"NETWORK_UNCONFIRMED",bn));return null}
+  finally{posting.current=false;setBusy(false)}
  }
  async function create(){
   if(!/^01[3-9][0-9]{8}$/.test(normalizeNumber(number))){setError(t("Enter a valid Bangladesh mobile number.","সঠিক বাংলাদেশি মোবাইল নম্বর দিন।"));return}
   const data=await post("/operations/gateways",{method,account_number:normalizeNumber(number)});
   if(!data)return;
   const id=data.id||data.account_id;
-  if(label.trim()&&id)await post("/phones/"+id+"/edit-account",{label:label.trim()});
+  if(label.trim()&&id&&!await post("/phones/"+id+"/edit-account",{label:label.trim()}))setError(t("Account added, but its name was not saved. Use Manage to update the name.","অ্যাকাউন্ট যোগ হয়েছে, কিন্তু নাম সংরক্ষিত হয়নি। Manage থেকে নাম পরিবর্তন করুন।"));
   setNumber("");setLabel("");createDialog.current?.close();
  }
  function edit(account:Account){setNewLabel(account.Label||"");setNewNumber(account.Number);setEdited(account.ID)}
@@ -115,6 +119,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   <dialog ref={editDialog} className="pg-phone-dialog ekv2-account-dialog ekv3-form-modal" aria-label={t("Edit account","অ্যাকাউন্ট পরিবর্তন")} onCancel={()=>setEdited(null)} onClose={()=>setEdited(null)} onClick={event=>{if(event.target===event.currentTarget)setEdited(null)}}>
    {edited&&accounts.filter(a=>a.ID===edited).map(a=><div key={a.ID}><div className="pg-phone-dialog-head"><h2>{t("Edit account","অ্যাকাউন্ট পরিবর্তন")}</h2><button type="button" aria-label={t("Close","বন্ধ করুন")} onClick={()=>setEdited(null)}>×</button></div>
    <form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void post("/phones/"+a.ID+"/edit-account",{label:newLabel,...(newNumber!==a.Number?{account_number:newNumber}:{})}).then(ok=>{if(ok)setEdited(null)})}}>
+    {error&&<p className="ekv3-page-error" role="alert">{error}</p>}
     <label>{t("Account name","অ্যাকাউন্টের নাম")}<input maxLength={100} value={newLabel} onChange={e=>setNewLabel(e.target.value)}/></label>
     <label>{t("Receiving number","রিসিভিং নম্বর")}<input type="tel" inputMode="tel" value={newNumber} onChange={e=>setNewNumber(e.target.value)}/></label>
     <div className="pg-phone-actions"><button type="button" onClick={()=>setEdited(null)}>{t("Cancel","বাতিল")}</button><button type="submit" className="ekv3-primary" disabled={busy}>{t("Save changes","পরিবর্তন সংরক্ষণ")}</button></div>
@@ -123,6 +128,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   <dialog ref={createDialog} className="pg-phone-dialog ekv3-form-modal ek-ref-modal" aria-labelledby="ekv3-add-account" onClick={event=>{if(event.target===event.currentTarget)createDialog.current?.close()}}>
    <div className="pg-phone-dialog-head"><div><h2 id="ekv3-add-account">{t("Add account","অ্যাকাউন্ট যোগ করুন")}</h2><p>{method?t("Enter the account customers will pay into.","গ্রাহক যে অ্যাকাউন্টে পেমেন্ট করবেন সেটি দিন।"):t("Choose a provider.","একটি মাধ্যম বেছে নিন।")}</p></div><button type="button" aria-label={t("Close","বন্ধ করুন")} onClick={()=>createDialog.current?.close()}>×</button></div>
    <form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void create()}}>
+    {error&&<p className="ekv3-page-error" role="alert">{error}</p>}
     {!method?<><label className="ek-ref-search ek-ref-provider-search"><DashboardIcon name="search" width={16} height={16}/><input aria-label={t("Search providers","মাধ্যম খুঁজুন")} placeholder={t("Search providers","মাধ্যম খুঁজুন")} value={providerQuery} onChange={e=>setProviderQuery(e.target.value)}/></label>{providerError&&<p className="ekv3-page-error" role="status">{providerError}<button type="button" onClick={()=>void loadProviderCatalog()}>{t("Retry","আবার চেষ্টা")}</button></p>}{providerLoading&&<p className="ek-ref-help">{t("Refreshing providers…","মাধ্যম লোড হচ্ছে…")}</p>}<div className="ek-ref-providers">{providerItems.filter(p=>p.name.toLowerCase().includes(providerQuery.toLowerCase())).map(({code:key,name,logo})=><button type="button" key={key} className="ek-ref-provider ek-provider-surface wc" style={providerSurfaceStyle(key)} onClick={()=>setMethod(key)}><span className={"ek-ref-logo ek-ref-"+key}>{logo||providerLogo(key)?<img className="ek-ref-provider-image" src={logo||providerLogo(key)} width={80} height={40} alt={name+" logo"}/>:name}</span><span className="ek-ref-provider-name">{name}</span></button>)}{!providerLoading&&!providerError&&!providerItems.some(p=>p.name.toLowerCase().includes(providerQuery.toLowerCase()))&&<div className="ek-ref-empty">{t("No provider found.","কোনো মাধ্যম পাওয়া যায়নি।")}</div>}</div></>:<div className="ek-ref-selected-provider ek-provider-surface" style={providerSurfaceStyle(method)}><span className={"ek-ref-logo ek-ref-"+method}>{providerLogo(method)?<img className="ek-ref-provider-image" src={providerLogo(method)} width={84} height={42} alt={providerName(method)+" logo"}/>:providerName(method)}</span><span className="ek-ref-provider-title">{providerName(method)}</span><button type="button" onClick={()=>setMethod("")}>{t("Change","পরিবর্তন")}</button></div>}
     {method&&<><label className="ek-ref-field">{t("Account number","অ্যাকাউন্ট নম্বর")}<input required type="tel" inputMode="tel" autoComplete="off" value={number} onChange={e=>setNumber(e.target.value)} placeholder="+880 1XXX XXXXXX"/></label>
     <label className="ek-ref-field">{t("Label","লেবেল")}<span className="ek-ref-help">{t("Optional, only you see this","ঐচ্ছিক, শুধু আপনি দেখবেন")}</span><input value={label} maxLength={100} placeholder={t("e.g. Main shop","যেমন: মূল দোকান")} onChange={e=>setLabel(e.target.value)}/></label>

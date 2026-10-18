@@ -49,6 +49,7 @@ func (s *Service) HandlePhones(w http.ResponseWriter,r *http.Request) {
  if !uuidPattern.MatchString(ws)|| (id!=""&&!uuidPattern.MatchString(id))||(realm!="sandbox"&&realm!="live"){fail(w,400,"INVALID_SCOPE");return}
  if r.Method!="GET"&&!originAllowed(r){fail(w,403,"ORIGIN_DENIED");return}
  if e:=s.pipelineSession(r,ws,realm,true);e!=nil{authError(w,e);return}
+ w,finishActivity:=s.observeAPI(w,r,ws,realm);defer finishActivity()
  if r.Method=="GET" {
   if id!="" || action!=""{fail(w,404,"NOT_FOUND");return}
   var raw []byte

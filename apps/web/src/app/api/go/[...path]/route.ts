@@ -53,7 +53,12 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   });
   return new Response(await upstream.text(), { status: upstream.status,
    headers: { "Content-Type": upstream.headers.get("Content-Type") || "application/json", "Cache-Control": "private, no-store",...(upstream.headers.has("X-Correlation-ID")?{"X-Correlation-ID":upstream.headers.get("X-Correlation-ID")!}:{}),...(upstream.headers.has("Retry-After")?{"Retry-After":upstream.headers.get("Retry-After")!}:{}) } });
- } catch { return Response.json({ code: "API_UNAVAILABLE" }, { status: 503 }); }
+ } catch(error) {
+  const correlation=crypto.randomUUID().replaceAll("-","").slice(0,24);
+  // Templates and error classes only: never log credentials, URLs, query values or bodies.
+  console.error("[go-proxy] upstream unavailable",{correlation,method:request.method,route:path.replace(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/gi,"{id}"),reason:error instanceof Error?error.name:"UnknownError"});
+  return Response.json({ code:"API_UNAVAILABLE",correlation_id:correlation },{status:503,headers:{"X-Correlation-ID":correlation,"Cache-Control":"private, no-store"}});
+ }
 }
 export const GET = forward;
 export const PATCH = forward;

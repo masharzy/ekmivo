@@ -28,11 +28,15 @@ export async function saveActiveDrafts():Promise<boolean>{
    if(!await draft.save())return false;
   }catch{return false;}
  }
- return activeDrafts().length===0;
+ // A true result means the form saved successfully. React state can settle
+ // after this promise resolves, so a synchronous dirty recheck is unreliable.
+ return true;
 }
 export function discardActiveDrafts():boolean{
  for(const draft of activeDrafts()){
   try{draft.discard();}catch{return false;}
  }
- return activeDrafts().length===0;
+ // React applies setState after the click handler; a synchronous dirty recheck
+ // would report failure even though every discard callback succeeded.
+ return true;
 }
