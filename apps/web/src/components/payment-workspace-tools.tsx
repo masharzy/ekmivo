@@ -1,4 +1,6 @@
 "use client";
+import {PlanResourceStatus,useResourceLimit} from "./plan-resource-status";
+import {planLimitMessage} from "../lib/plan-resource-limits";
 import {useDashboardInitialData} from "./dashboard-initial-data";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
@@ -37,6 +39,7 @@ function formatSettings(body:Settings):Settings{return Object.fromEntries(Object
 export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string}){
  const router=useRouter(),bn=locale==="bn";
  const t=useCallback((en:string,bengali:string)=>bn?bengali:en,[bn]);
+ const teamLimit=useResourceLimit("team_members",workspaceId,environment,resource==="team");
  const base="/api/go/workspaces/"+workspaceId+"/workspace-tools";
  const seed=useDashboardInitialData<ApiData>("workspace");
  const initialSettings={...defaults,...seed?.data?.body};
@@ -101,9 +104,10 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
    }
    setNotice(t("Changes saved.","পরিবর্তন সংরক্ষণ হয়েছে।"));
    if(action!=="settings")await load();
+   if(resource==="team")await teamLimit.refresh();
    if(action==="settings"||action==="transfer-owner")router.refresh();
    return true;
-  }catch(e){setError(t("Action not confirmed.","পরিবর্তন নিশ্চিত হয়নি।")+" "+(e instanceof Error?e.message:""));return false}
+  }catch(e){if(resource==="team")void teamLimit.refresh();setError(planLimitMessage(e instanceof Error?e.message:"",bn,"team_members")??(t("Action not confirmed.","পরিবর্তন নিশ্চিত হয়নি।")+" "+(e instanceof Error?e.message:"")));return false}
   finally{setBusy(false)}
  }
  const saveSettings=async()=>{
@@ -117,7 +121,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
  };
  useEffect(()=>{latest.current={body,version,saved,save:saveSettings,discard:()=>{setBody({...latest.current.saved});setError("")}}});
  useEffect(()=>{if(resource!=="settings"||!canManage)return;return registerDraft({id:"workspace-settings:"+workspaceId+":"+environment,isDirty:()=>JSON.stringify(latest.current.body)!==JSON.stringify(latest.current.saved),save:()=>latest.current.save(),discard:()=>latest.current.discard()})},[resource,workspaceId,environment,canManage]);
- async function invite(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(await command("invite",{email:email.trim().toLowerCase(),role})){setEmail("");setRole("viewer")}}
+ async function invite(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(teamLimit.blocked)return;if(await command("invite",{email:email.trim().toLowerCase(),role})){setEmail("");setRole("viewer")}}
  async function support(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(await command("help",{subject:subject.trim(),message:issue.trim()})){setSubject("");setIssue("")}}
  const visible=members.filter(member=>(member.name+" "+(member.email??"")+" "+member.role).toLowerCase().includes(find.trim().toLowerCase())&&(roleFilter==="all"||member.role===roleFilter));
  const resourceTitle=resource==="team"?t("Team & permissions","টিম ও অনুমতি"):resource==="settings"?t("Workspace settings","ওয়ার্কস্পেস সেটিংস"):t("Help & feedback","সহায়তা ও মতামত");
@@ -127,6 +131,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
   {notice&&<p data-feedback="success" className="ws-note" role="status">{notice}</p>}
   {loading?<div className="ws-loading" role="status">{t("Loading workspace…","ওয়ার্কস্পেস লোড হচ্ছে…")}</div>:!loaded?<p className="ws-empty" role="status">{t("Workspace data is unavailable. Try Refresh.","ওয়ার্কস্পেসের তথ্য পাওয়া যায়নি। রিফ্রেশ করুন।")}</p>:<>
    {resource==="team"&&<>
+    <PlanResourceStatus value={teamLimit} locale={locale}/>
     <div className="tp-stats" aria-label={t("Team summary","টিমের সারসংক্ষেপ")}><div><span>{t("Active members","সক্রিয় সদস্য")}</span><strong>{members.length}</strong></div><div><span>{t("Pending invites","অপেক্ষমাণ আমন্ত্রণ")}</span><strong>{invites.length}</strong></div><div><span>{t("Your role","আপনার দায়িত্ব")}</span><strong className="tp-stat-role">{isOwner?t("Owner","মালিক"):canManage?t("Admin","অ্যাডমিন"):t("Member","সদস্য")}</strong></div></div>
     <div className="tp-columns"><div className="tp-column">
      <section className="tp-panel">
@@ -160,7 +165,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
      </section>
     </div><div className="tp-column">
      {canManage&&<section className="tp-panel"><div className="tp-panel-header"><h2>{t("Invite a teammate","সহকর্মী আমন্ত্রণ")}</h2><p>{t("Creates a private invitation link. No email is sent automatically.","গোপন আমন্ত্রণ লিংক তৈরি হবে; ইমেইল পাঠানো হবে না।")}</p></div>
-      <form className="tp-invite" onSubmit={invite}><label>{t("Email","ইমেইল")}<input value={email} type="email" maxLength={254} required autoComplete="off" placeholder="name@company.com" disabled={busy} onChange={e=>setEmail(e.target.value)}/></label><label>{t("Role","দায়িত্ব")}<select value={role} disabled={busy} onChange={e=>setRole(e.target.value)}>{(isOwner?["admin","editor","viewer"]:["editor","viewer"]).map(r=><option key={r} value={r}>{memberRole(r)}</option>)}</select><small className="tp-role-hint">{role==="viewer"?t("Can view payments and reports.","পেমেন্ট ও রিপোর্ট দেখতে পারবেন।"):role==="editor"?t("Can work on assigned payment operations.","নির্ধারিত পেমেন্ট কাজ করতে পারবেন।"):t("Can manage team access.","টিমের অনুমতি পরিচালনা করতে পারবেন।")}</small></label><button className="tp-primary" disabled={busy||!email.trim()}>{t("Create invite","আমন্ত্রণ তৈরি")}</button></form>
+      <form className="tp-invite" onSubmit={invite}><label>{t("Email","ইমেইল")}<input value={email} type="email" maxLength={254} required autoComplete="off" placeholder="name@company.com" disabled={busy} onChange={e=>setEmail(e.target.value)}/></label><label>{t("Role","দায়িত্ব")}<select value={role} disabled={busy} onChange={e=>setRole(e.target.value)}>{(isOwner?["admin","editor","viewer"]:["editor","viewer"]).map(r=><option key={r} value={r}>{memberRole(r)}</option>)}</select><small className="tp-role-hint">{role==="viewer"?t("Can view payments and reports.","পেমেন্ট ও রিপোর্ট দেখতে পারবেন।"):role==="editor"?t("Can work on assigned payment operations.","নির্ধারিত পেমেন্ট কাজ করতে পারবেন।"):t("Can manage team access.","টিমের অনুমতি পরিচালনা করতে পারবেন।")}</small></label><button className="tp-primary" disabled={busy||teamLimit.blocked||!email.trim()}>{t("Create invite","আমন্ত্রণ তৈরি")}</button></form>
      </section>}
      {secretLink&&<section className="tp-panel"><div className="tp-panel-header"><h2>{t("Invitation link","আমন্ত্রণ লিংক")}</h2><p>{t("Only share with the intended person.","শুধু নির্দিষ্ট ব্যক্তির সঙ্গে শেয়ার করুন।")}</p></div><div className="tp-secret"><input readOnly value={secretLink} aria-label={t("Private invitation URL","গোপন আমন্ত্রণ লিংক")}/><div><button type="button" onClick={()=>void navigator.clipboard.writeText(secretLink).then(()=>setNotice(t("Copied","কপি হয়েছে"))).catch(()=>setError(t("Copy failed","কপি হয়নি")))}>{t("Copy link","লিংক কপি")}</button><button type="button" onClick={()=>setSecretLink("")}>{t("Done","শেষ")}</button></div></div></section>}
      <section className="tp-panel"><div className="tp-panel-header"><h2>{t("Pending invites","অপেক্ষমাণ আমন্ত্রণ")}</h2></div>

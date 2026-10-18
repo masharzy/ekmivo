@@ -1,4 +1,6 @@
 "use client";
+import {planSectionAllowed} from "../lib/plan-features";
+import type {PlanTerms} from "../lib/payment-plans";
 import {useEffect,useState} from "react";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 
@@ -9,8 +11,8 @@ const sources:SearchSection[]=["payments","incoming","payment-links","invoices",
 const en={payments:"Transaction",incoming:"Incoming receipt","payment-links":"Payment link",invoices:"Invoice",customers:"Customer"};
 const bn={payments:"লেনদেন",incoming:"ইনকামিং রসিদ","payment-links":"পেমেন্ট লিংক",invoices:"ইনভয়েস",customers:"গ্রাহক"};
 type SourceItem={id?:unknown;merchant_reference?:unknown;reference?:unknown;body?:{name?:unknown};method?:unknown;status?:unknown;amount_minor?:unknown;verified_amount_minor?:unknown};
-export function PaymentRecordSearch({locale,workspaceId,environment,query,open,onNavigate}:{
- locale:Locale;workspaceId:string;environment:PaymentEnvironment;query:string;open:boolean;onNavigate:(url:string)=>void;
+export function PaymentRecordSearch({locale,workspaceId,environment,query,open,onNavigate,planFeatures}:{
+ planFeatures?:PlanTerms["features"]|null;locale:Locale;workspaceId:string;environment:PaymentEnvironment;query:string;open:boolean;onNavigate:(url:string)=>void;
 }){
  const [matches,setMatches]=useState<RecordMatch[]>([]);
  const [pending,setPending]=useState(false);
@@ -21,7 +23,8 @@ export function PaymentRecordSearch({locale,workspaceId,environment,query,open,o
   const controller=new AbortController();
   const timer=window.setTimeout(async()=>{
    setPending(true);
-   const results=await Promise.allSettled(sources.map(async section=>{
+   const allowedSources=sources.filter(section=>planSectionAllowed(section,planFeatures));
+   const results=await Promise.allSettled(allowedSources.map(async section=>{
     const params=new URLSearchParams({environment,q:term});
     const base=`/api/go/workspaces/${workspaceId}`;
     const url=["payments","incoming"].includes(section)
@@ -45,11 +48,11 @@ export function PaymentRecordSearch({locale,workspaceId,environment,query,open,o
    }));
    if(controller.signal.aborted)return;
    setMatches(results.flatMap(result=>result.status==="fulfilled"?result.value:[]).slice(0,16));
-   setFailed(results.flatMap((result,i)=>result.status==="rejected"?[sources[i]]:[]));
+   setFailed(results.flatMap((result,i)=>result.status==="rejected"?[allowedSources[i]]:[]));
    setPending(false);
   },280);
   return()=>{window.clearTimeout(timer);controller.abort()};
- },[term,workspaceId,environment,locale,open]);
+ },[term,workspaceId,environment,locale,open,planFeatures]);
  if(!open||term.length<2)return <p className="ds-search-hint">{locale==="bn"?"কমপক্ষে ২ অক্ষর লিখলে অনুমোদিত পেমেন্ট, রসিদ, লিংক, ইনভয়েস ও গ্রাহক খোঁজা হবে।":"Type at least 2 characters to search authorized transactions, receipts, links, invoices and customers."}</p>;
  return <section className="ds-record-search" aria-label={locale==="bn"?"পেমেন্ট রেকর্ড":"Payment records"}>
   <h3>{locale==="bn"?"পেমেন্ট রেকর্ড":"Payment records"}</h3>

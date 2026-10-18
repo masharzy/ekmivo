@@ -1,4 +1,5 @@
 "use client";
+import {ExportUpgradeLink} from "./plan-feature-upgrade";
 import {useDashboardInitialData} from "./dashboard-initial-data";
 
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
@@ -91,7 +92,7 @@ function exportReport(report:Report,period:Filters,scope:"all"|"summary"="all"){
  const a=document.createElement("a");a.href=uri;a.download="ekmivo-report-"+period.from+"-"+period.to+".csv";document.body.append(a);a.click();a.remove();
  window.setTimeout(()=>URL.revokeObjectURL(uri),2000);
 }
-export function PaymentReports({locale,workspaceId,environment,canReveal,canExport=false}:{locale:Locale;workspaceId:string;environment:string;canReveal:boolean;canExport?:boolean}){
+export function PaymentReports({locale,workspaceId,environment,canReveal,canExport}:{locale:Locale;workspaceId:string;environment:string;canReveal:boolean;canExport?:boolean}){
  const bn=locale==="bn",t=useCallback((en:string,bengali:string)=>bn?bengali:en,[bn]);
  const seed=useDashboardInitialData<Report>("report");
  const initialLoad=useRef(Boolean(seed));
@@ -219,7 +220,7 @@ export function PaymentReports({locale,workspaceId,environment,canReveal,canExpo
   <div className="page">
    <header className="ph"><div><h1>{t("Reports","রিপোর্ট")}</h1><p>{t("Verified payments, matching and refunds for the period you choose.","নির্বাচিত সময়ের যাচাইকৃত পেমেন্ট, মিল ও রিফান্ড।")}</p></div>
     <div className="acts"><button className={"btn"+(loading?" spin":"")} disabled={loading} onClick={()=>{setRefresh(n=>n+1);setToast(t("Refreshed","রিফ্রেশ করা হয়েছে"))}}>{icon("refresh")}{t("Refresh","রিফ্রেশ")}</button>
-     {canExport&&<button className="btn" disabled={!displayed||stale} onClick={()=>{if(displayed){exportReport(displayed,active);setToast(t("Export started","এক্সপোর্ট শুরু হয়েছে"))}}}>{icon("download")}{t("Export","এক্সপোর্ট")}</button>}
+     {canExport===false&&<ExportUpgradeLink locale={locale} workspaceId={workspaceId}/>}{canExport&&<button className="btn" disabled={!displayed||stale} onClick={()=>{if(displayed){exportReport(displayed,active);setToast(t("Export started","এক্সপোর্ট শুরু হয়েছে"))}}}>{icon("download")}{t("Export","এক্সপোর্ট")}</button>}
      <button className="btn" disabled={!displayed||stale} onClick={printReport}>{icon("printer")}{t("Print","প্রিন্ট")}</button></div></header>
    <section className="card fl" id="fl" aria-label={t("Report period","রিপোর্টের সময়সীমা")}>
     <div className="chips" role="group" aria-label={t("Period","সময়সীমা")}>{([["7",t("7 days","৭ দিন")],["30",t("30 days","৩০ দিন")],["90",t("90 days","৯০ দিন")],["custom",t("Custom","নিজের মতো")]] as const).map(([k,label])=><button key={k} type="button" className="chip" aria-pressed={preset===k} onClick={()=>{if(k==="custom"){setPreset("custom");fromInput.current?.focus()}else quick(Number(k) as 7|30|90)}}>{label}</button>)}</div>

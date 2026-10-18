@@ -1,4 +1,7 @@
 "use client";
+import {PlanResourceStatus,useResourceLimit} from "./plan-resource-status";
+import {planLimitMessage} from "../lib/plan-resource-limits";
+
 import {useDashboardInitialData} from "./dashboard-initial-data";
 import Link from "next/link";
 import {PaymentRequestDetail} from "./payment-request-detail";
@@ -19,7 +22,7 @@ type Fields={reference:string;amount:string;expiry:string;sourceKind:"standalone
 type LoadState="loading"|"ready"|"offline"|"unavailable"|"forbidden"|"error";
 const empty:Fields={reference:"",amount:"",expiry:"15",sourceKind:"standalone",sourceId:""};
 const uuid=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const short=(code:string,bn:boolean)=>({
+const short=(code:string,bn:boolean)=>planLimitMessage(code,bn,"payments")??(({
  UNAUTHENTICATED:bn?"সেশন শেষ হয়েছে। আবার লগইন করুন।":"Session expired. Sign in again.",
  ACCESS_DENIED:bn?"আপনার এই কাজের অনুমতি নেই।":"You do not have permission for this action.",
  FINANCIAL_SERVICE_UNAVAILABLE:bn?"আর্থিক ডেটাবেস সংযুক্ত হয়নি।":"Financial database is not connected.",
@@ -30,7 +33,7 @@ const short=(code:string,bn:boolean)=>({
  INVALID_REQUEST:bn?"সঠিক amount, reference ও মেয়াদ দিন।":"Check the amount, reference and expiry.",
  SOURCE_NOT_FOUND:bn?"নির্বাচিত নথি পাওয়া যায়নি।":"Selected source document not found.",
  INVALID_SOURCE:bn?"নথির লাইন বা পরিমাণ ভুল।":"Invalid document line or price."
-} as Record<string,string>)[code]||(bn?"অনুরোধটি সম্পন্ন হয়নি। আবার চেষ্টা করুন।":"Request was not completed. Retry.");
+} as Record<string,string>)[code]||(bn?"অনুরোধটি সম্পন্ন হয়নি। আবার চেষ্টা করুন।":"Request was not completed. Retry."));
 function minor(value:string):number|null{
  value=value.replace(/[০-৯]/g,ch=>String(ch.charCodeAt(0)-0x09e6));
  if(!/^(?:0|[1-9][0-9]{0,8})(?:\.[0-9]{1,2})?$/.test(value))return null;
@@ -40,10 +43,11 @@ function minor(value:string):number|null{
 }
 const number=(amount:number,locale:Locale)=>new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(amount/100);
 function statusLabel(status:string,bn:boolean){return merchantStatusLabel("request",status,bn?"bn":"en")}
-export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}:{
- locale:Locale;userId:string;workspaceId:string;environment:PaymentEnvironment;canWrite:boolean;
+export function PaymentRequests({locale,userId,workspaceId,environment,canWrite,canPaymentLinks=false,canInvoices=false}:{
+ locale:Locale;userId:string;workspaceId:string;environment:PaymentEnvironment;canWrite:boolean;canPaymentLinks?:boolean;canInvoices?:boolean;
 }){
  const bn=locale==="bn";
+ const paymentLimit=useResourceLimit("payments",workspaceId,environment);
  const [selected,setSelected]=useState("");
  useEffect(()=>{const id=new URLSearchParams(location.search).get("request");if(id&&uuid.test(id))void Promise.resolve().then(()=>setSelected(id));},[]);
  function selectDetail(id:string){setSelected(id);const url=new URL(location.href);if(id)url.searchParams.set("request",id);else url.searchParams.delete("request");history.replaceState(history.state,"",url);}
@@ -64,7 +68,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
  const [draftBase,setDraftBase]=useState<Fields>(empty);
  const [expanded,setExpanded]=useState(false);
  useEffect(()=>{const url=new URL(window.location.href);if(url.searchParams.get("create")!=="1")return;const timer=setTimeout(()=>{url.searchParams.delete("create");window.history.replaceState(window.history.state,"",url.pathname+url.search+url.hash);setExpanded(true)},0);return()=>clearTimeout(timer)},[]);
- const openNewRequest=()=>{setFields(current=>({...current,reference:current.reference.trim()||"REQ-"+new Date().toISOString().slice(0,10).replace(/-/g,"")+"-"+crypto.randomUUID().slice(0,8).toUpperCase()}));setExpanded(true)};
+ const openNewRequest=()=>{if(paymentLimit.blocked)return;setFields(current=>({...current,reference:current.reference.trim()||"REQ-"+new Date().toISOString().slice(0,10).replace(/-/g,"")+"-"+crypto.randomUUID().slice(0,8).toUpperCase()}));setExpanded(true)};
  const [sourceOpen,setSourceOpen]=useState(false);
  const [visibleLimit,setVisibleLimit]=useState(20);
  const createDialog=useRef<HTMLDialogElement|null>(null),sourceDialog=useRef<HTMLDialogElement|null>(null);
@@ -137,6 +141,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
   }
  },[api,bn]);
  const refreshSources=useCallback(async()=>{
+  if(environment==="live"&&!canInvoices){setSources([]);setSourceLoad("ready");setSourceError("");return;}
 
   setSourceLoad("loading");
   try{
@@ -146,7 +151,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
    setSources(environment==="live"?(body.items||[]).filter((x:{status:string;amount_minor:number;paid_minor:number})=>x.status==="issued"&&x.amount_minor>x.paid_minor).map((x:{id:string;reference:string;amount_minor:number;paid_minor:number;created_at:string;body:{items:Source["items"]}})=>({id:x.id,source_kind:"invoice",source_reference:x.reference,amount_minor:x.amount_minor-x.paid_minor,issued_at:x.created_at,items:x.body.items})):Array.isArray(body.data)?body.data:[]);
    setSourceLoad("ready");setSourceError("");
   }catch{setSourceLoad("error");setSourceError(bn?"নথি লোড হয়নি। আবার চেষ্টা করুন।":"Document sources unavailable. Retry.");}
- },[sourcesApi,environment,bn]);
+ },[sourcesApi,environment,bn,canInvoices]);
  useEffect(()=>{if(seed)return;void Promise.resolve().then(()=>refresh())},[refresh,seed]);
  useEffect(()=>{if(sourcesSeed)return;void Promise.resolve().then(()=>refreshSources())},[refreshSources,sourcesSeed]);
  const edit=(field:keyof Fields,value:string)=>{
@@ -187,7 +192,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
  };
  async function create(event:React.FormEvent<HTMLFormElement>){
   event.preventDefault();
-  if(submitting||!canWrite)return;
+  if(submitting||paymentLimit.blocked||!canWrite)return;
   const linked=fields.sourceKind!=="standalone";
   const amount=linked?null:minor(fields.amount);
   const source=linked?sources.find(x=>x.id===fields.sourceId&&x.source_kind===fields.sourceKind):undefined;
@@ -216,7 +221,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
   }catch(reason){
    const failure=reason as {code?:string};
    setError(short(failure.code||"",bn));
-  }finally{setSubmitting(false);}
+  }finally{setSubmitting(false);void paymentLimit.refresh();}
  }
  async function cancel(id:string){
   if(!uuid.test(id)||!canWrite||acting)return;
@@ -270,8 +275,9 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
    &&(item.merchant_reference||"").toLowerCase().includes(search.trim().toLowerCase()));
  return <section className="pg05-merchant ekv3-requests">
   <div className="ref-dashboard"><div className="ref-page">
-  <header className="ekv3-page-header top"><div><h1>{bn?"পেমেন্ট লিংক":"Payment links"}</h1><p>{bn?"একবারের পেমেন্ট অনুরোধ তৈরি ও পরিচালনা করুন।":"Create and manage one-time payments."}</p></div><div className="ekv3-head-actions"><button type="button" className="ekv3-icon-button" disabled={load==="loading"} aria-label={bn?"রিফ্রেশ":"Refresh"} title={bn?"রিফ্রেশ":"Refresh"} onClick={()=>void refresh()}><RefIcon name="refresh"/></button>{canWrite&&<button type="button" className="ekv3-primary" aria-haspopup="dialog" onClick={openNewRequest}>{bn?"নতুন রিকোয়েস্ট":"New request"}</button>}</div></header>
-  <div className="tabs"><Link href={`/w/${workspaceId}/payments/payment-links`}>{bn?"পেমেন্ট লিংক":"Payment links"}</Link><button type="button" className="on" aria-current="page">{bn?"একবারের রিকোয়েস্ট":"One-time requests"}</button></div><div className="card ekv3-request-card"><div className="ekv3-requests-toolbar toolbar"><input type="search" aria-label={bn?"রেফারেন্স খুঁজুন":"Search reference"} placeholder={bn?"রেফারেন্স খুঁজুন":"Search reference"} value={search} onChange={event=>{setSearch(event.target.value);setVisibleLimit(20)}}/><select aria-label={bn?"অবস্থা":"Status"} value={statusFilter} onChange={event=>{setStatusFilter(event.target.value);setVisibleLimit(20)}}><option value="all">{bn?"সব":"All"}</option>{["completed","requires_payer","awaiting_payment","expired","cancelled"].map(key=><option value={key} key={key}>{statusLabel(key,bn)}</option>)}</select></div>
+  <header className="ekv3-page-header top"><div><h1>{bn?"একবারের রিকোয়েস্ট":"One-time requests"}</h1><p>{bn?"একবারের পেমেন্ট অনুরোধ তৈরি ও পরিচালনা করুন।":"Create and manage one-time payments."}</p></div><div className="ekv3-head-actions"><button type="button" className="ekv3-icon-button" disabled={load==="loading"} aria-label={bn?"রিফ্রেশ":"Refresh"} title={bn?"রিফ্রেশ":"Refresh"} onClick={()=>void refresh()}><RefIcon name="refresh"/></button>{canWrite&&<button type="button" className="ekv3-primary" disabled={paymentLimit.blocked} aria-haspopup="dialog" onClick={openNewRequest}>{bn?"নতুন রিকোয়েস্ট":"New request"}</button>}</div></header>
+  <PlanResourceStatus value={paymentLimit} locale={locale}/>
+  <div className="tabs">{canPaymentLinks&&<Link href={`/w/${workspaceId}/payments/payment-links`}>{bn?"পেমেন্ট লিংক":"Payment links"}</Link>}<button type="button" className="on" aria-current="page">{bn?"একবারের রিকোয়েস্ট":"One-time requests"}</button></div><div className="card ekv3-request-card"><div className="ekv3-requests-toolbar toolbar"><input type="search" aria-label={bn?"রেফারেন্স খুঁজুন":"Search reference"} placeholder={bn?"রেফারেন্স খুঁজুন":"Search reference"} value={search} onChange={event=>{setSearch(event.target.value);setVisibleLimit(20)}}/><select aria-label={bn?"অবস্থা":"Status"} value={statusFilter} onChange={event=>{setStatusFilter(event.target.value);setVisibleLimit(20)}}><option value="all">{bn?"সব":"All"}</option>{["completed","requires_payer","awaiting_payment","expired","cancelled"].map(key=><option value={key} key={key}>{statusLabel(key,bn)}</option>)}</select></div>
   {error&&<div className="ekv3-page-error" role="alert">{error}<button type="button" onClick={()=>void refresh()}>{bn?"আবার চেষ্টা করুন":"Try again"}</button></div>}
   <div className="ekv3-table-scroller tw" role="region" tabIndex={0} aria-label={bn?"একবারের রিকোয়েস্ট":"One-time requests"}><table className="ekv3-table"><thead><tr><th>{bn?"রেফারেন্স":"Reference"}</th><th className="ekv3-numeric">{bn?"পরিমাণ":"Amount"}</th><th>{bn?"অবস্থা":"Status"}</th><th>{bn?"মেয়াদ":"Expires"}</th><th><span className="sr-only">{bn?"অ্যাকশন":"Actions"}</span></th></tr></thead>
    <tbody>{load==="loading"&&!data.length?[0,1,2].map(n=><tr className="ekv3-loading-row" key={n}><td colSpan={5}><div className="ekv3-skeleton-row"><i/><span/><b/></div></td></tr>):visible.slice(0,visibleLimit).map(item=>{const checkout="/checkout/"+item.checkout_token;return <tr key={item.id} className="ekv3-clickable" tabIndex={0} onClick={()=>selectDetail(item.id)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectDetail(item.id)}}}>
@@ -287,7 +293,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
   </div></div></div>
   <dialog ref={createDialog} className="ekv3-request-modal" aria-labelledby="ekv3-request-title" onCancel={()=>setExpanded(false)} onClose={()=>setExpanded(false)} onClick={e=>{if(e.target===e.currentTarget)setExpanded(false)}}>
    <div className="ekv3-modal-heading"><h2 id="ekv3-request-title">{bn?"নতুন রিকোয়েস্ট":"New request"}</h2><button type="button" aria-label={bn?"বন্ধ":"Close"} onClick={()=>setExpanded(false)}>×</button></div>
-   <form onSubmit={create} className="pg05-form"><fieldset disabled={submitting||!canWrite}>
+   <form onSubmit={create} className="pg05-form"><fieldset disabled={submitting||paymentLimit.blocked||!canWrite}>
     <div className="pg05-two">
      <label>{bn?"ব্যবসার রেফারেন্স":"Merchant reference"}
       <input required maxLength={128} value={fields.reference} onChange={e=>edit("reference",e.target.value)} placeholder="ORDER-1024"/></label>
@@ -295,7 +301,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
       <select value={fields.sourceKind} onChange={e=>{keyRef.current="";setNotice("");setFields(f=>({...f,sourceKind:e.target.value as Fields["sourceKind"],sourceId:""}))}}>
        <option value="standalone">{bn?"স্বতন্ত্র":"Standalone"}</option>
        <option value="order" disabled={environment==="live"}>{bn?"ইস্যু করা অর্ডার":"Issued order"}</option>
-       <option value="invoice">{bn?"ইস্যু করা ইনভয়েস":"Issued invoice"}</option>
+       {(environment!=="live"||canInvoices)&&<option value="invoice">{bn?"ইস্যু করা ইনভয়েস":"Issued invoice"}</option>}
       </select></label>
      {fields.sourceKind==="standalone"?<label>{bn?"পরিমাণ (BDT)":"Amount (BDT)"}
       <input required inputMode="decimal" value={fields.amount} onChange={e=>edit("amount",e.target.value)} placeholder="500.00"/>
@@ -319,7 +325,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
     </div>
     
    </fieldset></form>
-   <div className="ekv3-source-link"><button type="button" onClick={()=>{setExpanded(false);setSourceOpen(true)}}>{bn?"নতুন ইনভয়েস বা অর্ডার তৈরি":"Issue source document"}</button></div>
+   {(environment!=="live"||canInvoices)&&<div className="ekv3-source-link"><button type="button" onClick={()=>{setExpanded(false);setSourceOpen(true)}}>{bn?"নতুন ইনভয়েস বা অর্ডার তৈরি":"Issue source document"}</button></div>}
   </dialog>
   <dialog ref={sourceDialog} className="ekv3-request-modal ekv3-request-large" aria-labelledby="ekv3-source-title" onCancel={()=>setSourceOpen(false)} onClose={()=>setSourceOpen(false)} onClick={e=>{if(e.target===e.currentTarget)setSourceOpen(false)}}>
    <div className="ekv3-modal-heading"><h2 id="ekv3-source-title">{bn?"নথি তৈরি":"Issue document"}</h2><button type="button" aria-label={bn?"বন্ধ":"Close"} onClick={()=>setSourceOpen(false)}>×</button></div>
@@ -327,7 +333,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite}
     <div className="pg05-two">
      <label>{bn?"নথির ধরন":"Document type"}
       <select value={sourceDraft.kind} onChange={e=>setSourceDraft(f=>({...f,kind:e.target.value as SourceDraft["kind"]}))} disabled={sourceBusy}>
-       <option value="invoice">{bn?"ইনভয়েস":"Invoice"}</option><option value="order" disabled={environment==="live"}>{bn?"অর্ডার":"Order"}</option>
+       {(environment!=="live"||canInvoices)&&<option value="invoice">{bn?"ইনভয়েস":"Invoice"}</option>}<option value="order" disabled={environment==="live"}>{bn?"অর্ডার":"Order"}</option>
       </select></label>
      <label>{bn?"নথির রেফারেন্স":"Document reference"}
       <input required maxLength={128} value={sourceDraft.reference} onChange={e=>setSourceDraft(f=>({...f,reference:e.target.value}))} placeholder="INV-2026-001" disabled={sourceBusy}/></label>
