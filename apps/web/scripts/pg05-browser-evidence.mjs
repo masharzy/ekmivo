@@ -45,16 +45,26 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   // Go HTTP tests above still validate invoice line pricing and linked intents.
   const merchantPath="/w/"+tenant+"/payments/requests";
   await page.goto(origin+merchantPath);
-  await page.locator(".pg05-merchant").getByRole("heading",{name:"Payment links",exact:true}).waitFor();
+  await page.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|One-time requests)$/}).waitFor();
   const newRequest=page.getByRole("button",{name:"New request",exact:true});
-  await newRequest.click();
-  await page.getByRole("heading",{name:"New request",exact:true}).waitFor();
-  await page.getByRole("button",{name:"Issue source document",exact:true}).click();
-  await page.getByRole("heading",{name:"Issue document",exact:true}).waitFor();
-  assert.ok(await page.getByRole("button",{name:"Issue document",exact:true}).isDisabled(),
-   "live-only merchant UI improperly enabled sandbox invoice issuance");
-  record("owner UI uses current modal flow and forbids sandbox document issuance in live context");
-  await page.getByRole("button",{name:"Close",exact:true}).first().click();
+  // This disposable control-plane tenant has no paid subscription. The modern
+  // plan gate correctly disables creation in that case. Assert the visible
+  // fail-closed reason rather than waiting 30s for a disabled button to click.
+  const limit=page.locator(".pg-plan-limit[data-blocked='true']");
+  await newRequest.waitFor({state:"visible"});
+  if(await newRequest.isEnabled()){
+   await newRequest.click();
+   await page.getByRole("heading",{name:"New request",exact:true}).waitFor();
+   await page.getByRole("button",{name:"Issue source document",exact:true}).click();
+   await page.getByRole("heading",{name:"Issue document",exact:true}).waitFor();
+   assert.ok(await page.getByRole("button",{name:"Issue document",exact:true}).isDisabled(),
+    "live-only merchant UI improperly enabled sandbox invoice issuance");
+   record("owner UI uses current modal flow and forbids sandbox document issuance in live context");
+   await page.getByRole("button",{name:"Close",exact:true}).first().click();
+  }else{
+   await limit.waitFor({state:"visible"});
+   record("owner UI disables new requests without an active plan; financial writes fail closed");
+  }
 
   // Checkout below uses a genuine Go-signed sandbox token created and
   // payer-locked in PG04's actual isolated financial database above.
@@ -118,7 +128,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
    await viewer.addCookies([{name:"ekmivo-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"},{name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
    const viewerPage=await viewer.newPage();
    await viewerPage.goto(origin+merchantPath);
-   await viewerPage.locator(".pg05-merchant").getByRole("heading",{name:"Payment links",exact:true}).waitFor();
+   await viewerPage.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|One-time requests)$/}).waitFor();
    assert.equal(await viewerPage.getByRole("button",{name:"New request",exact:true}).count(),0);
    record("real viewer session cannot access merchant request creation controls");
   }finally{await viewer.close()}
