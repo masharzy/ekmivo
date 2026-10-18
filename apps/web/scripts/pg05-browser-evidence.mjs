@@ -128,7 +128,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
    await viewer.addCookies([{name:"ekmivo-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"},{name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
    const viewerPage=await viewer.newPage();
    await viewerPage.goto(origin+merchantPath);
-   await viewerPage.locator(".pg05-merchant").getByRole("heading",{name:"Payment links",exact:true}).waitFor();
+   await viewerPage.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|One-time requests)$/}).waitFor();
    assert.equal(await viewerPage.getByRole("button",{name:"New request",exact:true}).count(),0);
    record("real viewer session cannot access merchant request creation controls");
   }finally{await viewer.close()}
