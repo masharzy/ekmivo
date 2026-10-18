@@ -2,7 +2,7 @@ import {cookies} from "next/headers";
 import {database} from "../lib/server/db";
 import {goOrigin} from "../lib/server/go-origin";
 import {planName,type PlanTerms} from "../lib/payment-plans";
-type PaymentUsage={effective?:{terms?:PlanTerms;active?:boolean;extra_payments?:number;period_start?:string;period_end?:string};usage?:{used:number;reserved:number};resources?:Record<string,number>;usage_error?:boolean;resource_usage_error?:boolean};
+type PaymentUsage={effective?:{platform_billing?:boolean;terms?:PlanTerms;active?:boolean;extra_payments?:number;period_start?:string;period_end?:string};usage?:{used:number;reserved:number};resources?:Record<string,number>;usage_error?:boolean;resource_usage_error?:boolean};
 export async function AdminWorkspaceUsage({locale,workspaceId,payments,ai}:{locale:"en"|"bn";workspaceId:string;payments:boolean;ai:boolean}){
  const bn=locale==="bn",t=(en:string,bd:string)=>bn?bd:en;
  const n=(v:number|null|undefined)=>v===null?t("Unlimited","সীমাহীন"):v===undefined?"—":v.toLocaleString(bn?"bn-BD":"en-BD");
@@ -12,7 +12,7 @@ export async function AdminWorkspaceUsage({locale,workspaceId,payments,ai}:{loca
   if(!r.ok)return null;return await r.json() as PaymentUsage;
  }catch{return null}};
  const [payment,credit]=await Promise.all([paymentRead(),ai?database()`SELECT balance,updated_at FROM platform_ai_credit_balances WHERE workspace_id=${workspaceId}::uuid LIMIT 1`.catch(()=>null):Promise.resolve(null)]);
- const terms=payment?.effective?.terms,resources=payment?.resources;
+ const terms=payment?.effective?.terms,resources=payment?.resources,system=payment?.effective?.platform_billing===true;
  const rows:Array<[string,number|undefined,number|null|undefined]>=[
   [t("Successful payments","সফল পেমেন্ট"),payment?.usage?.used,terms?terms.payment_limit===null?null:terms.payment_limit+(payment?.effective?.extra_payments??0):undefined],
   [t("Receiving accounts","রিসিভিং অ্যাকাউন্ট"),resources?.payment_methods,terms?.limits.payment_methods],
@@ -24,7 +24,7 @@ export async function AdminWorkspaceUsage({locale,workspaceId,payments,ai}:{loca
  const date=(v:string)=>new Date(v).toLocaleDateString(bn?"bn-BD":"en-GB",{timeZone:"Asia/Dhaka"});
  return <>
  {payments&&<section className="pa-surface pa-table-card"><div className="pa-description"><h2>{t("Payment gateway usage","পেমেন্ট গেটওয়ের ব্যবহার")}</h2>
- {terms&&<p>{planName(terms,bn)} · {payment?.effective?.active?t("Active","সক্রিয়"):t("Inactive","নিষ্ক্রিয়")}{payment?.effective?.period_start&&payment.effective.period_end?` · ${date(payment.effective.period_start)} – ${date(payment.effective.period_end)}`:""}</p>}
+ {terms&&<p>{planName(terms,bn)} · {system?t("Unlimited · No expiry","সীমাহীন · মেয়াদহীন"):payment?.effective?.active?t("Active","সক্রিয়"):t("Inactive","নিষ্ক্রিয়")}{!system&&payment?.effective?.period_start&&payment.effective.period_end?` · ${t("Usage period","ব্যবহারের সময়কাল")}: ${date(payment.effective.period_start)} – ${date(payment.effective.period_end)}`:""}</p>}
  {!payment&&<p role="status">{t("Payment usage is unavailable. Retry using Refresh.","পেমেন্ট ব্যবহারের তথ্য পাওয়া যায়নি। রিফ্রেশ করে আবার দেখুন।")}</p>}
  {payment&&!terms&&<p role="status">{t("No current payment plan is available.","বর্তমান পেমেন্ট প্ল্যান পাওয়া যায়নি।")}</p>}
  {(payment?.usage_error||payment?.resource_usage_error)&&<p role="status">{t("Some usage is unavailable; unknown values are shown as —.","কিছু ব্যবহারের তথ্য পাওয়া যায়নি; অজানা সংখ্যা — দিয়ে দেখানো হয়েছে।")}</p>}
