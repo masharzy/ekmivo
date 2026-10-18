@@ -22,7 +22,7 @@ export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:s
   }catch{if(!signal?.aborted)setError(bn?"স্টোরের তথ্য লোড হয়নি। আবার চেষ্টা করুন।":"Store details could not be loaded. Retry.")}
   finally{if(!signal?.aborted)setLoading(false)}
  },[endpoint,bn]);
- useEffect(()=>{const controller=new AbortController();void load(controller.signal);return()=>controller.abort()},[load]);
+ useEffect(()=>{const controller=new AbortController();void Promise.resolve().then(()=>{if(!controller.signal.aborted)return load(controller.signal)});return()=>controller.abort()},[load]);
  const dirty=JSON.stringify(body)!==JSON.stringify(saved);
  const save=useCallback(async()=>{
   if(!canManage||loading||busy||!body.name.trim()||version<1)return false;
@@ -34,7 +34,7 @@ export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:s
    setBody(data.body);setSaved(data.body);setVersion(data.version);setNotice(t("Store saved","স্টোর সংরক্ষিত হয়েছে"));router.refresh();return true;
   }catch(e){setError(e instanceof Error?e.message:t("Could not save changes.","তথ্য সংরক্ষণ হয়নি।"));return false}
   finally{setBusy(false)}
- },[canManage,loading,busy,body,version,endpoint,router,bn]);
+ },[canManage,loading,busy,body,version,endpoint,router,bn,t]);
  const latest=useRef({body,saved,save});useEffect(()=>{latest.current={body,saved,save}},[body,saved,save]);
  useEffect(()=>registerDraft({id:"store:"+workspaceId,isDirty:()=>JSON.stringify(latest.current.body)!==JSON.stringify(latest.current.saved),save:()=>latest.current.save(),discard:()=>{setBody(latest.current.saved);setError("")}}),[workspaceId]);
  const set=(key:keyof StoreProfile,value:string)=>setBody(current=>({...current,[key]:value}));

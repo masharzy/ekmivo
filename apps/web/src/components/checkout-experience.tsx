@@ -114,7 +114,7 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
   e.preventDefault();
   if(locking||!info)return;
   if(!info.methods?.includes(method))return; // URL preferences never bypass availability.
-  if(info.receiving_accounts?.length&&!info.receiving_accounts.some(account=>account.id===selectedAccountId&&account.method===method))return;
+  if(info.receiving_accounts!==undefined&&!info.receiving_accounts.some(account=>account.id===selectedAccountId&&account.method===method))return;
   const canonical=normalizeBangladeshPayer(payer);
   setPayerTouched(true);
   if(!canonical){setCode("INVALID_PAYER_OR_METHOD");return}
@@ -143,10 +143,10 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
  const canLock=state==="requires_payer"&&(info?.environment==="sandbox"||info?.environment==="live"&&info.verification_available);
  const selectedMethod=(info?.method&&isPayMethod(info.method)?info.method:method);
  const payerInvalid=(payerTouched||payer.length>=11)&&!normalizeBangladeshPayer(payer);
- const availableSelected=info?.methods?.includes(method)===true&&(!info.receiving_accounts?.length||info.receiving_accounts.some(a=>a.id===selectedAccountId&&a.method===method));
- const tiles=(info?.receiving_accounts?.length?info.receiving_accounts.filter(a=>isPayMethod(a.method)&&info.methods.includes(a.method)).map(a=>({id:a.id,method:a.method as PayMethod})):payMethods.filter(m=>info?.methods?.includes(m)).map(m=>({id:"",method:m})));
+ const availableSelected=info?.methods?.includes(method)===true&&(info.receiving_accounts===undefined||info.receiving_accounts.some(a=>a.id===selectedAccountId&&a.method===method));
+ const tiles=(info?.receiving_accounts!==undefined?info.receiving_accounts.filter(a=>isPayMethod(a.method)&&info.methods.includes(a.method)).map(a=>({id:a.id,method:a.method as PayMethod})):payMethods.filter(m=>info?.methods?.includes(m)).map(m=>({id:"",method:m})));
  const tileIndex=(id:string,m:PayMethod)=>tiles.filter(a=>a.method===m).findIndex(a=>a.id===id)+1;
- const pickingAccount=!!info?.receiving_accounts?.length&&!selectedAccountId;
+ const pickingAccount=info?.receiving_accounts!==undefined&&!selectedAccountId;
  const showPayer=state==="requires_payer"&&step==="payer"&&canLock&&availableSelected&&!pickingAccount;
  const isNagadEntry=showPayer&&selectedMethod==="nagad";
  const isFlow=showPayer||state!=="requires_payer";
