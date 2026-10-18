@@ -39,3 +39,25 @@ test("live theme and editor expose the same logo controls",()=>{
  assert.ok(!store.includes("Brand color"));
  assert.ok(!store.includes("ব্র্যান্ড রং"));
 });
+
+test("checkout theme is delivered on initial authorized server render",()=>{
+ const server=read("../../apps/web/src/components/dashboard-content.tsx");
+ const client=read("../../apps/web/src/components/checkout-themes.tsx");
+ assert.ok(server.includes("dashboard_checkout_theme_read("),"server must read current theme from DB");
+ assert.ok(server.includes("Promise.all(["),"independent reads must run concurrently");
+ assert.ok(server.includes("initialTheme={initialCheckoutTheme}"),"RSC must pass saved theme");
+ assert.ok(client.includes("initialTheme?.body??defaultCheckoutTheme(storeName)"),"client must initialize from server data");
+ assert.ok(client.includes("useState(!initialTheme)"),"saved configuration must not show loading state");
+ assert.ok(client.includes("{loaded&&<div className=\"cols\">"),"never show default configuration before real settings load");
+ assert.ok(client.includes("onClick={()=>void load()}"),"failed first read needs retry");
+});
+test("logo editor uses scoped controls with live values",()=>{
+ const editor=read("../../apps/web/src/components/checkout-themes.tsx");
+ const styles=read("../../apps/web/src/components/checkout-editor-reference.css");
+ assert.ok(editor.includes("logo-brand-preview"));
+ assert.ok(editor.includes("logo-slider"));
+ assert.ok(editor.includes("logo-placement-options"));
+ assert.ok(editor.includes('aria-pressed={config.store.position===id}'));
+ assert.ok(styles.includes(".ref-checkout-editor .logo-editor"));
+ assert.ok(styles.includes("--fill"));
+});
