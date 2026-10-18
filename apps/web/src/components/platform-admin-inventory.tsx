@@ -7,6 +7,7 @@ import {ProductAccessAction,EnvironmentAction,UserSessionsAction,UserStatusActio
 import type {AdminLocale} from "./platform-admin-shell";
 import {AdminRefreshButton} from "./admin-refresh-button";
 import {AdminWorkspaceFinance} from "./admin-workspace-finance";
+import {AdminPaymentPlansPage} from "./admin-payment-plans-page";
 
 const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 type Cell=ReactNode;
@@ -20,7 +21,7 @@ export function AdminTableView({table,empty="No records found"}:{table:AdminTabl
 }
 function SubNav({base,items,active}:{base:string;items:Array<[string,string]>;active:string}){return <nav className="pa-tabs" aria-label="Detail sections">{items.map(([name,path])=><Link key={path} href={base+(path?"/"+path:"")} aria-current={active===path?"page":undefined}>{name}</Link>)}</nav>;}
 const workspaceTabs:Array<[string,string]>=[["Overview",""],["Products","products"],["Payment plans","products-plan"],["Members","members"],["Environments","environments"],["API keys","api-keys"],["Payments","payments"],["Devices","devices"],["Usage & credits","usage-credits"],["Billing","billing"],["Activity","activity"]];
-export async function AdminWorkspaceDetail({locale,id,sub=""}:{locale:AdminLocale;id:string;sub?:string}){
+export async function AdminWorkspaceDetail({locale,id,sub="",actor=""}:{locale:AdminLocale;id:string;sub?:string;actor?:string}){
  if(!UUID.test(id)||!workspaceTabs.some(x=>x[1]===sub))notFound();
  const base="/"+locale+"/admin/workspaces/"+id;
  const r=await database()`SELECT id,name,service_mode,created_at,updated_at FROM workspaces WHERE id=${id}::uuid LIMIT 1`;
@@ -50,6 +51,8 @@ export async function AdminWorkspaceDetail({locale,id,sub=""}:{locale:AdminLocal
    </>;
  }else if(sub==="products"){
   content=<><section className="pa-surface pa-description"><h2>{t("Product access","প্রোডাক্ট অ্যাক্সেস")}</h2><p className="pa-subtle">{t("Enable or disable access for this workspace.","এই ওয়ার্কস্পেসে কোন প্রোডাক্ট চালু থাকবে তা নিয়ন্ত্রণ করুন।")}</p></section>{productControls}</>;
+ }else if(sub==="products-plan"){
+  content=<AdminPaymentPlansPage locale={locale} actor={actor} workspace={id}/>;
  }else if(sub==="members"){
   const rows=await database()`SELECT m.user_id,u.display_name,u.email,m.role,m.joined_at FROM workspace_members m JOIN app_users u ON u.id=m.user_id WHERE m.workspace_id=${id}::uuid ORDER BY m.joined_at ASC LIMIT 250`;
   content=<AdminTableView table={{headers:["Member","Email","Role","Joined","User ID"],rows:rows.map(x=>[text(x.display_name),text(x.email),text(x.role),format(x.joined_at,locale),text(x.user_id)])}}/>;
@@ -59,8 +62,36 @@ export async function AdminWorkspaceDetail({locale,id,sub=""}:{locale:AdminLocal
   const rows=await database()`SELECT id,public_id,name,environment,scopes,created_at,last_used_at,expires_at,revoked_at FROM merchant_api_keys WHERE workspace_id=${id}::uuid ORDER BY created_at DESC LIMIT 250`;
   content=<><AdminTableView table={{headers:["Name","Public ID (non-secret)","Environment","Scopes","Status","Last used"],rows:rows.map(x=>[text(x.name),text(x.public_id),text(x.environment),Array.isArray(x.scopes)?x.scopes.join(", "):"—",x.revoked_at?"Revoked":new Date(String(x.expires_at))<=new Date()?"Expired":"Active",format(x.last_used_at,locale)])}}/><AdminStepUpLink locale={locale}/><div className="pa-key-actions">{rows.filter(x=>!x.revoked_at).slice(0,25).map(x=><ApiKeyRevokeAction key={String(x.id)} locale={locale} keyId={String(x.id)} name={text(x.name)}/>)}</div></>;
  }else if(sub==="billing"){
-  const [s,invoices]=await Promise.all([database()`SELECT s.plan_id,s.paid_until::text,s.grace_until::text,s.updated_at FROM pg13_subscriptions s WHERE s.workspace_id=${id}::uuid`,database()`SELECT id,plan_id,amount_minor,status,created_at,paid_at FROM pg13_platform_invoices WHERE workspace_id=${id}::uuid ORDER BY created_at DESC LIMIT 100`]);
-  content=<><section className="pa-surface pa-description"><h2>Current subscription</h2>{s.length?<dl>{[["Plan",text(s[0].plan_id)],["Paid until",format(s[0].paid_until,locale)],["Grace until",format(s[0].grace_until,locale)]].map(([k,v])=><div className="pa-description-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>:<p className="pa-subtle">No active subscription record</p>}</section><AdminTableView table={{headers:["Invoice ID","Plan","Amount (BDT)","Status","Created","Paid at"],rows:invoices.map(x=>[text(x.id),text(x.plan_id),(Number(x.amount_minor)/100).toFixed(2),text(x.status),format(x.created_at,locale),format(x.paid_at,locale)])}}/></>;
+  const [subscription,invoices]=await Promise.all([
+   database()`SELECT s.plan_id,s.paid_until::text AS paid_until,s.grace_until::text AS grace_until,
+    v.version,v.terms->>'name' AS name_en,v.terms->>'name_bn' AS name_bn
+    FROM pg13_subscriptions s LEFT JOIN payment_plan_versions v ON v.id=s.plan_version_id
+    WHERE s.workspace_id=${id}::uuid LIMIT 1`,
+   database()`SELECT id,plan_id,amount_minor,status,created_at,paid_at FROM pg13_platform_invoices
+    WHERE workspace_id=${id}::uuid ORDER BY created_at DESC LIMIT 100`
+  ]);
+  const current=subscription[0];
+  content=<>
+    <section className="pa-surface pa-description">
+     <div className="pa-split-head"><h2>{t("Current subscription","বর্তমান সাবস্ক্রিপশন")}</h2><Link className="pa-button pa-button-primary" href={base+"/products-plan"}>{t("Manage plan","প্ল্যান পরিচালনা")}</Link></div>
+     {current?<dl>{[
+       [t("Plan","প্ল্যান"),text(locale==="bn"?current.name_bn||current.name_en||current.plan_id:current.name_en||current.plan_id)],
+       [t("Plan version","প্ল্যান ভার্সন"),current.version?"v"+text(current.version):"—"],
+       [t("Paid until","পেমেন্টের মেয়াদ"),format(current.paid_until,locale)],
+       [t("Grace until","অতিরিক্ত সময়"),format(current.grace_until,locale)]
+     ].map(([k,v])=><div key={k} className="pa-description-row"><dt>{k}</dt><dd>{v}</dd></div>)}</dl>:<p className="pa-subtle">{t("No subscription assigned.","এখনো কোনো সাবস্ক্রিপশন দেওয়া হয়নি।")}</p>}
+    </section>
+    <section className="pa-surface pa-table-card">
+     <div className="pa-workspace-plan-subhead"><h2>{t("Billing invoices","বিলিং ইনভয়েস")}</h2></div>
+     <div className="pa-table-wrap"><table><thead><tr>{[
+       t("Invoice","ইনভয়েস"),t("Plan","প্ল্যান"),t("Amount (BDT)","পরিমাণ (টাকা)"),
+       t("Status","অবস্থা"),t("Created","তৈরির সময়"),t("Paid at","পেমেন্টের সময়")
+     ].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>
+      {invoices.map(x=><tr key={String(x.id)}><td>{text(x.id)}</td><td>{text(x.plan_id)}</td><td>{(Number(x.amount_minor)/100).toFixed(2)}</td><td>{text(x.status)}</td><td>{format(x.created_at,locale)}</td><td>{format(x.paid_at,locale)}</td></tr>)}
+      {!invoices.length&&<tr><td colSpan={6} className="pa-empty-row">{t("No invoices yet.","এখনো কোনো ইনভয়েস নেই।")}</td></tr>}
+     </tbody></table></div>
+    </section>
+  </>;
  }else if(sub==="activity"){
   const rows=await database()`SELECT a.actor_id,u.display_name,a.product,a.previous_enabled,a.new_enabled,a.changed_at FROM workspace_product_access_audit a LEFT JOIN app_users u ON u.id=a.actor_id WHERE a.workspace_id=${id}::uuid ORDER BY a.changed_at DESC LIMIT 100`;
   content=<AdminTableView table={{headers:["Time","Actor","Product","Before","After"],rows:rows.map(x=>[format(x.changed_at,locale),text(x.display_name||x.actor_id),text(x.product),status(x.previous_enabled===true),status(x.new_enabled===true)])}}/>;
