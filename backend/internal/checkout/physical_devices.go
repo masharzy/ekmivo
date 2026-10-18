@@ -74,7 +74,7 @@ func (s *Service) HandlePhones(w http.ResponseWriter,r *http.Request) {
   write(w,200,map[string]any{"items":json.RawMessage(raw),"accounts":accounts});return
  }
  if r.Method!="POST"{fail(w,405,"METHOD_NOT_ALLOWED");return}
- if id==""&&action=="" {
+ if id==""&&action=="" || id!=""&&action=="reconnect" {
   var authoritative int64
   var active bool
   if err:=s.Pipeline.Control.QueryRow(r.Context(),
@@ -110,6 +110,14 @@ func (s *Service) HandlePhones(w http.ResponseWriter,r *http.Request) {
    if strings.TrimSpace(body.Name)==""||len(body.Name)>80{return errors.New("phone name required")}
    var err error;token,err=randomPhysicalPairingCode();if err!=nil{return err}
    return tx.QueryRow(r.Context(),"SELECT pg06_phone_begin($1::uuid,$2,$3,$4)",ws,realm,body.Name,digest(token)).Scan(&raw)
+  case id!=""&&action=="reconnect":
+   var err error;token,err=randomPhysicalPairingCode();if err!=nil{return err}
+   return tx.QueryRow(r.Context(),"SELECT pg06_phone_reconnect($1::uuid,$2,$3::uuid,$4)",ws,realm,id,digest(token)).Scan(&raw)
+  case id!=""&&action=="delete":
+   var deleted bool
+   if err:=tx.QueryRow(r.Context(),"SELECT pg06_phone_delete($1::uuid,$2,$3::uuid)",ws,realm,id).Scan(&deleted);err!=nil{return err}
+   if !deleted{return errors.New("phone not found")}
+   raw=[]byte(`{"deleted":true}`);return nil
   case id!=""&&action=="attach":
    rule,ok:=s.Pipeline.Rules[body.ParserID]
    if !ok||!rule.Approved||(rule.SandboxOnly&&realm!="sandbox")||rule.Source!=body.Source||!uuidPattern.MatchString(body.AccountID){

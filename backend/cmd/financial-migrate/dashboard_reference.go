@@ -20,8 +20,8 @@ func migrateDashboardReference(ctx context.Context) error {
  if dir=="" { return errors.New("DASHBOARD_REFERENCE_MIGRATION_DIR is required") }
  targets:=[]struct{realm,dsn string;files []string}{
   {"control",os.Getenv("PG04_CONTROL_MIGRATION_DATABASE_URL"),[]string{"0069_dashboard_preferences.sql","0073_dashboard_support_topic.sql","0074_checkout_themes.sql","0076_dashboard_billing.sql"}},
-  {"sandbox",os.Getenv("PG04_SANDBOX_MIGRATION_DATABASE_URL"),[]string{"0070_dashboard_link_actions.sql","0071_dashboard_phone_counts.sql","0072_dashboard_notification_read_all.sql","0075_checkout_customer_details.sql","0077_dashboard_billing_usage.sql","0078_invoice_numbers.sql","0079_public_invoice_details.sql","0080_invoice_public_draft.sql","0081_public_invoice_receipts.sql"}},
-  {"live",os.Getenv("PG04_LIVE_MIGRATION_DATABASE_URL"),[]string{"0070_dashboard_link_actions.sql","0071_dashboard_phone_counts.sql","0072_dashboard_notification_read_all.sql","0075_checkout_customer_details.sql","0077_dashboard_billing_usage.sql","0078_invoice_numbers.sql","0079_public_invoice_details.sql","0080_invoice_public_draft.sql","0081_public_invoice_receipts.sql"}},
+  {"sandbox",os.Getenv("PG04_SANDBOX_MIGRATION_DATABASE_URL"),[]string{"0070_dashboard_link_actions.sql","0071_dashboard_phone_counts.sql","0072_dashboard_notification_read_all.sql","0075_checkout_customer_details.sql","0077_dashboard_billing_usage.sql","0078_invoice_numbers.sql","0079_public_invoice_details.sql","0080_invoice_public_draft.sql","0081_public_invoice_receipts.sql","0086_phone_reconnect_delete.sql"}},
+  {"live",os.Getenv("PG04_LIVE_MIGRATION_DATABASE_URL"),[]string{"0070_dashboard_link_actions.sql","0071_dashboard_phone_counts.sql","0072_dashboard_notification_read_all.sql","0075_checkout_customer_details.sql","0077_dashboard_billing_usage.sql","0078_invoice_numbers.sql","0079_public_invoice_details.sql","0080_invoice_public_draft.sql","0081_public_invoice_receipts.sql","0086_phone_reconnect_delete.sql"}},
  }
  seen:=map[string]bool{}
  for _,target:=range targets {
