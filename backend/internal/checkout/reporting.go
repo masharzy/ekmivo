@@ -5,6 +5,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"net/http"
 	"time"
+	"strconv"
+	"strings"
 )
 
 func (s *Service) HandleReports(w http.ResponseWriter, r *http.Request) {
@@ -78,9 +80,38 @@ func (s *Service) HandleNotifications(w http.ResponseWriter, r *http.Request) {
 	}
 	var raw []byte
 	if r.Method == "GET" {
-		e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
-			return tx.QueryRow(r.Context(), "SELECT pg13_notification_list($1::uuid,$2,$3::uuid)", ws, realm, actor).Scan(&raw)
-		})
+		query := r.URL.Query()
+		pageMode := query.Has("page") || query.Has("page_size") || query.Has("filter") || query.Has("status") || query.Has("q")
+		if pageMode {
+			page, size := 1, 20
+			var parseErr error
+			if query.Has("page") {
+				page, parseErr = strconv.Atoi(query.Get("page"))
+			}
+			if parseErr == nil && query.Has("page_size") {
+				size, parseErr = strconv.Atoi(query.Get("page_size"))
+			}
+			filter, status, term := query.Get("filter"), query.Get("status"), strings.TrimSpace(query.Get("q"))
+			if filter == "" { filter = "all" }
+			if status == "" { status = "all" }
+			if parseErr != nil || page < 1 || page > 2000 ||
+				(size != 10 && size != 20 && size != 50) ||
+				(filter != "all" && filter != "payments" && filter != "refunds" && filter != "alerts") ||
+				(status != "all" && status != "read" && status != "unread") ||
+				len([]rune(term)) > 80 || strings.ContainsAny(term, "\r\n\t") {
+				fail(w, 422, "INVALID_NOTIFICATION_FILTERS")
+				return
+			}
+			e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+				return tx.QueryRow(r.Context(),
+					"SELECT pg103_notification_page($1::uuid,$2,$3::uuid,$4,$5,$6,$7,$8)",
+					ws, realm, actor, page, size, filter, status, term).Scan(&raw)
+			})
+		} else {
+			e = s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+				return tx.QueryRow(r.Context(), "SELECT pg13_notification_list($1::uuid,$2,$3::uuid)", ws, realm, actor).Scan(&raw)
+			})
+		}
 	} else {
 		if !originAllowed(r) || (r.PathValue("notificationID") != "all" && !uuidPattern.MatchString(r.PathValue("notificationID"))) {
 			fail(w, 403, "ACTION_DENIED")
