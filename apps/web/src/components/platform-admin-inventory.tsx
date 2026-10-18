@@ -5,6 +5,7 @@ import {database} from "../lib/server/db";
 import {goOrigin} from "../lib/server/go-origin";
 import {ProductAccessAction,EnvironmentAction,UserSessionsAction,UserStatusAction,ApiKeyRevokeAction,AdminSupportReply,AdminStepUpLink} from "./platform-admin-operations";
 import type {AdminLocale} from "./platform-admin-shell";
+import {AdminRefreshButton} from "./admin-refresh-button";
 
 const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 type Cell=ReactNode;
@@ -140,7 +141,7 @@ export async function AdminHealthView({locale}:{locale:AdminLocale}){
  const [api,financial]=await Promise.all([probe("/healthz"),probe("/readyz")]);
  const items=[{name:"Control database",state:control==="ready"?"Ready":"Unavailable",code:control==="ready"?"Query OK":"Query failed"},
  {name:"Go API process",...api},{name:"Financial release readiness",...financial}];
- return <><p className="pa-subtle">Live, read-only health checks. These are current observations, not uptime percentages or synthetic provider metrics.</p>
+ return <><div className="pa-page-head"><p className="pa-subtle">Live, read-only health checks. These are current observations, not uptime percentages or synthetic provider metrics.</p><AdminRefreshButton/></div>
  <section className="pa-surface pa-table-card"><div className="pa-table-wrap"><table><thead><tr><th>Component</th><th>Status</th><th>Evidence</th></tr></thead><tbody>{items.map(item=><tr key={item.name}><td className="pa-primary-cell">{item.name}</td><td>{item.state}</td><td>{item.code}</td></tr>)}</tbody></table></div></section></>;
 }
 
