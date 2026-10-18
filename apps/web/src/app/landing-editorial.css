@@ -1,14 +1,25 @@
 /*
  * Ekmivo Editorial — rebuilt public landing. Isolated from operational UI.
- * Warm art-directed light mode / strict black-white dark mode.
+ * Warm art-directed light and dark palettes with opt-in brand roles.
  * No remote assets, fabricated social proof or production-looking fake data.
  */
 .em{
- --em-paper:#fcfbf6;--em-canvas:#fffefa;--em-ink:#17233b;--em-muted:#59657b;
- --em-border:#d3dce1;--em-cream:#fff0ad;--em-yellow:#ffd65f;
- --em-blue:#e1f1fa;--em-blue-edge:#aacfe2;--em-rose:#f5c8bf;
- --em-card:#fffefa;--em-faint:#f5f1e7;--em-shadow:0 24px 54px rgb(35 49 69 / 9%);
- --em-action:#17233b;--em-action-text:#fffefa;--em-stroke:#17233b;
+ --em-paper:var(--brand-bg);
+ --em-canvas:var(--brand-surface);
+ --em-ink:var(--brand-text);
+ --em-muted:var(--brand-text-muted);
+ --em-border:var(--brand-border);
+ --em-cream:var(--brand-tint-yellow);
+ --em-yellow:var(--brand-accent);
+ --em-blue:var(--brand-tint-blue);
+ --em-blue-edge:var(--brand-tint-edge);
+ --em-rose:var(--brand-highlight);
+ --em-card:var(--brand-surface-raised);
+ --em-faint:var(--brand-tint-cream);
+ --em-shadow:var(--brand-shadow);
+ --em-action:var(--brand-action);
+ --em-action-text:var(--brand-action-contrast);
+ --em-stroke:var(--brand-stroke);
  background:var(--em-paper);color:var(--em-ink);font-family:var(--font-ui,"Hind Siliguri",sans-serif);
  isolation:isolate;overflow:hidden;
 }
@@ -33,16 +44,16 @@
 .em-brush:before{content:"";z-index:-1;position:absolute;inset:51% -4% -8% -3%;background:var(--em-rose);clip-path:polygon(0 16%,12% 8%,28% 16%,48% 3%,69% 16%,83% 6%,100% 20%,99% 84%,83% 92%,66% 84%,45% 99%,24% 90%,4% 100%);transform:rotate(-1.6deg)}
 .em-brush-small:before{inset:48% -2.5% -9% -2%}
 .em-button{display:inline-flex;justify-content:center;align-items:center;gap:20px;min-height:54px;border-radius:10px;border:1.5px solid var(--em-ink);padding:13px 23px;font-weight:750;font-size:14px;line-height:1.35;transition:transform .23s ease,background .23s ease,box-shadow .23s ease}
-.em-button:hover{transform:translateY(-4px);box-shadow:0 10px 0 rgb(28 45 70 / 10%)}
+.em-button:hover{transform:translateY(-4px);box-shadow:var(--brand-shadow-hover)}
 .em-button>span{font-size:19px;line-height:1}
-.em-button-primary{background:var(--em-yellow);color:#19243a!important;border-color:var(--em-yellow)}
+.em-button-primary{background:var(--em-yellow);color:var(--brand-accent-contrast)!important;border-color:var(--em-yellow)}
 .em-button-secondary{background:var(--em-card);color:var(--em-ink);border-color:var(--em-border)}
 .em-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
 
 /* Centered, full-viewport opening. Decorative marks are not a second column. */
 .em-hero{min-height:100svh;min-height:100dvh;position:relative;padding:124px 24px 95px;display:flex;align-items:center;justify-content:center;text-align:center;background:var(--em-paper);isolation:isolate}
 .em-hero:before{content:"";position:absolute;top:60px;left:-60px;width:260px;height:160px;border:1px solid var(--em-border);border-radius:100%;transform:rotate(-17deg);opacity:.48}
-.em-hero-grain{position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(var(--em-ink) .8px,transparent .8px);background-size:27px 27px;mask-image:radial-gradient(ellipse 65% 65% at 50% 50%,transparent 48%,#000 100%);opacity:.13}
+.em-hero-grain{position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(var(--em-ink) .8px,transparent .8px);background-size:27px 27px;mask-image:radial-gradient(ellipse 65% 65% at 50% 50%,transparent 48%,var(--brand-mask) 100%);opacity:.13}
 .em-hero-inner{max-width:910px;margin:0 auto;position:relative;z-index:1}
 .em-hero-eyebrow{display:inline-flex;align-items:center;justify-content:center;gap:12px;letter-spacing:.11em;font-size:11px;font-weight:800;margin:0 0 29px}
 .em-dot{height:7px;width:7px;border-radius:50%;background:var(--em-yellow);box-shadow:0 0 0 4px color-mix(in srgb,var(--em-yellow) 30%,transparent)}
@@ -66,7 +77,7 @@
 .em-services{background:var(--em-paper)}
 .em-service-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:stretch}
 .em-service-card{position:relative;border:1.5px solid var(--em-border);border-radius:20px;padding:36px clamp(27px,3.3vw,53px) 35px;overflow:hidden;box-shadow:var(--em-shadow);display:flex;flex-direction:column;min-height:590px;transition:transform .24s ease,box-shadow .24s ease}
-.em-service-card:hover{transform:translateY(-6px) rotate(0)!important;box-shadow:0 26px 60px rgb(0 0 0 / 13%)}
+.em-service-card:hover{transform:translateY(-6px) rotate(0)!important;box-shadow:var(--brand-shadow-card-hover)}
 .em-service-pay{background:var(--em-blue);transform:rotate(-1.2deg);border-color:var(--em-blue-edge)}
 .em-service-ai{background:var(--em-cream);transform:rotate(1.25deg)}
 .em-service-card-top{display:flex;justify-content:space-between;align-items:start;gap:15px;text-transform:uppercase;font-weight:800;letter-spacing:.1em;font-size:11px}
@@ -89,7 +100,7 @@
 .em-workflow{background:var(--em-canvas)}
 .em-workflow-switch{border:1px solid var(--em-border);border-radius:50px;background:var(--em-faint);padding:5px;display:flex;align-items:center;gap:4px;width:max-content;margin:0 auto 55px}
 .em-workflow-switch button{border:0;border-radius:40px;background:transparent;color:var(--em-muted);padding:12px 29px;font-size:14px;min-width:140px;font-weight:800;cursor:pointer}
-.em-workflow-switch button.is-current{background:var(--em-ink);color:var(--em-canvas);box-shadow:0 3px 9px #0001}
+.em-workflow-switch button.is-current{background:var(--em-ink);color:var(--em-canvas);box-shadow:var(--brand-shadow-pill)}
 .em-workflow-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:17px}
 .em-step{border-top:2px solid var(--em-ink);position:relative;padding:32px 13px 12px 0;animation:em-enter .35s both}
 .em-step-number{background:var(--em-yellow);color:var(--em-ink);display:grid;place-items:center;font-size:17px;font-weight:800;width:56px;height:56px;border-radius:50%;margin:-4px 0 25px;border:1px solid var(--em-ink)}
@@ -102,7 +113,7 @@
 /* Powder blue deck of lightly crooked sketch cards */
 .em-benefits{background:var(--em-blue);position:relative}
 .em-benefits-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px;padding:15px 15px 28px}
-.em-benefit-card{background:var(--em-card);color:var(--em-ink);border:1.5px solid var(--em-blue-edge);border-radius:9px;padding:28px 25px 25px;min-height:370px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:8px 12px 0 color-mix(in srgb,var(--em-blue-edge) 34%,transparent),0 22px 36px rgb(35 49 69 / 7%);transition:transform .23s ease}
+.em-benefit-card{background:var(--em-card);color:var(--em-ink);border:1.5px solid var(--em-blue-edge);border-radius:9px;padding:28px 25px 25px;min-height:370px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:8px 12px 0 color-mix(in srgb,var(--em-blue-edge) 34%,transparent),var(--brand-shadow-deck);transition:transform .23s ease}
 .em-benefit-card:hover{transform:rotate(0) translateY(-8px)}
 .em-tilt-0{transform:rotate(-3.5deg)}.em-tilt-1{transform:rotate(1deg)}.em-tilt-2{transform:rotate(-1.8deg)}
 .em-benefit-index{align-self:start;font-size:10px;font-weight:800;letter-spacing:.15em}
@@ -204,30 +215,6 @@
 .em-ending p{font-size:18px;color:var(--em-muted);max-width:650px;margin:0 auto 30px;line-height:1.75}
 .em-ending-doodle{position:absolute;right:5%;top:16%;color:var(--em-ink);width:120px;rotate:15deg;opacity:.5}
 
-/* Dark mode deliberately shares ZERO pastel / accent colors. */
-:root[data-theme="dark"] .em{
- --em-paper:#000;--em-canvas:#050505;--em-ink:#f5f5f5;--em-muted:#b1b1b1;
- --em-border:#343434;--em-cream:#111;--em-yellow:#f5f5f5;--em-blue:#0d0d0d;
- --em-blue-edge:#404040;--em-rose:#444;--em-card:#101010;--em-faint:#171717;
- --em-shadow:0 22px 52px rgb(0 0 0 / 50%);--em-action:#fff;--em-action-text:#000;--em-stroke:#f5f5f5;
-}
-:root[data-theme="dark"] .em .em-button-primary{color:#000!important}
-:root[data-theme="dark"] .em .em-step-number{color:#000}
-:root[data-theme="dark"] .em .em-service-mark svg{stroke:var(--em-ink)}
-:root[data-theme="dark"] .em .em-demo-button{background:#fff;color:#000}
-:root[data-theme="dark"] .em .em-workflow-switch button.is-current{color:#000}
-@media(prefers-color-scheme:dark){
- :root:not([data-theme="light"]) .em{
-  --em-paper:#000;--em-canvas:#050505;--em-ink:#f5f5f5;--em-muted:#b1b1b1;
-  --em-border:#343434;--em-cream:#111;--em-yellow:#f5f5f5;--em-blue:#0d0d0d;
-  --em-blue-edge:#404040;--em-rose:#444;--em-card:#101010;--em-faint:#171717;
-  --em-shadow:0 22px 52px rgb(0 0 0 / 50%);--em-action:#fff;--em-action-text:#000;--em-stroke:#f5f5f5;
- }
- :root:not([data-theme="light"]) .em .em-button-primary{color:#000!important}
- :root:not([data-theme="light"]) .em .em-step-number{color:#000}
- :root:not([data-theme="light"]) .em .em-demo-button{background:#fff;color:#000}
- :root:not([data-theme="light"]) .em .em-workflow-switch button.is-current{color:#000}
-}
 @media(max-width:1080px){
  .em-hero h1{font-size:clamp(46px,7.8vw,73px)}
  .em-benefits-grid{gap:25px}
