@@ -31,9 +31,10 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme}:{locale:"bn
  const error=profile.status==="error"||revoked.status==="error"||verification.status==="error";
  const others=sessions.filter(session=>!session.is_current);
  const initials=savedName.trim().slice(0,1).toUpperCase()||"?";
+ const keepDraft=()=>{if(!dirty)return;try{sessionStorage.setItem(key,name)}catch{}};
  const restore=()=>{try{const value=sessionStorage.getItem(key);if(value===null||value.length>100)throw Error("NO_DRAFT");setName(value);setRestored(true);setMessage(t("Restored your draft in this tab.","এই ট্যাবের খসড়া ফিরিয়ে আনা হয়েছে।"))}catch{setMessage(t("No saved draft in this tab.","এই ট্যাবে কোনো খসড়া নেই।"))}};
  return <div className="account-page" lang={locale}>
-  <header className="ac-top"><Link href="/workspaces" className="ac-brand">ekmivo</Link><div className="ac-top-actions"><Link href="/workspaces" className="ac-back">{t("Workspaces","ওয়ার্কস্পেস")}</Link><SiteControls locale={locale} initialTheme={theme} compactThemeToggle/><span className="ac-mini-avatar" aria-label={savedName}>{initials}</span></div></header>
+  <header className="ac-top"><Link href="/workspaces" onClick={keepDraft} className="ac-brand">ekmivo</Link><div className="ac-top-actions"><Link href="/workspaces" onClick={keepDraft} className="ac-back">{t("Workspaces","ওয়ার্কস্পেস")}</Link><SiteControls locale={locale} initialTheme={theme} compactThemeToggle/><span className="ac-mini-avatar" aria-label={savedName}>{initials}</span></div></header>
   <main className="ac-main">
    <div className="ac-page-head"><h1>{t("Account settings","অ্যাকাউন্ট সেটিংস")}</h1><p>{t("Your profile, sign-in and active sessions.","আপনার প্রোফাইল, লগইন ও সক্রিয় সেশন।")}</p></div>
    <section className="ac-identity" aria-label={t("Account summary","অ্যাকাউন্ট পরিচিতি")}><span className="ac-avatar">{initials}</span><div className="ac-identify"><strong>{savedName}</strong><span>{user.email}</span></div><span className={"ac-status "+(user.verified?"ac-positive":"ac-warning")}>{user.verified?t("Email verified","ইমেইল যাচাইকৃত"):t("Verification needed","যাচাই প্রয়োজন")}</span></section>
@@ -50,7 +51,7 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme}:{locale:"bn
      <div className="ac-setting-row"><div><strong>{t("Email address","ইমেইল ঠিকানা")}</strong><span>{user.email}</span></div><span className={"ac-status "+(user.verified?"ac-positive":"ac-warning")}>{user.verified?t("Verified","যাচাইকৃত"):t("Unverified","যাচাই হয়নি")}</span></div>
      {!user.verified&&<form action={verify} className="ac-verify"><button className="ac-secondary" disabled={verifying||verification.status==="sent"}>{verifying?t("Sending…","পাঠানো হচ্ছে…"):t("Send verification email","যাচাইয়ের ইমেইল পাঠান")}</button></form>}
      <div className="ac-setting-row"><div><strong>{t("Multi-factor authentication","দুই ধাপের নিরাপত্তা")}</strong><span>{t("Additional protection for administrator access.","অ্যাডমিন অ্যাক্সেসের অতিরিক্ত সুরক্ষা।")}</span></div><span className={"ac-status "+(mfa?"ac-positive":"ac-neutral")}>{mfa?t("Enabled","সক্রিয়"):t("Not set up","চালু নয়")}</span></div>
-     <div className="ac-setting-row"><div><strong>{t("Password","পাসওয়ার্ড")}</strong><span>{t("Recover access securely by email.","ইমেইলের মাধ্যমে নিরাপদে অ্যাক্সেস ফিরিয়ে নিন।")}</span></div><Link className="ac-secondary" href="/forgot-password">{t("Recovery","পুনরুদ্ধার")}</Link></div>
+     <div className="ac-setting-row"><div><strong>{t("Password","পাসওয়ার্ড")}</strong><span>{t("Recover access securely by email.","ইমেইলের মাধ্যমে নিরাপদে অ্যাক্সেস ফিরিয়ে নিন।")}</span></div><Link className="ac-secondary" href="/forgot-password" onClick={keepDraft}>{t("Recovery","পুনরুদ্ধার")}</Link></div>
     </section>
    </div>
    <section className="ac-panel ac-sessions"><header className="ac-panel-heading ac-session-header"><div><h2>{t("Active sessions","সক্রিয় সেশন")}</h2><p>{t("Review and revoke signed-in sessions.","সক্রিয় লগইনগুলো দেখুন ও প্রয়োজনমতো বন্ধ করুন।")}</p></div><form action={revoke} onSubmit={e=>{if(!confirm){e.preventDefault();setConfirm(true);if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>setConfirm(false),4500)}else setConfirm(false)}}><button className="ac-secondary ac-danger" disabled={revoking||others.length===0}>{revoking?t("Revoking…","বন্ধ হচ্ছে…"):confirm?t("Confirm revoke","বাতিল নিশ্চিত করুন"):t("Revoke other sessions","অন্য সেশন বন্ধ করুন")}</button></form></header>
@@ -59,7 +60,7 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme}:{locale:"bn
      {session.is_current?<span className="ac-status ac-positive">{t("Current","বর্তমান")}</span>:<button type="button" className="ac-secondary ac-danger" disabled={busy===session.id} onClick={async()=>{setBusy(session.id);try{const result=await revokeAccountSession(locale,session.id);setMessage(result.message);if(result.status==="success")router.refresh()}finally{setBusy("")}}}>{busy===session.id?t("Working…","অপেক্ষা করুন…"):t("Revoke","বন্ধ করুন")}</button>}
     </div>)}</div><p className="ac-note">{t("We only show actual recorded sessions. Device and IP information is not collected.","শুধু সংরক্ষিত সেশন দেখানো হয়; ডিভাইস বা IP তথ্য অনুমান করে দেখানো হয় না।")}</p>
    </section>
-   <footer className="ac-footer"><Link href="/workspaces" className="ac-secondary">{t("Back to workspaces","ওয়ার্কস্পেসে ফিরুন")}</Link><form action={logoutAction.bind(null,locale)}><button className="ac-secondary" type="submit">{t("Sign out","সাইন আউট")}</button></form></footer>
+   <footer className="ac-footer"><Link href="/workspaces" onClick={keepDraft} className="ac-secondary">{t("Back to workspaces","ওয়ার্কস্পেসে ফিরুন")}</Link><form action={logoutAction.bind(null,locale)}><button className="ac-secondary" type="submit">{t("Sign out","সাইন আউট")}</button></form></footer>
   </main>
  </div>;
 }
