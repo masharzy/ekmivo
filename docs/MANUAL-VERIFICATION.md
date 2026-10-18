@@ -747,3 +747,6 @@ Owner requested code-level verification only for this pass and will verify physi
 - Reconnect a disconnected/expired-pairing phone while device quota is full; backend rejects. A pending pairing that expires releases capacity after refresh. Re-enable an account at capacity; backend rejects. Key rotation is slot-neutral and revocation remains usable.
 - Team: reserve the last seat with an invitation, then accept it; one seat converts to a member. Resend an expired invitation when full; no extra seat can be reserved. Sandbox must not bypass shared team limits.
 - One-time payment requests: monthly successful+reserved quota and active pending checkout cap show the appropriate message; per-minute errors advise retrying. Existing documents/history and cleanup remain usable. Check EN/BN, light/dark and mobile layout. Manual/browser checks remain pending; automated evidence is in DASHBOARD-PLAN-LIMITS-20261018.
+
+### Plan feature UI — 2026-10-18
+Owner manual pending: for a workspace plan with invoices/payment links/reports/exports disabled, check sidebar/search, overview shortcuts, one-time requests, direct list/detail URLs and upgrade CTA to Billing > Plans in EN/BN, mobile/desktop and light/dark. Code tests/build evidence: `docs/evidence/PLAN-FEATURE-UX-20261018/README.md`.

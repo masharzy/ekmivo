@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from "react";
-import {useRouter} from "next/navigation";
+import {useRouter,useSearchParams} from "next/navigation";
 import {useDashboardInitialData} from "./dashboard-initial-data";
 import {RefIcon} from "./reference-ui";
 import type {PlanTerms} from "../lib/payment-plans";
@@ -20,8 +20,8 @@ function UsageChart({usage,number,label}:{usage:Usage;number:(n:number)=>string;
  return <svg className="bl-ch" viewBox="0 0 640 200" role="img" aria-label={label} style={{width:'100%',height:'auto',stroke:'none'}}>{Array.from({length:5},(_,i)=>{const y=8+168*(1-i/4);return <g key={i}><line x1={40} x2={640} y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 4"/><text x={32} y={y+3} textAnchor="end">{number(top*i/4)}</text></g>})}{values.map((v,i)=>{const h=168*v.count/top,x=40+i*width+width*.18;return <g key={v.day}><rect x={x} y={176-h} width={width*.64} height={h} rx={3} fill="var(--acc)"><title>{v.day} · {number(v.count)}</title></rect>{i%Math.max(1,Math.ceil(values.length/6))===0&&<text x={x+width*.32} y={194} textAnchor="middle">{number(Number(v.day.slice(-2)))}</text>}</g>})}</svg>;
 }
 export function PaymentBilling({locale,workspaceId,canManage}:{locale:'en'|'bn';workspaceId:string;canManage:boolean}){
- const bn=locale==='bn',t=useCallback((en:string,be:string)=>bn?be:en,[bn]),router=useRouter(),base=`/api/go/workspaces/${workspaceId}/billing`,seed=useDashboardInitialData<Data>('billing');
- const [data,setData]=useState<Data|null>(seed?.data??null),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(seed?.error??''),[notice,setNotice]=useState(''),[tab,setTab]=useState('overview'),[period,setPeriod]=useState('current'),[usage,setUsage]=useState<Usage|null>(null),[usageLoading,setUsageLoading]=useState(false),[usageError,setUsageError]=useState('');
+ const bn=locale==='bn',t=useCallback((en:string,be:string)=>bn?be:en,[bn]),router=useRouter(),searchParams=useSearchParams(),base=`/api/go/workspaces/${workspaceId}/billing`,seed=useDashboardInitialData<Data>('billing');
+ const [data,setData]=useState<Data|null>(seed?.data??null),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(seed?.error??''),[notice,setNotice]=useState(''),[tab,setTab]=useState(searchParams.get('tab')==='plans'?'plans':'overview'),[period,setPeriod]=useState('current'),[usage,setUsage]=useState<Usage|null>(null),[usageLoading,setUsageLoading]=useState(false),[usageError,setUsageError]=useState('');
  const [choice,setChoice]=useState<{plan:Plan;renew:boolean}|null>(null),[cycles,setCycles]=useState(1),[quote,setQuote]=useState<Quote|null>(null),[quoteLoading,setQuoteLoading]=useState(false),[quoteError,setQuoteError]=useState(''),[invoice,setInvoice]=useState<Invoice|null>(null),[clock,setClock]=useState(seed?.at??0);
  const key=useRef<{id:string;key:string}|null>(null);
  const number=(value:number)=>new Intl.NumberFormat(bn?'bn-BD':'en-US',{maximumFractionDigits:0}).format(value);

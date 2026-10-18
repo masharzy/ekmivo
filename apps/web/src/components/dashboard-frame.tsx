@@ -1,4 +1,5 @@
 "use client";
+import {planSectionAllowed} from "../lib/plan-features";
 import type {PlanTerms} from "../lib/payment-plans";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,8 +15,8 @@ import { activeDrafts,saveActiveDrafts,discardActiveDrafts } from "../lib/client
 
 type Space = { id: string; name: string; mode: "ai" | "commerce" | "both" | "off"; role: "owner" | "admin" | "editor" | "viewer" };
 type PaymentContext = { environment: PaymentEnvironment; status: "active" | "suspended"; availableEnvironments: PaymentEnvironment[]; liveOperational: false };
-const featureSections:Record<string,keyof PlanTerms["features"]>={invoices:"invoices","payment-links":"payment_links",reports:"reports"};
-type Props = { planFeatures?:PlanTerms["features"]; locale: Locale; service: Service; section: SectionKey; workspace: Space; spaces: Space[]; userName: string; platformAdmin: boolean; theme: "light" | "dark" | "system"; paymentContext?: PaymentContext; children: React.ReactNode; logout: React.ReactNode };
+
+type Props = { planFeatures?:PlanTerms["features"]|null; locale: Locale; service: Service; section: SectionKey; workspace: Space; spaces: Space[]; userName: string; platformAdmin: boolean; theme: "light" | "dark" | "system"; paymentContext?: PaymentContext; children: React.ReactNode; logout: React.ReactNode };
 const memoryKey=(workspaceId:string,service:Service)=>`ekmivo-last:${workspaceId}:${service}`;
 // Paused: Sandbox/Live preference in merchant UI.
 // const environmentKey=(workspaceId:string)=>`ekmivo-last-env:${workspaceId}`;
@@ -91,8 +92,8 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
   return()=>cancelAnimationFrame(frame);
  },[mobileOpen,section,workspace.id]);
 
- const allowed=(key:string)=>service!=="payments"||!featureSections[key]||planFeatures?.[featureSections[key]]===true;
- const groups=navigation[service].map(g=>({...g,items:g.items.filter(allowed)})).filter(g=>g.items.length);
+ const allowed=(key:string)=>service!=="payments"||planSectionAllowed(key,planFeatures);
+ const groups=navigation[service].map(g=>({...g,items:g.items.map(key=>service==="payments"&&key==="payment-links"&&!allowed(key)?"requests" as SectionKey:key).filter(allowed)})).filter(g=>g.items.length);
  const foundGroups=searchableNavigation(service,globalQuery).map(g=>({...g,items:g.items.filter(allowed)})).filter(g=>g.items.length);
  const foundKeys=foundGroups.flatMap(group=>group.items);
  const foundBusinesses=searchableBusinesses(spaces,globalQuery);
@@ -372,7 +373,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
     })}
     {!resultCount&&<p role="status">{bn?"মেলা পৃষ্ঠা বা ব্যবসা নেই":"No matching pages or businesses"}</p>}
    </div>
-   {service==="payments"&&paymentContext&&<PaymentRecordSearch key={workspace.id+environment} locale={locale} workspaceId={workspace.id} environment={environment} query={globalQuery} open={searchOpen} onNavigate={openPaymentSearchResult}/>}
+   {service==="payments"&&paymentContext&&<PaymentRecordSearch planFeatures={planFeatures} key={workspace.id+environment} locale={locale} workspaceId={workspace.id} environment={environment} query={globalQuery} open={searchOpen} onNavigate={openPaymentSearchResult}/>}
    {service!=="payments"&&<p className="ds-search-hint">{bn?"শুধু অনুমোদিত পৃষ্ঠা ও ব্যবসা দেখানো হচ্ছে।":"Only authorized pages and businesses appear."}</p>}
   </dialog>
   <dialog ref={draftDialog} className="ds-draft-dialog" aria-label={bn?"সংরক্ষণ না করা পরিবর্তন":"Unsaved changes"} onCancel={()=>{setBlockedRoute(null);setDraftError("");}}>

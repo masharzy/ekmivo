@@ -49,7 +49,7 @@ async function read<T>(path:string,signal:AbortSignal):Promise<Read<T>>{
   return {value:null,error:signal.aborted?"ABORTED":error instanceof Error?error.message:"UNAVAILABLE"};
  }
 }
-export function PaymentOverviewMission({locale,workspaceId,environment,canManage}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean}){
+export function PaymentOverviewMission({locale,workspaceId,environment,canManage,canPaymentLinks=false,canReports=false}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;canPaymentLinks?:boolean;canReports?:boolean}){
  const bn=locale==="bn";
  const t=(en:string,bnText:string)=>bn?bnText:en;
  const root="/w/"+workspaceId+"/payments/";
@@ -84,7 +84,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
     read<Settings>(api+"/workspace-tools/settings"+qs,abort.signal),
     read<{items:Phone[];accounts:Account[]}>(api+"/phones"+qs,abort.signal),
     read<Page<Account>>(api+"/operations/gateways"+qs,abort.signal),
-    read<Page<LinkRow>>(api+"/documents/payment-links"+qs,abort.signal),
+    canPaymentLinks?read<Page<LinkRow>>(api+"/documents/payment-links"+qs,abort.signal):Promise.resolve(blank<Page<LinkRow>>()),
     read<{data:Intent[]}>(api+"/payment-intents"+qs,abort.signal),
     read<Page<Overview>>(api+"/operations/overview"+qs,abort.signal),
     read<Page<Payment>>(api+"/operations/payments"+qs,abort.signal),
@@ -97,7 +97,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
   };
   void load();
   return()=>abort.abort();
- },[api,environment,refresh,billingSeed]);
+ },[api,environment,refresh,billingSeed,canPaymentLinks]);
  useEffect(()=>{
   const refreshOnFocus=()=>{if(document.visibilityState==="visible")update()};
   window.addEventListener("focus",refreshOnFocus);
@@ -136,7 +136,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
   {id:"profile",en:"Business profile",bn:"ব্যবসার প্রোফাইল",detailEn:"Business name and support contact",detailBn:"নাম ও যোগাযোগের তথ্য",target:"settings",icon:"store",ok:profileOk},
   {id:"account",en:"Receiving account",bn:"টাকা গ্রহণের অ্যাকাউন্ট",detailEn:"Add an enabled payment account",detailBn:"সক্রিয় bKash/Nagad/Rocket অ্যাকাউন্ট",target:"gateways",icon:"wallet",ok:accountOk},
   {id:"phone",en:"SMS Forwarder",bn:"SMS Forwarder",detailEn:"Pair phone and complete first sync",detailBn:"ফোন pair করে প্রথম sync করুন",target:"devices",icon:"smartphone",ok:phoneOk},
-  {id:"entry",en:"First payment entry",bn:"প্রথম Payment Link/Request",detailEn:"Publish a link or issue a request",detailBn:"একটি Link publish বা Request তৈরি করুন",target:"payment-links",icon:"link-2",ok:entryOk},
+  {id:"entry",en:"First payment entry",bn:"প্রথম Payment Link/Request",detailEn:"Publish a link or issue a request",detailBn:"একটি Link publish বা Request তৈরি করুন",target:canPaymentLinks?"payment-links":"requests",icon:"link-2",ok:entryOk},
   {id:"verify",en:"First verified payment",bn:"প্রথম verified payment",detailEn:"Confirmed by the real payment backend",detailBn:"সার্ভারে যাচাইকৃত প্রথম পেমেন্ট",target:"requests",icon:"shield-check",ok:verifyOk}
  ];
  const completed=tasks.filter(s=>s.ok===true).length;
@@ -161,7 +161,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
     <div className="em-heading-title"><h1>{t("Overview","সারসংক্ষেপ")}</h1></div>
 
    </div>
-   <div className="em-actions"><Link className="em-primary" href={go("payment-links")+"?create=1"}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span aria-hidden="true">+</span></Link><button type="button" onClick={update} disabled={loading}>{t("Refresh","আপডেট")}</button></div>
+   <div className="em-actions"><Link className="em-primary" href={go(canPaymentLinks?"payment-links":"requests")+"?create=1"}>{canPaymentLinks?t("Create payment link","পেমেন্ট লিংক তৈরি"):t("Create request","রিকোয়েস্ট তৈরি")} <span aria-hidden="true">+</span></Link><button type="button" onClick={update} disabled={loading}>{t("Refresh","আপডেট")}</button></div>
   </header>
   {loading&&!snapshot?<section className="em-panel em-loading" role="status"><span className="em-shimmer"/><span className="em-shimmer"/><span className="em-shimmer"/>{t("Checking setup and payments…","সেটআপ ও পেমেন্ট যাচাই হচ্ছে…")}</section>:null}
   {snapshot&&!ready&&<div className="ekv2-setup-note"><span className="ekv2-setup-dot"/><strong>{count(tasks.filter(step=>step.ok===false).length)} {t("setup steps left","টি সেটআপ বাকি")}</strong><button type="button" onClick={()=>setShowSteps(true)}>{t("Finish setup","সেটআপ সম্পূর্ণ করুন")}</button></div>}
@@ -175,7 +175,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
    <div className="em-kpis">
     <Link href={go("transactions")} className="em-kpi"><span>{t("Verified volume","যাচাইকৃত পেমেন্ট")}</span><strong>{moneyOrDash(overview?.verified_minor)}</strong><small>{t("Server-verified · not settlement","সার্ভারে যাচাইকৃত · settlement নয়")}</small></Link>
     <Link href={go("transactions")} className="em-kpi"><span>{t("Verified payments","যাচাইকৃত পেমেন্ট")}</span><strong>{verified===null?"—":count(verified.length)+(payments.value?.next_cursor?"+":"")}</strong><small>{t("Recent records, not lifetime total","সাম্প্রতিক রেকর্ড, মোট সংখ্যা নয়")}</small></Link>
-    <Link href={go("payment-links") } className="em-kpi"><span>{t("Pending","অপেক্ষমাণ")}</span><strong>{count(overview?.pending_requests)}</strong><small>{t("Awaiting payer or verification","গ্রাহক বা যাচাইয়ের অপেক্ষায়")}</small></Link>
+    <Link href={go(canPaymentLinks?"payment-links":"requests") } className="em-kpi"><span>{t("Pending","অপেক্ষমাণ")}</span><strong>{count(overview?.pending_requests)}</strong><small>{t("Awaiting payer or verification","গ্রাহক বা যাচাইয়ের অপেক্ষায়")}</small></Link>
     <Link href={go("incoming")} className="em-kpi"><span>{t("Needs review","পর্যালোচনা প্রয়োজন")}</span><strong>{count(overview?.unmatched_receipts)}</strong><small>{t("Needs review","যাচাই করা প্রয়োজন")}</small></Link>
    </div>
    <div className="em-main-grid">
@@ -193,7 +193,7 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
      <div className="em-panel-top"><h2>{t("Connections","সংযুক্ত সেবা")}</h2><Link href={go("devices")}>{t("Devices","ডিভাইস")} ↗</Link></div>
      <div><span>{t("Online phones","সক্রিয় ফোন")}</span><strong>{count(online)}</strong></div>
      <div><span>{t("Receiving accounts","টাকা গ্রহণের অ্যাকাউন্ট")}</span><strong>{configured?count(configured.filter(a=>!a.Disabled).length):fallback?count(fallback.filter(a=>!a.disabled_at&&!a.Disabled).length):"—"}</strong></div>
-     <div><span>{t("Active payment links","সক্রিয় পেমেন্ট লিংক")}</span><strong>{existingLinks?count(existingLinks.filter(a=>a.status==="active").length)+(links.value?.next_cursor?"+":""):"—"}</strong></div>
+     {canPaymentLinks&&<div><span>{t("Active payment links","সক্রিয় পেমেন্ট লিংক")}</span><strong>{existingLinks?count(existingLinks.filter(a=>a.status==="active").length)+(links.value?.next_cursor?"+":""):"—"}</strong></div>}
     </section>}
    </div>
    <div className="em-bottom-grid">
@@ -202,8 +202,8 @@ export function PaymentOverviewMission({locale,workspaceId,environment,canManage
       <div className="em-transaction-list">{recent.map(row=><Link href={go("transactions/"+row.id)} key={row.id} className="em-transaction"><span className="em-transaction-id">{row.merchant_reference}</span><strong>{moneyOrDash(row.verified_amount_minor)}</strong><time>{Number.isNaN(Date.parse(row.verified_at))?"—":new Intl.DateTimeFormat(bn?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",dateStyle:"short",timeStyle:"short"}).format(new Date(row.verified_at))}</time></Link>)}</div>}
     </section>
     <section className="em-panel em-shortcuts"><div className="em-panel-top"><h2>{t("Quick actions","দ্রুত কাজ")}</h2></div>
-     <Link href={go("payment-links")+"?create=1"}>{t("Create payment link","পেমেন্ট লিংক তৈরি")} <span>↗</span></Link>
-      <Link href={go("reports")}>{t("View reports","রিপোর্ট দেখুন")} <span>↗</span></Link>
+     <Link href={go(canPaymentLinks?"payment-links":"requests")+"?create=1"}>{canPaymentLinks?t("Create payment link","পেমেন্ট লিংক তৈরি"):t("Create request","রিকোয়েস্ট তৈরি")} <span>↗</span></Link>
+      {canReports&&<Link href={go("reports")}>{t("View reports","রিপোর্ট দেখুন")} <span>↗</span></Link>}
     </section>
    </div>
   </div>}
