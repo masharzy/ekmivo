@@ -12,3 +12,6 @@
 - Compare final desktop/mobile and light/dark screenshots against reference; visual regressions are blockers. Record tests run; never claim visual verification if no screenshots or authenticated preview.
 - If no reusable Admin component covers the need, extract exact spacing/color from reference before adding to the Admin stylesheet and document it.
 - Run `python apps/web/scripts/verify-admin-design.py` after editing approved tokens; any intentional change requires owner approval and update to reference.
+
+## LOCKED SIDEBAR
+The approved Admin HTML has exactly **11 primary options** in this order: Overview, Workspaces, Subscriptions, Billing & Revenue, Plans & Pricing, Payment Providers, AI Credits, Support, System Health, Audit Logs, Settings. Do not add Users, Payments, Devices, API, AI Bot, Staff or other extra sidebar links. Put necessary secondary features inside the approved pages as tabs/drawers. Add a sidebar option only after the owner changes the source HTML and explicitly approves it.

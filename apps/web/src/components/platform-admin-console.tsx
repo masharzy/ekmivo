@@ -13,6 +13,8 @@ import {VerificationSettings,RoleControls} from "./admin-controls";
 import {AdminShell,type AdminLocale} from "./platform-admin-shell";
 import {AdminModal,AdminCopy} from "./platform-admin-widgets";
 import {AdminPaymentPlansPage} from "./admin-payment-plans-page";
+import {AdminProvidersPage,AdminCreditsPage,AdminSubscriptionsPage} from "./admin-catalog-page";
+import {AdminWorkspaceCreationForm} from "./admin-catalog-management";
 import {AdminWorkspaceDetail,AdminUserDetail,AdminGlobalInventory,AdminHealthView,AdminSupportDetail} from "./platform-admin-inventory";
 
 type RecordRow={id:string;cells:string[];href?:string};
@@ -20,15 +22,15 @@ type RecordPage={columns:string[];rows:RecordRow[];next?:string};
 type Props={locale:AdminLocale;segments?:string[];query?:string;after?:string};
 const names:Record<string,[string,string]>={
  "":["Overview","ওভারভিউ"],workspaces:["Workspaces","ওয়ার্কস্পেস"],users:["Users","ব্যবহারকারী"],
- payments:["Payments","পেমেন্ট"],billing:["Billing","বিলিং"],credits:["API credits","এপিআই ক্রেডিট"],
- plans:["Plans","প্ল্যান"],"gateway/providers":["Providers","প্রোভাইডার"],"gateway/devices":["Receipt devices","রিসিপ্ট ডিভাইস"],
+ payments:["Payments","পেমেন্ট"],subscriptions:["Subscriptions","সাবস্ক্রিপশন"],billing:["Billing & Revenue","বিলিং ও আয়"],credits:["AI Credits","এআই ক্রেডিট"],providers:["Payment Providers","পেমেন্ট প্রোভাইডার"],
+ plans:["Plans & Pricing","প্ল্যান ও মূল্য"],"gateway/providers":["Providers","প্রোভাইডার"],"gateway/devices":["Receipt devices","রিসিপ্ট ডিভাইস"],
  "gateway/webhooks":["Webhooks & jobs","ওয়েবহুক ও জব"],ai:["AI Bot","এআই বট"],
  api:["API & sandbox","এপিআই ও স্যান্ডবক্স"],health:["Platform health","প্ল্যাটফর্মের অবস্থা"],
  staff:["Staff & security","স্টাফ ও নিরাপত্তা"],audit:["Audit log","অডিট লগ"],support:["Support tickets","সাপোর্ট টিকিট"],privacy:["Privacy requests","গোপনীয়তার আবেদন"],settings:["Settings","সেটিংস"]
 };
 const tabs:Record<string,string[]>={
  payments:["Payments","Exceptions","Disputes","Refunds","Reconciliation"],
- billing:["Subscriptions","Invoices","Revenue","Coupons"],
+ billing:["Subscriptions","Invoices","Revenue"],
  credits:["Balances","Ledger","Packs","Rules"],
  plans:["Payment gateway","AI Bot"],
  "gateway/webhooks":["Deliveries","Endpoints","Queues"],
@@ -140,22 +142,59 @@ function OfflineList({locale,kind,sub}:{locale:AdminLocale;kind:string;sub:strin
 
 function Stat({title,value,unavailable=false}:{title:string;value:string|number;unavailable?:boolean}){return <div className="pa-stat"><span>{title}</span><strong>{value}</strong>{unavailable&&<small>Not connected</small>}</div>;}
 async function Overview({locale,isSuper}:{locale:AdminLocale;isSuper:boolean}){
- const [r,activities]=await Promise.all([
- database()`SELECT (SELECT count(*) FROM workspaces)::int AS workspaces,(SELECT count(*) FROM app_users)::int AS users,(SELECT count(*) FROM workspaces WHERE created_at>=now()-interval '7 days')::int AS recent,
- (SELECT count(*) FROM workspace_product_access WHERE product='payments' AND enabled)::int AS payments_enabled,
- (SELECT count(*) FROM workspace_product_access WHERE product='ai' AND enabled)::int AS ai_enabled,
- (SELECT count(*) FROM pg13_support WHERE status IN ('submitted','reviewing'))::int AS open_support,
- (SELECT count(*) FROM workspace_environments WHERE environment='live' AND status='suspended')::int AS suspended_live,
- (SELECT count(*) FROM pg13_platform_invoices WHERE status='issued' AND created_at<now()-interval '7 days')::int AS older_invoices`,
- isSuper?database()`SELECT a.action,a.occurred_at,u.display_name FROM platform_admin_audit a LEFT JOIN app_users u ON u.id=a.actor_id ORDER BY a.occurred_at DESC LIMIT 5`:Promise.resolve([])
+ const [counts,activities,revenue,plans,attention]=await Promise.all([
+ database()`SELECT
+  (SELECT count(*) FROM workspaces)::int AS workspaces,
+  (SELECT count(*) FROM pg13_subscriptions WHERE paid_until>now())::int AS active_subscriptions,
+  (SELECT count(*) FROM pg13_platform_invoices WHERE status='issued' AND created_at<now()-interval '7 days')::int AS overdue,
+  (SELECT count(*) FROM pg13_support WHERE status IN ('submitted','reviewing'))::int AS open_cases,
+  (SELECT coalesce(sum(amount_minor),0) FROM pg13_platform_invoices WHERE status='paid' AND paid_at>=now()-interval '30 days')::bigint AS collected_minor`,
+ isSuper?database()`SELECT a.action,a.occurred_at,u.display_name FROM platform_admin_audit a LEFT JOIN app_users u ON u.id=a.actor_id ORDER BY a.occurred_at DESC LIMIT 5`:Promise.resolve([]),
+ database()`SELECT to_char(m.month_start,'Mon') AS label,coalesce(sum(i.amount_minor),0)::bigint AS revenue_minor FROM
+  (SELECT date_trunc('month',now()) - n*interval '1 month' AS month_start FROM generate_series(11,0,-1) n) m
+  LEFT JOIN pg13_platform_invoices i ON i.status='paid' AND i.paid_at>=m.month_start AND i.paid_at<m.month_start+interval '1 month'
+  GROUP BY m.month_start ORDER BY m.month_start`,
+ database()`SELECT s.plan_id,count(*)::int AS workspaces FROM pg13_subscriptions s WHERE s.paid_until>now() GROUP BY s.plan_id ORDER BY workspaces DESC LIMIT 8`,
+ database()`SELECT i.id,w.name,i.amount_minor,i.created_at,w.id AS workspace_id
+  FROM pg13_platform_invoices i JOIN workspaces w ON w.id=i.workspace_id
+  WHERE i.status='issued' AND i.created_at<now()-interval '7 days' ORDER BY i.created_at ASC LIMIT 6`
  ]);
- const c=r[0];
- return <><PageHead title={label(locale,"Overview","ওভারভিউ")} action={<span className="pa-date-label">{label(locale,"Last 7 days","শেষ ৭ দিন")}</span>}/>
+ const stats=counts[0],r=revenue.map(v=>({label:String(v.label),value:Number(v.revenue_minor)/100})),maximum=Math.max(1,...r.map(v=>v.value));
+ const x=(i:number)=>30+i*(550/Math.max(r.length-1,1)),y=(v:number)=>140-(v/maximum)*112;
+ const points=r.map((v,i)=>x(i)+","+y(v.value)).join(" ");
+ const money=(n:number)=>"৳"+n.toLocaleString("en-BD",{maximumFractionDigits:2});
+ const root="/"+locale+"/admin";
+ return <>
+ <PageHead title={label(locale,"Overview","ওভারভিউ")} description="Sales and account health."/>
  <section className="pa-surface pa-stats-strip">
- <Stat title="Total workspaces" value={Number(c.workspaces)}/><Stat title="New (7 days)" value={Number(c.recent)}/><Stat title="Total users" value={Number(c.users)}/><Stat title="Payment workspaces" value={Number(c.payments_enabled)}/><Stat title="AI Bot workspaces" value={Number(c.ai_enabled)}/><Stat title="Open support tickets" value={Number(c.open_support)}/></section>
- <div className="pa-overview-grid"><section className="pa-surface pa-chart-panel"><h2>Verified volume</h2><Offline locale={locale}/></section><section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Needs attention</h2><Link href={"/"+locale+"/admin/support"}>Support →</Link></div>{[["Open support tickets",Number(c.open_support)],["Suspended live environments",Number(c.suspended_live)],["Unpaid invoices older than 7 days",Number(c.older_invoices)]].map(([item,count])=><div className="pa-attention-row" key={item}><span>{item}</span><strong>{count}</strong></div>)}</section></div>
- <div className="pa-overview-grid"><section className="pa-surface pa-chart-panel"><h2>Signups & activation</h2><Offline locale={locale}/></section><section className="pa-surface pa-chart-panel"><h2>Top workspaces by volume</h2><Offline locale={locale}/></section></div>
- <div className="pa-overview-grid"><section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Recent admin activity</h2><Link href={"/"+locale+"/admin/audit"}>View all →</Link></div>{!isSuper?<p className="pa-subtle">Access restricted</p>:!activities.length?<p className="pa-subtle">No activity yet.</p>:activities.map((v,i)=><div className="pa-attention-row" key={i}><span>{titleCase(String(v.action))} <small>{v.display_name?String(v.display_name):""}</small></span><span>{formatDate(v.occurred_at,locale)}</span></div>)}</section><section className="pa-surface pa-chart-panel"><h2>System status</h2>{["API","Checkout","Webhooks","Workers"].map(n=><div className="pa-attention-row" key={n}><span>{n}</span><span>—</span></div>)}<p className="pa-subtle">Not connected</p></section></div>
+ <Stat title="Revenue collected (30 days)" value={money(Number(stats.collected_minor)/100)}/>
+ <Stat title="Active subscriptions" value={Number(stats.active_subscriptions)}/>
+ <Stat title="Overdue invoices" value={Number(stats.overdue)}/>
+ <Stat title="Open support cases" value={Number(stats.open_cases)}/></section>
+ <div className="pa-overview-grid">
+  <div>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Revenue</h2><span className="pa-subtle">Last 12 months · paid platform invoices</span></div>
+    <svg viewBox="0 0 620 165" width="100%" role="img" aria-label="Collected subscription revenue by month">
+     {[20,80,140].map(n=><line key={n} x1="20" x2="610" y1={n} y2={n} stroke="var(--bd)" strokeWidth="1"/>)}
+     {points&&<polyline points={points} fill="none" stroke="var(--ink)" strokeWidth="1.6" strokeLinejoin="round"/>}
+     {r.map((v,i)=><text key={i} x={x(i)} y="160" fontSize="10" fill="var(--mu)" textAnchor="middle">{v.label}</text>)}
+    </svg>
+   </section>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Needs follow-up</h2><Link href={root+"/billing/invoices"}>View invoices</Link></div>
+    {attention.length?attention.map(a=><div className="pa-attention-row" key={String(a.id)}><span><Link href={root+"/workspaces/"+a.workspace_id+"/billing"}>{String(a.name)}</Link> <small>Overdue platform invoice</small></span><strong>{money(Number(a.amount_minor)/100)}</strong></div>):<p className="pa-subtle">No overdue invoices.</p>}
+   </section>
+  </div>
+  <div>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Workspaces by plan</h2><Link href={root+"/subscriptions"}>View subscriptions</Link></div>
+    {plans.map(p=><div key={String(p.plan_id)} className="pa-attention-row"><span>{String(p.plan_id)}</span><strong>{Number(p.workspaces)}</strong></div>)}
+    {!plans.length&&<p className="pa-subtle">No active paid plans yet.</p>}
+   </section>
+   <section className="pa-surface pa-chart-panel"><div className="pa-split-head"><h2>Latest admin actions</h2><Link href={root+"/audit"}>View all</Link></div>
+    {!isSuper?<p className="pa-subtle">Access restricted.</p>:activities.map((a,i)=><div className="pa-attention-row" key={i}><span>{titleCase(String(a.action))}<small> {String(a.display_name||"System")}</small></span><span>{formatDate(a.occurred_at,locale)}</span></div>)}
+    {isSuper&&!activities.length&&<p className="pa-subtle">No admin actions recorded.</p>}
+   </section>
+  </div>
+ </div>
  </>;
 }
 export async function PlatformAdminConsole({locale,segments=[],query="",after=""}:Props){
@@ -178,7 +217,13 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  body=!isSuper?<><PageHead title={t}/><Denied locale={locale}/></>:key==="workspaces"&&extra[1]==="products-plan"?<AdminPaymentPlansPage locale={locale} actor={admin.user.id} workspace={extra[0]}/>:key==="workspaces"?<><AdminWorkspaceDetail locale={locale} id={extra[0]} sub={extra[1]||""}/>{extra[1]==="billing"&&<AdminPaymentPlansPage locale={locale} actor={admin.user.id} workspace={extra[0]}/>}</>:!extra[1]?<AdminUserDetail locale={locale} id={extra[0]}/>:notFound();
  }else if(key==="workspaces"||key==="users"||key==="audit"){
  const page=isSuper?(key==="workspaces"?await workspaces(locale,q,after):key==="users"?await users(locale,q,after):await audit(locale,q,after)):null;
- body=<><PageHead title={t}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
+ body=<><PageHead title={t} action={key==="workspaces"&&isSuper?<AdminModal title="New workspace" label="Add workspace"><AdminWorkspaceCreationForm/></AdminModal>:undefined}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
+ }else if(key==="subscriptions"){
+ body=isSuper?<AdminSubscriptionsPage locale={locale} query={q}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ }else if(key==="providers"){
+ body=isSuper?<AdminProvidersPage isSuper/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ }else if(key==="credits"){
+ body=isSuper?<AdminCreditsPage isSuper/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="plans"){
  body=isSuper?<AdminPaymentPlansPage locale={locale} actor={admin.user.id}/>:<Denied locale={locale}/>;
  }else if(key==="staff"){
@@ -189,7 +234,20 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  body=<><PageHead title={t} action={isSuper&&(page||sub==="roles")?<AdminModal title="Staff roles" label="Manage roles"><RoleControls locale={locale} users={list}/></AdminModal>:undefined}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{!isSuper?<Denied locale={locale}/>:page?<><Search locale={locale} query={q} kind="staff"/><Records locale={locale} base={base} query={q} page={page}/></>:staffInventory||<Offline locale={locale}/>}</>;
  }else if(key==="settings"){
  const settings=isSuper?await platformSettings():null;
- body=<><PageHead title={t}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{!isSuper?<Denied locale={locale}/>:(!sub||sub==="authentication-email")&&settings?<section className="pa-surface pa-settings-grid"><div><h2>Email verification</h2><p>{settings.emailVerification?"Required":"Off"}</p><span className="pa-status-text"><span className={"pa-status-dot "+(mailReady()?"green":"grey")}/>Resend: {mailReady()?"Connected":"Not connected"}</span></div><AdminModal label="Edit settings" title="Authentication & email"><VerificationSettings locale={locale} enabled={settings.emailVerification} providerReady={mailReady()}/></AdminModal></section>:<Offline locale={locale}/>}</>;
+ let staff:Array<{id:string;name:string;email:string;verified:boolean;role:string|null}>=[];
+ if(isSuper){const rows=await database()`SELECT u.id,u.display_name,u.email,u.email_verified_at,p.role
+ FROM app_users u LEFT JOIN platform_administrators p ON p.user_id=u.id ORDER BY u.created_at DESC LIMIT 150`;
+ staff=rows.map(x=>({id:String(x.id),name:String(x.display_name),email:String(x.email),verified:!!x.email_verified_at,role:x.role?String(x.role):null}));}
+ const roles=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"roles",query:""}):null;
+ const sessions=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"sessions",query:""}):null;
+ body=<><PageHead title={t}/>{!isSuper?<Denied locale={locale}/>:<>
+ <section className="pa-surface pa-settings-grid"><div><h2>Email verification</h2><p>{settings?.emailVerification?"Required":"Off"}</p>
+ <span className="pa-status-text"><span className={"pa-status-dot "+(mailReady()?"green":"grey")}/>Email service: {mailReady()?"Configured":"Configuration required"}</span>
+ </div><AdminModal label="Manage verification" title="Email verification"><VerificationSettings locale={locale} enabled={!!settings?.emailVerification} providerReady={mailReady()}/></AdminModal></section>
+ <div className="pa-page-head"><h2>Admin team</h2><AdminModal title="Admin roles" label="Manage roles"><RoleControls locale={locale} users={staff}/></AdminModal></div>
+ {roles}
+ <div className="pa-page-head"><h2>Admin sessions</h2></div>{sessions}
+ </>}</>;
  }else if(key==="support"&&extra[0]){
  body=isSuper?<AdminSupportDetail locale={locale} id={extra[0]}/>:<Denied locale={locale}/>;
  }else if(key==="health"){
@@ -201,7 +259,7 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  }else{
  const op=offlineActions[key];
  const inventory=isSuper?await AdminGlobalInventory({locale,kind:key,sub,query:q}):null;
- body=<><PageHead title={t} action={op&&!inventory?<button type="button" disabled className="pa-button pa-button-secondary">{op}</button>:undefined}/>
+ body=<><PageHead title={t} action={key==="billing"&&isSuper?<a className="pa-button" href={"/"+locale+"/admin/exports?"+new URLSearchParams({kind:"invoices",q}).toString()}>Export invoices CSV</a>:op&&!inventory?<button type="button" disabled className="pa-button pa-button-secondary">{op}</button>:undefined}/>
  {tabs[key]&&<PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>}
  {!isSuper?<Denied locale={locale}/>:inventory||<OfflineList locale={locale} kind={key} sub={sub}/>}</>;
  }

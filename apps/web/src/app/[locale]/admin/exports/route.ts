@@ -15,7 +15,7 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  const admin=await verifiedAdmin();
  if(!admin||admin.role!=="super_admin")return NextResponse.json({error:"ACCESS_DENIED"},{status:403,headers:{"Cache-Control":"no-store"}});
  const kind=request.nextUrl.searchParams.get("kind");
- if(!["workspaces","users","audit","staff"].includes(kind||""))return NextResponse.json({error:"INVALID_EXPORT"},{status:400});
+ if(!["workspaces","users","audit","staff","subscriptions","invoices"].includes(kind||""))return NextResponse.json({error:"INVALID_EXPORT"},{status:400});
  const q=(request.nextUrl.searchParams.get("q")||"").trim().slice(0,80),term="%"+q+"%";
  let rows:unknown[][];
  if(kind==="workspaces"){
@@ -24,6 +24,19 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
     EXISTS(SELECT 1 FROM workspace_product_access p WHERE p.workspace_id=w.id AND p.product='ai' AND p.enabled) AS ai
     FROM workspaces w WHERE (${q}='' OR w.name ILIKE ${term} OR w.id::text ILIKE ${term}) ORDER BY w.created_at DESC LIMIT 5000`;
   rows=[["Workspace ID","Name","Owner email","Payments enabled","AI enabled","Created at"],...r.map(x=>[x.id,x.name,x.owner,x.pay,x.ai,x.created_at])];
+ }else if(kind==="subscriptions"){
+  const r=await database()`SELECT s.workspace_id,w.name,s.plan_id,s.plan_version_id,s.started_at,s.paid_until,s.grace_until
+   FROM pg13_subscriptions s JOIN workspaces w ON w.id=s.workspace_id
+   WHERE (${q}='' OR w.name ILIKE ${term} OR s.plan_id ILIKE ${term}) ORDER BY s.started_at DESC LIMIT 5000`;
+  rows=[["Workspace ID","Workspace","Plan","Plan version ID","Started at","Paid until","Grace until"],
+  ...r.map(x=>[x.workspace_id,x.name,x.plan_id,x.plan_version_id,x.started_at,x.paid_until,x.grace_until])];
+ }else if(kind==="invoices"){
+  const r=await database()`SELECT i.id,i.workspace_id,w.name,i.plan_id,i.amount_minor,i.status,i.created_at,i.paid_at
+   FROM pg13_platform_invoices i JOIN workspaces w ON w.id=i.workspace_id
+   WHERE (${q}='' OR w.name ILIKE ${term} OR i.id::text ILIKE ${term})
+   ORDER BY i.created_at DESC LIMIT 5000`;
+  rows=[["Invoice ID","Workspace ID","Workspace","Plan","Amount minor BDT","Status","Created at","Paid at"],
+  ...r.map(x=>[x.id,x.workspace_id,x.name,x.plan_id,x.amount_minor,x.status,x.created_at,x.paid_at])];
  }else if(kind==="users"||kind==="staff"){
   const r=await database()`SELECT u.id,u.display_name,u.email,u.email_verified_at,u.disabled_at,u.created_at,p.role FROM app_users u LEFT JOIN platform_administrators p ON p.user_id=u.id
    WHERE (${q}='' OR u.display_name ILIKE ${term} OR u.email ILIKE ${term} OR u.id::text ILIKE ${term})

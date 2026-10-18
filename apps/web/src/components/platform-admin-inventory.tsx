@@ -5,6 +5,7 @@ import {database} from "../lib/server/db";
 import {goOrigin} from "../lib/server/go-origin";
 import {ProductAccessAction,EnvironmentAction,UserSessionsAction,UserStatusAction,ApiKeyRevokeAction,AdminSupportReply,AdminStepUpLink} from "./platform-admin-operations";
 import type {AdminLocale} from "./platform-admin-shell";
+import {AdminRefreshButton} from "./admin-refresh-button";
 
 const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 type Cell=ReactNode;
@@ -51,7 +52,22 @@ export async function AdminWorkspaceDetail({locale,id,sub=""}:{locale:AdminLocal
  }else if(sub==="devices"){
   content=<section className="pa-surface pa-description"><h2>Receipt devices</h2><p className="pa-subtle">Phone receipts and signed device evidence reside in the isolated financial database. The control database cannot safely enumerate those rows.</p><Link className="pa-button pa-button-secondary" href={"/"+locale+"/admin/gateway/devices?q="+id}>View device operations →</Link></section>;
  }else{
-  content=<section className="pa-surface pa-description"><h2>Usage & credits</h2><p className="pa-subtle">Payment gateway and AI Bot access are managed in the Products tab. Usage credits require an authoritative metering and ledger source; no synthetic balance is displayed.</p></section>;
+  const [credit,ledger]=await Promise.all([
+    database()`SELECT balance,updated_at FROM platform_ai_credit_balances WHERE workspace_id=${id}::uuid LIMIT 1`,
+    database()`SELECT l.id,l.delta,l.balance_after,l.reason,l.created_at,u.display_name
+      FROM platform_ai_credit_ledger l JOIN app_users u ON u.id=l.actor_id WHERE l.workspace_id=${id}::uuid
+      ORDER BY l.created_at DESC LIMIT 100`
+   ]);
+   content=<><section className="pa-surface pa-description"><h2>AI credit balance</h2><dl>
+     <div className="pa-description-row"><dt>Current balance</dt><dd>{Number(credit[0]?.balance||0).toLocaleString()}</dd></div>
+     <div className="pa-description-row"><dt>Last adjusted</dt><dd>{format(credit[0]?.updated_at,locale)}</dd></div>
+     <div className="pa-description-row"><dt>AI product</dt><dd>{on("ai")?"Enabled":"Disabled"}</dd></div>
+   </dl><div className="pa-inline-actions"><Link href={"/"+locale+"/admin/credits"} className="pa-button pa-button-primary">Manage AI credits</Link>
+   <Link href={base+"/products-plan"} className="pa-button">Payment allowances</Link></div></section>
+   <AdminTableView table={{headers:["When","Adjustment","Balance after","By","Reason"],
+    rows:ledger.map(l=>[format(l.created_at,locale),Number(l.delta)>0?"+"+l.delta:text(l.delta),
+    Number(l.balance_after).toLocaleString(),text(l.display_name),text(l.reason)])}} empty="No AI credit adjustments yet."/>;
+   <p className="pa-subtle">This is the manual adjustment ledger, not metered AI model usage.</p></>;
  }
  return <><Title name={text(w.name)} back={"/"+locale+"/admin/workspaces"}/><SubNav base={base} items={workspaceTabs} active={sub}/>{content}</>;
 }
@@ -125,7 +141,7 @@ export async function AdminHealthView({locale}:{locale:AdminLocale}){
  const [api,financial]=await Promise.all([probe("/healthz"),probe("/readyz")]);
  const items=[{name:"Control database",state:control==="ready"?"Ready":"Unavailable",code:control==="ready"?"Query OK":"Query failed"},
  {name:"Go API process",...api},{name:"Financial release readiness",...financial}];
- return <><p className="pa-subtle">Live, read-only health checks. These are current observations, not uptime percentages or synthetic provider metrics.</p>
+ return <><div className="pa-page-head"><p className="pa-subtle">Live, read-only health checks. These are current observations, not uptime percentages or synthetic provider metrics.</p><AdminRefreshButton/></div>
  <section className="pa-surface pa-table-card"><div className="pa-table-wrap"><table><thead><tr><th>Component</th><th>Status</th><th>Evidence</th></tr></thead><tbody>{items.map(item=><tr key={item.name}><td className="pa-primary-cell">{item.name}</td><td>{item.state}</td><td>{item.code}</td></tr>)}</tbody></table></div></section></>;
 }
 

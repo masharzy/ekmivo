@@ -6,20 +6,17 @@ import {logoutAction} from "../actions/account";
 
 export type AdminLocale="en"|"bn";
 const groups=[
- {group:"Platform",items:[["Overview","","home"],["Workspaces","workspaces","grid"],["Users","users","users"]]},
- {group:"Payment gateway",items:[["Payments","payments","wallet"],["Payment workspaces","payments/workspaces","grid"],["Providers","gateway/providers","plug"],["Receipt devices","gateway/devices","phone"],["Webhooks & jobs","gateway/webhooks","workflow"]]},
- {group:"AI Bot",items:[["AI workspaces","ai","bot"],["Models & usage","ai/models-usage","pulse"],["Conversations","ai/conversations","history"],["Safety","ai/safety","shield"],["Handover","ai/handover","users"]]},
- {group:"Commercial",items:[["Billing","billing","receipt"],["Invoices","billing/invoices","receipt"],["API credits","credits","coins"],["Plans","plans","layers"]]},
- {group:"Developers",items:[["API keys","api","code"],["Sandbox","api/sandbox","code"],["Rate limits","api/limits","pulse"],["API versions","api/versions","layers"]]},
- {group:"System",items:[["Health","health","pulse"],["Staff & security","staff","shield"],["Audit log","audit","history"],["Support tickets","support","users"],["Privacy requests","privacy","shield"],["Settings","settings","settings"]]}
+ {group:"",items:[["Overview","","home"]]},
+ {group:"Sales",items:[["Workspaces","workspaces","grid"],["Subscriptions","subscriptions","history"],["Billing & Revenue","billing","wallet"]]},
+ {group:"Catalog",items:[["Plans & Pricing","plans","layers"],["Payment Providers","providers","plug"],["AI Credits","credits","coins"]]},
+ {group:"Operations",items:[["Support","support","users"],["System Health","health","pulse"]]},
+ {group:"Platform",items:[["Audit Logs","audit","history"],["Settings","settings","settings"]]}
 ] as const;
 const bnNames:Record<string,string>={
- Overview:"ওভারভিউ",Workspaces:"ওয়ার্কস্পেস",Users:"ব্যবহারকারী",Payments:"পেমেন্ট","Payment workspaces":"পেমেন্ট ওয়ার্কস্পেস",
- Providers:"প্রোভাইডার","Receipt devices":"রিসিপ্ট ডিভাইস","Webhooks & jobs":"ওয়েবহুক ও জব",
- "AI workspaces":"এআই ওয়ার্কস্পেস","Models & usage":"মডেল ও ব্যবহার",Conversations:"কথোপকথন",Safety:"নিরাপত্তা",Handover:"হ্যান্ডওভার",
- Billing:"বিলিং",Invoices:"ইনভয়েস","API credits":"এপিআই ক্রেডিট",Plans:"প্ল্যান","API keys":"এপিআই কী",Sandbox:"স্যান্ডবক্স","Rate limits":"রেট লিমিট","API versions":"এপিআই ভার্সন",
- Health:"সিস্টেমের অবস্থা","Staff & security":"স্টাফ ও নিরাপত্তা","Audit log":"অডিট লগ","Support tickets":"সাপোর্ট টিকিট","Privacy requests":"প্রাইভেসি রিকোয়েস্ট",Settings:"সেটিংস",
- Platform:"প্ল্যাটফর্ম","Payment gateway":"পেমেন্ট গেটওয়ে","AI Bot":"এআই বট",Commercial:"বাণিজ্যিক",Developers:"ডেভেলপার",System:"সিস্টেম"
+ Overview:"ওভারভিউ",Workspaces:"ওয়ার্কস্পেস",Subscriptions:"সাবস্ক্রিপশন","Billing & Revenue":"বিলিং ও আয়",
+ "Plans & Pricing":"প্ল্যান ও মূল্য","Payment Providers":"পেমেন্ট প্রোভাইডার","AI Credits":"এআই ক্রেডিট",
+ Support:"সাপোর্ট","System Health":"সিস্টেমের অবস্থা","Audit Logs":"অডিট লগ",Settings:"সেটিংস",
+ Sales:"বিক্রয়",Catalog:"ক্যাটালগ",Operations:"অপারেশনস",Platform:"প্ল্যাটফর্ম"
 };
 const iconPaths:Record<string,string>={
  search:"M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16 M17 17l5 5",
@@ -75,7 +72,7 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
    <Link href={root} className="pa-brand" onClick={e=>{e.preventDefault();jump("");}}>ekmivo<span className="pa-admin-tag">Admin</span></Link>
    <button className="pa-search-launch" type="button" onClick={()=>setSearch(true)}><AdminIcon name="search"/><span>{isBn?"যেকোনো পেজে যান":"Search pages"}</span><kbd>⌘ K</kbd></button>
    <div className="pa-topbar-end">
-    <span className="pa-environment"><span className="pa-status-dot green"/>{isBn?"লাইভ":"Live"}</span>
+    
     <label className="pa-sr-only" htmlFor="pa-language">{isBn?"ভাষা":"Language"}</label>
     <select id="pa-language" className="pa-toolbar-select" value={locale} onChange={e=>goLocale(e.target.value as AdminLocale)}><option value="en">EN</option><option value="bn">বাং</option></select>
     <label className="pa-sr-only" htmlFor="pa-theme">{isBn?"থিম":"Theme"}</label>
@@ -85,7 +82,7 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
   </header>
   {mobile&&<button className="pa-mobile-backdrop" onClick={()=>setMobile(false)} aria-label="Close navigation"/>}
   <div className="pa-layout"><aside className={"pa-sidebar"+(mobile?" is-open":"")} aria-label="Admin navigation">
-   <Link href={root} className="pa-sidebar-brand" onClick={e=>{e.preventDefault();jump("");}}><span className="pa-sidebar-brand-mark">e</span>Ekmivo</Link><nav>{groups.map(group=><section key={group.group} className="pa-nav-group"><h2>{isBn?bnNames[group.group]:group.group}</h2>{group.items.map(item=>{const path=item[1];return <Link key={path} href={root+(path?"/"+path:"")} prefetch onMouseEnter={()=>router.prefetch(root+(path?"/"+path:""))} onClick={e=>{e.preventDefault();jump(path);}} className={"pa-nav-link"+(active(path)?" is-active":"")} aria-current={active(path)?"page":undefined}><AdminIcon name={item[2]}/><span>{isBn?bnNames[item[0]]:item[0]}</span></Link>})}</section>)}</nav>
+   <Link href={root} className="pa-sidebar-brand" onClick={e=>{e.preventDefault();jump("");}}><span className="pa-sidebar-brand-mark">e</span>Ekmivo</Link><nav>{groups.map(group=><section key={group.group} className="pa-nav-group">{group.group&&<h2>{isBn?bnNames[group.group]:group.group}</h2>}{group.items.map(item=>{const path=item[1];return <Link key={path} href={root+(path?"/"+path:"")} prefetch onMouseEnter={()=>router.prefetch(root+(path?"/"+path:""))} onClick={e=>{e.preventDefault();jump(path);}} className={"pa-nav-link"+(active(path)?" is-active":"")} aria-current={active(path)?"page":undefined}><AdminIcon name={item[2]}/><span>{isBn?bnNames[item[0]]:item[0]}</span></Link>})}</section>)}</nav>
   </aside><main id="main" className="pa-main"><div className="pa-content">{children}</div></main></div>
   {search&&<div className="pa-palette-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSearch(false);}}><div className="pa-palette" role="dialog" aria-modal="true" aria-label={isBn?"দ্রুত খুঁজুন":"Quick navigation"}><div className="pa-palette-input"><AdminIcon name="search"/><input ref={queryRef} placeholder={isBn?"পেজের নাম লিখুন":"Search admin pages"} value={term} onChange={e=>{setTerm(e.target.value);setEntities([]);setEntitySearching(e.target.value.trim().length>=2)}} onKeyDown={e=>{if(e.key==="Enter"){if(options[0])jump(options[0].path);else if(entities[0])jump(entities[0].path);}}}/><button type="button" onClick={()=>setSearch(false)} aria-label="Close">Esc</button></div><div className="pa-palette-results">{options.map(item=><button key={item.path} onClick={()=>jump(item.path)}><AdminIcon name={item.icon}/><span>{isBn?bnNames[item.name]:item.name}</span></button>)}{role==="super_admin"&&term.trim().length>=2&&<><span className="pa-palette-section">{isBn?"ওয়ার্কস্পেস ও ব্যবহারকারী":"Workspaces & users"}</span>{entities.map(item=><button key={item.kind+item.id} onClick={()=>jump(item.path)}><AdminIcon name={item.kind==="workspace"?"grid":"users"}/><span>{item.label}<small>{item.kind} · {item.id.slice(0,8)}</small></span></button>)}</>}{!options.length&&!entities.length&&!entitySearching&&<p>{isBn?"কোনো ফল পাওয়া যায়নি":"No matching pages or records"}</p>}</div></div></div>}
  </div>;
