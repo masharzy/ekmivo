@@ -81,12 +81,19 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
    await c.addCookies([{name:"ekmivo-theme",value:theme,url:origin},{name:"ekmivo-locale",value:locale,url:origin}]);
    const p=await c.newPage();
    try{
-    await p.goto(origin+"/"+locale+"/checkout/"+token);
+    const [checkResponse]=await Promise.all([
+     p.waitForResponse(r=>r.url().includes("/api/checkout/"+token)&&r.request().method()==="GET"),
+     p.goto(origin+"/"+locale+"/checkout/"+token)
+    ]);
+    assert.equal(checkResponse.status(),200,"localized checkout API failed");
+    assert.equal((await checkResponse.json()).amount_minor,12345,"localized checkout amount changed");
     await p.locator('[data-customer-checkout="true"]').waitFor();
     assert.equal(await p.locator("html").getAttribute("lang"),locale);
     assert.equal(await p.locator("html").getAttribute("data-theme"),theme);
-    const shown=(await p.locator('[data-customer-checkout="true"]').innerText()).replace(/[০-৯]/g,d=>String("০১২৩৪৫৬৭৮৯".indexOf(d))).replace(/,/g,"");
-    assert.ok(shown.includes("123.45"),"checkout did not show the exact authoritative BDT amount");
+    await p.waitForFunction(()=>{
+     const v=document.querySelector('[data-customer-checkout="true"]')?.textContent||"";
+     return v.replace(/[০-৯]/g,d=>String("০১২৩৪৫৬৭৮৯".indexOf(d))).replace(/,/g,"").includes("123.45");
+    },null,{timeout:15000});
     assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),
      "horizontal checkout overflow at "+width+"px "+locale+" "+theme);
     assert.equal(await p.getByRole("button",{name:/mark.*paid|approve.*payment/i}).count(),0);
