@@ -39,3 +39,5 @@
 .ref-notifications .hint{max-width:520px;margin:90px auto;text-align:center;color:var(--d)}
 .ref-notifications{display:block;min-height:0;padding:0;color:var(--txt,var(--t));} .ref-notifications button{cursor:pointer} .ref-notifications button:disabled{cursor:not-allowed}
 .ref-notifications .ref-mark-read{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--a);border:0;background:none;padding:0}.ref-notifications .ref-mark-read:disabled{opacity:.4;cursor:default}
+
+.ref-notifications[lang="bn"],.ref-notifications[lang="bn"] :is(button,input,select,textarea){font-family:var(--font-hind-siliguri),"Hind Siliguri",sans-serif}

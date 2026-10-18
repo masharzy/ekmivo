@@ -25,7 +25,7 @@ export function serviceEnabled(service: Service, mode: "ai" | "commerce" | "both
   return mode === "both" || (service === "ai" ? mode === "ai" : mode === "commerce");
 }
 export function sectionInService(service: Service, section: string): section is SectionKey {
-  if(service==="payments"&&["events","integrations","requests","webhooks","apps","reconciliation","team","billing","settings","help","orders","products","inventory","coupons","shipping","returns"].includes(section))return true;
+  if(service==="payments"&&["events","notifications","integrations","requests","webhooks","apps","reconciliation","team","billing","settings","help","orders","products","inventory","coupons","shipping","returns"].includes(section))return true;
   return navigation[service].some(group => group.items.includes(section as SectionKey));
 }
 export function defaultService(mode: "ai" | "commerce" | "both" | "off"): Service { return mode === "ai" ? "ai" : "payments"; }

@@ -1,5 +1,5 @@
 export const sections={
- notifications:{en:"Notifications",bn:"নোটিফিকেশন",detail:{en:"Handovers, waiting customers and tasks that need you.",bn:"আপনার অপেক্ষায় থাকা চ্যাট, হ্যান্ডওভার ও জরুরি কাজ।"},group:"ai"},
+ notifications:{en:"Notifications",bn:"নোটিফিকেশন",detail:{en:"Payment notifications and activity in one place.",bn:"পেমেন্টের সব নোটিফিকেশন ও কার্যক্রম এক জায়গায়।"},group:"ai"},
  comments:{en:"Comments",bn:"কমেন্ট",detail:{en:"Customer questions on your posts and moderation.",bn:"পোস্টে গ্রাহকের প্রশ্ন ও কমেন্ট পরিচালনা।"},group:"ai"},
  "saved-replies":{en:"Saved replies",bn:"সেভ করা উত্তর",detail:{en:"Reusable answers for you and your team.",bn:"বারবার ব্যবহার করার জন্য আপনার টিমের তৈরি উত্তর।"},group:"ai"},
  contacts:{en:"Contacts",bn:"কন্ট্যাক্ট",detail:{en:"Customer profiles, labels and conversation history.",bn:"গ্রাহকের পরিচয়, লেবেল ও কথোপকথনের ইতিহাস।"},group:"ai"},
