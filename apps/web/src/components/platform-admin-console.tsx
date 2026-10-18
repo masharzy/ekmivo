@@ -214,7 +214,7 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  let body:ReactNode;
  if(!key){body=<Overview locale={locale} isSuper={isSuper}/>;}
  else if((key==="workspaces"||key==="users")&&extra[0]){
- body=!isSuper?<><PageHead title={t}/><Denied locale={locale}/></>:key==="workspaces"&&extra[1]==="products-plan"?<AdminPaymentPlansPage locale={locale} actor={admin.user.id} workspace={extra[0]}/>:key==="workspaces"?<><AdminWorkspaceDetail locale={locale} id={extra[0]} sub={extra[1]||""}/>{extra[1]==="billing"&&<AdminPaymentPlansPage locale={locale} actor={admin.user.id} workspace={extra[0]}/>}</>:!extra[1]?<AdminUserDetail locale={locale} id={extra[0]}/>:notFound();
+ body=!isSuper?<><PageHead title={t}/><Denied locale={locale}/></>:key==="workspaces"&&extra[1]==="products-plan"?<AdminPaymentPlansPage locale={locale} actor={admin.user.id} workspace={extra[0]}/>:key==="workspaces"?<AdminWorkspaceDetail locale={locale} id={extra[0]} sub={extra[1]||""}/>:!extra[1]?<AdminUserDetail locale={locale} id={extra[0]}/>:notFound();
  }else if(key==="workspaces"||key==="users"||key==="audit"){
  const page=isSuper?(key==="workspaces"?await workspaces(locale,q,after):key==="users"?await users(locale,q,after):await audit(locale,q,after)):null;
  body=<><PageHead title={t} action={key==="workspaces"&&isSuper?<AdminModal title="New workspace" label="Add workspace"><AdminWorkspaceCreationForm/></AdminModal>:undefined}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
