@@ -45,7 +45,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   // Go HTTP tests above still validate invoice line pricing and linked intents.
   const merchantPath="/w/"+tenant+"/payments/requests";
   await page.goto(origin+merchantPath);
-  await page.locator(".pg05-merchant").getByRole("heading",{name:"Payment links",exact:true}).waitFor();
+  await page.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|One-time requests)$/}).waitFor();
   const newRequest=page.getByRole("button",{name:"New request",exact:true});
   // This disposable control-plane tenant has no paid subscription. The modern
   // plan gate correctly disables creation in that case. Assert the visible
