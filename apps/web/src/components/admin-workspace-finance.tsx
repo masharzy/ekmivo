@@ -28,7 +28,7 @@ export function AdminWorkspaceFinance({locale,workspaceId,resource}:{locale:Loca
   }catch(e){setError((bn?"সরাসরি সার্ভার থেকে তথ্য পাওয়া যায়নি: ":"Live finance server unavailable: ")+(e instanceof Error?e.message:""));}
   finally{setLoading(false);}
  },[resource,workspaceId,environment,bn]);
- useEffect(()=>{void refresh()},[refresh]);
+ useEffect(()=>{void Promise.resolve().then(()=>refresh())},[refresh]);
  const columns=resource==="payments"?paymentCols:deviceCols;
  const filtered=rows.filter(row=>Object.entries(row).some(([key,value])=>["id","name","merchant_reference","method","status","source"].includes(key)&&String(value||"").toLowerCase().includes(search.toLowerCase())));
  return <div className="pa-workspace-finance">
