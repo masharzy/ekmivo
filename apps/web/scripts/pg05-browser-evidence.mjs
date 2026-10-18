@@ -30,7 +30,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   await context.addCookies([{name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"}]);
   const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   page.on("dialog",dialog=>dialog.accept());
-  const path=`/en/w/${tenant}/payments/requests?env=sandbox`;
+  const path=`/w/${tenant}/payments/requests`;
   await page.goto(origin+path);
   await page.getByRole("heading",{name:"Order and invoice sources",exact:true}).waitFor();
   const ref="BROWSER-INVOICE-"+randomUUID();
@@ -102,13 +102,13 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   const cancelCard=page.locator(".pg05-record").filter({has:page.getByText(ref+"-PAY",{exact:true})});
   await cancelCard.getByRole("button",{name:"Cancel request",exact:true}).click();
   await cancelCard.getByText("Cancelled",{exact:true}).waitFor();
-  await page.goto(origin+"/en/checkout/"+issued.checkout_token);
+  await page.goto(origin+"/checkout/"+issued.checkout_token);
   await page.getByRole("heading",{name:"Request cancelled",exact:true}).waitFor();
   record("real merchant cancellation survives public reload and preserves source history");
-  await page.goto(origin+"/en/checkout/"+randomBytes(32).toString("base64url"));
+  await page.goto(origin+"/checkout/"+randomBytes(32).toString("base64url"));
   await page.getByRole("heading",{name:"Checkout not found",exact:true}).waitFor();
   record("invalid opaque capability displays actual missing state without payment instructions");
-  await page.goto(origin+"/en/checkout/"+expiredToken);
+  await page.goto(origin+"/checkout/"+expiredToken);
   await page.getByRole("heading",{name:"Checkout expired",exact:true}).waitFor();
   assert.equal(await page.getByLabel("Number you will pay from",{exact:true}).count(),0);
   record("expired real server record retains summary and removes payer/payment actions");
@@ -124,7 +124,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   for(const width of [320,768,1024,1440])for(const locale of ["en","bn"])for(const theme of ["light","dark"]){
    const c=await browser.newContext({viewport:{width,height:900}});
    await c.addCookies([{name:"ekmivo-theme",value:theme,url:origin}]);
-   const p=await c.newPage();await p.goto(`${origin}/${locale}/checkout/${token}`);
+   const p=await c.newPage();await p.goto(`${origin}/checkout/${token}`);
    await p.locator(".pg05-amount strong").waitFor();
    assert.equal(await p.locator("html").getAttribute("lang"),locale);
    assert.equal(await p.locator("html").getAttribute("data-theme"),theme);
