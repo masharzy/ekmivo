@@ -17,7 +17,8 @@ test("payment notifications are scoped to workspace and current financial realm"
 test("notification center uses server search, pagination and read filters",()=>{
  const client=load("apps/web/src/components/payment-notification-center.tsx");
  const proxy=load("apps/web/src/app/api/go/[...path]/route.ts");
- for(const key of ["page","page_size","filter","status","q"])assert.ok(client.includes(key+":"),"missing "+key);
+ for(const key of ["page","page_size","filter","q"])assert.ok(client.includes(key+":"),"missing "+key);
+ assert.match(client,/filter:category,status,q:query/);
  assert.match(client,/Mark all read/);
  assert.match(client,/mark\(item\.id\)/);
  assert.match(client,/noticeHref\(workspaceId,item\)/);
