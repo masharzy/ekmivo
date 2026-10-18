@@ -11,7 +11,7 @@ export function IntegrationIcon({name}:{name:"code"|"hook"|"activity"|"plug"|"ar
  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>;
 }
 export function IntegrationNav({scope,active}:{scope:IntegrationScope;active:string}){
- const items=[['developers','Developers','ডেভেলপার','code'],['webhooks','Webhooks','ওয়েবহুক','hook'],['events','Events & logs','ইভেন্ট ও লগ','activity'],['integrations','Integrations','সংযোগ','plug']] as const;
+ const items=[['developers','Developers','ডেভেলপার','code'],['webhooks','Webhooks','ওয়েবহুক','hook'],['integrations','Integrations','সংযোগ','plug']] as const;
  return <nav className="int-nav" aria-label={scope.locale==="bn"?"ইন্টিগ্রেশন ও ইভেন্ট":"Integrations and events"}>{items.map(([id,en,bn,icon])=><Link key={id} href={integrationHref(scope,id)} aria-current={id===active?"page":undefined}><IntegrationIcon name={icon}/>{scope.locale==="bn"?bn:en}</Link>)}</nav>;
 }
 export function integrationHref(s:IntegrationScope,section:string,id?:string,tab?:string){const p=new URLSearchParams();if(tab)p.set("tab",tab);return `/${s.locale}/w/${s.workspaceId}/payments/${section}${id?"/"+encodeURIComponent(id):""}${p.size?'?'+p:''}`;}

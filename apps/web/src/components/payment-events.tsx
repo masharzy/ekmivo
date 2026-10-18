@@ -1,48 +1,121 @@
 "use client";
-import Link from 'next/link';
-import {useCallback,useEffect,useRef,useState} from 'react';
-import {useSearchParams} from 'next/navigation';
+import Link from "next/link";
+import {useCallback,useEffect,useRef,useState} from "react";
+import {useSearchParams} from "next/navigation";
+import {safeIntegrationPayload} from "../lib/integration-safe-payload";
+import {DashboardIcon} from "./dashboard-icon";
+import {CopyValue,IntegrationRequestError,IntegrationFeedback,IntegrationStatus,IntegrationSkeleton,integrationDate,integrationHref,setIntegrationTab,useIntegrationTransport,type ActivityRow,type IntegrationScope} from "./integration-ui";
+import "./activity-logs.css";
 
-import {safeIntegrationPayload} from '../lib/integration-safe-payload';
-import {CopyValue,IntegrationRequestError,IntegrationEmpty,IntegrationFeedback,IntegrationIntro,IntegrationNav,IntegrationStatus,IntegrationSkeleton,integrationDate,integrationHref,setIntegrationTab,useIntegrationTransport,type ActivityRow,type IntegrationScope} from './integration-ui';
+const tabs={events:["Payment events","পেমেন্ট ইভেন্ট"],api:["API logs","API লগ"],audit:["Audit history","পরিবর্তনের ইতিহাস"],exports:["Exports","এক্সপোর্ট"]} as const;
+type Tab=keyof typeof tabs;
+const isTab=(value:string):value is Tab=>Object.prototype.hasOwnProperty.call(tabs,value);
+const value=(row:ActivityRow,key:string)=>String(row[key]??"—");
 
-const viewNames={events:['Domain events','পেমেন্ট ইভেন্ট'],api:['API logs','API লগ'],audit:['Audit trail','পরিবর্তনের ইতিহাস'],exports:['Exports','এক্সপোর্ট'],notifications:['Notifications','নোটিফিকেশন']} as const;
-type View=keyof typeof viewNames;
-export function PaymentEvents(scope:IntegrationScope&{detailId?:string}){return <ScopedEvents key={`${scope.workspaceId}:${scope.environment}:${scope.detailId||''}`} {...scope}/>;}
-function ScopedEvents(scope:IntegrationScope&{detailId?:string}){
- const {locale,detailId,canManage}=scope,bn=locale==='bn',t=(en:string,be:string)=>bn?be:en,{request,online}=useIntegrationTransport(scope),params=useSearchParams();
- const requested=params.get('tab')||'events',view:View=detailId?'events':Object.hasOwn(viewNames,requested)?requested as View:'events';
- const [rows,setRows]=useState<ActivityRow[]>([]),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[search,setSearch]=useState(''),[query,setQuery]=useState('');
- const [deliveries,setDeliveries]=useState<ActivityRow[]>([]),[traceError,setTraceError]=useState('');const seq=useRef(0);const [now,setNow]=useState(0);useEffect(()=>{const tick=()=>setNow(Date.now());tick();const timer=setInterval(tick,15000);return()=>clearInterval(timer)},[]);
- const restricted=['api','audit','exports'].includes(view)&&!canManage;
- const load=useCallback(async(after?:string,signal?:AbortSignal)=>{
-  const current=++seq.current;setLoading(true);setError('');if(restricted){setRows([]);setLoading(false);return}
-  const p=new URLSearchParams();if(query)p.set('q',query);if(after)p.set('cursor',after);
-  const path=view==='events'?`operations/events${detailId?'/'+detailId:''}`:view==='notifications'?'notifications':`activity/${view}`;
-  try{const d=await request(`${path}?${p}`,undefined,signal);if(current!==seq.current||signal?.aborted)return;setRows(prev=>after?[...prev,...d.items.filter((r:ActivityRow)=>!prev.some(x=>x.id===r.id))]:d.items);setCursor(d.next_cursor||null);
-   if(detailId&&d.items[0]){try{const h=await request(`operations/deliveries?q=${detailId}`,undefined,signal);if(current===seq.current&&!signal?.aborted){setDeliveries(h.items);setTraceError('')}}catch{if(current===seq.current&&!signal?.aborted)setTraceError(bn?'ডেলিভারি ট্রেস পাওয়া যায়নি। রিফ্রেশ করুন।':'Delivery trace unavailable. Refresh to retry.')}}
-  }catch(e){if(e instanceof IntegrationRequestError&&[401,403].includes(e.status))setRows([]);if(current===seq.current&&!signal?.aborted)setError(e instanceof Error?e.message:(bn?'তথ্য পাওয়া যায়নি।':'Could not load activity.'))}finally{if(current===seq.current&&!signal?.aborted)setLoading(false)}
- },[request,view,detailId,query,restricted,bn]);
- useEffect(()=>{const c=new AbortController();void Promise.resolve().then(()=>{if(!c.signal.aborted)void load(undefined,c.signal)});return()=>c.abort()},[load]);
+export function PaymentEvents(scope:IntegrationScope&{detailId?:string}){
+ return <ActivityLogs key={[scope.workspaceId,scope.environment,scope.detailId||""].join(":")} {...scope}/>;
+}
+function ActivityLogs(scope:IntegrationScope&{detailId?:string}){
+ const {locale,canManage,detailId}=scope;
+ const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en;
+ const {request,online}=useIntegrationTransport(scope);
+ const params=useSearchParams(),requested=params.get("tab")||"events";
+ const tab:Tab=detailId?"events":isTab(requested)?requested:"events";
+ const restricted=tab!=="events"&&!canManage;
+ const [rows,setRows]=useState<ActivityRow[]>([]),[cursor,setCursor]=useState<string|null>(null);
+ const [loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const [busy,setBusy]=useState(false),[search,setSearch]=useState(""),[query,setQuery]=useState("");
+ const [refresh,setRefresh]=useState(0),seq=useRef(0);
+ const [now,setNow]=useState(0);
+ useEffect(()=>{const handler=()=>setNow(Date.now());handler();const timer=setInterval(handler,30000);return()=>clearInterval(timer)},[]);
  useEffect(()=>{const timer=setTimeout(()=>setQuery(search.trim()),300);return()=>clearTimeout(timer)},[search]);
- function tab(v:View){setSearch('');setQuery('');setRows([]);setIntegrationTab(v)}
- async function read(id:string){if(busy||!online)return;setBusy(true);try{await request(`notifications/${id}/read`,{});setRows(prev=>prev.map(r=>r.id===id?{...r,read_at:new Date().toISOString()}:r));setNotice(t('Marked as read.','পড়া হয়েছে হিসেবে রাখা হয়েছে।'))}catch(e){setError(e instanceof Error?e.message:t('Change unconfirmed.','পরিবর্তন নিশ্চিত হয়নি।'))}finally{setBusy(false)}}
- async function download(id:string){if(busy||!online||!canManage)return;setBusy(true);setError('');try{const r=await fetch(`/api/go/workspaces/${scope.workspaceId}/exports/${id}/download?environment=${scope.environment}`,{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok){if([401,403].includes(r.status))setRows([]);throw Error(r.status===410?t('This export expired. Create a new export from the document page.','এই এক্সপোর্টের মেয়াদ শেষ। ডকুমেন্টের পেজ থেকে নতুন করে তৈরি করুন।'):[401,403].includes(r.status)?t('Download access denied. Sign in again or contact the owner.','ডাউনলোডের অনুমতি নেই। আবার সাইন ইন করুন বা মালিকের সঙ্গে যোগাযোগ করুন।'):t('Download unavailable. Refresh and retry.','ডাউনলোড পাওয়া যায়নি। রিফ্রেশ করে আবার চেষ্টা করুন।'))}if(!r.headers.get('content-type')?.startsWith('text/csv'))throw Error(t('Invalid export response. Refresh to retry.','এক্সপোর্টের উত্তর সঠিক নয়। রিফ্রেশ করুন।'));const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download='ekmivo-export.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice(t('Download started.','ডাউনলোড শুরু হয়েছে।'))}catch(e){setError(e instanceof Error?e.message:t('Download failed.','ডাউনলোড হয়নি।'))}finally{setBusy(false)}}
- function exportSafe(){const data=rows.map(r=>view==='events'?{id:r.id,event_type:r.event_type,payment_id:r.payment_id,created_at:r.created_at,payload:safeIntegrationPayload(r.payload)}:view==='api'?{id:r.id,method:r.method,route:r.route,http_status:r.http_status,duration_ms:r.duration_ms,correlation_id:r.correlation_id,created_at:r.created_at}:view==='audit'?{id:r.id,resource:r.resource,resource_id:r.resource_id,action:r.action,created_at:r.created_at}:view==='exports'?{id:r.id,resource:r.resource,created_at:r.created_at,expires_at:r.expires_at}:{id:r.id,type:r.type,resource_id:r.resource_id,created_at:r.created_at,read_at:r.read_at});const url=URL.createObjectURL(new Blob([JSON.stringify({workspace_id:scope.workspaceId,environment:scope.environment,view,loaded_records_only:true,items:data},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`ekmivo-${view}-${scope.environment}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice(t('Loaded records exported. This is not a complete historical export.','লোড হওয়া রেকর্ড এক্সপোর্ট হয়েছে। এটি পুরো ইতিহাসের এক্সপোর্ট নয়।'))}
- const visible=view==='notifications'?rows.filter(r=>`${r.type}`.toLowerCase().includes(query.toLowerCase())):rows;
- const resourceHref=(resource:unknown,id:unknown)=>{const map:Record<string,string>={payments:'transactions',refunds:'refunds',devices:'devices',incoming:'incoming',webhooks:'webhooks',integrations:'integrations',gateways:'gateways',invoices:'invoices'};const section=map[String(resource)];return section?integrationHref(scope,section,['transactions','refunds','devices','incoming','webhooks','invoices'].includes(section)?String(id):undefined):undefined};
- return <section className="int-workspace"><IntegrationNav scope={scope} active="events"/>{detailId&&<Link href={integrationHref(scope,'events')}>{t('← All events','← সব ইভেন্ট')}</Link>}<IntegrationIntro icon="activity" title={detailId?t('Follow the event','ইভেন্টের পুরো পথ দেখুন'):t('Every event, a clear trail','প্রতিটি ইভেন্টের স্পষ্ট ইতিহাস')} description={t('Inspect payment events, delivery attempts and authorized changes in this environment.','এই পরিবেশের পেমেন্ট ইভেন্ট, ডেলিভারির চেষ্টা ও অনুমোদিত পরিবর্তন দেখুন।')}/>
- {!detailId&&<div className="int-tabs int-tabs-wrap" role="group" aria-label={t('Activity views','ইভেন্টের অংশ')}>{(Object.keys(viewNames) as View[]).map(v=><button key={v} aria-pressed={v===view} onClick={()=>tab(v)}>{viewNames[v][bn?1:0]}</button>)}</div>}
- <IntegrationFeedback error={error} notice={notice} online={online} locale={locale}/>{restricted?<IntegrationEmpty title={t('Owner or admin access required','মালিক বা অ্যাডমিনের অনুমতি প্রয়োজন')} description={t('API diagnostics, audit history and export metadata are restricted.','API লগ, পরিবর্তনের ইতিহাস ও এক্সপোর্টের তথ্য সীমিত অনুমতির অংশ।')}/>:<><div className="int-toolbar">{!detailId&&<label className="int-search">{view==='notifications'?t('Search loaded notifications','লোড হওয়া নোটিফিকেশন খুঁজুন'):t('Search activity','ইভেন্ট খুঁজুন')}<input maxLength={96} type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder={view==='api'?t('Route, HTTP status or correlation ID','রুট, HTTP স্ট্যাটাস বা করেলেশন আইডি'):undefined}/></label>}<div className="int-actions"><button disabled={loading||!online} onClick={()=>void load()}>{t('Refresh','রিফ্রেশ')}</button>{canManage&&<button disabled={!rows.length||loading||!!error} onClick={exportSafe}>{t('Export loaded records','লোড হওয়া রেকর্ড এক্সপোর্ট')}</button>}</div></div>
- {view==='api'&&<p className="int-caption">{t('Authorized payment-intent and document API requests only. Metadata logging is best effort; bodies, credentials and customer details are never stored here.','অনুমোদিত পেমেন্ট রিকোয়েস্ট ও ডকুমেন্ট API কলের তথ্য। লগ সংরক্ষণ সর্বোচ্চ চেষ্টা অনুযায়ী; বডি, গোপন কী বা গ্রাহকের তথ্য এখানে রাখা হয় না।')}</p>}{view==='exports'&&<p className="int-caption">{t('Your generated exports only. Download access is checked by the server; expired exports are unavailable.','শুধু আপনার তৈরি এক্সপোর্ট। সার্ভার ডাউনলোডের অনুমতি যাচাই করে; মেয়াদ শেষ হলে পাওয়া যাবে না।')}</p>}
- {loading&&!rows.length?<IntegrationSkeleton locale={locale} kind="events"/>:!visible.length&&!error?<IntegrationEmpty title={detailId?t('Event unavailable','ইভেন্ট পাওয়া যায়নি'):query?t('No matching activity','খোঁজা তথ্য পাওয়া যায়নি'):t('No activity yet','এখনও কোনো ইভেন্ট নেই')} description={t('Records appear after the corresponding action happens. Refresh to check again.','সংশ্লিষ্ট কাজ হওয়ার পর রেকর্ড দেখা যাবে। আবার দেখতে রিফ্রেশ করুন।')}/>:<div className="int-event-list">{visible.map(row=><article className="int-panel int-event" key={row.id}><div className="int-card-head"><h3>{String(view==='events'?row.event_type:view==='api'?`${row.method} · HTTP ${row.http_status}`:view==='audit'?row.action:view==='exports'?row.resource:row.type)}</h3><time className="int-caption">{integrationDate(row.created_at,locale)}</time></div>
- {view==='events'&&<><p className="int-caption">{t('Event ID','ইভেন্ট আইডি')}: <span className="int-mono">{row.id}</span></p><div className="int-actions">{!detailId&&<Link href={integrationHref(scope,'events',row.id)}>{t('Trace event →','ইভেন্টের বিস্তারিত →')}</Link>}{row.payment_id? <Link href={integrationHref(scope,'transactions',String(row.payment_id))}>{t('Open payment','পেমেন্ট দেখুন')}</Link>:null}<Link href={integrationHref(scope,'webhooks',undefined,'deliveries')}>{t('Webhook deliveries','ওয়েবহুক ডেলিভারি')}</Link></div><details open={!!detailId}><summary>{t('Safe event payload','নিরাপদ ইভেন্টের তথ্য')}</summary><p className="int-caption">{t('Unknown or sensitive fields are omitted.','অপরিচিত বা সংবেদনশীল তথ্য বাদ দেওয়া হয়েছে।')}</p><pre>{JSON.stringify(safeIntegrationPayload(row.payload),null,2)}</pre></details></>}
- {view==='api'&&<><code className="int-route">{String(row.route)}</code><dl className="int-facts"><div><dt>{t('Duration','সময়')}</dt><dd>{String(row.duration_ms)} ms</dd></div><div><dt>{t('Correlation ID','করেলেশন আইডি')}</dt><dd><CopyValue value={String(row.correlation_id)} locale={locale}/></dd></div></dl></>}
- {view==='audit'&&<><p>{t('Resource','বিষয়')}: {String(row.resource)}</p><p className="int-mono">{String(row.resource_id||'—')}</p>{resourceHref(row.resource,row.resource_id)&&<Link href={resourceHref(row.resource,row.resource_id)!}>{t('Open resource →','সংশ্লিষ্ট তথ্য দেখুন →')}</Link>}<p className="int-caption">{t('Free-text reasons and private data are omitted. Audit history cannot be cleared here.','ব্যক্তিগত তথ্য ও বিস্তারিত মন্তব্য বাদ দেওয়া হয়েছে। এই ইতিহাস মুছে ফেলা যায় না।')}</p></>}
- {view==='exports'&&<><p>{t('Expires','মেয়াদ শেষ')}: {integrationDate(row.expires_at,locale)}</p><CopyValue value={row.id} locale={locale}/>{Date.parse(String(row.expires_at))>now?<button disabled={busy||!online} onClick={()=>void download(row.id)}>{t('Download CSV','CSV ডাউনলোড')}</button>:<IntegrationStatus value="expired" locale={locale}/>}</>}
- {view==='notifications'&&<><IntegrationStatus value={row.read_at?'read':'unread'} locale={locale}/><div className="int-actions">{row.resource_id&&resourceHref(String(row.type)==='payment.verified'?'payments':String(row.type)==='payment.exception'?'incoming':'refunds',row.resource_id)?<Link href={resourceHref(String(row.type)==='payment.verified'?'payments':String(row.type)==='payment.exception'?'incoming':'refunds',row.resource_id)!}>{t('View details','বিস্তারিত দেখুন')}</Link>:null}{!row.read_at&&<button disabled={busy||!online} onClick={()=>void read(row.id)}>{t('Mark read','পড়া হয়েছে')}</button>}</div></>}
- </article>)}</div>}{cursor&&<button disabled={loading||!online} onClick={()=>void load(cursor)}>{t('Load more','আরও দেখুন')}</button>}
- {detailId&&rows.length>0&&<section className="int-guide"><h3>{t('Delivery trace','ডেলিভারির পথ')}</h3>{traceError&&<p role="alert">{traceError}</p>}{!traceError&&deliveries.length===0&&<p>{t('No delivery recorded for this event.','এই ইভেন্টের কোনো ডেলিভারি নেই।')}</p>}{deliveries.map(d=><div className="int-trace" key={d.id}><IntegrationStatus value={String(d.status)} locale={locale}/><span>HTTP {String(d.http_status??'—')} · {String(d.attempts)} {t('attempts','চেষ্টা')}</span><Link href={integrationHref(scope,'webhooks',String(d.endpoint_id),'deliveries')}>{t('Endpoint history →','ওয়েবহুক ইতিহাস →')}</Link></div>)}</section>}
- </>}
+ const load=useCallback(async(next?:string,signal?:AbortSignal)=>{
+  const id=++seq.current;
+  if(restricted){setRows([]);setCursor(null);setLoading(false);return;}
+  setLoading(true);setError("");
+  const params=new URLSearchParams();
+  if(query)params.set("q",query);
+  if(next)params.set("cursor",next);
+  const endpoint=tab==="events"?"operations/events"+(detailId?"/"+encodeURIComponent(detailId):""):"activity/"+tab;
+  try{
+   const response=await request(endpoint+"?"+params.toString(),undefined,signal);
+   if(id!==seq.current||signal?.aborted)return;
+   setRows(current=>next?[...current,...response.items.filter((item:ActivityRow)=>!current.some(previous=>previous.id===item.id))]:response.items);
+   setCursor(typeof response.next_cursor==="string"?response.next_cursor:null);
+  }catch(cause){
+   if(id!==seq.current||signal?.aborted)return;
+   if(cause instanceof IntegrationRequestError&&[401,403].includes(cause.status))setRows([]);
+   setError(cause instanceof Error?cause.message:t("Activity could not be loaded. Try again.","কার্যক্রম লোড হয়নি। আবার চেষ্টা করুন।"));
+  }finally{if(id===seq.current&&!signal?.aborted)setLoading(false)}
+ },[tab,query,detailId,restricted,request,locale]);
+ useEffect(()=>{const controller=new AbortController();void Promise.resolve().then(()=>{if(!controller.signal.aborted)void load(undefined,controller.signal)});return()=>controller.abort()},[load,refresh]);
+ function selectTab(selected:Tab){if(selected===tab)return;setSearch("");setQuery("");setRows([]);setCursor(null);setIntegrationTab(selected)}
+ const reload=()=>setRefresh(x=>x+1);
+ const resourceHref=(resource:unknown,id:unknown)=>{
+  const map:Record<string,string>={payments:"transactions",refunds:"refunds",devices:"devices",incoming:"incoming",integrations:"integrations",gateways:"gateways",invoices:"invoices"};
+  const section=map[String(resource)];
+  if(!section)return null;
+  return integrationHref(scope,section,["transactions","refunds","devices","incoming","invoices"].includes(section)?String(id):undefined);
+ };
+ async function download(id:string){
+  if(busy||!online||!canManage)return;
+  setBusy(true);setError("");
+  try{
+   const response=await fetch("/api/go/workspaces/"+scope.workspaceId+"/exports/"+encodeURIComponent(id)+"/download?environment="+encodeURIComponent(scope.environment),{cache:"no-store",signal:AbortSignal.timeout(15000)});
+   if(!response.ok)throw Error(response.status===410?t("This export expired.","এই এক্সপোর্টের মেয়াদ শেষ।"):t("Download failed. Try again.","ডাউনলোড হয়নি। আবার চেষ্টা করুন।"));
+   if(!response.headers.get("content-type")?.startsWith("text/csv"))throw Error(t("Invalid export response.","এক্সপোর্টের উত্তর সঠিক নয়।"));
+   const url=URL.createObjectURL(await response.blob()),a=document.createElement("a");
+   a.href=url;a.download="ekmivo-export.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+   setNotice(t("Download started.","ডাউনলোড শুরু হয়েছে।"));
+  }catch(cause){setError(cause instanceof Error?cause.message:t("Download failed.","ডাউনলোড হয়নি।"))}
+  finally{setBusy(false)}
+ }
+ function exportLoaded(){
+  const items=rows.map(row=>tab==="events"?{id:row.id,event_type:row.event_type,payment_id:row.payment_id,created_at:row.created_at,payload:safeIntegrationPayload(row.payload)}:
+   tab==="api"?{id:row.id,method:row.method,route:row.route,http_status:row.http_status,duration_ms:row.duration_ms,correlation_id:row.correlation_id,created_at:row.created_at}:
+   tab==="audit"?{id:row.id,resource:row.resource,resource_id:row.resource_id,action:row.action,created_at:row.created_at}:
+   {id:row.id,resource:row.resource,created_at:row.created_at,expires_at:row.expires_at});
+  const blob=new Blob([JSON.stringify({workspace_id:scope.workspaceId,environment:scope.environment,view:tab,loaded_records_only:true,items},null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ekmivo-"+tab+"-"+scope.environment+".json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  setNotice(t("Loaded records exported. This is not the full history.","লোড হওয়া রেকর্ড এক্সপোর্ট হয়েছে; এটি সম্পূর্ণ ইতিহাস নয়।"));
+ }
+ const title=detailId?t("Event details","ইভেন্টের বিস্তারিত"):t("Activity logs","কার্যক্রমের ইতিহাস");
+ return <section className="activity-logs" lang={locale}>
+  <header className="al-heading"><div><h1>{title}</h1><p>{detailId?t("Details of a single payment event.","একটি পেমেন্ট ইভেন্টের বিস্তারিত।"):t("Payment events, API requests and account changes.","পেমেন্ট, API ও অনুমোদিত পরিবর্তনের ইতিহাস।")}</p></div>
+   <div className="al-top-actions">{detailId&&<Link className="al-button" href={integrationHref(scope,"events")}>{t("All activity","সব কার্যক্রম")}</Link>}<button type="button" className="al-button" disabled={loading||!online} onClick={reload}>{t("Refresh","রিফ্রেশ")}</button></div>
+  </header>
+  {!detailId&&<div className="al-tabs" role="group" aria-label={t("Activity category","কার্যক্রমের ধরন")}>{(Object.keys(tabs) as Tab[]).map(id=><button type="button" key={id} aria-pressed={tab===id} onClick={()=>selectTab(id)}>{tabs[id][bn?1:0]}</button>)}</div>}
+  <IntegrationFeedback error={error} notice={notice} online={online} locale={locale}/>
+  <div className="al-panel">
+   <div className="al-toolbar">
+    <div className="al-count"><strong>{tabs[tab][bn?1:0]}</strong><span>{!loading?rows.length+" "+t("loaded","লোড হয়েছে"):"…"}</span></div>
+    <div className="al-controls">
+     {!detailId&&<label className="al-search"><span className="sr-only">{t("Search activity","কার্যক্রম খুঁজুন")}</span><input type="search" maxLength={96} value={search} onChange={event=>setSearch(event.target.value)} placeholder={t("Search activity…","কার্যক্রম খুঁজুন…")}/></label>}
+     <button type="button" className="al-button" disabled={!rows.length||loading||!!error} onClick={exportLoaded}>{t("Export loaded","লোড হওয়া তথ্য এক্সপোর্ট")}</button>
+    </div>
+   </div>
+   {restricted?<div className="al-empty"><strong>{t("Restricted to owners and admins","শুধু মালিক ও অ্যাডমিনের জন্য")}</strong><p>{t("You don't have permission to view these diagnostic records.","এই লগ দেখার অনুমতি নেই।")}</p></div>:
+    loading&&!rows.length?<div className="al-loading"><IntegrationSkeleton locale={locale} kind="events"/></div>:
+    !rows.length&&!error?<div className="al-empty"><strong>{query?t("No matching activity","মিলে এমন কার্যক্রম নেই"):t("No activity yet","এখনও কোনো কার্যক্রম নেই")}</strong><p>{t("Try another search or refresh.","অন্য কিছু খুঁজুন অথবা রিফ্রেশ করুন।")}</p></div>:
+    <div className="al-list">{rows.map(row=>{
+     const heading=tab==="events"?value(row,"event_type"):tab==="api"?value(row,"method")+" · HTTP "+value(row,"http_status"):tab==="audit"?value(row,"action"):value(row,"resource");
+     const href=tab==="audit"?resourceHref(row.resource,row.resource_id):null;
+     const failed=tab==="api"&&Number(row.http_status)>=400;
+     return <article className="al-record" key={row.id}>
+      <span className={"al-event-icon "+(failed?"al-failed":"")} aria-hidden="true"><DashboardIcon name={tab==="events"?"events":tab==="api"?"developers":tab==="audit"?"shield":"invoices"}/></span>
+      <div className="al-main">
+       <div className="al-record-head"><strong>{heading}</strong>{failed&&<span className="al-error-state">{t("Error","ত্রুটি")}</span>}</div>
+       <time>{integrationDate(row.created_at,locale)}</time>
+       {tab==="events"&&<div className="al-meta"><span>{t("Event ID","ইভেন্ট আইডি")}</span><CopyValue value={row.id} locale={locale}/></div>}
+       {tab==="events"&&<div className="al-row-actions">{!detailId&&<Link href={integrationHref(scope,"events",row.id)}>{t("View event","ইভেন্ট দেখুন")}</Link>}{row.payment_id?<Link href={integrationHref(scope,"transactions",String(row.payment_id))}>{t("Open payment","পেমেন্ট দেখুন")}</Link>:null}</div>}
+       {tab==="events"&&<details className="al-payload" open={!!detailId}><summary>{t("Event details","ইভেন্টের তথ্য")}</summary><pre>{JSON.stringify(safeIntegrationPayload(row.payload),null,2)}</pre></details>}
+       {tab==="api"&&<div className="al-facts"><span>{value(row,"route")}</span><span>{value(row,"duration_ms")} ms</span><CopyValue value={value(row,"correlation_id")} locale={locale}/></div>}
+       {tab==="audit"&&<div className="al-facts"><span>{t("Resource","বিষয়")}: {value(row,"resource")}</span><CopyValue value={value(row,"resource_id")} locale={locale}/>{href&&<Link href={href}>{t("Open record","রেকর্ড দেখুন")}</Link>}</div>}
+       {tab==="exports"&&<div className="al-facts"><span>{t("Expires","মেয়াদ")}: {integrationDate(row.expires_at,locale)}</span><CopyValue value={row.id} locale={locale}/>{Date.parse(String(row.expires_at))>now?<button disabled={busy||!online||!canManage} onClick={()=>void download(row.id)}>{t("Download CSV","CSV ডাউনলোড")}</button>:<IntegrationStatus value="expired" locale={locale}/>}</div>}
+      </div>
+     </article>
+    })}</div>}
+   {cursor&&!restricted&&<footer className="al-footer"><button type="button" className="al-button" disabled={loading||!online} onClick={()=>void load(cursor)}>{loading?t("Loading…","লোড হচ্ছে…"):t("Load more","আরও দেখুন")}</button></footer>}
+  </div>
  </section>;
 }
