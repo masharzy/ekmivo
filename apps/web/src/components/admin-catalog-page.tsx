@@ -5,7 +5,7 @@ import {AdminTableView} from "./platform-admin-inventory";
 import type {AdminLocale} from "./platform-admin-shell";
 type Provider={code:string;display_name:string;logo_url:string;provider_type:string;status:string;visible_in_add_account:boolean;checkout_enabled:boolean;live_enabled:boolean;verification_supported:boolean;sort_order:number};
 function DbMissing({name}:{name:string}){return <section className="pa-surface pa-not-connected"><p>{name} database setup required</p><span>Migration 0084_admin_provider_credit_catalog.sql must be applied to the control database before these actions are available. No demo records are shown.</span></section>}
-export async function AdminProvidersPage({isSuper}:{isSuper:boolean}){
+export async function AdminProvidersPage({isSuper,locale}:{isSuper:boolean;locale:"bn"|"en"}){
  let providers:Provider[]|null=null;
  try{
  const rows=await database()`SELECT code,display_name,logo_url,provider_type,status,visible_in_add_account,
@@ -14,9 +14,9 @@ export async function AdminProvidersPage({isSuper}:{isSuper:boolean}){
  provider_type:String(x.provider_type),status:String(x.status),visible_in_add_account:x.visible_in_add_account===true,
  checkout_enabled:x.checkout_enabled===true,live_enabled:x.live_enabled===true,verification_supported:x.verification_supported===true,sort_order:Number(x.sort_order)}));
  }catch(error){console.error("[admin/providers]",error instanceof Error?error.name:"unknown");}
- return providers?<AdminProviderManager providers={providers} canEdit={isSuper}/>:<><div className="pa-page-head"><h1>Payment Providers</h1></div><DbMissing name="Provider catalog"/></>;
+ return providers?<AdminProviderManager providers={providers} canEdit={isSuper} locale={locale}/>:<><div className="pa-page-head"><h1>Payment Providers</h1></div><DbMissing name="Provider catalog"/></>;
 }
-export async function AdminCreditsPage({isSuper}:{isSuper:boolean}){
+export async function AdminCreditsPage({isSuper,locale}:{isSuper:boolean;locale:"bn"|"en"}){
  let workspaces:Array<{id:string;name:string;balance:number}>|null=null;
  let history:Array<{id:string;workspace:string;delta:number;balance_after:number;reason:string;actor:string;created_at:string}>=[];
  try{
@@ -31,7 +31,7 @@ export async function AdminCreditsPage({isSuper}:{isSuper:boolean}){
  history=entries.map(x=>({id:String(x.id),workspace:String(x.workspace),delta:Number(x.delta),
  balance_after:Number(x.balance_after),reason:String(x.reason),actor:String(x.actor),created_at:new Date(String(x.created_at)).toISOString()}));
  }catch(error){console.error("[admin/credits]",error instanceof Error?error.name:"unknown");}
- return workspaces?<AdminAiCreditsManager canEdit={isSuper} workspaces={workspaces} entries={history}/>:<><div className="pa-page-head"><h1>AI Credits</h1></div><DbMissing name="Credit ledger"/></>;
+ return workspaces?<AdminAiCreditsManager canEdit={isSuper} locale={locale} workspaces={workspaces} entries={history}/>:<><div className="pa-page-head"><h1>AI Credits</h1></div><DbMissing name="Credit ledger"/></>;
 }
 export async function AdminSubscriptionsPage({locale,query}:{locale:AdminLocale;query:string}){
  const base="/"+locale+"/admin",q=query.slice(0,80),term="%"+q+"%";
