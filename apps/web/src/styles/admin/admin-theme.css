@@ -1,6 +1,6 @@
 /* Explicit Admin typography and scoped resets, values from Ekmivo_Admin.html. */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600&display=swap");
-.pa-root.pa-admin-design,.pa-mfa-screen.pa-admin-design{background:var(--bg);color:var(--tx);font:13px/1.45 Inter,system-ui,-apple-system,"Segoe UI","Noto Sans Bengali",sans-serif;font-feature-settings:"cv11","ss01";font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;min-height:100dvh}
+.pa-root.pa-admin-design,.pa-mfa-screen.pa-admin-design{background:var(--bg);color:var(--tx);font:13px/1.45 Inter,var(--font-hind-siliguri),system-ui,-apple-system,"Segoe UI",sans-serif;font-feature-settings:"cv11","ss01";font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;min-height:100dvh}
 .pa-root.pa-admin-design *,.pa-mfa-screen.pa-admin-design *{box-sizing:border-box}
 .pa-root.pa-admin-design :focus-visible,.pa-mfa-screen.pa-admin-design :focus-visible{outline:2px solid var(--ac);outline-offset:1px}
 .pa-root.pa-admin-design :is(button,input,select,textarea){font:inherit;color:inherit}
@@ -8,3 +8,7 @@
 .pa-root.pa-admin-design :is(h1,h2,h3,h4,h5,h6,p){margin-top:0}
 .pa-root.pa-admin-design :is(input,textarea,select)::placeholder{color:var(--mu)}
 @media(prefers-reduced-motion:reduce){.pa-root.pa-admin-design *, .pa-root.pa-admin-design *:before,.pa-root.pa-admin-design *:after{animation:none!important;transition:none!important}}
+
+/* Bengali glyphs always use the bundled Hind Siliguri face, English stays Inter. */
+.pa-root.pa-admin-design[lang="bn"],.pa-mfa-screen.pa-admin-design[lang="bn"]{font-family:Inter,var(--font-hind-siliguri),sans-serif}
+.pa-root.pa-admin-design :is(button,input,select,textarea),.pa-mfa-screen.pa-admin-design :is(button,input,select,textarea){font-family:inherit}

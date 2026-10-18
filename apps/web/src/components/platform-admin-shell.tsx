@@ -45,7 +45,8 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
  const [entities,setEntities]=useState<Array<{id:string;kind:string;label:string;path:string}>>([]);
  const [entitySearching,setEntitySearching]=useState(false);
  const root="/"+locale+"/admin";
- const active=(path:string)=>pathname===root+(path?"/"+path:"")||!!path&&pathname.startsWith(root+"/"+path+"/");
+ const normalized=pathname.replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
+ const active=(path:string)=>normalized==="/admin"+(path?"/"+path:"")||!!path&&normalized.startsWith("/admin/"+path+"/");
  const nav=useMemo(()=>groups.flatMap(g=>g.items.map(item=>({name:item[0],path:item[1],icon:item[2]}))),[]);
  const options=nav.filter(item=>(item.name+" "+(bnNames[item.name]||"")).toLowerCase().includes(term.trim().toLowerCase())).slice(0,16);
  const go=(path:string)=>{setMobile(false);setSearch(false);setTerm("");setEntities([]);setEntitySearching(false);startTransition(()=>router.push(path));};
@@ -63,7 +64,14 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
  },[search,role,term,locale]);
 
  useEffect(()=>{document.cookie="ekmivo-admin-theme="+mode+";path=/;max-age=31536000;samesite=lax";},[mode]);
- const goLocale=(next:AdminLocale)=>{if(next!==locale)go(pathname.replace(/^\/(en|bn)(?=\/)/,"/"+next));};
+ const goLocale=(next:AdminLocale)=>{
+  if(next===locale)return;
+  document.cookie="ekmivo-locale="+next+";path=/;max-age=31536000;samesite=lax";
+  const prefixed=/^\/(en|bn)(?=\/|$)/.test(pathname);
+  const nextPath=prefixed?pathname.replace(/^\/(en|bn)(?=\/|$)/,"/"+next):"/"+next+pathname;
+  setMobile(false);setSearch(false);
+  startTransition(()=>{router.replace(nextPath);router.refresh()});
+ };
  const jump=(path:string)=>go(root+(path?"/"+path:""));
  return <div className={"pa-root pa-admin-design"+(production?" pa-production":"")} data-admin-theme={mode} lang={locale}>
   <div className={"pa-route-progress"+(pending?" is-visible":"")} aria-hidden="true"/>

@@ -151,3 +151,80 @@
 .pa-root.pa-admin-design .pa-dialog-foot{gap:8px}
 @media(max-width:900px){.pa-root.pa-admin-design .pa-admin-two-col{grid-template-columns:1fr}}
 @media(max-width:480px){.pa-root.pa-admin-design .pa-admin-form-pair{grid-template-columns:1fr}}
+
+/* Admin reference refinements — only this scoped Admin root, never global marketing styles. */
+.pa-root.pa-admin-design .pa-stats-strip{display:grid;gap:12px;border:0;background:transparent;overflow:visible;grid-template-columns:repeat(4,minmax(0,1fr))}
+.pa-root.pa-admin-design .pa-stats-strip .pa-stat,.pa-root.pa-admin-design .pa-stats-strip .pa-stat:first-child{min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:8px;padding:18px 20px;background:var(--sf);border:1px solid var(--bd);border-radius:10px;min-height:105px}
+.pa-root.pa-admin-design .pa-stats-strip .pa-stat span{display:block;min-height:0;line-height:1.45;color:var(--mu)}
+.pa-root.pa-admin-design .pa-stats-strip .pa-stat strong{display:block;margin:0;font-size:24px;line-height:1.2;letter-spacing:-.03em;overflow-wrap:anywhere}
+.pa-root.pa-admin-design .pa-overview-grid>div{display:grid;align-content:start;gap:20px;min-width:0}
+.pa-root.pa-admin-design .pa-overview-grid .pa-chart-panel{padding:18px 20px;min-width:0}
+.pa-root.pa-admin-design .pa-overview-grid .pa-chart-panel .pa-split-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.pa-root.pa-admin-design .pa-overview-grid .pa-chart-panel h2{margin:0}
+.pa-root.pa-admin-design .pa-chart-panel svg{display:block;max-width:100%;height:auto}
+.pa-root.pa-admin-design .pa-workspace-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pa-root.pa-admin-design .pa-workspace-summary-grid>div{display:grid;align-content:center;gap:8px;padding:16px 18px;min-height:88px}
+.pa-root.pa-admin-design .pa-workspace-summary-grid span,.pa-root.pa-admin-design .pa-workspace-plan-metrics span,.pa-root.pa-admin-design .pa-workspace-plan-usage span{color:var(--mu);font-size:12px}
+.pa-root.pa-admin-design .pa-workspace-summary-grid strong,.pa-root.pa-admin-design .pa-workspace-plan-metrics strong{font-size:18px;line-height:1.3;font-weight:550;overflow-wrap:anywhere}
+.pa-root.pa-admin-design .pa-workspace-plan,.pa-root.pa-admin-design .pa-workspace-finance{display:grid;gap:16px;min-width:0}
+.pa-root.pa-admin-design .pa-workspace-plan .pa-page-head,.pa-root.pa-admin-design .pa-workspace-finance .pa-page-head{align-items:center}
+.pa-root.pa-admin-design .pa-workspace-plan-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pa-root.pa-admin-design .pa-workspace-plan-metrics>div{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px;display:grid;gap:10px;min-width:0}
+.pa-root.pa-admin-design .pa-workspace-plan-usage{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.pa-root.pa-admin-design .pa-workspace-plan-usage>div{display:grid;gap:7px;padding:12px;border:1px solid var(--bd);border-radius:8px}
+.pa-root.pa-admin-design .pa-workspace-plan-usage strong{font-size:16px;font-weight:550}
+.pa-root.pa-admin-design .pa-workspace-plan-subhead{padding:14px 16px;border-bottom:1px solid var(--bd)}
+.pa-root.pa-admin-design .pa-workspace-plan-subhead h2{margin:0}
+.pa-root.pa-admin-design .pa-workspace-sub-modal{width:min(480px,calc(100vw - 32px))}
+.pa-root.pa-admin-design .pa-workspace-plan-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pa-root.pa-admin-design .pa-workspace-check{display:flex!important;flex-direction:row;align-items:center;gap:10px}
+.pa-root.pa-admin-design .pa-workspace-check input{width:16px;height:16px}
+.pa-root.pa-admin-design .pa-workspace-danger{color:var(--ba)!important;border-color:var(--ba)!important}
+.pa-root.pa-admin-design .pa-workspace-finance .pa-page-actions{margin-left:auto}
+.pa-root.pa-admin-design .pa-workspace-finance .pa-admin-table-search{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bd)}
+.pa-root.pa-admin-design .pa-workspace-finance .pa-admin-table-search input{max-width:320px}
+.pa-root.pa-admin-design .pa-workspace-finance-error{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px}
+.pa-root.pa-admin-design .pa-workspace-finance-error p{margin:0;color:var(--ba)}
+.pa-root.pa-admin-design .pa-workspace-finance-dialog{width:min(480px,calc(100vw - 32px))}
+.pa-root.pa-admin-design .mp-admin{gap:20px;min-width:0}
+.pa-root.pa-admin-design .mp-admin>header.pa-page-head{align-items:flex-end}
+.pa-root.pa-admin-design .mp-toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:0}
+.pa-root.pa-admin-design .mp-toolbar label{gap:5px}
+.pa-root.pa-admin-design .mp-toolbar :is(input,select){min-width:140px}
+.pa-root.pa-admin-design .mp-table{overflow-x:auto;border:1px solid var(--bd);border-radius:10px;background:var(--sf)}
+.pa-root.pa-admin-design .mp-table th{text-align:left;color:var(--mu);font-size:12px;font-weight:500;padding:12px 16px}
+.pa-root.pa-admin-design .mp-table td{padding:12px 16px;vertical-align:middle}
+.pa-root.pa-admin-design .mp-table td:first-child{min-width:160px}
+.pa-root.pa-admin-design .mp-table .mp-actions{gap:6px;white-space:nowrap}
+.pa-root.pa-admin-design .mp-table .mp-actions button{height:28px;min-height:28px;padding:0 10px}
+.pa-root.pa-admin-design .mp-admin-subscriptions-launch{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px 20px}
+.pa-root.pa-admin-design .mp-admin-subscriptions-launch h2{font-size:13px;font-weight:600;margin:0 0 5px}
+.pa-root.pa-admin-design .mp-admin-subscriptions-launch p{margin:0;color:var(--mu)}
+.pa-root.pa-admin-design .mp-editor-dialog{display:block;width:min(520px,calc(100vw - 32px));max-width:520px;max-height:90dvh;overflow:auto;padding:0;background:var(--sf)}
+.pa-root.pa-admin-design .mp-editor-dialog form{border:0;border-radius:0;background:transparent;padding:0 20px 16px}
+.pa-root.pa-admin-design .mp-editor-dialog aside{position:static;max-width:100%;padding:0 20px 20px}
+.pa-root.pa-admin-design .mp-editor-dialog .mp-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pa-root.pa-admin-design .mp-editor-dialog fieldset{border-top:0;margin:0;padding:14px 0 18px}
+.pa-root.pa-admin-design .mp-editor-dialog legend{font-size:13px;font-weight:600;padding:0;margin:0 0 10px}
+.pa-root.pa-admin-design .mp-editor-dialog .mp-check{min-height:28px;font-size:13px}
+.pa-root.pa-admin-design .mp-editor-dialog .mp-check input{accent-color:var(--ink)}
+.pa-root.pa-admin-design .mp-wizard-header{display:flex;justify-content:space-between;align-items:flex-start;padding:16px 0 12px}
+.pa-root.pa-admin-design .mp-wizard-header h2{margin:0;font-size:15px}
+.pa-root.pa-admin-design .mp-wizard-header p{margin:3px 0 0;font-size:12px;color:var(--mu)}
+.pa-root.pa-admin-design .mp-wizard-steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:0 0 14px;border-bottom:1px solid var(--bd)}
+.pa-root.pa-admin-design .mp-wizard-steps button{display:grid;justify-items:center;align-content:center;gap:4px;height:auto;min-height:42px;padding:4px 2px;border-radius:6px;border:1px solid transparent;font-size:12px;color:var(--mu);background:var(--s2)}
+.pa-root.pa-admin-design .mp-wizard-steps button span{font-size:10px;white-space:nowrap}
+.pa-root.pa-admin-design .mp-wizard-steps button[aria-current=step]{background:var(--ink);border-color:var(--ink);color:var(--onink)}
+.pa-root.pa-admin-design .mp-wizard-description{margin:12px 0 0;color:var(--mu)!important;font-size:12px}
+.pa-root.pa-admin-design .mp-wizard-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--bd);padding-top:14px}
+.pa-root.pa-admin-design .mp-subscribers-dialog{display:block;width:min(680px,calc(100vw - 32px));max-width:680px;max-height:90dvh;overflow:auto;padding:0}
+.pa-root.pa-admin-design .mp-subscribers-dialog>.pa-dialog-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px}
+.pa-root.pa-admin-design .mp-subscribers-dialog .mp-workspace{border:0;border-top:1px solid var(--bd);border-radius:0;padding:16px 20px 20px}
+.pa-root.pa-admin-design .mp-subscribers-dialog .mp-workspace>h2{display:none}
+.pa-root.pa-admin-design .mp-subscribers-dialog .mp-workspace .mp-toolbar{margin:0 0 16px}
+.pa-root.pa-admin-design .mp-subscribers-dialog .mp-metrics{gap:10px;margin:12px 0}
+.pa-root.pa-admin-design .mp-subscribers-dialog .mp-metrics>div{padding:12px}
+.pa-root.pa-admin-design .mp-subscribers-dialog .mp-workspace form{margin:14px 0}
+@media(max-width:1100px){.pa-root.pa-admin-design .pa-stats-strip,.pa-root.pa-admin-design .pa-workspace-plan-metrics,.pa-root.pa-admin-design .pa-workspace-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.pa-root.pa-admin-design .pa-stats-strip,.pa-root.pa-admin-design .pa-workspace-summary-grid,.pa-root.pa-admin-design .pa-workspace-plan-metrics{gap:10px}.pa-root.pa-admin-design .pa-stats-strip .pa-stat{padding:14px}.pa-root.pa-admin-design .mp-editor-dialog .mp-fields{grid-template-columns:1fr}.pa-root.pa-admin-design .mp-admin-subscriptions-launch{align-items:flex-start;flex-direction:column}.pa-root.pa-admin-design .pa-workspace-finance .pa-page-actions{margin-left:0}}
+@media(max-width:420px){.pa-root.pa-admin-design .pa-stats-strip,.pa-root.pa-admin-design .pa-workspace-plan-metrics,.pa-root.pa-admin-design .pa-workspace-summary-grid,.pa-root.pa-admin-design .pa-workspace-plan-usage{grid-template-columns:1fr}.pa-root.pa-admin-design .mp-wizard-steps button span{font-size:9px}}

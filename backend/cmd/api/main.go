@@ -64,6 +64,7 @@ func newHandlerWithRepository(repo *authz.Repository) http.Handler {
 func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/platform/workspaces/{workspaceID}/payment-usage", pay.HandleAdminPlanUsage)
+	mux.HandleFunc("GET /v1/platform/workspaces/{workspaceID}/operations/{resource}", pay.HandleAdminWorkspaceOperations)
 	mux.HandleFunc("POST /v1/public-sandbox/receiver/{receiverID}", pay.HandlePublicSandboxReceiver)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/activity/{activityKind}", pay.HandleActivity)
 	mux.HandleFunc("POST /v1/public/checkout/{token}/notices/{noticeAction}", pay.HandleNotice)
