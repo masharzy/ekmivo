@@ -1,6 +1,7 @@
 export function paymentMethodError(status:number,code:string,bn:boolean,requestId?:string){
  const t=(en:string,bd:string)=>bn?bd:en;
  const messages:Record<string,string>={
+ RECEIVING_ACCOUNT_IN_USE:t("This receiving number is registered in another workspace. Use a different number or contact support.","এই রিসিভিং নম্বর অন্য ওয়ার্কস্পেসে নিবন্ধিত আছে। অন্য নম্বর ব্যবহার করুন অথবা সহায়তা নিন।"),
  PLAN_RESOURCE_LIMIT:t("Your plan's receiving-account limit is reached. Disable an unused account or change your plan.","প্ল্যানের রিসিভিং অ্যাকাউন্টের সীমা পূর্ণ। অব্যবহৃত অ্যাকাউন্ট বন্ধ করুন বা প্ল্যান বদলান।"),
  SUBSCRIPTION_REQUIRED:t("An active payment plan is required.","সক্রিয় পেমেন্ট প্ল্যান প্রয়োজন।"),
  CONFLICT:t("This account already exists. Refresh the account list before adding it again.","এই অ্যাকাউন্ট আগে থেকেই আছে। আবার যোগ করার আগে তালিকা রিফ্রেশ করুন।"),

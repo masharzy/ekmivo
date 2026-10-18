@@ -44,3 +44,21 @@ func TestSandboxAdmissionDoesNotNeedLiveSubscription(t *testing.T) {
 		t.Fatal("sandbox must not spend a live payment allowance")
 	}
 }
+
+func TestReceivingAccountConflictIsDistinctFromOtherConflicts(t *testing.T) {
+	for _, tc := range []struct{ constraint, code string }{
+		{"financial_exclusive_receiving_identity", "RECEIVING_ACCOUNT_IN_USE"},
+		{"other_unique_constraint", "CONFLICT"},
+	} {
+		w := httptest.NewRecorder()
+		mapped(w, &pgconn.PgError{Code: "23505", ConstraintName: tc.constraint})
+		var body struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+		}
+		if json.Unmarshal(w.Body.Bytes(), &body) != nil || w.Code != 409 || body.Error.Code != tc.code {
+			t.Fatalf("constraint %s: %d %s", tc.constraint, w.Code, w.Body.String())
+		}
+	}
+}

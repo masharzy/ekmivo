@@ -7,3 +7,5 @@ test('non-JSON gateway errors retain HTTP status without claiming the save faile
 test('duplicate account explains refresh instead of retrying creation',()=>assert.match(paymentMethodError(409,'CONFLICT',false),/already exists/));
 test('safe diagnostic code and request ID are retained',()=>assert.match(paymentMethodError(503,'PLAN_SNAPSHOT_REQUIRED',false,'a'.repeat(24)),/PLAN_SNAPSHOT_REQUIRED · a{24}/));
 test('Bengali message and unsafe diagnostic filtering',()=>{const m=paymentMethodError(503,'<html>bad</html>',true,'secret');assert.match(m,/সংরক্ষণ নিশ্চিত হয়নি/);assert.ok(!m.includes('<html>'));assert.ok(!m.includes('secret'))});
+
+test('cross-workspace account conflict explains why the current list can be empty',()=>{assert.match(paymentMethodError(409,'RECEIVING_ACCOUNT_IN_USE',false),/another workspace/);assert.match(paymentMethodError(409,'RECEIVING_ACCOUNT_IN_USE',true),/অন্য ওয়ার্কস্পেসে/)});

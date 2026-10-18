@@ -34,3 +34,9 @@ Render searches returned no matching historical error/request records; HTTP coun
 ## Activation
 
 Migration 0094 was applied to production control with the existing migration lock and exact SHA-256 ledger entry. Production restricted-runtime execution returned `api_keys=0`, `team_members=1` for the target workspace. Proxy diagnostics preserve a generated correlation header on upstream/network failures and log only route templates/error classes. No automatic retry of financial writes was introduced.
+
+## Follow-up: account conflict identified
+
+Owner supplied correlation `c6544ceaa140808a848e2d95`. Production activity confirms POST receiving-account operation returned 409 at 07:39:07 UTC. Render logs show SQLSTATE 23505 on `financial_receiving_accounts` at that time. The target workspace has no receiving-account rows. Schema inspection found the additional global unique index `financial_exclusive_receiving_identity(environment,method,identity_hmac)`, beyond the workspace-local constraint. Thus a receiving identity in another workspace conflicts even when the current list is empty. The generic message failed to explain this distinction.
+
+Map that exact constraint to `RECEIVING_ACCOUNT_IN_USE` with an explicit cross-workspace message in both languages; retain generic conflict for other unique constraints. Safe diagnostics now also include the constraint name. Preserve the existing global exclusivity policy, immutable financial history and other workspace records. No accounts were moved, deleted or disclosed in the user response. This explains the newly observed 409; it does not retrospectively prove a cause for old 502/503 responses.
