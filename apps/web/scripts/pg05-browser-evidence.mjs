@@ -29,9 +29,19 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   const context=await browser.newContext({viewport:{width:1280,height:900},permissions:["clipboard-read","clipboard-write"]});
   await context.addCookies([{name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"}]);
   const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
+  // Capture only public URL paths/statuses; never log session headers/tokens.
+  const redirectTrace=[];
+  page.on("response",response=>{
+   if(response.status()>=300&&response.status()<400&&redirectTrace.length<55){
+    const target=response.headers()["location"]||"";
+    const url=new URL(response.url());
+    const dest=target?new URL(target,url).pathname:"";
+    redirectTrace.push(response.status()+" "+url.pathname+" -> "+dest);
+   }
+  });
   page.on("dialog",dialog=>dialog.accept());
   const path=`/w/${tenant}/payments/requests`;
-  await page.goto(origin+path);
+  try{await page.goto(origin+path)}catch(error){throw Error(String(error)+"\nRedirect chain:\n"+redirectTrace.join("\n")+"\nNext logs:\n"+logs)}
   await page.getByRole("heading",{name:"Order and invoice sources",exact:true}).waitFor();
   const ref="BROWSER-INVOICE-"+randomUUID();
   await page.getByLabel("Document reference",{exact:true}).fill(ref);
