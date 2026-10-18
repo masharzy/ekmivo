@@ -217,13 +217,13 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  body=!isSuper?<><PageHead title={t}/><Denied locale={locale}/></>:key==="workspaces"?<AdminWorkspaceDetail locale={locale} id={extra[0]} sub={extra[1]||""} actor={admin.user.id}/>:!extra[1]?<AdminUserDetail locale={locale} id={extra[0]}/>:notFound();
  }else if(key==="workspaces"||key==="users"||key==="audit"){
  const page=isSuper?(key==="workspaces"?await workspaces(locale,q,after):key==="users"?await users(locale,q,after):await audit(locale,q,after)):null;
- body=<><PageHead title={t} action={key==="workspaces"&&isSuper?<AdminModal title="New workspace" label="Add workspace"><AdminWorkspaceCreationForm/></AdminModal>:undefined}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
+ body=<><PageHead title={t} action={key==="workspaces"&&isSuper?<AdminModal title="New workspace" label="Add workspace"><AdminWorkspaceCreationForm locale={locale}/></AdminModal>:undefined}/>{page?<><Search locale={locale} query={q} kind={key}/><Records locale={locale} base={base} query={q} page={page}/></>:<Denied locale={locale}/>}</>;
  }else if(key==="subscriptions"){
  body=isSuper?<AdminSubscriptionsPage locale={locale} query={q}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="providers"){
- body=isSuper?<AdminProvidersPage isSuper/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ body=isSuper?<AdminProvidersPage isSuper locale={locale}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="credits"){
- body=isSuper?<AdminCreditsPage isSuper/>:<><PageHead title={t}/><Denied locale={locale}/></>;
+ body=isSuper?<AdminCreditsPage isSuper locale={locale}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="plans"){
  body=isSuper?<AdminPaymentPlansPage locale={locale} actor={admin.user.id}/>:<Denied locale={locale}/>;
  }else if(key==="staff"){
