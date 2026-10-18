@@ -1,5 +1,6 @@
 "use server";
 import {revalidatePath} from "next/cache";
+import {createHash} from "node:crypto";
 import {database} from "../lib/server/db";
 import {requireFreshSuperAdmin} from "../lib/server/platform-admin";
 export type AdminCatalogState={status:"idle"|"success"|"error";message:string};
@@ -10,6 +11,7 @@ const result=(status:AdminCatalogState["status"],message:string):AdminCatalogSta
 const supported=new Set(["bkash","nagad","rocket"]);
 function validateLogo(s:string){
  if(!s)return true;
+ if(/^\/api\/provider-logos\/[a-f0-9]{64}$/.test(s))return true;
  if(s.startsWith("/payment-assets/"))return /^[\/a-zA-Z0-9_.-]+$/.test(s);
  if(/^https:\/\//.test(s))return s.length<2048;
  return /^data:image\/(?:png|webp|jpeg);base64,[a-zA-Z0-9+/=]+$/.test(s)&&s.length<=700000;
@@ -28,9 +30,18 @@ export async function saveAdminProvider(_previous:AdminCatalogState,form:FormDat
  if(live&&!checkout)return result("error","Live availability requires checkout to be enabled.");
  let logo=field(form,"logo_url");
  const uploaded=form.get("logo_file");
- if(uploaded instanceof File && uploaded.size>0){
-  if(uploaded.size>512000||!["image/png","image/webp","image/jpeg"].includes(uploaded.type))return result("error","Upload a PNG, WebP or JPEG logo up to 500 KB.");
-  logo="data:"+uploaded.type+";base64,"+Buffer.from(await uploaded.arrayBuffer()).toString("base64");
+ let asset:{hash:string;contentType:string;bytes:Buffer}|null=null;
+ if(uploaded instanceof File&&uploaded.size>0){
+  if(uploaded.size>512000||!["image/png","image/webp","image/jpeg"].includes(uploaded.type))return result("error","Upload a PNG, WebP or JPEG up to 500 KB.");
+  const bytes=Buffer.from(await uploaded.arrayBuffer());
+  const png=bytes.length>=8&&bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  const jpg=bytes.length>=3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
+  const webp=bytes.length>=12&&bytes.toString("ascii",0,4)==="RIFF"&&bytes.toString("ascii",8,12)==="WEBP";
+  if((uploaded.type==="image/png"&&!png)||(uploaded.type==="image/jpeg"&&!jpg)||(uploaded.type==="image/webp"&&!webp))
+   return result("error","Image format and file contents do not match.");
+  const hash=createHash("sha256").update(bytes).digest("hex");
+  asset={hash,contentType:uploaded.type,bytes};
+  logo="/api/provider-logos/"+hash;
  }
  if(!validateLogo(logo))return result("error","Logo must be a safe HTTPS URL, local asset path, or approved image upload.");
  try{
@@ -39,6 +50,11 @@ export async function saveAdminProvider(_previous:AdminCatalogState,form:FormDat
    if(!roles.length)throw Error("PERMISSION");
    const prev=await tx`SELECT code,display_name,provider_type,status,visible_in_add_account,checkout_enabled,live_enabled,sort_order FROM platform_payment_providers WHERE code=${code} FOR UPDATE`;
    const action=prev.length?"updated":"created";
+   if(asset){
+    await tx`INSERT INTO platform_provider_assets(digest,content_type,bytes,created_by)
+      VALUES (${asset.hash},${asset.contentType},${asset.bytes},${actor.user.id}::uuid)
+      ON CONFLICT(digest) DO NOTHING`;
+   }
    await tx`INSERT INTO platform_payment_providers(code,display_name,logo_url,provider_type,status,visible_in_add_account,checkout_enabled,live_enabled,verification_supported,sort_order,updated_by)
     VALUES (${code},${name},${logo},${type},${status},${visible},${checkout},${live},${runtimeSupported},${order},${actor.user.id}::uuid)
     ON CONFLICT(code) DO UPDATE SET display_name=EXCLUDED.display_name,logo_url=EXCLUDED.logo_url,provider_type=EXCLUDED.provider_type,
