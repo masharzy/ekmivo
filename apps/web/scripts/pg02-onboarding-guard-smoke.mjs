@@ -29,6 +29,7 @@ const sandbox={
    useActionState:(_action,initial)=>[initial,()=>{}]
   };
   if(id==="react-dom")return {useFormStatus:()=>({pending:false})};
+  if(id==="./public-icon")return {PublicIcon:()=>null};
   if(id==="react/jsx-runtime")return {jsx:()=>null,jsxs:()=>null};
   if(id==="../actions/account")return {createWorkspaceAction:()=>{}};
   if(id==="../lib/server/validation")return {emptyState:{status:"idle"}};
