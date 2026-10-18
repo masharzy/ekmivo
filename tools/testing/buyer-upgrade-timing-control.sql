@@ -1,0 +1,56 @@
+-- Isolated Neon control branch only. Synthetic proof calls are not wallet evidence.
+DO $test$
+DECLARE a uuid:=gen_random_uuid();outsider uuid:=gen_random_uuid();w uuid:=gen_random_uuid();w2 uuid:=gen_random_uuid();w3 uuid:=gen_random_uuid();suffix text:=left(replace(gen_random_uuid()::text,'-',''),10);
+ low text:='timing-low-'||suffix;high text:='timing-high-'||suffix;t jsonb;q jsonb;qnow jsonb;i jsonb;initial jsonb;p jsonb;proof uuid:=gen_random_uuid();ending timestamptz;future_end timestamptz;shifted timestamptz;oldrev bigint;
+BEGIN BEGIN
+ UPDATE platform_billing_settings SET workspace_id='3c12457f-01e7-4b85-9269-0244b55c7be4' WHERE singleton;
+ INSERT INTO app_users(id,email,display_name,password_hash) VALUES(a,'timing-'||suffix||'@example.invalid','Timing fixture','invalid-test-only'),(outsider,'timing-out-'||suffix||'@example.invalid','Outsider','invalid-test-only');
+ INSERT INTO platform_administrators(user_id,role) VALUES(a,'super_admin');
+ INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(w,'Timing scheduled '||suffix,'commerce',a),(w2,'Timing immediate '||suffix,'commerce',a),(w3,'Timing stale '||suffix,'commerce',a);
+ INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(w,a,'owner'),(w2,a,'owner'),(w3,a,'owner');
+ t:=jsonb_build_object('name','Timing low','name_bn','পরীক্ষার প্ল্যান','description','','description_bn','','kind','paid','amount_minor',10000,'period_days',30,'grace_days',0,'free_days',NULL,'payment_limit',500,'quota_period','billing','active_checkout_limit',20,'create_per_minute',120,'features',jsonb_build_object('invoices',true,'payment_links',true,'reports',true,'exports',true),'limits',jsonb_build_object('api_keys',NULL,'team_members',NULL,'devices',NULL,'payment_methods',NULL),'badge','','badge_bn','','contact_url','');
+ PERFORM payment_plan_admin(a,'save',jsonb_build_object('id',low,'terms',t,'status','published','visibility','public','reason','Isolated activation timing fixture'));
+ PERFORM payment_plan_admin(a,'save',jsonb_build_object('id',high,'terms',t||'{"name":"Timing high","amount_minor":25000,"payment_limit":2000}'::jsonb,'status','published','visibility','public','reason','Isolated activation timing fixture'));
+ BEGIN PERFORM dashboard_billing_quote(w3,a,high,1,'period_end');RAISE EXCEPTION 'no-plan future activation allowed';EXCEPTION WHEN SQLSTATE '22023' THEN NULL;END;
+ initial:=pg13_billing_issue(w,a,low,'initial-timing-'||suffix);PERFORM pg13_billing_verified(w,(initial->>'id')::uuid,gen_random_uuid(),10000,now());
+ initial:=pg13_billing_issue(w2,a,low,'initial-now-'||suffix);PERFORM pg13_billing_verified(w2,(initial->>'id')::uuid,gen_random_uuid(),10000,now());
+ ending:=now()+interval '10 days';UPDATE pg13_subscriptions SET paid_until=ending,grace_until=ending WHERE workspace_id IN (w,w2);
+ BEGIN PERFORM dashboard_billing_quote(w,outsider,high,1,'period_end');RAISE EXCEPTION 'cross-tenant quote';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+ BEGIN PERFORM dashboard_billing_quote(w,a,high,1,'unknown');RAISE EXCEPTION 'invalid timing accepted';EXCEPTION WHEN SQLSTATE '22023' THEN NULL;END;
+ qnow:=dashboard_billing_quote(w,a,high,1,'now');
+ IF qnow->>'operation'<>'upgrade' OR (qnow->>'amount_minor')::bigint>=25000 OR (qnow->>'entitlement_end')::timestamptz<>ending THEN RAISE EXCEPTION 'immediate proration changed';END IF;
+ q:=dashboard_billing_quote(w,a,high,1,'period_end');future_end:=ending+interval '30 days';
+ IF q->>'operation'<>'scheduled_upgrade' OR (q->>'amount_minor')::bigint<>25000 OR (q->>'entitlement_start')::timestamptz<>ending OR (q->>'entitlement_end')::timestamptz<>future_end THEN RAISE EXCEPTION 'future price/dates incorrect';END IF;
+ i:=dashboard_billing_issue(w,a,(q->>'id')::uuid,'prepaid-timing-'||suffix);
+ IF (dashboard_billing_issue(w,a,(q->>'id')::uuid,'prepaid-timing-'||suffix)->>'id')<>i->>'id' THEN RAISE EXCEPTION 'invoice replay duplicated';END IF;
+ IF (SELECT next_paid_invoice_id FROM pg13_subscriptions WHERE workspace_id=w) IS NOT NULL THEN RAISE EXCEPTION 'unpaid invoice scheduled access';END IF;
+ BEGIN PERFORM pg13_billing_verified(w,(i->>'id')::uuid,proof,24999,now());RAISE EXCEPTION 'wrong payment accepted';EXCEPTION WHEN check_violation THEN NULL;END;
+ PERFORM pg13_billing_verified(w,(i->>'id')::uuid,proof,25000,now());
+ IF NOT EXISTS(SELECT 1 FROM pg13_subscriptions WHERE workspace_id=w AND plan_id=low AND paid_until=ending AND next_paid_invoice_id=(i->>'id')::uuid) THEN RAISE EXCEPTION 'prepayment replaced current plan early';END IF;
+ p:=pg13_billing_read(w,a);
+ IF p->'scheduled'->>'prepaid' IS DISTINCT FROM 'true' OR (p->'scheduled'->>'ends_at')::timestamptz<>future_end THEN RAISE EXCEPTION 'paid schedule missing from UI response';END IF;
+ oldrev:=(SELECT revision FROM pg13_subscriptions WHERE workspace_id=w);
+ IF NOT pg13_billing_verified(w,(i->>'id')::uuid,proof,25000,now()) OR pg13_billing_verified(w,(i->>'id')::uuid,gen_random_uuid(),25000,now()) THEN RAISE EXCEPTION 'proof replay invalid';END IF;
+ IF (SELECT revision FROM pg13_subscriptions WHERE workspace_id=w)<>oldrev THEN RAISE EXCEPTION 'replay changed entitlement';END IF;
+ BEGIN PERFORM dashboard_billing_issue(w,a,(qnow->>'id')::uuid,'stale-now-'||suffix);RAISE EXCEPTION 'stale quote accepted';EXCEPTION WHEN serialization_failure THEN NULL;END;
+ BEGIN PERFORM dashboard_billing_change(w,a,NULL,true);RAISE EXCEPTION 'paid future cancelled without refund';EXCEPTION WHEN serialization_failure THEN NULL;END;
+ BEGIN PERFORM dashboard_billing_quote(w,a,high,1,'now');RAISE EXCEPTION 'second paid future overwritten';EXCEPTION WHEN serialization_failure THEN NULL;END;
+ -- Shift only synthetic fixture dates to exercise the boundary without sleeping.
+ shifted:=now()-interval '1 hour';
+ UPDATE pg13_subscriptions SET next_paid_invoice_id=NULL WHERE workspace_id=w;
+ UPDATE pg13_platform_invoices SET entitlement_start=shifted,entitlement_end=shifted+interval '30 days' WHERE id=(i->>'id')::uuid;
+ UPDATE pg13_subscriptions SET paid_until=shifted,grace_until=shifted,next_paid_invoice_id=(i->>'id')::uuid WHERE workspace_id=w;
+ p:=payment_plan_effective(w);
+ IF p->>'plan_id'<>high OR NOT (p->>'active')::boolean OR (SELECT started_at FROM pg13_subscriptions WHERE workspace_id=w)<>shifted OR (p->>'access_until')::timestamptz<>shifted+interval '30 days' THEN RAISE EXCEPTION 'future did not activate for full quoted term';END IF;
+ PERFORM payment_plan_effective(w);
+ IF (SELECT count(*) FROM payment_subscription_audit WHERE workspace_id=w AND action='subscription.prepaid_activated')<>1 THEN RAISE EXCEPTION 'future activated twice';END IF;
+ q:=dashboard_billing_quote(w2,a,high,1,'now');i:=dashboard_billing_issue(w2,a,(q->>'id')::uuid,'immediate-timing-'||suffix);PERFORM pg13_billing_verified(w2,(i->>'id')::uuid,gen_random_uuid(),(q->>'amount_minor')::bigint,now());
+ IF (payment_plan_effective(w2)->>'plan_id')<>high OR (SELECT paid_until FROM pg13_subscriptions WHERE workspace_id=w2)<>ending THEN RAISE EXCEPTION 'immediate upgrade changed term';END IF;
+ initial:=pg13_billing_issue(w3,a,low,'initial-late-'||suffix);PERFORM pg13_billing_verified(w3,(initial->>'id')::uuid,gen_random_uuid(),10000,now());
+ q:=dashboard_billing_quote(w3,a,high,1,'period_end');i:=dashboard_billing_issue(w3,a,(q->>'id')::uuid,'late-timing-'||suffix);
+ UPDATE pg13_subscriptions SET paid_until=now()-interval '1 hour',grace_until=now()-interval '1 hour' WHERE workspace_id=w3;
+ UPDATE pg13_platform_invoices SET entitlement_start=now()-interval '1 hour' WHERE id=(i->>'id')::uuid;
+ BEGIN PERFORM pg13_billing_verified(w3,(i->>'id')::uuid,gen_random_uuid(),25000,now());RAISE EXCEPTION 'late transfer silently activated';EXCEPTION WHEN serialization_failure THEN NULL;END;
+ IF (SELECT status FROM pg13_platform_invoices WHERE id=(i->>'id')::uuid)='paid' THEN RAISE EXCEPTION 'late transfer silently accepted';END IF;
+ RAISE EXCEPTION 'rollback timing fixture' USING ERRCODE='P6999';
+EXCEPTION WHEN SQLSTATE 'P6999' THEN NULL;END;END $test$;

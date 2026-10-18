@@ -756,3 +756,6 @@ Manual pending: selected system workspace Billing shows all features/unlimited/n
 
 ### System subscription cleanup — 2026-10-18
 After Vercel build quota allows frontend rollout: verify workspace overview shows System workspace/Unlimited, subscription management is absent, and Usage opens in EN/BN without server error. Production subscription assignment already detached with audit retained; unlimited access active. Evidence: `docs/evidence/SYSTEM-SUBSCRIPTION-CLEANUP-20261018/README.md`.
+
+### Buyer upgrade timing — 2026-10-18
+Manual pending: with a non-system workspace on an active finite Starter term, choose a higher paid plan; compare Activate now (prorated / old expiry) and After current plan ends (full term price / future start and end). Verify payment, unchanged current access before the boundary, Paid schedule banner, and new plan after the boundary. Check EN/BN, light/dark and mobile. Do not test this on the unlimited system workspace. SQL/code checks: `docs/evidence/BUYER-UPGRADE-TIMING-20261018/README.md`.

@@ -62,3 +62,19 @@ func TestReceivingAccountConflictIsDistinctFromOtherConflicts(t *testing.T) {
 		}
 	}
 }
+
+func TestBillingStateChangesAreConflictsNotDependencyFailures(t *testing.T) {
+	w := httptest.NewRecorder()
+	billingMapped(w, &pgconn.PgError{Code: "40001", Message: "subscription changed"})
+	if w.Code != 409 {
+		t.Fatalf("status %d", w.Code)
+	}
+	var body struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(w.Body.Bytes(), &body) != nil || body.Error.Code != "BILLING_STATE_CHANGED" {
+		t.Fatal("buyer cannot distinguish a changed quote from an outage")
+	}
+}

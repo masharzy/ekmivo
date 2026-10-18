@@ -6,9 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"net/http"
 	"time"
 )
+
+func billingMapped(w http.ResponseWriter, err error) {
+	var pg *pgconn.PgError
+	if errors.As(err, &pg) && pg.Code == "40001" {
+		fail(w, http.StatusConflict, "BILLING_STATE_CHANGED")
+		return
+	}
+	mapped(w, err)
+}
 
 func (s *Service) billingAllowsNew(ctx context.Context, workspace, realm string) bool {
 	if realm == "sandbox" {
@@ -54,7 +64,7 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 		}
 		e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_billing_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
 		if e != nil {
-			mapped(w, e)
+			billingMapped(w, e)
 			return
 		}
 		if r.PathValue("billingAction") == "usage" {
@@ -115,7 +125,7 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 		}
 		e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT payment_plan_claim_free($1::uuid,$2::uuid,$3)", ws, actor.UserID, b.Plan).Scan(&raw)
 		if e != nil {
-			mapped(w, e)
+			billingMapped(w, e)
 			return
 		}
 		var d any
@@ -126,8 +136,9 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 
 	if action := r.PathValue("billingAction"); action == "quote" || action == "schedule" || action == "undo" {
 		var b struct {
-			Plan   string `json:"plan_id"`
-			Cycles int    `json:"cycles"`
+			Plan       string `json:"plan_id"`
+			Cycles     int    `json:"cycles"`
+			Activation string `json:"activation_timing"`
 		}
 		if decodeBounded(w, r, &b, 1024) != nil {
 			fail(w, 422, "INVALID_BILLING_REQUEST")
@@ -137,12 +148,19 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 			if b.Cycles == 0 {
 				b.Cycles = 1
 			}
-			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT dashboard_billing_quote($1::uuid,$2::uuid,$3,$4)", ws, actor.UserID, b.Plan, b.Cycles).Scan(&raw)
+			if b.Activation == "" {
+				b.Activation = "now"
+			}
+			if b.Activation != "now" && b.Activation != "period_end" {
+				fail(w, 422, "INVALID_BILLING_REQUEST")
+				return
+			}
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT dashboard_billing_quote($1::uuid,$2::uuid,$3,$4,$5)", ws, actor.UserID, b.Plan, b.Cycles, b.Activation).Scan(&raw)
 		} else {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT dashboard_billing_change($1::uuid,$2::uuid,$3,$4)", ws, actor.UserID, b.Plan, action == "undo").Scan(&raw)
 		}
 		if e != nil {
-			mapped(w, e)
+			billingMapped(w, e)
 			return
 		}
 		write(w, 200, json.RawMessage(raw))
@@ -165,7 +183,7 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 	// Read itself verifies current membership before any invoice lookup or reconcile.
 	e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_billing_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
 	if e != nil {
-		mapped(w, e)
+		billingMapped(w, e)
 		return
 	}
 	var invoice struct {
@@ -217,7 +235,7 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 		var saved bool
 		e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT dashboard_billing_verified($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7)", ws, invoice.ID, proof.ID, proof.Amount, proof.At, proof.Method, proof.PayerSuffix).Scan(&saved)
 		if e != nil {
-			mapped(w, e)
+			billingMapped(w, e)
 			return
 		}
 		write(w, 200, map[string]any{"renewed": saved})
@@ -251,7 +269,7 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 	if b.QuoteID == "" {
 		e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT dashboard_billing_quote($1::uuid,$2::uuid,$3,1)", ws, actor.UserID, b.Plan).Scan(&raw)
 		if e != nil {
-			mapped(w, e)
+			billingMapped(w, e)
 			return
 		}
 		var q struct {
@@ -266,7 +284,7 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 	}
 	e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT dashboard_billing_issue($1::uuid,$2::uuid,$3::uuid,$4)", ws, actor.UserID, b.QuoteID, key).Scan(&raw)
 	if e != nil {
-		mapped(w, e)
+		billingMapped(w, e)
 		return
 	}
 	_ = json.Unmarshal(raw, &invoice)
@@ -282,7 +300,7 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 		return tx.QueryRow(r.Context(), "SELECT pg10_intent($1::uuid,'live',$2,$3,60,$4,$5,$6)", platform, "SAAS-"+invoice.ID, invoice.Amount, "billing:"+invoice.ID, digest(cap), digest(invoice.ID)).Scan(&result)
 	})
 	if e != nil {
-		mapped(w, e)
+		billingMapped(w, e)
 		return
 	}
 	write(w, 201, map[string]any{"invoice_id": invoice.ID, "checkout_token": cap, "amount_minor": invoice.Amount, "currency": "BDT"})
@@ -328,7 +346,7 @@ func (s *Service) billingUsage(w http.ResponseWriter, r *http.Request, ws string
 		return tx.QueryRow(r.Context(), "SELECT dashboard_billing_usage($1::uuid,'live',$2,$3)", ws, start, end).Scan(&usage)
 	})
 	if err != nil {
-		mapped(w, err)
+		billingMapped(w, err)
 		return
 	}
 	write(w, 200, json.RawMessage(usage))
