@@ -67,3 +67,10 @@
 /* Frame size is explicit: browser default iframe height (150px) clips the preview. */
 .ref-checkout-editor .pvw iframe{height:760px;min-height:500px;max-height:calc(100dvh - 70px);display:block}
 @media(max-width:640px){.ref-checkout-editor .pvw iframe{height:690px;max-height:none}}
+
+.ref-checkout-editor .logo-editor .row{gap:10px;flex-wrap:wrap}
+.ref-checkout-editor .logo-editor .row input[type="range"]{width:min(100%,220px);accent-color:var(--txt)}
+.ref-checkout-editor .logo-editor .logo-position select{min-height:36px;min-width:140px;flex:1;max-width:260px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--txt);padding:0 10px;font:inherit}
+.ref-checkout-editor .logo-editor .lgp{background:transparent;border:0;border-radius:0}
+.ref-checkout-editor .logo-editor .lgp img{display:block;background:transparent;border:0;object-fit:contain}
+.ref-checkout-editor .dock .wl img{height:23px;width:23px;object-fit:contain;display:block;background:transparent;box-shadow:none}

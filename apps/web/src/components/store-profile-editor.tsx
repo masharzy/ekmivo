@@ -6,7 +6,7 @@ import type {StoreProfile} from "../lib/store-profile";
 import {validStoreProfile} from "../lib/store-profile";
 import "./store-profile-editor.css";
 const initial:StoreProfile={name:"",logo:"",business_type:"online",description:"",brand_color:"#0b0c0f",phone:"",support_email:"",whatsapp:"",website:"",address:"",statement_name:"",refund_url:"",receipt_note:""};
-const swatches=["#0b0c0f","#2563eb","#7c3aed","#db2777","#ea580c","#059669"];
+
 export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:string;locale:"en"|"bn";canManage:boolean}){
  const bn=locale==="bn",t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const router=useRouter(),base="/api/workspaces/"+workspaceId+"/store";
@@ -81,7 +81,7 @@ export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:s
      <label className="ss-field"><span>{t("Store name","স্টোরের নাম")} <small>{body.name.length}/40</small></span><input value={body.name} maxLength={40} required className={invalid==="name"?"ss-invalid":undefined} disabled={!canManage||busy} onChange={e=>set("name",e.target.value)}/></label>
      <label className="ss-field"><span>{t("Business type","ব্যবসার ধরন")}</span><select value={body.business_type} disabled={!canManage||busy} onChange={e=>set("business_type",e.target.value)}><option value="online">{t("E-commerce / online shop","ই-কমার্স / অনলাইন শপ")}</option><option value="physical">{t("Physical store","ফিজিক্যাল স্টোর")}</option><option value="service">{t("Services","সেবা")}</option><option value="other">{t("Other","অন্যান্য")}</option></select></label>
      <label className="ss-field ss-full"><span>{t("Short description (optional)","সংক্ষিপ্ত পরিচিতি (ঐচ্ছিক)")} <small>{body.description.length}/60</small></span><input maxLength={60} value={body.description} disabled={!canManage||busy} placeholder={t("What does your store sell?","যেমন: প্রতিদিনের বাজার, দোনাজপুর")} onChange={e=>set("description",e.target.value)}/></label>
-     <div className="ss-field ss-full"><span>{t("Brand color","ব্র্যান্ড রং")}</span><div className="ss-swatches" role="group" aria-label={t("Brand color","ব্র্যান্ড রং")}>{swatches.map(color=><button key={color} type="button" style={{background:color}} className={color===body.brand_color?"selected":undefined} aria-label={color} aria-pressed={color===body.brand_color} disabled={!canManage||busy} onClick={()=>set("brand_color",color)}/>)}</div></div>
+
     </div>
    </section>
    <section className="ss-section"><h2>{t("Contact","যোগাযোগ")}</h2><p className="ss-description">{t("Where customers can reach you about their orders.","গ্রাহক পেমেন্ট নিয়ে সমস্যায় পড়লে এখানে যোগাযোগ করবেন।")}</p>
