@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-// The merchant's persisted theme is the only authority for collecting details.
+// Saved merchant settings control collection; an absent theme uses the Official
+// default (name/email only), matching the public checkout renderer.
 // These are customer contact fields, never payer identity or payment evidence.
 func validateCheckoutCustomerDetails(brand map[string]string, details map[string]string) error {
 	if len(details) == 0 {
@@ -17,7 +18,14 @@ func validateCheckoutCustomerDetails(brand map[string]string, details map[string
 		Info   bool            `json:"info"`
 		Fields map[string]bool `json:"f"`
 	}
-	if json.Unmarshal([]byte(brand["checkout_theme"]), &config) != nil || !config.Info {
+	raw := strings.TrimSpace(brand["checkout_theme"])
+	if raw == "" || raw == "null" {
+		config.Info = true
+		config.Fields = map[string]bool{"name": true, "email": true}
+	} else if json.Unmarshal([]byte(raw), &config) != nil {
+		return errors.New("invalid checkout theme")
+	}
+	if !config.Info {
 		return errors.New("customer details disabled")
 	}
 	for key, value := range details {
