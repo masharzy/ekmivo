@@ -65,3 +65,15 @@ test("dashboard does not declare every live workspace unready from an environmen
  assert.match(s,/service==="payments"&&environment==="sandbox"/);
  assert.doesNotMatch(s,/Live payments are not enabled|Receiving sources, devices, APIs and security checks are pending/);
 });
+
+test("public provider discovery shows all supported wallets without making unready methods payable",()=>{
+ const doc=source("apps/web/src/components/public-document.tsx");
+ const checkout=source("apps/web/src/components/checkout-experience.tsx");
+ assert.match(doc,/const methods=payMethods;/);
+ assert.match(doc,/!configured.includes\(m\)/);
+ assert.match(doc,/!selectedReady\|\|payable<=0/);
+ assert.match(checkout,/const tiles=payMethods.flatMap/);
+ assert.match(checkout,/\!info.methods.includes\(tile.method\)/);
+ assert.match(checkout,/methodChosen&&!availableSelected/);
+ assert.match(checkout,/const showPayer=.*availableSelected/);
+});
