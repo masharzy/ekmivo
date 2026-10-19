@@ -174,6 +174,7 @@ DECLARE src inbox_messages;x inbox_messages;r jsonb;items jsonb:='[]';BEGIN
  SELECT m.* INTO src FROM inbox_messages m JOIN inbox_threads a ON a.id=m.thread_id JOIN inbox_connections c ON c.id=a.connection_id AND c.enabled AND c.environment=e WHERE m.id=source AND m.workspace_id=w AND m.sender IN ('seller','ai') AND m.thread_id<>t;
  IF src.id IS NULL THEN RAISE EXCEPTION 'forward unavailable' USING ERRCODE='42501';END IF;
  IF src.type<>'image' OR src.batch_id IS NULL THEN RETURN inbox_advanced(w,e,d,t,'forward',jsonb_build_object('message_id',source,'idempotency_key',k));END IF;
+ IF EXISTS(SELECT 1 FROM inbox_messages dest WHERE dest.thread_id=t AND dest.batch_id=k AND NOT EXISTS(SELECT 1 FROM inbox_messages original WHERE original.thread_id=src.thread_id AND original.batch_id=src.batch_id AND md5(k::text||original.id::text)::uuid=dest.idempotency_key)) THEN RAISE EXCEPTION 'album idempotency conflict' USING ERRCODE='23505';END IF;
  FOR x IN SELECT * FROM inbox_messages WHERE thread_id=src.thread_id AND batch_id=src.batch_id AND sender=src.sender AND type='image' ORDER BY sequence LOOP
   r:=inbox_advanced(w,e,d,t,'forward',jsonb_build_object('message_id',x.id,'idempotency_key',md5(k::text||x.id::text)::uuid,'batch_id',k));items:=items||jsonb_build_array(r);
  END LOOP;RETURN jsonb_build_object('items',items);

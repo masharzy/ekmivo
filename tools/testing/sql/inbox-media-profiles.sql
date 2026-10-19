@@ -30,8 +30,12 @@ BEGIN
  r:=inbox_profile(w,'live',t);IF (r->'summary'->>'spend_minor')::bigint<>10000 OR (r->'summary'->>'total')::integer<>3 THEN RAISE EXCEPTION 'bad profile totals';END IF;
  PERFORM inbox_inbound_media(c,'provider-image','customer-a','','image',decode('ab','hex'),now());
  IF NOT EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t AND provider_id='provider-image' AND type='image' AND content ? 'media_id') THEN RAISE EXCEPTION 'missing inbound media';END IF;
- r:=inbox_forward_album(w,'live',d,t2,(m->>'id')::uuid,gen_random_uuid());
+ r:=inbox_forward_album(w,'live',d,t2,(m->>'id')::uuid,key);
  IF jsonb_array_length(r->'items')<>2 THEN RAISE EXCEPTION 'album forward lost images';END IF;
+ PERFORM inbox_forward_album(w,'live',d,t2,(m->>'id')::uuid,key);
+ IF (SELECT count(*) FROM inbox_messages WHERE thread_id=t2 AND batch_id=key)<>2 THEN RAISE EXCEPTION 'duplicate forwarded album';END IF;
+ r:=inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',i,'idempotency_key',gen_random_uuid(),'batch_id',gen_random_uuid()));
+ BEGIN PERFORM inbox_forward_album(w,'live',d,t2,(r->>'id')::uuid,key);RAISE EXCEPTION 'album key content conflict accepted';EXCEPTION WHEN unique_violation THEN NULL;END;
  PERFORM inbox_provider_reaction(c,'future-provider','customer-a','❤️',now());
  r:=inbox_next_send();
  PERFORM inbox_finish_send((m->>'id')::uuid,'future-provider','sent','');
