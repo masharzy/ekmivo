@@ -3,7 +3,7 @@ import {useRouter} from "next/navigation";
 import Image from "next/image";
 import {useEffect,useRef,useState} from "react";
 import {ProviderMark,isPayMethod,payMethods,type PayMethod} from "./provider-mark";
-import {parseCheckoutTheme} from "../lib/checkout-theme";
+import {resolveCheckoutTheme} from "../lib/checkout-theme";
 import {ThemedCheckout,WalletToken} from "./themed-checkout";
 import type {MerchantBrandInfo} from "./merchant-brand";
 
@@ -103,7 +103,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
  const amount=(payable/100).toLocaleString(bn?"bn-BD":"en-BD",{maximumFractionDigits:2});
  const support=safeUrl(doc?.brand?.support_url),email=doc?.brand?.support_email||"";
  const logo=safeUrl(doc?.brand?.logo_url);
- const theme=parseCheckoutTheme(doc?.brand?.checkout_theme);
+ const theme=doc?resolveCheckoutTheme(doc.brand?.checkout_theme,doc.merchant_name,logo):null;
  if(doc?.kind==="invoices"&&(doc.status==="cancelled"||doc.status==="draft"))return <main data-customer-checkout="true" className="customer-pay-screen" lang={locale}><div className="customer-pay-shell" style={{padding:32,textAlign:"center"}}><h1>{doc.status==="draft"?t("Invoice draft","ইনভয়েস খসড়া"):t("Invoice cancelled","ইনভয়েস বাতিল হয়েছে")}</h1><p>{doc.status==="draft"?t("This invoice has not been issued yet. Payment is unavailable.","ইনভয়েসটি এখনো ইস্যু হয়নি। পেমেন্ট করা যাবে না।"):t("This invoice is void. No payment can be made.","এই ইনভয়েসটি বাতিল। কোনো পেমেন্ট করা যাবে না।")}</p><a href={"/invoice/"+token}>{t("View invoice","ইনভয়েস দেখুন")}</a></div></main>;
  if(theme&&doc)return <ThemedCheckout config={theme} locale={locale} method={selected} step="pay" amountMinor={payable} reference={doc.reference} onLanguage={()=>{document.cookie=`ekmivo-locale=${bn?'en':'bn'}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()}}>
   <h2 className="tk-h">{t('How would you like to pay?','কীভাবে পরিশোধ করতে চান?')}</h2><form onSubmit={pay} className="tk-document-form"><div className="tk-ms">{methods.map(m=><button className="tk-m" key={m} type="button" disabled={locked} aria-pressed={selected===m} onClick={()=>setSelected(m)}><WalletToken method={m}/><span className="tk-mt">{m==='bkash'?'bKash':m==='nagad'?'Nagad':'Rocket'}</span><i className="tk-rd"/></button>)}</div>
