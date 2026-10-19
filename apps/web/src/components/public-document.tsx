@@ -8,7 +8,7 @@ import {ThemedCheckout,WalletToken} from "./themed-checkout";
 import type {MerchantBrandInfo} from "./merchant-brand";
 
 type Field={id:string;label:string;type:string;required:boolean;options:string[]};
-type Document={merchant_name:string;brand?:MerchantBrandInfo;kind:string;reference:string;status?:string;environment:string;amount_minor:number;due_minor?:number;paid_minor:number;configured_methods?:string[];methods?:string[];body:{max_quantity?:number;image_url?:string;description?:string;notes?:string;due_at?:string;items?:{title:string;quantity:number;unit_amount_minor:number}[];fields?:Field[]}};
+type Document={receiving_accounts?:{id:string;method:string;suffix?:string;source_online?:boolean;ready?:boolean}[];merchant_name:string;brand?:MerchantBrandInfo;kind:string;reference:string;status?:string;environment:string;amount_minor:number;due_minor?:number;paid_minor:number;configured_methods?:string[];methods?:string[];body:{max_quantity?:number;image_url?:string;description?:string;notes?:string;due_at?:string;items?:{title:string;quantity:number;unit_amount_minor:number}[];fields?:Field[]}};
 function safeUrl(raw?:string){if(!raw)return "";try{const u=new URL(raw);return u.protocol==="https:"&&!u.username&&!u.password?u.href:""}catch{return ""}}
 function ContactIcon({kind}:{kind:"support"|"email"}){return kind==="email"
  ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>
@@ -18,7 +18,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
  const router=useRouter();
  const bn=locale==="bn",t=(en:string,bengali:string)=>bn?bengali:en;
  const [doc,setDoc]=useState<Document|null>(null),[error,setError]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[quantity,setQuantity]=useState(1),[values,setValues]=useState<Record<string,string|string[]>>({});
- const [selected,setSelected]=useState<PayMethod|null>(null);
+ const [selected,setSelected]=useState<{id:string;method:PayMethod;source_online?:boolean;ready?:boolean}|null>(null);
  const [customerDetails,setCustomerDetails]=useState<Record<string,string>>({});
  const key=useRef<string|null>(null),pendingBody=useRef<string|null>(null),completedToken=useRef<string|null>(null);
  const [unconfirmed,setUnconfirmed]=useState(false);
@@ -60,8 +60,8 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
  function back(){if(window.history.length>1)router.back();else router.push("/")}
  async function pay(e:React.FormEvent){
   e.preventDefault();
-  if(busy||!doc||!selected||!doc.methods?.includes(selected)||terminal)return;
-  if(completedToken.current){router.push("/checkout/"+completedToken.current+"?method="+selected);return}
+  if(busy||!doc||!selected||!doc.methods?.includes(selected.method)||selected.source_online===false||selected.ready===false||terminal)return;
+  if(completedToken.current){router.push("/checkout/"+completedToken.current+"?method="+selected.method+(selected.id?"&account="+selected.id:""));return}
   if(!pendingBody.current&&doc.body.fields?.some(f=>f.type==="checkbox"&&f.required&&(!Array.isArray(values[f.id])||values[f.id].length===0))){
    setError(t("Choose all required options.","প্রয়োজনীয় অপশন নির্বাচন করুন।"));return;
   }
@@ -84,7 +84,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
    if(typeof d.checkout_token!=="string"||!/^[A-Za-z0-9_-]{43}$/.test(d.checkout_token))throw Error("UNCONFIRMED");
    completedToken.current=d.checkout_token;
    try{sessionStorage.setItem("ekmivo:document:"+token,JSON.stringify({key:key.current,body:pendingBody.current,checkout:d.checkout_token}))}catch{}
-   router.push("/checkout/"+d.checkout_token+"?method="+selected);
+   router.push("/checkout/"+d.checkout_token+"?method="+selected.method+(selected.id?"&account="+selected.id:""));
   }catch(e){setError(checkoutError(e instanceof Error?e.message:"UNCONFIRMED"))}
   finally{setBusy(false)}
  }
@@ -96,25 +96,26 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
   }catch{setError(t("File upload is unavailable. Please retry.","ফাইল আপলোড হয়নি, আবার চেষ্টা করুন।"))}finally{setBusy(false)}
  }
  const configured=(doc?.configured_methods||[]).filter(isPayMethod);
- // All supported providers remain visible; only ready methods can proceed to payment.
- const methods=payMethods;
+ // Every enabled receiver gets an individual tile, preserving account identity.
+ const tiles=doc?.receiving_accounts!==undefined?doc.receiving_accounts.filter(a=>isPayMethod(a.method)).map(a=>({...a,method:a.method as PayMethod})):doc?.environment==='sandbox'?payMethods.map(method=>({id:'',method,source_online:true,ready:true})):[];
+ const tileIndex=(tile:{id:string;method:PayMethod})=>tiles.filter(a=>a.method===tile.method).findIndex(a=>a.id===tile.id)+1;
  const readyMethods=doc?.methods||[];
- const selectedReady=selected!==null&&readyMethods.includes(selected);
+ const selectedReady=selected!==null&&readyMethods.includes(selected.method)&&selected.source_online!==false&&selected.ready!==false;
  const payable=Math.max(0,doc?.kind==="payment-links"?(doc?.amount_minor||0)*quantity:(doc?.due_minor??doc?.amount_minor??0));
  const amount=(payable/100).toLocaleString(bn?"bn-BD":"en-BD",{maximumFractionDigits:2});
  const support=safeUrl(doc?.brand?.support_url),email=doc?.brand?.support_email||"";
  const logo=safeUrl(doc?.brand?.logo_url);
  const theme=doc?resolveCheckoutTheme(doc.brand?.checkout_theme,doc.merchant_name,logo):null;
  if(doc?.kind==="invoices"&&(doc.status==="cancelled"||doc.status==="draft"))return <main data-customer-checkout="true" className="customer-pay-screen" lang={locale}><div className="customer-pay-shell" style={{padding:32,textAlign:"center"}}><h1>{doc.status==="draft"?t("Invoice draft","ইনভয়েস খসড়া"):t("Invoice cancelled","ইনভয়েস বাতিল হয়েছে")}</h1><p>{doc.status==="draft"?t("This invoice has not been issued yet. Payment is unavailable.","ইনভয়েসটি এখনো ইস্যু হয়নি। পেমেন্ট করা যাবে না।"):t("This invoice is void. No payment can be made.","এই ইনভয়েসটি বাতিল। কোনো পেমেন্ট করা যাবে না।")}</p><a href={"/invoice/"+token}>{t("View invoice","ইনভয়েস দেখুন")}</a></div></main>;
- if(theme&&doc)return <ThemedCheckout config={theme} locale={locale} method={selected} step="pay" amountMinor={payable} reference={doc.reference} onLanguage={()=>{document.cookie=`ekmivo-locale=${bn?'en':'bn'}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()}}>
-  <h2 className="tk-h">{t('How would you like to pay?','কীভাবে পরিশোধ করতে চান?')}</h2><form onSubmit={pay} className="tk-document-form"><div className="tk-ms">{methods.map(m=><button className="tk-m" key={m} type="button" disabled={locked} aria-pressed={selected===m} onClick={()=>setSelected(m)}><WalletToken method={m}/><span className="tk-mt">{m==='bkash'?'bKash':m==='nagad'?'Nagad':'Rocket'}</span>{!configured.includes(m)?<span className="tk-method-status">{t("Not configured","সেটআপ নেই")}</span>:!readyMethods.includes(m)?<span className="tk-method-status">{t("Not ready","প্রস্তুত নয়")}</span>:null}<i className="tk-rd"/></button>)}</div>
+ if(theme&&doc)return <ThemedCheckout config={theme} locale={locale} method={selected?.method||null} step="pay" amountMinor={payable} reference={doc.reference} onLanguage={()=>{document.cookie=`ekmivo-locale=${bn?'en':'bn'}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()}}>
+  <h2 className="tk-h">{t('How would you like to pay?','কীভাবে পরিশোধ করতে চান?')}</h2><form onSubmit={pay} className="tk-document-form"><div className="tk-ms">{tiles.map(tile=><button className="tk-m" key={tile.id||tile.method} type="button" disabled={locked} aria-pressed={selected?.id===tile.id&&selected.method===tile.method} onClick={()=>setSelected(tile)} aria-label={tile.method+" account "+tileIndex(tile)}><WalletToken method={tile.method}/><span className="tk-mt">{tile.method==='bkash'?'bKash':tile.method==='nagad'?'Nagad':'Rocket'}</span>{(tile.source_online===false||tile.ready===false||!readyMethods.includes(tile.method))&&<span className="tk-method-status">{t("Not ready","প্রস্তুত নয়")}</span>}{tileIndex(tile)>1&&<span className="tk-m-index">{tileIndex(tile)}</span>}<i className="tk-rd"/></button>)}</div>
   {theme.info&&([['name','Full name','পুরো নাম'],['email','Email','ইমেইল'],['addr','Address','ঠিকানা'],['note','Order note','অর্ডার নোট']] as const).filter(([key])=>theme.f[key]).map(([key,en,be])=><label className="tk-fl" key={key}>{t(en,be)}<input className="tk-in" type={key==='email'?'email':'text'} maxLength={key==='note'?1000:254} disabled={locked} value={customerDetails[key]||''} onChange={e=>setCustomerDetails(d=>({...d,[key]:e.target.value}))}/></label>)}
   {doc.kind==='payment-links'&&(doc.body.max_quantity||1)>1&&<label className="tk-fl">{t('Quantity','পরিমাণ')}<input className="tk-in" type="number" required min={1} max={doc.body.max_quantity} disabled={locked} value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label>}
        {doc.body.fields?.map(f=><div className="customer-pay-field" key={f.id}>
         {f.type==="checkbox"||f.type==="radio"?<fieldset disabled={locked}><legend>{f.label}{f.required?" *":""}</legend>{f.options.map(option=><label key={option}><input type={f.type} name={"field-"+f.id} required={f.type==="radio"&&f.required} checked={f.type==="radio"?values[f.id]===option:Array.isArray(values[f.id])&&values[f.id].includes(option)} onChange={e=>setValues(v=>{if(f.type==="radio")return{...v,[f.id]:option};const list=Array.isArray(v[f.id])?v[f.id] as string[]:[];return{...v,[f.id]:e.target.checked?[...list,option]:list.filter(x=>x!==option)}})}/>{option}</label>)}</fieldset>:<><label htmlFor={"customer-field-"+f.id}>{f.label}{f.required?" *":""}</label>{f.type==="file"?<><input id={"customer-field-"+f.id} type="file" required={f.required&&!values[f.id]} accept="image/jpeg,image/png,application/pdf" disabled={locked} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(f.id,file)}}/>{values[f.id]&&<span>{t("Uploaded","আপলোড হয়েছে")}</span>}</>:f.type==="select"?<select id={"customer-field-"+f.id} required={f.required} value={String(values[f.id]||"")} disabled={locked} onChange={e=>setValues(v=>({...v,[f.id]:e.target.value}))}><option value="">{t("Select","বেছে নিন")}</option>{f.options.map(option=><option key={option}>{option}</option>)}</select>:f.type==="textarea"?<textarea id={"customer-field-"+f.id} required={f.required} maxLength={2000} disabled={locked} value={String(values[f.id]||"")} onChange={e=>setValues(v=>({...v,[f.id]:e.target.value}))}/>:<input id={"customer-field-"+f.id} required={f.required} maxLength={2000} disabled={locked} value={String(values[f.id]||"")} onChange={e=>setValues(v=>({...v,[f.id]:e.target.value}))}/>}</>}
        </div>)}
 
-  <button className="tk-cta" type="submit" disabled={busy||terminal||!selectedReady||payable<=0}>{busy?t('Preparing checkout…','চেকআউট তৈরি হচ্ছে…'):unconfirmed?t('Retry same checkout','একই checkout আবার চেষ্টা করুন'):!selected?t('Choose a wallet to pay','পরিশোধের মাধ্যম বেছে নিন'):t('Pay ৳'+amount,'৳'+amount+' পরিশোধ করুন')}</button></form>{selected&&!selectedReady&&<p className="tk-err" role="alert">{!configured.includes(selected)?t("This merchant has not configured this provider. Do not send money.","এই বিক্রেতা এই মাধ্যমটি সেটআপ করেননি। টাকা পাঠাবেন না।"):t("Payment verification is not ready. Do not send money.","পেমেন্ট যাচাই প্রস্তুত নয়। টাকা পাঠাবেন না।")}</p>}{error&&<p className="tk-err" role="alert">{error}</p>}{doc.body.notes&&<p className="tk-sub">{doc.body.notes}</p>}
+  <button className="tk-cta" type="submit" disabled={busy||terminal||!selectedReady||payable<=0}>{busy?t('Preparing checkout…','চেকআউট তৈরি হচ্ছে…'):unconfirmed?t('Retry same checkout','একই checkout আবার চেষ্টা করুন'):!selected?t('Choose a wallet to pay','পরিশোধের মাধ্যম বেছে নিন'):t('Pay ৳'+amount,'৳'+amount+' পরিশোধ করুন')}</button></form>{selected&&!selectedReady&&<p className="tk-err" role="alert">{!configured.includes(selected.method)?t("This merchant has not configured this provider. Do not send money.","এই বিক্রেতা এই মাধ্যমটি সেটআপ করেননি। টাকা পাঠাবেন না।"):t("Payment verification is not ready. Do not send money.","পেমেন্ট যাচাই প্রস্তুত নয়। টাকা পাঠাবেন না।")}</p>}{error&&<p className="tk-err" role="alert">{error}</p>}{doc.body.notes&&<p className="tk-sub">{doc.body.notes}</p>}
  </ThemedCheckout>;
  return <main data-customer-checkout="true" className="customer-pay-screen" data-standalone={standalone} lang={locale}>
   <div className="customer-pay-shell">
@@ -139,15 +140,13 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
      <section className="customer-pay-body" aria-label={t("Choose a payment method","পেমেন্ট মাধ্যম বাছাই")}>
       <div className="customer-pay-section-title">{t("Mobile Banking","মোবাইল ব্যাংকিং")}</div>
       <div className="customer-pay-methods">
-       {methods.map(m=><button type="button" key={m} data-method={m} data-ready={readyMethods.includes(m)} aria-pressed={selected===m}
-        disabled={locked||terminal} onClick={()=>{setSelected(m);setError("")}} aria-label={m+" · "+(readyMethods.includes(m)?t("Ready to pay","পেমেন্ট প্রস্তুত"):t("Verification pending","যাচাই প্রস্তুত নয়"))}>
-        <ProviderMark method={m}/>
-        {!configured.includes(m)?<span className="customer-pay-disabled">{t("Not configured","সেটআপ নেই")}</span>:!readyMethods.includes(m)&&<span className="customer-pay-disabled">{t("Setup pending","সেটআপ বাকি")}</span>}
-       </button>)}
+       {tiles.map(tile=><button type="button" key={tile.id||tile.method} data-method={tile.method} data-ready={readyMethods.includes(tile.method)&&tile.source_online!==false} aria-pressed={selected?.id===tile.id&&selected.method===tile.method} disabled={locked||terminal} onClick={()=>{setSelected(tile);setError("")}} aria-label={tile.method+" account "+tileIndex(tile)}>
+         <ProviderMark method={tile.method}/>{tileIndex(tile)>1&&<span className="pg05-account-index">{tileIndex(tile)}</span>}
+         {(tile.source_online===false||tile.ready===false||!readyMethods.includes(tile.method))&&<span className="customer-pay-disabled">{t("Not ready","প্রস্তুত নয়")}</span>}</button>)}
       </div>
       {configured.length===0&&<div className="customer-pay-unavailable" role="status">{t("No receiving method has been configured yet.","এখনো কোনো receiving account যুক্ত করা হয়নি।")}</div>}
       {configured.length>0&&readyMethods.length===0&&!selected&&<div className="customer-pay-unavailable" role="status">{t("The merchant has receiving accounts, but payment verification is not ready. Select a method to check its status. Do not send money.","বিক্রেতার receiving account আছে, কিন্তু payment verification প্রস্তুত নয়। অবস্থা দেখতে একটি মাধ্যম বেছে নিন। টাকা পাঠাবেন না।")}</div>}
-      {selected&&!selectedReady&&<div className="customer-pay-unavailable" role="status">{!configured.includes(selected)?t("The merchant has not configured "+selected+". Do not send money.","বিক্রেতা "+selected+" সেটআপ করেননি। টাকা পাঠাবেন না।"):t("Payment through "+selected+" is not ready yet. The merchant needs a verified receiving source. Do not send money.","এই "+selected+" মাধ্যমে পেমেন্ট এখনো প্রস্তুত নয়। বিক্রেতাকে যাচাইকৃত receiving source যুক্ত করতে হবে। টাকা পাঠাবেন না।")}</div>}
+      {selected&&!selectedReady&&<div className="customer-pay-unavailable" role="status">{!configured.includes(selected.method)?t("The merchant has not configured "+selected+". Do not send money.","বিক্রেতা "+selected+" সেটআপ করেননি। টাকা পাঠাবেন না।"):t("Payment through "+selected.method+" is not ready yet. The merchant needs a verified receiving source. Do not send money.","এই "+selected.method+" মাধ্যমে পেমেন্ট এখনো প্রস্তুত নয়। বিক্রেতাকে যাচাইকৃত receiving source যুক্ত করতে হবে। টাকা পাঠাবেন না।")}</div>}
       {doc.body.description&&<p className="customer-pay-description">{doc.body.description}</p>}
       {doc.body.image_url&&<Image className="customer-pay-product" src={doc.body.image_url} alt={doc.body.description||t("Product image","পণ্যের ছবি")} unoptimized width={620} height={320} referrerPolicy="no-referrer"/>}
       <form onSubmit={pay} className="customer-pay-form">
