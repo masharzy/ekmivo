@@ -13,5 +13,5 @@ BEGIN
  RETURN jsonb_build_object('workspace_id',state.workspace_id,'environment',state.environment,'provider',state.provider);
 END $$;
 REVOKE ALL ON FUNCTION inbox_oauth_begin(text,uuid,text,uuid,text),inbox_oauth_consume(text,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION inbox_oauth_begin(text,uuid,text,uuid,text),inbox_oauth_consume(text,uuid) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION inbox_oauth_begin(text,uuid,text,uuid,text),inbox_oauth_consume(text,uuid) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;

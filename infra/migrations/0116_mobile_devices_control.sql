@@ -69,7 +69,7 @@ BEGIN
 END $$;
 CREATE FUNCTION mobile_device_touch(i uuid) RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$ UPDATE mobile_devices SET heartbeat_at=now() WHERE id=i AND revoked_at IS NULL $$;
 REVOKE ALL ON FUNCTION mobile_device_manage(uuid,text,text,uuid,text,text),mobile_device_preview(text),mobile_device_claim(text,bytea),mobile_device_key(uuid),mobile_device_adopt(uuid,uuid,text,bytea),mobile_device_touch(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION mobile_device_manage(uuid,text,text,uuid,text,text),mobile_device_preview(text),mobile_device_claim(text,bytea),mobile_device_key(uuid),mobile_device_adopt(uuid,uuid,text,bytea),mobile_device_touch(uuid) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION mobile_device_manage(uuid,text,text,uuid,text,text),mobile_device_preview(text),mobile_device_claim(text,bytea),mobile_device_key(uuid),mobile_device_adopt(uuid,uuid,text,bytea),mobile_device_touch(uuid) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 -- Unlike pairing preview, an already authorized handset must learn both OFF too.
 CREATE FUNCTION mobile_workspace_state(w uuid,e text) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT jsonb_build_object('workspace_id',b.id,'workspace_name',b.name,'environment',v.environment,
@@ -77,10 +77,10 @@ CREATE FUNCTION mobile_workspace_state(w uuid,e text) RETURNS jsonb LANGUAGE sql
  FROM workspaces b JOIN workspace_environments v ON v.workspace_id=b.id WHERE b.id=w AND v.environment=e AND v.status='active'
 $$;
 REVOKE ALL ON FUNCTION mobile_workspace_state(uuid,text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION mobile_workspace_state(uuid,text) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION mobile_workspace_state(uuid,text) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 CREATE FUNCTION mobile_device_pair_exists(d text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT EXISTS(SELECT 1 FROM mobile_devices WHERE revoked_at IS NULL AND ((pair_digest=d AND pair_expires_at>now()) OR (recovery_digest=d AND recovery_expires_at>now())))
 $$;
 REVOKE ALL ON FUNCTION mobile_device_pair_exists(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION mobile_device_pair_exists(text) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION mobile_device_pair_exists(text) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;

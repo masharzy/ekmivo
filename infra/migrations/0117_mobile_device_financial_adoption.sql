@@ -9,11 +9,11 @@ BEGIN
  RETURN EXISTS(SELECT 1 FROM pg06_phones WHERE id=i AND workspace_id=w AND environment=e AND public_key=k AND revoked_at IS NULL AND coalesce(to_jsonb(pg06_phones)->>'deleted_at','')='');
 END $$;
 REVOKE ALL ON FUNCTION pg06_mobile_adopt(uuid,uuid,text,bytea) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION pg06_mobile_adopt(uuid,uuid,text,bytea) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION pg06_mobile_adopt(uuid,uuid,text,bytea) TO ekmivo_financial_runtime,ekmivo_finance_reader;
 CREATE FUNCTION pg06_mobile_key(i uuid) RETURNS TABLE(workspace_id uuid,environment text,public_key bytea,authorized boolean)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT p.workspace_id,p.environment,p.public_key,(p.revoked_at IS NULL AND p.public_key IS NOT NULL AND coalesce(to_jsonb(p)->>'deleted_at','')='') FROM pg06_phones p WHERE p.id=i
 $$;
 REVOKE ALL ON FUNCTION pg06_mobile_key(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION pg06_mobile_key(uuid) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION pg06_mobile_key(uuid) TO ekmivo_financial_runtime,ekmivo_finance_reader;
 COMMIT;

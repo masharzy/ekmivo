@@ -11,5 +11,5 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  AND EXISTS(SELECT 1 FROM workspace_product_access p WHERE p.workspace_id=b.id AND p.enabled)
 $$;
 REVOKE ALL ON FUNCTION mobile_workspace_preview(uuid,text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION mobile_workspace_preview(uuid,text) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION mobile_workspace_preview(uuid,text) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;

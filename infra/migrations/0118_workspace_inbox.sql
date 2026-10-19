@@ -148,7 +148,7 @@ BEGIN
  INSERT INTO inbox_webhook_events(id,provider,event_cipher) VALUES(i,p,b) ON CONFLICT DO NOTHING;GET DIAGNOSTICS n=ROW_COUNT;RETURN n>0;
 END $$;
 REVOKE ALL ON FUNCTION inbox_page(uuid,text,uuid,uuid,bigint,jsonb),inbox_action(uuid,text,uuid,uuid,text,jsonb),inbox_ingest(uuid,text,text,text,text,text,timestamptz),inbox_connection(uuid,text,text,text,bytea),inbox_next_send(),inbox_finish_send(uuid,text,text,text),inbox_provider_connections(text,text),inbox_webhook_record(text,text,bytea) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION inbox_page(uuid,text,uuid,uuid,bigint,jsonb),inbox_action(uuid,text,uuid,uuid,text,jsonb),inbox_ingest(uuid,text,text,text,text,text,timestamptz),inbox_connection(uuid,text,text,text,bytea),inbox_next_send(),inbox_finish_send(uuid,text,text,text),inbox_provider_connections(text,text),inbox_webhook_record(text,text,bytea) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION inbox_page(uuid,text,uuid,uuid,bigint,jsonb),inbox_action(uuid,text,uuid,uuid,text,jsonb),inbox_ingest(uuid,text,text,text,text,text,timestamptz),inbox_connection(uuid,text,text,text,bytea),inbox_next_send(),inbox_finish_send(uuid,text,text,text),inbox_provider_connections(text,text),inbox_webhook_record(text,text,bytea) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 CREATE TABLE inbox_status_events(connection_id uuid NOT NULL REFERENCES inbox_connections(id),provider_id text NOT NULL,status text NOT NULL CHECK(status IN ('sent','delivered','seen','failed')),occurred_at timestamptz NOT NULL,PRIMARY KEY(connection_id,provider_id,status));
 ALTER TABLE inbox_status_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON inbox_status_events FROM PUBLIC,ekmivo_financial_runtime;
@@ -163,7 +163,7 @@ BEGIN
  FROM inbox_threads t WHERE m.thread_id=t.id AND t.connection_id=c AND m.provider_id=p AND m.sender<>'customer';
 END $$;
 REVOKE ALL ON FUNCTION inbox_status(uuid,text,text,timestamptz) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION inbox_status(uuid,text,text,timestamptz) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION inbox_status(uuid,text,text,timestamptz) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 CREATE TABLE inbox_read_watermarks(connection_id uuid NOT NULL REFERENCES inbox_connections(id),external_id text NOT NULL,last_seen_at timestamptz NOT NULL,PRIMARY KEY(connection_id,external_id));
 ALTER TABLE inbox_read_watermarks ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON inbox_read_watermarks FROM PUBLIC,ekmivo_financial_runtime;
@@ -174,7 +174,7 @@ BEGIN
  FROM inbox_threads t WHERE m.thread_id=t.id AND t.connection_id=c AND t.external_id=r AND m.sender<>'customer' AND m.created_at<=at_time AND m.provider_id IS NOT NULL;
 END $$;
 REVOKE ALL ON FUNCTION inbox_seen_watermark(uuid,text,timestamptz) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION inbox_seen_watermark(uuid,text,timestamptz) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION inbox_seen_watermark(uuid,text,timestamptz) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 CREATE FUNCTION inbox_connection_list(w uuid,e text) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT jsonb_build_object('items',coalesce(jsonb_agg(jsonb_build_object('id',id,'provider',provider,'enabled',enabled) ORDER BY created_at),'[]'::jsonb)) FROM inbox_connections WHERE workspace_id=w AND environment=e
 $$;
@@ -182,5 +182,5 @@ CREATE FUNCTION inbox_disconnect(w uuid,e text,i uuid) RETURNS boolean LANGUAGE 
 DECLARE n integer;
 BEGIN UPDATE inbox_connections SET enabled=false WHERE id=i AND workspace_id=w AND environment=e;GET DIAGNOSTICS n=ROW_COUNT;RETURN n>0;END $$;
 REVOKE ALL ON FUNCTION inbox_connection_list(uuid,text),inbox_disconnect(uuid,text,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION inbox_connection_list(uuid,text),inbox_disconnect(uuid,text,uuid) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION inbox_connection_list(uuid,text),inbox_disconnect(uuid,text,uuid) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;

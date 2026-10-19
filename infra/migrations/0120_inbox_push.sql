@@ -28,5 +28,5 @@ END $$;
 CREATE FUNCTION inbox_finish_push(d uuid,m uuid,s text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN IF s NOT IN ('sent','queued','failed') THEN RAISE EXCEPTION 'invalid state'; END IF;UPDATE inbox_push_jobs SET state=s WHERE device_id=d AND message_id=m AND state='sending';END $$;
 REVOKE ALL ON FUNCTION inbox_register_push(uuid,bytea),inbox_queue_push(),inbox_next_push(),inbox_finish_push(uuid,uuid,text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION inbox_register_push(uuid,bytea),inbox_next_push(),inbox_finish_push(uuid,uuid,text) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION inbox_register_push(uuid,bytea),inbox_next_push(),inbox_finish_push(uuid,uuid,text) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;

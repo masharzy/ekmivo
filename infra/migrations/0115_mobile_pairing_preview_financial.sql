@@ -11,5 +11,5 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  LIMIT 1
 $$;
 REVOKE ALL ON FUNCTION pg06_phone_pairing_preview(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION pg06_phone_pairing_preview(text) TO ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION pg06_phone_pairing_preview(text) TO ekmivo_financial_runtime,ekmivo_finance_reader;
 COMMIT;

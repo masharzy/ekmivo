@@ -764,6 +764,18 @@ try{
    throw rollback;
   })}catch(err){if(err!==rollback)throw err}
  }
+ // Current API uses restricted control-projection and financial-reader pools.
+ // Keep the actual additive contracts installed on these disposable DBs for HTTP tests.
+ for(const filename of ["0114_mobile_workspace_preview_control.sql","0116_mobile_devices_control.sql","0118_workspace_inbox.sql","0119_channel_oauth.sql","0120_inbox_push.sql"]){
+  const sql=await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8");
+  await admin.unsafe(sql).simple();
+ }
+ for(const realm of names){
+  for(const filename of ["0115_mobile_pairing_preview_financial.sql","0117_mobile_device_financial_adoption.sql"]){
+   const sql=await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8");
+   await dbs[realm].unsafe(sql).simple();
+  }
+ }
  console.log("Android phases 2–4 control/dual-finance pairing, products, inbox, OAuth, push and status replay PASS (rolled back)");
  try{
   await dbs.sandbox.begin(async tx=>{

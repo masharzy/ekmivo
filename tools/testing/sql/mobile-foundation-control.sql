@@ -42,6 +42,8 @@ BEGIN
  BEGIN PERFORM inbox_page(other,'live',device,t,NULL,'{}');RAISE EXCEPTION 'foreign workspace allowed';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
  PERFORM inbox_register_push(device,decode('abcd','hex'));
  PERFORM inbox_ingest(c,'provider-2','customer-1','Fixture customer','New message','text',now());
+ PERFORM set_config('test.mobile_workspace',w::text,true);
+ IF NOT has_function_privilege('ekmivo_financial_projection','mobile_workspace_state(uuid,text)','EXECUTE') OR NOT has_function_privilege('ekmivo_financial_projection','inbox_action(uuid,text,uuid,uuid,text,jsonb)','EXECUTE') THEN RAISE EXCEPTION 'actual control pool role cannot execute';END IF;
  IF has_table_privilege('ekmivo_financial_runtime','inbox_connections','SELECT') OR has_table_privilege('ekmivo_financial_runtime','inbox_messages','SELECT') THEN RAISE EXCEPTION 'runtime raw access'; END IF;
  IF (SELECT count(*) FROM inbox_push_jobs WHERE device_id=device)<>1 THEN RAISE EXCEPTION 'push fanout missing'; END IF;
  PERFORM inbox_oauth_begin(repeat('c',64),w,'live',u,'wa');
@@ -56,3 +58,7 @@ BEGIN
  IF (SELECT authorized FROM mobile_device_key(device)) THEN RAISE EXCEPTION 'revoked device authorized'; END IF;
 END $test$;
 SELECT true AS products_pairing_tenant_inbox_idempotency_handover_checks_pass;
+
+SET LOCAL ROLE ekmivo_financial_projection;
+SELECT mobile_workspace_state(current_setting('test.mobile_workspace')::uuid,'live') IS NOT NULL AS restricted_control_role_pass;
+RESET ROLE;
