@@ -39,11 +39,11 @@ BEGIN
   AND NOT platform_billing_system_workspace(sub.workspace_id);
  RETURN NEW;
 END $$;
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.payment_plan_catalog'::regclass AND tgname='payment_plan_free_quota_upgrade_trigger' AND NOT tgisinternal) THEN
   CREATE TRIGGER payment_plan_free_quota_upgrade_trigger AFTER UPDATE OF current_version
    ON payment_plan_catalog FOR EACH ROW EXECUTE FUNCTION payment_plan_free_quota_upgrade();
  END IF;
-END $;
+END $$;
 REVOKE ALL ON FUNCTION payment_plan_free_quota_upgrade() FROM PUBLIC;
 COMMIT;
