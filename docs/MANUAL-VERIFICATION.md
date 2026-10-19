@@ -780,3 +780,9 @@ Manual pending: with a non-system workspace on an active finite Starter term, ch
 - With no saved theme, verify the Official merchant/method/payer/waiting/result flow; selected custom themes remain selected.
 - Changing checkout language keeps the public route locale-neutral; the webhook secret initially says it is hidden and reveals only after the authorized action.
 - Regression checks/evidence: `docs/evidence/CHECKOUT-CANONICAL-DEFAULT-20261019/README.md`. Actual money transfer is not claimed by code checks.
+
+## Android reference phases 1–2 (2026-10-19, PR #86)
+
+- Phase 1: compare native dark/light setup and Inbox shell against `docs/design/android-20261019/` at the same inner viewport/font scale; native assemble/unit CI passed for Phase 1, visual parity remains unverified.
+- Phase 2 preview: apply only additive 0114 control + 0115 financial via the guarded operator before testing this APK against that runtime. Production rollout has not been performed. Test physical camera and manual code, explicit Verify, loading/retry/rescan, expired/revoked/claimed code, network loss, process death and rotation. Verify lookup does not consume the code and the final explicit confirmation claims the displayed workspace/realm only.
+- Full Phase 2 remains open: AI-only control-plane enrollment, capability-driven permissions/background work/navigation, real-phone reconnect/queue preservation. No AI-only enrollment or complete Inbox/channel integration accepted.
