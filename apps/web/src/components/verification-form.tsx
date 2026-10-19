@@ -1,8 +1,8 @@
 "use client";
-import Link from "next/link";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { resendEmailCodeAction, verifyEmailCodeAction, type RecoveryState } from "../actions/recovery";
 import type { Locale } from "../lib/site-copy";
+import {logoutAction} from "../actions/account";
 
 const initial:RecoveryState={status:"idle",message:""};
 export function VerificationForm({locale,email}:{locale:Locale;email:string}){
@@ -64,7 +64,7 @@ export function VerificationForm({locale,email}:{locale:Locale;email:string}){
     <button type="button" disabled={resending} onClick={()=>startResend(()=>resendAction())}>{locale==="bn"?"আবার পাঠান":"Resend code"}</button>
    </div>
    {resendState.status!=="idle"&&<p className={resendState.status==="error"?"ek-field-error":"ek-verify-help"} role="status">{resendState.message}</p>}
-   <Link href="/account" className="ek-verify-back">← {locale==="bn"?"অ্যাকাউন্টে ফিরুন":"Back to account"}</Link>
+   <form action={logoutAction.bind(null,locale)}><button type="submit" className="ek-verify-back" style={{border:0,background:"transparent",cursor:"pointer",font:"inherit"}}>{locale==="bn"?"অন্য অ্যাকাউন্ট ব্যবহার করুন":"Use a different account"}</button></form>
   </div>
  </main>;
 }

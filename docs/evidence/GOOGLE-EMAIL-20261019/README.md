@@ -34,3 +34,5 @@ These changes concern auth security email. Payment receipt/invoice SMTP workers 
 
 ## Release
 Primary implementation: 5da998891dad76aa4fb162c86d4ab14ac922a471. Production Vercel deployment dpl_EPxP77mRT8LA6pJT821po8yivAE3 READY with ekmivo-web.vercel.app alias. Production migration 0106 checksum eaa86e11a4508c4d1f6de4da4148fa38b989f8637da4eecad0d09c5d48ce6c43; finance runtime SELECT denied, no Google identities fabricated. Follow-up makes verification instructions truthful before a code is requested and logs only safe provider acceptance/rejection metadata.
+
+Verification page now offers an actual sign-out/switch-account action, rather than sending an unverified user back into the verification redirect loop. Primary follow-up 545c3c05b50f87203180d9978f908b25ea0c714e deployed READY (dpl_2KAnJ9tCXpGBoWanqjconLuWVyij); 16 tests/build/lint passed before rollout.
