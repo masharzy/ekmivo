@@ -291,6 +291,14 @@ func migratePG05Control(ctx context.Context, raw, filename string) error {
 }
 
 func main() {
+ if os.Getenv("MOBILE_PREVIEW_ALLOW_MIGRATION")=="true" {
+  ctx,cancel:=context.WithTimeout(context.Background(),3*time.Minute)
+  defer cancel()
+  if err:=migrateMobilePreview(ctx);err!=nil {log.Fatal(err)}
+  log.Print("Mobile workspace preview migrations verified; no base migrations executed")
+  return
+ }
+
  if os.Getenv("DASHBOARD_REFERENCE_ALLOW_MIGRATION") == "true" {
   ctx,cancel:=context.WithTimeout(context.Background(),3*time.Minute)
   defer cancel()

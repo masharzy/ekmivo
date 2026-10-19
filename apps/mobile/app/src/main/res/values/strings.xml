@@ -4,11 +4,11 @@
     <string name="pair_header">ফোন যুক্ত করুন</string>
     <string name="pair_header_scan">ড্যাশবোর্ডের QR স্ক্যান করুন</string>
     <string name="pair_header_code">কোড দিয়ে</string>
-    <string name="pair_welcome_title">ফোনটি Ekmivo-র সাথে যুক্ত করুন</string>
-    <string name="pair_welcome_body">এই ফোনে আসা পেমেন্টের SMS নিজে থেকে Ekmivo-তে পাঠানো হবে।</string>
-    <string name="pair_step_1">ড্যাশবোর্ডে ‘SMS devices’ খুলুন</string>
-    <string name="pair_step_2">‘ফোন যুক্ত করুন’ থেকে pairing QR তৈরি করুন</string>
-    <string name="pair_step_3">ড্যাশবোর্ডে দেখানো পেয়ারিং QR কোডটি স্ক্যান করুন।</string>
+    <string name="pair_welcome_title">আপনার ওয়ার্কস্পেসের সঙ্গে এই ফোন সংযুক্ত করুন</string>
+    <string name="pair_welcome_body">ড্যাশবোর্ডের QR কোড স্ক্যান করলেই ফোন যুক্ত হয়ে যাবে।</string>
+    <string name="pair_step_1">ওয়েবের মেনুতে Devices খুলুন</string>
+    <string name="pair_step_2">এই ফোনে QR স্ক্যান করুন</string>
+    <string name="pair_step_3">দরকারি অনুমতিগুলো দিন</string>
     <string name="pair_scan">QR স্ক্যান করুন</string>
     <string name="pair_code_link">কোড দিয়ে যুক্ত করুন</string>
     <string name="pair_camera_title">ক্যামেরা চালু করুন</string>
@@ -81,4 +81,15 @@
     <string name="settings_theme_light">লাইট</string>
     <string name="settings_theme_dark">ডার্ক</string>
     <string name="settings_last_fail">সর্বশেষ সাড়া জানা নেই</string>
+    <string name="pair_lookup_title">আপনার ওয়ার্কস্পেস লোড হচ্ছে…</string>
+    <string name="pair_lookup_body">একটু অপেক্ষা করুন।</string>
+    <string name="pair_lookup_failed">ওয়ার্কস্পেস লোড করা যায়নি</string>
+    <string name="pair_lookup_retry">আবার চেষ্টা</string>
+    <string name="pair_rescan">আবার স্ক্যান করুন</string>
+    <string name="pair_workspace">ওয়ার্কস্পেস</string>
+    <string name="pair_service_enabled">চালু</string>
+    <string name="pair_connect">সংযুক্ত করুন</string>
+    <string name="pair_verify_code">কোড যাচাই করুন</string>
+    <string name="pair_ai_notice">কাস্টমার রিপ্লাই দিলে এই ফোনে নোটিফিকেশন আসবে।</string>
+    <string name="pair_payment_notice">SMS ফরওয়ার্ডিং: পেমেন্টের SMS পাঠাতে এই ফোনের SMS অনুমতি লাগবে। Ekmivo এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।</string>
 </resources>

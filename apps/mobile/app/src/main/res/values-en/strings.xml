@@ -4,15 +4,15 @@
     <string name="pair_header">Connect phone</string>
     <string name="pair_header_scan">Scan the dashboard QR</string>
     <string name="pair_header_code">Use a code</string>
-    <string name="pair_welcome_title">Connect this phone to Ekmivo</string>
-    <string name="pair_welcome_body">Payment SMS received on this phone will be forwarded to Ekmivo automatically.</string>
-    <string name="pair_step_1">Open ‘SMS devices’ in your dashboard</string>
-    <string name="pair_step_2">Choose ‘Connect phone’ and create a pairing QR</string>
-    <string name="pair_step_3">Scan the pairing QR code shown on your dashboard.</string>
+    <string name="pair_welcome_title">Connect this phone to your workspace</string>
+    <string name="pair_welcome_body">Scan the QR code from your dashboard to connect this phone.</string>
+    <string name="pair_step_1">Open Devices in the web menu</string>
+    <string name="pair_step_2">Scan the QR on this phone</string>
+    <string name="pair_step_3">Grant the required permissions</string>
     <string name="pair_scan">Scan QR</string>
     <string name="pair_code_link">Connect with a code</string>
     <string name="pair_camera_title">Enable camera</string>
-    <string name="pair_camera_body">The camera is needed to scan a QR code. No photo is saved.</string>
+    <string name="pair_camera_body">Camera access is needed to scan the QR code. No photos are stored.</string>
     <string name="pair_allow">Allow access</string>
     <string name="pair_scan_hint">Hold the dashboard QR inside the frame</string>
     <string name="pair_torch">Torch</string>
@@ -81,4 +81,15 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_last_fail">No recent response</string>
+    <string name="pair_lookup_title">Loading your workspace…</string>
+    <string name="pair_lookup_body">Please wait a moment.</string>
+    <string name="pair_lookup_failed">Unable to load workspace</string>
+    <string name="pair_lookup_retry">Try again</string>
+    <string name="pair_rescan">Scan again</string>
+    <string name="pair_workspace">Workspace</string>
+    <string name="pair_service_enabled">On</string>
+    <string name="pair_connect">Connect</string>
+    <string name="pair_verify_code">Verify code</string>
+    <string name="pair_ai_notice">You will receive a notification when a customer replies.</string>
+    <string name="pair_payment_notice">SMS forwarding: this phone needs SMS access to send payment receipts. Ekmivo sends only payment SMS. Other SMS are not sent or stored.</string>
 </resources>

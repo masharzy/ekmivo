@@ -23,3 +23,21 @@ Reference forward means sending a NEW copy through a channel's ordinary send-mes
 ## References and continuation
 
 `docs/ANDROID-REDESIGN-HANDOFF.md` contains the complete specification and all originals. Extracted originals are in `docs/design/android-20261019/`. No sample customer/store values should enter production. Continue from the latest checkpoint in this file, not old Phase6 docs. No migration, financial matching, account mapping or existing plan-limit behavior changed.
+
+## Phase 1 pushed evidence
+
+Source commit: `4dee27488267fdca88adee6588c19620c3e04f13`; PR #86. GitHub Actions run `39258379855`: Native Kotlin Compose assemble + unit tests **passed**, debug APK artifact uploaded; runtime/migration Docker compile passed. Device screenshot parity still manual pending. Unrelated Go HTTP smoke failed after Go unit tests passed; do not report entire CI green.
+
+## Phase 2 — started, not complete
+
+Implemented the real lookup slice: new non-consuming financial pairing-preview function (0115), minimal authoritative control workspace/products function (0114), Go `/v1/device/pairing-preview`, explicit guarded migration-operator mode, and native QR/manual-code → loading → fetched confirmation/retry flow. Manual code now has explicit Verify action; workspace/realm returned by claim must match the preview before local enrollment is saved. Invalid preview cannot revoke a retained pairing. Product-neutral Welcome copy and exact native setup icons are used.
+
+Verification: existing mobile contracts 3/3 pass; Neon `test-dashboard-sms-evidence-20261015` (`br-cold-paper-b3pks3sr`) control + sandbox financial transaction tests passed for authoritative name/products, unknown scope, read-only repeated preview, expiration, revocation, claimed code, suspended workspace and invalid digest. Both transactions rolled back; confirmed both new functions absent afterward. Fresh branch creation was refused by Neon branch quota, so these checks used an existing non-production test branch without persistent changes. Production migrations/API rollout **not performed**.
+
+Remaining Phase 2: product-aware durable device identity/enrollment for AI-only (existing phone codes require financial payment projection); permissions/wizard/background work and navigation driven by authoritative capabilities; per-reason failure/expired recovery handling; lifecycle/rotation/small-screen validation; real camera/device pairing QA; production migration/runtime rollout only after reviewed checks. The current preview reads existing Payment phone codes; it is not an AI-only enrollment implementation.
+
+Owner integration direction: `ANDROID-MESSAGING-FOUNDATION.md` is binding for later work. Build real DB/API/channel flows, including technically supported reference interactions, before enabling the UI. Do not mark planned entities/contracts as implemented.
+
+### Next agent action
+
+Start from PR #86 head. Inspect latest Android/Go CI before merging. Continue Phase 2's control-plane device enrollment/capability path without changing payment financial matching, old enrollment IDs or queued evidence. See explicit migration mode `MOBILE_PREVIEW_ALLOW_MIGRATION=true` with `MOBILE_PREVIEW_CONTROL_MIGRATION_FILE` (0114), `MOBILE_PREVIEW_FINANCIAL_MIGRATION_FILE` (0115), and existing three `PG04_*_MIGRATION_DATABASE_URL` variables. It runs only these additive migrations, not base/River migrations. Do not release the new pairing UI against an old API without these functions deployed.

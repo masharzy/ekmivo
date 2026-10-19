@@ -76,7 +76,7 @@ class ReceiptRepository private constructor(private val context: Context) {
 
  fun onTransport(status: Int, action: String, deviceId: String) {
   if (auth.onHttpStatus(status, action, deviceId)) return
-  if (action == "claim") return // Bad pairing code is NOT device revocation.
+  if (action == "claim" || action == "pairing-preview") return // Bad pairing code is NOT device revocation.
   when {
    status in 200..299 && (action == "configuration" || action == "phone-heartbeat" || action == "heartbeat") -> {
     ReceiptStore(context).use { it.markServerAccepted(deviceId) }

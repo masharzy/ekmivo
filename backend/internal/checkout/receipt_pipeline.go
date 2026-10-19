@@ -459,6 +459,10 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 		fail(w, 413, "BODY_TOO_LARGE")
 		return
 	}
+	if r.PathValue("action") == "pairing-preview" {
+		s.handleMobilePairingPreview(w,r,raw)
+		return
+	}
 	if r.PathValue("action") == "claim" {
 		var claim struct {
 			Token     string `json:"pairing_token"`
