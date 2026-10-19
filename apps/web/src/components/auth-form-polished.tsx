@@ -7,9 +7,10 @@ import {emptyState,type FormErrorState} from "../lib/server/validation";
 import {passwordChecks,validNewPassword} from "../lib/password-policy";
 import {PublicIcon} from "./public-icon";
 import type {Locale} from "../lib/site-copy";
+import {beginGoogleAction} from "../actions/google";
 type Field="email"|"password"|"name"|"workspace_name";
 function Submit({label,bn}:{label:string;bn:boolean}){const {pending}=useFormStatus();return <button className="ek-auth-primary ek-auth-submit" type="submit" disabled={pending} aria-busy={pending}>{pending?(bn?"অপেক্ষা করুন…":"Please wait…"):label}<span aria-hidden="true">↗</span></button>}
-export function AuthForm({locale,mode}:{locale:Locale;mode:"login"|"register"}){
+export function AuthForm({locale,mode,googleReady=false,googleNotice=""}:{locale:Locale;mode:"login"|"register";googleReady?:boolean;googleNotice?:string}){
  const bn=locale==="bn",login=mode==="login",t=(en:string,bengali:string)=>bn?bengali:en;
  const submitAction=login?loginAction.bind(null,locale):registerAction.bind(null,locale);
  const [server,action]=useActionState<FormErrorState,FormData>(async(previous,data)=>{const result=await submitAction(previous,data);setEdited({});return result;},emptyState);
@@ -38,6 +39,8 @@ export function AuthForm({locale,mode}:{locale:Locale;mode:"login"|"register"}){
   <section className="ek-auth-login-area" aria-labelledby="auth-heading"><div className="ek-auth-v2-form">
    {!login&&<ol className="ek-auth-progress" aria-label={t("Registration steps","অ্যাকাউন্ট তৈরির ধাপ")}><li aria-current={currentStep===1?"step":undefined}><span>{currentStep===2?<PublicIcon name="check"/>:"1"}</span>{t("Account","অ্যাকাউন্ট")}</li><li aria-current={currentStep===2?"step":undefined}><span>2</span>{t("Workspace","ওয়ার্কস্পেস")}</li></ol>}
    <h1 id="auth-heading">{heading}</h1><p className="ek-auth-subtitle">{login?t("Sign in to open your default workspace.","লগইন করে আপনার ডিফল্ট ওয়ার্কস্পেস খুলুন।"):currentStep===1?t("Your email and a secure password. That's the first step.","ইমেইল ও নিরাপদ পাসওয়ার্ড দিয়ে প্রথম ধাপ শুরু করুন।"):t("Tell us your name and name your business workspace.","আপনার নাম ও ব্যবসার ওয়ার্কস্পেসের নাম দিন।")}</p>
+   {googleNotice&&<p className="ek-form-error" role="status">{googleNotice}</p>}
+   {googleReady&&(login||currentStep===1)&&<form action={beginGoogleAction.bind(null,locale,"signin")}><GoogleSubmit bn={bn}/></form>}
    <form ref={formRef} className="ek-auth-fields" action={action} onSubmit={validate} noValidate>
     {login||currentStep===1?<>{input("email",t("Email address","ইমেইল ঠিকানা"),"email")}<label htmlFor="auth-password">{t("Password","পাসওয়ার্ড")}<span className="ek-auth-password"><input id="auth-password" name="password" aria-label={t("Password","পাসওয়ার্ড")} type={show?"text":"password"} autoComplete={login?"current-password":"new-password"} maxLength={256} value={values.password} onChange={e=>change("password",e.target.value)} aria-invalid={!!error("password")} aria-describedby={error("password")?"auth-password-error":!login?"auth-password-checks":undefined}/><button type="button" aria-pressed={show} onClick={()=>setShow(v=>!v)}>{show?t("Hide","লুকান"):t("Show","দেখুন")}</button></span>{error("password")&&<small id="auth-password-error" className="ek-field-error">{error("password")}</small>}</label>
     {!login&&<ul className="ek-password-checks" id="auth-password-checks">{[{met:c.length,label:t("8–256 characters","৮–২৫৬ অক্ষর")},{met:c.letter,label:t("At least one letter","অন্তত একটি অক্ষর")},{met:c.number,label:t("At least one number","অন্তত একটি সংখ্যা")},{met:c.symbol,label:t("Symbol for extra strength (optional)","আরও শক্তিশালী করতে বিশেষ চিহ্ন (ঐচ্ছিক)")}].map(item=><li key={item.label} data-met={item.met}><span aria-hidden="true">{item.met?<PublicIcon name="check"/>:"○"}</span><span className="sr-only">{item.met?t("Met: ","পূরণ হয়েছে: "):t("Not met: ","পূরণ হয়নি: ")}</span>{item.label}</li>)}</ul>}</>:<><input type="hidden" name="email" value={values.email}/><input type="hidden" name="password" value={values.password}/><p className="ek-auth-account-summary"><PublicIcon name="key"/>{values.email}<button type="button" onClick={()=>{setStep(1);setEdited({email:true,password:true});}}>{t("Edit","পরিবর্তন")}</button></p>{input("name",t("Your name","আপনার নাম"),"name")}{input("workspace_name",t("Workspace / business name","ওয়ার্কস্পেস / ব্যবসার নাম"),"organization")}<p className="ek-auth-register-tip">{t("Start with Payment Gateway. Manage your services later.","Payment Gateway দিয়ে শুরু করুন। পরে সেবা পরিচালনা করতে পারবেন।")}</p></>}
@@ -49,3 +52,4 @@ export function AuthForm({locale,mode}:{locale:Locale;mode:"login"|"register"}){
   </div></section>
  </div></main>;
 }
+function GoogleSubmit({bn}:{bn:boolean}){const {pending}=useFormStatus();return <button className="ek-auth-google" type="submit" disabled={pending}>{pending?(bn?"Google খুলছে…":"Opening Google…"):(bn?"Google দিয়ে চালিয়ে যান":"Continue with Google")}</button>}

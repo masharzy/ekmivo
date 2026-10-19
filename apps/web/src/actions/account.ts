@@ -51,7 +51,7 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
   await createSession(account.userId);
   await selectDefaultWorkspace(account.userId,account.workspaceId);
   if(verify){
-   try{await sendCode(account.userId,email,"verify_email");}
+   try{await sendCode(account.userId,email,"verify_email",locale);}
    catch(e){report("send initial verification email",e);}
   }
  } catch(e){report("register",e);return fail(t.generic);}

@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { database } from "../lib/server/db";
 import { currentUser, passwordHash } from "../lib/server/auth";
-import { consumeCode, mailReady, sendCode, verificationEnabled } from "../lib/server/email";
+import { consumeCode, mailReady, sendCode } from "../lib/server/email";
 import { asText, safeLocale, strongPassword, validEmail } from "../lib/server/validation";
 
 export type RecoveryState={status:"idle"|"error"|"sent"|"success";message:string};
@@ -12,13 +12,14 @@ const copy={
 } as const;
 
 export async function resendEmailCodeAction(localeParam:string,_prev:RecoveryState):Promise<RecoveryState>{
+ void _prev;
  const locale=safeLocale(localeParam),t=copy[locale];
  const user=await currentUser();
  if(!user)return {status:"error",message:t.generic};
- if(user.verified || !await verificationEnabled())return {status:"success",message:t.verified};
+ if(user.verified)return {status:"success",message:t.verified};
  if(!mailReady())return {status:"error",message:t.missing};
  try{
-  const result=await sendCode(user.id,user.email,"verify_email");
+  const result=await sendCode(user.id,user.email,"verify_email",locale);
   return result.ok?{status:"sent",message:t.sent}:{status:"error",message:t.cooldown};
  }catch(e){console.error("[email verification resend]",e instanceof Error?e.name:"error");return {status:"error",message:t.generic};}
 }
@@ -26,7 +27,7 @@ export async function resendEmailCodeAction(localeParam:string,_prev:RecoverySta
 export async function verifyEmailCodeAction(localeParam:string,_prev:RecoveryState,form:FormData):Promise<RecoveryState>{
  const locale=safeLocale(localeParam),t=copy[locale],user=await currentUser();
  if(!user)return {status:"error",message:t.generic};
- if(user.verified || !await verificationEnabled())redirect(`/${locale}/workspaces/open`);
+ if(user.verified)redirect("/workspaces/open");
  const code=asText(form.get("code"));
  let verified=false;
  try{
@@ -45,7 +46,7 @@ export async function requestPasswordResetAction(localeParam:string,_prev:Recove
  try{
   const users=await database()`SELECT id,email FROM app_users
    WHERE email=${email} AND disabled_at IS NULL LIMIT 1`;
-  if(users.length)await sendCode(String(users[0].id),String(users[0].email),"reset_password");
+  if(users.length)await sendCode(String(users[0].id),String(users[0].email),"reset_password",locale);
   // Same response for unknown accounts and rate-limited requests.
   return {status:"sent",message:t.sent};
  }catch(e){console.error("[request reset]",e instanceof Error?e.name:"error");return {status:"error",message:t.generic};}

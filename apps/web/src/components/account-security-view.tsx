@@ -8,11 +8,12 @@ import {logoutAction} from "../actions/account";
 import {RefIcon} from "./reference-ui";
 import {SiteControls} from "./site-controls";
 import "./account-dashboard.css";
+import {beginGoogleAction} from "../actions/google";
 
 type Session={id:string;created_at:string;expires_at:string;is_current:boolean};
 const initial:ProfileActionState={status:"idle",message:""};
 
-export function AccountSecurityView({locale,user,sessions,mfa,theme}:{locale:"bn"|"en";user:{id:string;name:string;email:string;verified:boolean};sessions:Session[];mfa:boolean;theme:"light"|"dark"|"system"}){
+export function AccountSecurityView({locale,user,sessions,mfa,theme,googleReady=false,googleLinked=false,googleNotice=""}:{locale:"bn"|"en";user:{id:string;name:string;email:string;verified:boolean};sessions:Session[];mfa:boolean;theme:"light"|"dark"|"system";googleReady?:boolean;googleLinked?:boolean;googleNotice?:string}){
  const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en,router=useRouter();
  const [profile,save,saving]=useActionState(saveDisplayName.bind(null,locale),initial);
  const [revoked,revoke,revoking]=useActionState(revokeOtherSessions.bind(null,locale),initial);
@@ -27,7 +28,7 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme}:{locale:"bn
  useEffect(()=>{if(revoked.status==="success")router.refresh()},[revoked.status,router]);
  useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current)},[]);
  const stamp=(value:string)=>new Intl.DateTimeFormat(bn?"bn-BD":"en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Dhaka"}).format(new Date(value));
- const alert=message||profile.message||revoked.message||verification.message;
+ const alert=message||profile.message||revoked.message||verification.message||googleNotice;
  const error=profile.status==="error"||revoked.status==="error"||verification.status==="error";
  const others=sessions.filter(session=>!session.is_current);
  const initials=savedName.trim().slice(0,1).toUpperCase()||"?";
@@ -49,7 +50,8 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme}:{locale:"bn
     </section>
     <section className="ac-panel"><div className="ac-panel-heading"><h2>{t("Sign-in & security","লগইন ও নিরাপত্তা")}</h2></div>
      <div className="ac-setting-row"><div><strong>{t("Email address","ইমেইল ঠিকানা")}</strong><span>{user.email}</span></div><span className={"ac-status "+(user.verified?"ac-positive":"ac-warning")}>{user.verified?t("Verified","যাচাইকৃত"):t("Unverified","যাচাই হয়নি")}</span></div>
-     {!user.verified&&<form action={verify} className="ac-verify"><button className="ac-secondary" disabled={verifying||verification.status==="sent"}>{verifying?t("Sending…","পাঠানো হচ্ছে…"):t("Send verification email","যাচাইয়ের ইমেইল পাঠান")}</button></form>}
+     {!user.verified&&<form action={verify} className="ac-verify"><button className="ac-secondary" disabled={verifying||verification.status==="sent"}>{verifying?t("Sending…","পাঠানো হচ্ছে…"):t("Send verification email","যাচাইয়ের ইমেইল পাঠান")}</button>{verification.status==="sent"&&<Link className="ac-secondary" href="/verify-email">{t("Enter code","কোড দিন")}</Link>}</form>}
+     {googleReady&&<div className="ac-setting-row"><div><strong>Google</strong><span>{googleLinked?t("Connected for sign-in.","লগইনের জন্য যুক্ত আছে।"):t("Use the same email as your account.","অ্যাকাউন্টের একই ইমেইল ব্যবহার করুন।")}</span></div>{googleLinked?<span className="ac-status ac-positive">{t("Connected","যুক্ত")}</span>:<form action={beginGoogleAction.bind(null,locale,"link")}><button type="submit" className="ac-secondary">{t("Connect Google","Google যুক্ত করুন")}</button></form>}</div>}
      <div className="ac-setting-row"><div><strong>{t("Multi-factor authentication","দুই ধাপের নিরাপত্তা")}</strong><span>{t("Additional protection for administrator access.","অ্যাডমিন অ্যাক্সেসের অতিরিক্ত সুরক্ষা।")}</span></div><span className={"ac-status "+(mfa?"ac-positive":"ac-neutral")}>{mfa?t("Enabled","সক্রিয়"):t("Not set up","চালু নয়")}</span></div>
      <div className="ac-setting-row"><div><strong>{t("Password","পাসওয়ার্ড")}</strong><span>{t("Recover access securely by email.","ইমেইলের মাধ্যমে নিরাপদে অ্যাক্সেস ফিরিয়ে নিন।")}</span></div><Link className="ac-secondary" href="/forgot-password" onClick={keepDraft}>{t("Recovery","পুনরুদ্ধার")}</Link></div>
     </section>

@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import ts from '../../apps/web/node_modules/typescript/lib/typescript.js';
+import {generateKeyPair,exportJWK,createLocalJWKSet,SignJWT} from '../../apps/web/node_modules/jose/dist/webapi/index.js';
+const root=new URL('../../apps/web/',import.meta.url);
+function module(path){let src=ts.transpileModule(readFileSync(new URL('src/'+path,root),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;src=src.replaceAll('from "jose"','from '+JSON.stringify(new URL('node_modules/jose/dist/webapi/index.js',root).href));return import('data:text/javascript;base64,'+Buffer.from(src).toString('base64'));}
+const g=await module('lib/google-oidc.ts');
+const mail=await module('lib/security-email.ts');
+const key=crypto.getRandomValues(new Uint8Array(32));
+const origin='https://ekmivo-web.vercel.app';
+const {privateKey,publicKey}=await generateKeyPair('RS256');
+const jwk=await exportJWK(publicKey);jwk.kid='test';const jwks=createLocalJWKSet({keys:[jwk]});
+const base={sub:'google-123',email:'owner@gmail.com',email_verified:true,nonce:'expected-nonce',name:'Owner'};
+async function token(p={},options={}){return new SignJWT({...base,...p}).setProtectedHeader({alg:'RS256',kid:'test'}).setIssuer(options.issuer||'https://accounts.google.com').setAudience(options.audience||'client').setIssuedAt().setExpirationTime(options.exp||'5m').sign(privateKey)}
+test('authorization uses code/PKCE S256, least scopes, random state and nonce',()=>{const a=g.newGoogleFlow('bn'),b=g.newGoogleFlow('en');assert.notEqual(a.state,b.state);assert.notEqual(a.nonce,b.nonce);const u=new URL(g.googleAuthorizationUrl(a,'client',origin+'/api/auth/google/callback'));assert.equal(u.origin,'https://accounts.google.com');assert.equal(u.searchParams.get('code_challenge_method'),'S256');assert.equal(u.searchParams.get('response_type'),'code');assert.equal(u.searchParams.get('scope'),'openid email profile');assert.equal(u.searchParams.get('access_type'),null);assert.equal(u.searchParams.get('code_verifier'),null)});
+test('encrypted state binds browser, origin, mode and session; rejects tamper/wrong state/key/origin',async()=>{const f=g.newGoogleFlow('en',{userId:'11111111-1111-4111-8111-111111111111',sessionHash:'a'.repeat(64)}),s=await g.sealGoogleFlow(f,key,origin);assert.deepEqual(Object.fromEntries(Object.entries(await g.openGoogleFlow(s,f.state,key,origin)).filter(([k])=>!['iat','exp','iss','aud'].includes(k))),f);for(const args of [[s,'x'.repeat(43),key,origin],[s,f.state,new Uint8Array(32),origin],[s,f.state,key,'https://evil.example'],[s.slice(0,-10)+'xxxxxxxxxx',f.state,key,origin]])await assert.rejects(g.openGoogleFlow(...args));});
+test('real signed Google ID token accepts stable subject; audience/issuer/nonce/expiry/signature/email checks reject',async()=>{assert.equal((await g.verifyGoogleIdToken(await token(),'expected-nonce','client',jwks)).subject,'google-123');for(const [p,o] of [[{}, {audience:'other'}],[{}, {issuer:'https://evil.example'}],[{nonce:'other'},{}],[{email_verified:false},{}],[{azp:'other'},{}],[{email:'bad'},{}],[{}, {exp:'-1s'}]])await assert.rejects(g.verifyGoogleIdToken(await token(p,o),'expected-nonce','client',jwks));let signed=await token();signed=signed.slice(0,-10)+'xxxxxxxxxx';await assert.rejects(g.verifyGoogleIdToken(signed,'expected-nonce','client',jwks));});
+test('external Google email requires independent ownership for new signup; Workspace/Gmail are authoritative',async()=>{assert.equal((await g.verifyGoogleIdToken(await token({email:'user@example.com'}),'expected-nonce','client',jwks)).authoritativeEmail,false);assert.equal((await g.verifyGoogleIdToken(await token({email:'user@example.com',hd:'example.com'}),'expected-nonce','client',jwks)).authoritativeEmail,true);});
+test('security emails have bilingual plain text/HTML, exact OTP and no user-controlled HTML',()=>{for(const locale of ['en','bn'])for(const purpose of ['verify_email','reset_password']){const m=mail.securityEmail('012345',purpose,locale);assert.match(m.text,/012345/);assert.match(m.html,/012345/);assert.match(m.html,new RegExp('lang="'+locale+'"'));assert.ok(m.subject)}assert.throws(()=>mail.securityEmail('<script>','verify_email'));});

@@ -759,3 +759,8 @@ After Vercel build quota allows frontend rollout: verify workspace overview show
 
 ### Buyer upgrade timing — 2026-10-18
 Manual pending: with a non-system workspace on an active finite Starter term, choose a higher paid plan; compare Activate now (prorated / old expiry) and After current plan ends (full term price / future start and end). Verify payment, unchanged current access before the boundary, Paid schedule banner, and new plan after the boundary. Check EN/BN, light/dark and mobile. Do not test this on the unlimited system workspace. SQL/code checks: `docs/evidence/BUYER-UPGRADE-TIMING-20261018/README.md`.
+
+## Google login + Resend auth email — 2026-10-19
+- Add Google Cloud Web OAuth Client ID/Secret to Vercel production (details: evidence/GOOGLE-EMAIL-20261019). Google sign-in remains hidden until configured. Redeploy after setting.
+- Test Google signup, existing linked login, cancellation, existing local-email collision, same-email Account linking within 10 minutes of fresh login, expired linking session, and admin MFA on an untrusted device. No real Google flow claimed passed.
+- Check owner mailbox/Resend delivery log for requested recovery test. A timed-out app response/outstanding OTP is not proof of email delivery. Test Account > Send verification email > Enter code; verify wrong/expired/reused code rejection and recovery/session invalidation. Enable global mandatory verification only after real delivery is confirmed.

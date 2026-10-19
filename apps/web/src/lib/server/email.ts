@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { database } from "./db";
 import { cache } from "react";
+import {securityEmail} from "../security-email";
 
 export type CodePurpose = "verify_email" | "reset_password";
 export function mailReady() {
@@ -16,23 +17,25 @@ function signature(userId:string,purpose:CodePurpose,code:string) {
  if(!pepper || pepper.length<32) throw Error("EMAIL_CONFIG_MISSING");
  return createHmac("sha256",pepper).update(userId+":"+purpose+":"+code).digest("hex");
 }
-async function deliver(email:string,code:string,purpose:CodePurpose) {
+async function deliver(email:string,code:string,purpose:CodePurpose,id:string,locale:"en"|"bn") {
  if(!mailReady()) throw Error("EMAIL_CONFIG_MISSING");
- const title=purpose==="verify_email"?"Verify your Ekmivo email":"Reset your Ekmivo password";
  const response=await fetch("https://api.resend.com/emails",{
-  method:"POST",cache:"no-store",
-  headers:{Authorization:"Bearer "+process.env.RESEND_API_KEY,"Content-Type":"application/json"},
-  body:JSON.stringify({from:process.env.EMAIL_FROM,to:[email],subject:title,
-   text:`Your Ekmivo security code: ${code}\n\nThis code expires in 10 minutes. Never share it. If this wasn't you, ignore this message.`})
+  method:"POST",cache:"no-store",signal:AbortSignal.timeout(10000),
+  headers:{Authorization:"Bearer "+process.env.RESEND_API_KEY,"Content-Type":"application/json","Idempotency-Key":"auth-code-"+id},
+  body:JSON.stringify({from:process.env.EMAIL_FROM,to:[email],
+   ...securityEmail(code,purpose,locale)})
  });
  if(!response.ok) throw Error("EMAIL_DELIVERY_FAILED");
 }
-export async function sendCode(userId:string,email:string,purpose:CodePurpose){
+export async function sendCode(userId:string,email:string,purpose:CodePurpose,locale:"en"|"bn"="en"){
  if(!mailReady()) throw Error("EMAIL_CONFIG_MISSING");
  const sql=database();
- // Throttle across serverless instances. Two concurrent requests can still race:
- // this is supplemented by per-code attempt caps and should later use a DB advisory lock.
- const recent=await sql`SELECT created_at FROM auth_one_time_codes
+ const code=String(randomInt(0,1_000_000)).padStart(6,"0");
+ const digest=signature(userId,purpose,code);
+ const result=await sql.begin(async tx=>{
+ // Serialize issuance/cooldown across serverless instances for this user/purpose.
+ await tx`SELECT pg_advisory_xact_lock(hashtextextended(${'auth-code:'+userId+':'+purpose},0))`;
+ const recent=await tx`SELECT created_at FROM auth_one_time_codes
   WHERE user_id=${userId}::uuid AND purpose=${purpose}
   ORDER BY created_at DESC LIMIT 6`;
  const now=Date.now();
@@ -40,14 +43,15 @@ export async function sendCode(userId:string,email:string,purpose:CodePurpose){
   return {ok:false,reason:"cooldown"} as const;
  if(recent.filter(r=>now-new Date(r.created_at).getTime()<3600_000).length>=5)
   return {ok:false,reason:"hourly_limit"} as const;
- await sql`UPDATE auth_one_time_codes SET consumed_at=now() WHERE user_id=${userId}::uuid AND purpose=${purpose} AND consumed_at IS NULL`;
- const code=String(randomInt(0,1_000_000)).padStart(6,"0");
- const digest=signature(userId,purpose,code);
- const rows=await sql`INSERT INTO auth_one_time_codes(user_id,purpose,code_hash,expires_at)
+ await tx`UPDATE auth_one_time_codes SET consumed_at=now() WHERE user_id=${userId}::uuid AND purpose=${purpose} AND consumed_at IS NULL`;
+ const rows=await tx`INSERT INTO auth_one_time_codes(user_id,purpose,code_hash,expires_at)
  VALUES (${userId}::uuid,${purpose},${digest},now()+interval '10 minutes') RETURNING id`;
- try{await deliver(email,code,purpose);}
+ return {ok:true,id:String(rows[0].id)} as const;
+ });
+ if(!result.ok)return result;
+ try{await deliver(email,code,purpose,result.id,locale);}
  catch(error){
-  await sql`UPDATE auth_one_time_codes SET consumed_at=now() WHERE id=${rows[0].id}::uuid`;
+  await sql`UPDATE auth_one_time_codes SET consumed_at=now() WHERE id=${result.id}::uuid`;
   throw error;
  }
  return {ok:true} as const;

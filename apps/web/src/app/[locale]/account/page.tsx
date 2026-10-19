@@ -2,9 +2,11 @@ import { cookies } from "next/headers";
 import { requireUser,hashToken } from "../../../lib/server/auth";
 import { database } from "../../../lib/server/db";
 import {AccountSecurityView} from "../../../components/account-security-view";
+import {googleConfiguration} from "../../../lib/google-oidc";
+import {googleMessage} from "../../../lib/google-message";
 
 export const dynamic="force-dynamic";
-export default async function AccountPage({params}:{params:Promise<{locale:string}>}){
+export default async function AccountPage({params,searchParams}:{params:Promise<{locale:string}>;searchParams:Promise<{google?:string}>}){
  const {locale:raw}=await params,locale=raw==="en"?"en":"bn";
  const user=await requireUser(locale);
  const cookieJar=await cookies();
@@ -19,5 +21,7 @@ export default async function AccountPage({params}:{params:Promise<{locale:strin
  ]);
  const themeValue=cookieJar.get("ekmivo-theme")?.value;
  const theme=themeValue==="light"||themeValue==="dark"?themeValue:"system";
- return <AccountSecurityView locale={locale} user={user} mfa={Boolean(mfa[0]?.enabled)} theme={theme} sessions={sessions.map(s=>({id:String(s.id),created_at:new Date(s.created_at).toISOString(),expires_at:new Date(s.expires_at).toISOString(),is_current:Boolean(s.is_current)}))}/>;
+ const googleReady=!!googleConfiguration();
+ const linked=googleReady?await database()`SELECT 1 FROM auth_google_identities WHERE user_id=${user.id}::uuid LIMIT 1`:[];
+ return <AccountSecurityView locale={locale} user={user} googleReady={googleReady} googleLinked={linked.length>0} googleNotice={googleMessage((await searchParams).google,locale==="bn")} mfa={Boolean(mfa[0]?.enabled)} theme={theme} sessions={sessions.map(s=>({id:String(s.id),created_at:new Date(s.created_at).toISOString(),expires_at:new Date(s.expires_at).toISOString(),is_current:Boolean(s.is_current)}))}/>;
 }

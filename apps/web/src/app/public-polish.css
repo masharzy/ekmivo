@@ -1,4 +1,8 @@
 /* Public polish: retain the editorial identity without adding dashboard clutter. */
+.ek-auth-polished .ek-auth-google{width:100%;min-height:46px;padding:10px 16px;margin-bottom:20px;border:1px solid var(--ek-pub-border);border-radius:9px;background:var(--ek-pub-surface);color:var(--ek-pub-ink);font:inherit;font-weight:600;cursor:pointer}
+.ek-auth-polished .ek-auth-google:hover{background:var(--ek-pub-blue)}
+.ek-auth-polished .ek-auth-google:focus-visible{outline:2px solid var(--ek-pub-focus);outline-offset:3px}
+.ek-auth-polished .ek-auth-google:disabled{opacity:.6;cursor:wait}
 .em-heading,.ek-product-heading{display:flex;flex-direction:column;align-items:flex-start;gap:0}
 .em-heading.em-centered{align-items:center}
 .em-heading>.em-kicker,.ek-product-heading>.ek-public-kicker{display:block;position:static;max-width:100%}
