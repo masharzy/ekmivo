@@ -27,7 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /**
- * Phase 0 only: a developer preview of web-derived tokens and reference
+ * Phase 1 only: a developer preview of owner-reference tokens and reference
  * primitives. It is not routed into the shipping Android UI.
  */
 @Composable
@@ -104,24 +104,10 @@ private fun TokenPreview(dark: Boolean) {
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 EkmivoNavItem(label = "লাইভ", selected = true, onClick = {}, icon = {
-                    Canvas(Modifier.size(20.dp)) {
-                        drawLine(
-                            p.text,
-                            Offset(0f, size.height / 2),
-                            Offset(size.width, size.height / 2),
-                            strokeWidth = 1.8.dp.toPx()
-                        )
-                    }
+                    EkmivoReferenceIcon(EkmivoGlyph.ACT)
                 })
                 EkmivoNavItem(label = "সেটিংস", selected = false, onClick = {}, icon = {
-                    Canvas(Modifier.size(20.dp)) {
-                        drawLine(
-                            p.secondary,
-                            Offset(size.width / 2, 0f),
-                            Offset(size.width / 2, size.height),
-                            strokeWidth = 1.8.dp.toPx()
-                        )
-                    }
+                    EkmivoReferenceIcon(EkmivoGlyph.SET, tint=p.secondary)
                 })
             }
             // Each size/weight/line-height role from design spec section 2.
@@ -157,10 +143,10 @@ private fun TokenPreview(dark: Boolean) {
     }
 }
 
-@Preview(name = "Phase 0 · BN Dark 360", widthDp = 360, heightDp = 850, locale = "bn")
+@Preview(name = "Phase 1 · BN Dark 360", widthDp = 360, heightDp = 850, locale = "bn")
 @Composable
 private fun PreviewDark360() = TokenPreview(dark = true)
 
-@Preview(name = "Phase 0 · BN Light 412", widthDp = 412, heightDp = 850, locale = "bn")
+@Preview(name = "Phase 1 · BN Light 412", widthDp = 412, heightDp = 850, locale = "bn")
 @Composable
 private fun PreviewLight412() = TokenPreview(dark = false)
