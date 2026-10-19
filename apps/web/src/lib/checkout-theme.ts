@@ -9,3 +9,11 @@ export function validCheckoutTheme(value:unknown):value is CheckoutThemeConfig{
  return checkoutThemes.includes(v.theme)&&typeof v.info==='boolean'&&!!v.store&&typeof v.store.name==='string'&&v.store.name.trim().length>0&&v.store.name.length<=100&&!/[\u0000-\u001f]/.test(v.store.name)&&typeof v.store.logo==='string'&&v.store.logo.length<=1500000&&Number.isInteger(v.store.size)&&v.store.size>=24&&v.store.size<=96&&Number.isInteger(v.store.radius)&&v.store.radius>=0&&v.store.radius<=48&&logoPositions.includes(v.store.position)&&typeof v.store.invert==='boolean'&&!!v.f&&['name','email','addr','note'].every(k=>typeof v.f[k as keyof typeof v.f]==='boolean');
 }
 export function parseCheckoutTheme(raw?:string):CheckoutThemeConfig|null{try{const v=JSON.parse(raw||'null');return validCheckoutTheme(v)?v:null}catch{return null}}
+
+// Missing, legacy or invalid saved settings use the same Official renderer as the editor.
+export function resolveCheckoutTheme(raw:string|undefined,name:string,logo=""):CheckoutThemeConfig{
+ const saved=parseCheckoutTheme(raw);
+ if(saved)return saved;
+ const fallback=defaultCheckoutTheme(name);
+ return {...fallback,store:{...fallback.store,logo}};
+}

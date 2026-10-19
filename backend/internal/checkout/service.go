@@ -669,9 +669,7 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		data["checkout_token"] = token
-		if origin := strings.TrimSuffix(getAllowedOrigin(), "/"); strings.HasPrefix(origin, "https://") {
-			data["checkout_url"] = origin + "/en/checkout/" + url.PathEscape(token)
-		}
+		data["checkout_url"] = publicCheckoutURL(token)
 		write(w, 201, data)
 	default:
 		fail(w, 405, "METHOD_NOT_ALLOWED")

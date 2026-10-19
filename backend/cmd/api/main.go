@@ -358,6 +358,9 @@ func main() {
 		log.Print("PG01 authz runtime PASS: nonprivileged role and no-context tenant isolation verified")
 		defer db.Close()
 	}
+	if err := checkout.SetPublicCheckoutOrigin(os.Getenv("GO_PUBLIC_WEB_ORIGIN")); err != nil {
+		log.Fatal(err)
+	}
 	checkout.SetAllowedOrigin(os.Getenv("GO_WEB_ORIGIN"))
 	if os.Getenv("GO_WEB_ORIGIN") == "" {
 		checkout.SetAllowedOrigin("https://ekmivo-web-masharzys-projects.vercel.app")

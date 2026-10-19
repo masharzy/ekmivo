@@ -774,3 +774,9 @@ Manual pending: with a non-system workspace on an active finite Starter term, ch
 - Open the previously cancelled subscription invoice and check payment: show cancelled/unverified guidance inside its drawer, with no renewal and no raw VERIFIED_PLATFORM_PAYMENT_REQUIRED.
 - Verify a real successful platform payment updates subscription once; pending/expired/cancelled payments never grant access. Physical phone/SMS verification belongs to owner.
 - Automated checks and production read-only diagnosis: `docs/evidence/PLAN-LABELS-BILLING-STATUS-20261019/README.md`.
+
+## 2026-10-19 — Canonical checkout URL and Official fallback
+- New API-created payment links must use `https://ekmivo-web.vercel.app/checkout/<token>`, independently of the dashboard CORS alias.
+- With no saved theme, verify the Official merchant/method/payer/waiting/result flow; selected custom themes remain selected.
+- Changing checkout language keeps the public route locale-neutral; the webhook secret initially says it is hidden and reveals only after the authorized action.
+- Regression checks/evidence: `docs/evidence/CHECKOUT-CANONICAL-DEFAULT-20261019/README.md`. Actual money transfer is not claimed by code checks.
