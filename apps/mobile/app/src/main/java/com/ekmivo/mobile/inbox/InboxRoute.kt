@@ -26,6 +26,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -107,7 +109,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
  val longPressConfig=LocalViewConfiguration.current
  val exactPress=remember(longPressConfig){object:ViewConfiguration by longPressConfig {override val longPressTimeoutMillis:Long=430L}}
  val awayFromBottom by remember{derivedStateOf{val layout=scroll.layoutInfo;val last=layout.visibleItemsInfo.lastOrNull();last!=null&&((layout.totalItemsCount-last.index)>2 || last.offset+last.size-layout.viewportEndOffset>120)}}
- fun quoteOriginal(id:String){val index=messages.indexOfFirst{it.optString("id")==id};if(index>=0)scope.launch{scroll.animateScrollToItem(index+if(olderAvailable)1 else 0);flashed=id;delay(1200);flashed=null}}
+
 
  fun fail(){failure=true}
  suspend fun loadMessages(id:String,older:Boolean=false) {
@@ -115,7 +117,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
   val response=request(app,"messages",id,before=before)
   info=response.getJSONObject("thread")
   val fetched=response.getJSONArray("items").rows()
-  olderAvailable=fetched.size==50
+  if(older||messages.isEmpty())olderAvailable=fetched.size==50
   messages=if(older)(fetched+messages).distinctBy{it.getString("id")}else (messages.filter{m->fetched.firstOrNull()?.optLong("sequence")?.let{m.optLong("sequence")<it}==true}+fetched).distinctBy{it.getString("id")}
   if(initializedThread!=id&&fetched.isNotEmpty()) {
    val cursor=info?.optLong("read_sequence")?:0L
@@ -126,6 +128,13 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
   }
   fetched.lastOrNull()?.let{request(app,"read",id,body=JSONObject().put("sequence",it.getLong("sequence")))}
  }
+ fun quoteOriginal(id:String){scope.launch {
+  try {
+   while(isActive&&olderAvailable&&messages.none{it.optString("id")==id})loadMessages(thread?:return@launch,true)
+   val index=messages.indexOfFirst{it.optString("id")==id}
+   if(index>=0){scroll.animateScrollToItem(index+if(olderAvailable)1 else 0);flashed=id;delay(1200);flashed=null}
+  }catch(e:CancellationException){throw e}catch(_:Exception){fail()}
+ }}
  LaunchedEffect(thread){onDetailChange(thread!=null);selected=null;reply=null;input="";pendingKey=null;initializedThread=null;messages=emptyList();info=null}
  DisposableEffect(Unit){onDispose{onDetailChange(false)}}
  BackHandler(enabled=thread!=null||filterOpen){if(filterOpen)filterOpen=false else if(selected!=null)selected=null else thread=null}
@@ -214,8 +223,9 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
        .combinedClickable(onClick={if(m.optString("state")=="failed")action("retry",JSONObject().put("message_id",m.getString("id")))else selected=null},onLongClick={if(m.optString("type")=="text")selected=m})
        .pointerInput(m.getString("id")){detectHorizontalDragGestures(onDragStart={dragged=0f;crossed=false;selected=null},onDragEnd={if(crossed&&m.optString("type")=="text")reply=m;dragged=0f},onDragCancel={dragged=0f},onHorizontalDrag={change,amount->change.consume();val next=(dragged+amount).coerceAtLeast(0f);val threshold=56.dp.toPx();dragged=if(next>threshold)threshold+(next-threshold)*.28f else next;if(dragged>=threshold&&!crossed){crossed=true;(app.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator)?.vibrate(android.os.VibrationEffect.createOneShot(12,android.os.VibrationEffect.DEFAULT_AMPLITUDE))}})}.padding(horizontal=12.dp,vertical=9.dp)) {
        if(own&&messages.getOrNull(index-1)?.optString("sender")!=m.optString("sender"))Text(if(m.optString("sender")=="ai")"AI" else if(bn)"আপনি" else "You",style=EkmivoType.messageSender,color=ink.copy(alpha=.7f))
-       val quoted=messages.firstOrNull{it.optString("id")==m.optString("reply_to")}
-       if(quoted!=null)Text(quoted.optString("body"),style=EkmivoType.heroNote,color=ink.copy(alpha=.7f),maxLines=1,modifier=Modifier.clickable{quoteOriginal(quoted.getString("id"))}.padding(bottom=5.dp))
+       val replyID=m.optString("reply_to").takeUnless{it.isBlank()||it=="null"}
+       val quoteBody=messages.firstOrNull{it.optString("id")==replyID}?.optString("body")?:m.optString("reply_body").takeUnless{it=="null"}
+       if(replyID!=null&&quoteBody!=null)Text(quoteBody,style=EkmivoType.heroNote,color=ink.copy(alpha=.7f),maxLines=1,modifier=Modifier.clip(RoundedCornerShape(8.dp)).drawBehind{drawLine(p.success,Offset.Zero,Offset(0f,size.height),3.dp.toPx())}.clickable{quoteOriginal(replyID)}.padding(5.dp))
        Text(m.optString("body"),style=EkmivoType.chatMessage,color=ink)
        Row(Modifier.align(Alignment.End),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
         Text(clock(m.optString("created_at"),bn),style=EkmivoType.messageTime,color=ink.copy(alpha=.65f))

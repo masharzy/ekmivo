@@ -37,3 +37,9 @@ Additional Neon rollback evidence: 0117 adopted AI-first phone identity idempote
 The second run passed native/Go/image checks and real checkout browser journeys at 320/768/1440, EN/BN and Light/Dark, then stopped on an obsolete expired-result heading assertion. The current Official theme says “This payment link has expired”; the fixture now asserts that exact heading and the do-not-send-money guidance. New phase 2–4 SQL assertions are also included in the existing isolated CI database suite and roll back after testing.
 
 Database role verification correction: the running API uses `ekmivo_financial_projection` for its restricted control pool and `ekmivo_finance_reader` for each finance pool. Function-only EXECUTE grants now include those actual roles; raw messaging tables remain inaccessible. CI installs the real additive contracts before current API HTTP tests, and SQL asserts actual pool-role execution. Earlier owner-role-only SQL checks did not establish runtime grants.
+
+## Verified combined CI checkpoint — 2026-10-19
+
+Commit `4cf7f9b780600ec55c60cf4abfb007d87f5c6b54`, [Foundation CI run 39267709334](https://github.com/masharzy/ekmivo/actions/runs/39267709334): **all four jobs passed** — native Kotlin Compose assemble/unit tests, Go compile/unit/race/vet/HTTP smoke, runtime/migration image builds, and full Next.js lint/build/OpenAPI/PostgreSQL/session/browser suites. Mobile foundation SQL and restricted-role execution were included.
+
+Final follow-up contains this consolidated handoff, both-off permission-screen guard, stable end-of-history pagination and quote content/jump across older pages. Inspect the latest PR head CI before continuing; the green checkpoint above predates this final follow-up. Real-device/provider/production acceptance remains pending as documented.

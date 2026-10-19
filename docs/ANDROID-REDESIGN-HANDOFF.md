@@ -1,6 +1,104 @@
 # Ekmivo Native Kotlin Android — সম্পূর্ণ ডিজাইন ও ডেভেলপমেন্ট হ্যান্ডঅফ
 
-সংস্করণ: 1.0 · প্রস্তুত: ১৯ অক্টোবর ২০২৬ · বর্তমান অবস্থা: পরিকল্পনা ও reference handoff প্রস্তুত; অ্যাপ implementation যাচাই/পরিবর্তন করা হয়নি।
+সংস্করণ: 2.0 · আপডেট: ১৯ অক্টোবর ২০২৬ · নিচের checkpoint বর্তমান implementation-এর authoritative অবস্থা; মূল design extraction-এর পুরোনো status বাক্যগুলো ঐতিহাসিক।
+
+## বর্তমান এজেন্ট হ্যান্ডঅফ — আগে পড়তে হবে
+
+Repository: `masharzy/ekmivo`; branch `codex/android-reference-phases-1-2`; PR https://github.com/masharzy/ekmivo/pull/86 . Phase 1–4 source আছে। Phase 2–4 একসাথে বাস্তব DB/API/native UI-তে implement করা হয়েছে; CI/real-device acceptance আলাদা। Final commit ও CI outcome PR-তে দেখবে; pending run-কে green ধরে নেবে না। নতুন এজেন্ট production rollout হয়েছে ধরে শুরু করবে না। মূল reference এবং সব original HTML এই ফাইলের পরের অংশে রয়েছে।
+
+এখন Phase 5–পরবর্তী কাজ user চাইলে শুরু করবে; কাজের আগে working tree/PR head inspect করবে। একই ID, signed receipt queue, no-SIM-binding ও isolated financial realm রক্ষা করবে। কোনো নতুন agent context না পেলেও এই checkpoint, API contract ও নিচের পূর্ণ reference থেকে বাকি কাজ চালাতে পারবে।
+
+### Implementation checkpoint (embedded)
+
+
+
+## Current implementation
+
+Phases 2–4 source implemented together; combined CI pending at this checkpoint. Phase 1 previously passed native compile/unit CI. Exact screenshot parity and live provider/device acceptance remain manual pending.
+
+- Phase 2: product-neutral QR/manual preview, explicit consent, control-plane device identity for AI-only/Payment/both, same-ID reconnect, server workspace capabilities, product-aware permissions and navigation. Foreground refresh runs immediately on STARTED and every two seconds while visible: no restart/APK update for entitlement changes. This is bounded polling, not a zero-latency push guarantee. Android permission consent always remains user-controlled.
+- Phase 3: native SMS dashboard from encrypted local evidence, durable daily delivery counters (additive Room migration), connection/offline/failure/retry states; capability-aware Settings, same device identity on Payment adoption, existing queued receipt preservation. Unknown historical totals display a dash rather than fabricated zero.
+- Phase 4: signed real database Inbox list/filter/pagination, text chat, durable reader cursors, AI handover toggle, reply quote/copy/swipe, idempotent send and known-failure retry, provider-derived delivery/read status, closed-window/offline states. Web Inbox uses the same database/API. Media/forward/reactions/profile belong to the later reference phases and are not claimed implemented here.
+
+## Backend and database
+
+Additive migrations 0114/0116/0118/0119/0120 target CONTROL only. 0115/0117 target each independent FINANCIAL realm. Control devices never bind a phone/SIM to a receiving account. Authoritative signed workspace-state remains readable with either/both products off; disabled Payment cannot collect or deliver new receipts. Financial projection readiness is distinct from entitlement. Legacy phone key/revocation is checked before adopting control identity.
+
+Normalized channel connections/threads/messages/read cursors, tenant+realm scope, encrypted channel credentials, signed provider webhook ingestion, durable outgoing queue, early delivery-status replay, scoped encrypted push registration/jobs and OAuth single-use actor-bound states are implemented. Ambiguous send outcomes are marked uncertain instead of blindly sending duplicates. This does not implement an AI reply-generation engine.
+
+## Operator rollout (not performed)
+
+Use the EXISTING financial migration operator with `MOBILE_PREVIEW_ALLOW_MIGRATION=true`, explicit `MOBILE_PREVIEW_CONTROL_MIGRATION_FILE` (0114), `MOBILE_PREVIEW_FINANCIAL_MIGRATION_FILE` (0115), `MOBILE_FOUNDATION_ALLOW_MIGRATION=true`, `MOBILE_FOUNDATION_MIGRATION_DIRECTORY`, and the existing three `PG04_*_MIGRATION_DATABASE_URL` values. Migration owner/independent-realm checks remain. No automatic API-startup migrations; deploy migrations before new runtime/client.
+
+Server provider configuration: inspect `inbox_oauth.go`/`inbox_provider.go` for META variables, approved scopes, redirect/webhook URLs and API version. Enable `INBOX_SENDER_ENABLED=true` only on the configured sender runtime. Push optionally requires `INBOX_FCM_CREDENTIALS_FILE` pointing to server-only service-account JSON. Android public Firebase identifiers use `EKMIVO_FIREBASE_APPLICATION_ID`, `EKMIVO_FIREBASE_API_KEY`, `EKMIVO_FIREBASE_PROJECT_ID`, `EKMIVO_FIREBASE_SENDER_ID`; without configuration no mock token/notification is generated.
+
+## Verification
+
+Local Go all-package tests passed. TypeScript passed. Neon isolated branch `br-cold-paper-b3pks3sr`, database `ekmivo`: rolled-back migrations and functional tests passed product switching, AI-only pairing, both-off access, cross-realm/tenant denial, incoming deduplication, outgoing idempotency conflicts, handover, durable reads, early provider seen event replay, 24h denial, revocation and push-job fanout. No production migration or rollout performed. Combined remote CI results must be appended below after completion.
+
+## Next agent / remaining gates
+
+Do not reset financial matching, identity, queues or plan semantics. Read `ANDROID-REDESIGN-HANDOFF.md` and original references in `docs/design/android-20261019/`. Continue later reference phases only after combined CI is green. Keep live Meta approval/account tests, Firebase delivery, real-device permission transitions/process death, EN/BN and screenshot comparison pending in `MANUAL-VERIFICATION.md`. Do not claim pixel parity or production acceptance from compilation. No separate release APK requested at this stage.
+
+## Combined verification checkpoint
+
+Commit `4b8ed10c0c165bd60eea8bf240ac18a6854e30e5`, run `39265784728`: native Compose compile/unit, Go all-package/race/vet/HTTP smoke and both runtime/operator image builds passed. Web lint/build/OpenAPI and initial database suites passed; PG04 HTTP fixture failed because the fixture omitted runtime-required `pg06_workspace_ready`. Follow-up installs the genuine pipeline/readiness migrations in both disposable realms before current API requests; readiness security remains enforced. Run `39266611114` tests that fix plus unread opening position/divider, quote jump/highlight, exact long-press duration, swipe/haptics, pull refresh, pagination refresh, lifecycle-aware polling and connected-channel management. Final run outcome is recorded on PR #86; do not infer success from this pending checkpoint.
+
+Additional Neon rollback evidence: 0117 adopted AI-first phone identity idempotently in both sandbox/live financial test databases, with one physical phone and authorized key. OAuth actor isolation and single-use replay tests passed in control.
+
+The second run passed native/Go/image checks and real checkout browser journeys at 320/768/1440, EN/BN and Light/Dark, then stopped on an obsolete expired-result heading assertion. The current Official theme says “This payment link has expired”; the fixture now asserts that exact heading and the do-not-send-money guidance. New phase 2–4 SQL assertions are also included in the existing isolated CI database suite and roll back after testing.
+
+Database role verification correction: the running API uses `ekmivo_financial_projection` for its restricted control pool and `ekmivo_finance_reader` for each finance pool. Function-only EXECUTE grants now include those actual roles; raw messaging tables remain inaccessible. CI installs the real additive contracts before current API HTTP tests, and SQL asserts actual pool-role execution. Earlier owner-role-only SQL checks did not establish runtime grants.
+
+### API/operator continuation (embedded)
+
+
+
+Implemented by `backend/internal/checkout/mobile_devices.go`, `mobile_inbox.go`, `inbox_oauth.go`, `inbox_provider.go` and `inbox_push.go`. This is source API documentation, not a production deployment claim. Later media/profile endpoints are not implemented by this contract.
+
+## Scope and authentication
+
+Mobile POSTs use the existing P-256 signed transport and bounded body. Headers: `X-Ekmivo-Device-ID`, `X-Ekmivo-Event-ID`, `X-Ekmivo-Timestamp`, `X-Ekmivo-Signature`. The signature covers method, exact route, timestamp, event ID and raw body using the existing canonicalizer. Server loads device workspace/environment/key and verifies current authorization; caller-supplied scope never routes messages. Web routes require the existing session, active workspace membership/settings permission and explicit `environment=live|sandbox`; mutating browser requests pass existing origin/proxy protection.
+
+| Route | Behavior |
+|---|---|
+| POST `/v1/device/pairing-preview` | `{pairing_token}`; non-consuming lookup, fetched name/products/expiry only; no SMS permission or collection |
+| POST `/v1/device/claim` | Explicit consent plus existing signed public-key proof; same-key recovery, same device ID |
+| POST `/v1/device/workspace-state` | Authoritative workspace identity, `products.ai/payments`, `payments_ready`, device ID; supports both-off state |
+| POST `/v1/device/mobile-disconnect` | Revoke current control device; client retains queued evidence and blocks destructive local disconnect while pending |
+| POST `/v1/device/inbox` | Signed actions below |
+| POST `/v1/device/inbox-push-register` | Active device token registration; encrypted server-side |
+| GET/POST `/v1/workspaces/{workspaceID}/mobile-devices` | List / create expiring one-use phone code |
+| POST `/v1/workspaces/{workspaceID}/mobile-devices/{mobileID}/{mobileAction}` | `reconnect`, `revoke`, `delete`; body `phone_id` must match route; reconnect preserves ID |
+| POST `/v1/workspaces/{workspaceID}/inbox` | Same Inbox actions under session authorization; distinct durable user cursor |
+| GET `/v1/workspaces/{workspaceID}/inbox-connections` | Scoped provider/connection state; no credential disclosure |
+| POST `/v1/workspaces/{workspaceID}/inbox-connect` | `{provider:wa|ig|ms}`; single-use actor-scoped OAuth URL |
+| POST `/v1/workspaces/{workspaceID}/inbox-connections/{connectionID}/disconnect` | Disable connection and sending/sync |
+| GET `/v1/channels/meta/callback` | Session-bound state consumption and code exchange; scope rechecked before save |
+| GET/POST `/v1/channels/meta/webhook` | Verification challenge / HMAC-verified durable ingestion; credentials never supplied by Android |
+
+## Inbox actions
+
+Envelope: `{action,thread_id?,before?,filters?,body?}`. Mobile bodies may include existing enrollment/environment transport fields; scope is always derived server-side. Request body maximum 32768 bytes. Client cannot set `reader_kind`; backend overwrites it as device/user.
+
+- `list`: filters `channel` (`wa`,`ig`,`ms` or empty), `unread`, `mode` (`ai`,`seller`,`waiting` or empty), `days`, `q`, `offset`. Page size 50; current pagination uses bounded offsets. Response `{items}` includes actual preview, activity and reader-specific unread count.
+- `messages`: required thread ID; optional `before` message sequence; ascending items from newest matching page of 50. Response `{thread,items}`; thread includes current AI setting, reply-window status and durable read sequence.
+- `read`: body `{sequence}`; monotonic cursor clamped to existing messages in this thread.
+- `ai`: body `{enabled:boolean}`; persists handover configuration and increments version. This is not AI reply generation.
+- `send`: body `{text,idempotency_key,reply_to?}`; UUID key, supported text only, optional same-thread reply. Same key/body returns original message; changed content conflicts. Seller send atomically disables AI and increments handover version. Server checks current product, enabled connection and 24-hour customer window.
+- `retry`: body `{message_id}`; only known failed messages in the same scoped thread and open window. Uncertain outcomes cannot be blindly retried.
+
+Outgoing state is queued → sending → sent/failed/uncertain. Provider events alone establish delivered/seen; late or reordered status does not regress seen. A leased send lost during a worker crash becomes uncertain. Read watermarks and per-message events survive a provider-status-before-send-response race. Reply acceptance is not payment confirmation.
+
+## Runtime and client behavior
+
+Foreground capability refresh occurs on STARTED and every two seconds; visible navigation/permission policy reacts to the observable snapshot. Payment entitlement and finance projection readiness are separate. Failed fetches preserve last scoped cache; authority remains server-side. Disabled Payment stops capture/delivery without deleting existing encrypted evidence. New permissions are requested through Android consent; grants cannot be automatic.
+
+Provider integration requires configured approved Meta app, scopes, account access, OAuth redirect and verified webhook subscription. Current account discovery is bounded to 100 entries per provider discovery call; larger portfolios need pagination expansion. Tokens are encrypted; production token expiry/refresh/revocation behavior still needs live validation. Optional FCM uses minimal IDs and reauthorizes/fetches data before notification display. See `ANDROID-REDESIGN-STATUS.md` for migration/configuration details and `MANUAL-VERIFICATION.md` for remaining provider/device tests.
+
+---
+
+নিচে মূল design specification ও original reference। Implementation status-এর ক্ষেত্রে উপরের checkpoint প্রাধান্য পাবে।
 
 ## 1. নতুন এজেন্ট প্রথমে এটি পড়বে
 
@@ -3276,3 +3374,9 @@ setInterval(()=>{if(!$('#ph').classList.contains('chat'))renderList()},60000);
 
 `````
 <!-- END SOURCE: ekmivo-design-spec.md -->
+
+## Verified combined CI checkpoint — 2026-10-19
+
+Commit `4cf7f9b780600ec55c60cf4abfb007d87f5c6b54`, [Foundation CI run 39267709334](https://github.com/masharzy/ekmivo/actions/runs/39267709334): **all four jobs passed** — native Kotlin Compose assemble/unit tests, Go compile/unit/race/vet/HTTP smoke, runtime/migration image builds, and full Next.js lint/build/OpenAPI/PostgreSQL/session/browser suites. Mobile foundation SQL and restricted-role execution were included.
+
+Final follow-up contains this consolidated handoff, both-off permission-screen guard, stable end-of-history pagination and quote content/jump across older pages. Inspect the latest PR head CI before continuing; the green checkpoint above predates this final follow-up. Real-device/provider/production acceptance remains pending as documented.

@@ -77,7 +77,7 @@ fun EkmivoApp(preferences:AppPreferences,incomingPairingLink:String?=null,incomi
     Spacer(Modifier.height(12.dp))
     EkmivoPrimaryButton(if(bn)"আবার চেষ্টা" else "Try again",onClick={scope.launch{withContext(Dispatchers.IO){accessRepo.refreshBlocking()}}},modifier=Modifier.padding(horizontal=24.dp))
    }
-   missing||showSuccess||repair -> SetupWizard(bn,onLanguageChange={v->scope.launch{preferences.updateLanguage(if(v)Language.BN else Language.EN)}},onDone={
+   (payments||ai)&&(missing||showSuccess||repair) -> SetupWizard(bn,onLanguageChange={v->scope.launch{preferences.updateLanguage(if(v)Language.BN else Language.EN)}},onDone={
     health=SetupHealth(app).refresh();showSuccess=false;repair=false
    },payments=payments,ai=ai,workspaceName=access!!.name)
    else -> Column(Modifier.fillMaxSize().background(LocalEkmivoPalette.current.canvas).statusBarsPadding()) {

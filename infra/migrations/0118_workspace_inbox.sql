@@ -47,7 +47,7 @@ BEGIN
  IF t IS NOT NULL THEN
   IF NOT EXISTS(SELECT 1 FROM inbox_threads a JOIN inbox_connections c ON c.id=a.connection_id WHERE a.id=t AND a.workspace_id=w AND c.enabled AND c.environment=e) THEN RAISE EXCEPTION 'thread unavailable' USING ERRCODE='42501'; END IF;
   SELECT jsonb_build_object('thread',jsonb_build_object('id',a.id,'name',a.customer_name,'channel',c.provider,'read_sequence',coalesce((SELECT sequence FROM inbox_read_cursors WHERE thread_id=a.id AND device_id=d AND reader_kind=rk),0),'ai_enabled',a.ai_enabled,'last_customer_at',a.last_customer_at,'window_open',coalesce(a.last_customer_at>now()-interval '24 hours',false)),
-   'items',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.sequence) FROM (SELECT m.id,m.sequence,m.sender,m.type,m.body,m.state,m.created_at,m.sent_at,m.delivered_at,m.seen_at,m.reply_to,m.error_code FROM inbox_messages m WHERE m.workspace_id=w AND m.thread_id=t AND (before_seq IS NULL OR m.sequence<before_seq) ORDER BY m.sequence DESC LIMIT 50)x),'[]'::jsonb)) INTO result
+   'items',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.sequence) FROM (SELECT m.id,m.sequence,m.sender,m.type,m.body,m.state,m.created_at,m.sent_at,m.delivered_at,m.seen_at,m.reply_to,(SELECT quoted.body FROM inbox_messages quoted WHERE quoted.id=m.reply_to AND quoted.thread_id=m.thread_id) AS reply_body,m.error_code FROM inbox_messages m WHERE m.workspace_id=w AND m.thread_id=t AND (before_seq IS NULL OR m.sequence<before_seq) ORDER BY m.sequence DESC LIMIT 50)x),'[]'::jsonb)) INTO result
   FROM inbox_threads a JOIN inbox_connections c ON c.id=a.connection_id WHERE a.id=t AND a.workspace_id=w;
   RETURN result;
  END IF;
