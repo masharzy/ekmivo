@@ -290,6 +290,12 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	if fresh {
+		if err = s.persistInboxMedia(r.Context(), tx, provider, raw); err != nil {
+			fail(w, 503, "SOURCE_UNAVAILABLE")
+			return
+		}
+	}
 	if tx.Commit(r.Context()) != nil {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
@@ -316,15 +322,7 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			if err := s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_next_send()").Scan(&raw); err != nil || len(raw) == 0 {
 				continue
 			}
-			var job struct {
-				ID         string `json:"id"`
-				Workspace  string `json:"workspace_id"`
-				Text       string `json:"text"`
-				Channel    string `json:"channel"`
-				Account    string `json:"account"`
-				Recipient  string `json:"recipient"`
-				Credential string `json:"credential"`
-			}
+			var job inboxSendJob
 			if json.Unmarshal(raw, &job) != nil {
 				continue
 			}
@@ -333,9 +331,10 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			encoded, err := base64.StdEncoding.DecodeString(job.Credential)
 			token, decryptErr := merchantwebhook.Decrypt(s.Pipeline.Key, encoded, job.Workspace+"|inbox|"+job.Channel+"|"+job.Account)
 			if err == nil && decryptErr == nil && strings.HasPrefix(version, "v") && !strings.ContainsAny(version, "/?#") {
-				payload := map[string]any{"recipient": map[string]string{"id": job.Recipient}, "message": map[string]string{"text": job.Text}, "messaging_type": "RESPONSE"}
-				if job.Channel == "wa" {
-					payload = map[string]any{"messaging_product": "whatsapp", "to": job.Recipient, "type": "text", "text": map[string]string{"body": job.Text}}
+				payload, payloadErr := s.inboxSendPayload(ctx, job, string(token), version)
+				if payloadErr != nil {
+					_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','MEDIA_PREPARATION_FAILED')", job.ID)
+					continue
 				}
 				data, _ := json.Marshal(payload)
 				req, _ := http.NewRequestWithContext(ctx, "POST", "https://graph.facebook.com/"+version+"/"+url.PathEscape(job.Account)+"/messages", bytes.NewReader(data))
@@ -356,6 +355,9 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 					response.Body.Close()
 					if response.StatusCode >= 200 && response.StatusCode < 300 && parseErr == nil {
 						id = result.MID
+						if job.Type == "reaction" && id == "" {
+							id = "reaction-" + job.ID
+						}
 						if len(result.Messages) > 0 {
 							id = result.Messages[0].ID
 						}
@@ -375,6 +377,9 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 				}
 			}
 			_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,$2,$3,$4)", job.ID, id, state, safe)
+			if state == "sent" && job.Type == "reaction" {
+				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_reaction_finish($1::uuid)", job.ID)
+			}
 		}
 	}
 }

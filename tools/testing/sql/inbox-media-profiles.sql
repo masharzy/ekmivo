@@ -1,0 +1,35 @@
+DO $test$
+DECLARE u uuid:=gen_random_uuid();w uuid:=gen_random_uuid();c uuid;t uuid;t2 uuid;d uuid:=gen_random_uuid();i uuid:=gen_random_uuid();key uuid:=gen_random_uuid();r jsonb;m jsonb;
+BEGIN
+ INSERT INTO app_users(id,email,display_name,password_hash) VALUES(u,'media-'||u||'@example.test','Media fixture','not-a-login-hash');
+ INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(w,'Media fixture','both',u);
+ UPDATE workspace_product_access SET enabled=true WHERE workspace_id=w;
+ c:=inbox_connection(w,'live','wa','media-'||w,decode('abcd','hex'));
+ PERFORM inbox_ingest(c,'incoming-a','customer-a','Customer','hello','text',now());
+ PERFORM inbox_ingest(c,'incoming-b','customer-b','Other','hello','text',now());
+ SELECT id INTO t FROM inbox_threads WHERE connection_id=c AND external_id='customer-a';
+ SELECT id INTO t2 FROM inbox_threads WHERE connection_id=c AND external_id='customer-b';
+ r:=inbox_profile(w,'live',t);IF (r->'summary'->>'total')::integer<>0 THEN RAISE EXCEPTION 'fabricated orders';END IF;
+ PERFORM inbox_advanced(w,'live',d,t,'note','{"text":"remember","version":0}');
+ BEGIN PERFORM inbox_advanced(w,'live',d,t,'note','{"text":"overwrite","version":0}');RAISE EXCEPTION 'lost update';EXCEPTION WHEN unique_violation THEN NULL;END;
+ PERFORM inbox_advanced(w,'live',d,t,'note','{"text":"","version":1}');
+ IF inbox_profile(w,'live',t)->>'note'<>'' THEN RAISE EXCEPTION 'empty note not saved';END IF;
+ PERFORM inbox_media_save(w,'live',t,i,'fixture/key','receipt.png','image/png',123,repeat('a',64),0);
+ m:=inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',i,'idempotency_key',key));
+ r:=inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',i,'idempotency_key',key));
+ IF r->>'id'<>m->>'id' THEN RAISE EXCEPTION 'duplicate media send';END IF;
+ BEGIN PERFORM inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',gen_random_uuid(),'idempotency_key',key));RAISE EXCEPTION 'key conflict';EXCEPTION WHEN unique_violation THEN NULL;END;
+ r:=inbox_advanced(w,'live',d,t2,'forward',jsonb_build_object('message_id',m->>'id','idempotency_key',gen_random_uuid()));
+ IF inbox_media_access(w,'live',t2,i)->>'object_key'<>'fixture/key' THEN RAISE EXCEPTION 'forward media unreadable';END IF;
+ BEGIN PERFORM inbox_media_access(gen_random_uuid(),'live',t,i);RAISE EXCEPTION 'foreign media';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+ BEGIN PERFORM inbox_media_access(w,'sandbox',t,i);RAISE EXCEPTION 'foreign realm';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+ PERFORM inbox_advanced(w,'live',d,t,'orders-save',jsonb_build_object('id',gen_random_uuid(),'reference','order-a','items','Actual order','amount_minor',10000,'status','ok'));
+ PERFORM inbox_advanced(w,'live',d,t,'orders-save',jsonb_build_object('id',gen_random_uuid(),'reference','order-b','items','Cancelled','amount_minor',9000,'status','cx'));
+ PERFORM inbox_advanced(w,'live',d,t,'orders-save',jsonb_build_object('id',gen_random_uuid(),'reference','order-c','items','Running','amount_minor',20000,'status','run'));
+ r:=inbox_profile(w,'live',t);IF (r->'summary'->>'spend_minor')::bigint<>10000 OR (r->'summary'->>'total')::integer<>3 THEN RAISE EXCEPTION 'bad profile totals';END IF;
+ PERFORM inbox_inbound_media(c,'provider-image','customer-a','','image',decode('ab','hex'),now());
+ IF NOT EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t AND provider_id='provider-image' AND type='image' AND content ? 'media_id') THEN RAISE EXCEPTION 'missing inbound media';END IF;
+ UPDATE inbox_threads SET last_customer_at=now()-interval '25 hours' WHERE id=t2;
+ BEGIN PERFORM inbox_advanced(w,'live',d,t2,'forward',jsonb_build_object('message_id',m->>'id','idempotency_key',gen_random_uuid()));RAISE EXCEPTION 'closed forward';EXCEPTION WHEN invalid_parameter_value THEN NULL;END;
+ IF has_table_privilege('ekmivo_financial_projection','inbox_media','SELECT') THEN RAISE EXCEPTION 'raw media accessible';END IF;
+END $test$;

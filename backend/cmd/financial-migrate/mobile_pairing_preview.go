@@ -41,7 +41,8 @@ func migrateMobilePreview(ctx context.Context) error {
 			struct{ dsn, file, realm string }{live, filepath.Join(root, "0117_mobile_device_financial_adoption.sql"), "live"},
 			struct{ dsn, file, realm string }{control, filepath.Join(root, "0118_workspace_inbox.sql"), ""},
 			struct{ dsn, file, realm string }{control, filepath.Join(root, "0119_channel_oauth.sql"), ""},
-			struct{ dsn, file, realm string }{control, filepath.Join(root, "0120_inbox_push.sql"), ""})
+			struct{ dsn, file, realm string }{control, filepath.Join(root, "0120_inbox_push.sql"), ""},
+			struct{ dsn, file, realm string }{control, filepath.Join(root, "0121_inbox_media_profiles.sql"), ""})
 	}
 	for _, t := range targets {
 		want := "0115_mobile_pairing_preview_financial.sql"
@@ -49,7 +50,7 @@ func migrateMobilePreview(ctx context.Context) error {
 			want = "0114_mobile_workspace_preview_control.sql"
 		}
 		base := filepath.Base(t.file)
-		if base != want && !(os.Getenv("MOBILE_FOUNDATION_ALLOW_MIGRATION") == "true" && (base == "0116_mobile_devices_control.sql" || base == "0117_mobile_device_financial_adoption.sql" || base == "0118_workspace_inbox.sql" || base == "0119_channel_oauth.sql" || base == "0120_inbox_push.sql")) {
+		if base != want && !(os.Getenv("MOBILE_FOUNDATION_ALLOW_MIGRATION") == "true" && (base == "0116_mobile_devices_control.sql" || base == "0117_mobile_device_financial_adoption.sql" || base == "0118_workspace_inbox.sql" || base == "0119_channel_oauth.sql" || base == "0120_inbox_push.sql" || base == "0121_inbox_media_profiles.sql")) {
 			return errors.New("explicit mobile preview migration file required")
 		}
 		pool, e := pgxpool.New(ctx, t.dsn)
@@ -73,6 +74,8 @@ func migrateMobilePreview(ctx context.Context) error {
 				marker = "mobile_devices"
 			case "0117_mobile_device_financial_adoption.sql":
 				marker = "pg06_mobile_adopt(uuid,uuid,text,bytea)"
+			case "0121_inbox_media_profiles.sql":
+				marker = "inbox_media"
 			case "0120_inbox_push.sql":
 				marker = "inbox_push_tokens"
 			case "0119_channel_oauth.sql":

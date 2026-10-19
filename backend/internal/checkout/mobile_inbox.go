@@ -30,7 +30,7 @@ func (s *Service) HandleWebInbox(w http.ResponseWriter, r *http.Request) {
 		authError(w, err)
 		return
 	}
-	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 32768))
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 7340032))
 	if err != nil {
 		fail(w, 413, "BODY_TOO_LARGE")
 		return
@@ -71,6 +71,28 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 	}
 	b.Body["reader_kind"] = reader
 	var result []byte
+	if b.Action == "media-upload" || b.Action == "media-get" {
+		if thread == nil {
+			fail(w, 422, "INVALID_THREAD")
+			return
+		}
+		s.inboxMediaAction(w, r, d, b.Thread, b.Action, b.Body)
+		return
+	}
+	if b.Action == "profile" || b.Action == "note" || b.Action == "products" || b.Action == "info" || b.Action == "send-media" || b.Action == "send-product" || b.Action == "forward" || b.Action == "react" || (reader == "user" && (b.Action == "orders-save" || b.Action == "product-save" || b.Action == "contact")) {
+		if thread == nil {
+			fail(w, 422, "INVALID_THREAD")
+			return
+		}
+		body, _ := json.Marshal(b.Body)
+		err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_advanced($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", d.Workspace, d.Environment, d.ID, thread, b.Action, body).Scan(&result)
+		if err != nil {
+			mapped(w, err)
+			return
+		}
+		write(w, 200, json.RawMessage(result))
+		return
+	}
 	if b.Action == "list" || b.Action == "messages" {
 		if b.Action == "messages" && thread == nil {
 			fail(w, 422, "INVALID_THREAD")

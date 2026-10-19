@@ -3380,3 +3380,7 @@ setInterval(()=>{if(!$('#ph').classList.contains('chat'))renderList()},60000);
 Commit `4cf7f9b780600ec55c60cf4abfb007d87f5c6b54`, [Foundation CI run 39267709334](https://github.com/masharzy/ekmivo/actions/runs/39267709334): **all four jobs passed** — native Kotlin Compose assemble/unit tests, Go compile/unit/race/vet/HTTP smoke, runtime/migration image builds, and full Next.js lint/build/OpenAPI/PostgreSQL/session/browser suites. Mobile foundation SQL and restricted-role execution were included.
 
 Final follow-up contains this consolidated handoff, both-off permission-screen guard, stable end-of-history pagination and quote content/jump across older pages. Inspect the latest PR head CI before continuing; the green checkpoint above predates this final follow-up. Real-device/provider/production acceptance remains pending as documented.
+
+## Phase 5–6 continuation checkpoint — 2026-10-20
+
+Phase 5–6 source is added by control migration 0121, Inbox advanced/media/provider handlers and native `InboxMedia`, `InboxMessageActions`, `CustomerProfile`, `CustomerVerdict` components. Current API/operator/configuration/verification details are appended in `ANDROID-MESSAGING-API.md`, `ANDROID-REDESIGN-STATUS.md`, and the consolidated `MANUAL-VERIFICATION.md`. Earlier “later media/profile endpoints are not implemented” passages above describe the phase 2–4 checkpoint only. Do not infer production readiness: Meta approval/account, private storage/scanner, device and visual checks remain pending. Check latest PR head CI before continuing.

@@ -456,7 +456,7 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 	limit := int64(12288)
 
 	if r.PathValue("action") == "inbox" {
-		limit = 32768
+		limit = 7340032
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	raw, e := io.ReadAll(r.Body)

@@ -741,12 +741,13 @@ try{
  // isolated CI databases only. Entire transaction intentionally rolls back.
  try {
   await admin.begin(async tx=>{
-   for(const filename of ["0114_mobile_workspace_preview_control.sql","0116_mobile_devices_control.sql","0118_workspace_inbox.sql","0119_channel_oauth.sql","0120_inbox_push.sql"]){
+   for(const filename of ["0114_mobile_workspace_preview_control.sql","0116_mobile_devices_control.sql","0118_workspace_inbox.sql","0119_channel_oauth.sql","0120_inbox_push.sql","0121_inbox_media_profiles.sql"]){
     const sql=await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8");
     await tx.unsafe(sql.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple();
    }
    const checks=await readFile(new URL("../../../tools/testing/sql/mobile-foundation-control.sql",import.meta.url),"utf8");
    await tx.unsafe(checks).simple();
+   await tx.unsafe(await readFile(new URL("../../../tools/testing/sql/inbox-media-profiles.sql",import.meta.url),"utf8")).simple();
    throw rollback;
   });
  }catch(err){if(err!==rollback)throw err}
@@ -766,7 +767,7 @@ try{
  }
  // Current API uses restricted control-projection and financial-reader pools.
  // Keep the actual additive contracts installed on these disposable DBs for HTTP tests.
- for(const filename of ["0114_mobile_workspace_preview_control.sql","0116_mobile_devices_control.sql","0118_workspace_inbox.sql","0119_channel_oauth.sql","0120_inbox_push.sql"]){
+ for(const filename of ["0114_mobile_workspace_preview_control.sql","0116_mobile_devices_control.sql","0118_workspace_inbox.sql","0119_channel_oauth.sql","0120_inbox_push.sql","0121_inbox_media_profiles.sql"]){
   const sql=await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8");
   await admin.unsafe(sql).simple();
  }
