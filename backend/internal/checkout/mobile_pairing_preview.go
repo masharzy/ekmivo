@@ -1,7 +1,9 @@
 package checkout
 
 import (
+ "bytes"
  "encoding/json"
+ "io"
  "errors"
  "net/http"
 
@@ -13,9 +15,12 @@ import (
 func (s *Service) handleMobilePairingPreview(w http.ResponseWriter, r *http.Request, raw []byte) {
  w.Header().Set("Cache-Control", "no-store")
  var body struct { Token string `json:"pairing_token"` }
- if json.Unmarshal(raw,&body)!=nil || !physicalPairingCodePattern.MatchString(body.Token) {
+ decoder:=json.NewDecoder(bytes.NewReader(raw))
+ decoder.DisallowUnknownFields()
+ if decoder.Decode(&body)!=nil || !physicalPairingCodePattern.MatchString(body.Token) {
   fail(w,422,"INVALID_ENROLLMENT"); return
  }
+ if decoder.Decode(new(any))!=io.EOF { fail(w,422,"INVALID_ENROLLMENT");return }
  if !s.budget(w,"device-preview-global",300) || !s.budget(w,"device-preview|"+digest(body.Token),20) { return }
  var identity []byte
  err:=s.Sandbox.QueryRow(r.Context(),"SELECT pg06_phone_pairing_preview($1)",digest(body.Token)).Scan(&identity)

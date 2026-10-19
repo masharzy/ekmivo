@@ -265,6 +265,52 @@ paths:
         '403': {description: Denied}
         '404': {description: Resource or transition unavailable}
         '503': {description: Source unavailable}
+  /v1/device/pairing-preview:
+    post:
+      operationId: previewMobileWorkspace
+      summary: Read workspace identity before explicit pairing consent
+      description: |
+        Uses a valid unconsumed eight-character pairing capability. Does not claim
+        a device, consume the token, register a key, or authorize SMS collection.
+        Resolves the workspace and enabled products from the authoritative database.
+        Requires additive control 0114 and financial 0115 migrations. Response is no-store.
+        Currently supports existing Payment phone pairing codes; AI-only enrollment
+        requires its separate control-plane device identity path.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [pairing_token]
+              properties:
+                pairing_token: {type: string, pattern: '^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$'}
+      responses:
+        '200':
+          description: Scoped workspace identity and current products
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [workspace_id, workspace_name, environment, products, expires_at]
+                properties:
+                  workspace_id: {type: string, format: uuid}
+                  workspace_name: {type: string}
+                  environment: {type: string, enum: [sandbox, live]}
+                  expires_at: {type: string, format: date-time}
+                  products:
+                    type: object
+                    required: [ai, payments]
+                    properties:
+                      ai: {type: boolean}
+                      payments: {type: boolean}
+        '403': {description: Pairing unavailable or workspace disabled}
+        '413': {description: Body too large}
+        '422': {description: Invalid pairing code}
+        '429': {description: Preview budget exceeded}
+        '503': {description: Workspace source or migration unavailable}
   /v1/device/{action}:
     parameters:
       - {name: action, in: path, required: true, schema: {type: string, enum: [claim, heartbeat, events, history]}}
@@ -446,773 +492,197 @@ paths:
                     required: [title, quantity, unit_amount_minor]
                     properties:
                       title: { type: string, minLength: 1, maxLength: 160 }
-                      quantity: { type: integer, minimum: 1, maximum: 9999 }
-                      unit_amount_minor: { type: integer, minimum: 1, maximum: 100000000000 }
-      responses:
-        '201':
-          description: Immutable issued source with total computed by database
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/BillingSource' }
-        '403': { description: Write scope denied }
-        '409': { description: Duplicate issued document reference }
-        '422': { description: Invalid line or total overflow }
-        '503': { description: Dependency unavailable }
-  /v1/payment/create:
-    post:
-      operationId: createSimplePayment
-      summary: Create a hosted payment
-      description: Creates an immutable payment using the existing intent engine. Optional webhook_url is bound automatically; manual registration is not required.
-      security: [{ MerchantBearer: [] }]
-      parameters:
-        - in: header
-          name: Idempotency-Key
-          schema: { type: string, minLength: 16, maxLength: 128 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [amount]
-              properties:
-                amount: { type: number, exclusiveMinimum: 0, maximum: 1000000000, multipleOf: 0.01 }
-                redirect_url: { type: string, format: uri }
-                webhook_url: { type: string, format: uri, description: Optional public HTTPS destination for this payment. }
-                cancel_url: { type: string, format: uri }
-                reference: { type: string, maxLength: 128 }
-                customer_name: { type: string, maxLength: 160 }
-                customer_email: { type: string, maxLength: 254 }
-                customer_phone: { type: string, maxLength: 32 }
-                metadata: { type: object, additionalProperties: true }
-      responses:
-        '201':
-          description: Created, not paid. Legacy fields remain available.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [invoice_id, status]
-                properties:
-                  invoice_id: { type: string, format: uuid }
-                  payment_url: { type: string, format: uri }
-                  status: { type: string, enum: [PENDING, COMPLETED, CANCELLED, EXPIRED, FAILED, REFUNDED] }
-        default:
-          description: Request rejected or source unavailable.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ApiError' }
-  /v1/payment/verify:
-    post:
-      operationId: verifySimplePayment
-      summary: Read authoritative payment status by invoice_id
-      description: Read-only lookup. Match invoice_id, amount_minor and currency against the stored order before fulfilment. A webhook or redirect alone is not proof.
-      security: [{ MerchantBearer: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [invoice_id]
-              additionalProperties: false
-              properties:
-                invoice_id: { type: string, format: uuid }
-      responses:
-        '200':
-          description: Lookup succeeded; status must equal COMPLETED before fulfilment.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [invoice_id, status, amount_minor, currency]
-                properties:
-                  invoice_id: { type: string, format: uuid }
-                  status: { type: string, enum: [PENDING, COMPLETED, CANCELLED, EXPIRED, FAILED, REFUNDED] }
-                  amount_minor: { type: integer }
-                  currency: { type: string }
-                  reference: { type: string }
-        default:
-          description: Request rejected or source unavailable.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ApiError' }
-  /v1/payment-intents:
-    get:
-      operationId: listPaymentIntentsKey
-      summary: List up to 50 tenant/environment-scoped issued requests
-      tags: [Merchant]
-      security:
-        - MerchantBearer: []
-      responses:
-        '200':
-          description: Authorized list of actual financial records
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data, environment]
-                properties:
-                  environment: { type: string, const: sandbox }
-                  data: { type: array, items: { $ref: '#/components/schemas/Intent' } }
-        '401': { description: Not authenticated }
-        '403': { description: Read scope or business denied }
-        '503': { description: Financial database or live source unavailable }
-    post:
-      operationId: createPaymentIntentKey
-      summary: Issue an immutable standalone or order/invoice-linked BDT request
-      tags: [Merchant]
-      description: |
-        Simple standalone payments require only amount (BDT); redirect_url is optional for apps and bots
-        (HTTPS). The server derives BDT/paisa, merchant_reference, currency BDT
-        and default expiry (30 minutes). Existing integrations may continue
-        sending amount_minor, merchant_reference, currency and expiry.
-        Linked order/invoice requests still resolve the amount from the
-        frozen tenant source. Supplying amount and amount_minor together is
-        invalid. Idempotency-Key is optional but strongly recommended: reuse
-        the same key and body to get a single intent on retries.
-        webhook_url is securely bound to this payment automatically;
-        signed webhook delivery is handled by the normal endpoint worker.
-        A redirect or unsigned callback never proves payment.
-      security:
-        - MerchantBearer: []
-      parameters:
-        - name: Idempotency-Key
-          in: header
-          required: false
-          description: Recommended stable identifier for safe server retries.
-          schema: { type: string, minLength: 16, maxLength: 128 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              oneOf:
-                - required: [amount]
-                - required: [amount_minor]
-                - required: [order_id]
-                - required: [invoice_id]
-              properties:
-                amount: { type: number, minimum: 0.01, maximum: 1000000000, multipleOf: 0.01, description: "Amount in BDT, max two decimal places. No floats are used for server money arithmetic." }
-                redirect_url: { type: string, format: uri, maxLength: 2048, description: "Public HTTPS return page; not payment proof." }
-                cancel_url: { type: string, format: uri, maxLength: 2048 }
-                webhook_url: { type: string, format: uri, maxLength: 2048, description: "Optional public HTTPS callback bound to this payment. Automatic callback signing secret is available in API Keys." }
-                customer_name: { type: string, maxLength: 160 }
-                customer_email: { type: string, format: email, maxLength: 254 }
-                customer_phone: { type: string, maxLength: 32 }
-                metadata: { type: object, description: "Merchant-only JSON object, maximum 2048 bytes." }
-                reference: { type: string, minLength: 1, maxLength: 128 }
-                merchant_reference: { type: string, minLength: 1, maxLength: 128, deprecated: true }
-                amount_minor: { type: integer, minimum: 1, maximum: 100000000000, deprecated: true }
-                order_id: { type: string, format: uuid }
-                invoice_id: { type: string, format: uuid }
-                currency: { type: string, const: BDT, default: BDT }
-                expires_in_minutes: { type: integer, minimum: 5, maximum: 60, default: 30 }
-      responses:
-        '201':
-          description: Issued standalone payment request, not paid
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Intent'
-                  - type: object
-                    required: [checkout_token]
-                    properties:
-                      checkout_token: { type: string, minLength: 43, maxLength: 43 }
-                      checkout_url: { type: string, format: uri, description: "Present when the public HTTPS web origin is configured." }
-        '401': { description: Unauthenticated }
-        '403': { description: Write scope denied }
-        '409': { description: Duplicate reference or changed idempotency payload }
-        '404': { description: Linked source absent from authorized realm }
-        '422': { description: "Invalid amount, expiry, mixed source or caller-forged linked total" }
-        '503': { description: Finance or live source unavailable }
-  /v1/payment-intents/{intentID}:
-    get:
-      operationId: getPaymentIntentKey
-      tags: [Merchant]
-      summary: Read original issued terms, linked lines and immutable history
-      security:
-        - MerchantBearer: []
-      parameters:
-        - name: workspaceID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: intentID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: environment
-          in: query
-          required: true
-          schema: { type: string, enum: [sandbox, live] }
-      responses:
-        '200':
-          description: Masked payer, issued source lines and append-only events
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data, environment]
-                properties:
-                  environment: { type: string, const: sandbox }
-                  data:
-                    allOf:
-                      - $ref: '#/components/schemas/Intent'
-                      - type: object
-                        properties:
-                          items:
-                            type: [array, 'null']
-                            items:
-                              type: object
-                              properties:
-                                title: { type: string }
-                                quantity: { type: integer }
-                                unit_amount_minor: { type: integer }
-                          attempt:
-                            type: [object, 'null']
-                            properties:
-                              payer_suffix: { type: string, pattern: '^[0-9]{4}$' }
-                              method: { type: string, enum: [bkash, nagad, rocket] }
-                              window_start: { type: string, format: date-time }
-                              window_end: { type: string, format: date-time }
-                          events:
-                            type: array
-                            items:
-                              type: object
-                              required: [event_type, reason, occurred_at]
-                              properties:
-                                event_type: { type: string, enum: [created, payer_locked, cancelled] }
-                                reason: { type: string }
-                                occurred_at: { type: string, format: date-time }
-        '401': { description: Not authenticated }
-        '403': { description: Tenant or read scope denied }
-        '404': { description: Request not found in authorized tenant/environment }
-        '429':
-          description: Per-process authenticated workspace budget exceeded
-          headers:
-            Retry-After:
-              schema: { type: integer, const: 60 }
-        '503': { description: Finance or live source unavailable }
-  /v1/payment-intents/{intentID}/cancel:
-    post:
-      operationId: cancelPaymentIntentKey
-      tags: [Merchant]
-      summary: Append-only cancellation for an unpaid unexpired request
-      description: No refund or paid-state mutation occurs. Verified evidence processing is separate.
-      security:
-        - MerchantBearer: []
-      parameters:
-        - name: workspaceID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: intentID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: environment
-          in: query
-          required: true
-          schema: { type: string, enum: [sandbox, live] }
-      responses:
-        '200': { description: Cancelled or previously cancelled }
-        '403': { description: Workspace permission denied }
-        '404': { description: Intent not found in authorized realm }
-        '409': { description: Intent already paid or expired }
-        '503': { description: Finance source unavailable }
-  /v1/payment-intents/{intentID}/verify-transaction:
-    post:
-      operationId: lookupVerifiedReceiptByTrxID
-      tags: [Merchant]
-      summary: Read-only TrxID-assisted lookup of an already verified payment
-      description: |
-        This request does not consume a transaction, verify raw SMS, charge a credit
-        or mark money paid. It only reports an already uniquely matched, verified
-        observation within the authenticated API key's workspace and environment.
-      security:
-        - MerchantBearer: []
-      parameters:
-        - name: intentID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [transaction_id, provider, amount_minor]
-              properties:
-                transaction_id: { type: string, minLength: 4, maxLength: 128 }
-                provider: { type: string, enum: [bkash, nagad, rocket] }
-                amount_minor: { type: integer, minimum: 1 }
-      responses:
-        '200':
-          description: Read-only status of uniquely matched payment for the requested intent
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [verified, status, payment_intent_id]
-                properties:
-                  verified: { type: boolean }
-                  status: { type: string, enum: [pending, verified] }
-                  payment_intent_id: { type: string, format: uuid }
-                  payment_id: { type: string, format: uuid }
-                  verified_at: { type: string, format: date-time }
-        '401': { description: Missing or expired merchant API key }
-        '403': { description: Read scope or workspace access denied }
-        '422': { description: Invalid lookup input }
-        '429': { description: Rate limited }
-        '503': { description: Financial dependency unavailable }
-  /v1/workspaces/{workspaceID}/payment-intents:
-    parameters:
-      - name: workspaceID
-        in: path
-        required: true
-        schema: { type: string, format: uuid }
-      - name: environment
-        in: query
-        required: true
-        schema: { type: string, enum: [sandbox, live] }
-        description: Live returns 503 until a real approved receiving source is connected.
-    get:
-      operationId: listPaymentIntents
-      summary: List up to 50 tenant/environment-scoped issued requests
-      tags: [Merchant]
-      security:
-        - MerchantBearer: []
-        - SessionCookie: []
-      responses:
-        '200':
-          description: Authorized list of actual financial records
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data, environment]
-                properties:
-                  environment: { type: string, const: sandbox }
-                  data: { type: array, items: { $ref: '#/components/schemas/Intent' } }
-        '401': { description: Not authenticated }
-        '403': { description: Read scope or business denied }
-        '503': { description: Financial database or live source unavailable }
-    post:
-      operationId: createPaymentIntent
-      summary: Issue an immutable standalone or order/invoice-linked BDT request
-      tags: [Merchant]
-      description: |
-        Server-side payments:write permission required. Linked requests include
-        only order_id OR invoice_id; the server resolves the exact amount from
-        its immutable tenant/environment-bound source. Caller-provided linked
-        amount is rejected. Same idempotency key plus identical payload returns
-        one original request; changed payload or duplicate reference conflicts.
-        No TrxID, payment screenshot, manual approval or client paid state.
-      security:
-        - MerchantBearer: []
-        - SessionCookie: []
-      parameters:
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: { type: string, minLength: 16, maxLength: 128 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [merchant_reference, currency, expires_in_minutes]
-              oneOf:
-                - required: [amount_minor]
-                - required: [order_id]
-                - required: [invoice_id]
-              properties:
-                merchant_reference: { type: string, minLength: 1, maxLength: 128 }
-                amount_minor: { type: integer, minimum: 1, maximum: 100000000000 }
-                order_id: { type: string, format: uuid }
-                invoice_id: { type: string, format: uuid }
-                currency: { type: string, const: BDT }
-                expires_in_minutes: { type: integer, minimum: 5, maximum: 60 }
-      responses:
-        '201':
-          description: Issued standalone payment request, not paid
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Intent'
-                  - type: object
-                    required: [checkout_token]
-                    properties:
-                      checkout_token: { type: string, minLength: 43, maxLength: 43 }
-        '401': { description: Unauthenticated }
-        '403': { description: Write scope denied }
-        '409': { description: Duplicate reference or changed idempotency payload }
-        '404': { description: Linked source absent from authorized realm }
-        '422': { description: "Invalid amount, expiry, mixed source or caller-forged linked total" }
-        '503': { description: Finance or live source unavailable }
-  /v1/workspaces/{workspaceID}/payment-intents/{intentID}:
-    get:
-      operationId: getPaymentIntent
-      tags: [Merchant]
-      summary: Read original issued terms, linked lines and immutable history
-      security:
-        - MerchantBearer: []
-        - SessionCookie: []
-      parameters:
-        - name: workspaceID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: intentID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: environment
-          in: query
-          required: true
-          schema: { type: string, enum: [sandbox, live] }
-      responses:
-        '200':
-          description: Masked payer, issued source lines and append-only events
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data, environment]
-                properties:
-                  environment: { type: string, const: sandbox }
-                  data:
-                    allOf:
-                      - $ref: '#/components/schemas/Intent'
-                      - type: object
-                        properties:
-                          items:
-                            type: [array, 'null']
-                            items:
-                              type: object
-                              properties:
-                                title: { type: string }
-                                quantity: { type: integer }
-                                unit_amount_minor: { type: integer }
-                          attempt:
-                            type: [object, 'null']
-                            properties:
-                              payer_suffix: { type: string, pattern: '^[0-9]{4}$' }
-                              method: { type: string, enum: [bkash, nagad, rocket] }
-                              window_start: { type: string, format: date-time }
-                              window_end: { type: string, format: date-time }
-                          events:
-                            type: array
-                            items:
-                              type: object
-                              required: [event_type, reason, occurred_at]
-                              properties:
-                                event_type: { type: string, enum: [created, payer_locked, cancelled] }
-                                reason: { type: string }
-                                occurred_at: { type: string, format: date-time }
-        '401': { description: Not authenticated }
-        '403': { description: Tenant or read scope denied }
-        '404': { description: Request not found in authorized tenant/environment }
-        '429':
-          description: Per-process authenticated workspace budget exceeded
-          headers:
-            Retry-After:
-              schema: { type: integer, const: 60 }
-        '503': { description: Finance or live source unavailable }
-  /v1/workspaces/{workspaceID}/payment-intents/{intentID}/cancel:
-    post:
-      operationId: cancelPaymentIntent
-      tags: [Merchant]
-      summary: Append-only cancellation for an unpaid unexpired request
-      description: No refund or paid-state mutation occurs. Verified evidence processing is separate.
-      security:
-        - MerchantBearer: []
-        - SessionCookie: []
-      parameters:
-        - name: workspaceID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: intentID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-        - name: environment
-          in: query
-          required: true
-          schema: { type: string, enum: [sandbox, live] }
-      responses:
-        '200': { description: Cancelled or previously cancelled }
-        '403': { description: Workspace permission denied }
-        '404': { description: Intent not found in authorized realm }
-        '409': { description: Intent already paid or expired }
-        '503': { description: Finance source unavailable }
-  /v1/public/checkout/{token}:
-    get:
-      operationId: getCheckoutStatus
-      tags: [Checkout]
-      summary: Safe public capability lookup and authoritative status
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/CheckoutToken'
-      responses:
-        '200':
-          description: Opaque-token scope only, no full payer, no raw evidence
-          headers:
-            Cache-Control: { schema: { type: string, const: no-store } }
-            Referrer-Policy: { schema: { type: string, const: no-referrer } }
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Checkout' }
-        '404': { description: Invalid or unprovisioned capability }
-        '503': { description: Financial service unavailable }
-  /v1/public/checkout/{token}/lock:
-    post:
-      operationId: lockCheckoutPayer
-      tags: [Checkout]
-      summary: Confirm actual payer, receiving method and immutable attempt window
-      description: |
-        The full payer number is normalized server-side, persisted only as keyed
-        digest and last-four suffix. Repeating identical lock returns the same
-        attempt; changed payer/method or overlapping active evidence bucket is
-        409. This does not assert that money was sent or verified.
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/CheckoutToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [payer_number, method]
-              additionalProperties: false
-              properties:
-                payer_number: { type: string, minLength: 11, maxLength: 20 }
-                method: { type: string, enum: [bkash, nagad, rocket] }
-      responses:
-        '200':
-          description: Locked payer and route, awaiting payment evidence only
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Checkout' }
-        '403': { description: Browser origin denied }
-        '404': { description: Checkout capability missing }
-        '409': { description: "Expired, changed payer, cancelled or overlap conflict" }
-        '422': { description: Invalid full payer or method }
-        '503': { description: Financial service unavailable }
-components:
-  parameters:
-    CheckoutToken:
-      name: token
-      in: path
-      required: true
-      schema:
-        type: string
-        pattern: '^[A-Za-z0-9_-]{43}$'
-  securitySchemes:
-    SessionCookie:
-      type: apiKey
-      in: cookie
-      name: ekmivo-session
-    MerchantBearer:
-      type: http
-      scheme: bearer
-      bearerFormat: ek_test_<publicId>_<random32> or ek_live_<publicId>_<random32>
-      description: |
-        256-bit random server-side bearer secret, never put into browser JavaScript,
-        query strings or client SDK bundles; store in a server-side secret manager.
-  schemas:
-    DeviceClaimRequest:
-      type: object
-      additionalProperties: false
-      required: [pairing_token, public_key]
-      properties:
-        pairing_token: {type: string, pattern: '^[A-Za-z0-9_-]{43}$'}
-        public_key: {type: string, contentEncoding: base64, description: "P-256 X.509 DER public key; possession proven by the request signature"}
-    DeviceHeartbeatRequest:
-      type: object
-      additionalProperties: false
-      required: [enrollment_id, environment, permission_ok, backlog, overflow_count, queue_error, model, app_version]
-      properties:
-        enrollment_id: {type: string, format: uuid}
-        environment: {type: string, enum: [sandbox, live]}
-        permission_ok: {type: boolean}
-        backlog: {type: integer, minimum: 0, maximum: 10000}
-        overflow_count: {type: integer, format: int64, minimum: 0, description: "Monotonic tally of dropped receipt captures at the 500-event encrypted outbox quota"}
-        queue_error: {type: string, maxLength: 64, pattern: '^[A-Z0-9_]*$', description: "Diagnostic code only, never receipt text"}
-        model: {type: string}
-        app_version: {type: string}
-    DeviceEventRequest:
-      type: object
-      additionalProperties: false
-      required: [enrollment_id, environment, source, binding, kind, evidence, observed_at, sequence]
-      properties:
-        enrollment_id: {type: string, format: uuid}
-        environment: {type: string, enum: [sandbox, live]}
-        source: {type: string}
-        binding: {type: string, description: "Enrolled sms:subscriptionID or notification package binding"}
-        kind: {type: string, enum: [device_sms, device_notification]}
-        evidence: {type: string, maxLength: 8192, description: "Approved incoming receipt only; encrypted server-side, never merchant-facing"}
-        observed_at: {type: string, format: date-time, description: "Device collection time, never a replacement for original provider transaction time"}
-        sequence: {type: integer, format: int64, minimum: 1}
-    DeviceHistoryRequest:
-      type: object
-      additionalProperties: false
-      required: [enrollment_id, environment]
-      properties:
-        enrollment_id: {type: string, format: uuid}
-        environment: {type: string, enum: [sandbox, live]}
-    DeviceDurableAck:
-      type: object
-      required: [ack, observation_id, reason, replayed]
-      properties:
-        ack: {type: string, const: durable}
-        observation_id: {type: [string, 'null'], format: uuid}
-        reason: {type: string}
-        replayed: {type: boolean}
-    BillingSource:
-      type: object
-      required: [id, source_kind, source_reference, amount_minor, currency, issued_at, items]
-      properties:
-        id: { type: string, format: uuid }
-        source_kind: { type: string, enum: [order, invoice] }
-        source_reference: { type: string }
-        amount_minor: { type: integer, minimum: 1 }
-        currency: { type: string, const: BDT }
-        issued_at: { type: string, format: date-time }
-        items: { type: array, items: { type: object } }
-    Intent:
-      type: object
-      required: [id, merchant_reference, amount_minor, currency, expires_at, state]
-      properties:
-        id: { type: string, format: uuid }
-        merchant_reference: { type: string }
-        amount_minor: { type: integer, minimum: 1 }
-        currency: { type: string, const: BDT }
-        environment: { type: string, const: sandbox }
-        source_kind: { type: [string, 'null'], enum: [order, invoice, null] }
-        source_id: { type: [string, 'null'], format: uuid }
-        source_reference: { type: [string, 'null'] }
-        expires_at: { type: string, format: date-time }
-        state: { type: string, enum: [requires_payer, awaiting_payment, processing, completed, expired, cancelled] }
-    Checkout:
-      allOf:
-        - $ref: '#/components/schemas/Intent'
-        - type: object
-          properties:
-            merchant_name: { type: string, description: Current enabled business name from control-plane records }
-            brand:
-              type: object
-              properties:
-                logo_url: {type: [string, 'null'], format: uri}
-                checkout_title: {type: [string, 'null']}
-                checkout_description: {type: [string, 'null']}
-                support_url: {type: [string, 'null'], format: uri}
-                support_email: {type: [string, 'null'], format: email}
-                legal_url: {type: [string, 'null'], format: uri}
-                locale: {type: [string, 'null'], enum: [en, bn, null]}
+                      quantity: { …32121 tokens truncated… run. Missing privacy/connector/design/state code is still in the implementation status and must not be moved into this manual ledger as if implemented.
 
-            server_time: { type: string, format: date-time }
-            source_reference: { type: string }
-            items:
-              type: array
-              items:
-                type: object
-                properties:
-                  title: { type: string }
-                  quantity: { type: integer }
-                  unit_amount_minor: { type: integer }
-            payer_suffix: { type: [string, 'null'], pattern: '^[0-9]{4}$' }
-            method: { type: [string, 'null'], enum: [bkash, nagad, rocket, null] }
-            methods: { type: array, items: { type: string, enum: [bkash, nagad, rocket] } }
-            destination: { type: [string, 'null'] }
-            verification_available: { type: boolean, const: false }
-    MerchantContext:
-      type: object
-      additionalProperties: false
-      required: [workspace_id, environment, key_id, scopes, financial_api_ready]
-      properties:
-        workspace_id:
-          type: string
-          format: uuid
-        environment:
-          type: string
-          enum: [sandbox, live]
-        key_id:
-          type: string
-          format: uuid
-        scopes:
-          type: array
-          uniqueItems: true
-          items:
-            $ref: '#/components/schemas/KeyScope'
-        financial_api_ready:
-          type: boolean
-          const: false
-    KeyScope:
-      type: string
-      enum:
-        - payments:read
-        - payments:write
-        - customers:read
-        - customers:write
-        - invoices:read
-        - invoices:write
-        - refunds:read
-        - refunds:write
-        - webhooks:manage
-    ApiError:
-      type: object
-      additionalProperties: false
-      required: [error]
-      properties:
-        error:
-          type: object
-          required: [code, message, retryable, correlation_id]
-          additionalProperties: false
-          properties:
-            code:
-              type: string
-              enum: [INVALID_ENVIRONMENT, INVALID_API_KEY, SCOPE_OR_ENVIRONMENT_DENIED, AUTH_SERVICE_UNAVAILABLE]
-            message:
-              type: string
-            retryable:
-              type: boolean
-            correlation_id:
-              type: string
-              pattern: '^[a-f0-9]{24}$'
-  responses:
-    BadEnvironment:
-      description: Missing, repeated or unsupported environment
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
-    InvalidCredential:
-      description: Invalid, revoked or expired merchant key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
-    ScopeDenied:
-      description: Authenticated key cannot access required scope/environment
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
-    AuthUnavailable:
-      description: Credential database unavailable; safe to retry
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
+- [ ] Disposable control/live/sandbox databases: run the existing coordinator plus extension SQL smoke; prove all thirteen matcher scenarios, cross-tenant cursor denial, refund cap, orphan lease cleanup and privacy operator/runtime separation. No production database for this pass.
+- [ ] Dedicated owner/admin/viewer accounts: exercise refund/statement filters/pagination, report account/customer/refund views, public branding, Bengali filenames and document-field upload scan/errors. Verify 320/768/1024/desktop, EN/BN and Light/Dark/System, keyboard and loading/error/empty/forbidden/offline states.
+- [ ] Lost checkout/CSV export response: retry same immutable key/body; leave and return to an export without creating a duplicate job; user/business/environment switch never restores another user's export.
+- [ ] Independent sandbox service: tools use GO_SANDBOX_API_URL; absence produces unavailable, never Live simulation. SMTP/scanner/storage outages and maintenance/invoice worker failure must turn relevant readiness false.
+- [ ] Privacy operator: test open owner export request, separate SQL operator/realm boundaries, encrypted snapshot credentials/raw-body exclusion and cross-tenant negatives. Do not record full export/deletion until private objects, device cache, queues and backups have their own actual outcomes.
+- [ ] Prepared 25-workspace sandbox fixtures: run receipt-load, worker observer and read-load against one tested source; failures/drops/unknowns block target PASS. No Live load.
+- [ ] Real phones/accounts and merchant receiver: complete existing receipt/payment/webhook/source, backup restore and real observed cohort/release gates. No synthetic result substitutes for these.
+
+
+## 2026-10-13 — Standalone branded customer /pay and /checkout (PR #17)
+
+Status: **manual pending**; not live-provider accepted. Test with a real authorized merchant payment-link and a real phone; no unverified payment must be sent.
+
+- [ ] 320px/375px/768px/desktop: confirm no marketing header/footer, correct workspace identity/title/logo, real configured support contacts, high-contrast provider tiles and amount, and no overflow in EN/BN or light/dark/system.
+- [ ] Only enabled configured and production-verifiable bKash/Nagad/Rocket options clickable; disabled accounts show clearly and never create a customer attempt. Do not show unsupported Upay/QR as usable.
+- [ ] bKash pink payer-number → confirm → personal receiving number/copy → Send Money instructions → countdown/auto-poll. Nagad red equivalent; Rocket only when configured and verifiable.
+- [ ] No email receipt / email consent / verification-code controls anywhere in the public checkout. Prior backend email records are retained.
+- [ ] Actual brand links never use invented contacts; close/back preserves payment record. POST loss/retry remains idempotent, payer lock irreversible, no browser-set paid state.
+- [ ] Repeat checks with device offline, receipt parser unavailable, expired link, wrong payer, active session, genuine provider receipts, and verified server/webhook settlement. Real payment acceptance remains OPEN.
+
+
+## Simple Payment API / Developer Guide (2026-10-15 — pending)
+
+All of the following are **MANUAL PENDING**, not passed: apply migration 0062 in Sandbox and Live finance databases before Go rollout; authorized Sandbox key minimal create→checkout→receipt scenario→GET verified status; live provider/device evidence; webhook signature/retries and configured URL; redirect/cancel routing; legacy integrations; EN/BN and Light/Dark mobile/desktop docs; production deploy parity. Details: docs/evidence/SIMPLE-PAYMENT-API-20261015.md.
+
+
+## Simple Payment API migration 0062 — operator update (2026-10-15)
+
+**DB SCHEMA APPLIED / VERIFIED** in both physical Neon finance databases `ekmivo_sandbox_financial` and `ekmivo_live_financial` (production branch); 13-statement atomic transaction each. Owner, realm, SQL objects, RLS and grants checked; existing payment rows untouched. Control database `ekmivo` unchanged. Prior ledger entries saying migration pending are superseded by this statement only. Still MANUAL PENDING: actual verified Sandbox/Live payment + provider device, signed webhook callback/retries, Go runtime smoke, checkout redirects and responsive EN/BN browser checks. See `docs/evidence/SIMPLE-PAYMENT-API-20261015.md`.
+
+
+## Dashboard/API refinement — 2026-10-15 — manual pending
+
+- After authorized rollout of financial migrations 0063/0064, control migration 0065 and API/web deployment, verify owner/admin Team access against the actual workspace. Isolated Neon branch confirms the ambiguous role SQL fix; production has not been changed.
+- Use an authorized merchant sandbox API key and a publicly reachable HTTPS receiver: create with/without webhook_url, complete a genuine payment, validate signature and retry/deduplication, call verify before fulfillment, and confirm callback failure never reverses payment. Repeat with legacy default endpoint and cross-workspace/environment denial.
+- Verify automatic invoice/customer activity with genuine authorized payment records; check permissions, pagination, search, filters, SMS evidence and ciphertext privacy.
+- Complete actual-data browser pass EN/BN, Light/Dark/System, 320/768/1024/desktop, keyboard, offline, denied roles, documents create/edit and workspace settings. Saved screenshots use explicitly fictional development fixtures and do not establish live integration.
+- Review the reference public payment-link/QR destination; clipboard capture was unavailable, so that reference path is not verified.
+- Neon test branch `br-silent-breeze-b32znlqj` remains for review. Delete only with owner authorization. No Docker permitted.
+
+
+## Production migration rollout — 2026-10-15
+
+After explicit owner approval (push + migrations), existing financial-migrate runner with `EKMIVO_DASHBOARD_UPGRADE_ONLY=true` successfully applied only 0063/0064 to production Neon Sandbox/Live financial databases and 0065 to the control database at 2026-10-15 14:11 UTC. Runner confirmed no base migrations executed. Catalog probes confirm both financial migrations and the Team role fix. Before/after counts unchanged: Sandbox intents 15/payments 2/endpoints 1; Live intents 21/payments 3/endpoints 0. Runtime rollout and actual payment/browser E2E remain separate gates.
+
+
+## Developer portal — 2026-10-15
+
+Manual pending: finish the 11-page EN/BN × Light/Dark/System × 360/768/desktop browser matrix, search arrows/Enter/Escape and focus loop, copy toast and global code preference across navigation, reduced motion, marketing-to-portal shell swap and back. Browser tooling repeatedly timed out during this pass; only observed checks in the evidence README are passed. Use an owner-controlled Sandbox workspace/key for create → hosted checkout → real test receipt scenario → verify, plus signed payment alert delivery. Never paste a Live key into the tester. Provision the public custom API origin and publish an idempotency retention promise before removing those TODOs.
+
+
+## Dashboard V2 / PR #61 — 2026-10-15
+
+Manual pending: authorized Sandbox/Live workspace data reconciliation; EN/BN and Light/Dark/System at 320/768/1024/desktop; modal focus/keyboard/escape and create=1 navigation; payment/SMS details and roles; customer CSV import/export; invoice cancellation; payment-link create/edit/publish/archive and redirect/expiry validation; seller-managed refund decision; method enable/disable; phone pairing/disconnect. Use owner-controlled test accounts/devices and Sandbox for mutating scenarios. Source/build verification is recorded in `docs/evidence/DASHBOARD-V2-UI-HANDOFF.md`; it does not prove real-provider or production financial acceptance.
+
+## Customer and navigation correction — 2026-10-16 (manual pending)
+
+Use the existing authorized owner session and verified payer customer in the Neon-backed preview. Confirm full number in list/details; confirm viewer/editor do not gain recovery access. Navigate Payments → Customers and other payment menus with a slow source: old page stays until data or explicit error is ready, top progress line is visible, no page skeleton flash. Check full-width workspace picker on desktop/mobile and light/dark; retain draft guards and filter resets. No new payment or financial mutation is required. Automated evidence: `docs/evidence/CUSTOMERS-NAVIGATION-20261016.md`.
+
+
+## Managed payment plans — 2026-10-16 (release pending)
+
+**Rollout update, 14:20 UTC:** Owner approved completing deployment. Control 0067 and both financial 0068 are applied; existing financial counts and subscriptions preserved. Vercel/Render production run merged `65d6f80`. See production probe JSON in the managed-plans evidence directory. Earlier migration-pending instructions below are historical. Remaining: real enrolled-admin mutation/purchase flow and owner-approved hosting for existing standalone background workers. Primary signed-phone matching runs inline; worker health is currently false and `/readyz` is honestly 503. No paid worker was provisioned and no fake ready flag set.
+
+Source and isolated Neon checks: `docs/evidence/MANAGED-PLANS-20261016/README.md`. Before production activation, review exact catalog pricing and entitlement terms; apply only control 0067 and financial 0068 to the intended realms using the existing targeted coordinator; deploy matching API, worker and web together. Confirm existing purchased subscriptions and pre-migration accepted checkouts. With an owner-controlled workspace/phone/platform receiving account: free activation, a real paid subscription invoice → verified receipt → renewal, quota exhaustion/upgrade, and expiry while a previously accepted payment/webhook completes. Check fresh-MFA challenge using a real enrolled admin and keyboard/screen-reader flows. Synthetic sessions/financial evidence are not real payment or MFA-enrollment acceptance. Test branches `br-lucky-mode-b3hkfaxa` and `br-still-fog-b38to82q` remain isolated; do not delete without owner authorization. No Docker used.
+
+
+## API-hosted workers — 2026-10-16
+
+**Activated 14:46 UTC with owner authorization:** #71 merged; restricted worker credentials configured in existing Render API. Both runtime startup logs and genuine critical/export/maintenance heartbeats observed in Sandbox/Live. `/readyz` HTTP 200, `release_verified=false`. No error logs in initial post-start interval. Earlier authorization-pending notes below are historical. Optional mail workers are not configured. Still manual pending: actual owner-controlled callback/renewal/provider lifecycle and host sleep/recovery under operational load.
+
+Owner chose the existing API process temporarily. Full Go suite and isolated Neon two-realm audit-runtime startup/drain pass. Production activation awaits explicit permission to place the three restricted worker/projection credentials in the existing Render API service after automatic approval review rejected that egress. After authorization: confirm both River runtime startup logs and genuine critical/export/maintenance heartbeats, SMTP-dependent health if configured, and `/readyz`. Real authorized provider/callback/renewal acceptance remains distinct. Free Render instance sleep pauses both API and workers; no new paid service or always-on guarantee.
+> **2026-10-16 pairing projection repair:** Production control and both financial registries now agree at version 5/active; hosted authoritative coordinator recurrence verified after deploy `dep-db93sacsiqls73d000r0`. Automated isolated stale-version recovery and full Go tests PASS. Remaining manual check: in the existing authenticated merchant workspace, click Create Pairing QR, confirm a real QR is returned, and pair the intended phone. No synthetic production enrollment or authenticated browser success is claimed. Evidence: `docs/evidence/API-HOSTED-WORKERS-20261016/README.md`.
+
+
+## Dashboard reference overhaul — 2026-10-17 continuation (NOT ACCEPTED)
+
+**Actual automated checks:** control/Live migration-ledger SHA-256 9/9 current SQL hashes match. Sandbox/Live financial ledger SHA-256 values agree. Read-only Neon connector verification only. GitHub Foundation CI job setup failed before any steps ran (no runner allocated); build, lint, type-check, Go tests and financial smoke checks did **not** pass in this continuation. Previous test results are historical, not substituted for fresh CI.
+
+**Manual and environment pending:** Use an authenticated owner/admin and viewer workspace, existing real Sandbox/Live read access, a separate isolated Neon test branch for permitted mutation; side-by-side reference/app at 320/768/1024/1440 in Light/Dark/System, EN/BN; ensure screenshot Customer list/modal interactions, persisted masked/full customer numbers including details/copy, CSV import/export; invoice add/edit values/corrections/actions; payment link create→publish→public payment, disable/delete preserving accepted receipts; SMS pairing, live counts, recheck success/failure and raw-SMS redaction; API key create/one-time display/rotate/revoke; notifications read-one/read-all and destination; profile/session revoke; support topic changes/retries and replies; billing scheduled paid/free downgrade, renewal, proration and verified proof replay; nine checkout themes, real checkout success/cancel/expiry/redirect. Confirm focus/escape/outside click and no state leak across workspaces/realms. No prototype fixtures or production financial test writes. See `docs/evidence/DASHBOARD-REFERENCE-20261017/README.md` for precise continuation commits and blockers.
+
+### Dashboard reference continuation — 2026-10-17 follow-up
+
+Source fixes on `main`: Customer View table action (`32fa429`) and CSV import errors (`cd0008f`); Checkout Themes EN/BN editor labels (`c35d447`, `275cb86`, `da988d8`); API key one-time creation/rotation result separation (`f347d2b`); invoice-only checkout issue idempotency key (`453b8c5`). Vercel reports production builds READY through `cd0008f`. **No authorized browser/real-provider lifecycle acceptance is implied.**
+
+Isolated Neon control branch rollback tests: (1) number visibility true/false write→readback PASS, original value preserved; (2) checkout theme version increment and stale optimistic-write conflict PASS, original value preserved. An attempted Sandbox document create→publish→disable→reenable→delete test was incomplete (first SQL invocation lacked required transaction workspace scope; scoped retry was blocked by safety checks). Those mutations were not accepted or performed on production. Continue actual browser screenshot comparison at 320/768/1024/1440 with EN/BN, light/dark/system, and authenticated payments/keys/billing/customer workflows; confirm key repeated-rotation displays fresh secret once, CSV error/retry, and expiry/cancel paths. GitHub Foundation CI runner failure remains unresolved; do not mark full build/lint/Go contract checks passed.
+
+### Sandbox API Keys reference acceptance — 2026-10-17
+
+Source/deploy evidence: API Keys includes Sandbox/Live list selector, active-realm validation in create modal, independent credential/webhook secret scopes, expiry column and Sandbox test-data notice. Production Neon READ ONLY confirms Sandbox realm active for four workspaces; no test key mutation. Vercel production build for `1bc3423` is READY; see `docs/evidence/DASHBOARD-REFERENCE-20261017/README.md`.
+
+Manual pending: in an owner/admin workspace, open Developers → API Keys while Live is selected, choose Sandbox, create a real **Sandbox-only** key after password verification; validate one-time secret copy, prefix, expiry, authorized sandbox request, refresh/persistence, rotate and revoke. Confirm newly created Sandbox keys never appear under Live; user role viewer cannot read or write either. Test create-modal switch between active realms, suspended realm refusal, and automatic webhook secret isolation. Do not expose any secret in evidence. GitHub full CI and browser reference visual comparison remain open.
+
+
+## 2026-10-17 — Shared drawer, sidebar, One-time Requests and Invoice release gates
+
+**Source changes merged/pushed to main; NOT fully accepted.** Shared RefModal drawer CSS (padding, width, long values, body-only scroll, mobile safe-area), Billing pinned under separately scrollable sidebar, palette icon, reference-look One-time Requests toolbar/card/tabs and copy/cancel/detail actions, Create Request modal, invoice create-or-draft UI, automatic sequential invoice numbering, public hosted bilingual invoice, SMTP HTML+text invoice message and verified-only Paid status.
+
+**Sandbox Neon checks PASS (rollback):** invoice-number replay returns same reference, second request increments counter; public draft shows sanitized data but no payment, issued date/status, canceled read-only status. New migrations 0078–0080 installed and checksummed in Live/Sandbox production financial databases; no live financial test writes. The invoice `fee_minor` is a merchant-entered additive fee, **not** processor pricing.
+
+**Must still run before acceptance:** 320/768/1024/1440 side-by-side browser checks Light/Dark/System EN/BN; drawer focus trap/backdrop/Escape/focus restoration/long-ID copy; desktop and mobile sidebar scrolling and pinned Billing; both link/request tabs, create/cancel/copy/refresh/pagination and retained prior receipts; invoice Draft/Create & Issue, concurrent numbering, optional override, prefilled Edit, issued/correct/cancel, verified-paid and overdue statuses, checkout theme on Pay, SMTP HTML delivery/unknown delivery, and webhook status sync. Run Next lint, typecheck, full production build, Go compile/unit tests, contracts, and financial smoke. GitHub Foundation runner startup and Vercel build rate-limit currently prevent fresh PASS. Access to an interactive authenticated browser and a working CI/build runner is needed. Do not replace these results with source inspection.
+
+
+### 2026-10-17 continued fixes: invoice delivery and request visual shell
+
+Implemented and pushed:
+- Invoice email test fixtures match canonical language-neutral invoice and Pay URLs; renderer reads saved Checkout Theme store name and validated asset URL; prints issue/due dates and recipient, maintains HTML+text, full Paid confirmation can be sent without offering a second Pay button.
+- Hosted invoice displays stored PNG/JPEG/WebP base64 logo if present. Invoice Print now opens real hosted invoice page with print trigger rather than printing dashboard chrome.
+- Invoice total breakdown and grouped invoice-hosted links have premium scoped CSS (custom disclosure control rather than browser-default triangle), mobile responsive.
+- One-time Requests header now lives in same `ref-dashboard/ref-page` layout as Payment Links; toolbar, table and actions already migrated into one card.
+- These changes do **not** alter payment verification, allocation or financial proof.
+
+**Verification actually observed:** Render deployment `dep-db9hdvv2d8hs73d7c8hg` for commit `6497aa1` reached `live` after `go build` succeeded. Later CSS/request-layout commits have not been verified by Vercel production build due to plan-level `build-rate-limit`. GitHub Foundation CI workflow for latest source commit has no passing jobs. Production Live/Sandbox ledger `0078`–`0081` SHA-256 entries match each other. Production data at audit time: Live one issued invoice and one associated intent; zero verified invoice allocations; Sandbox zero verified invoice allocations. Actual Paid status end-to-end cannot be demonstrated with that data; do not claim it passed.
+
+Manual pending as before: frontend build, lint, TypeScript checks, all Go unit tests, authenticated browser screenshot/focus/viewport checks, email delivery to an inbox, and a real provider-verified invoice transaction. No 100% acceptance.
+
+
+### 2026-10-17 — Source-code completion pass, NOT final acceptance
+
+**Fixed and pushed:** Billing paid-plan checkout uses `/checkout/{token}` (no obsolete language prefix); pure Node contract checker added to `payment:contract-check`; Invoice Save as Draft and Create/Issue both go through browser form validation; invoice-linked hosted capabilities paginate with cursor, Refresh/loading/errors, cancellation on workspace/realm switch and no premature empty state; hosted Invoice store name, From label and print image readiness; shared RefModal close accessibility labels (EN/BN) and reopen animation; Checkout Themes preview-only Step and placeholder accessibility copy.
+
+**High-priority release pipeline fix:** official `backend/cmd/financial-migrate/dashboard_reference.go` now includes existing migrations 0078–0081 in both Live and Sandbox realm lists with SHA-256 ledger recheck, so new installations get invoice numbering, public Draft/Void metadata and verified receipts. The disposable `pg04-financial-smoke.mjs` setup installs the four additions after PG10 and `pg10-extension-smoke.mjs` now asserts sequential invoice reference, idempotency, private-notes redaction and Draft→Issued→Void public behavior. These **new test assertions have not executed** due runner provisioning failure.
+
+**Actual rollback Neon Sandbox DB contract PASSES:** existing verified Sandbox allocation was connected to a temporary invoice inside a rollback subtransaction; its public projection reported paid_minor=5500, due_minor=0, exactly one verified receipt and no private_notes. Separately, an invalid combination of receipt/attempt was refused by immutable financial proof constraints. Control DB scheduled-Free downgrade preserved current paid entitlements, Undo cleared schedule, and forced expiry applied the scheduled Free plan, all rolled back with original state restored. **None** of this proves a production provider→browser transaction.
+
+**Remaining verification:** Next lint/type-check/build (Vercel plan build-rate-limit), GitHub Actions runner start, interactive 320/768/1024/1440 browser and keyboard/focus regression, authenticated Sandbox API key lifecycle, SMS device evidence delivery, SMTP inbox acceptance, live paid verification and billing renewal/replay. No Docker used and no production payment/financial test writes.
+
+## Admin trusted devices / plan audit — 2026-10-18
+
+Owner requested code-level verification only for this pass and will verify physical devices.
+
+- On an untrusted device, ordinary dashboard login must not grant Admin access; complete MFA once, then keep using the same valid session without periodic prompts.
+- Trust a private device for 30 days; sign out/in and verify remembered access. Remove it from Settings and confirm linked sessions lose access. Clearing device storage or using another browser requires MFA again.
+- After a role change or MFA recovery/reset, old trust and sessions must no longer authorize Admin operations.
+- Production deploy/migrations and authenticated production API integration remain unverified. Isolated Neon/code checks are recorded in `docs/evidence/ADMIN-SECURITY-PLANS-20261018/README.md`.
+
+### 2026-10-18 receiving account sharing/removal
+- In EN/BN and light/dark, add a provider+number already in another workspace: red consent dialog, no other workspace identity disclosed; Cancel does not create; unchecked submit disabled; Help & security opens workspace help; checked submit creates once. Same-workspace duplicate remains blocked.
+- Hover/focus an account: right-side delete icon appears; touch shows it without hover. Cancel preserves it; confirm removes active/disabled account, leaves historical payments, and re-add checks consent/plan again.
+- Code/database checks are recorded in WORKSPACE-SAVE-DIAGNOSIS-20261018. Visual and physical-device checks are manual pending.
+
+### 2026-10-18 mobile dashboard and system billing
+- Admin Settings: select a payment-enabled workspace you manage, containing only active super admins. Save the selection; confirm ordinary Admin/support/analyst cannot change it.
+- In the selected workspace, add system receiving numbers and connect the real SMS device. Purchase a plan from a different workspace; check the correct number, exact plan price, verified payment and one entitlement renewal. Do not use the system workspace as its own purchaser.
+- At 320/375/390/768px EN/BN light/dark: mobile menu opens/closes; sidebar does not take page width; header controls fit; Billing stacks, its tables scroll internally; account delete/actions and dialogs fit. Desktop layout remains intact. Browser/physical verification is pending; source cascade and database/code checks are recorded in SYSTEM-BILLING-MOBILE-20261018.
+
+- System workspace Settings regression: save a different eligible workspace; selection remains visible and Save becomes disabled. Reload/navigate away and back: saved workspace remains selected. A rejected change retains the last confirmed saved destination. Setup links and instructional paragraphs are absent.
+
+### 2026-10-18 plan-aware Add/Create controls
+- Use a non-system payment workspace with finite plan limits. Check Receiving accounts, SMS devices, API keys and Team usage, including owner + pending invitations. At the cap, Add/Create is disabled and View plans/Refresh work. Disable/disconnect/revoke/cancel a pending invitation and verify a slot returns. Unlimited and inactive plans must be distinguished.
+- Reconnect a disconnected/expired-pairing phone while device quota is full; backend rejects. A pending pairing that expires releases capacity after refresh. Re-enable an account at capacity; backend rejects. Key rotation is slot-neutral and revocation remains usable.
+- Team: reserve the last seat with an invitation, then accept it; one seat converts to a member. Resend an expired invitation when full; no extra seat can be reserved. Sandbox must not bypass shared team limits.
+- One-time payment requests: monthly successful+reserved quota and active pending checkout cap show the appropriate message; per-minute errors advise retrying. Existing documents/history and cleanup remain usable. Check EN/BN, light/dark and mobile layout. Manual/browser checks remain pending; automated evidence is in DASHBOARD-PLAN-LIMITS-20261018.
+
+### Plan feature UI — 2026-10-18
+Owner manual pending: for a workspace plan with invoices/payment links/reports/exports disabled, check sidebar/search, overview shortcuts, one-time requests, direct list/detail URLs and upgrade CTA to Billing > Plans in EN/BN, mobile/desktop and light/dark. Code tests/build evidence: `docs/evidence/PLAN-FEATURE-UX-20261018/README.md`.
+
+### System workspace unlimited — 2026-10-18
+Manual pending: selected system workspace Billing shows all features/unlimited/no renewal; Usage and invoices remain accessible. Check EN/BN, light/dark, mobile/desktop. Automated switching/removal/expiry/no-subscription tests passed on isolated Neon. Evidence: `docs/evidence/SYSTEM-UNLIMITED-20261018/README.md`.
+
+### System subscription cleanup — 2026-10-18
+After Vercel build quota allows frontend rollout: verify workspace overview shows System workspace/Unlimited, subscription management is absent, and Usage opens in EN/BN without server error. Production subscription assignment already detached with audit retained; unlimited access active. Evidence: `docs/evidence/SYSTEM-SUBSCRIPTION-CLEANUP-20261018/README.md`.
+
+### Buyer upgrade timing — 2026-10-18
+Manual pending: with a non-system workspace on an active finite Starter term, choose a higher paid plan; compare Activate now (prorated / old expiry) and After current plan ends (full term price / future start and end). Verify payment, unchanged current access before the boundary, Paid schedule banner, and new plan after the boundary. Check EN/BN, light/dark and mobile. Do not test this on the unlimited system workspace. SQL/code checks: `docs/evidence/BUYER-UPGRADE-TIMING-20261018/README.md`.
+
+## Google login + Resend auth email — 2026-10-19
+- Add Google Cloud Web OAuth Client ID/Secret to Vercel production (details: evidence/GOOGLE-EMAIL-20261019). Google sign-in remains hidden until configured. Redeploy after setting.
+- Test Google signup, existing linked login, cancellation, existing local-email collision, same-email Account linking within 10 minutes of fresh login, expired linking session, and admin MFA on an untrusted device. No real Google flow claimed passed.
+- Production Server Action returned sent after Resend acceptance; check owner mailbox/Resend delivery log. Inbox delivery is not claimed. Mandatory verification is now enabled with audit; unverified accounts must use the code screen. Test resend/Enter code, wrong/expired/reused code rejection and recovery/session invalidation.
+
+## New workspace first-load race — 2026-10-19
+- Create a new Google/password account or payment-enabled workspace and immediately open Overview/Payments/Payment methods/SMS devices without refresh. Authorized empty data should load on the first request while provisioning runs on demand; no transient ACCESS_DENIED from an absent financial registry.
+- Verify genuine plan-disabled pages still show existing upgrade UI, and suspended/wrong-workspace requests remain denied. Initialization outage must show unavailable/retry, never false zero data. Code + isolated SQL passed; no production synthetic account was created.
+
+## 2026-10-19 — Plan labels and billing payment status
+- Open Admin plan creation on mobile in EN/BN and light/dark: filled numeric fields retain labels; Free distinguishes quota cycle/access expiry and has no grace input; review shows actual Free duration and quota reset.
+- Open the previously cancelled subscription invoice and check payment: show cancelled/unverified guidance inside its drawer, with no renewal and no raw VERIFIED_PLATFORM_PAYMENT_REQUIRED.
+- Verify a real successful platform payment updates subscription once; pending/expired/cancelled payments never grant access. Physical phone/SMS verification belongs to owner.
+- Automated checks and production read-only diagnosis: `docs/evidence/PLAN-LABELS-BILLING-STATUS-20261019/README.md`.
+
+## 2026-10-19 — Canonical checkout URL and Official fallback
+- New API-created payment links must use `https://ekmivo-web.vercel.app/checkout/<token>`, independently of the dashboard CORS alias.
+- With no saved theme, verify the Official merchant/method/payer/waiting/result flow; selected custom themes remain selected.
+- Changing checkout language keeps the public route locale-neutral; the webhook secret initially says it is hidden and reveals only after the authorized action.
+- Regression checks/evidence: `docs/evidence/CHECKOUT-CANONICAL-DEFAULT-20261019/README.md`. Actual money transfer is not claimed by code checks.
+
+## Android reference phases 1–2 (2026-10-19, PR #86)
+
+- Phase 1: compare native dark/light setup and Inbox shell against `docs/design/android-20261019/` at the same inner viewport/font scale; native assemble/unit CI passed for Phase 1, visual parity remains unverified.
+- Phase 2 preview: apply only additive 0114 control + 0115 financial via the guarded operator before testing this APK against that runtime. Production rollout has not been performed. Test physical camera and manual code, explicit Verify, loading/retry/rescan, expired/revoked/claimed code, network loss, process death and rotation. Verify lookup does not consume the code and the final explicit confirmation claims the displayed workspace/realm only.
+- Full Phase 2 remains open: AI-only control-plane enrollment, capability-driven permissions/background work/navigation, real-phone reconnect/queue preservation. No AI-only enrollment or complete Inbox/channel integration accepted.
