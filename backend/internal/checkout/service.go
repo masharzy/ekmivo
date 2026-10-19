@@ -64,7 +64,9 @@ type createRequest struct {
 	CancelURL       string          `json:"cancel_url,omitempty"`
 	WebhookURL      string          `json:"webhook_url,omitempty"`
 	CustomerName    string          `json:"customer_name,omitempty"`
+	Fullname        string          `json:"fullname,omitempty"` // Merchant-friendly integration alias.
 	CustomerEmail   string          `json:"customer_email,omitempty"`
+	Email          string          `json:"email,omitempty"` // Merchant-friendly integration alias.
 	CustomerPhone   string          `json:"customer_phone,omitempty"`
 	Metadata        json.RawMessage `json:"metadata,omitempty"`
 }
@@ -73,6 +75,15 @@ type createRequest struct {
 // interpretation. Storage and matching continue using integer paisa.
 func parseBDT(raw json.RawMessage) (int64, bool) {
 	text := string(raw)
+	// Shop integrations commonly serialize a decimal amount as a JSON string.
+	// Normalize only a strict decimal string; never parse floats or exponent notation.
+	if len(text) >= 2 && text[0] == '"' {
+		var amountText string
+		if err := json.Unmarshal(raw, &amountText); err != nil {
+			return 0, false
+		}
+		text = amountText
+	}
 	if !regexp.MustCompile(`^(0|[1-9][0-9]{0,9})(\.[0-9]{1,2})?$`).MatchString(text) {
 		return 0, false
 	}
@@ -105,6 +116,20 @@ func parseBDT(raw json.RawMessage) (int64, bool) {
 func prepareCreateRequest(body *createRequest, key, workspace, realm string) bool {
 	if body == nil {
 		return false
+	}
+	// Accept familiar customer aliases, but never let two conflicting identities
+	// be silently chosen over one another. Store only the canonical names.
+	if body.Fullname != "" {
+		if body.CustomerName != "" && body.CustomerName != body.Fullname {
+			return false
+		}
+		body.CustomerName, body.Fullname = body.Fullname, ""
+	}
+	if body.Email != "" {
+		if body.CustomerEmail != "" && body.CustomerEmail != body.Email {
+			return false
+		}
+		body.CustomerEmail, body.Email = body.Email, ""
 	}
 	if len(body.AmountBDT) > 0 {
 		if body.Amount != 0 || body.OrderID != "" || body.InvoiceID != "" {
