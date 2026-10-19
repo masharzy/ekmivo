@@ -764,3 +764,7 @@ Manual pending: with a non-system workspace on an active finite Starter term, ch
 - Add Google Cloud Web OAuth Client ID/Secret to Vercel production (details: evidence/GOOGLE-EMAIL-20261019). Google sign-in remains hidden until configured. Redeploy after setting.
 - Test Google signup, existing linked login, cancellation, existing local-email collision, same-email Account linking within 10 minutes of fresh login, expired linking session, and admin MFA on an untrusted device. No real Google flow claimed passed.
 - Production Server Action returned sent after Resend acceptance; check owner mailbox/Resend delivery log. Inbox delivery is not claimed. Mandatory verification is now enabled with audit; unverified accounts must use the code screen. Test resend/Enter code, wrong/expired/reused code rejection and recovery/session invalidation.
+
+## New workspace first-load race — 2026-10-19
+- Create a new Google/password account or payment-enabled workspace and immediately open Overview/Payments/Payment methods/SMS devices without refresh. Authorized empty data should load on the first request while provisioning runs on demand; no transient ACCESS_DENIED from an absent financial registry.
+- Verify genuine plan-disabled pages still show existing upgrade UI, and suspended/wrong-workspace requests remain denied. Initialization outage must show unavailable/retry, never false zero data. Code + isolated SQL passed; no production synthetic account was created.

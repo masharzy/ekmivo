@@ -3,6 +3,7 @@ package workerruntime
 import (
 	"context"
 	"errors"
+	"golang.org/x/sync/singleflight"
 	"log"
 	"net/url"
 	"sync"
@@ -56,17 +57,18 @@ func StartHostedProjection(ctx context.Context, c *ProjectionConfig) *sync.WaitG
 
 // Reuses the existing authoritative coordinator and monotonic SQL upsert.
 // No identity data is copied and phone authorization remains fail-closed.
-func RunProjection(ctx context.Context, c ProjectionConfig) error {
+func openProjection(ctx context.Context, c ProjectionConfig) (*financial.ProjectionCoordinator, func(), error) {
 	pools := make([]*pgxpool.Pool, 0, 3)
-	defer func() {
+	closePools := func() {
 		for _, p := range pools {
 			p.Close()
 		}
-	}()
+	}
 	for _, dsn := range []string{c.Control, c.Sandbox, c.Live} {
 		cfg, e := pgxpool.ParseConfig(dsn)
 		if e != nil {
-			return errors.New("projection connection unavailable")
+			closePools()
+			return nil, nil, errors.New("projection connection unavailable")
 		}
 		cfg.MaxConns = 2
 		cfg.MinConns = 0
@@ -74,7 +76,8 @@ func RunProjection(ctx context.Context, c ProjectionConfig) error {
 		cfg.ConnConfig.ConnectTimeout = 5 * time.Second
 		p, e := pgxpool.NewWithConfig(ctx, cfg)
 		if e != nil {
-			return errors.New("projection connection unavailable")
+			closePools()
+			return nil, nil, errors.New("projection connection unavailable")
 		}
 		pools = append(pools, p)
 	}
@@ -95,9 +98,51 @@ func RunProjection(ctx context.Context, c ProjectionConfig) error {
 	}
 	done()
 	if err != nil {
-		return errors.New("projection preflight rejected")
+		closePools()
+		return nil, nil, errors.New("projection preflight rejected")
 	}
-	co := financial.ProjectionCoordinator{Control: pools[0], Sandbox: pools[1], Live: pools[2]}
+	co := &financial.ProjectionCoordinator{Control: pools[0], Sandbox: pools[1], Live: pools[2]}
+	return co, closePools, nil
+}
+
+// NewProjectionRepair uses the same restricted provisioners as the reconciler.
+// It repairs only a missing projection; it never grants workspace membership or a plan.
+func NewProjectionRepair(ctx context.Context, c *ProjectionConfig) (func(context.Context, string, string) error, func(), error) {
+	if c == nil {
+		return nil, func() {}, nil
+	}
+	co, closePools, err := openProjection(ctx, *c)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	var group singleflight.Group
+	repair := func(ctx context.Context, ws, realm string) error {
+		result := group.DoChan(ws+"|"+realm, func() (any, error) {
+			_, active, e := co.Sync(ctx, ws, realm)
+			if e != nil {
+				return nil, e
+			}
+			if !active {
+				return nil, financial.ErrStaleProjection
+			}
+			return nil, nil
+		})
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case r := <-result:
+			return r.Err
+		}
+	}
+	return repair, closePools, nil
+}
+
+func RunProjection(ctx context.Context, c ProjectionConfig) error {
+	co, closePools, err := openProjection(ctx, c)
+	if err != nil {
+		return err
+	}
+	defer closePools()
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 	log.Print("API authoritative workspace projection reconciler active")

@@ -39,6 +39,7 @@ var (
 )
 
 type Service struct {
+	SyncProjection      func(context.Context, string, string) error
 	NoticeSMTP          *receiptnotice.SMTPConfig
 	NoticeSchema        bool
 	Pipeline            *Pipeline
@@ -298,6 +299,10 @@ func mapped(w http.ResponseWriter, err error) {
 			return
 		}
 		switch pg.Code {
+		case "P0401":
+			w.Header().Set("Retry-After", "1")
+			fail(w, 503, "WORKSPACE_INITIALIZING")
+			return
 		case "P6902":
 			fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
 			return
@@ -438,6 +443,9 @@ func authError(w http.ResponseWriter, err error) {
 	}
 }
 func (s *Service) scoped(ctx context.Context, ws, realm string, fn func(pgx.Tx) error) error {
+	return withProjectionRepair(ctx, ws, realm, func() error { return s.scopedOnce(ctx, ws, realm, fn) }, s.SyncProjection)
+}
+func (s *Service) scopedOnce(ctx context.Context, ws, realm string, fn func(pgx.Tx) error) error {
 	pool := s.Sandbox
 	if realm == "live" {
 		pool = s.pipelinePool(realm)
@@ -452,6 +460,9 @@ func (s *Service) scoped(ctx context.Context, ws, realm string, fn func(pgx.Tx) 
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment',$2,true)`, ws, realm)
 	if err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, "SELECT pg06_workspace_ready($1::uuid,$2)", ws, realm); err != nil {
 		return err
 	}
 	if err = fn(tx); err != nil {
@@ -879,10 +890,10 @@ func (s *Service) HandlePublic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var body struct {
-			Payer           string            `json:"payer_number"`
-			Method          string            `json:"method"`
-			ReceivingAccountID string        `json:"receiving_account_id"`
-			CustomerDetails map[string]string `json:"customer_details"`
+			Payer              string            `json:"payer_number"`
+			Method             string            `json:"method"`
+			ReceivingAccountID string            `json:"receiving_account_id"`
+			CustomerDetails    map[string]string `json:"customer_details"`
 		}
 		if !decode(w, r, &body) {
 			return
@@ -1066,11 +1077,15 @@ func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byt
 				var encoded []byte
 				if err = pool.QueryRow(r.Context(), "SELECT pg98_checkout_accounts($1)", digest(r.PathValue("token"))).Scan(&encoded); err == nil && json.Unmarshal(encoded, &accounts) == nil {
 					allowed := make(map[string]bool, len(list))
-					for _, method := range list { allowed[method] = true }
+					for _, method := range list {
+						allowed[method] = true
+					}
 					filtered := make([]map[string]any, 0, len(accounts))
 					for _, account := range accounts {
 						method, _ := account["method"].(string)
-						if allowed[method] { filtered = append(filtered, account) }
+						if allowed[method] {
+							filtered = append(filtered, account)
+						}
 					}
 					data["receiving_accounts"] = filtered
 				}

@@ -427,6 +427,16 @@ func main() {
 		log.Printf("API workspace projection not started: %v", projectionErr)
 	}
 	projectionGroup := workerruntime.StartHostedProjection(runtimeContext, projectionConfig)
+	repair, closeProjection, repairErr := workerruntime.NewProjectionRepair(runtimeContext, projectionConfig)
+	if repairErr != nil {
+		log.Print("API on-demand workspace projection unavailable")
+	} else {
+		pg05.SyncProjection = repair
+		if repair != nil {
+			log.Print("API on-demand workspace projection active")
+		}
+	}
+	defer closeProjection()
 	server := &http.Server{Addr: ":" + port, Handler: newHandlerWithCheckout(repo, pg05), ReadHeaderTimeout: 10 * time.Second}
 	httpStopped := make(chan struct{})
 	go func() {
