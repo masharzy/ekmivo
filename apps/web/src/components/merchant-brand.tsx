@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-export type MerchantBrandInfo={checkout_theme?:string;logo_url?:string;title?:string;description?:string;support_url?:string;support_email?:string;legal_url?:string;locale?:string};
+export type MerchantBrandInfo={checkout_theme?:string;logo_url?:string;title?:string;description?:string;support_url?:string;support_email?:string;legal_url?:string;locale?:string;website_url?:string;support_phone?:string;whatsapp?:string;address?:string;business_type?:string;statement_name?:string;receipt_note?:string};
 function publicURL(value?:string){
  if(!value)return null;
  try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password?u.href:null}catch{return null}
