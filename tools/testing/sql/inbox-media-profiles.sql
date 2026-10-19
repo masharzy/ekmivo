@@ -15,9 +15,10 @@ BEGIN
  PERFORM inbox_advanced(w,'live',d,t,'note','{"text":"","version":1}');
  IF inbox_profile(w,'live',t)->>'note'<>'' THEN RAISE EXCEPTION 'empty note not saved';END IF;
  PERFORM inbox_media_save(w,'live',t,i,'fixture/key','receipt.png','image/png',123,repeat('a',64),0);
- m:=inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',i,'idempotency_key',key));
- r:=inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',i,'idempotency_key',key));
+ m:=inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',i,'idempotency_key',key,'batch_id',i));
+ r:=inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',i,'idempotency_key',key,'batch_id',i));
  IF r->>'id'<>m->>'id' THEN RAISE EXCEPTION 'duplicate media send';END IF;
+ PERFORM inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',i,'idempotency_key',gen_random_uuid(),'batch_id',i));
  BEGIN PERFORM inbox_advanced(w,'live',d,t,'send-media',jsonb_build_object('media_id',gen_random_uuid(),'idempotency_key',key));RAISE EXCEPTION 'key conflict';EXCEPTION WHEN unique_violation THEN NULL;END;
  r:=inbox_advanced(w,'live',d,t2,'forward',jsonb_build_object('message_id',m->>'id','idempotency_key',gen_random_uuid()));
  IF inbox_media_access(w,'live',t2,i)->>'object_key'<>'fixture/key' THEN RAISE EXCEPTION 'forward media unreadable';END IF;
@@ -29,6 +30,8 @@ BEGIN
  r:=inbox_profile(w,'live',t);IF (r->'summary'->>'spend_minor')::bigint<>10000 OR (r->'summary'->>'total')::integer<>3 THEN RAISE EXCEPTION 'bad profile totals';END IF;
  PERFORM inbox_inbound_media(c,'provider-image','customer-a','','image',decode('ab','hex'),now());
  IF NOT EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t AND provider_id='provider-image' AND type='image' AND content ? 'media_id') THEN RAISE EXCEPTION 'missing inbound media';END IF;
+ r:=inbox_forward_album(w,'live',d,t2,(m->>'id')::uuid,gen_random_uuid());
+ IF jsonb_array_length(r->'items')<>2 THEN RAISE EXCEPTION 'album forward lost images';END IF;
  PERFORM inbox_provider_reaction(c,'future-provider','customer-a','❤️',now());
  r:=inbox_next_send();
  PERFORM inbox_finish_send((m->>'id')::uuid,'future-provider','sent','');

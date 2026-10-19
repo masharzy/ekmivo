@@ -84,7 +84,7 @@ fun EkmivoApp(preferences:AppPreferences,incomingPairingLink:String?=null,incomi
     if(page!=EkmivoReferencePage.INBOX)EkmivoReferenceHeader(if(page==EkmivoReferencePage.SETTINGS)(if(bn)"সেটিংস" else "Settings") else access!!.name,subtitle=if(page==EkmivoReferencePage.SMS)(if(bn)"ওয়ার্কস্পেস" else "Workspace") else null,titleIsPage=page==EkmivoReferencePage.SETTINGS)
     Box(Modifier.weight(1f)) {
      when(page) {
-      EkmivoReferencePage.INBOX -> InboxRoute(bn=bn,workspace=access!!,onDetailChange={inboxDetail=it},initialThread=if(incomingInboxWorkspace==access!!.id)incomingInboxThread else null)
+      EkmivoReferencePage.INBOX -> key(access!!.id,access!!.environment) {InboxRoute(bn=bn,workspace=access!!,onDetailChange={inboxDetail=it},initialThread=if(incomingInboxWorkspace==access!!.id)incomingInboxThread else null)}
       EkmivoReferencePage.SMS -> EkmivoSmsHome(bn,connection,onRetry={ReceiptSyncWorker.scheduleNow(app)})
       EkmivoReferencePage.SETTINGS -> EkmivoSettingsScreen(bn,language,appearance,
        changeLanguage={scope.launch{preferences.updateLanguage(it)}},changeAppearance={scope.launch{preferences.updateAppearance(it)}},

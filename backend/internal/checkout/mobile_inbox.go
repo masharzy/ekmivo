@@ -84,6 +84,21 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 			fail(w, 422, "INVALID_THREAD")
 			return
 		}
+		if b.Action == "forward" && b.Body["album"] == true {
+			messageID, _ := b.Body["message_id"].(string)
+			key, _ := b.Body["idempotency_key"].(string)
+			if !uuidPattern.MatchString(messageID) || !uuidPattern.MatchString(key) {
+				fail(w, 422, "INVALID_MESSAGE")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_forward_album($1::uuid,$2,$3::uuid,$4::uuid,$5::uuid,$6::uuid)", d.Workspace, d.Environment, d.ID, thread, messageID, key).Scan(&result)
+			if err != nil {
+				mapped(w, err)
+				return
+			}
+			write(w, 200, json.RawMessage(result))
+			return
+		}
 		body, _ := json.Marshal(b.Body)
 		err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_advanced($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", d.Workspace, d.Environment, d.ID, thread, b.Action, body).Scan(&result)
 		if err != nil {
