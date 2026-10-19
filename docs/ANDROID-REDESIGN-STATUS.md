@@ -41,3 +41,13 @@ Owner integration direction: `ANDROID-MESSAGING-FOUNDATION.md` is binding for la
 ### Next agent action
 
 Start from PR #86 head. Inspect latest Android/Go CI before merging. Continue Phase 2's control-plane device enrollment/capability path without changing payment financial matching, old enrollment IDs or queued evidence. See explicit migration mode `MOBILE_PREVIEW_ALLOW_MIGRATION=true` with `MOBILE_PREVIEW_CONTROL_MIGRATION_FILE` (0114), `MOBILE_PREVIEW_FINANCIAL_MIGRATION_FILE` (0115), and existing three `PG04_*_MIGRATION_DATABASE_URL` variables. It runs only these additive migrations, not base/River migrations. Do not release the new pairing UI against an old API without these functions deployed.
+
+### Checkpoint validation detail
+
+Phase 2 source checkpoint `7a42f2b2a23bc8eac21480e9d9734925bb48c215` is pushed. Its compile CI is run `39259379422`; runtime/migration Docker compilation passed. Latest local Node source contracts: 7/7 passed (mobile contracts + short-code consent checks). OpenAPI validation attempted locally but could not run because this isolated checkout has no `@apidevtools/swagger-parser`; CI owns that check. The follow-up adds the explicit API schema and rejects unexpected preview fields/trailing JSON. Source flags remain gated by migration/runtime availability; full Phase 2 is not accepted.
+
+HTTP Go smoke failure on Phase 1 run was connection refused on port 18080 after its startup polling window, while Go unit tests and Docker compile passed. The log did not surface the redirected server log, so the root cause is not proven and no unrelated API/security behavior was changed to silence it.
+
+### Phase 2 compile evidence
+
+Run `39259379422` for `7a42f2b`: native Android debug assemble and unit tests **passed**, Go unit/race/vet step **passed**, API and migration Docker builds **passed**. HTTP smoke and broader web checks are separate; no whole-CI-green claim. Follow-up request-decoder/OpenAPI changes remain subject to their latest CI. Device/visual and full Phase 2 gates remain open.
