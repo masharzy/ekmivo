@@ -49,6 +49,13 @@ function describe(code:string,bn:boolean){
  };
  return (labels[code]||["Could not complete this action. Nothing has been confirmed.","কাজটি সম্পন্ন হয়নি। কোনো পেমেন্ট নিশ্চিত হয়নি।"])[bn?1:0];
 }
+// Only called after a network response, never while React renders.
+function captureServerClock(iso:string){
+ const timestamp=Date.parse(iso);
+ if(!Number.isFinite(timestamp))throw {code:"INVALID_FINANCIAL_RESULT"};
+ const monotonic=performance.now();
+ return {timestamp,monotonic};
+}
 export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;token:string;initialMethod?:PayMethod}){
  const router=useRouter();
  const bn=locale==="bn";
@@ -79,9 +86,8 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
    const json=await response.json();
    if(!response.ok)throw {status:response.status,code:json.error?.code||json.code};
    if(!live.current||request!==sequence.current)return;
-   const timestamp=Date.parse((json as Checkout).server_time);
-   if(!Number.isFinite(timestamp))throw {code:"INVALID_FINANCIAL_RESULT"};
-   const monotonic=performance.now();setClock(monotonic);setServerAnchor({time:timestamp,monotonic});
+   const {timestamp,monotonic}=captureServerClock((json as Checkout).server_time);
+   setClock(monotonic);setServerAnchor({time:timestamp,monotonic});
    latest.current=json as Checkout;
    setInfo(json as Checkout);setStatus("ready");setCode("");setUpdated(timestamp);
   }catch(err){
@@ -125,9 +131,8 @@ export function CheckoutExperience({locale,token,initialMethod}:{locale:Locale;t
     body:JSON.stringify({payer_number:canonical,method,receiving_account_id:accountId||undefined,customer_details:customerDetails}),credentials:"same-origin"});
    const json=await response.json();
    if(!response.ok)throw {code:json.error?.code||json.code,status:response.status};
-   const timestamp=Date.parse((json as Checkout).server_time);
-   if(!Number.isFinite(timestamp))throw {code:"INVALID_FINANCIAL_RESULT"};
-   const monotonic=performance.now();setClock(monotonic);setServerAnchor({time:timestamp,monotonic});
+   const {timestamp,monotonic}=captureServerClock((json as Checkout).server_time);
+   setClock(monotonic);setServerAnchor({time:timestamp,monotonic});
    latest.current=json as Checkout;sequence.current++;
    setInfo(json as Checkout);setStatus("ready");setUpdated(timestamp);setPayer("");setPayerTouched(false);
   }catch(err){
