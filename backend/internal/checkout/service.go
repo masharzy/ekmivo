@@ -1074,18 +1074,13 @@ func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byt
 				var accounts []map[string]any
 				var encoded []byte
 				if err = pool.QueryRow(r.Context(), "SELECT pg98_checkout_accounts($1)", digest(r.PathValue("token"))).Scan(&encoded); err == nil && json.Unmarshal(encoded, &accounts) == nil {
-					allowed := make(map[string]bool, len(list))
-					for _, method := range list {
-						allowed[method] = true
-					}
-					filtered := make([]map[string]any, 0, len(accounts))
+					// Show every enabled account; readiness gates payer locking, not tile visibility.
 					for _, account := range accounts {
 						method, _ := account["method"].(string)
-						if allowed[method] {
-							filtered = append(filtered, account)
-						}
+						online, _ := account["source_online"].(bool)
+						account["ready"] = available[method] && online
 					}
-					data["receiving_accounts"] = filtered
+					data["receiving_accounts"] = accounts
 				}
 			}
 		}

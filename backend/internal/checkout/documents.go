@@ -635,9 +635,12 @@ func (s *Service) HandlePublicDocument(w http.ResponseWriter, r *http.Request) {
 		// Public customers see configured accounts by provider name, never phone
 		// identities, receiving numbers or unreleased parser rules.
 		if doc.Environment == "live" {
-			var sourceBytes []byte
+			var sourceBytes, accountBytes []byte
 			err := s.pipelineScoped(r.Context(), doc.Workspace, doc.Environment, func(tx pgx.Tx) error {
-				return tx.QueryRow(r.Context(), "SELECT pg10_public_payment_sources($1::uuid,$2)", doc.Workspace, doc.Environment).Scan(&sourceBytes)
+				if err := tx.QueryRow(r.Context(), "SELECT pg10_public_payment_sources($1::uuid,$2)", doc.Workspace, doc.Environment).Scan(&sourceBytes); err != nil {
+					return err
+				}
+				return tx.QueryRow(r.Context(), "SELECT pg110_public_workspace_accounts($1::uuid,$2)", doc.Workspace, doc.Environment).Scan(&accountBytes)
 			})
 			if err != nil {
 				fail(w, 503, "DOCUMENT_SOURCE_UNAVAILABLE")
@@ -657,6 +660,17 @@ func (s *Service) HandlePublicDocument(w http.ResponseWriter, r *http.Request) {
 					methods = append(methods, method)
 				}
 			}
+			var accounts []map[string]any
+			if json.Unmarshal(accountBytes, &accounts) != nil {
+				fail(w, 503, "INVALID_DOCUMENT_RESULT")
+				return
+			}
+			for _, account := range accounts {
+				method, _ := account["method"].(string)
+				online, _ := account["source_online"].(bool)
+				account["ready"] = allowed[method] && online
+			}
+			data["receiving_accounts"] = accounts
 			data["configured_methods"] = selection.Configured
 			data["methods"] = methods
 		} else {
