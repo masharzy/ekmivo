@@ -1,3 +1,5 @@
+import {WorkspaceChannels} from "../../../../../../components/workspace-channels";
+import {WorkspaceInbox} from "../../../../../../components/workspace-inbox";
 import { notFound,redirect } from "next/navigation";
 import { requireWorkspace } from "../../../../../../lib/server/auth";
 import { paymentContextFor } from "../../../../../../lib/server/workspace-context";
@@ -14,6 +16,8 @@ export default async function ServiceSection({ params, searchParams }: {
  if(service==="payments"&&section==="settings")redirect(`/w/${workspaceId}/payments/store`);
  if(service==="payments"&&section==="payments")redirect(`/w/${workspaceId}/payments/transactions`);
  if((service!=="ai"&&service!=="payments")||!serviceEnabled(service,workspace.mode)||!sectionInService(service,section))notFound();
+ if(service==="ai"&&section==="channels")return <WorkspaceChannels key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>;
+ if(service==="ai"&&section==="inbox")return <WorkspaceInbox key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>;
  const query=await searchParams;
  // Legacy bookmarked ?env= links are normalized; environment selection is
  // intentionally hidden and no longer accepted from a dashboard URL.

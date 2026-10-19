@@ -15,6 +15,11 @@ android {
   versionCode = 4
   versionName = "0.2.2"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+  // Firebase client identifiers are public configuration, never service-account secrets.
+  for (key in listOf("APPLICATION_ID", "API_KEY", "PROJECT_ID", "SENDER_ID")) {
+   val value = providers.environmentVariable("EKMIVO_FIREBASE_" + key).orElse("").get()
+   buildConfigField("String", "FIREBASE_" + key, "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
+  }
   // Public origin only: never embed credentials or a payment authority in a mobile binary.
   buildConfigField("String", "API_BASE_URL",
     "\"" + (providers.gradleProperty("ekmivoApiBaseUrl").orElse("https://ekmivo-go-api.onrender.com").get().trimEnd('/')) + "\"")

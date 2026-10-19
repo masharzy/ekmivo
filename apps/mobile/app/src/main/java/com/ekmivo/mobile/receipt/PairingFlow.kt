@@ -317,6 +317,7 @@ fun PairingFlow(
           input = ""
           onPaired()
          }
+        } catch (e: CancellationException) { throw e
         } catch (_: java.net.UnknownHostException) {
          errorId = R.string.pair_error_network
          page = PairPage.CONFIRM

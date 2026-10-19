@@ -65,18 +65,19 @@ class ReceiptRepository private constructor(private val context: Context) {
 
  fun permissions(): Set<RequiredPermission> {
   val missing = mutableSetOf<RequiredPermission>()
-  if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED)
+  val payment=WorkspaceAccessRepository.paymentAllowed(context)
+  if (payment && ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED)
    missing += RequiredPermission.SMS
   val health=SetupHealth(context).refresh()
   if(health.notification!=HealthLevel.OK) missing+=RequiredPermission.NOTIFICATIONS
-  if(health.battery!=HealthLevel.OK) missing+=RequiredPermission.BATTERY
-  if(health.samsung&&!health.oemGuideAcknowledged) missing+=RequiredPermission.OEM
+  if(payment&&health.battery!=HealthLevel.OK) missing+=RequiredPermission.BATTERY
+  if(payment&&health.samsung&&!health.oemGuideAcknowledged) missing+=RequiredPermission.OEM
   return missing
  }
 
  fun onTransport(status: Int, action: String, deviceId: String) {
   if (auth.onHttpStatus(status, action, deviceId)) return
-  if (action == "claim" || action == "pairing-preview") return // Bad pairing code is NOT device revocation.
+  if (action == "claim" || action == "pairing-preview" || action == "workspace-state") return // Bad pairing code is NOT device revocation.
   when {
    status in 200..299 && (action == "configuration" || action == "phone-heartbeat" || action == "heartbeat") -> {
     ReceiptStore(context).use { it.markServerAccepted(deviceId) }

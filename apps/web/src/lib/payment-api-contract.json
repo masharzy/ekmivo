@@ -59150,6 +59150,103 @@
         }
       }
     },
+    "/v1/device/pairing-preview": {
+      "post": {
+        "operationId": "previewMobileWorkspace",
+        "summary": "Read workspace identity before explicit pairing consent",
+        "description": "Uses a valid unconsumed eight-character pairing capability. Does not claim\na device, consume the token, register a key, or authorize SMS collection.\nResolves the workspace and enabled products from the authoritative database.\nRequires additive control 0114 and financial 0115 migrations. Response is no-store.\nCurrently supports existing Payment phone pairing codes; AI-only enrollment\nrequires its separate control-plane device identity path.\n",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "pairing_token"
+                ],
+                "properties": {
+                  "pairing_token": {
+                    "type": "string",
+                    "pattern": "^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scoped workspace identity and current products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "workspace_id",
+                    "workspace_name",
+                    "environment",
+                    "products",
+                    "expires_at"
+                  ],
+                  "properties": {
+                    "workspace_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "workspace_name": {
+                      "type": "string"
+                    },
+                    "environment": {
+                      "type": "string",
+                      "enum": [
+                        "sandbox",
+                        "live"
+                      ]
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "products": {
+                      "type": "object",
+                      "required": [
+                        "ai",
+                        "payments"
+                      ],
+                      "properties": {
+                        "ai": {
+                          "type": "boolean"
+                        },
+                        "payments": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Pairing unavailable or workspace disabled"
+          },
+          "413": {
+            "description": "Body too large"
+          },
+          "422": {
+            "description": "Invalid pairing code"
+          },
+          "429": {
+            "description": "Preview budget exceeded"
+          },
+          "503": {
+            "description": "Workspace source or migration unavailable"
+          }
+        }
+      }
+    },
     "/v1/device/{action}": {
       "parameters": [
         {

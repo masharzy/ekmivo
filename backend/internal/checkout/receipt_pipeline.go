@@ -453,14 +453,48 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 		fail(w, 429, "RATE_LIMITED")
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 12288)
+	limit := int64(12288)
+
+	if r.PathValue("action") == "inbox" {
+		limit = 32768
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	raw, e := io.ReadAll(r.Body)
 	if e != nil {
 		fail(w, 413, "BODY_TOO_LARGE")
 		return
 	}
+	if r.PathValue("action") == "mobile-disconnect" {
+		d, err := s.mobileIdentity(r, raw)
+		if err != nil {
+			authError(w, err)
+			return
+		}
+		var result []byte
+		if err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT mobile_device_manage($1::uuid,$2,'revoke',$3::uuid,'','')", d.Workspace, d.Environment, d.ID).Scan(&result); err != nil {
+			fail(w, 503, "SOURCE_UNAVAILABLE")
+			return
+		}
+		write(w, 200, map[string]bool{"disconnected": true})
+		return
+	}
+	if r.PathValue("action") == "inbox-push-register" {
+		s.handleInboxPushRegistration(w, r, raw)
+		return
+	}
+	if r.PathValue("action") == "inbox" {
+		s.handleMobileInbox(w, r, raw)
+		return
+	}
+	if r.PathValue("action") == "workspace-state" {
+		s.handleWorkspaceState(w, r, raw)
+		return
+	}
+	if r.PathValue("action") == "claim" && s.tryMobileClaim(w, r, raw) {
+		return
+	}
 	if r.PathValue("action") == "pairing-preview" {
-		s.handleMobilePairingPreview(w,r,raw)
+		s.handleMobilePairingPreview(w, r, raw)
 		return
 	}
 	if r.PathValue("action") == "claim" {
@@ -491,6 +525,16 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 			e = s.Pipeline.Live.QueryRow(r.Context(), "SELECT pg06_phone_claim($1,$2)", digest(claim.Token), key).Scan(&result)
 		}
 		if e == nil {
+			var enrollment struct {
+				ID          string `json:"id"`
+				Workspace   string `json:"workspace_id"`
+				Environment string `json:"environment"`
+			}
+			var adopted bool
+			if json.Unmarshal(result, &enrollment) != nil || s.Pipeline.Control.QueryRow(r.Context(), "SELECT mobile_device_adopt($1::uuid,$2::uuid,$3,$4)", enrollment.ID, enrollment.Workspace, enrollment.Environment, key).Scan(&adopted) != nil || !adopted {
+				fail(w, 503, "WORKSPACE_LOOKUP_UNAVAILABLE")
+				return
+			}
 			write(w, 200, json.RawMessage(result))
 			return
 		}

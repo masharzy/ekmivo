@@ -33,6 +33,7 @@ var Operations=map[string]Operation{"listcustomers": {Method:"GET",Path:"/v1/wor
 "customerReceiptNotice": {Method:"POST",Path:"/v1/public/checkout/{token}/notices/{noticeAction}",Public:true},
 "listFinancialOperations": {Method:"GET",Path:"/v1/workspaces/{workspaceID}/operations/{resource}",Public:false},
 "getFinancialOperation": {Method:"GET",Path:"/v1/workspaces/{workspaceID}/operations/{resource}/{resourceID}",Public:false},
+"previewMobileWorkspace": {Method:"POST",Path:"/v1/device/pairing-preview",Public:true},
 "getMerchantContext": {Method:"GET",Path:"/v1/merchant/context",Public:false},
 "listLinkedBillingSources": {Method:"GET",Path:"/v1/workspaces/{workspaceID}/linked-sources",Public:false},
 "issueLinkedBillingSource": {Method:"POST",Path:"/v1/workspaces/{workspaceID}/linked-sources",Public:false},

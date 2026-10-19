@@ -17,7 +17,7 @@ test("physical phone registration is distinct from stable source enrollments",as
 });
 test("scoped full receiving number is decrypted only after workspace management check",async()=>{
  const handler=await source("backend/internal/checkout/physical_devices.go");
- assert.match(handler,/pipelineSession\(r,ws,realm,true\)/);
+ assert.match(handler,/pipelineSession\(r,\s*ws,\s*realm,\s*true\)/);
  assert.match(handler,/pg06_phone_account_cipher/);
  assert.match(handler,/merchantwebhook.Decrypt/);
  assert.match(handler,/account_label/);

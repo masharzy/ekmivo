@@ -37,7 +37,7 @@ import com.ekmivo.mobile.ui.*
 
 /** One permission per screen. OEM steps never fabricate an OS-verified OK. */
 @Composable
-fun SetupWizard(bn:Boolean,onLanguageChange:(Boolean)->Unit,onDone:()->Unit) {
+fun SetupWizard(bn:Boolean,onLanguageChange:(Boolean)->Unit,onDone:()->Unit,payments:Boolean=true,ai:Boolean=false,workspaceName:String="Ekmivo") {
  val context=LocalContext.current
  val health=remember(context){SetupHealth(context.applicationContext)}
  val owner=LocalLifecycleOwner.current
@@ -81,8 +81,8 @@ fun SetupWizard(bn:Boolean,onLanguageChange:(Boolean)->Unit,onDone:()->Unit) {
      runCatching{settingsLauncher.launch(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))}.isFailure)
    appSettings()
  }
- val step=SetupPlan.firstMissing(snapshot)
- val totalSteps=SetupPlan.steps(snapshot.samsung)
+ val step=SetupPlan.firstMissing(snapshot,payments)
+ val totalSteps=SetupPlan.steps(snapshot.samsung,payments)
  val stepIndex=step?.let{totalSteps.indexOf(it)}?:totalSteps.size
  val permission=when(step){
   SetupStep.SMS->Manifest.permission.RECEIVE_SMS
@@ -107,14 +107,12 @@ fun SetupWizard(bn:Boolean,onLanguageChange:(Boolean)->Unit,onDone:()->Unit) {
  val body=when(step){
   SetupStep.SMS->if(bn)"পেমেন্টের SMS চিনে Ekmivo-তে পাঠাতে এই অনুমতি দরকার। বাকি SMS পাঠানো হবে না।"
    else "Allow Ekmivo to recognize and forward payment SMS. Other SMS are not forwarded."
-  SetupStep.NOTIFICATION->if(bn)"ফরওয়ার্ডিং ও ডেলিভারি সমস্যা জানাতে নোটিফিকেশন দরকার।"
-   else "Notifications help you see forwarding and delivery problems."
+  SetupStep.NOTIFICATION->if(!payments) {if(bn)"কাস্টমার রিপ্লাই দিলে সাথে সাথে জানাতে নোটিফিকেশন দরকার।" else "Get notified when a customer replies."} else if(bn)"ফরওয়ার্ডিং চালু আছে কি না, আর কোনো SMS ব্যর্থ হলে সেটা জানাতে নোটিফিকেশন দরকার।" else "Notifications help you see forwarding and delivery problems."
   SetupStep.BATTERY->if(bn)"স্ক্রিন বন্ধ থাকলেও পেমেন্ট SMS মিস না করতে Ekmivo-কে ব্যাটারি সীমাবদ্ধতা থেকে ছাড় দিন।"
    else "Exclude Ekmivo from battery restrictions to help forward SMS with the screen off."
   SetupStep.OEM->if(bn)"Samsung Settings-এ Sleeping এবং Deep sleeping apps থেকে Ekmivo সরান।"
    else "In Samsung Settings, remove Ekmivo from Sleeping and Deep sleeping apps."
-  null->if(bn)"এই ফোনে পেমেন্ট SMS ফরওয়ার্ড করার সেটআপ সম্পন্ন।"
-   else "Setup complete. This phone is configured to forward payment SMS."
+  null->if(!payments) {if(bn)"কাস্টমার মেসেজের নোটিফিকেশন এখন এই ফোনে আসবে।" else "Customer message notifications are now enabled."} else if(bn)"ফোনটি ওয়ার্কস্পেসের সাথে যুক্ত। পেমেন্টের SMS নিজে থেকে পাঠানো হবে।" else "This phone is connected. Payment SMS will be sent automatically."
  }
  val action=when{
   step==null->if(bn)"শুরু করুন" else "Start"
@@ -133,12 +131,12 @@ fun SetupWizard(bn:Boolean,onLanguageChange:(Boolean)->Unit,onDone:()->Unit) {
   ){
    Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(p.text),
     contentAlignment=Alignment.Center){Text("e.",style=EkmivoType.shop,color=p.onPrimary)}
-   Text("Ekmivo",style=EkmivoType.shop,color=p.text)
+   Text(workspaceName,style=EkmivoType.shop,color=p.text)
    Spacer(Modifier.weight(1f))
    EkmivoLanguageSwitch(bn,onLanguageChange)
   }
   Row(Modifier.padding(top=18.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-   repeat(4){i->
+   repeat(totalSteps.size){i->
     Box(Modifier.size(width=22.dp,height=4.dp).clip(RoundedCornerShape(2.dp))
      .background(if(i<=stepIndex)p.text else p.border))
    }
@@ -157,11 +155,11 @@ fun SetupWizard(bn:Boolean,onLanguageChange:(Boolean)->Unit,onDone:()->Unit) {
    Text(body,style=EkmivoType.body,color=p.secondary,textAlign=TextAlign.Center)
    Spacer(Modifier.height(18.dp))
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically){
-    listOf(
+    (if(!payments) emptyList() else listOf(
      SetupStep.SMS to "SMS",
      SetupStep.NOTIFICATION to (if(bn)"নোটিফিকেশন" else "Notifications"),
      SetupStep.BATTERY to (if(bn)"ব্যাটারি" else "Battery")
-    ).forEach{(item,label)->
+    )).forEach{(item,label)->
      val ok=snapshot.level(item)==HealthLevel.OK
      EkmivoStatusTag(label+(if(ok)" ✓" else ""),
       if(ok)p.successBackground else p.subtle,

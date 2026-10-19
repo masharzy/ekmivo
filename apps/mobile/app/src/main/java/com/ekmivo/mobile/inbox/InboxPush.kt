@@ -5,19 +5,14 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import com.ekmivo.mobile.receipt.ReceiptStore
+import com.ekmivo.mobile.BuildConfig
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
-/**
- * FCM groundwork only; a Firebase project config and an authenticated inbox
- * token-registration backend are NOT provisioned by Phase 6.
- *
- * Tokens are scoped to the active phone enrollment. They cannot be reused
- * after disconnect/re-pairing with a different enrollment. No token is sent
- * to any API endpoint until a server contract exists.
- */
+/** Tokens are registered only for the authenticated active phone enrollment. */
 object InboxPushTokenRegistry {
  private const val prefsName="ekmivo_inbox_push"
  private const val tokenKey="fcm_token"
@@ -34,7 +29,13 @@ object InboxPushTokenRegistry {
   if(!InboxFeatureFlag.inboxEnabled || token.isBlank())return false
   val id=currentPhone(context)?:return false
   return context.applicationContext.getSharedPreferences(prefsName,Context.MODE_PRIVATE).edit()
-   .putString(tokenKey,token).putString(phoneKey,id).commit()
+   .putString(tokenKey,token).putString(phoneKey,id).commit().also { saved ->
+    if(saved) {
+     val work=androidx.work.OneTimeWorkRequestBuilder<InboxPushRegistrationWorker>()
+      .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build()).build()
+     androidx.work.WorkManager.getInstance(context).enqueueUniqueWork("inbox-push-register-"+id,androidx.work.ExistingWorkPolicy.REPLACE,work)
+    }
+   }
  }
  fun currentToken(context:Context):String? {
   if(!InboxFeatureFlag.inboxEnabled)return null
@@ -52,22 +53,25 @@ object InboxPushTokenRegistry {
  fun prepare(context:Context) {
   if(!InboxFeatureFlag.inboxEnabled)return
   val app=context.applicationContext
-  if(FirebaseApp.getApps(app).isEmpty())return
+  if(FirebaseApp.getApps(app).isEmpty()) {
+   if(BuildConfig.FIREBASE_APPLICATION_ID.isBlank()||BuildConfig.FIREBASE_API_KEY.isBlank()||BuildConfig.FIREBASE_PROJECT_ID.isBlank()||BuildConfig.FIREBASE_SENDER_ID.isBlank())return
+   val initialized=runCatching { FirebaseApp.initializeApp(app,FirebaseOptions.Builder().setApplicationId(BuildConfig.FIREBASE_APPLICATION_ID).setApiKey(BuildConfig.FIREBASE_API_KEY).setProjectId(BuildConfig.FIREBASE_PROJECT_ID).setGcmSenderId(BuildConfig.FIREBASE_SENDER_ID).build()) }.getOrNull()
+   if(initialized==null)return
+  }
   ensureChannel(app)
   FirebaseMessaging.getInstance().token.addOnSuccessListener { token -> capture(app,token) }
-  // Do not send token to server: no authenticated inbox registration endpoint yet.
  }
  fun ensureChannel(context:Context){
   if(!InboxFeatureFlag.inboxEnabled)return
   val manager=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
   manager.createNotificationChannel(
    NotificationChannel(channelId,"Inbox messages",NotificationManager.IMPORTANCE_DEFAULT)
-    .apply { description="Future Ekmivo inbox notifications" }
+    .apply { description="Ekmivo inbox notifications" }
   )
  }
 }
 
-/** Service entry point for future FCM token refresh. No financial SMS handling. */
+/** FCM token refresh and scoped inbox notification delivery. */
 class InboxFirebaseService:FirebaseMessagingService() {
  override fun onNewToken(token:String) {
   super.onNewToken(token)
@@ -75,8 +79,11 @@ class InboxFirebaseService:FirebaseMessagingService() {
  }
  override fun onMessageReceived(message:RemoteMessage) {
   super.onMessageReceived(message)
-  // No verified inbox message schema/endpoint exists yet. Do not display
-  // untrusted sender or message content, store a fabricated chat, or claim
-  // delivery. Real routing is explicitly gated behind inboxEnabled.
+  val data=message.data
+  val request=androidx.work.OneTimeWorkRequestBuilder<InboxNotificationWorker>()
+   .setInputData(androidx.work.workDataOf("device_id" to data["device_id"],"workspace_id" to data["workspace_id"],"thread_id" to data["thread_id"],"message_id" to data["message_id"]))
+   .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
+   .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST).build()
+  androidx.work.WorkManager.getInstance(applicationContext).enqueue(request)
  }
 }

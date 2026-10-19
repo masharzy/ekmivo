@@ -18,7 +18,7 @@ class ReceiptStageRepository(private val context: Context) {
  fun capture(store: ReceiptStore, payload: JSONObject): Boolean {
   val id = UUID.randomUUID().toString()
   val encrypted = store.encryptStaging(id, payload.toString().toByteArray(Charsets.UTF_8))
-  if (dao.insert(ReceivedSms(id, encrypted, System.currentTimeMillis())) == -1L) return false
+  if (dao.insert(ReceivedSms(id, encrypted, System.currentTimeMillis(),origin=payload.optString("enrollment_id"))) == -1L) return false
   // Receipt is durable in Room even when mirroring needs a later worker retry.
   runCatching { mirrorOne(store, id, encrypted) }
   return true
@@ -33,7 +33,7 @@ class ReceiptStageRepository(private val context: Context) {
    return false
   }
   when (store.deliveryDisposition(id)) {
-   2 -> { dao.acknowledged(id, System.currentTimeMillis()); return true } // ACK survived a process crash
+   2 -> { dao.acknowledgeWithStats(id, System.currentTimeMillis()); return true } // ACK survived a process crash
    1 -> { dao.mirrored(id); return true }      // already mirrored to outbox
   }
   val ok = store.enqueue(body, id)
@@ -52,7 +52,7 @@ class ReceiptStageRepository(private val context: Context) {
 
  fun sending(id: String) = dao.sending(id)
  fun acknowledge(id: String) {
-  dao.acknowledged(id,System.currentTimeMillis())
+  dao.acknowledgeWithStats(id,System.currentTimeMillis())
   dao.pruneSent()
  }
  fun failed(id: String, safeCode: String) {
