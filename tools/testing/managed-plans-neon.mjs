@@ -43,7 +43,15 @@ try{
   assert.equal((await control`SELECT payment_plan_effective(${workspaces[0]}) AS p`)[0].p.access_until,initial.access_until);
   await rejected(()=>control`SELECT payment_plan_claim_free(${workspaces[1]},${outsider},${pid})`,'42501');
   await save(pid,{...terms,payment_limit:7},'public',plan.current_version);
-  const unchanged=(await control`SELECT payment_plan_effective(${workspaces[0]}) AS p`)[0].p;assert.equal(unchanged.terms.payment_limit,3);
+  const raised=(await control`SELECT payment_plan_effective(${workspaces[0]}) AS p`)[0].p;
+  assert.equal(raised.terms.payment_limit,7);
+  assert.equal(raised.access_until,initial.access_until);
+  // Paid plan and other paid/pricing changes remain version-pinned.
+  // Restore this test fixture's original three-payment limit explicitly to
+  // keep its existing final-slot concurrency assertions meaningful.
+  await admin('assign',{workspace_id:workspaces[0],version_id:plan.current_version,until_at:initial.access_until,reason:'Restore original quota for synthetic race tests'});
+  const pinned=(await control`SELECT payment_plan_effective(${workspaces[0]}) AS p`)[0].p;
+  assert.equal(pinned.terms.payment_limit,3);
   await rejected(()=>save(pid,terms,'public',plan.current_version),'40001');
   await rejected(()=>control`UPDATE payment_plan_versions SET terms='{}' WHERE id=${plan.current_version}`,'42501');
   await rejected(()=>control`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${workspaces[0]},${outsider},'viewer')`,'P6806');

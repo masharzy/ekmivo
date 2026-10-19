@@ -34,6 +34,11 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 	if w.Pool.QueryRow(ctx, "SELECT pg11_emit_expiry()").Scan(&count) != nil {
 		return errors.New("expiry event sweep unavailable")
 	}
+	// Expiry events do not transition reserved allowance rows. Release stale
+	// rows without touching completed payment proofs or immutable intent data.
+	if w.Pool.QueryRow(ctx, "SELECT payment_allowance_reconcile_expired(200)").Scan(&count) != nil {
+		return errors.New("expired payment reservation reconciliation unavailable")
+	}
 	if w.Pool.QueryRow(ctx, "SELECT pg15_prune_exports()").Scan(&count) != nil {
 		return errors.New("export retention unavailable")
 	}
