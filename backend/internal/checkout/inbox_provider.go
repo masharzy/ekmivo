@@ -266,6 +266,9 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 			}
 			for _, change := range entry.Changes {
 				for _, m := range change.Value.Messages {
+					if m.Type == "reaction" {
+						continue
+					}
 					kind, text := m.Type, m.Text.Body
 					if kind != "text" {
 						kind = "unsupported"
@@ -355,13 +358,10 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 					response.Body.Close()
 					if response.StatusCode >= 200 && response.StatusCode < 300 && parseErr == nil {
 						id = result.MID
-						if job.Type == "reaction" && id == "" {
-							id = "reaction-" + job.ID
-						}
 						if len(result.Messages) > 0 {
 							id = result.Messages[0].ID
 						}
-						if id != "" {
+						if id != "" || job.Type == "reaction" {
 							state = "sent"
 							safe = ""
 						} else {

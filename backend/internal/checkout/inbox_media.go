@@ -34,7 +34,7 @@ func validateInboxMedia(data []byte, declared string) (string, error) {
 		if err != nil || cfg.Width < 1 || cfg.Height < 1 || int64(cfg.Width)*int64(cfg.Height) > 20000000 {
 			return "", errors.New("INVALID_IMAGE")
 		}
-	} else if typ == "application/octet-stream" && len(data) > 12 && string(data[4:8]) == "ftyp" && declared == "audio/mp4" {
+	} else if (typ == "application/octet-stream" || typ == "video/mp4") && len(data) > 12 && string(data[4:8]) == "ftyp" && declared == "audio/mp4" {
 		typ = "audio/mp4"
 	} else if typ != "application/pdf" && typ != "audio/mpeg" && typ != "audio/ogg" && typ != "audio/aac" && typ != "audio/mp4" && !strings.HasPrefix(typ, "text/plain") {
 		return "", errors.New("UNSUPPORTED_FILE_TYPE")

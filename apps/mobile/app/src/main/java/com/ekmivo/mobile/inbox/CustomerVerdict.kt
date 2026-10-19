@@ -5,7 +5,7 @@ data class CustomerVerdict(val key:String,val rate:Int?,val completed:Int) {
   fun from(ok:Int,cancelled:Int,returned:Int,running:Int,talks:Int):CustomerVerdict {
    require(listOf(ok,cancelled,returned,running,talks).all{it>=0})
    val done=ok+cancelled+returned
-   val rate=if(done>0)kotlin.math.round(ok.toDouble()/done*100).toInt() else null
+   val rate=if(done>0)kotlin.math.floor(ok.toDouble()/done*100+0.5).toInt() else null
    val key=when {
     done+running==0&&talks<=1->"new"
     done+running==0&&talks>=4->"frequent"

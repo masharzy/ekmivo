@@ -97,6 +97,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
  var pendingKey by rememberSaveable{mutableStateOf<String?>(null)}
  var failure by remember{mutableStateOf(false)}
  var loaded by remember{mutableStateOf(false)}
+ var recording by remember{mutableStateOf(false)}
  var busy by remember{mutableStateOf(false)}
  var net by remember{mutableStateOf(online(app))}
  var listPage by remember{mutableIntStateOf(0)}
@@ -228,7 +229,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
      Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=2.dp),horizontalArrangement=if(own)Arrangement.End else Arrangement.Start) {
       CompositionLocalProvider(LocalViewConfiguration provides exactPress) {
       Column(Modifier.graphicsLayer{translationX=shift}.semantics {customActions=listOf(CustomAccessibilityAction(if(bn)"উত্তর দিন" else "Reply"){reply=m;true})}.widthIn(max=maxBubble).clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp,bottomStart=if(!own&&messages.getOrNull(index+1)?.optString("sender")!=m.optString("sender"))5.dp else 16.dp,bottomEnd=if(own&&messages.getOrNull(index+1)?.optString("sender")!=m.optString("sender"))5.dp else 16.dp)).background(if(selected?.optString("id")==m.optString("id")||flashed==m.optString("id"))p.warningBackground else fill)
-       .combinedClickable(onClick={if(m.optString("state")=="failed")action("retry",JSONObject().put("message_id",m.getString("id")))else selected=null},onLongClick={selected=m})
+       .combinedClickable(onClick={if(mediaGroup.any{it.optString("state")=="failed"})mediaGroup.filter{it.optString("state")=="failed"}.forEach{action("retry",JSONObject().put("message_id",it.getString("id")))}else if(m.optString("state")=="failed")action("retry",JSONObject().put("message_id",m.getString("id")))else selected=null},onLongClick={selected=m})
        .pointerInput(m.getString("id")){detectHorizontalDragGestures(onDragStart={dragged=0f;crossed=false;selected=null},onDragEnd={if(crossed&&m.optString("type")=="text")reply=m;dragged=0f},onDragCancel={dragged=0f},onHorizontalDrag={change,amount->change.consume();val next=(dragged+amount).coerceAtLeast(0f);val threshold=56.dp.toPx();dragged=if(next>threshold)threshold+(next-threshold)*.28f else next;if(dragged>=threshold&&!crossed){crossed=true;(app.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator)?.vibrate(android.os.VibrationEffect.createOneShot(12,android.os.VibrationEffect.DEFAULT_AMPLITUDE))}})}.padding(horizontal=12.dp,vertical=9.dp)) {
        if(own&&messages.getOrNull(index-1)?.optString("sender")!=m.optString("sender"))Text(if(m.optString("sender")=="ai")"AI" else if(bn)"আপনি" else "You",style=EkmivoType.messageSender,color=ink.copy(alpha=.7f))
        val replyID=m.optString("reply_to").takeUnless{it.isBlank()||it=="null"}
@@ -238,7 +239,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
        Row(Modifier.align(Alignment.End),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
         Text(clock(m.optString("created_at"),bn),style=EkmivoType.messageTime,color=ink.copy(alpha=.65f))
         if(own) {
-         val status=m.optString("state")
+         val status=if(mediaGroup.isEmpty())m.optString("state")else listOf("uncertain","failed","queued","sending","sent","delivered","seen").firstOrNull{state->mediaGroup.any{it.optString("state")==state}}?:m.optString("state")
          if(status in listOf("failed","uncertain"))Text("!",style=EkmivoType.messageTime,color=p.danger)
          else {
           val tint=if(status=="seen")p.seen else ink.copy(alpha=.65f)
@@ -258,9 +259,9 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    val window=info?.optBoolean("window_open")==true
    if(!window&&info!=null)Column(Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(14.dp)).background(p.surface).padding(12.dp)){Text(if(bn)"২৪ ঘণ্টা পার হয়ে গেছে" else "24 hours have passed",style=EkmivoType.shop,color=p.text);Text(if(bn)"কাস্টমার নতুন মেসেজ দিলে আবার উত্তর দেওয়া যাবে।" else "You can reply when the customer sends a new message.",style=EkmivoType.heroNote,color=p.secondary)}
    else Row(Modifier.fillMaxWidth().topHairline(p.border).imePadding().padding(start=12.dp,end=12.dp,top=8.dp,bottom=14.dp),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-    InboxAttachments(thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),net&&!busy&&window){scope.launch{loadMessages(thread!!)}}
-    BasicTextField(input,{input=it.take(8000);pendingKey=null},enabled=net&&!busy&&window,textStyle=EkmivoType.chatMessage.copy(color=p.text),maxLines=4,modifier=Modifier.weight(1f).heightIn(min=40.dp,max=96.dp).clip(RoundedCornerShape(20.dp)).background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp)).padding(10.dp),decorationBox={inner->if(input.isEmpty())Text(if(bn)"মেসেজ লিখুন…" else "Write a message…",style=EkmivoType.chatMessage,color=p.secondary);inner()})
-    Box(Modifier.size(40.dp).clip(CircleShape).background(p.text).clickable(enabled=input.isNotBlank()&&!busy&&net&&window){
+    InboxAttachments(thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),net&&!busy&&window,replyTo=reply?.optString("id"),onRecordingChange={recording=it}){reply=null;scope.launch{loadMessages(thread!!)}}
+    if(!recording)BasicTextField(input,{input=it.take(8000);pendingKey=null},enabled=net&&!busy&&window,textStyle=EkmivoType.chatMessage.copy(color=p.text),maxLines=4,modifier=Modifier.weight(1f).heightIn(min=40.dp,max=96.dp).clip(RoundedCornerShape(20.dp)).background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp)).padding(10.dp),decorationBox={inner->if(input.isEmpty())Text(if(bn)"মেসেজ লিখুন…" else "Write a message…",style=EkmivoType.chatMessage,color=p.secondary);inner()})
+    if(!recording)Box(Modifier.size(40.dp).clip(CircleShape).background(p.text).clickable(enabled=input.isNotBlank()&&!busy&&net&&window){
      val id=thread!!;val text=input;val quote=reply;val key=pendingKey?:UUID.randomUUID().toString().also{pendingKey=it}
      scope.launch{busy=true;try{val body=JSONObject().put("text",text).put("idempotency_key",key);if(quote!=null)body.put("reply_to",quote.getString("id"));inboxRequest(app,"send",id,body=body);pendingKey=null;input="";reply=null;loadMessages(id);scroll.animateScrollToItem((messages.size-1).coerceAtLeast(0));failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}
     },contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary)}

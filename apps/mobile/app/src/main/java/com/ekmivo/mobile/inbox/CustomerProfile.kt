@@ -27,10 +27,11 @@ internal fun CustomerProfile(thread:String,bn:Boolean,onClose:()->Unit,onChanged
  val app=LocalContext.current.applicationContext;val p=LocalEkmivoPalette.current;val scope=rememberCoroutineScope()
  var data by remember(thread){mutableStateOf<JSONObject?>(null)};var error by remember{mutableStateOf(false)}
  var note by rememberSaveable(thread){mutableStateOf("")};var original by remember{mutableStateOf("")};var version by remember{mutableLongStateOf(0)}
+ var initialized by remember{mutableStateOf(false)};var changedNote by remember{mutableStateOf<String?>(null)}
  var busy by remember{mutableStateOf(false)};var expanded by rememberSaveable{mutableStateOf(false)};var retry by remember{mutableIntStateOf(0)}
  var confirmClose by remember{mutableStateOf(false)}
  fun close(){if(note!=original)confirmClose=true else onClose()}
- LaunchedEffect(thread,retry){try{data=inboxRequest(app,"profile",thread);note=data!!.optString("note");original=note;version=data!!.optLong("note_version");error=false}catch(e:CancellationException){throw e}catch(_:Exception){error=true}}
+ LaunchedEffect(thread,retry){try{val latest=inboxRequest(app,"profile",thread);val serverNote=latest.optString("note");if(!initialized||note==original){note=serverNote}else if(serverNote!=original){changedNote=serverNote};original=serverNote;data=latest;version=latest.optLong("note_version");initialized=true;error=false}catch(e:CancellationException){throw e}catch(_:Exception){error=true}}
  Dialog(onDismissRequest={close()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
  BackHandler{close()}
  Column(Modifier.fillMaxSize().background(p.canvas).systemBarsPadding()) {
@@ -55,8 +56,9 @@ internal fun CustomerProfile(thread:String,bn:Boolean,onClose:()->Unit,onChanged
      }
      if(ok>0)ProfileLine("",displayDigits(if(bn)"${ok}টি অর্ডার ঠিকমতো নিয়েছেন" else "$ok successful orders",bn))
      if(cx==0&&rt==0)ProfileLine("",if(bn)"কখনো বাতিল বা ফেরত দেননি" else "No cancellations or returns")
-     if(cx>0)ProfileLine("",displayDigits(if(bn)"${cx}বার অর্ডার বাতিল করেছেন" else "$cx cancelled orders",bn))
+     if(cx>0){val orders=d.getJSONArray("orders");val reason=(0 until orders.length()).map{orders.getJSONObject(it)}.firstOrNull{it.optString("status")=="cx"&&it.optString("reason").isNotBlank()}?.optString("reason");ProfileLine("",displayDigits(if(bn)"${cx}বার অর্ডার বাতিল করেছেন" else "$cx cancelled orders",bn)+(if(reason!=null)(if(bn)"। সর্বশেষ কারণ: " else ". Latest reason: ")+reason else ""))}
      if(rt>0)ProfileLine("",displayDigits(if(bn)"${rt}টি পণ্য ফেরত দিয়েছেন" else "$rt returned orders",bn))
+     if(run>0)ProfileLine("",displayDigits(if(bn)"${run}টি অর্ডার এখন চলছে" else "$run orders in progress",bn))
      if(v.key in listOf("risk","caution"))Text(if(bn)"অর্ডার নেওয়ার আগে ফোনে কনফার্ম করুন, সম্ভব হলে অগ্রিম নিন" else "Confirm by phone before accepting an order; consider an advance.",style=EkmivoType.heroNote,color=p.warning)
     }else{Text(v.label(bn),style=EkmivoType.shop,color=p.text);Text(if(run>0)(if(bn)"ডেলিভারি হওয়ার পর সফল অর্ডারের হার দেখা যাবে।" else "The success rate appears after delivery.")else(if(bn)"অর্ডার হলে এখানে অর্ডারের ইতিহাস দেখা যাবে।" else "Order history will appear when an order is recorded."),style=EkmivoType.heroNote,color=p.secondary)}
    }
@@ -69,7 +71,8 @@ internal fun CustomerProfile(thread:String,bn:Boolean,onClose:()->Unit,onChanged
    val fresh=summary.optInt("total")==0&&talks<=1;val first=d.optJSONObject("first")
    ProfileCard(if(fresh)(if(bn)"পরিচিতি" else "Introduction")else(if(bn)"কথা বলা আর কেনার আচরণ" else "Conversation and purchases")){
     if(first!=null){ProfileLine(if(bn)"প্রথম মেসেজ" else "First message",displayDigits(first.optString("at").take(16).replace('T',' '),bn));if(fresh&&first.optString("text").isNotBlank())Text(first.optString("text"),style=EkmivoType.chatMessage,color=p.text)}
-    if(!fresh){ProfileLine(if(bn)"মোট মেসেজ দিয়েছেন" else "Messages",displayDigits(d.optInt("messages").toString(),bn));ProfileLine(if(bn)"কথা হয়েছে" else "Conversation days",displayDigits(talks.toString(),bn))}
+    if(fresh)ProfileLine(if(bn)"চ্যানেল" else "Channel",when(d.optString("channel")){"wa"->"WhatsApp";"ig"->"Instagram";else->"Messenger"})
+    if(!fresh){ProfileLine(if(bn)"মোট মেসেজ দিয়েছেন" else "Messages",displayDigits(d.optInt("messages").toString(),bn));ProfileLine(if(bn)"কথা হয়েছে" else "Conversations",displayDigits(talks.toString(),bn))}
    }
    val orders=d.getJSONArray("orders");if(orders.length()>0)ProfileCard(if(bn)"অর্ডারের ইতিহাস" else "Order history"){
     Text(d.optString("store"),style=EkmivoType.shop,color=p.text)
@@ -80,8 +83,9 @@ internal fun CustomerProfile(thread:String,bn:Boolean,onClose:()->Unit,onChanged
    if(details.isNotEmpty())ProfileCard(if(bn)"যোগাযোগ ও ডেলিভারি" else "Contact and delivery"){details.forEach{ProfileLine(it.first,it.second)}}
    val interests=contact.optJSONArray("interests");if(interests!=null&&interests.length()>0)ProfileCard(if(bn)"যা নিয়ে জানতে চেয়েছেন" else "Interests"){repeat(interests.length()){Text(interests.optString(it),style=EkmivoType.heroNote,color=p.text)}}
    ProfileCard(if(bn)"আপনার নোট" else "Your notes") {
+    changedNote?.let{remote->Text(if(bn)"অন্য জায়গা থেকে নোট বদলেছে। আপনার লেখা রাখা আছে; মিলিয়ে সেভ করুন।" else "The note changed elsewhere. Your draft is preserved; review before saving.",color=p.warning,style=EkmivoType.heroNote);Text(remote,color=p.secondary,style=EkmivoType.heroNote)}
     androidx.compose.foundation.text.BasicTextField(note,{note=it.take(8000)},textStyle=EkmivoType.chatMessage.copy(color=p.text),modifier=Modifier.fillMaxWidth().heightIn(min=70.dp).clip(RoundedCornerShape(12.dp)).background(p.surface).padding(10.dp))
-    EkmivoPrimaryButton(if(busy)(if(bn)"সেভ হচ্ছে…" else "Saving…")else(if(bn)"সেভ করুন" else "Save"),enabled=!busy&&note!=original,onClick={scope.launch{busy=true;try{val result=inboxRequest(app,"note",thread,body=JSONObject().put("text",note).put("version",version));version=result.getLong("version");original=note;error=false}catch(_:Exception){error=true}finally{busy=false}}})
+    EkmivoPrimaryButton(if(busy)(if(bn)"সেভ হচ্ছে…" else "Saving…")else(if(bn)"সেভ করুন" else "Save"),enabled=!busy&&note!=original,onClick={scope.launch{busy=true;try{val result=inboxRequest(app,"note",thread,body=JSONObject().put("text",note).put("version",version));version=result.getLong("version");original=note;changedNote=null;error=false}catch(_:Exception){error=true}finally{busy=false}}})
    }
   }
  }

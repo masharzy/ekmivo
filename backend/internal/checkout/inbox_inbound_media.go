@@ -76,6 +76,56 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 	}
 	return out
 }
+
+type inboxIncomingReaction struct {
+	Account, Message, Sender, Emoji string
+	At                              time.Time
+}
+
+func parseInboxReactions(raw []byte) []inboxIncomingReaction {
+	var root map[string]any
+	if json.Unmarshal(raw, &root) != nil {
+		return nil
+	}
+	rows := func(v any) []any { x, _ := v.([]any); return x }
+	obj := func(v any) map[string]any { x, _ := v.(map[string]any); return x }
+	var out []inboxIncomingReaction
+	for _, entry := range rows(root["entry"]) {
+		e := obj(entry)
+		for _, message := range rows(e["messaging"]) {
+			m := obj(message)
+			r := obj(m["reaction"])
+			if str(r, "mid") == "" {
+				continue
+			}
+			emoji := str(r, "emoji")
+			if emoji == "" {
+				emoji = map[string]string{"love": "❤️", "like": "👍", "laugh": "😂", "wow": "😮", "sad": "😢", "angry": "😠"}[str(r, "reaction")]
+			}
+			if str(r, "action") == "unreact" {
+				emoji = ""
+			}
+			stamp, _ := m["timestamp"].(float64)
+			out = append(out, inboxIncomingReaction{str(e, "id"), str(r, "mid"), str(obj(m["sender"]), "id"), emoji, time.UnixMilli(int64(stamp))})
+		}
+		for _, change := range rows(e["changes"]) {
+			v := obj(obj(change)["value"])
+			for _, message := range rows(v["messages"]) {
+				m := obj(message)
+				if str(m, "type") != "reaction" {
+					continue
+				}
+				r := obj(m["reaction"])
+				sec, err := strconv.ParseInt(str(m, "timestamp"), 10, 64)
+				if err != nil {
+					continue
+				}
+				out = append(out, inboxIncomingReaction{str(obj(v["metadata"]), "phone_number_id"), str(r, "message_id"), str(m, "from"), str(r, "emoji"), time.Unix(sec, 0)})
+			}
+		}
+	}
+	return out
+}
 func (s *Service) persistInboxMedia(ctx context.Context, tx pgx.Tx, provider string, raw []byte) error {
 	for _, m := range parseInboxMedia(raw) {
 		var conn, ws string
@@ -97,6 +147,22 @@ func (s *Service) persistInboxMedia(ctx context.Context, tx pgx.Tx, provider str
 			return err
 		}
 	}
+	for _, reaction := range parseInboxReactions(raw) {
+		var conn, ws string
+		var token []byte
+		err := tx.QueryRow(ctx, "SELECT * FROM inbox_provider_connections($1,$2)", provider, reaction.Account).Scan(&conn, &ws, &token)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, "SELECT inbox_provider_reaction($1::uuid,$2,$3,$4,$5)", conn, reaction.Message, reaction.Sender, reaction.Emoji, reaction.At)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 func safeMetaMediaURL(raw string) bool {

@@ -27,7 +27,7 @@ DECLARE v inbox_threads;BEGIN
  SELECT x.* INTO v FROM inbox_threads x JOIN inbox_connections c ON c.id=x.connection_id AND c.environment=e AND c.enabled WHERE x.id=t AND x.workspace_id=w;
  IF v.id IS NULL THEN RAISE EXCEPTION 'thread unavailable' USING ERRCODE='42501';END IF;RETURN v;
 END $$;
-CREATE FUNCTION inbox_capabilities(p text) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$ SELECT jsonb_build_object('image',true,'audio',true,'document',p<>'ig','product',true,'forward',true,'reactions',CASE WHEN p='ig' THEN '["❤️"]'::jsonb ELSE '["❤️","👍","😂","😮","😢","🙏"]'::jsonb END,'delivered',p<>'ig','max_images',10,'max_bytes',5242880) $$;
+CREATE FUNCTION inbox_capabilities(p text) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$ SELECT jsonb_build_object('image',true,'audio',true,'document',p<>'ig','product',true,'forward',true,'reactions',CASE WHEN p='ig' THEN '["❤️"]'::jsonb WHEN p='ms' THEN '["❤️","👍","😂","😮","😢"]'::jsonb ELSE '["❤️","👍","😂","😮","😢","🙏"]'::jsonb END,'delivered',p<>'ig','max_images',10,'max_bytes',5242880) $$;
 ALTER FUNCTION inbox_page(uuid,text,uuid,uuid,bigint,jsonb) RENAME TO inbox_page_v1;
 CREATE FUNCTION inbox_page(w uuid,e text,d uuid,t uuid,before_seq bigint,f jsonb) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE r jsonb;p text;BEGIN
@@ -55,13 +55,13 @@ DECLARE v inbox_threads;r jsonb;BEGIN
  v:=inbox_scope(w,e,t);
  SELECT jsonb_build_object('id',v.id,'name',v.customer_name,'channel',c.provider,'phone',CASE WHEN c.provider='wa' THEN v.external_id ELSE v.contact->>'phone' END,'contact',v.contact,'note',v.note,'note_version',v.note_version,'ai_enabled',v.ai_enabled,'store',ws.name,
  'messages',(SELECT count(*) FROM inbox_messages WHERE thread_id=t AND sender='customer'),
- 'talks',(SELECT count(DISTINCT (created_at AT TIME ZONE 'Asia/Dhaka')::date) FROM inbox_messages WHERE thread_id=t AND sender='customer'),
+ 'talks',(SELECT count(*) FILTER(WHERE previous_at IS NULL OR created_at-previous_at>interval '24 hours') FROM (SELECT created_at,lag(created_at) OVER(ORDER BY created_at,sequence) previous_at FROM inbox_messages WHERE thread_id=t AND sender='customer') sessions),
  'first',(SELECT jsonb_build_object('at',created_at,'text',body) FROM inbox_messages WHERE thread_id=t AND sender='customer' ORDER BY sequence LIMIT 1),
  'summary',(SELECT jsonb_build_object('total',count(*),'ok',count(*) FILTER(WHERE status='ok'),'cx',count(*) FILTER(WHERE status='cx'),'rt',count(*) FILTER(WHERE status='rt'),'run',count(*) FILTER(WHERE status='run'),'spend_minor',coalesce(sum(amount_minor) FILTER(WHERE status='ok'),0),'last_order',max(created_at)) FROM inbox_orders WHERE workspace_id=w AND thread_id=t),
  'orders',coalesce((SELECT jsonb_agg(to_jsonb(o)-'workspace_id' ORDER BY created_at DESC,id) FROM inbox_orders o WHERE workspace_id=w AND thread_id=t),'[]'::jsonb)) INTO r FROM inbox_connections c JOIN workspaces ws ON ws.id=w WHERE c.id=v.connection_id;
  RETURN r;END $$;
 CREATE FUNCTION inbox_advanced(w uuid,e text,d uuid,t uuid,a text,b jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE v inbox_threads;m inbox_messages;src inbox_messages;f inbox_media;p text;ct jsonb;kind text;key uuid;prod inbox_products;BEGIN
+DECLARE v inbox_threads;m inbox_messages;src inbox_messages;f inbox_media;p text;ct jsonb;kind text;key uuid;quoted uuid;prod inbox_products;BEGIN
  v:=inbox_scope(w,e,t);SELECT provider INTO p FROM inbox_connections WHERE id=v.connection_id;
  -- Serialize sends, note revisions and handovers in this conversation.
  PERFORM 1 FROM inbox_threads WHERE id=t FOR UPDATE;
@@ -85,14 +85,14 @@ DECLARE v inbox_threads;m inbox_messages;src inbox_messages;f inbox_media;p text
   IF NOT FOUND THEN RAISE EXCEPTION 'product unavailable' USING ERRCODE='42501';END IF;RETURN jsonb_build_object('saved',true);
  ELSIF a='info' THEN
   SELECT * INTO m FROM inbox_messages WHERE id=(b->>'message_id')::uuid AND workspace_id=w AND thread_id=t;
-  IF m.id IS NULL THEN RAISE EXCEPTION 'message unavailable' USING ERRCODE='42501';END IF;RETURN to_jsonb(m)-'workspace_id';
+  IF m.id IS NULL THEN RAISE EXCEPTION 'message unavailable' USING ERRCODE='42501';END IF;RETURN (to_jsonb(m)-'workspace_id')||jsonb_build_object('channel',p);
  END IF;
  IF a NOT IN ('send-media','send-product','forward','react') THEN RAISE EXCEPTION 'invalid action' USING ERRCODE='22023';END IF;
  key:=(b->>'idempotency_key')::uuid;
  IF key IS NULL THEN RAISE EXCEPTION 'missing key' USING ERRCODE='22023';END IF;
  SELECT * INTO m FROM inbox_messages WHERE thread_id=t AND idempotency_key=key;
  IF m.id IS NOT NULL THEN
-  IF m.content->>'request_hash' IS DISTINCT FROM md5(b::text) THEN RAISE EXCEPTION 'idempotency conflict' USING ERRCODE='23505';END IF;RETURN to_jsonb(m)-'workspace_id';
+  IF m.content->>'request_hash' IS DISTINCT FROM md5(b::text) THEN RAISE EXCEPTION 'idempotency conflict' USING ERRCODE='23505';END IF;RETURN (to_jsonb(m)-'workspace_id')||jsonb_build_object('channel',p);
  END IF;
  IF v.last_customer_at IS NULL OR v.last_customer_at<=now()-interval '24 hours' THEN RAISE EXCEPTION 'WINDOW_CLOSED' USING ERRCODE='22023';END IF;
  IF a='forward' THEN
@@ -115,8 +115,10 @@ DECLARE v inbox_threads;m inbox_messages;src inbox_messages;f inbox_media;p text
  END IF;
  IF kind='document' AND p='ig' THEN RAISE EXCEPTION 'unsupported document' USING ERRCODE='22023';END IF;
  IF (b->>'batch_id') IS NOT NULL AND (SELECT count(*) FROM inbox_messages WHERE workspace_id=w AND thread_id=t AND batch_id=(b->>'batch_id')::uuid)>=10 THEN RAISE EXCEPTION 'max 10 images' USING ERRCODE='22023';END IF;
+ quoted:=(b->>'reply_to')::uuid;
+ IF quoted IS NOT NULL AND NOT EXISTS(SELECT 1 FROM inbox_messages WHERE id=quoted AND workspace_id=w AND thread_id=t) THEN RAISE EXCEPTION 'invalid reply' USING ERRCODE='42501';END IF;
  ct:=ct||jsonb_build_object('request_hash',md5(b::text));
- INSERT INTO inbox_messages(workspace_id,thread_id,sender,type,body,state,idempotency_key,content,batch_id) VALUES(w,t,'seller',kind,CASE WHEN a='forward' THEN src.body WHEN kind='product' THEN prod.name ELSE '' END,'queued',key,ct,(b->>'batch_id')::uuid) RETURNING * INTO m;
+ INSERT INTO inbox_messages(workspace_id,thread_id,sender,type,body,state,idempotency_key,content,batch_id,reply_to) VALUES(w,t,'seller',kind,CASE WHEN a='forward' THEN src.body WHEN kind='product' THEN prod.name ELSE '' END,'queued',key,ct,(b->>'batch_id')::uuid,quoted) RETURNING * INTO m;
  IF kind<>'reaction' THEN UPDATE inbox_threads SET ai_enabled=false,ai_version=ai_version+1,last_activity_at=now() WHERE id=t;END IF;
  RETURN to_jsonb(m)-'workspace_id';END $$;
 ALTER FUNCTION inbox_next_send() RENAME TO inbox_next_send_v1;
@@ -150,6 +152,22 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION inbox_inbound_media(uuid,text,text,text,text,bytea,timestamptz),inbox_media_source(uuid,text,uuid,uuid),inbox_inbound_store(uuid,uuid,uuid,text,text,text,integer,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION inbox_inbound_media(uuid,text,text,text,text,bytea,timestamptz),inbox_media_source(uuid,text,uuid,uuid),inbox_inbound_store(uuid,uuid,uuid,text,text,text,integer,text) TO ekmivo_financial_runtime,ekmivo_financial_projection;
+CREATE TABLE inbox_incoming_reactions(connection_id uuid NOT NULL REFERENCES inbox_connections(id),provider_id text NOT NULL,external_id text NOT NULL,emoji text NOT NULL,occurred_at timestamptz NOT NULL,PRIMARY KEY(connection_id,provider_id,external_id));
+ALTER TABLE inbox_incoming_reactions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON inbox_incoming_reactions FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
+CREATE FUNCTION inbox_provider_reaction(c uuid,p text,s text,emoji_value text,at_time timestamptz) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+BEGIN
+ INSERT INTO inbox_incoming_reactions VALUES(c,p,s,emoji_value,at_time) ON CONFLICT(connection_id,provider_id,external_id) DO UPDATE SET emoji=EXCLUDED.emoji,occurred_at=EXCLUDED.occurred_at WHERE EXCLUDED.occurred_at>=inbox_incoming_reactions.occurred_at;
+ INSERT INTO inbox_reactions(workspace_id,thread_id,message_id,emoji,updated_at) SELECT m.workspace_id,m.thread_id,m.id,r.emoji,r.occurred_at FROM inbox_messages m JOIN inbox_threads t ON t.id=m.thread_id JOIN inbox_incoming_reactions r ON r.connection_id=t.connection_id AND r.provider_id=m.provider_id AND r.external_id=t.external_id WHERE t.connection_id=c AND m.provider_id=p AND t.external_id=s AND m.sender<>'customer'
+ ON CONFLICT(message_id) DO UPDATE SET emoji=EXCLUDED.emoji,updated_at=EXCLUDED.updated_at WHERE EXCLUDED.updated_at>=inbox_reactions.updated_at;
+END $$;
+ALTER FUNCTION inbox_finish_send(uuid,text,text,text) RENAME TO inbox_finish_send_v1;
+CREATE FUNCTION inbox_finish_send(i uuid,p text,s text,err text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+BEGIN PERFORM inbox_finish_send_v1(i,p,s,err);
+ PERFORM inbox_provider_reaction(r.connection_id,r.provider_id,r.external_id,r.emoji,r.occurred_at) FROM inbox_incoming_reactions r JOIN inbox_threads t ON t.connection_id=r.connection_id JOIN inbox_messages m ON m.thread_id=t.id WHERE m.id=i AND r.provider_id=p;
+END $$;
+REVOKE ALL ON FUNCTION inbox_provider_reaction(uuid,text,text,text,timestamptz),inbox_finish_send(uuid,text,text,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION inbox_provider_reaction(uuid,text,text,text,timestamptz),inbox_finish_send(uuid,text,text,text) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 REVOKE ALL ON FUNCTION inbox_scope(uuid,text,uuid),inbox_capabilities(text),inbox_page(uuid,text,uuid,uuid,bigint,jsonb),inbox_media_access(uuid,text,uuid,uuid),inbox_media_save(uuid,text,uuid,uuid,text,text,text,integer,text,integer),inbox_profile(uuid,text,uuid),inbox_advanced(uuid,text,uuid,uuid,text,jsonb),inbox_next_send(),inbox_reaction_finish(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION inbox_capabilities(text),inbox_page(uuid,text,uuid,uuid,bigint,jsonb),inbox_media_access(uuid,text,uuid,uuid),inbox_media_save(uuid,text,uuid,uuid,text,text,text,integer,text,integer),inbox_profile(uuid,text,uuid),inbox_advanced(uuid,text,uuid,uuid,text,jsonb),inbox_next_send(),inbox_reaction_finish(uuid) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;

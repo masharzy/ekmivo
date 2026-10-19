@@ -29,7 +29,18 @@ BEGIN
  r:=inbox_profile(w,'live',t);IF (r->'summary'->>'spend_minor')::bigint<>10000 OR (r->'summary'->>'total')::integer<>3 THEN RAISE EXCEPTION 'bad profile totals';END IF;
  PERFORM inbox_inbound_media(c,'provider-image','customer-a','','image',decode('ab','hex'),now());
  IF NOT EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t AND provider_id='provider-image' AND type='image' AND content ? 'media_id') THEN RAISE EXCEPTION 'missing inbound media';END IF;
+ PERFORM inbox_provider_reaction(c,'future-provider','customer-a','❤️',now());
+ r:=inbox_next_send();
+ PERFORM inbox_finish_send((m->>'id')::uuid,'future-provider','sent','');
+ IF NOT EXISTS(SELECT 1 FROM inbox_reactions WHERE message_id=(m->>'id')::uuid AND emoji='❤️') THEN RAISE EXCEPTION 'early reaction lost';END IF;
  UPDATE inbox_threads SET last_customer_at=now()-interval '25 hours' WHERE id=t2;
  BEGIN PERFORM inbox_advanced(w,'live',d,t2,'forward',jsonb_build_object('message_id',m->>'id','idempotency_key',gen_random_uuid()));RAISE EXCEPTION 'closed forward';EXCEPTION WHEN invalid_parameter_value THEN NULL;END;
  IF has_table_privilege('ekmivo_financial_projection','inbox_media','SELECT') THEN RAISE EXCEPTION 'raw media accessible';END IF;
+ IF NOT has_function_privilege('ekmivo_financial_projection','inbox_advanced(uuid,text,uuid,uuid,text,jsonb)','EXECUTE') THEN RAISE EXCEPTION 'runtime grant missing';END IF;
+ IF pg_has_role(current_user,'ekmivo_financial_projection','SET') THEN
+ EXECUTE 'SET LOCAL ROLE ekmivo_financial_projection';
+ PERFORM inbox_profile(w,'live',t);
+ PERFORM inbox_advanced(w,'live',d,t,'note','{"text":"runtime role","version":2}');
+ EXECUTE 'RESET ROLE';
+ END IF;
 END $test$;
