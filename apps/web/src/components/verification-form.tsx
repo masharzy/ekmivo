@@ -45,13 +45,13 @@ export function VerificationForm({locale,email}:{locale:Locale;email:string}){
    <div className="ek-verify-mark">e<span>.</span></div>
    <span className="ek-page-kicker">ACCOUNT SECURITY / 01</span>
    <h1>{locale==="bn"?"ইমেইল যাচাই করুন":"Verify your email"}</h1>
-   <p>{locale==="bn"?"আমরা ছয় সংখ্যার একটি কোড পাঠিয়েছি:":"Enter the six-digit code sent to:"}<br/><strong>{email}</strong></p>
+   <p>{locale==="bn"?"ইমেইলের ছয় সংখ্যার কোড দিন, অথবা নতুন কোড নিন:":"Enter the six-digit email code, or request a new one:"}<br/><strong>{email}</strong></p>
    <form ref={form} action={verifyAction}>
     <input type="hidden" name="code" value={code}/>
     <div className="ek-otp-inputs" role="group" aria-label={locale==="bn"?"ছয় সংখ্যার যাচাই কোড":"Six-digit verification code"}>
      {digits.map((d,i)=><input key={i} ref={el=>{inputs.current[i]=el;}} value={d}
        type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete={i===0?"one-time-code":"off"}
-       aria-label={`Digit ${i+1}`} aria-invalid={verifyState.status==="error"}
+       aria-label={locale==="bn"?`সংখ্যা ${i+1}`:`Digit ${i+1}`} aria-invalid={verifyState.status==="error"}
        onChange={event=>{if(!event.target.value){const next=[...digits];next[i]="";setDigits(next);}else applyAt(i,event.target.value);}}
        onPaste={event=>{const numbers=event.clipboardData.getData("text").replace(/\D/g,"").slice(0,6);if(numbers){event.preventDefault();const next=Array(6).fill("");[...numbers].forEach((ch,j)=>next[j]=ch);setDigits(next);inputs.current[Math.min(numbers.length,5)]?.focus();}}}
        onKeyDown={event=>key(i,event)}/>)}
@@ -64,7 +64,7 @@ export function VerificationForm({locale,email}:{locale:Locale;email:string}){
     <button type="button" disabled={resending} onClick={()=>startResend(()=>resendAction())}>{locale==="bn"?"আবার পাঠান":"Resend code"}</button>
    </div>
    {resendState.status!=="idle"&&<p className={resendState.status==="error"?"ek-field-error":"ek-verify-help"} role="status">{resendState.message}</p>}
-   <Link href={`/${locale}/login`} className="ek-verify-back">← {locale==="bn"?"লগইনে ফিরুন":"Back to login"}</Link>
+   <Link href="/account" className="ek-verify-back">← {locale==="bn"?"অ্যাকাউন্টে ফিরুন":"Back to account"}</Link>
   </div>
  </main>;
 }

@@ -25,7 +25,14 @@ async function deliver(email:string,code:string,purpose:CodePurpose,id:string,lo
   body:JSON.stringify({from:process.env.EMAIL_FROM,to:[email],
    ...securityEmail(code,purpose,locale)})
  });
- if(!response.ok) throw Error("EMAIL_DELIVERY_FAILED");
+ if(!response.ok){
+  console.error("[security email] provider rejected",{status:response.status,purpose});
+  throw Error("EMAIL_DELIVERY_FAILED");
+ }
+ // Provider acceptance is distinct from inbox delivery. Never log recipient/code.
+ const receipt:unknown=await response.json().catch(()=>null);
+ const providerId=receipt&&typeof receipt==="object"&&"id" in receipt&&typeof receipt.id==="string"&&/^[a-f0-9-]{36}$/i.test(receipt.id)?receipt.id:undefined;
+ console.info("[security email] provider accepted",{purpose,providerId});
 }
 export async function sendCode(userId:string,email:string,purpose:CodePurpose,locale:"en"|"bn"="en"){
  if(!mailReady()) throw Error("EMAIL_CONFIG_MISSING");
