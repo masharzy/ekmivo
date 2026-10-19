@@ -48,3 +48,12 @@ func TestMediaRejectsOversizeAndExecutable(t *testing.T) {
 		t.Fatal("invalid binary accepted")
 	}
 }
+
+func TestProviderOggAudioIsNotRejectedAsGenericOgg(t *testing.T) {
+	data := make([]byte, 64)
+	copy(data, []byte("OggS\x00"))
+	typ, err := validateInboxMedia(data, "audio/ogg")
+	if err != nil || typ != "audio/ogg" {
+		t.Fatal(typ, err)
+	}
+}

@@ -248,7 +248,11 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	if err != nil {
 		return err
 	}
-	typ, err := validateInboxMedia(data, ref["mime"])
+	declared := ref["mime"]
+	if declared == "" && str(src, "kind") == "audio" {
+		declared = strings.Split(res.Header.Get("Content-Type"), ";")[0]
+	}
+	typ, err := validateInboxMedia(data, declared)
 	if err != nil {
 		return err
 	}

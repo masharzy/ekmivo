@@ -26,6 +26,12 @@ func validateInboxMedia(data []byte, declared string) (string, error) {
 		return "", errors.New("FILE_LIMIT_EXCEEDED")
 	}
 	typ := http.DetectContentType(data)
+	if typ == "application/ogg" && declared == "audio/ogg" {
+		typ = "audio/ogg"
+	}
+	if typ == "application/octet-stream" && declared == "audio/aac" && len(data) > 2 && data[0] == 0xff && data[1]&0xf6 == 0xf0 {
+		typ = "audio/aac"
+	}
 	if strings.HasPrefix(typ, "image/") {
 		if typ != "image/jpeg" && typ != "image/png" {
 			return "", errors.New("UNSUPPORTED_FILE_TYPE")
