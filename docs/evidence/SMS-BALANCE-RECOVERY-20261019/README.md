@@ -1,0 +1,9 @@
+# Opaque balance and durable phone SMS recovery — 2026-10-19
+
+Root cause reproduced with the owner's bKash receipt: a thousands separator in the balance caused the entire original grammar to reject a valid incoming receipt. Balance is not a captured field or matching condition. Built-in bKash and Nagad rules now treat the balance segment as bounded opaque single-line text; payer, received amount, original time and transaction identity remain strictly parsed. Parser version is 2.
+
+Existing durable records with no observation can be revisited by the restricted financial worker, bounded to ten recent records per sweep. The server decrypts the original signed phone ciphertext, parses approved rules uniquely, checks fresh control-plane version/active access, derives HMAC identities using the existing server key and uses the existing unique immutable-attempt lookup. Recovery preserves original capture/event digest and ciphertext, provider-identity deduplication, and sends the resulting observation through the normal matcher/outbox. No browser/pasted replacement text marks a payment paid.
+
+Migration 0108 was tested on the existing isolated Live/Sandbox branch and applied through the existing migration ledger to production Live/Sandbox. SHA256: 4006579fd33f0cd7302d0833c66b1e4674a462bdb4ce48154fd301ff35e50e13. Smoke checks: queue executes; missing record returns NULL; worker has execute; merchant reader does not. No production fixture or manual paid update.
+
+Go tests PASS for checkout, financial, worker runtime, API and migration coordinator, including opaque-balance regressions (commas, alternative formatting and nonnumeric balance), original strict receipt rejection cases and existing financial tests. Production recovery outcome is checked after deployment and reported separately.

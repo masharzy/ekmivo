@@ -188,6 +188,9 @@ func Run(ctx context.Context, cfg Config) error {
 			}
 		}
 		pipeline := &financial.PipelineWorker{Pool: pool, Control: control, Realm: realm, EncryptionKey: key, NoticeSMTP: noticeSMTP}
+		pipeline.RecoverPhoneReceipts = func(ctx context.Context) error {
+			return checkout.RecoverPendingPhoneReceipts(ctx, pool, control, realm, key, []byte(os.Getenv("PG05_PAYER_SECRET")), os.Getenv("PG06_PARSER_RULES_JSON"))
+		}
 		pipeline.TrackHealth = os.Getenv("PG10_EXTENSIONS_ENABLED") == "true"
 		if os.Getenv("PG10_EXTENSIONS_ENABLED") == "true" {
 			if noticeSMTP != nil {

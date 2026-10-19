@@ -26,7 +26,8 @@ type PipelineWorker struct {
 	NoticeSMTP    *receiptnotice.SMTPConfig
 	TrackHealth   bool
 	// An inline public-test drain must never operate on other tenants or Live.
-	OnlyWorkspace string
+	OnlyWorkspace        string
+	RecoverPhoneReceipts func(context.Context) error
 }
 
 func (w *PipelineWorker) Timeout(*river.Job[PipelineArgs]) time.Duration { return 20 * time.Second }
@@ -70,6 +71,11 @@ func (w *PipelineWorker) Work(ctx context.Context, job *river.Job[PipelineArgs])
 	}
 	if job.Args.Environment != w.Realm || len(w.EncryptionKey) != 32 {
 		return errors.New("pipeline configuration unavailable")
+	}
+	if w.RecoverPhoneReceipts != nil {
+		if err := w.RecoverPhoneReceipts(ctx); err != nil {
+			return errors.New("stored phone receipt recovery unavailable")
+		}
 	}
 	items, e := w.pending(ctx, "pg07_pending")
 	if e != nil {
