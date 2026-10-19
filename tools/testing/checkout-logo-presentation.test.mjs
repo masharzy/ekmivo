@@ -20,6 +20,9 @@ test("checkout preview script compiles and uses icon-only marks",()=>{
  assert.ok(html.includes("payment-assets/${x}-icon.png"));
  assert.ok(html.includes("payment-assets/'+m+'-icon.png"));
  assert.ok(html.includes("data-logo-position"));
+ assert.ok(html.includes("tk-info-toggle"));
+ assert.ok(html.includes("tk-info-panel"));
+ assert.ok(html.includes("grid-template-columns:var(--lgs,40px)"));
  assert.ok(html.includes('data-logo-invert'));
  assert.ok(!html.includes('"/payment-assets/${x}.png"'));
 });
@@ -60,4 +63,16 @@ test("logo editor uses scoped controls with live values",()=>{
  assert.ok(editor.includes('aria-pressed={config.store.position===id}'));
  assert.ok(styles.includes(".ref-checkout-editor .logo-editor"));
  assert.ok(styles.includes("--fill"));
+});
+
+test("saved Store contact fields appear in all checkout themes without duplicate theme settings",()=>{
+ const editor=read("../../apps/web/src/components/checkout-themes.tsx");
+ const theme=read("../../apps/web/src/components/themed-checkout.tsx");
+ const sql=read("../../infra/migrations/0111_public_checkout_store_contact.sql");
+ assert.match(editor,/merchantContact/);
+ assert.match(editor,/\/store`/);
+ assert.match(theme,/MerchantInfo brand=\{merchant\}/);
+ assert.match(sql,/'whatsapp'/);
+ assert.match(sql,/'support_phone'/);
+ assert.match(sql,/'website_url'/);
 });

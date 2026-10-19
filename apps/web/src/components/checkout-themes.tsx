@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState,type CSSProperties} from "react";
 import {defaultCheckoutTheme,validCheckoutTheme,type CheckoutTheme,type CheckoutThemeConfig} from "../lib/checkout-theme";
 import {checkoutPreviewHTML} from "../lib/checkout-preview";
+import type {StoreProfile} from "../lib/store-profile";
 import {registerDraft} from "../lib/client/draft-navigation";
 import {RefIcon} from "./reference-ui";
 import "./checkout-editor-reference.css";
@@ -19,6 +20,7 @@ export function CheckoutThemes({workspaceId,storeName,canManage,initialTheme,loc
  const t=(label:string)=>locale==="bn"?(checkoutLabels[label]??label):label;
  const [config,setConfig]=useState(()=>initialTheme?.body??defaultCheckoutTheme(storeName)),[saved,setSaved]=useState(()=>initialTheme?.body??defaultCheckoutTheme(storeName)),[version,setVersion]=useState(initialTheme?.version??0),[loading,setLoading]=useState(!initialTheme),[loaded,setLoaded]=useState(!!initialTheme),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  const [step,setStep]=useState('pay'),[method,setMethod]=useState(''),[device,setDevice]=useState('d'),[ready,setReady]=useState(false);
+ const [merchantContact,setMerchantContact]=useState<Partial<StoreProfile>|null>(null);
  const frame=useRef<HTMLIFrameElement>(null),base=`/api/workspaces/${workspaceId}/checkout-theme`;
  const load=useCallback(async(signal?:AbortSignal)=>{
   setLoading(true);setError('');
@@ -34,7 +36,8 @@ export function CheckoutThemes({workspaceId,storeName,canManage,initialTheme,loc
   }finally{if(!signal?.aborted)setLoading(false)}
  },[base,locale]);
  useEffect(()=>{if(initialTheme)return;const controller=new AbortController();void Promise.resolve().then(()=>{if(!controller.signal.aborted)return load(controller.signal)});return()=>controller.abort()},[initialTheme,load]);
- useEffect(()=>{if(!ready)return;const body={...config,f:Object.fromEntries(Object.entries(config.f).map(([k,v])=>[k,v?1:0])),store:{...config.store,logo:config.store.logo.startsWith('/')?location.origin+config.store.logo:config.store.logo}};frame.current?.contentWindow?.postMessage({ek:1,cfg:body,screen:step,method},'*')},[config,ready,step,method]);
+ useEffect(()=>{const ctrl=new AbortController();void fetch(`/api/workspaces/${workspaceId}/store`,{cache:'no-store',signal:ctrl.signal,credentials:'same-origin'}).then(async r=>r.ok?r.json():null).then(data=>{if(!ctrl.signal.aborted&&data?.body&&typeof data.body==='object')setMerchantContact(data.body as StoreProfile)}).catch(()=>{});return()=>ctrl.abort()},[workspaceId]);
+ useEffect(()=>{if(!ready)return;const body={...config,f:Object.fromEntries(Object.entries(config.f).map(([k,v])=>[k,v?1:0])),store:{...config.store,logo:config.store.logo.startsWith('/')?location.origin+config.store.logo:config.store.logo}};frame.current?.contentWindow?.postMessage({ek:1,cfg:body,merchant:merchantContact,screen:step,method},'*')},[config,ready,step,method,merchantContact]);
  const save=useCallback(async()=>{if(!canManage||loading||busy||!loaded)return false;setBusy(true);setError('');try{const r=await fetch(base,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:config,version})});const d=await r.json();if(!r.ok)throw Error(d.code==='VERSION_CONFLICT'?t('Another admin changed this theme. Reload and review those changes before saving.'):t('Changes could not be saved. Please retry.'));if(!validCheckoutTheme(d.body))throw Error(t('Invalid settings response.'));setConfig(d.body);setSaved(d.body);setVersion(d.version);setMessage(t('Saved'));return true}catch(e){setError(e instanceof Error?e.message:t('Changes could not be saved.'));return false}finally{setBusy(false)}},[base,config,version,loading,busy,canManage,locale,loaded]);
  const latest=useRef({config,saved,save});useEffect(()=>{latest.current={config,saved,save}},[config,saved,save]);
  useEffect(()=>registerDraft({id:'checkout-theme:'+workspaceId,isDirty:()=>JSON.stringify(latest.current.config)!==JSON.stringify(latest.current.saved),save:()=>latest.current.save(),discard:()=>setConfig(latest.current.saved)}),[workspaceId]);
