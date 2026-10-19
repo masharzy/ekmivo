@@ -768,3 +768,9 @@ Manual pending: with a non-system workspace on an active finite Starter term, ch
 ## New workspace first-load race — 2026-10-19
 - Create a new Google/password account or payment-enabled workspace and immediately open Overview/Payments/Payment methods/SMS devices without refresh. Authorized empty data should load on the first request while provisioning runs on demand; no transient ACCESS_DENIED from an absent financial registry.
 - Verify genuine plan-disabled pages still show existing upgrade UI, and suspended/wrong-workspace requests remain denied. Initialization outage must show unavailable/retry, never false zero data. Code + isolated SQL passed; no production synthetic account was created.
+
+## 2026-10-19 — Plan labels and billing payment status
+- Open Admin plan creation on mobile in EN/BN and light/dark: filled numeric fields retain labels; Free distinguishes quota cycle/access expiry and has no grace input; review shows actual Free duration and quota reset.
+- Open the previously cancelled subscription invoice and check payment: show cancelled/unverified guidance inside its drawer, with no renewal and no raw VERIFIED_PLATFORM_PAYMENT_REQUIRED.
+- Verify a real successful platform payment updates subscription once; pending/expired/cancelled payments never grant access. Physical phone/SMS verification belongs to owner.
+- Automated checks and production read-only diagnosis: `docs/evidence/PLAN-LABELS-BILLING-STATUS-20261019/README.md`.

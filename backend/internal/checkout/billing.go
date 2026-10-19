@@ -218,18 +218,17 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 		platform = receiver.String
 		cap := s.token(platform, "live", "billing:"+invoice.ID)
 		var proofRaw []byte
-		e = s.Pipeline.Live.QueryRow(r.Context(), "SELECT pg13_platform_payment($1)", digest(cap)).Scan(&proofRaw)
-		var proof struct {
-			ID          string    `json:"id"`
-			Method      string    `json:"method"`
-			PayerSuffix string    `json:"payer_suffix"`
-			Amount      int64     `json:"amount_minor"`
-			Workspace   string    `json:"workspace_id"`
-			At          time.Time `json:"verified_at"`
+		var checkoutState sql.NullString
+		e = s.Pipeline.Live.QueryRow(r.Context(), "SELECT pg13_platform_payment($1),pg05_checkout_view($1)->>'state'", digest(cap)).Scan(&proofRaw, &checkoutState)
+		proof, verified, proofErr := decodeBillingPaymentProof(proofRaw, platform, invoice.Amount)
+		if e != nil || proofErr != nil {
+			fail(w, 503, "BILLING_VERIFICATION_UNAVAILABLE")
+			return
 		}
-		_ = json.Unmarshal(proofRaw, &proof)
-		if e != nil || proof.Workspace != platform || proof.Amount != invoice.Amount || !uuidPattern.MatchString(proof.ID) {
-			fail(w, 409, "VERIFIED_PLATFORM_PAYMENT_REQUIRED")
+		if !verified {
+			// An invoice is an amount due, not evidence of a successful transfer.
+			// Cancellation/expiry must never grant a subscription or look like an outage.
+			writeUnverifiedBilling(w, checkoutState.String)
 			return
 		}
 		var saved bool
@@ -238,7 +237,7 @@ func (s *Service) HandleBilling(w http.ResponseWriter, r *http.Request) {
 			billingMapped(w, e)
 			return
 		}
-		write(w, 200, map[string]any{"renewed": saved})
+		write(w, 200, map[string]any{"renewed": saved, "payment_status": "paid"})
 		return
 	}
 	// Reject unavailable destinations before issuing a merchant invoice.
@@ -372,4 +371,41 @@ func (s *Service) recordCheckoutCheck(ws, realm, id string) {
 			return err
 		})
 	}()
+}
+
+// Only a complete, matching financial allocation may authorize reconciliation.
+// No proof is a normal unpaid outcome; malformed/mismatched proof is unavailable.
+type billingPaymentProof struct {
+	ID          string    `json:"id"`
+	Method      string    `json:"method"`
+	PayerSuffix string    `json:"payer_suffix"`
+	Amount      int64     `json:"amount_minor"`
+	Workspace   string    `json:"workspace_id"`
+	At          time.Time `json:"verified_at"`
+}
+
+func decodeBillingPaymentProof(raw []byte, workspace string, amount int64) (billingPaymentProof, bool, error) {
+	var proof billingPaymentProof
+	if len(raw) == 0 || string(raw) == "null" {
+		return proof, false, nil
+	}
+	if err := json.Unmarshal(raw, &proof); err != nil {
+		return proof, false, err
+	}
+	if proof.Workspace != workspace || proof.Amount != amount || !uuidPattern.MatchString(proof.ID) || proof.At.IsZero() {
+		return proof, false, errors.New("invalid platform payment proof")
+	}
+	return proof, true, nil
+}
+
+func writeUnverifiedBilling(w http.ResponseWriter, state string) {
+	switch state {
+	case "requires_payer", "awaiting_payment", "expired", "cancelled", "exception":
+	case "":
+		state = "not_created"
+	default:
+		fail(w, 503, "BILLING_VERIFICATION_UNAVAILABLE")
+		return
+	}
+	write(w, 200, map[string]any{"renewed": false, "payment_status": state})
 }
