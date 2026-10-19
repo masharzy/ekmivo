@@ -27,3 +27,11 @@ Local Go all-package tests passed. TypeScript passed. Neon isolated branch `br-c
 ## Next agent / remaining gates
 
 Do not reset financial matching, identity, queues or plan semantics. Read `ANDROID-REDESIGN-HANDOFF.md` and original references in `docs/design/android-20261019/`. Continue later reference phases only after combined CI is green. Keep live Meta approval/account tests, Firebase delivery, real-device permission transitions/process death, EN/BN and screenshot comparison pending in `MANUAL-VERIFICATION.md`. Do not claim pixel parity or production acceptance from compilation. No separate release APK requested at this stage.
+
+## Combined verification checkpoint
+
+Commit `4b8ed10c0c165bd60eea8bf240ac18a6854e30e5`, run `39265784728`: native Compose compile/unit, Go all-package/race/vet/HTTP smoke and both runtime/operator image builds passed. Web lint/build/OpenAPI and initial database suites passed; PG04 HTTP fixture failed because the fixture omitted runtime-required `pg06_workspace_ready`. Follow-up installs the genuine pipeline/readiness migrations in both disposable realms before current API requests; readiness security remains enforced. Run `39266611114` tests that fix plus unread opening position/divider, quote jump/highlight, exact long-press duration, swipe/haptics, pull refresh, pagination refresh, lifecycle-aware polling and connected-channel management. Final run outcome is recorded on PR #86; do not infer success from this pending checkpoint.
+
+Additional Neon rollback evidence: 0117 adopted AI-first phone identity idempotently in both sandbox/live financial test databases, with one physical phone and authorized key. OAuth actor isolation and single-use replay tests passed in control.
+
+The second run passed native/Go/image checks and real checkout browser journeys at 320/768/1440, EN/BN and Light/Dark, then stopped on an obsolete expired-result heading assertion. The current Official theme says “This payment link has expired”; the fixture now asserts that exact heading and the do-not-send-money guidance. New phase 2–4 SQL assertions are also included in the existing isolated CI database suite and roll back after testing.

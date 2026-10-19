@@ -28,6 +28,11 @@ BEGIN
  PERFORM inbox_next_send();
  PERFORM inbox_finish_send((m->>'id')::uuid,'outbound-fixture','sent','');
  IF (SELECT state FROM inbox_messages WHERE id=(m->>'id')::uuid)<>'seen' THEN RAISE EXCEPTION 'early provider read event lost'; END IF;
+ PERFORM inbox_seen_watermark(c,'customer-1',now()+interval '1 second');
+ again:=inbox_action(w,'live',device,t,'send',jsonb_build_object('text','Second reply','idempotency_key',gen_random_uuid()));
+ PERFORM inbox_next_send();
+ PERFORM inbox_finish_send((again->>'id')::uuid,'second-outbound-fixture','sent','');
+ IF (SELECT state FROM inbox_messages WHERE id=(again->>'id')::uuid)<>'seen' THEN RAISE EXCEPTION 'early Messenger watermark lost';END IF;
  IF (SELECT ai_enabled FROM inbox_threads WHERE id=t) THEN RAISE EXCEPTION 'seller reply did not hand off AI'; END IF;
  BEGIN PERFORM inbox_action(w,'live',device,t,'send',jsonb_build_object('text','Other','idempotency_key',k));RAISE EXCEPTION 'idempotency conflict accepted';EXCEPTION WHEN unique_violation THEN NULL;END;
  PERFORM inbox_action(w,'live',device,t,'read',jsonb_build_object('sequence',m->>'sequence'));
@@ -37,6 +42,7 @@ BEGIN
  BEGIN PERFORM inbox_page(other,'live',device,t,NULL,'{}');RAISE EXCEPTION 'foreign workspace allowed';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
  PERFORM inbox_register_push(device,decode('abcd','hex'));
  PERFORM inbox_ingest(c,'provider-2','customer-1','Fixture customer','New message','text',now());
+ IF has_table_privilege('ekmivo_financial_runtime','inbox_connections','SELECT') OR has_table_privilege('ekmivo_financial_runtime','inbox_messages','SELECT') THEN RAISE EXCEPTION 'runtime raw access'; END IF;
  IF (SELECT count(*) FROM inbox_push_jobs WHERE device_id=device)<>1 THEN RAISE EXCEPTION 'push fanout missing'; END IF;
  PERFORM inbox_oauth_begin(repeat('c',64),w,'live',u,'wa');
  BEGIN PERFORM inbox_oauth_consume(repeat('c',64),other);RAISE EXCEPTION 'foreign OAuth actor allowed';EXCEPTION WHEN insufficient_privilege THEN NULL;END;

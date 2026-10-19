@@ -139,6 +139,7 @@ BEGIN
  IF s NOT IN ('sent','failed','uncertain') THEN RAISE EXCEPTION 'invalid state'; END IF;
  UPDATE inbox_messages SET state=s,provider_id=nullif(p,''),error_code=err,sent_at=CASE WHEN s='sent' THEN now() ELSE sent_at END WHERE id=i AND state='sending';
  PERFORM inbox_status(x.connection_id,x.provider_id,x.status,x.occurred_at) FROM inbox_status_events x JOIN inbox_threads t ON t.connection_id=x.connection_id JOIN inbox_messages m ON m.thread_id=t.id WHERE m.id=i AND x.provider_id=p;
+ UPDATE inbox_messages m SET state='seen',seen_at=coalesce(m.seen_at,r.last_seen_at) FROM inbox_threads t JOIN inbox_read_watermarks r ON r.connection_id=t.connection_id AND r.external_id=t.external_id WHERE m.id=i AND m.thread_id=t.id AND m.provider_id IS NOT NULL AND m.created_at<=r.last_seen_at;
 END $$;
 CREATE FUNCTION inbox_provider_connections(p text,x text) RETURNS TABLE(id uuid,workspace_id uuid,credential_cipher bytea) LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$ SELECT id,workspace_id,credential_cipher FROM inbox_connections WHERE provider=p AND external_id=x AND enabled $$;
 CREATE FUNCTION inbox_webhook_record(i text,p text,b bytea) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
@@ -163,10 +164,15 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION inbox_status(uuid,text,text,timestamptz) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION inbox_status(uuid,text,text,timestamptz) TO ekmivo_financial_runtime;
-CREATE FUNCTION inbox_seen_watermark(c uuid,r text,at_time timestamptz) RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+CREATE TABLE inbox_read_watermarks(connection_id uuid NOT NULL REFERENCES inbox_connections(id),external_id text NOT NULL,last_seen_at timestamptz NOT NULL,PRIMARY KEY(connection_id,external_id));
+ALTER TABLE inbox_read_watermarks ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON inbox_read_watermarks FROM PUBLIC,ekmivo_financial_runtime;
+CREATE FUNCTION inbox_seen_watermark(c uuid,r text,at_time timestamptz) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+BEGIN
+ INSERT INTO inbox_read_watermarks VALUES(c,r,at_time) ON CONFLICT(connection_id,external_id) DO UPDATE SET last_seen_at=greatest(inbox_read_watermarks.last_seen_at,EXCLUDED.last_seen_at);
  UPDATE inbox_messages m SET state='seen',seen_at=coalesce(seen_at,at_time)
- FROM inbox_threads t WHERE m.thread_id=t.id AND t.connection_id=c AND t.external_id=r AND m.sender<>'customer' AND m.created_at<=at_time AND m.provider_id IS NOT NULL
-$$;
+ FROM inbox_threads t WHERE m.thread_id=t.id AND t.connection_id=c AND t.external_id=r AND m.sender<>'customer' AND m.created_at<=at_time AND m.provider_id IS NOT NULL;
+END $$;
 REVOKE ALL ON FUNCTION inbox_seen_watermark(uuid,text,timestamptz) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION inbox_seen_watermark(uuid,text,timestamptz) TO ekmivo_financial_runtime;
 CREATE FUNCTION inbox_connection_list(w uuid,e text) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$

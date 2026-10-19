@@ -118,8 +118,9 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   await page.getByRole("heading",{name:"Payment link not found",exact:true}).waitFor();
   record("invalid opaque checkout token has a truthful missing-state message");
   await page.goto(origin+"/en/checkout/"+expiredToken);
-  await page.getByRole("heading",{name:"Checkout expired",exact:true}).waitFor();
+  await page.getByRole("heading",{name:"This payment link has expired",exact:true}).waitFor();
   assert.equal(await page.getByRole("button",{name:/mark.*paid|approve.*payment/i}).count(),0);
+  await page.getByText("This link is no longer active. Please do not send money to it. Ask the store for a new one.",{exact:true}).waitFor();
   record("expired real checkout is read-only and cannot be manually paid");
 
   await context.close();

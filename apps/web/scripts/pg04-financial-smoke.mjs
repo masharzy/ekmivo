@@ -737,6 +737,34 @@ try{
   ok((await dbs[realm].unsafe("SELECT to_regclass('public.pg06_phone_forwarded') IS NOT NULL AS installed"))[0].installed,
     "Missing phone forwarder schema in "+realm);
  }
+ // Reference phases 2–4: actual additive control schema and functional assertions,
+ // isolated CI databases only. Entire transaction intentionally rolls back.
+ try {
+  await admin.begin(async tx=>{
+   for(const filename of ["0114_mobile_workspace_preview_control.sql","0116_mobile_devices_control.sql","0118_workspace_inbox.sql","0119_channel_oauth.sql","0120_inbox_push.sql"]){
+    const sql=await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8");
+    await tx.unsafe(sql.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple();
+   }
+   const checks=await readFile(new URL("../../../tools/testing/sql/mobile-foundation-control.sql",import.meta.url),"utf8");
+   await tx.unsafe(checks).simple();
+   throw rollback;
+  });
+ }catch(err){if(err!==rollback)throw err}
+ for(const realm of names){
+  try {await dbs[realm].begin(async tx=>{
+   const sql=await readFile(new URL("../../../infra/migrations/0117_mobile_device_financial_adoption.sql",import.meta.url),"utf8");
+   await tx.unsafe(sql.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple();
+   const device=randomUUID(),ws=randomUUID(),key=randomBytes(91);
+   await tx.unsafe("INSERT INTO financial_workspace_registry(workspace_id,environment,status,entitlement_version) VALUES($1::uuid,$2,'active',1)",[ws,realm]);
+   for(let attempt=0;attempt<2;attempt++){
+    const row=(await tx.unsafe("SELECT pg06_mobile_adopt($1::uuid,$2::uuid,$3,$4::bytea) AS ready",[device,ws,realm,key]))[0];
+    ok(row.ready,"AI-first same-ID financial adoption failed");
+   }
+   same((await tx.unsafe("SELECT count(*)::int AS n FROM pg06_phones WHERE id=$1::uuid",[device]))[0].n,1,"financial adoption duplicated phone");
+   throw rollback;
+  })}catch(err){if(err!==rollback)throw err}
+ }
+ console.log("Android phases 2–4 control/dual-finance pairing, products, inbox, OAuth, push and status replay PASS (rolled back)");
  try{
   await dbs.sandbox.begin(async tx=>{
    const ws=controls[0][1];

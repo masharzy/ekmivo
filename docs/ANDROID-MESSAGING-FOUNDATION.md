@@ -1,6 +1,6 @@
 # Ekmivo shared messaging foundation — owner direction, 2026-10-19
 
-This is the binding integration architecture for Android phases 4–6 and the web channel connection flow. It does not claim those features are implemented. The existing Go/Postgres application remains authoritative; use its auth, workspace access, encryption and job infrastructure. Do not introduce a parallel backend or enable a demo Inbox.
+This is the binding integration architecture for Android phases 4–6 and the web channel connection flow. Implementation evidence is maintained in `ANDROID-REDESIGN-STATUS.md`; architecture requirements below also cover later media/profile phases. The existing Go/Postgres application remains authoritative; use its auth, workspace access, encryption and job infrastructure. Do not introduce a parallel backend or enable a demo Inbox.
 
 ## End-to-end ownership
 
@@ -39,4 +39,6 @@ Connection/revocation, seller takeover, duplicate/out-of-order webhooks, retry a
 
 ## Current honest status
 
-Android Inbox is disabled (`InboxFeatureFlag.inboxEnabled=false`); its repository only observes threads/messages and marks read. No functional channel connection/send/forward is claimed by this branch. Phase 2 implements a real database-backed non-consuming workspace preview for existing Payment phone codes; it does not provide a universal AI-only device enrollment. The latter requires a control-plane device identity/enrollment path, product-aware credentials/permissions/background work, and corresponding web Devices management before AI-only can be accepted. Never issue an AI-only phone through financial projection by pretending Payment is enabled.
+Phases 2–4 now implement control-plane device pairing/capabilities and database-backed text Inbox. The enabled native route uses signed API requests; web channels use session authorization, single-use OAuth state, encrypted account credentials and verified provider ingestion. Both use the same scoped conversations, read cursors and outgoing queue. Polling refresh is bounded at two seconds while foregrounded; this is not a zero-latency streaming guarantee. Device push is optional and configuration-dependent. Production migrations/provider approval/live-device acceptance have not been performed.
+
+Media assets, reactions, copy-forward, full customer/order profiles and seller notes remain later phases. AI handover configuration is persisted; this change does not implement an AI reply-generation engine. Advanced token lifecycle/expiry health and channel-specific live behavior still require provider validation. Read `ANDROID-REDESIGN-STATUS.md` for rollout switches, test evidence and continuation instructions.
