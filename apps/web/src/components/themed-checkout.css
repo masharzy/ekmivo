@@ -210,3 +210,10 @@
 .checkout-theme-surface .tk[data-logo-position="top-right"] .tk-side{justify-items:end;text-align:right}
 .checkout-theme-surface .tk[data-logo-position="top-center"] .tk-side{justify-items:center;text-align:center}
 .checkout-theme-surface .tk[data-logo-position="beside-left"] .tk-brand-row,.checkout-theme-surface .tk[data-logo-position="beside-right"] .tk-brand-row{margin-bottom:6px}
+
+/* Shared identity/result constraints apply to every checkout theme. */
+.tk-mi,.tk-side,.tk-main{min-width:0;max-width:100%}
+.tk-mi{flex:1;overflow:hidden}.tk-mi b{overflow-wrap:anywhere}
+.tk-ref{display:block;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk-dl div{gap:16px;min-width:0}.tk-dl dt{flex-shrink:0}.tk-dl dd{min-width:0;max-width:70%;margin:0;text-align:right;overflow-wrap:anywhere}
+.tk-sub,.tk-return{overflow-wrap:anywhere}

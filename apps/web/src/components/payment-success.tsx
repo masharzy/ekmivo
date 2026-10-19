@@ -1,24 +1,9 @@
 "use client";
-import {useEffect,useState} from "react";
+import {CheckoutReturn} from "./checkout-return";
+import {checkoutReturnUrl} from "../lib/checkout-return";
 import {ProviderMark,type PayMethod} from "./provider-mark";
-
-function safeReturnUrl(raw?:string):string {
- if(!raw)return "";
- try{
-  const u=new URL(raw);
-  return (u.protocol==="https:"||u.protocol==="http:"&&u.hostname==="localhost")&&!u.username&&!u.password?u.href:"";
- }catch{return ""}
-}
-
-export function PaymentSuccess({method,returnUrl,bn}:{method:PayMethod;returnUrl?:string;bn:boolean}){
- const destination=safeReturnUrl(returnUrl);
- const [seconds,setSeconds]=useState(3);
- useEffect(()=>{
-  if(!destination)return;
-  const timer=window.setInterval(()=>setSeconds(n=>Math.max(0,n-1)),1000);
-  const redirect=window.setTimeout(()=>window.location.assign(destination),3000);
-  return()=>{window.clearInterval(timer);window.clearTimeout(redirect)};
- },[destination]);
+export function PaymentSuccess({method,returnUrl,bn,store,origin}:{method:PayMethod;returnUrl?:string;bn:boolean;store:string;origin?:string}){
+ const destination=checkoutReturnUrl("completed",origin,returnUrl);
  const provider=method==="bkash"?"bKash":method==="nagad"?"Nagad":"Rocket";
  const nagad=method==="nagad";
  return <main className={"ek-payment-success ek-payment-success-"+method+(nagad?" is-nagad":"")} role="status" aria-live="polite">
@@ -31,10 +16,8 @@ export function PaymentSuccess({method,returnUrl,bn}:{method:PayMethod;returnUrl
     </svg>
     {nagad&&<div className="ek-nagad-success-word">SUCCESS</div>}
     <h1>{nagad?(bn?"আপনার পেমেন্ট সফলভাবে সম্পন্ন হয়েছে":"Your Payment Successfully Complete.") :destination?bn?provider+" অ্যাকাউন্ট যাচাই সফল":provider+" Account verification successful":bn?"পেমেন্ট সম্পন্ন হয়েছে":"Payment completed"}</h1>
-    {destination?<p>{bn?"বিক্রেতার ওয়েবসাইটে ফিরে যাচ্ছেন":"Redirecting to Merchant Website"} in {seconds}s</p>
-     :<p>{bn?"আপনার পেমেন্ট সফলভাবে যাচাই হয়েছে।":"Your payment has been successfully verified."}</p>}
-    {nagad&&<button className="ek-nagad-continue" type="button" onClick={()=>{if(destination)window.location.assign(destination);else window.location.assign(window.location.href)}}>{destination?(bn?"চালিয়ে যান":"Continue"):(bn?"সম্পন্ন":"Continue")}</button>}
-    {!nagad&&destination&&<a href={destination} className="ek-success-return">{bn?"বিক্রেতার ওয়েবসাইট":"Merchant Website"} ↗</a>}
+    <p>{bn?"আপনার পেমেন্ট সফলভাবে যাচাই হয়েছে।":"Your payment has been successfully verified."}</p>
+    <CheckoutReturn destination={destination} store={store} bn={bn}/>
    </section>
    <div className="ek-success-progress" aria-hidden="true"><span className="active"/><span className="active"/><span/><span/></div>
   </div>
