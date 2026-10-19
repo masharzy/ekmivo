@@ -32,3 +32,10 @@ func TestInboxStatusesUseProviderTimesOnly(t *testing.T) {
 		t.Fatal("empty event fabricated a status")
 	}
 }
+
+func TestInstagramSeenMessageID(t *testing.T) {
+	events := parseInboxStatuses([]byte(`{"object":"instagram","entry":[{"id":"account","messaging":[{"sender":{"id":"customer"},"timestamp":1792400000000,"read":{"mid":"ig.message"}}]}]}`))
+	if len(events) != 1 || events[0].Watermark || events[0].Message != "ig.message" || events[0].Status != "seen" {
+		t.Fatal("Instagram read ID missing")
+	}
+}

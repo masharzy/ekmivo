@@ -55,6 +55,12 @@ func metaSubscribe(r *http.Request, version, account, token, fields string) erro
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return errors.New("webhook subscription rejected")
 	}
+	var result struct {
+		Success bool `json:"success"`
+	}
+	if json.NewDecoder(io.LimitReader(response.Body, 65536)).Decode(&result) != nil || !result.Success {
+		return errors.New("webhook subscription not confirmed")
+	}
 	return nil
 }
 func (s *Service) HandleInboxOAuthBegin(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +242,7 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 	for account, key := range subscriptions {
 		fields := ""
 		if target.Provider != "wa" {
-			fields = "messages,messaging_postbacks,message_deliveries,messaging_reads"
+			fields = "messages,messaging_postbacks,message_deliveries,message_reads"
 		}
 		if err = metaSubscribe(r, version, account, key, fields); err != nil {
 			fail(w, 503, "CHANNEL_SUBSCRIPTION_UNAVAILABLE")

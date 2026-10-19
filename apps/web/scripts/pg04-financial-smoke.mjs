@@ -214,6 +214,19 @@ try{
  for(let i=0;i<2;i++)execFileSync("go",["run","./cmd/financial-migrate"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg05Env,timeout:100000
  });
+ const pg06Env={...pg05Env,PG06_ALLOW_MIGRATION:"true",
+  PG08_NOTICE_ALLOW_MIGRATION:"true",
+  PG08_NOTICE_MIGRATION_FILE:new URL("../../../infra/migrations/0015_pg08_customer_notice.sql",import.meta.url).pathname,
+  PG06_PIPELINE_MIGRATION_FILE:new URL("../../../infra/migrations/0014_pg06_pg09_receipt_pipeline.sql",import.meta.url).pathname};
+ // Current API requires the scoped readiness contract even for PG05 HTTP reads.
+ // Install the real dependent schema on both disposable realms; never bypass readiness.
+ execFileSync("go",["run","./cmd/financial-migrate"],{
+  cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg06Env,timeout:100000
+ });
+ for(const realm of names){
+  const readiness=await readFile(new URL("../../../infra/migrations/0107_workspace_projection_readiness.sql",import.meta.url),"utf8");
+  await dbs[realm].unsafe(readiness).simple();
+ }
  const tenant=controls[0][1];
  const reader=postgres(ds("ekmivo_pg04_sandbox","ekmivo_finance_reader_sandbox",
    "pg04-sandbox-reader-only"),{max:1,prepare:false});
@@ -685,11 +698,7 @@ try{
  }
 
  // PG06-PG09: source-matched 0014 migration, both disposable realms only.
- // This executes AFTER the PG04/PG05 regressions, never on an owner DB.
- const pg06Env={...pg05Env,PG06_ALLOW_MIGRATION:"true",
-  PG08_NOTICE_ALLOW_MIGRATION:"true",
-  PG08_NOTICE_MIGRATION_FILE:new URL("../../../infra/migrations/0015_pg08_customer_notice.sql",import.meta.url).pathname,
-  PG06_PIPELINE_MIGRATION_FILE:new URL("../../../infra/migrations/0014_pg06_pg09_receipt_pipeline.sql",import.meta.url).pathname};
+ // Repeated operator pass verifies already-installed pipeline idempotency.
  for(let pass=0;pass<2;pass++){
   execFileSync("go",["run","./cmd/financial-migrate"],{
    cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg06Env,timeout:100000

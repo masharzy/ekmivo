@@ -17,7 +17,8 @@ func parseInboxStatuses(raw []byte) []inboxStatusEvent {
 		Entry []struct {
 			ID        string `json:"id"`
 			Messaging []struct {
-				Sender struct {
+				Timestamp int64 `json:"timestamp"`
+				Sender    struct {
 					ID string `json:"id"`
 				} `json:"sender"`
 				Delivery *struct {
@@ -25,7 +26,8 @@ func parseInboxStatuses(raw []byte) []inboxStatusEvent {
 					Watermark int64    `json:"watermark"`
 				} `json:"delivery"`
 				Read *struct {
-					Watermark int64 `json:"watermark"`
+					Watermark int64  `json:"watermark"`
+					MID       string `json:"mid"`
 				} `json:"read"`
 			} `json:"messaging"`
 			Changes []struct {
@@ -68,6 +70,9 @@ func parseInboxStatuses(raw []byte) []inboxStatusEvent {
 				for _, id := range m.Delivery.MIDs {
 					out = append(out, inboxStatusEvent{Account: e.ID, Message: id, Status: "delivered", At: time.UnixMilli(m.Delivery.Watermark)})
 				}
+			}
+			if m.Read != nil && m.Read.MID != "" && m.Timestamp > 0 {
+				out = append(out, inboxStatusEvent{Account: e.ID, Message: m.Read.MID, Status: "seen", At: time.UnixMilli(m.Timestamp)})
 			}
 			if m.Read != nil && m.Read.Watermark > 0 {
 				out = append(out, inboxStatusEvent{Account: e.ID, Recipient: m.Sender.ID, Status: "seen", At: time.UnixMilli(m.Read.Watermark), Watermark: true})
