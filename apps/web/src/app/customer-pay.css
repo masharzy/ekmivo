@@ -220,3 +220,6 @@
  .ek-nagad-digit{height:25px}
  .ek-nagad-actions button{min-height:29px;padding:4px 10px}
 }
+
+/* Individual account markers for repeated payment providers. */
+.customer-pay-methods .pg05-account-index{position:absolute;top:4px;right:4px;border:1px solid #e5e7eb;border-radius:5px;padding:1px 5px;background:#fff;color:#1f2937;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
