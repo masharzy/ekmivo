@@ -6,5 +6,7 @@ export function chooseReceivingAccountId(
 ):string{
  if(!methodChosen)return "";
  const matching=accounts.filter(account=>account.method===method);
- return matching.find(account=>account.id===preferredId)?.id||matching[0]?.id||"";
+ // If the selected receiver disappears, do not silently switch to another.
+ if(preferredId)return matching.find(account=>account.id===preferredId)?.id||"";
+ return matching.find(account=>("ready" in account)&&account.ready===true)?.id||matching[0]?.id||"";
 }
