@@ -1,0 +1,10 @@
+/*
+ * Merchant Payment Dashboard style authority, owned by DashboardFrame.
+ * The approved cascading order is v2 -> shell-v3 -> pass2.
+ * Public marketing, checkout and Admin must not import this bundle.
+ * Shared auth/workspace base CSS remains in app/globals.css until the
+ * next strictly screenshot-gated isolation pass.
+ */
+@import "../app/dashboard-v2.css";
+@import "../app/dashboard-shell-v3.css";
+@import "../app/dashboard-pass2.css";
