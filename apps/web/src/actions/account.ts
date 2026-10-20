@@ -22,10 +22,11 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
  const locale=safeLocale(localeParam),t=strings[locale];
  const name=asText(form.get("name")),email=asText(form.get("email")).toLowerCase();
  const password=form.get("password"),confirm=form.get("confirm");
- const workspaceName=asText(form.get("workspace_name"));
+ // The business details are collected after verification, never at signup.
+ const workspaceName="New business";
  const fields:Record<string,string>={};
  if(!validatedName(name))fields.name=locale==="bn"?"নাম অন্তত ২ অক্ষরের হতে হবে।":"Enter 2–100 characters.";
- if(!validatedName(workspaceName))fields.workspace_name=locale==="bn"?"ওয়ার্কস্পেসের নাম ২–১০০ অক্ষর হতে হবে।":"Enter a workspace name (2–100 characters).";
+
  if(!validEmail(email))fields.email=locale==="bn"?"সঠিক ইমেইল দিন।":"Enter a valid email.";
  if(typeof password!=="string"||!strongPassword(password))fields.password=locale==="bn"?"৮–২৫৬ অক্ষর, অন্তত একটি অক্ষর ও একটি সংখ্যা দিন।":"Use 8–256 characters, including a letter and a number.";
  if(password!==confirm)fields.confirm=locale==="bn"?"পাসওয়ার্ড দুটি মিলছে না।":"Passwords don't match.";
