@@ -36,7 +36,7 @@ function at(value?:string,locale:"en"|"bn"="en"){
 }
 function isHttps(value:string){try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password&&!!u.hostname}catch{return false}}
 function formatSettings(body:Settings):Settings{return Object.fromEntries(Object.entries(body).map(([k,v])=>[k,v.trim()])) as unknown as Settings}
-export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId,paymentPlanApplies=true}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string;paymentPlanApplies?:boolean}){
+export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId,paymentPlanApplies=true,workspaceName=""}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string;paymentPlanApplies?:boolean;workspaceName?:string}){
  const router=useRouter(),bn=locale==="bn";
  const t=useCallback((en:string,bengali:string)=>bn?bengali:en,[bn]);
  // Payment subscription quotas apply only when Payments is enabled. AI-only
@@ -44,7 +44,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
  const teamLimit=useResourceLimit("team_members",workspaceId,environment,resource==="team"&&paymentPlanApplies);
  const base="/api/go/workspaces/"+workspaceId+"/workspace-tools";
  const seed=useDashboardInitialData<ApiData>("workspace");
- const initialSettings={...defaults,...seed?.data?.body};
+ const initialSettings={...defaults,...seed?.data?.body,name:seed?.data?.body?.name||workspaceName};
  const [members,setMembers]=useState<Member[]>(seed?.data?.members??[]),[invites,setInvites]=useState<Invitation[]>(seed?.data?.invitations??[]),[tickets,setTickets]=useState<Ticket[]>(seed?.data?.items??[]);
  const [body,setBody]=useState<Settings>(initialSettings),[version,setVersion]=useState(seed?.data?.version??0),[saved,setSaved]=useState<Settings>(initialSettings);
  const [grants,setGrants]=useState<Record<string,Record<string,boolean>>>(seed?.data?.grants??{});
@@ -75,7 +75,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
     setMembers(d.members);setInvites(d.invitations);setGrants(d.grants??{});setGrantDrafts({});setRoleDrafts({});
    }else if(resource==="settings"){
     if(!d.body||typeof d.version!=="number")throw Error("INVALID_SETTINGS_RESPONSE");
-    const value={...defaults,...d.body};setBody(value);setSaved(value);setVersion(d.version);
+    const value={...defaults,...d.body,name:d.body.name||workspaceName};setBody(value);setSaved(value);setVersion(d.version);
    }else{
     if(!Array.isArray(d.items))throw Error("INVALID_SUPPORT_RESPONSE");
     setTickets(d.items);
@@ -83,7 +83,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
    setLoaded(true);
   }catch(e){if(!signal?.aborted)setError(t("Unable to load workspace data. Check the connection and retry.","ওয়ার্কস্পেসের তথ্য পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।")+" ("+(e instanceof Error?e.message:"UNKNOWN")+")")}
   finally{if(!signal?.aborted)setLoading(false)}
- },[base,resource,environment,t]);
+ },[base,resource,environment,t,workspaceName]);
  useEffect(()=>{if(seed)return;const c=new AbortController();void Promise.resolve().then(()=>{if(!c.signal.aborted)return load(c.signal)});return()=>c.abort()},[load,seed]);
  const refresh=()=>{if(resource==="settings"&&dirty&&!window.confirm(t("Discard unsaved settings and reload?","সংরক্ষণ না করা সেটিংস বাদ দিয়ে আবার লোড করবেন?")))return;void load()};
  async function command(action:string,data:Record<string,unknown>,target?:string){
