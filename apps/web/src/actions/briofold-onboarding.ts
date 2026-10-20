@@ -31,8 +31,9 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
    const [owner]=await tx`SELECT role FROM workspace_members WHERE workspace_id=${workspace.id}::uuid
       AND user_id=${actor.id}::uuid FOR UPDATE`;
    if(!owner||owner.role!=="owner")return "forbidden";
-   const [record]=await tx`SELECT step FROM briofold_business_onboarding WHERE workspace_id=${workspace.id}::uuid
-      AND owner_id=${actor.id}::uuid FOR UPDATE`;
+   // Onboarding belongs to the business, not the historical creator.
+   // The actor's CURRENT owner membership was already locked above.
+   const [record]=await tx`SELECT step FROM briofold_business_onboarding WHERE workspace_id=${workspace.id}::uuid FOR UPDATE`;
    if(!record)return "missing";
    if(record.step==="complete")return "already";
    if(record.step!==step)return "conflict";
