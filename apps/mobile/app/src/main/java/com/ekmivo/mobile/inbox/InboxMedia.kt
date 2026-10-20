@@ -14,7 +14,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +30,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
@@ -97,7 +104,7 @@ internal suspend fun fetchMedia(context:Context,thread:String,id:String,api:Inbo
 
 private object ActiveVoice {var player:MediaPlayer?=null}
 @Composable private fun VoiceMessage(thread:String,c:JSONObject,bn:Boolean,ink:Color){
- val api=rememberInboxApi();val app=LocalContext.current;val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current;val scope=rememberCoroutineScope();var player by remember{mutableStateOf<MediaPlayer?>(null)};var playing by remember{mutableStateOf(false)};var progress by remember{mutableFloatStateOf(0f)};var elapsed by remember{mutableIntStateOf(0)};var measuredDuration by remember{mutableIntStateOf(0)};var error by remember{mutableStateOf(false)}
+ val api=rememberInboxApi();val app=LocalContext.current;val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current;val view=LocalView.current;val scope=rememberCoroutineScope();var player by remember{mutableStateOf<MediaPlayer?>(null)};var playing by remember{mutableStateOf(false)};var progress by remember{mutableFloatStateOf(0f)};var elapsed by remember{mutableIntStateOf(0)};var measuredDuration by remember{mutableIntStateOf(0)};var error by remember{mutableStateOf(false)}
  DisposableEffect(owner){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP)runCatching{player?.pause()}};owner.lifecycle.addObserver(observer);onDispose{owner.lifecycle.removeObserver(observer);if(ActiveVoice.player===player)ActiveVoice.player=null;player?.release()}}
  LaunchedEffect(player){while(isActive){val v=player;playing=runCatching{v?.isPlaying==true}.getOrDefault(false);if(v!=null){measuredDuration=runCatching{v.duration/1000}.getOrDefault(0);elapsed=runCatching{v.currentPosition/1000}.getOrDefault(0);progress=runCatching{v.currentPosition.toFloat()/v.duration.coerceAtLeast(1)}.getOrDefault(0f)};delay(90)}}
  Row(Modifier.width(210.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){
@@ -126,20 +133,23 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  hasText:Boolean,replyTo:String?=null,
  onRecordingChange:(Boolean)->Unit={},
  onSendText:()->Unit,
+ onVoicePrepared:(File,Long,String?)->Unit,
  inputField:@Composable RowScope.()->Unit,
  onSent:()->Unit
 ){
  val api=rememberInboxApi();val app=LocalContext.current;val p=LocalEkmivoPalette.current;val scope=rememberCoroutineScope();val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current
  var sheet by remember{mutableStateOf(false)};var selection by rememberSaveable(thread){mutableStateOf(arrayListOf<String>())};var active by rememberSaveable{mutableIntStateOf(0)}
  var batch by rememberSaveable(thread){mutableStateOf(UUID.randomUUID().toString())};var cameraPath by rememberSaveable{mutableStateOf("")}
- var pendingVoiceMs by rememberSaveable(thread){mutableLongStateOf(0L)}
  var busy by remember{mutableStateOf(false)};var error by remember{mutableStateOf(false)};var products by remember{mutableStateOf<List<JSONObject>?>(null)}
  var recorder by remember{mutableStateOf<MediaRecorder?>(null)};var recordFile by remember{mutableStateOf<File?>(null)};var recordStart by remember{mutableLongStateOf(0L)};var duration by remember{mutableLongStateOf(0L)};var samples by remember{mutableStateOf<List<Float>>(emptyList())}
  var locked by remember{mutableStateOf(false)};var paused by remember{mutableStateOf(false)};var pauseAt by remember{mutableLongStateOf(0L)};var pauseSum by remember{mutableLongStateOf(0L)};var swipeX by remember{mutableFloatStateOf(0f)};var swipeY by remember{mutableFloatStateOf(0f)}
  fun toast(text:String){Toast.makeText(app,text,Toast.LENGTH_SHORT).show()}
  fun discard(){runCatching{recorder?.stop()};recorder?.release();recorder=null;recordFile?.delete();recordFile=null;samples=emptyList();locked=false;paused=false;pauseAt=0L;pauseSum=0L}
  fun begin(){try{val file=File(app.cacheDir,"inbox/record-${UUID.randomUUID()}.m4a").apply{parentFile?.mkdirs()};val r=if(android.os.Build.VERSION.SDK_INT>=31)MediaRecorder(app)else @Suppress("DEPRECATION") MediaRecorder();r.setAudioSource(MediaRecorder.AudioSource.MIC);r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);r.setAudioSamplingRate(44100);r.setOutputFile(file.absolutePath);r.setMaxDuration(60000);r.prepare();r.start();recordStart=System.currentTimeMillis();recordFile=file;recorder=r;duration=0;samples=emptyList();paused=false;pauseSum=0L;locked=false}catch(_:Exception){discard();error=true}}
- val mic=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){if(it&&enabled)begin()else toast(if(bn)"মাইক্রোফোনের অনুমতি প্রয়োজন" else "Microphone permission is required")}
+ val mic=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){
+  toast(if(it)(if(bn)"রেকর্ড করতে মাইক চেপে ধরে রাখুন" else "Hold the microphone to record")
+   else(if(bn)"মাইক্রোফোনের অনুমতি প্রয়োজন" else "Microphone permission is required"))
+ }
  DisposableEffect(owner){val obs=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP)discard()};owner.lifecycle.addObserver(obs);onDispose{owner.lifecycle.removeObserver(obs);discard();onRecordingChange(false)}}
  LaunchedEffect(enabled){if(!enabled){sheet=false;products=null;discard()}}
  LaunchedEffect(recorder){onRecordingChange(recorder!=null);while(recorder!=null){
@@ -153,140 +163,182 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  val gallery=rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()){uris->uris.forEach{runCatching{app.contentResolver.takePersistableUriPermission(it,Intent.FLAG_GRANT_READ_URI_PERMISSION)}};add(uris)}
  val document=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){it?.let{u->runCatching{app.contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)};add(listOf(u))}}
  val camera=rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()){ok->if(ok)add(listOf(Uri.fromFile(File(cameraPath))))else File(cameraPath).delete()}
- suspend fun sendFiles(uris:List<String>,voiceMs:Long=0){
+ suspend fun sendFiles(uris:List<String>){
   val savedBatch=batch
   for((index,raw) in uris.withIndex()) {
    val uri=Uri.parse(raw);val bytes=withContext(Dispatchers.IO){app.contentResolver.openInputStream(uri)?.use{input->val out=java.io.ByteArrayOutputStream();val buffer=ByteArray(8192);var total=0;while(true){val n=input.read(buffer);if(n<0)break;total+=n;check(total<=5242880);out.write(buffer,0,n)};out.toByteArray()}?:error("FILE_UNAVAILABLE")};check(bytes.size in 1..5242880)
    val mediaID=UUID.nameUUIDFromBytes("$thread|$savedBatch|$raw".toByteArray()).toString();val key=UUID.nameUUIDFromBytes("send|$mediaID".toByteArray()).toString()
    var name=uri.lastPathSegment?:"attachment";app.contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())name=it.getString(0)}
-   val mime=if(voiceMs>0)"audio/mp4"else app.contentResolver.getType(uri)?:if(name.endsWith(".pdf",true))"application/pdf"else "image/jpeg"
-   api.call("media-upload",thread,body=JSONObject().put("media_id",mediaID).put("data",Base64.encodeToString(bytes,Base64.NO_WRAP)).put("mime",mime).put("name",name).put("duration_ms",voiceMs))
+   val mime=app.contentResolver.getType(uri)?:if(name.endsWith(".pdf",true))"application/pdf"else "image/jpeg"
+   api.call("media-upload",thread,body=JSONObject().put("media_id",mediaID).put("data",Base64.encodeToString(bytes,Base64.NO_WRAP)).put("mime",mime).put("name",name))
    api.call("send-media",thread,body=JSONObject().put("media_id",mediaID).put("idempotency_key",key).put("batch_id",savedBatch).apply{if(replyTo!=null)put("reply_to",replyTo)})
   }
-  selection=arrayListOf();pendingVoiceMs=0;batch=UUID.randomUUID().toString();onSent()
+  selection=arrayListOf();batch=UUID.randomUUID().toString();onSent()
  }
- fun finishVoice(send:Boolean) {
-  val ms=duration
+ fun durationNow():Long{
+  val now=System.currentTimeMillis()
+  return (now-recordStart-pauseSum-(if(paused)now-pauseAt else 0L)).coerceAtLeast(0L)
+ }
+ fun vibrate(){runCatching{val v=app.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+  v.vibrate(android.os.VibrationEffect.createOneShot(12,android.os.VibrationEffect.DEFAULT_AMPLITUDE))}}
+ fun finishVoice(send:Boolean){
   val file=recordFile
+  val elapsed=durationNow()
   if(!send){discard();return}
-  val ok=runCatching{if(paused)recorder?.resume();recorder?.stop()}.isSuccess
-  recorder?.release();recorder=null;recordFile=null;locked=false;paused=false
-  if(!ok){file?.delete();error=true;return}
-  if(ms<1000){file?.delete();toast(if(bn)"ভয়েস খুব ছোট" else "Voice is too short")}
-  else if(file!=null)scope.launch{busy=true;try{sendFiles(listOf(file.toURI().toString()),ms);file.delete();error=false}
-   catch(_:Exception){selection=arrayListOf(file.toURI().toString());pendingVoiceMs=ms;error=true}
-   finally{busy=false}}
+  val stopped=runCatching{if(paused)recorder?.resume();recorder?.stop()}.isSuccess
+  recorder?.release();recorder=null;recordFile=null;paused=false;locked=false;samples=emptyList()
+  if(!stopped||file==null){file?.delete();toast(if(bn)"রেকর্ডিং সংরক্ষণ করা যায়নি" else "Recording could not be saved");return}
+  if(elapsed<1000L){file.delete();toast(if(bn)"রেকর্ড করতে চেপে ধরে রাখুন, ছাড়লে পাঠানো হবে"
+   else "Hold to record, release to send");return}
+  onVoicePrepared(file,elapsed,replyTo)
  }
- // Keep the microphone pointer target composed while recording, so holding
- // doesn't lose the release event during recomposition.
- // The reference composer occupies the safe region above the gesture bar / IME.
- // Keep it mounted while typing so attachments, camera, and voice retain state.
- Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
-  .topHairline(p.border).background(p.canvas)
-  .padding(start=12.dp,end=12.dp,top=8.dp,bottom=14.dp),
-  verticalArrangement=Arrangement.spacedBy(6.dp)) {
-  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Bottom,
-   horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-   if(recorder==null) {
-    Row(
-     Modifier.weight(1f).heightIn(min=40.dp,max=104.dp)
-      .clip(RoundedCornerShape(20.dp)).background(p.surface)
-      .border(1.dp,p.border,RoundedCornerShape(20.dp))
-      .padding(start=8.dp,end=4.dp),
-     verticalAlignment=Alignment.Bottom
-    ) {
-     inputField()
-     Box(Modifier.width(32.dp).height(38.dp)
-       .clickable(enabled=enabled&&!busy){sheet=true},
-       contentAlignment=Alignment.Center) {
-      EkmivoReferenceIcon(EkmivoGlyph.CLIP,tint=p.secondary,size=20.dp,
-       description=if(bn)"সংযুক্ত করুন" else "Attachments")
-     }
-     if(!hasText)Box(Modifier.width(32.dp).height(38.dp)
-       .clickable(enabled=enabled&&!busy){
-        val file=File(app.cacheDir,"inbox/camera-${UUID.randomUUID()}.jpg").apply{parentFile?.mkdirs()}
-        cameraPath=file.absolutePath
-        camera.launch(FileProvider.getUriForFile(app,app.packageName+".updates",file))
-       },contentAlignment=Alignment.Center) {
-      EkmivoReferenceIcon(EkmivoGlyph.CAM,tint=p.secondary,size=20.dp,
-       description=if(bn)"ক্যামেরা" else "Camera")
-     }
-    }
-   }else {
-    Row(Modifier.weight(1f).heightIn(min=40.dp).clip(RoundedCornerShape(20.dp))
-      .background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp))
-      .padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically,
-      horizontalArrangement=Arrangement.spacedBy(8.dp)){
-     IconButton(onClick={discard()},modifier=Modifier.size(30.dp)){
-      EkmivoReferenceIcon(EkmivoGlyph.TRASH,tint=p.danger,size=20.dp)
-     }
-     Box(Modifier.size(7.dp).clip(CircleShape).background(p.danger))
-     Text(displayDigits("%d:%02d".format(duration/60000,(duration/1000)%60),bn),
-      style=EkmivoType.meta,color=p.text)
-     Row(Modifier.weight(1f).height(26.dp),verticalAlignment=Alignment.CenterVertically,
-       horizontalArrangement=Arrangement.spacedBy(2.dp)){
-      samples.takeLast(22).forEach{sample->
-       Box(Modifier.width(2.dp).height((3+19*sample).dp)
-        .clip(RoundedCornerShape(2.dp)).background(p.secondary))
-      }
-     }
-     if(locked)IconButton(onClick={
-      if(paused){runCatching{recorder?.resume()};pauseSum+=System.currentTimeMillis()-pauseAt;paused=false}
-      else{runCatching{recorder?.pause()};pauseAt=System.currentTimeMillis();paused=true}
-     },modifier=Modifier.size(30.dp)){
-      EkmivoReferenceIcon(if(paused)EkmivoGlyph.PLAY else EkmivoGlyph.PAUSE,size=20.dp)
+ val isHolding=recorder!=null&&!locked
+ val micScale by animateFloatAsState(if(isHolding)1.65f else 1f,animationSpec=tween(150),label="voice-mic-scale")
+ Column(
+  Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
+   .topHairline(p.border).background(p.canvas)
+   .padding(start=12.dp,end=12.dp,top=8.dp,bottom=14.dp),
+  verticalArrangement=Arrangement.spacedBy(12.dp)
+ ){
+  if(recorder!=null&&locked){
+   Row(Modifier.fillMaxWidth().height(26.dp),verticalAlignment=Alignment.CenterVertically,
+    horizontalArrangement=Arrangement.spacedBy(12.dp)){
+    Text(displayDigits("%d:%02d".format(duration/60000,(duration/1000)%60),bn),
+     style=EkmivoType.shop,color=p.text)
+    Row(Modifier.weight(1f).height(26.dp),verticalAlignment=Alignment.CenterVertically,
+     horizontalArrangement=Arrangement.End){
+     samples.takeLast(40).forEach{amp->
+      Box(Modifier.padding(start=2.dp).width(2.5.dp).height((3+20*amp).dp)
+       .clip(RoundedCornerShape(2.dp)).background(p.text.copy(alpha=.55f)))
      }
     }
    }
-   if(recorder==null && hasText) {
-    Box(Modifier.size(40.dp).clip(CircleShape).background(p.text)
-     .clickable(enabled=enabled&&!busy){onSendText()},contentAlignment=Alignment.Center) {
-     EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,size=20.dp,
-      description=if(bn)"মেসেজ পাঠান" else "Send message")
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+    horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    Box(Modifier.size(40.dp).clip(CircleShape).background(p.dangerBackground).clickable{discard()},
+     contentAlignment=Alignment.Center){
+     EkmivoReferenceIcon(EkmivoGlyph.TRASH,tint=p.danger,size=20.dp,
+      description=if(bn)"বাতিল" else "Discard")
     }
-   }else {
-    Box(Modifier.size(40.dp).clip(CircleShape).background(p.text)
-     .pointerInput(enabled,busy) {
-      var canceled=false
-      detectDragGesturesAfterLongPress(
-       onDragStart={
-        swipeX=0f;swipeY=0f;canceled=false
-        if(enabled&&!busy){
-         if(ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)begin()
-         else mic.launch(Manifest.permission.RECORD_AUDIO)
+    Row(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp))
+     .background(if(paused)p.successBackground else p.raised)
+     .clickable{
+      if(paused){runCatching{recorder?.resume()}.onSuccess{pauseSum+=System.currentTimeMillis()-pauseAt;paused=false}}
+      else{runCatching{recorder?.pause()}.onSuccess{pauseAt=System.currentTimeMillis();paused=true}}
+     },verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
+     EkmivoReferenceIcon(if(paused)EkmivoGlyph.MIC else EkmivoGlyph.PAUSE,
+      tint=if(paused)p.success else p.text,size=20.dp)
+     Spacer(Modifier.width(8.dp))
+     Text(if(paused)(if(bn)"চালিয়ে যান" else "Resume")else(if(bn)"পজ" else "Pause"),
+      style=EkmivoType.shop,color=if(paused)p.success else p.text)
+    }
+    Box(Modifier.size(40.dp).clip(CircleShape).background(p.text).clickable{finishVoice(true)},
+     contentAlignment=Alignment.Center){
+     EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,size=20.dp,
+      description=if(bn)"ভয়েস পাঠান" else "Send voice")
+    }
+   }
+  }else{
+   Box(Modifier.fillMaxWidth()){
+    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Bottom,
+     horizontalArrangement=Arrangement.spacedBy(8.dp)){
+     if(isHolding){
+      Row(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp))
+       .background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp))
+       .padding(start=12.dp,end=10.dp),verticalAlignment=Alignment.CenterVertically,
+       horizontalArrangement=Arrangement.spacedBy(8.dp)){
+       EkmivoReferenceIcon(EkmivoGlyph.MIC,tint=p.danger,size=18.dp)
+       Text(displayDigits("%d:%02d".format(duration/60000,(duration/1000)%60),bn),
+        style=EkmivoType.shop,color=p.text)
+       Spacer(Modifier.weight(1f))
+       Text(if(bn)"‹ বাতিল করতে স্লাইড করুন" else "‹ Slide to cancel",
+        style=EkmivoType.meta,color=p.secondary,maxLines=1)
+      }
+     }else{
+      Row(Modifier.weight(1f).heightIn(min=40.dp,max=104.dp)
+       .clip(RoundedCornerShape(20.dp)).background(p.surface)
+       .border(1.dp,p.border,RoundedCornerShape(20.dp))
+       .padding(start=8.dp,end=4.dp),
+       verticalAlignment=Alignment.Bottom){
+       inputField()
+       Box(Modifier.width(32.dp).height(38.dp).clickable(enabled=enabled&&!busy){sheet=true},
+        contentAlignment=Alignment.Center){
+        EkmivoReferenceIcon(EkmivoGlyph.CLIP,tint=p.secondary,size=20.dp,
+         description=if(bn)"সংযুক্ত করুন" else "Attachments")
+       }
+       if(!hasText)Box(Modifier.width(32.dp).height(38.dp)
+        .clickable(enabled=enabled&&!busy){
+         val file=File(app.cacheDir,"inbox/camera-${UUID.randomUUID()}.jpg").apply{parentFile?.mkdirs()}
+         cameraPath=file.absolutePath
+         camera.launch(FileProvider.getUriForFile(app,app.packageName+".updates",file))
+        },contentAlignment=Alignment.Center){
+        EkmivoReferenceIcon(EkmivoGlyph.CAM,tint=p.secondary,size=20.dp,
+         description=if(bn)"ক্যামেরা" else "Camera")
+       }
+      }
+     }
+     if(hasText&&!isHolding){
+      Box(Modifier.size(40.dp).clip(CircleShape).background(p.text)
+       .clickable(enabled=enabled&&!busy){onSendText()},contentAlignment=Alignment.Center){
+       EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,size=20.dp,
+        description=if(bn)"মেসেজ পাঠান" else "Send message")
+      }
+     }else{
+      Box(Modifier.size(40.dp).graphicsLayer{scaleX=micScale;scaleY=micScale}
+       .clip(CircleShape).background(p.text)
+       .semantics{contentDescription=if(bn)"রেকর্ড করতে মাইক চেপে ধরে রাখুন" else "Hold to record voice"}
+       .pointerInput(enabled,busy){
+        awaitEachGesture{
+         val down=awaitFirstDown(requireUnconsumed=false)
+         if(!enabled||busy){
+          while(true){val ev=awaitPointerEvent();if(ev.changes.none{it.id==down.id&&it.pressed})break}
+          return@awaitEachGesture
+         }
+         if(ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
+          mic.launch(Manifest.permission.RECORD_AUDIO)
+          while(true){val ev=awaitPointerEvent();if(ev.changes.none{it.id==down.id&&it.pressed})break}
+          return@awaitEachGesture
+         }
+         begin()
+         if(recorder==null)return@awaitEachGesture
+         vibrate()
+         down.consume()
+         val origin=down.position
+         var canceled=false
+         while(true){
+          val ev=awaitPointerEvent()
+          val change=ev.changes.firstOrNull{it.id==down.id}
+          if(change==null){if(!locked)discard();break}
+          val dx=change.position.x-origin.x
+          val dy=change.position.y-origin.y
+          if(!locked&&dx<=-96.dp.toPx()){canceled=true;discard();break}
+          if(!locked&&dy<=-72.dp.toPx()){locked=true;vibrate()}
+          if(!change.pressed){
+           if(recorder!=null&&!locked&&!canceled)finishVoice(true)
+           break
+          }
+          change.consume()
+         }
         }
-       },
-       onDrag={change,drag->
-        change.consume()
-        if(recorder!=null&&!locked){
-         swipeX+=drag.x;swipeY+=drag.y
-         if(swipeX < -68.dp.toPx()){canceled=true;discard()}
-         else if(swipeY < -72.dp.toPx())locked=true
-        }
-       },
-       onDragEnd={if(recorder!=null&&!locked&&!canceled)finishVoice(true);swipeX=0f;swipeY=0f},
-       onDragCancel={if(recorder!=null&&!locked)discard();swipeX=0f;swipeY=0f}
-      )
-     }.clickable(enabled=enabled&&!busy){
-      if(recorder!=null)finishVoice(true)
-      else if(ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED){begin();locked=true}
-      else mic.launch(Manifest.permission.RECORD_AUDIO)
-     },contentAlignment=Alignment.Center) {
-     EkmivoReferenceIcon(if(recorder!=null)EkmivoGlyph.SND else EkmivoGlyph.MIC,
-      tint=p.onPrimary,size=20.dp,
-      description=if(recorder!=null)(if(bn)"ভয়েস পাঠান" else "Send voice")
-       else(if(bn)"ভয়েস রেকর্ড করুন" else "Record voice"))
+       },contentAlignment=Alignment.Center){
+       EkmivoReferenceIcon(EkmivoGlyph.MIC,tint=p.onPrimary,size=20.dp,
+        description=if(bn)"ভয়েস রেকর্ড করুন" else "Record voice")
+      }
+     }
+    }
+    if(isHolding)Column(
+     Modifier.align(Alignment.BottomEnd).offset(x=0.dp,y=(-62).dp)
+      .size(width=40.dp,height=68.dp).clip(RoundedCornerShape(20.dp))
+      .background(p.raised).border(1.dp,p.border,RoundedCornerShape(20.dp)),
+     horizontalAlignment=Alignment.CenterHorizontally,
+     verticalArrangement=Arrangement.SpaceEvenly){
+     EkmivoReferenceIcon(EkmivoGlyph.LOCK_OPEN,tint=p.text,size=18.dp)
+     EkmivoReferenceIcon(EkmivoGlyph.CHEVRON_UP,tint=p.text,size=18.dp)
     }
    }
   }
-  if(recorder!=null&&!locked)Text(
-   if(bn)"বাঁয়ে টানলে বাতিল · উপরে টানলে লক" else "Slide left to cancel · up to lock",
-   style=EkmivoType.meta,color=p.secondary)
-  if(recorder!=null&&locked)Text(if(paused)(if(bn)"পজ করা" else "Paused")
-   else(if(bn)"রেকর্ড হচ্ছে" else "Recording"),style=EkmivoType.meta,color=p.secondary)
-  if(error)Text(if(bn)"পাঠানো যায়নি। আবার চেষ্টা করুন।" else "Unable to send. Try again.",
-   style=EkmivoType.meta,color=p.danger)
  }
+
  if(sheet)ModalBottomSheet(onDismissRequest={sheet=false},containerColor=p.raised,tonalElevation=0.dp){Row(Modifier.fillMaxWidth().padding(18.dp),horizontalArrangement=Arrangement.SpaceEvenly){
   AttachmentChoice(EkmivoGlyph.IMG,if(bn)"গ্যালারি" else "Gallery"){gallery.launch(arrayOf("image/jpeg","image/png"))}
   AttachmentChoice(EkmivoGlyph.CAM,if(bn)"ক্যামেরা" else "Camera"){val file=File(app.cacheDir,"inbox/camera-${UUID.randomUUID()}.jpg").apply{parentFile?.mkdirs()};cameraPath=file.absolutePath;sheet=false;camera.launch(FileProvider.getUriForFile(app,app.packageName+".updates",file))}
@@ -296,10 +348,10 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  if(selection.isNotEmpty())Dialog(onDismissRequest={if(!busy)selection=arrayListOf()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)){
   Column(Modifier.fillMaxSize().background(Color.Black).systemBarsPadding()){
    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={if(!busy)selection=arrayListOf()}){EkmivoReferenceIcon(EkmivoGlyph.X,tint=Color.White)};Text("${active+1}/${selection.size}",color=Color.White);Spacer(Modifier.weight(1f));IconButton(onClick={if(!busy){selection=ArrayList(selection.filterIndexed{i,_->i!=active});active=active.coerceAtMost((selection.size-1).coerceAtLeast(0))}}){EkmivoReferenceIcon(EkmivoGlyph.TRASH,tint=Color.White)}}
-   val current=selection.getOrNull(active);if(current!=null)Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){if(pendingVoiceMs>0)EkmivoReferenceIcon(EkmivoGlyph.MIC,tint=Color.White,size=52.dp)else if(app.contentResolver.getType(Uri.parse(current))?.startsWith("image/")==false||current.contains(".pdf",true))EkmivoReferenceIcon(EkmivoGlyph.DOC,tint=Color.White,size=52.dp)else MediaImage(current,Modifier.fillMaxWidth(),ContentScale.Fit)}
-   Row(Modifier.horizontalScroll(rememberScrollState()).padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){selection.forEachIndexed{i,uri->Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).border(if(i==active)2.dp else 0.dp,Color.White,RoundedCornerShape(10.dp)).clickable{active=i}){MediaImage(uri,Modifier.fillMaxSize())}};if(selection.size<10&&pendingVoiceMs==0L)IconButton(onClick={gallery.launch(arrayOf("image/jpeg","image/png"))}){EkmivoReferenceIcon(EkmivoGlyph.CLIP,tint=Color.White)}}
+   val current=selection.getOrNull(active);if(current!=null)Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){if(app.contentResolver.getType(Uri.parse(current))?.startsWith("image/")==false||current.contains(".pdf",true))EkmivoReferenceIcon(EkmivoGlyph.DOC,tint=Color.White,size=52.dp)else MediaImage(current,Modifier.fillMaxWidth(),ContentScale.Fit)}
+   Row(Modifier.horizontalScroll(rememberScrollState()).padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){selection.forEachIndexed{i,uri->Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).border(if(i==active)2.dp else 0.dp,Color.White,RoundedCornerShape(10.dp)).clickable{active=i}){MediaImage(uri,Modifier.fillMaxSize())}};if(selection.size<10)IconButton(onClick={gallery.launch(arrayOf("image/jpeg","image/png"))}){EkmivoReferenceIcon(EkmivoGlyph.CLIP,tint=Color.White)}}
    if(error)Text(if(bn)"পাঠানো যায়নি। আবার চেষ্টা করুন।" else "Unable to send. Try again.",color=Color.White)
-   EkmivoPrimaryButton(if(busy)(if(bn)"পাঠানো হচ্ছে…" else "Sending…")else displayDigits(if(bn)"${selection.size}টি পাঠান" else "Send ${selection.size}",bn),enabled=!busy&&enabled,onClick={val chosen=selection.toList();scope.launch{busy=true;try{sendFiles(chosen,pendingVoiceMs);error=false}catch(_:Exception){error=true}finally{busy=false}}},modifier=Modifier.padding(12.dp))
+   EkmivoPrimaryButton(if(busy)(if(bn)"পাঠানো হচ্ছে…" else "Sending…")else displayDigits(if(bn)"${selection.size}টি পাঠান" else "Send ${selection.size}",bn),enabled=!busy&&enabled,onClick={val chosen=selection.toList();scope.launch{busy=true;try{sendFiles(chosen);error=false}catch(_:Exception){error=true}finally{busy=false}}},modifier=Modifier.padding(12.dp))
   }
  }
  products?.let{items->ModalBottomSheet(onDismissRequest={products=null},containerColor=p.raised){Column(Modifier.fillMaxWidth().heightIn(max=420.dp).verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text(if(bn)"পণ্য বাছাই" else "Choose a product",style=EkmivoType.button,color=p.text);if(items.isEmpty())Text(if(bn)"কোনো পণ্য যোগ করা হয়নি" else "No products added",color=p.secondary);items.forEach{product->Row(Modifier.fillMaxWidth().clickable(enabled=!busy&&enabled){scope.launch{busy=true;try{api.call("send-product",thread,body=JSONObject().put("product_id",product.getString("id")).put("idempotency_key",UUID.nameUUIDFromBytes("$batch|${product.getString("id")}".toByteArray()).toString()).apply{if(replyTo!=null)put("reply_to",replyTo)});batch=UUID.randomUUID().toString();products=null;onSent()}catch(_:Exception){error=true}finally{busy=false}}}.padding(10.dp)){Text(product.optString("name"),modifier=Modifier.weight(1f),color=p.text);Text(money(product.optLong("price_minor"),bn),color=p.text)}}}}}
