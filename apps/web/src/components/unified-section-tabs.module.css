@@ -1,0 +1,5 @@
+.tabs{display:flex;align-items:center;gap:20px;overflow-x:auto;scrollbar-width:thin;border-bottom:1px solid var(--color-border);margin:0 0 20px;max-width:100%;padding:0 1px;white-space:nowrap}
+.tabs a{display:inline-flex;align-items:center;min-height:39px;border-bottom:2px solid transparent;margin-bottom:-1px;text-decoration:none;color:var(--color-text-muted);font-size:13px;font-weight:500;padding:8px 1px;transition:color .12s ease,border-color .12s ease}
+.tabs a:hover{color:var(--color-text)}
+.tabs a.active{border-bottom-color:var(--color-primary);color:var(--color-text);font-weight:600}
+.tabs a:focus-visible{outline:2px solid var(--color-focus);outline-offset:-2px}

@@ -8,6 +8,7 @@ import {DashboardContent} from "./dashboard-content";
 import {WorkspaceInbox} from "./workspace-inbox";
 import {WorkspaceChannels} from "./workspace-channels";
 import {UnifiedSettingsIndex} from "./unified-settings-index";
+import {UnifiedSectionTabs} from "./unified-section-tabs";
 
 export const unifiedDynamic="force-dynamic";
 
@@ -35,5 +36,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
     :<DashboardContent locale={locale} user={user} workspace={workspace}
       section={section} service={service} paymentContext={paymentContext} framed/>;
  return <AppShell unified locale={locale} user={user} workspace={workspace}
-   service={service} section={section} paymentContext={paymentContext}>{body}</AppShell>;
+   service={service} section={section} paymentContext={paymentContext}>
+    <UnifiedSectionTabs locale={locale} root={root} mode={workspace.mode} view={view}/>
+    {body}
+   </AppShell>;
 }
