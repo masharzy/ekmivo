@@ -12,7 +12,7 @@ export async function runBriofoldWalletChecks(url){
  const equal=(actual,expected)=>{assert.deepEqual(actual,expected);count++;};
  const reject=async (callback,code)=>{await assert.rejects(callback,error=>error.code===code);count++;};
  try{
-  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql"]){
+  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql","0128_briofold_ai_topup_recovery.sql"]){
    const migration=await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8");
    await db.begin(tx=>tx.unsafe(migration.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple());
   }
@@ -118,6 +118,19 @@ export async function runBriofoldWalletChecks(url){
   equal(current[0].value.id,second);
   await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT briofold_ai_admin_adjust(${actor},${workspace},${randomUUID()},1,'Runtime grant forbidden')`;}),"42501");
   await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT * FROM briofold_ai_tariff_versions`;}),"42501");
+  // A closed tab/revoked member cannot strand an already verified purchase.
+  const recoveryTopup=randomUUID(),recoveryProof=randomUUID();
+  await db`INSERT INTO briofold_ai_topups(id,workspace_id,actor_id,idempotency_key,amount_minor,receiving_workspace_id)
+   VALUES(${recoveryTopup},${workspace},${actor},${randomUUID()},1000,${receiver})`;
+  const claimBatch=()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_projection`;return tx`SELECT briofold_ai_topup_claim_pending() AS items`;});
+  const batches=await Promise.all(Array.from({length:4},claimBatch));
+  equal(batches.flatMap(x=>x[0].items).filter(x=>x.id===recoveryTopup).length,1);
+  equal((await claimBatch())[0].items.length,0);
+  await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
+  const recover=()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_projection`;return tx`SELECT briofold_ai_topup_credit_proof(${workspace},${recoveryTopup},${recoveryProof},1000) AS result`;});
+  const recovered=await Promise.all(Array.from({length:12},recover));
+  equal(recovered.filter(x=>x[0].result.credited).length,1);equal(await balance(),[2000,0]);
+  await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT briofold_ai_topup_credit_proof(${workspace},${recoveryTopup},${recoveryProof},1000)`;}),"42501");
   console.log(`Briofold prepaid wallet PASS: ${count} actual PostgreSQL assertions; synthetic fixtures only`);
   return count;
  }finally{await db.end({timeout:3});}
