@@ -64,13 +64,10 @@ class Phase6ScreenshotTest {
   }
   rule.waitForIdle()
   val bitmap=rule.onRoot().captureToImage().asAndroidBitmap()
-  val folder=File(ctx.getExternalFilesDir(null),"phase6_screenshots").apply{mkdirs()}
   val locale=if(bn)"bn" else "en"
   val theme=if(dark)"dark" else "light"
   val filename=screen+"_"+width.toString()+"dp_"+locale+"_"+theme+".png"
-  FileOutputStream(File(folder,filename)).use { output ->
-   bitmap.compress(Bitmap.CompressFormat.PNG,100,output)
-  }
+  saveTestScreenshot(filename,bitmap,"Ekmivo-Phase6")
  }
 
  @Test fun pairingEnglishDark()=shot("pairing",false,true)

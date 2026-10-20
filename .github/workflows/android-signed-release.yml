@@ -57,15 +57,15 @@ jobs:
           script: |
             adb shell wm size 720x1440
             adb shell wm density 320
-            gradle -p apps/mobile --no-daemon --console=plain :app:connectedDebugAndroidTest -PekmivoApiBaseUrl=https://example.invalid || { mkdir -p phase7-evidence/failed; adb pull /sdcard/Android/data/com.ekmivo.mobile/files/phase7_screenshots phase7-evidence/failed/; exit 1; }
+            gradle -p apps/mobile --no-daemon --console=plain :app:connectedDebugAndroidTest -PekmivoApiBaseUrl=https://example.invalid || { mkdir -p phase7-evidence/failed; adb pull /sdcard/Pictures/Ekmivo-Phase7 phase7-evidence/failed/; exit 1; }
             mkdir -p phase7-evidence/360dp
-            adb pull /sdcard/Android/data/com.ekmivo.mobile/files/phase7_screenshots phase7-evidence/360dp/
-            adb pull /sdcard/Android/data/com.ekmivo.mobile/files/phase6_screenshots phase7-evidence/360dp/
+            adb pull /sdcard/Pictures/Ekmivo-Phase7 phase7-evidence/360dp/
+            adb pull /sdcard/Pictures/Ekmivo-Phase6 phase7-evidence/360dp/
             adb shell wm size 640x1280
             adb shell settings put system font_scale 1.3
             gradle -p apps/mobile --no-daemon --console=plain :app:connectedDebugAndroidTest -PekmivoApiBaseUrl=https://example.invalid -Pandroid.testInstrumentationRunnerArguments.class=com.ekmivo.mobile.Phase7IntegrationTest
             mkdir -p phase7-evidence/320dp-font130
-            adb pull /sdcard/Android/data/com.ekmivo.mobile/files/phase7_screenshots phase7-evidence/320dp-font130/
+            adb pull /sdcard/Pictures/Ekmivo-Phase7 phase7-evidence/320dp-font130/
       - name: Save native UI evidence and reports
         if: always()
         uses: actions/upload-artifact@v4

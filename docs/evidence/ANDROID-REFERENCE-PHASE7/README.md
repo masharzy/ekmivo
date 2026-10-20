@@ -25,3 +25,5 @@ Real Samsung screen-off/reboot/force-stop behavior, live signed SMS evidence, re
 ## First emulator run
 
 `bf0e86f`, run 39354451017: actual Android-35 execution passed 23/24 tests, including draft restore/send, profile note clear, source-failure handling and 20 current setup/SMS/settings captures. The image-catalog bitmap check used merged semantics under a clickable container, where its descendant test tags are hidden; it now inspects the unmerged tree. The bitmap/count assertion remains intact. The release job correctly stayed blocked. Final rerun and screenshot review are pending at this source checkpoint.
+
+Second emulator run `9fafbdc`, 39355263506: **24/24 native UI tests passed** at 360dp, including all image counts/modes. Evidence export then failed because AGP uninstalled the app and removed its private external-files directory. Test PNG export now uses the API-35 MediaStore shared Pictures collection, which survives uninstall, without adding any production storage permission. The 320dp/font130 pass and release signing remain gated on the final run.

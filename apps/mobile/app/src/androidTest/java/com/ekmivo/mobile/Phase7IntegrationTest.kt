@@ -54,7 +54,7 @@ class Phase7IntegrationTest {
    }
   }
  }
- private fun capture(name:String){rule.waitForIdle();val context=InstrumentationRegistry.getInstrumentation().targetContext;val folder=File(context.getExternalFilesDir(null),"phase7_screenshots").apply{mkdirs()};File(folder,"${name}_${context.resources.configuration.screenWidthDp}dp.png").outputStream().use{rule.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG,100,it)}}
+ private fun capture(name:String){rule.waitForIdle();val context=InstrumentationRegistry.getInstrumentation().targetContext;saveTestScreenshot("${name}_${context.resources.configuration.screenWidthDp}dp.png",rule.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap(),"Ekmivo-Phase7")}
  @Test fun chatDraftSurvivesStateRestorationAndSendUsesGateway(){
   val api=Fixture(thread);val restore=StateRestorationTester(rule)
   restore.setContent{CompositionLocalProvider(LocalInboxApi provides api){EkmivoTheme(false){InboxRoute(false,workspace,initialThread=thread)}}}
