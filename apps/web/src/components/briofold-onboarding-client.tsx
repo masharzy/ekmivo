@@ -3,6 +3,23 @@ import {useActionState} from "react";
 import {submitBriofoldSetup,type SetupResult} from "../actions/briofold-onboarding";
 import styles from "./briofold-onboarding.module.css";
 type Plan={id:string;name:string;description:string;kind:string;price:string};
+// Server Actions deliberately return stable, non-sensitive errors. Keep their
+// English messages as the API fallback while localizing the merchant display.
+const setupErrorBn:Record<string,string>={
+ "Business unavailable.":"ব্যবসার তথ্য পাওয়া যায়নি।",
+ "Your selected business changed. Refresh setup and try again.":"নির্বাচিত ব্যবসা বদলেছে। সেটআপ রিফ্রেশ করে আবার চেষ্টা করুন।",
+ "Invalid setup step.":"সেটআপের ধাপটি সঠিক নয়।",
+ "Check your business name and type.":"ব্যবসার নাম ও ধরন পরীক্ষা করুন।",
+ "Choose AI, Payments, or Both.":"AI, Payments অথবা দুটোই নির্বাচন করুন।",
+ "Invalid plan selection.":"নির্বাচিত প্ল্যানটি সঠিক নয়।",
+ "Store profile unavailable.":"ব্যবসার প্রোফাইল এখন পাওয়া যাচ্ছে না।",
+ "Service configuration unavailable.":"সেবার সেটিংস এখন পাওয়া যাচ্ছে না।",
+ "Business services changed. Refresh setup.":"ব্যবসার সেবা বদলেছে। সেটআপ রিফ্রেশ করুন।",
+ "Choose an available plan.":"তালিকা থেকে একটি উপলব্ধ প্ল্যান নির্বাচন করুন।",
+ "Owner access required.":"শুধুমাত্র বর্তমান মালিক সেটআপ পরিবর্তন করতে পারবেন।",
+ "This setup changed. Refresh and try again.":"সেটআপের অবস্থা বদলেছে। রিফ্রেশ করে আবার চেষ্টা করুন।",
+ "Could not save setup. Check the details and retry.":"সেটআপ সংরক্ষণ করা যায়নি। তথ্য পরীক্ষা করে আবার চেষ্টা করুন।",
+};
 const initial:SetupResult={status:"idle",message:""};
 export function BriofoldOnboardingClient({locale,step,businessId,businessName,mode,plans}:{
  businessId:string;locale:"bn"|"en";step:"business"|"services"|"billing";businessName:string;
@@ -58,7 +75,7 @@ export function BriofoldOnboardingClient({locale,step,businessId,businessName,mo
      </fieldset>}
      {mode!=="commerce"&&<div className={styles.notice}>{t("AI uses separate prepaid credits based on actual metered usage. There is no unlimited AI plan.","AI-তে বাস্তব ব্যবহার অনুযায়ী prepaid credits কাটবে। Unlimited AI প্ল্যান নেই।")}</div>}
     </>}
-    {result.status==="error"&&<p role="alert" className={styles.error}>{result.message}</p>}
+    {result.status==="error"&&<p role="alert" className={styles.error}>{bn?(setupErrorBn[result.message]??result.message):result.message}</p>}
     <button className={styles.submit} type="submit" disabled={pending||step==="billing"&&mode!=="ai"&&plans.length===0}>{pending?t("Saving…","সংরক্ষণ হচ্ছে…"):step==="billing"?t("Finish setup","সেটআপ শেষ করুন"):t("Continue","পরবর্তী ধাপ")}</button>
    </form>
   </section>
