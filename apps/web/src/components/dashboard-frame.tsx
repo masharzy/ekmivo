@@ -411,7 +411,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    {service==="payments"&&paymentContext&&<PaymentRecordSearch planFeatures={planFeatures} key={workspace.id+environment} locale={locale} workspaceId={workspace.id} environment={environment} query={globalQuery} open={searchOpen} onNavigate={openPaymentSearchResult}/>}
    {service!=="payments"&&<p className="ds-search-hint">{bn?"শুধু অনুমোদিত পৃষ্ঠা ও ব্যবসা দেখানো হচ্ছে।":"Only authorized pages and businesses appear."}</p>}
   </dialog>
-  <dialog ref={draftDialog} className="ds-draft-dialog" aria-label={bn?"সংরক্ষণ না করা পরিবর্তন":"Unsaved changes"} onCancel={()=>{setBlockedRoute(null);setDraftError("");}}>
+  <dialog ref={draftDialog} className="ds-draft-dialog" aria-label={bn?"সংরক্ষণ না করা পরিবর্তন":"Unsaved changes"} onCancel={event=>{if(draftSaving){event.preventDefault();return;}setBlockedRoute(null);setDraftError("");}}>
    <h2>{bn?"পরিবর্তন সংরক্ষণ করা হয়নি":"You have unsaved changes"}</h2>
    <p>{bn?"ব্যবসা, সেবা বা পরিবেশ পরিবর্তন করলে এই খসড়া হারাতে পারেন। কী করতে চান?":"Changing the business, product or environment may lose your draft. Choose an action."}</p>
    {draftError&&<p className="ds-draft-error" role="alert">{draftError}</p>}
