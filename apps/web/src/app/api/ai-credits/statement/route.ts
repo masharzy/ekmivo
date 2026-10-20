@@ -22,12 +22,12 @@ export async function GET(request:Request){
   const db=database();
   // Protect every page with *current* membership and billing capability.
   const [access]=await db`
-   SELECT m.role,pg13_capability_override(${workspace.id}::uuid,${user.id}::uuid,'workspace:settings') AS override
+   SELECT m.role,pg13_capability_override(${workspace.id}::uuid,${user.id}::uuid,'workspace:settings') AS capability_allowed
    FROM workspace_members m JOIN workspace_product_access p
     ON p.workspace_id=m.workspace_id AND p.product='ai' AND p.enabled=true
    WHERE m.workspace_id=${workspace.id}::uuid AND m.user_id=${user.id}::uuid
     AND m.role IN ('owner','admin') LIMIT 1`;
-  if(!access||access.override===false)return forbidden(403,"ACCESS_DENIED");
+  if(!access||access.capability_allowed===false)return forbidden(403,"ACCESS_DENIED");
   const [installed]=await db`SELECT to_regclass('public.briofold_ai_credit_journal') AS rel`;
   if(!installed?.rel)return forbidden(503,"AI_CREDITS_UNAVAILABLE");
   const rows=cursor
