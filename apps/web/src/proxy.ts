@@ -13,7 +13,8 @@ export function proxy(request:NextRequest){
  const locale=preference==="en"||preference==="bn"?preference:(legacy?.[1]==="en"?"en":"bn");
  // The internally rewritten /<locale>/... path can traverse this proxy again.
  // Redirecting it to the original unprefixed URL loops forever (307 to self).
- // Accept legacy /en and /bn URLs as-is; our generated links stay locale neutral.
+ // next.config.ts redirects browser requests for /en or /bn first.
+ // This path is still required for internal Next.js rewrites to [locale].
  if(legacy){
   const response=NextResponse.next();
   if(preference!=="en"&&preference!=="bn")
