@@ -9,6 +9,7 @@ import {WorkspaceInbox} from "./workspace-inbox";
 import {WorkspaceChannels} from "./workspace-channels";
 import {UnifiedSettingsIndex} from "./unified-settings-index";
 import {UnifiedSectionTabs} from "./unified-section-tabs";
+import {onboardingState} from "../lib/server/briofold-onboarding";
 
 export const unifiedDynamic="force-dynamic";
 
@@ -21,6 +22,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
  // No client-provided workspace ID, query, locale or cookie grants financial access.
  const workspace=await preferredWorkspaceFor(user.id);
  if(!workspace||workspace.mode==="off")redirect("/workspaces");
+ const setup=await onboardingState(workspace,user.id);
+ if(setup&&setup!=="complete")redirect("/setup");
  const destination=unifiedDestination(workspace.mode,root,view);
  if(!destination)notFound();
  const {section,service,kind}=destination;

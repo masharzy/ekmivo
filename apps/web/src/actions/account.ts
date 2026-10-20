@@ -45,6 +45,11 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
    const workspaceId=String(spaces[0].id);
    await sql`INSERT INTO workspace_members(workspace_id,user_id,role)
     VALUES(${workspaceId}::uuid,${userId}::uuid,'owner')`;
+   // Only registrations AFTER the additive migration enter the new onboarding.
+   // Existing merchant accounts are never backfilled or unexpectedly blocked.
+   const [feature]=await sql`SELECT to_regclass('public.briofold_business_onboarding') AS ready`;
+   if(feature?.ready)await sql`INSERT INTO briofold_business_onboarding(workspace_id,owner_id)
+    VALUES(${workspaceId}::uuid,${userId}::uuid)`;
    return {userId,workspaceId};
   });
   if(!account)return fail(t.duplicate,{email:t.duplicate});
