@@ -20,7 +20,8 @@ function render(mode,locale,unavailable){
 for(const locale of ["en","bn"])for(const mode of ["commerce","both"])test("unavailable Gateway catalogue explains retry while preserving setup: "+mode+" "+locale,()=>{
  const nodes=render(mode,locale,true);
  assert.ok(nodes.some(n=>n.props.role==="alert"));
- assert.ok(nodes.some(n=>n.type==="a"&&n.props.href==="/setup"));
+ const retry=nodes.find(n=>n.type==="button"&&n.props.type==="button");
+ assert.ok(retry&&typeof retry.props.onClick==="function");
  assert.equal(nodes.find(n=>n.type==="button"&&n.props.type==="submit").props.disabled,true);
 });
 test("AI-only can complete without Gateway catalogue or subscription",()=>{
