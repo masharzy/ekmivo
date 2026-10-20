@@ -55,6 +55,9 @@ jobs:
       - name: Briofold Phase 4 and 5 onboarding and prepaid safety contract
         working-directory: apps/web
         run: node --test scripts/briofold-onboarding-contract.test.mjs scripts/briofold-onboarding-actions.test.mjs scripts/briofold-ai-tariff.test.mjs scripts/briofold-topup-proxy.test.mjs
+      - name: Briofold full AI wallet statement and low balance contract
+        working-directory: apps/web
+        run: node --test scripts/briofold-ai-statement.test.mjs
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json

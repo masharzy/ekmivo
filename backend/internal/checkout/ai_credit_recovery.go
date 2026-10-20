@@ -13,11 +13,11 @@ type aiTopupQueryer interface {
 
 // No user session is required for recovery of an already accepted purchase.
 // Neither a checkout redirect nor a control-database status is payment proof.
-func reconcileAITopups(ctx context.Context, control, financial aiTopupQueryer, _ []byte, realm string, enabled bool) error {
+func reconcileAITopups(ctx context.Context, control, financial aiTopupQueryer, key []byte, realm string, enabled bool) error {
 	if !enabled || realm != "live" {
 		return nil
 	}
-	if control == nil || financial == nil {
+	if control == nil || financial == nil || len(key) < 32 {
 		return errors.New("AI top-up recovery unavailable")
 	}
 	var raw []byte
@@ -29,24 +29,22 @@ func reconcileAITopups(ctx context.Context, control, financial aiTopupQueryer, _
 		Workspace string `json:"workspace_id"`
 		Receiver  string `json:"receiving_workspace_id"`
 		Amount    int64  `json:"amount_minor"`
-		ProofDigest string `json:"checkout_token_digest"`
 	}
 	if len(raw) == 0 || string(raw) == "null" || json.Unmarshal(raw, &pending) != nil || len(pending) > 50 {
 		return errors.New("AI top-up recovery queue invalid")
 	}
+	service := &Service{TokenKey: key}
 	var failed error
 	for _, purchase := range pending {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if !uuidPattern.MatchString(purchase.ID) || !uuidPattern.MatchString(purchase.Workspace) || !uuidPattern.MatchString(purchase.Receiver) || purchase.Workspace == purchase.Receiver || purchase.Amount < 1000 || purchase.Amount > 10000000 || !validAICreditProofDigest(purchase.ProofDigest) {
+		if !uuidPattern.MatchString(purchase.ID) || !uuidPattern.MatchString(purchase.Workspace) || !uuidPattern.MatchString(purchase.Receiver) || purchase.Workspace == purchase.Receiver || purchase.Amount < 1000 || purchase.Amount > 10000000 {
 			failed = errors.New("AI top-up recovery scope invalid")
 			continue
 		}
 		var rawProof []byte
-		// Use the immutable digest persisted at checkout issuance, not a token
-		// derived from today's signing key (which may have been rotated).
-		token := purchase.ProofDigest
+		token := digest(service.token(purchase.Receiver, "live", "ai-credit:"+purchase.ID))
 		if err := financial.QueryRow(ctx, "SELECT pg13_platform_payment($1)", token).Scan(&rawProof); err != nil {
 			failed = errors.New("AI top-up recovery proof unavailable")
 			continue

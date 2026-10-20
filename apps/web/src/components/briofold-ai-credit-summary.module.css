@@ -4,3 +4,5 @@
 .section p.note{padding:11px;border-radius:7px;background:var(--color-hover);font-size:12px}
 .section summary{cursor:pointer;font-size:13px;font-weight:600}.section ul{padding:0;list-style:none;display:grid;gap:8px}.section li{display:flex;justify-content:space-between;gap:8px;font-size:12px}
 @media(max-width:500px){.section{padding:15px}.section dl{grid-template-columns:1fr}}
+
+.section p.warning{padding:12px 14px;border:1px solid var(--color-border);background:var(--color-hover);border-radius:8px;color:var(--color-text);font-weight:500}

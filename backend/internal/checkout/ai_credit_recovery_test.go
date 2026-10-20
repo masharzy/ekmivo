@@ -33,13 +33,12 @@ const recoveryWorkspace = "10000000-0000-4000-8000-000000000001"
 const recoveryReceiver = "10000000-0000-4000-8000-000000000002"
 const recoveryTopup = "10000000-0000-4000-8000-000000000003"
 const recoveryPayment = "10000000-0000-4000-8000-000000000004"
-const recoveryDigest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 func recoveryQueue() []byte {
-	return []byte(`[{"id":"` + recoveryTopup + `","workspace_id":"` + recoveryWorkspace + `","receiving_workspace_id":"` + recoveryReceiver + `","amount_minor":1000,"checkout_token_digest":"` + recoveryDigest + `"}]`)
+	return []byte(`[{"id":"` + recoveryTopup + `","workspace_id":"` + recoveryWorkspace + `","receiving_workspace_id":"` + recoveryReceiver + `","amount_minor":1000}]`)
 }
 func TestAITopupRecoveryOnlyCreditsAuthoritativeExactProof(t *testing.T) {
-	key := []byte("rotated-test-key-with-no-original-secrets")
+	key := []byte(strings.Repeat("k", 32))
 	valid := billingPaymentProof{ID: recoveryPayment, Workspace: recoveryReceiver, Amount: 1000, At: time.Now().UTC()}
 	for _, tc := range []struct {
 		name                  string
@@ -66,7 +65,7 @@ func TestAITopupRecoveryOnlyCreditsAuthoritativeExactProof(t *testing.T) {
 				return topupTestRow{body: []byte(`{"credited":true,"balance_minor":1000}`)}
 			}}
 			finance := topupTestDB{query: func(q string, args ...any) pgx.Row {
-				expected := recoveryDigest
+				expected := digest((&Service{TokenKey: key}).token(recoveryReceiver, "live", "ai-credit:"+recoveryTopup))
 				if q != "SELECT pg13_platform_payment($1)" || len(args) != 1 || args[0] != expected {
 					t.Fatal("wrong authoritative proof lookup")
 				}
@@ -96,10 +95,10 @@ func TestAITopupRecoveryNeverRunsInSandboxOrWhenDisabled(t *testing.T) {
 }
 
 func TestAITopupRecoveryRejectsBadQueueAndContinuesAfterProofFailure(t *testing.T) {
-	key := []byte("rotated-test-key-with-no-original-secrets")
+	key := []byte(strings.Repeat("k", 32))
 	credits := 0
 	lookups := 0
-	queue := strings.TrimSuffix(string(recoveryQueue()), "]") + `,{"id":"10000000-0000-4000-8000-000000000005","workspace_id":"` + recoveryWorkspace + `","receiving_workspace_id":"` + recoveryReceiver + `","amount_minor":1000,"checkout_token_digest":"` + recoveryDigest + `"}]`
+	queue := strings.TrimSuffix(string(recoveryQueue()), "]") + `,{"id":"10000000-0000-4000-8000-000000000005","workspace_id":"` + recoveryWorkspace + `","receiving_workspace_id":"` + recoveryReceiver + `","amount_minor":1000}]`
 	control := topupTestDB{query: func(q string, args ...any) pgx.Row {
 		if strings.Contains(q, "claim_pending") {
 			return topupTestRow{body: []byte(queue)}
