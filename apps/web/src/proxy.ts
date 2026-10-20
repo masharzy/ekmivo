@@ -11,10 +11,18 @@ export function proxy(request:NextRequest){
  const legacy=path.match(/^\/(bn|en)(?=\/|$)/);
  const preference=request.cookies.get("ekmivo-locale")?.value;
  const locale=preference==="en"||preference==="bn"?preference:(legacy?.[1]==="en"?"en":"bn");
- // The internally rewritten /<locale>/... path can traverse this proxy again.
- // Redirecting it to the original unprefixed URL loops forever (307 to self).
- // Accept legacy /en and /bn URLs as-is; our generated links stay locale neutral.
+ // Internal App Router rewrites can visit /<locale>/... again. A request
+ // header added only to our own rewrite distinguishes that internal traversal
+ // from a browser's legacy /bn or /en URL, preventing redirect loops.
+ const internalRewrite=request.headers.get("x-ekmivo-internal-rewrite")==="1";
  if(legacy){
+  if(!internalRewrite){
+   const destination=request.nextUrl.clone();
+   destination.pathname=path.slice(legacy[0].length)||"/";
+   const response=NextResponse.redirect(destination,307);
+   response.cookies.set("ekmivo-locale",legacy[1],{path:"/",maxAge:31536000,sameSite:"lax"});
+   return response;
+  }
   const response=NextResponse.next();
   if(preference!=="en"&&preference!=="bn")
    response.cookies.set("ekmivo-locale",locale,{path:"/",maxAge:31536000,sameSite:"lax"});
@@ -25,10 +33,12 @@ export function proxy(request:NextRequest){
  if(path==="/")target.pathname="/"+locale;
  const headers=new Headers(request.headers);
  // Public headers are never trusted to select the UI shell.
+ headers.delete("x-ekmivo-internal-rewrite");
+ headers.set("x-ekmivo-internal-rewrite","1");
  headers.delete("x-ekmivo-application");
  headers.delete("x-ekmivo-auth-page");
  headers.set("x-ekmivo-locale",locale);
- if(/^\/(?:workspaces|w|account|admin)(?:\/|$)/.test(path))headers.set("x-ekmivo-application","1");
+ if(/^\/(?:dashboard|workspaces|w|account|admin)(?:\/|$)/.test(path))headers.set("x-ekmivo-application","1");
  if(/^\/(?:login|register|forgot-password|verify-email)(?:\/|$)/.test(path))headers.set("x-ekmivo-auth-page","1");
  return NextResponse.rewrite(target,{request:{headers}});
 }

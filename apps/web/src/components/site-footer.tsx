@@ -7,7 +7,7 @@ export function SiteFooter({locale}:{locale:Locale}){
  const pathname=usePathname();
  const segment=useSelectedLayoutSegment();
  const path=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
- if(["pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:workspaces|w|account|admin|login|register|forgot-password|verify-email|pay|checkout|receipt|invoice)(?:\/|$)/.test(path))return null;
+ if(["dashboard","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:dashboard|workspaces|w|account|admin|login|register|forgot-password|verify-email|pay|checkout|receipt|invoice)(?:\/|$)/.test(path))return null;
  const t=siteCopy[locale];
  return <footer className="site-footer ek-public-footer">
   <div className="footer-inner">

@@ -53,7 +53,13 @@ test("provider colors and no marketing header in standalone routes",()=>{
  assert.match(css,/--provider-accent:#81218a/);
  // Public /pay and /checkout are locale-rewritten without application chrome.
  assert.match(proxy,/target\.pathname="\/"\+locale\+path/);
- assert.match(proxy,/if\(\/\^\\\/\(\?:workspaces\|w\|account\|admin\)/);
+ // A public prefixed URL must redirect, but the internal locale rewrite must
+ // bypass that redirect to avoid a /dashboard -> /bn/dashboard -> /dashboard loop.
+ assert.match(proxy,/NextResponse.redirect\(destination,307\)/);
+ assert.match(proxy,/headers.set\("x-ekmivo-internal-rewrite","1"\)/);
+ const nextConfig=source("apps/web/next.config.ts");
+ assert.doesNotMatch(nextConfig,/source: "\/:locale\(bn\|en\)/);
+ assert.match(proxy,/if\(\/\^\\\/\(\?:dashboard\|workspaces\|w\|account\|admin\)/);
  const checkout=source("apps/web/src/components/checkout-experience.tsx");
  const document=source("apps/web/src/components/public-document.tsx");
  assert.match(checkout,/pg05-standalone/);

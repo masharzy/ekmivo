@@ -67,10 +67,10 @@ export const currentUser=cache(async function currentUser():Promise<User|null> {
  const row=rows[0];
  return {id:String(row.id),email:String(row.email),name:String(row.display_name),verified:!!row.email_verified_at};
 });
-export const requireUser=cache(async function requireUser(locale:"bn"|"en"):Promise<User> {
+export const requireUser=cache(async function requireUser(_locale:"bn"|"en"):Promise<User> {
  const u=await currentUser();
- if(!u)redirect(`/${locale}/login`);
- if(!u.verified && await verificationEnabled())redirect(`/${locale}/verify-email`);
+ if(!u)redirect("/login");
+ if(!u.verified && await verificationEnabled())redirect("/verify-email");
  return u;
 });
 export async function workspacesFor(userId:string):Promise<Workspace[]>{
@@ -101,7 +101,7 @@ export async function preferredWorkspaceFor(userId:string){
 }
 export const requireWorkspace=cache(async function requireWorkspace(locale:"bn"|"en",id:string){
  const user=await requireUser(locale);
- if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))redirect(`/${locale}/workspaces`);
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))redirect("/workspaces");
  const rows=await database()`
  SELECT w.id,w.name,CASE WHEN COALESCE(ai.enabled,false) AND COALESCE(pay.enabled,false) THEN 'both'
  WHEN COALESCE(ai.enabled,false) THEN 'ai'
@@ -110,7 +110,7 @@ export const requireWorkspace=cache(async function requireWorkspace(locale:"bn"|
  LEFT JOIN workspace_product_access ai ON ai.workspace_id=w.id AND ai.product='ai'
  LEFT JOIN workspace_product_access pay ON pay.workspace_id=w.id AND pay.product='payments'
  WHERE m.user_id=${user.id} AND w.id=${id}::uuid LIMIT 1`;
- if(!rows.length)redirect(`/${locale}/workspaces`);
+ if(!rows.length)redirect("/workspaces");
  const w=rows[0];
  return {user,workspace:{id:String(w.id),name:String(w.name),mode:w.service_mode as Workspace["mode"],role:w.role as Workspace["role"]}};
 });
