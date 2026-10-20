@@ -45,14 +45,24 @@ export async function runPG09Browser({origin,browser,tenant,sessions}){
 
    await p.getByRole("button",{name:"Filters",exact:true}).click();
    await p.locator("#payment-filters").getByLabel("Status").selectOption("verified");
+   const filteredResponse=p.waitForResponse(response=>{
+    const url=new URL(response.url());
+    return url.pathname.endsWith("/operations/payments")&&url.searchParams.get("status")==="verified"&&response.request().method()==="GET";
+   });
    await p.locator("#payment-filters").getByRole("button",{name:"Apply",exact:true}).click();
+   assert.equal((await filteredResponse).status(),200);
    await p.getByText("PG09-FAKE-UI-REFERENCE").first().waitFor();
    assert.ok(calls.some(x=>x.resource==="payments"&&x.status==="verified"),
     "server status filter was not forwarded to scoped payment operations API");
    pass("current transaction filter is passed to Go API, not filtered locally");
 
    await p.getByLabel("Search records").fill("PG09-FAKE");
+   const searchResponse=p.waitForResponse(response=>{
+    const url=new URL(response.url());
+    return url.pathname.endsWith("/operations/payments")&&url.searchParams.get("q")==="PG09-FAKE"&&response.request().method()==="GET";
+   });
    await p.getByRole("button",{name:"Search",exact:true}).click();
+   assert.equal((await searchResponse).status(),200);
    await p.getByText("PG09-FAKE-UI-REFERENCE").first().waitFor();
    assert.ok(calls.some(x=>x.resource==="payments"&&x.q==="PG09-FAKE"),
     "server-side search was not passed through");
