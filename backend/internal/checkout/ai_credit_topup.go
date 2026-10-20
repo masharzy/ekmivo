@@ -110,10 +110,27 @@ func (s *Service) HandleAICreditTopup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cap := s.token(platform.String, "live", "ai-credit:"+order.ID)
+		// Store the immutable financial lookup BEFORE intent creation. Even if
+		// a process crashes after the financial write, background recovery can
+		// look up the original intent after TokenKey rotation. This digest is
+		// only a locator; actual credited money requires live financial proof.
+		proofDigest := digest(cap)
+		var boundDigest string
+		e = s.Auth.DB.QueryRowContext(r.Context(),
+			"SELECT briofold_ai_topup_bind_proof($1::uuid,$2::uuid,$3::uuid,$4)",
+			ws, actor.UserID, order.ID, proofDigest).Scan(&boundDigest)
+		if e != nil {
+			billingMapped(w, e)
+			return
+		}
+		if boundDigest != proofDigest {
+			fail(w, 409, "AI_TOPUP_LOCATOR_CONFLICT")
+			return
+		}
 		e = s.creationScoped(r.Context(), platform.String, "live", func(tx pgx.Tx) error {
 			var result []byte
 			return tx.QueryRow(r.Context(), "SELECT pg10_intent($1::uuid,'live',$2,$3,60,$4,$5,$6)",
-				platform.String, "AI-"+order.ID, order.Amount, "ai-credit:"+order.ID, digest(cap), digest(order.ID)).Scan(&result)
+				platform.String, "AI-"+order.ID, order.Amount, "ai-credit:"+order.ID, proofDigest, digest(order.ID)).Scan(&result)
 		})
 		if e != nil {
 			billingMapped(w, e)
@@ -128,21 +145,24 @@ func (s *Service) HandleAICreditTopup(w http.ResponseWriter, r *http.Request) {
 			fail(w, 404, "NOT_FOUND")
 			return
 		}
-		var platform string
+		var platform, proofDigest string
 		var amount int64
-		e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT receiving_workspace_id,amount_minor FROM briofold_ai_topup_context($1::uuid,$2::uuid,$3::uuid)", ws, actor.UserID, id).Scan(&platform, &amount)
+		e = s.Auth.DB.QueryRowContext(r.Context(),
+			"SELECT receiving_workspace_id,amount_minor,checkout_token_digest FROM briofold_ai_topup_payment_context($1::uuid,$2::uuid,$3::uuid)",
+			ws, actor.UserID, id).Scan(&platform, &amount, &proofDigest)
 		if e == sql.ErrNoRows {
 			fail(w, 404, "NOT_FOUND")
 			return
 		}
-		if e != nil || !uuidPattern.MatchString(platform) || s.Pipeline.Live == nil {
+		if e != nil || !uuidPattern.MatchString(platform) || !validAICreditProofDigest(proofDigest) || s.Pipeline.Live == nil {
 			fail(w, 503, "AI_CREDITS_UNAVAILABLE")
 			return
 		}
-		cap := s.token(platform, "live", "ai-credit:"+id)
+		// Never regenerate the lookup from the current signing key: a pending
+		// checkout may have been issued before a key rotation.
 		var proofRaw []byte
 		var checkoutState sql.NullString
-		e = s.Pipeline.Live.QueryRow(r.Context(), "SELECT pg13_platform_payment($1),pg05_checkout_view($1)->>'state'", digest(cap)).Scan(&proofRaw, &checkoutState)
+		e = s.Pipeline.Live.QueryRow(r.Context(), "SELECT pg13_platform_payment($1),pg05_checkout_view($1)->>'state'", proofDigest).Scan(&proofRaw, &checkoutState)
 		proof, verified, proofErr := decodeBillingPaymentProof(proofRaw, platform, amount)
 		if e != nil || proofErr != nil {
 			fail(w, 503, "AI_TOPUP_VERIFICATION_UNAVAILABLE")
@@ -164,4 +184,14 @@ func (s *Service) HandleAICreditTopup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fail(w, 404, "NOT_FOUND")
+}
+
+// A proof digest is a 64-character lowercase SHA-256 hex locator, not proof
+// that a payment occurred. All payment state comes from the financial realm.
+func validAICreditProofDigest(s string) bool {
+	if len(s) != 64 { return false }
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') { return false }
+	}
+	return true
 }
