@@ -23,6 +23,7 @@ for(const scenario of ["success","legacy-success","duplicate","workspace-failure
   const result=await callback(sql);writes.push(...staged);return result;
  }};
  const mocks={
+  "next/cache":{revalidatePath:()=>{}},
   "next/navigation":{redirect:path=>{throw Object.assign(Error("redirect"),{digest:"NEXT_REDIRECT",path})}},
   "next/headers":{cookies:async()=>({})},
   "../lib/server/email":{verificationEnabled:async()=>false,mailReady:()=>true},
