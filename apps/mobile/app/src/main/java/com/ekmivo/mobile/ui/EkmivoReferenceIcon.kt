@@ -48,7 +48,9 @@ enum class EkmivoGlyph(@DrawableRes val drawable: Int) {
     BAG(R.drawable.reference_bag),
     CLK(R.drawable.reference_clk),
     TRASH(R.drawable.reference_trash),
-    DOWN(R.drawable.reference_down)
+    DOWN(R.drawable.reference_down),
+    LOCK_OPEN(R.drawable.reference_lock_open),
+    CHEVRON_UP(R.drawable.reference_chevron_up)
 }
 
 @Composable
