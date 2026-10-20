@@ -10,7 +10,7 @@ export function BriofoldAiTopupControls({workspaceId,locale,enabled,topups}:{
  const router=useRouter();
  const [amount,setAmount]=useState(100),[pending,startTransition]=useTransition(),[error,setError]=useState("");
  const key=useRef("");
- const money=(minor:number)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(minor/100);
+ const money=(minor:number)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(minor/100);
  async function purchase(){
   setError("");
   if(!enabled){setError(t("AI credit purchases are not available yet.","AI ক্রেডিট কেনা এখনো চালু হয়নি।"));return}
@@ -23,7 +23,7 @@ export function BriofoldAiTopupControls({workspaceId,locale,enabled,topups}:{
     if(!r.ok)throw Error(data?.error?.code||data?.code||String(r.status));
     if(!/^[a-zA-Z0-9_-]{10,256}$/.test(String(data.checkout_token)))throw Error("CHECKOUT_TOKEN_MISSING");
     key.current="";
-    window.location.assign("/pay/"+encodeURIComponent(data.checkout_token));
+    router.push("/pay/"+encodeURIComponent(data.checkout_token));
    }catch(e){setError(t("Could not start your top-up. Retry safely.","ক্রেডিট কেনা শুরু হয়নি। একই অনুরোধ আবার চেষ্টা করুন।")+" "+(e instanceof Error?e.message:""))}
   });
  }
@@ -42,7 +42,7 @@ export function BriofoldAiTopupControls({workspaceId,locale,enabled,topups}:{
  return <div className={styles.root}>
   <h3>{t("Add AI credits","AI ক্রেডিট যোগ করুন")}</h3>
   {enabled?<div className={styles.buy}>
-   <label>{t("Amount in BDT","টাকা")}<input type="number" min="10" max="100000" step="1" value={amount} onChange={e=>setAmount(Number(e.target.value))}/></label>
+   <label>{t("Amount in BDT","টাকা")}<input type="number" min="10" max="100000" step="1" value={amount} disabled={pending} onChange={e=>{key.current="";setAmount(Number(e.target.value));setError("")}}/></label>
    <button type="button" disabled={pending} onClick={()=>void purchase()}>{t("Continue to payment","পেমেন্টে যান")}</button>
   </div>:<p>{t("AI top-ups are disabled until the credit purchase and metering checks have been approved.","ক্রেডিট কেনা ও AI usage-এর verification শেষ না হওয়া পর্যন্ত top-up বন্ধ থাকবে।")}</p>}
   {topups.length>0&&<section><h3>{t("Your top-ups","ক্রেডিট যোগ করার ইতিহাস")}</h3><div className={styles.history}>

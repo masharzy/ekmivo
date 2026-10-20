@@ -6,7 +6,7 @@ export async function BriofoldAiCreditSummary({workspaceId,actorId,locale}:{
 }){
  const wallet=await readAiWallet(workspaceId,actorId),bn=locale==="bn";
  const t=(en:string,be:string)=>bn?be:en;
- const money=(n:number)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:2}).format(n/100);
+ const money=(n:number)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(n/100);
  return <section className={styles.section} aria-labelledby="briofold-ai-credit-title">
   <header><h2 id="briofold-ai-credit-title">{t("AI prepaid credits","AI প্রিপেইড ক্রেডিট")}</h2>
    <p>{t("Metered AI usage and credits are separate from your Payment Gateway subscription.","AI ব্যবহার ও ক্রেডিট Payment Gateway সাবস্ক্রিপশন থেকে আলাদা।")}</p></header>
