@@ -316,7 +316,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
         Text(clock(m.optString("created_at"),bn),style=EkmivoType.messageTime,color=ink.copy(alpha=.65f))
         if(own) {
          val status=if(mediaGroup.isEmpty())m.optString("state")else listOf("uncertain","failed","queued","sending","sent","delivered","seen").firstOrNull{state->mediaGroup.any{it.optString("state")==state}}?:m.optString("state")
-         if(status in listOf("failed","uncertain"))Text("!",style=EkmivoType.messageTime,color=p.danger)
+         if(status in listOf("failed","uncertain"))EkmivoReferenceIcon(EkmivoGlyph.X,tint=p.danger,size=13.dp,description=if(bn)"আবার পাঠান" else "Retry message")
          else {
           val tint=if(status=="seen")p.seen else ink.copy(alpha=.65f)
           EkmivoReferenceIcon(if(status in listOf("queued","sending"))EkmivoGlyph.CLK else EkmivoGlyph.CHK,tint=tint,size=13.dp)
