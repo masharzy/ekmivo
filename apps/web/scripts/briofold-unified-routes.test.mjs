@@ -13,7 +13,7 @@ test("navigation has exactly nine clean, prefixed-free merchant entries",()=>{
  const src=source("lib/unified-navigation.ts");
  for(const path of ["/dashboard","/inbox","/orders","/payments","/sms-data","/invoices","/customers","/reports","/settings"])
   assert.ok(src.includes(`href:"${path}"`),`Missing nav href ${path}`);
- assert.equal((src.match(/href:"\/(dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings)"/g)||[]).length,7);
+ assert.equal((src.match(/href:"\/(dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings)"/g)||[]).length,9);
  assert.doesNotMatch(src,/href:"\/(?:bn|en|w)\//);
  assert.match(src,/view\.length>1/);
  assert.match(src,/mode==="off"/);
@@ -46,4 +46,18 @@ test("settings uses opt-in CSS module and preserves legacy payment screens",()=>
  assert.match(frame,/unified\?"/);
  assert.match(frame,/data-service=\{unified\?"payments":service\}/);
  assert.match(frame,/!unified&&service==="payments"/);
+});
+
+test("simplified Payments has no request or reconciliation user-facing tab",()=>{
+ const nav=source("lib/unified-navigation.ts");
+ const tabs=source("components/unified-section-tabs.tsx");
+ const links=source("components/payment-documents.tsx");
+ assert.doesNotMatch(nav,/requests:\{section:"requests"/);
+ assert.doesNotMatch(nav,/reconciliation:\{section:"reconciliation"/);
+ const paymentTabs=tabs.split(" payments:[")[1]?.split(" customers:[")[0]??"";
+ assert.ok(paymentTabs.includes("/payments/links"));
+ assert.doesNotMatch(paymentTabs,/\/payments\/(?:requests|incoming|invoices|reconciliation)/);
+ assert.doesNotMatch(links,/className="tabs"><button className="on">\{t\("Payment links"/);
+ assert.match(nav,/href:"\/sms-data"/);
+ assert.match(nav,/href:"\/invoices"/);
 });
