@@ -1,6 +1,7 @@
 import {spawn} from "node:child_process";
 import {chromium} from "@playwright/test";
 import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
+import {runBriofoldOnboardingBrowser} from "./briofold-onboarding-browser.mjs";
 
 // Called after all control/financial extensions, not the earlier PG05 schema.
 export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,apiEnv}){
@@ -25,6 +26,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
   await runBriofoldSettingsBrowser({origin,browser,control,sessions});
+  await runBriofoldOnboardingBrowser({origin,browser,control,sessions});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }
