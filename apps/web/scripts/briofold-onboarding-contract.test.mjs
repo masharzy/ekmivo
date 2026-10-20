@@ -19,7 +19,7 @@ test("AI-only and Both selection preserve the chosen value",()=>{
  const submit=read("actions/briofold-onboarding.ts");
  assert.match(submit,/publicPaymentPlans\(\)/);
  assert.match(submit,/selected\.terms\.kind==="free"/);
- assert.match(submit,/step="billing"/);
+ assert.match(submit,/step==="billing"/);
 });
 test("Prepaid AI must fail closed by default and use server verified money",()=>{
  const summary=read("components/briofold-ai-credit-summary.tsx");
