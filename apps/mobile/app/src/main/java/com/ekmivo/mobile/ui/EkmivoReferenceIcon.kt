@@ -50,6 +50,7 @@ enum class EkmivoGlyph(@DrawableRes val drawable: Int) {
     TRASH(R.drawable.reference_trash),
     DOWN(R.drawable.reference_down),
     LOCK_OPEN(R.drawable.reference_lock_open),
+    LOCK(R.drawable.reference_lock),
     CHEVRON_UP(R.drawable.reference_chevron_up)
 }
 
