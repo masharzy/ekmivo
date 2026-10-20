@@ -36,6 +36,28 @@ test("Lossless currency arithmetic refuses imprecise or noninteger wallet amount
  assert.equal(row.available_delta_minor,-20);
  assert.equal(row.available_after_minor,1000);
 });
+test("Microsecond-precise statement cursors cannot skip same-millisecond ledger transactions",()=>{
+ const h=statementHelpers(),id="10000000-0000-4000-8000-000000000001";
+ // PostgreSQL stores 6 fractional digits; JS Date only preserves the first 3.
+ const exact="2026-10-20T10:10:10.123456Z";
+ const row=h.statementEntry({id,kind:"settle",created_at:exact,
+  available_delta_minor:"-100",reserved_delta_minor:"0",available_after_minor:"900",reserved_after_minor:"0"});
+ assert.equal(row.created_at,exact);
+ const parsed=h.parseStatementCursor(h.statementCursor(row));
+ assert.equal(parsed.createdAt,exact);
+ // A later page must include this older row, even within the same millisecond.
+ const older="2026-10-20T10:10:10.123123Z";
+ assert.ok(older<parsed.createdAt);
+ const api=src("app/api/ai-credits/statement/route.ts");
+ const server=src("lib/server/briofold-ai-wallet.ts");
+ for(const q of [api,server]){
+  assert.match(q,/to_char\(created_at AT TIME ZONE 'UTC'/);
+  assert.match(q,/HH24:MI:SS\.US"Z"'/);
+ }
+ const legacy=h.parseStatementCursor(h.statementCursor({created_at:"2026-10-20T10:10:10.123Z",id}));
+ assert.equal(legacy.createdAt,"2026-10-20T10:10:10.123Z");
+ assert.throws(()=>h.statementEntry({...row,created_at:"not-a-date"}));
+});
 test("Ledger pages are tenant, role, subscription and permission restricted",()=>{
  const api=src("app/api/ai-credits/statement/route.ts");
  assert.match(api,/currentUser\(\)/);

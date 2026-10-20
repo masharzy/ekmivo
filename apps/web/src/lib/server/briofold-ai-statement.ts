@@ -12,7 +12,12 @@ export function safeWalletMinor(value:unknown):number{
  return n;
 }
 export function statementEntry(row:Record<string,unknown>):WalletStatementEntry{
- const at=new Date(String(row.created_at)).toISOString();
+ // PostgreSQL timestamptz has microsecond precision. Never pass the ledger
+ // keyset timestamp through JS Date.toISOString() (milliseconds only):
+ // doing so can silently skip journal rows during pagination.
+ const at=String(row.created_at);
+ if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}(?:\d{3})?Z$/.test(at)||
+  !Number.isFinite(Date.parse(at)))throw new Error("AI_LEDGER_ROW_TIMESTAMP_INVALID");
  const id=String(row.id);
  if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))throw new Error("AI_LEDGER_ROW_ID_INVALID");
  return {
@@ -32,7 +37,7 @@ export function parseStatementCursor(value:string|null):{createdAt:string;id:str
  const parsed:unknown=JSON.parse(Buffer.from(value,"base64url").toString("utf8"));
  if(!Array.isArray(parsed)||parsed.length!==2||typeof parsed[0]!=="string"||typeof parsed[1]!=="string")
   throw new Error("AI_LEDGER_CURSOR_INVALID");
- if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(parsed[0])||
+ if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}(?:\d{3})?Z$/.test(parsed[0])||
   !Number.isFinite(Date.parse(parsed[0]))||
   !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(parsed[1]))
   throw new Error("AI_LEDGER_CURSOR_INVALID");

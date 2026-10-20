@@ -36,12 +36,14 @@ export async function GET(request:Request){
   if(!installed?.rel)return forbidden(503,"AI_CREDITS_UNAVAILABLE");
   const rows=cursor
    ?await db`SELECT id,kind,available_delta_minor,reserved_delta_minor,
-     available_after_minor,reserved_after_minor,created_at
+     available_after_minor,reserved_after_minor,
+     to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at
      FROM briofold_ai_credit_journal WHERE workspace_id=${workspace.id}::uuid
       AND (created_at,id)<(${cursor.createdAt}::timestamptz,${cursor.id}::uuid)
      ORDER BY created_at DESC,id DESC LIMIT 51`
    :await db`SELECT id,kind,available_delta_minor,reserved_delta_minor,
-     available_after_minor,reserved_after_minor,created_at
+     available_after_minor,reserved_after_minor,
+     to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at
      FROM briofold_ai_credit_journal WHERE workspace_id=${workspace.id}::uuid
      ORDER BY created_at DESC,id DESC LIMIT 51`;
   const entries=rows.slice(0,50).map(row=>statementEntry(row));
