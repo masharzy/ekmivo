@@ -268,8 +268,23 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
        .pointerInput(m.getString("id")){detectHorizontalDragGestures(onDragStart={dragged=0f;crossed=false;selected=null},onDragEnd={if(crossed&&m.optString("type")=="text")reply=m;dragged=0f},onDragCancel={dragged=0f},onHorizontalDrag={change,amount->change.consume();val next=(dragged+amount).coerceAtLeast(0f);val threshold=56.dp.toPx();dragged=if(next>threshold)threshold+(next-threshold)*.28f else next;if(dragged>=threshold&&!crossed){crossed=true;(app.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator)?.vibrate(android.os.VibrationEffect.createOneShot(12,android.os.VibrationEffect.DEFAULT_AMPLITUDE))}})}.padding(horizontal=12.dp,vertical=9.dp)) {
        if(own&&messages.getOrNull(index-1)?.optString("sender")!=m.optString("sender"))Text(if(m.optString("sender")=="ai")"AI" else if(bn)"আপনি" else "You",style=EkmivoType.messageSender,color=ink.copy(alpha=.7f))
        val replyID=m.optString("reply_to").takeUnless{it.isBlank()||it=="null"}
-       val quoteBody=messages.firstOrNull{it.optString("id")==replyID}?.optString("body")?:m.optString("reply_body").takeUnless{it=="null"}
-       if(replyID!=null&&quoteBody!=null)Text(quoteBody,style=EkmivoType.heroNote,color=ink.copy(alpha=.7f),maxLines=1,modifier=Modifier.clip(RoundedCornerShape(8.dp)).drawBehind{drawLine(p.success,Offset.Zero,Offset(0f,size.height),3.dp.toPx())}.clickable{quoteOriginal(replyID)}.padding(5.dp))
+       val original=messages.firstOrNull{it.optString("id")==replyID}
+       val quoteBody=when(original?.optString("type")) {
+        "audio"->if(bn)"ভয়েস মেসেজ" else "Voice message"
+        "image"->if(bn)"ছবি" else "Photo"
+        "document"->if(bn)"ডকুমেন্ট" else "Document"
+        "product"->if(bn)"পণ্য" else "Product"
+        else->original?.optString("body").orEmpty().ifBlank {
+         m.optString("reply_body").takeUnless{it.isBlank()||it=="null"}?:if(bn)"মেসেজ" else "Message"
+        }
+       }
+       if(replyID!=null)Column(Modifier.clip(RoundedCornerShape(9.dp))
+        .background(ink.copy(alpha=.075f)).drawBehind{drawLine(p.success,Offset.Zero,Offset(0f,size.height),3.dp.toPx())}
+        .clickable{quoteOriginal(replyID)}.padding(horizontal=9.dp,vertical=6.dp)) {
+        Text(when(original?.optString("sender")){"customer"->info?.optString("name").orEmpty();"ai"->"AI";"seller"->if(bn)"আপনি" else "You";else->if(bn)"রিপ্লাই" else "Reply"},
+         style=EkmivoType.messageSender,color=p.success)
+        Text(quoteBody,style=EkmivoType.heroNote,color=ink.copy(alpha=.72f),maxLines=1)
+       }
        InboxMessageContent(m,mediaGroup,thread!!,bn,ink)
        Row(Modifier.align(Alignment.End),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
         Text(clock(m.optString("created_at"),bn),style=EkmivoType.messageTime,color=ink.copy(alpha=.65f))
