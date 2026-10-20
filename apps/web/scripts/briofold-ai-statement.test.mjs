@@ -40,6 +40,8 @@ test("Ledger pages are tenant, role, subscription and permission restricted",()=
  const api=src("app/api/ai-credits/statement/route.ts");
  assert.match(api,/currentUser\(\)/);
  assert.match(api,/preferredWorkspaceFor\(user\.id\)/);
+ assert.match(api,/requestWorkspace!==workspace\.id/);
+ assert.match(api,/ACTIVE_BUSINESS_CHANGED/);
  assert.match(api,/workspace\.role!==["']owner["']/);
  assert.match(api,/workspace_product_access/);
  assert.match(api,/pg13_capability_override/);
@@ -47,7 +49,8 @@ test("Ledger pages are tenant, role, subscription and permission restricted",()=
  assert.match(api,/\(created_at,id\)<\(/);
  assert.match(api,/LIMIT 51/);
  assert.match(api,/no-store/);
- assert.doesNotMatch(api,/searchParams\.get\(["']workspace/);
+ assert.match(api,/searchParams\.get\("workspace_id"\)/);
+ assert.doesNotMatch(api,/workspace_id[\s\S]*workspaceId/);
 });
 test("Low-balance warnings depend on live configured reservation, not guessed prices",()=>{
  const server=src("lib/server/briofold-ai-wallet.ts"),ui=src("components/briofold-ai-credit-summary.tsx");
