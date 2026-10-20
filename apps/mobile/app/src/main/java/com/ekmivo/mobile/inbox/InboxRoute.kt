@@ -290,19 +290,33 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    }
    if(awayFromBottom)Box(Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=12.dp).size(40.dp).clip(CircleShape).background(p.raised).border(1.dp,p.border,CircleShape).clickable{scope.launch{scroll.animateScrollToItem((scroll.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}}.semantics{contentDescription=if(bn)"নিচে যান" else "Jump to latest"},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.DOWN,tint=p.text,size=21.dp)}
    }
-   if(reply!=null)Row(Modifier.fillMaxWidth().padding(horizontal=12.dp).background(p.surface).padding(10.dp)) {Text(reply!!.optString("body"),style=EkmivoType.heroNote,color=p.success,maxLines=1,modifier=Modifier.weight(1f));Text("×",modifier=Modifier.clickable{reply=null},color=p.secondary)}
+   if(reply!=null)Row(Modifier.fillMaxWidth().padding(start=12.dp,end=12.dp,top=6.dp)
+     .clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp,bottomStart=8.dp,bottomEnd=8.dp)).background(p.surface)
+     .border(1.dp,p.border,RoundedCornerShape(topStart=16.dp,topEnd=16.dp,bottomStart=8.dp))
+     .padding(horizontal=12.dp,vertical=9.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+     Box(Modifier.width(3.dp).height(34.dp).clip(CircleShape).background(p.success))
+     Column(Modifier.weight(1f)) {
+      Text(if(reply!!.optString("sender")=="customer")info?.optString("name").orEmpty() else if(reply!!.optString("sender")=="ai")"AI" else if(bn)"আপনি" else "You",style=EkmivoType.messageSender,color=p.success)
+      Text(reply!!.optString("body").ifBlank { when(reply!!.optString("type")){"audio"->if(bn)"ভয়েস মেসেজ" else "Voice message";"image"->if(bn)"ছবি" else "Photo";else->if(bn)"মেসেজ" else "Message"} },style=EkmivoType.heroNote,color=p.secondary,maxLines=1)
+     }
+     Box(Modifier.size(30.dp).clip(CircleShape).clickable{reply=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.X,tint=p.secondary,size=17.dp)}
+    }
    val window=info?.optBoolean("window_open")==true
    if(!window&&info!=null)Column(Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(14.dp)).background(p.surface).padding(12.dp)){Text(if(bn)"২৪ ঘণ্টা পার হয়ে গেছে" else "24 hours have passed",style=EkmivoType.shop,color=p.text);Text(if(bn)"কাস্টমার নতুন মেসেজ দিলে আবার উত্তর দেওয়া যাবে।" else "You can reply when the customer sends a new message.",style=EkmivoType.heroNote,color=p.secondary)}
-   else Row(Modifier.fillMaxWidth().topHairline(p.border).imePadding().padding(start=12.dp,end=12.dp,top=8.dp,bottom=14.dp),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-    InboxAttachments(thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),net&&!busy&&window,replyTo=reply?.optString("id"),onRecordingChange={recording=it}){reply=null;scope.launch{loadMessages(thread!!)}}
-    if(!recording)BasicTextField(input,{input=it.take(8000);pendingKey=null},enabled=net&&!busy&&window,textStyle=EkmivoType.chatMessage.copy(color=p.text),maxLines=4,modifier=Modifier.testTag("chat-input").weight(1f).heightIn(min=40.dp,max=96.dp).clip(RoundedCornerShape(20.dp)).background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp)).padding(10.dp),decorationBox={inner->if(input.isEmpty())Text(if(bn)"মেসেজ লিখুন…" else "Write a message…",style=EkmivoType.chatMessage,color=p.secondary);inner()})
-    if(!recording)Box(Modifier.size(40.dp).clip(CircleShape).background(p.text).clickable(enabled=input.isNotBlank()&&!busy&&net&&window){
-     val id=thread!!;val text=input;val quote=reply;val key=pendingKey?:UUID.randomUUID().toString().also{pendingKey=it}
-     scope.launch{busy=true;try{val body=JSONObject().put("text",text).put("idempotency_key",key);if(quote!=null)body.put("reply_to",quote.getString("id"));api.call("send",id,body=body);pendingKey=null;input="";reply=null;loadMessages(id);scroll.animateScrollToItem((messages.size-1).coerceAtLeast(0));failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}
-    },contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,description=if(bn)"মেসেজ পাঠান" else "Send message")}
-   }
+   else Row(Modifier.fillMaxWidth().topHairline(p.border).imePadding().padding(start=12.dp,end=12.dp,top=8.dp,bottom=12.dp),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+     if(!recording)Row(Modifier.testTag("composer-surface").weight(1f).heightIn(min=44.dp,max=104.dp).clip(RoundedCornerShape(22.dp)).background(p.surface).border(1.dp,p.border,RoundedCornerShape(22.dp)).padding(start=3.dp,end=6.dp),verticalAlignment=Alignment.Bottom) {
+      Box(Modifier.size(38.dp).clip(CircleShape).clickable{emojiOpen=true},contentAlignment=Alignment.Center){Icon(Icons.Outlined.EmojiEmotions,contentDescription=if(bn)"ইমোজি, GIF ও স্টিকার" else "Emoji, GIF and stickers",modifier=Modifier.size(23.dp),tint=p.secondary)}
+      BasicTextField(input,{input=it.take(8000);pendingKey=null},enabled=net&&!busy&&window,textStyle=EkmivoType.chatMessage.copy(color=p.text),maxLines=4,modifier=Modifier.testTag("chat-input").weight(1f).heightIn(min=40.dp,max=96.dp).padding(vertical=10.dp,horizontal=3.dp),decorationBox={inner->Box{if(input.isEmpty())Text(if(bn)"মেসেজ লিখুন…" else "Write a message…",style=EkmivoType.chatMessage,color=p.secondary);inner()}})
+     }
+     if(input.isBlank()||recording)InboxAttachments(thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),net&&!busy&&window,replyTo=reply?.optString("id"),onRecordingChange={recording=it}){reply=null;scope.launch{loadMessages(thread!!)}}
+     if(input.isNotBlank()&&!recording)Box(Modifier.size(42.dp).clip(CircleShape).background(p.text).clickable(enabled=!busy&&net&&window){
+      val id=thread!!;val text=input;val quote=reply;val key=pendingKey?:UUID.randomUUID().toString().also{pendingKey=it}
+      scope.launch{busy=true;try{val body=JSONObject().put("text",text).put("idempotency_key",key);if(quote!=null)body.put("reply_to",quote.getString("id"));api.call("send",id,body=body);pendingKey=null;input="";reply=null;loadMessages(id);scroll.animateScrollToItem((messages.size-1).coerceAtLeast(0));failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}
+     },contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,description=if(bn)"মেসেজ পাঠান" else "Send message")}
+    }
   }
  }
+ if(emojiOpen)InboxEmojiPicker(bn,onDismiss={emojiOpen=false},onEmoji={input=(input+it).take(8000);pendingKey=null;emojiOpen=false})
  if(profileOpen&&thread!=null)CustomerProfile(thread!!,bn,{profileOpen=false},{scope.launch{loadMessages(thread!!)}})
  actionsMessage?.let{message->if(thread!=null)InboxMessageActions(message,thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),{actionsMessage=null},{scope.launch{loadMessages(thread!!)}})}
  if(filterOpen)androidx.compose.material3.ModalBottomSheet(onDismissRequest={filterOpen=false},containerColor=p.raised,tonalElevation=0.dp,dragHandle=null,scrimColor=Color.Black.copy(alpha=.5f),shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)) {
