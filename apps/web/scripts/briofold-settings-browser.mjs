@@ -51,13 +51,15 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   assert.equal(await viewerPage.locator('input[list="ws-common-timezones"]').isDisabled(),true);
   const view=await readOnly.request.get(base);assert.equal(view.status(),200);
   const current=await view.json();
-  const denied=await readOnly.request.post(base,{headers:{Origin:origin},data:{version:current.version,body:{...current.body,timezone:changed}}});
+  const denied=await readOnly.request.post(base,{headers:{Origin:origin},data:{expected_version:current.version,body:{...current.body,timezone:changed}}});
   assert.equal(denied.status(),403,"Viewer preference mutation was not forbidden by backend");
   assert.equal((await (await context.request.get(base)).json()).body.timezone,original,"Forbidden write modified settings");
   console.log("Phase3 REAL SETTINGS BROWSER PASS: owner initial state/save/reload/restore, viewer disabled editor, real backend mutation denial");
  }finally{
   if(context)await context.close();if(readOnly)await readOnly.close();
-  if(owner)await db.unsafe("DELETE FROM workspaces WHERE id=$1 AND created_by=$2 AND name='Phase3 preferences fixture'",[workspace,owner]);
+  // Settings writes create append-only control audit references. Never delete
+  // those audit records for cleanup: this entire disposable CI DB is destroyed
+  // by the workflow service teardown after the suite finishes.
   await db.end({timeout:3});
  }
 }
