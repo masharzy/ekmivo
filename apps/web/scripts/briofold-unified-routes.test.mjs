@@ -117,7 +117,7 @@ test("canonical product gates cover all roots, settings and valid subroutes",()=
  }
 });
 
-function renderDraftSwitch({save=true,discard=true,choose=true}={}){
+function renderDraftSwitch({save=true,discard=true,choose=true,pathname="/dashboard"}={}){
  const states=[],refs=[],nodes=[],events=[];
  let stateIndex=0,refIndex=0,dirty=true;
  const workspace={id:"10000000-0000-4000-8000-000000000001",name:"First",mode:"both",role:"owner"};
@@ -135,7 +135,7 @@ function renderDraftSwitch({save=true,discard=true,choose=true}={}){
  const legacy={};runInNewContext(compile(source("lib/dashboard-navigation.ts")),{exports:legacy,require:()=>sections});
  const deps={
   react,"react/jsx-runtime":{jsx,jsxs:jsx,Fragment:"fragment"},
-  "next/navigation":{useRouter:()=>router,usePathname:()=>"/dashboard"},
+  "next/navigation":{useRouter:()=>router,usePathname:()=>pathname},
   "next/link":{default:()=>null},
   "../lib/plan-features":{planSectionAllowed:()=>true},
   "../lib/dashboard-sections":sections,"../lib/dashboard-navigation":legacy,
@@ -190,4 +190,12 @@ test("revoked membership and selection errors keep the draft dialog without navi
 test("Stay cancels pending business selection",async()=>{
  const h=renderDraftSwitch();h.button("Stay").props.onClick();await drain();
  assert.deepEqual(h.events,[]);
+});
+
+test("internal locale rewrite and canonical URL render identical active navigation",()=>{
+ for(const path of ["/dashboard","/inbox","/payments/links","/settings/preferences"]){
+  const project=pathname=>renderDraftSwitch({pathname}).nodes.filter(n=>n.props.className==="is-current").map(n=>({href:n.props.href,current:n.props["aria-current"]}));
+  const canonical=project(path);assert.ok(canonical.length>0);
+  for(const locale of ["en","bn"])assert.deepEqual(project("/"+locale+path),canonical);
+ }
 });

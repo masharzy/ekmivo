@@ -6,6 +6,7 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
  if(!["localhost","127.0.0.1","[::1]"].includes(target.hostname)||/prod/i.test(target.pathname))throw Error("Settings browser refuses shared DB");
  const db=postgres(control,{max:1,prepare:false}),workspace=randomUUID();
  let owner,viewer,context,readOnly;
+ const pageErrors=[];
  try{
   const identities=await Promise.all([sessions.owner,sessions.viewer].map(token=>db.unsafe("SELECT user_id FROM auth_sessions WHERE token_hash=$1",[createHash("sha256").update(token).digest("hex")])));
   assert.ok(identities.every(rows=>rows.length===1));owner=String(identities[0][0].user_id);viewer=String(identities[1][0].user_id);
@@ -24,7 +25,7 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   const initialResponse=await context.request.get(base);
   assert.equal(initialResponse.status(),200,"Owner settings initial read denied");
   const initial=await initialResponse.json(),original=initial.body.timezone||"Asia/Dhaka",changed=original==="UTC"?"Asia/Dhaka":"UTC";
-  const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
+  const page=await context.newPage();page.on("pageerror",error=>pageErrors.push(error.message));page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   assert.equal((await page.goto(origin+"/settings/preferences")).status(),200);
   const waitLoaded=async value=>page.waitForFunction(expected=>{
    const field=document.querySelector('input[list="ws-common-timezones"]'),refresh=document.querySelector(".ws-refresh");
@@ -47,7 +48,7 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   const restored=await context.request.get(base);
   assert.equal((await restored.json()).body.timezone,original,"Original preference was not restored");
   readOnly=await createContext(sessions.viewer,viewer);
-  const viewerPage=await readOnly.newPage();viewerPage.setDefaultNavigationTimeout(90000);
+  const viewerPage=await readOnly.newPage();viewerPage.on("pageerror",error=>pageErrors.push(error.message));viewerPage.setDefaultNavigationTimeout(90000);
   assert.equal((await viewerPage.goto(origin+"/settings/preferences")).status(),200);
   await viewerPage.locator('input[list="ws-common-timezones"]').waitFor();
   assert.equal(await viewerPage.locator('input[list="ws-common-timezones"]').isDisabled(),true);
@@ -56,6 +57,7 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   const denied=await readOnly.request.post(base,{headers:{Origin:origin},data:{expected_version:current.version,body:{...current.body,timezone:changed}}});
   assert.equal(denied.status(),403,"Viewer preference mutation was not forbidden by backend");
   assert.equal((await (await context.request.get(base)).json()).body.timezone,original,"Forbidden write modified settings");
+  assert.deepEqual(pageErrors,[],"Settings browser reported a client runtime/hydration error");
   console.log("Phase3 REAL SETTINGS BROWSER PASS: owner initial state/save/reload/restore, viewer disabled editor, real backend mutation denial");
  }finally{
   if(context)await context.close();if(readOnly)await readOnly.close();

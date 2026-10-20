@@ -8,19 +8,22 @@ const source=await readFile(new URL("../src/actions/account.ts",import.meta.url)
 const validationCode=ts.transpileModule(await readFile(new URL("../src/lib/password-policy.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
 const policy={exports:{}};runInNewContext(validationCode,{module:policy,exports:policy.exports});
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-for(const scenario of ["success","duplicate","workspace-failure","invalid-password"]){
+for(const scenario of ["success","legacy-success","duplicate","workspace-failure","onboarding-failure","invalid-password"]){
  const writes=[],authEvents=[];
  const db={begin:async callback=>{
   const staged=[];
   const sql=async parts=>{const query=parts.join("?");
    if(query.includes("INSERT INTO app_users")){if(scenario==="duplicate")return [];staged.push("user");return [{id:"user-id"}]}
    if(query.includes("INSERT INTO workspaces")){if(scenario==="workspace-failure")throw Error("simulated workspace failure");staged.push("workspace");return [{id:"workspace-id"}]}
+   if(query.includes("to_regclass"))return [{ready:scenario!=="legacy-success"?"briofold_business_onboarding":null}];
+   if(query.includes("INSERT INTO briofold_business_onboarding")){if(scenario==="onboarding-failure")throw Error("simulated onboarding failure");staged.push("onboarding");return []}
    if(query.includes("INSERT INTO workspace_members")){staged.push("owner-membership");return []}
    throw Error("Unexpected SQL operation");
   };
   const result=await callback(sql);writes.push(...staged);return result;
  }};
  const mocks={
+  "next/cache":{revalidatePath:()=>{}},
   "next/navigation":{redirect:path=>{throw Object.assign(Error("redirect"),{digest:"NEXT_REDIRECT",path})}},
   "next/headers":{cookies:async()=>({})},
   "../lib/server/email":{verificationEnabled:async()=>false,mailReady:()=>true},
@@ -31,8 +34,8 @@ for(const scenario of ["success","duplicate","workspace-failure","invalid-passwo
  const actionModule={exports:{}};
  runInNewContext(code,{module:actionModule,exports:actionModule.exports,require:name=>{assert.ok(mocks[name],"Unexpected import "+name);return mocks[name]},console:{error:()=>{}}});
  const form=new FormData();for(const [k,v] of Object.entries({email:"unit@example.invalid",password:scenario==="invalid-password"?"12345678":"hello123",confirm:scenario==="invalid-password"?"12345678":"hello123",name:"Unit Test",workspace_name:"Test Business"}))form.set(k,v);
- let result;try{result=await actionModule.exports.registerAction("en",{status:"idle",message:""},form)}catch(e){assert.equal(scenario,"success");assert.equal(e.path,"/workspaces/open")}
- if(scenario==="success"){assert.deepEqual(writes,["user","workspace","owner-membership"]);assert.deepEqual(authEvents,["session","default-workspace"])}
+ let result;try{result=await actionModule.exports.registerAction("en",{status:"idle",message:""},form)}catch(e){assert.ok(["success","legacy-success"].includes(scenario));assert.equal(e.path,"/workspaces/open")}
+ if(["success","legacy-success"].includes(scenario)){assert.deepEqual(writes,["user","workspace","owner-membership",...(scenario==="success"?["onboarding"]:[])]);assert.deepEqual(authEvents,["session","default-workspace"])}
  else{assert.deepEqual(writes,[]);assert.deepEqual(authEvents,[]);assert.equal(result.status,"error")}
  console.log("PASS (simulation): signup "+scenario);
 }

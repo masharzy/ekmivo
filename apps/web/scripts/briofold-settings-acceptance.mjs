@@ -1,9 +1,27 @@
+import {readFile} from "node:fs/promises";
+import postgres from "postgres";
 import {spawn} from "node:child_process";
 import {chromium} from "@playwright/test";
 import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
+import {runBriofoldOnboardingBrowser} from "./briofold-onboarding-browser.mjs";
 
 // Called after all control/financial extensions, not the earlier PG05 schema.
 export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,apiEnv}){
+ const target=new URL(control);
+ if(!["localhost","127.0.0.1","[::1]"].includes(target.hostname)||/prod/i.test(target.pathname))throw Error("Acceptance refuses shared database");
+ const schema=postgres(control,{max:1,prepare:false});
+ try{
+  const apply=async name=>schema.unsafe(await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8")).simple();
+  if(!(await schema`SELECT to_regclass('public.pg13_plans') AS rel`)[0].rel)await apply("0024_pg13_billing.sql");
+  if(!(await schema`SELECT to_regclass('public.payment_plan_catalog') AS rel`)[0].rel){
+   await schema`INSERT INTO pg13_plans(id,name,amount_minor,period_days,grace_days,enabled) VALUES('phase4_fixture','Fictional CI Gateway tier',100,30,0,true) ON CONFLICT DO NOTHING`;
+   await apply("0067_managed_payment_plans.sql");
+  }
+  if(!(await schema`SELECT to_regclass('public.checkout_theme_settings') AS rel`)[0].rel)await apply("0074_checkout_themes.sql");
+  if(!(await schema`SELECT to_regclass('public.dashboard_store_profiles') AS rel`)[0].rel)await apply("0097_workspace_store_identity.sql");
+  const [details]=await schema`SELECT position('receipt_note' in pg_get_functiondef(to_regprocedure('public.dashboard_store_write(uuid,uuid,jsonb,bigint,text,bytea)')))>0 AS ready`;
+  if(!details.ready)await apply("0099_store_details.sql");
+ }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false"},stdio:["ignore","pipe","pipe"]});
  let server,browser,logs="";
@@ -25,6 +43,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
   await runBriofoldSettingsBrowser({origin,browser,control,sessions});
+  await runBriofoldOnboardingBrowser({origin,browser,control,sessions});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }

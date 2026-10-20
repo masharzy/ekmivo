@@ -11,7 +11,7 @@ const source=readFileSync(new URL("../src/actions/briofold-onboarding.ts",import
 const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const realRequire=createRequire(import.meta.url);
 function fixture(options={}){
- let state={step:"services",role:"owner",products:{ai:false,payments:false},mode:"off",audit:[],claims:[],...options};
+ let state={step:"services",role:"owner",products:{ai:false,payments:false},mode:"off",audit:[],claims:[],profile:{body:{"name":"Existing store","logo":"","business_type":"online","description":"","brand_color":"#0b0c0f","phone":"","support_email":"","whatsapp":"","website":"","address":"","statement_name":"","refund_url":"","receipt_note":""},version:1},...options};
  const workspace={id:"business-a",mode:"both",...options.workspace};
  const db={begin:async callback=>{
   const draft=structuredClone(state);
@@ -21,6 +21,15 @@ function fixture(options={}){
    if(query.startsWith("SELECT step FROM briofold_business_onboarding")){
     if(draft.originalOwnerTransferred&&query.includes("owner_id="))return [];
     return draft.step?[{step:draft.step}]:[];
+   }
+   if(query.startsWith("SELECT dashboard_store_read"))return [{profile:draft.profile}];
+   if(query.startsWith("SELECT dashboard_store_write")){
+    const body=values[2];assert.equal(Object.keys(body).length,13);
+    draft.profile={body,version:draft.profile.version+1};return [];
+   }
+   if(query.startsWith("UPDATE workspaces SET name")){draft.businessName=values[0];return [];}
+   if(query.startsWith("UPDATE briofold_business_onboarding SET step='services'")){
+    if(draft.stageError)throw Error("stage failure");draft.step="services";return [];
    }
    if(query.startsWith("SELECT enabled FROM workspace_product_access"))return values[1] in draft.products?[{enabled:draft.products[values[1]]}]:[];
    if(query.startsWith("UPDATE workspace_product_access")){draft.products[values[2]]=values[0];return [];}
@@ -33,6 +42,7 @@ function fixture(options={}){
    if(query.startsWith("UPDATE briofold_business_onboarding SET step='complete'")){draft.step="complete";draft.selected=values[0];return [];}
    throw Error("Unexpected query: "+query);
   };
+  tx.json=value=>value;
   const result=await callback(tx);
   state=draft;
   return result;
@@ -126,4 +136,16 @@ test("former owner who is now admin cannot mutate unfinished onboarding",async()
  const f=fixture({role:"admin",originalOwnerTransferred:true});
  assert.equal((await f.submit({mode:"ai"})).status,"error");
  assert.equal(f.state().step,"services");
+});
+
+test("business setup saves the current thirteen-field Store profile",async()=>{
+ const f=fixture({step:"business"});const before=structuredClone(f.state().profile.body);
+ assert.equal((await f.submit({name:"Fixture shop",business_type:"service",description:"Fixture summary",address:"Fixture address"})).location,"/setup");
+ assert.equal(f.state().step,"services");assert.equal(f.state().businessName,"Fixture shop");
+ assert.deepEqual(structuredClone(f.state().profile.body),{...before,name:"Fixture shop",business_type:"service",description:"Fixture summary",address:"Fixture address"});
+});
+test("stage update failure rolls back Store identity and workspace name",async()=>{
+ const f=fixture({step:"business",stageError:true}),before=structuredClone(f.state());
+ assert.equal((await f.submit({name:"Fixture shop",business_type:"online"})).status,"error");
+ assert.deepEqual(f.state(),before);
 });
