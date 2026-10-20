@@ -4,14 +4,14 @@ import {readFileSync,existsSync} from "node:fs";
 const at=(path)=>new URL("../src/"+path,import.meta.url);
 const source=(path)=>readFileSync(at(path),"utf8");
 
-test("all seven canonical merchant entry routes exist independently of /w workspace slugs",()=>{
+test("all nine canonical merchant entry routes exist independently of /w workspace slugs",()=>{
  assert.ok(existsSync(at("app/[locale]/dashboard/page.tsx")));
- for(const root of ["inbox","orders","payments","customers","reports","settings"])
+ for(const root of ["inbox","orders","payments","sms-data","invoices","customers","reports","settings"])
   assert.ok(existsSync(at(`app/[locale]/${root}/[[...view]]/page.tsx`)),`Missing canonical route: ${root}`);
 });
-test("navigation has exactly seven clean, prefixed-free merchant entries",()=>{
+test("navigation has exactly nine clean, prefixed-free merchant entries",()=>{
  const src=source("lib/unified-navigation.ts");
- for(const path of ["/dashboard","/inbox","/orders","/payments","/customers","/reports","/settings"])
+ for(const path of ["/dashboard","/inbox","/orders","/payments","/sms-data","/invoices","/customers","/reports","/settings"])
   assert.ok(src.includes(`href:"${path}"`),`Missing nav href ${path}`);
  assert.equal((src.match(/href:"\/(dashboard|inbox|orders|payments|customers|reports|settings)"/g)||[]).length,7);
  assert.doesNotMatch(src,/href:"\/(?:bn|en|w)\//);

@@ -184,7 +184,6 @@ export function PaymentDocuments({kind,workspaceId,environment,locale,userId,can
    {kind==="customers"&&<><label className="ey mut" style={{fontSize:12,whiteSpace:"nowrap"}}><RefSwitch checked={hideNumbers} label={t("Hide numbers","নম্বর লুকান")} disabled={!canManage||preferenceBusy} onChange={value=>void toggleNumbers(value)}/>{t("Hide numbers","নম্বর লুকান")}</label>{canWrite&&<button className="ib" onClick={()=>setImportOpen(true)}>{t("Import CSV","CSV ইমপোর্ট")}</button>}</>}
    {canWrite&&<button className="ib pri" disabled={busy} onClick={()=>void edit(null)}><RefIcon name="plus"/>{isLinks?t("New link","নতুন লিংক"):kind==="customers"?t("Add customer","গ্রাহক যোগ"):t("New invoice","নতুন ইনভয়েস")}</button>}
   </div><p>{isLinks?t("Share a link or request a one-time payment.","লিংক শেয়ার করুন অথবা একবারের পেমেন্ট চান।"):kind==="customers"?t("People who pay your business.","যাঁরা আপনার ব্যবসায় পেমেন্ট করেন।"):t("Issue invoices and track confirmed payments.","ইনভয়েস তৈরি ও নিশ্চিত পেমেন্ট দেখুন।")}</p></div>
-  {isLinks&&<div className="tabs"><button className="on">{t("Payment links","পেমেন্ট লিংক")}</button><Link href={`/w/${workspaceId}/payments/requests`}>{t("One-time requests","একবারের রিকোয়েস্ট")}</Link></div>}
   {error&&<div className="notice ref-errors" role="alert">{error}<button className="ib" disabled={busy} onClick={()=>void load()}>{t("Retry","আবার চেষ্টা")}</button></div>}
   {message&&<p className="notice" role="status" data-feedback="success">{message}</p>}
   <div className="card">

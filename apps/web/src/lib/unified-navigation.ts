@@ -2,13 +2,15 @@ import type {SectionKey} from "./dashboard-sections";
 import type {Service} from "./dashboard-navigation";
 
 export type BusinessMode="ai"|"commerce"|"both"|"off";
-export type UnifiedRoot="dashboard"|"inbox"|"orders"|"payments"|"customers"|"reports"|"settings";
+export type UnifiedRoot="dashboard"|"inbox"|"orders"|"payments"|"sms-data"|"invoices"|"customers"|"reports"|"settings";
 export type UnifiedNavItem={key:UnifiedRoot;en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common"};
 export const unifiedNavigation:readonly UnifiedNavItem[]=[
  {key:"dashboard",en:"Overview",bn:"ওভারভিউ",icon:"overview",href:"/dashboard",service:"common"},
  {key:"inbox",en:"Inbox",bn:"ইনবক্স",icon:"inbox",href:"/inbox",service:"ai"},
  {key:"orders",en:"Orders",bn:"অর্ডার",icon:"orders",href:"/orders",service:"common"},
  {key:"payments",en:"Payments",bn:"পেমেন্ট",icon:"transactions",href:"/payments",service:"payments"},
+ {key:"sms-data",en:"SMS Data",bn:"SMS ডাটা",icon:"incoming",href:"/sms-data",service:"payments"},
+ {key:"invoices",en:"Invoices",bn:"ইনভয়েস",icon:"invoices",href:"/invoices",service:"payments"},
  {key:"customers",en:"Customers",bn:"গ্রাহক",icon:"customers",href:"/customers",service:"common"},
  {key:"reports",en:"Reports",bn:"রিপোর্ট",icon:"reports",href:"/reports",service:"common"},
  {key:"settings",en:"Settings",bn:"সেটিংস",icon:"settings",href:"/settings",service:"common"},
@@ -30,7 +32,6 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  {slug:"payment",en:"Payment setup",bn:"পেমেন্ট সেটআপ",items:[
   {slug:"payment-methods",en:"Payment methods",bn:"পেমেন্ট মাধ্যম",section:"gateways",service:"payments"},
   {slug:"devices",en:"SMS devices",bn:"SMS ডিভাইস",section:"devices",service:"payments"},
-  {slug:"incoming",en:"Incoming receipts",bn:"আগত রসিদ",section:"incoming",service:"payments"},
  ]},
  {slug:"developers",en:"Developers & integrations",bn:"ডেভেলপার ও ইন্টিগ্রেশন",items:[
   {slug:"api-keys",en:"API keys",bn:"API Keys",section:"developers",service:"payments"},
@@ -51,7 +52,7 @@ export type UnifiedDestination={section:SectionKey;service:Service;kind?:"inbox"
 export const unifiedSectionPaths:Partial<Record<SectionKey,string>>={
  overview:"/dashboard",inbox:"/inbox",comments:"/inbox/comments","saved-replies":"/inbox/saved-replies",tickets:"/inbox/tickets",
  orders:"/orders",products:"/orders/products",inventory:"/orders/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/orders/coupons",
- transactions:"/payments", "payment-links":"/payments/links",requests:"/payments/requests",invoices:"/payments/invoices",refunds:"/payments/refunds",incoming:"/payments/incoming",reconciliation:"/payments/reconciliation",
+ transactions:"/payments", "payment-links":"/payments/links",requests:"/payments/links",invoices:"/invoices",refunds:"/payments/refunds",incoming:"/sms-data",reconciliation:"/reports",
  customers:"/customers",contacts:"/customers",leads:"/customers/leads","follow-ups":"/customers/follow-ups",broadcasts:"/customers/broadcasts",bookings:"/customers/bookings",posts:"/customers/posts",
  reports:"/reports",settings:"/settings",gateways:"/settings/payment-methods",devices:"/settings/devices",
  store:"/settings/business","checkout-themes":"/settings/checkout",developers:"/settings/api-keys",webhooks:"/settings/webhooks",
@@ -80,7 +81,9 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   dashboard:{"":{section:"overview",service:defaultService}},
   inbox:{"":{section:"inbox",service:"ai",kind:"inbox"},comments:{section:"comments",service:"ai"},"saved-replies":{section:"saved-replies",service:"ai"},tickets:{section:"tickets",service:"ai"},"agent-desk":{section:"ai-agent",service:"ai"}},
   orders:{"":{section:"orders",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:"payments"},delivery:{section:"shipping",service:"payments"},returns:{section:"returns",service:"payments"},coupons:{section:"coupons",service:"payments"}},
-  payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},requests:{section:"requests",service:"payments"},invoices:{section:"invoices",service:"payments"},refunds:{section:"refunds",service:"payments"},incoming:{section:"incoming",service:"payments"},reconciliation:{section:"reconciliation",service:"payments"}},
+  payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},refunds:{section:"refunds",service:"payments"}},
+  "sms-data":{"":{section:"incoming",service:"payments"}},
+  invoices:{"":{section:"invoices",service:"payments"}},
   customers:{"":{section:payments?"customers":"contacts",service:defaultService},leads:{section:"leads",service:"ai"},"follow-ups":{section:"follow-ups",service:"ai"},broadcasts:{section:"broadcasts",service:"ai"},bookings:{section:"bookings",service:"ai"},posts:{section:"posts",service:"ai"}},
   reports:{"":{section:"reports",service:defaultService},payments:{section:"reports",service:"payments"},ai:{section:"reports",service:"ai"}},
  };
