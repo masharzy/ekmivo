@@ -11,6 +11,10 @@ export async function GET(request:Request){
  const user=await currentUser();
  if(!user)return forbidden(401,"UNAUTHENTICATED");
  const workspace=await preferredWorkspaceFor(user.id);
+ // The workspace ID is a stale-render guard, NOT a source of authority.
+ // Authorization always comes from the server-resolved preferred business.
+ const requestWorkspace=new URL(request.url).searchParams.get("workspace_id");
+ if(!requestWorkspace||!workspace||requestWorkspace!==workspace.id)return forbidden(409,"ACTIVE_BUSINESS_CHANGED");
  if(!workspace||workspace.mode==="off"||workspace.mode==="commerce"||
    (workspace.role!=="owner"&&workspace.role!=="admin"))
   return forbidden(403,"ACCESS_DENIED");
