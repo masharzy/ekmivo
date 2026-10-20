@@ -97,7 +97,11 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   if(part==="channels")destination.kind="channels";
   if(part==="devices"&&mode==="ai")destination.kind="devices";
   if(part==="devices"&&mode==="both")destination.kind="mixed-devices";
- }else destination=main[root][part];
+ }else{
+  // URL segments are untrusted keys. Inherited Object properties are not routes.
+  if(!Object.hasOwn(main,root)||!Object.hasOwn(main[root],part))return null;
+  destination=main[root][part];
+ }
  if(!destination)return null;
  if(destination.service==="payments"&&!payments)return null;
  if(destination.service==="ai"&&mode==="commerce")return null;
