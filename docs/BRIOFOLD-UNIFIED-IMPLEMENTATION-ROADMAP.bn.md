@@ -12,7 +12,7 @@
 6. **Payment truth remains authoritative:** original wallet SMS/notification evidence matching, financial realm isolation, transaction idempotency, webhook delivery, device pairing, plan limits, refund and reconciliation semantics do not move into AI authority. No invented verified payments.
 7. The user sees **one Dashboard and one Billing page**, but **two billing products**: Payment Gateway subscription/quotas, AI prepaid metered credits. Both means a chosen gateway tier PLUS AI credit wallet. Do not bundle unbounded AI calls. AI credit exhausted must not disable permitted manual Inbox or payment operations.
 8. A business's contact, order, payment and invoice data may be related through authorized linking without collapsing their separate source of truth. Never merge customer identities by name or unverified phone alone.
-9. Bengali/English, Hindi Siliguri for Bengali, payment-dashboard approved English font, keyboard/mobile accessibility, light/dark/system, loading/empty/error and RBAC are mandatory on every migrated route.
+9. Bengali/English, Hind Siliguri for Bengali, payment-dashboard approved English font, keyboard/mobile accessibility, light/dark/system, loading/empty/error and RBAC are mandatory on every migrated route.
 10. Production remains intact while new routes are built. Feature flags and dual-read compatibility exist before any legacy delete. Database schema migrations need forward/backward compatibility, backups and rollback plan.
 
 ## 1. Verified source baseline / limitations
