@@ -13,7 +13,7 @@ function render(mode,locale,unavailable){
   "../actions/briofold-onboarding":{submitBriofoldSetup(){}},
   "./briofold-onboarding.module.css":{default:{}}
  };
- vm.runInNewContext(js,{exports,require:id=>{assert.ok(Object.hasOwn(deps,id));return deps[id];}});
+ vm.runInNewContext(js,{exports,window:{location:{reload:()=>nodes.push({type:"reload",props:{}})}},require:id=>{assert.ok(Object.hasOwn(deps,id));return deps[id];}});
  exports.BriofoldOnboardingClient({locale,mode,step:"billing",businessId:"fixture",businessName:"Fixture",plans:[],gatewayPlansUnavailable:unavailable});
  return nodes;
 }
@@ -22,6 +22,7 @@ for(const locale of ["en","bn"])for(const mode of ["commerce","both"])test("unav
  assert.ok(nodes.some(n=>n.props.role==="alert"));
  const retry=nodes.find(n=>n.type==="button"&&n.props.type==="button");
  assert.ok(retry&&typeof retry.props.onClick==="function");
+ retry.props.onClick();assert.ok(nodes.some(n=>n.type==="reload"));
  assert.equal(nodes.find(n=>n.type==="button"&&n.props.type==="submit").props.disabled,true);
 });
 test("AI-only can complete without Gateway catalogue or subscription",()=>{
