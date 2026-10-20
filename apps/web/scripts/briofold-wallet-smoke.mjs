@@ -12,7 +12,7 @@ export async function runBriofoldWalletChecks(url){
  const equal=(actual,expected)=>{assert.deepEqual(actual,expected);count++;};
  const reject=async (callback,code)=>{await assert.rejects(callback,error=>error.code===code);count++;};
  try{
-  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql","0128_briofold_ai_topup_recovery.sql"]){
+  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql","0128_briofold_ai_topup_recovery.sql","0129_briofold_ai_execution_meter.sql"]){
    const migration=await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8");
    await db.begin(tx=>tx.unsafe(migration.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple());
   }
@@ -131,6 +131,68 @@ export async function runBriofoldWalletChecks(url){
   const recovered=await Promise.all(Array.from({length:12},recover));
   equal(recovered.filter(x=>x[0].result.credited).length,1);equal(await balance(),[2000,0]);
   await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT briofold_ai_topup_credit_proof(${workspace},${recoveryTopup},${recoveryProof},1000)`;}),"42501");
+  await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${workspace},${actor},'owner')`;
+  const executionKey=randomUUID(),fp="a".repeat(64),encryptedFixture=Buffer.alloc(32,7);
+  const beginExecution=(key,fingerprint=fp,w=workspace,a=actor,thread=null)=>db.begin(async tx=>{
+   await tx`SET LOCAL ROLE ekmivo_financial_runtime`;
+   return tx`SELECT briofold_ai_request_begin(${w},${a},${key},${model},${fingerprint},600,${thread}) AS result`;
+  });
+  const completeExecution=(key,input=1000,cached=0,output=100,ref="fixture-"+key)=>db.begin(async tx=>{
+   await tx`SET LOCAL ROLE ekmivo_financial_runtime`;
+   return tx`SELECT briofold_ai_request_complete(${workspace},${key},${ref},${input},${cached},${output},${encryptedFixture}) AS result`;
+  });
+  const failExecution=(key,release,ref="")=>db.begin(async tx=>{
+   await tx`SET LOCAL ROLE ekmivo_financial_runtime`;
+   return tx`SELECT briofold_ai_request_fail(${workspace},${key},${ref},${release})`;
+  });
+  const started=await Promise.all(Array.from({length:12},()=>beginExecution(executionKey)));
+  equal(started.filter(x=>x[0].result.fresh).length,1);equal(await balance(),[1976,24]);
+  equal(started[0][0].result.tariff.id,second);
+  await Promise.all(Array.from({length:12},()=>completeExecution(executionKey)));
+  equal(await balance(),[1997,0]);
+  equal((await beginExecution(executionKey))[0].result.state,"completed");equal(await balance(),[1997,0]);
+  const duplicateGeneration=randomUUID();await beginExecution(duplicateGeneration);
+  await reject(()=>completeExecution(duplicateGeneration,1000,0,100,"fixture-"+executionKey),"23505");
+  await failExecution(duplicateGeneration,false,"fixture-"+executionKey);
+  // An authoritative zero-token cache result may complete without a second debit.
+  await completeExecution(duplicateGeneration,0,0,0,"fixture-"+executionKey);equal(await balance(),[1997,0]);
+  await reject(()=>beginExecution(executionKey,"b".repeat(64)),"23505");
+  await reject(()=>beginExecution(randomUUID(),fp,workspace,otherActor),"42501");
+  await reject(()=>completeExecution(executionKey,1001),"23505");
+  const third=(await publish(randomUUID(),second,{...terms,input_minor_per_million:9000}))[0].id;
+  equal((await beginExecution(executionKey))[0].result.tariff.id,second);
+  const rejectedKey=randomUUID();await beginExecution(rejectedKey);
+  await Promise.all(Array.from({length:8},()=>failExecution(rejectedKey,true)));
+  equal((await beginExecution(rejectedKey))[0].result.state,"released");equal(await balance(),[1997,0]);
+  const uncertainKey=randomUUID();await beginExecution(uncertainKey);await failExecution(uncertainKey,false,"fixture-uncertain");
+  equal((await beginExecution(uncertainKey))[0].result.state,"unknown");equal(await balance(),[1903,94]);
+  await reject(()=>failExecution(uncertainKey,true),"23505");
+  await reject(()=>completeExecution(uncertainKey,10001,0,100,"fixture-uncertain"),"22023");
+  equal(await balance(),[1903,94]);
+  await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
+  // Completing accepted work is independent of the initiating user's later access.
+  await completeExecution(uncertainKey,1000,0,100,"fixture-uncertain");equal(await balance(),[1987,0]);
+  await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${workspace},${actor},'owner')`;
+  const requestKeys=Array.from({length:25},()=>randomUUID());
+  const parallel=await Promise.allSettled(requestKeys.map(key=>beginExecution(key)));
+  equal(parallel.filter(x=>x.status==="fulfilled").length,20);
+  equal(parallel.filter(x=>x.status==="rejected"&&x.reason.code==="54000").length,5);
+  await Promise.all(requestKeys.filter((_,i)=>parallel[i].status==="fulfilled").map(key=>failExecution(key,true)));
+  equal(await balance(),[1987,0]);
+  const [connection]=await db`SELECT inbox_connection(${workspace},'live','ms',${"meter-"+workspace},decode('abcd','hex')) AS id`;
+  await db`SELECT inbox_ingest(${connection.id},'meter-incoming','meter-customer','Fictional meter customer','Hello','text',now())`;
+  const [thread]=await db`SELECT id FROM inbox_threads WHERE connection_id=${connection.id}`;
+  const threadKey=randomUUID();await beginExecution(threadKey,fp,workspace,actor,thread.id);
+  await reject(()=>beginExecution(randomUUID(),fp,workspace,actor,thread.id),"54000");
+  await reject(()=>beginExecution(randomUUID(),fp,receiver,otherActor,thread.id),"42501");
+  await db`UPDATE inbox_threads SET ai_enabled=false,ai_version=ai_version+1 WHERE id=${thread.id}`;
+  await reject(()=>beginExecution(randomUUID(),fp,workspace,actor,thread.id),"42501");
+  await completeExecution(threadKey);equal(await balance(),[1977,0]);
+  equal((await db`SELECT count(*)::int AS n FROM inbox_messages WHERE thread_id=${thread.id} AND sender='ai'`)[0].n,0);
+  await reject(()=>beginExecution(randomUUID(),fp,receiver,otherActor),"P0001");
+  equal((await db`SELECT count(*)::int AS n FROM briofold_ai_executions WHERE workspace_id=${receiver}`)[0].n,0);
+  equal((await db`SELECT current_version FROM briofold_ai_tariff_catalog WHERE model=${model}`)[0].current_version,third);
+  await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT * FROM briofold_ai_executions`;}),"42501");
   console.log(`Briofold prepaid wallet PASS: ${count} actual PostgreSQL assertions; synthetic fixtures only`);
   return count;
  }finally{await db.end({timeout:3});}

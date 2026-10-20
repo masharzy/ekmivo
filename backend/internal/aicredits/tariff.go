@@ -21,7 +21,11 @@ type Tariff struct {
 	MaxRequestMinor                                                         int64
 }
 
-type Usage struct{ InputTokens, CachedInputTokens, OutputTokens int64 }
+type Usage struct {
+	InputTokens       int64 `json:"input_tokens"`
+	CachedInputTokens int64 `json:"cached_input_tokens"`
+	OutputTokens      int64 `json:"output_tokens"`
+}
 
 func (t Tariff) Validate() error {
 	if strings.TrimSpace(t.Version) == "" || len(t.Version) > 100 || strings.TrimSpace(t.Model) == "" || len(t.Model) > 200 || t.Currency != "BDT" ||
