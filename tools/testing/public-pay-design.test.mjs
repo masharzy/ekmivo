@@ -53,7 +53,7 @@ test("provider colors and no marketing header in standalone routes",()=>{
  assert.match(css,/--provider-accent:#81218a/);
  // Public /pay and /checkout are locale-rewritten without application chrome.
  assert.match(proxy,/target\.pathname="\/"\+locale\+path/);
- assert.match(proxy,/if\(\/\^\\\/\(\?:workspaces\|w\|account\|admin\)/);
+ assert.match(proxy,/if\(\/\^\\\/\(\?:dashboard\|workspaces\|w\|account\|admin\)/);
  const checkout=source("apps/web/src/components/checkout-experience.tsx");
  const document=source("apps/web/src/components/public-document.tsx");
  assert.match(checkout,/pg05-standalone/);
