@@ -90,6 +90,6 @@ class Phase7IntegrationTest {
  @Test fun imageCatalogAtAllAlbumSizesAndFourThemeLanguageModes(){
   val api=Fixture(thread);var count by mutableIntStateOf(1);var dark by mutableStateOf(false);var bn by mutableStateOf(false)
   rule.setContent{CompositionLocalProvider(LocalInboxApi provides api){EkmivoTheme(dark){Column(Modifier.fillMaxSize().background(LocalEkmivoPalette.current.canvas)){Text(if(bn)"শুধু UI পরীক্ষার ছবি" else "UI test images only",color=LocalEkmivoPalette.current.text);val images=(0 until count).map{i->JSONObject().put("id","img-$i").put("type","image").put("content",JSONObject().put("media_id","a0000000-0000-4000-8000-${(i+1).toString().padStart(12,'0')}"))};InboxMessageContent(images.first(),images,thread,bn,LocalEkmivoPalette.current.text)}}}}
-  for(mode in 0..3){rule.runOnIdle{dark=mode%2==1;bn=mode>=2};for(n in listOf(1,2,3,4,5,10)){rule.runOnIdle{count=n};rule.waitUntil(15000){rule.onAllNodesWithTag("media-image").fetchSemanticsNodes().size>=minOf(n,4)};capture("album_${n}_${if(bn)"bn" else "en"}_${if(dark)"dark" else "light"}")}}
+  for(mode in 0..3){rule.runOnIdle{dark=mode%2==1;bn=mode>=2};for(n in listOf(1,2,3,4,5,10)){rule.runOnIdle{count=n};rule.waitUntil(15000){rule.onAllNodesWithTag("media-image",useUnmergedTree=true).fetchSemanticsNodes().size>=minOf(n,4)};capture("album_${n}_${if(bn)"bn" else "en"}_${if(dark)"dark" else "light"}")}}
  }
 }

@@ -21,3 +21,7 @@ Results and final commit/run/artifact identity are recorded in PR #86 after the 
 ## Remaining human/provider gates
 
 Real Samsung screen-off/reboot/force-stop behavior, live signed SMS evidence, real Meta/Firebase media/push round trips, configured private storage/scanner, complete reference parity/accessibility and production migration/rollout remain pending in `docs/MANUAL-VERIFICATION.md`. An emulator UI fixture does not prove those capabilities. Never advertise all production gates as accepted from these tests.
+
+## First emulator run
+
+`bf0e86f`, run 39354451017: actual Android-35 execution passed 23/24 tests, including draft restore/send, profile note clear, source-failure handling and 20 current setup/SMS/settings captures. The image-catalog bitmap check used merged semantics under a clickable container, where its descendant test tags are hidden; it now inspects the unmerged tree. The bitmap/count assertion remains intact. The release job correctly stayed blocked. Final rerun and screenshot review are pending at this source checkpoint.
