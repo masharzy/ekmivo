@@ -21,6 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -110,6 +113,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
  var info by remember{mutableStateOf<JSONObject?>(null)}
  var profileOpen by remember{mutableStateOf(false)}
  var actionsMessage by remember{mutableStateOf<JSONObject?>(null)}
+ var actionsMode by remember{mutableStateOf("info")}
  var selected by remember{mutableStateOf<JSONObject?>(null)}
  var reply by remember{mutableStateOf<JSONObject?>(null)}
  var input by rememberSaveable(thread){mutableStateOf("")}
@@ -237,17 +241,61 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
     listOf("wa","ig","ms").forEach{ch->EkmivoFilterChip(channelName(ch),channel==ch){channel=if(channel==ch)"" else ch;listPage=0}}
    }
 
+  }else if(selected!=null){
+   // Selected messages replace the customer header rather than adding an action menu.
+   Row(Modifier.fillMaxWidth().height(66.dp).topHairline(p.border)
+    .padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,
+    horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+    Spacer(Modifier.weight(1f))
+    Box(Modifier.size(43.dp).clickable{reply=selected;selected=null},
+     contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.Reply,contentDescription=if(bn)"উত্তর দিন" else "Reply",
+      tint=p.text,modifier=Modifier.size(23.dp))
+    }
+    Box(Modifier.size(43.dp).clickable{
+     actionsMode="info";actionsMessage=selected;selected=null
+    },contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.Info,contentDescription=if(bn)"মেসেজের তথ্য" else "Message info",
+      tint=p.text,modifier=Modifier.size(22.dp))
+    }
+    val copyEnabled=selected?.optString("type")=="text"
+    Box(Modifier.size(43.dp).clickable(enabled=copyEnabled){
+     (app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+      .setPrimaryClip(ClipData.newPlainText("",selected?.optString("body")))
+     selected=null
+    },contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.ContentCopy,contentDescription=if(bn)"কপি" else "Copy",
+      tint=if(copyEnabled)p.text else p.muted.copy(alpha=.45f),
+      modifier=Modifier.size(21.dp))
+    }
+    Box(Modifier.size(43.dp).clickable{
+     actionsMode="forward";actionsMessage=selected;selected=null
+    },contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.Forward,contentDescription=if(bn)"ফরওয়ার্ড" else "Forward",
+      tint=p.text,modifier=Modifier.size(23.dp))
+    }
+    Box(Modifier.size(43.dp).clickable{selected=null},
+     contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.Close,contentDescription=if(bn)"বাতিল" else "Cancel selection",
+      tint=p.text,modifier=Modifier.size(23.dp))
+    }
+   }
   }else {
-   Row(Modifier.fillMaxWidth().topHairline(p.border).padding(horizontal=10.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-    Box(Modifier.size(34.dp).clickable{thread=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.ARR,tint=p.secondary)}
-    ChannelAvatar(info?.optString("name").orEmpty().take(1),info?.optString("channel").orEmpty(),34.dp)
-    Column(Modifier.weight(1f).clickable{profileOpen=true}) {Text(info?.optString("name").orEmpty(),style=EkmivoType.chatName,color=p.text,maxLines=1);Text(channelName(info?.optString("channel").orEmpty()),style=EkmivoType.meta,color=p.secondary)}
-    if(selected==null)EkmivoPill(if(info?.optBoolean("ai_enabled")==true)(if(bn)"AI চালু" else "AI on")else(if(bn)"AI বন্ধ" else "AI off"),info?.optBoolean("ai_enabled")==true){action("ai",JSONObject().put("enabled",info?.optBoolean("ai_enabled")!=true))}
-    else {
-     Box(Modifier.size(34.dp).clickable{reply=selected;selected=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.REP)}
-     if(selected?.optString("type")=="text")Box(Modifier.size(34.dp).clickable{(app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("",selected?.optString("body")));selected=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.COPY)}
-     Box(Modifier.size(34.dp).clickable{actionsMessage=selected;selected=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.INFO)}
-     Box(Modifier.size(34.dp).clickable{selected=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.X)}
+   Row(Modifier.fillMaxWidth().height(66.dp).topHairline(p.border)
+    .padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically,
+    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+    Box(Modifier.size(34.dp).clickable{thread=null},contentAlignment=Alignment.Center){
+     EkmivoReferenceIcon(EkmivoGlyph.ARR,tint=p.secondary)
+    }
+    ChannelAvatar(info?.optString("name").orEmpty().take(1),
+     info?.optString("channel").orEmpty(),34.dp)
+    Column(Modifier.weight(1f).clickable{profileOpen=true}) {
+     Text(info?.optString("name").orEmpty(),style=EkmivoType.chatName,color=p.text,maxLines=1)
+     Text(channelName(info?.optString("channel").orEmpty()),style=EkmivoType.meta,color=p.secondary)
+    }
+    EkmivoPill(if(info?.optBoolean("ai_enabled")==true)(if(bn)"AI চালু" else "AI on")
+     else(if(bn)"AI বন্ধ" else "AI off"),info?.optBoolean("ai_enabled")==true){
+     action("ai",JSONObject().put("enabled",info?.optBoolean("ai_enabled")!=true))
     }
    }
   }
@@ -409,7 +457,8 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
   }
  }
  if(profileOpen&&thread!=null)CustomerProfile(thread!!,bn,{profileOpen=false},{scope.launch{loadMessages(thread!!)}})
- actionsMessage?.let{message->if(thread!=null)InboxMessageActions(message,thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),{actionsMessage=null},{scope.launch{loadMessages(thread!!)}})}
+ actionsMessage?.let{message->if(thread!=null)InboxMessageActions(message,thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),
+ actionsMode,{actionsMessage=null},{scope.launch{loadMessages(thread!!)}})}
  if(filterOpen)androidx.compose.material3.ModalBottomSheet(onDismissRequest={filterOpen=false},containerColor=p.raised,tonalElevation=0.dp,dragHandle=null,scrimColor=Color.Black.copy(alpha=.5f),shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)) {
   Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.raised).padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
    Text(if(bn)"ফিল্টার" else "Filters",style=EkmivoType.button,color=p.text)
