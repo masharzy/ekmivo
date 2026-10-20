@@ -20,6 +20,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  {slug:"business",en:"Business & verification",bn:"ব্যবসা ও যাচাই",items:[
   {slug:"business",en:"Business profile",bn:"ব্যবসার পরিচিতি",section:"store",service:"common"},
   {slug:"account",en:"Account & security",bn:"অ্যাকাউন্ট ও নিরাপত্তা",section:"settings",service:"common"},
+  {slug:"preferences",en:"Business preferences",bn:"ব্যবসার পছন্দ",section:"settings",service:"common"},
   {slug:"checkout",en:"Checkout appearance",bn:"চেকআউট ডিজাইন",section:"checkout-themes",service:"payments"},
  ]},
  {slug:"ai",en:"AI & channels",bn:"AI ও চ্যানেল",items:[

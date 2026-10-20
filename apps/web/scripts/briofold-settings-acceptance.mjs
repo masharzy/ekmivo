@@ -1,0 +1,30 @@
+import {spawn} from "node:child_process";
+import {chromium} from "@playwright/test";
+import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
+
+// Called after all control/financial extensions, not the earlier PG05 schema.
+export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,apiEnv}){
+ const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
+ const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false"},stdio:["ignore","pipe","pipe"]});
+ let server,browser,logs="";
+ const capture=child=>{for(const stream of [child.stdout,child.stderr])stream.on("data",chunk=>{logs=(logs+String(chunk)).slice(-5000);});};
+ capture(api);
+ const ready=async(url,expected,child)=>{
+  for(let i=0;i<100;i++){
+   if(child.exitCode!==null)throw Error("Settings acceptance process exited: "+logs);
+   try{if((await fetch(url,{signal:AbortSignal.timeout(1000)})).status===expected)return;}catch{}
+   await new Promise(resolve=>setTimeout(resolve,250));
+  }
+  throw Error("Settings acceptance startup failed: "+logs);
+ };
+ try{
+  await ready(apiOrigin+"/healthz",200,api);
+  server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false"},stdio:["ignore","pipe","pipe"]
+  });
+  capture(server);await ready(origin+"/api/checkout/invalid",404,server);
+  browser=await chromium.launch({headless:true});
+  await runBriofoldSettingsBrowser({origin,browser,control,sessions});
+ }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
+ finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
+}

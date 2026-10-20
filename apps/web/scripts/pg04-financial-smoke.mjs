@@ -1610,6 +1610,19 @@ try{
  }
  count+=await runPaymentExtensions({db:dbs.sandbox,live:dbs.live,control:admin,workspace:pg07WS,otherWorkspace:randomUUID()});
  count+=await runBriofoldWalletChecks(control);
+ if(process.env.PG05_BROWSER_TESTS==="true"){
+  const {runBriofoldSettingsAcceptance}=await import("./briofold-settings-acceptance.mjs");
+  await runBriofoldSettingsAcceptance({control,sessions:pg09Auth.sessions,apiBin:apiTestBin,apiEnv:{
+   ...process.env,
+   AUTHZ_DATABASE_URL:ds(source.pathname.slice(1),"ekmivo_financial_runtime","pg01-ci-only-password"),
+   PG05_SANDBOX_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_finance_reader_sandbox","pg04-sandbox-reader-only"),
+   PG05_TOKEN_SECRET:pg09Auth.tokenSecret,PG05_PAYER_SECRET:pg09Auth.payerSecret,
+   PG06_PIPELINE_ENABLED:"true",PG06_PARSER_RULES_JSON:await readFile(new URL("../../../examples/receipt-parser/sandbox-fixture.json",import.meta.url),"utf8"),
+   PG06_ENCRYPTION_KEY_HEX:Buffer.alloc(32,88).toString("hex"),
+   PG06_CONTROL_PROJECTION_URL:ds(source.pathname.slice(1),"ekmivo_financial_projection_operator","pg04-control-projection-only")
+  }});
+ }
+
  console.log("PG10-PG17 extension source SQL cases executed against disposable realms; fictional evidence only");
  const controlEmpty=await admin`SELECT to_regclass('public.payment_intents') IS NULL AS no_payments`;
  ok(controlEmpty[0].no_payments,"financial tables leaked into control DB");

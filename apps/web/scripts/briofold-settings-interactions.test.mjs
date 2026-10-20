@@ -66,3 +66,69 @@ test("empty support filter does not claim the existing collection has no request
  assert.ok(h.text().includes("No matching support requests."));
  assert.equal(h.text().includes("No support requests yet."),false);
 });
+
+test("business preferences stay separate from personal account security in all enabled product modes",()=>{
+ const navigation={};
+ const body=readFileSync(new URL("../src/lib/unified-navigation.ts",import.meta.url),"utf8");
+ vm.runInNewContext(ts.transpileModule(body,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:navigation});
+ for(const mode of ["ai","commerce","both"]){
+  const d=navigation.unifiedDestination(mode,"settings",["preferences"]);
+  assert.equal(d.section,"settings");assert.equal(d.kind,undefined);
+  assert.equal(d.service,mode==="ai"?"ai":"payments");
+ }
+ assert.equal(navigation.unifiedDestination("off","settings",["preferences"]),null);
+ const item=navigation.unifiedSettings.flatMap(group=>group.items).find(item=>item.slug==="preferences");
+ assert.equal(item.service,"common");
+});
+
+test("first-time business preferences inherit the authorized name and preserve an explicit saved name",()=>{
+ const raw=readFileSync(new URL("../src/components/payment-workspace-tools.tsx",import.meta.url),"utf8");
+ const code=ts.transpileModule(raw,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ for(const [body,expected] of [[{},"Authorized business"],[{name:"Saved business"},"Saved business"]]){
+  const exports={},nodes=[],jsx=(type,props)=>{const node={type,props};nodes.push(node);return node;};
+  const dependencies={
+   react:{useState:initial=>[initial,()=>{}],useRef:initial=>({current:initial}),useCallback:fn=>fn,useMemo:fn=>fn(),useEffect(){}},
+   "react/jsx-runtime":{jsx,jsxs:jsx},"next/navigation":{useRouter:()=>({refresh(){}})},
+   "./plan-resource-status":{PlanResourceStatus:()=>null,useResourceLimit:()=>({blocked:false})},
+   "../lib/plan-resource-limits":{planLimitMessage:()=>""},
+   "./dashboard-initial-data":{useDashboardInitialData:()=>({data:{body,version:0}})},
+   "../lib/client/draft-navigation":{registerDraft:()=>()=>{}},
+   "./payment-privacy":{PaymentPrivacy:()=>null},"./payment-team-reference.css":{}
+  };
+  vm.runInNewContext(code,{exports,require:id=>{if(!Object.hasOwn(dependencies,id))throw Error("Unexpected settings dependency "+id);return dependencies[id];}});
+  exports.PaymentWorkspaceTools({locale:"en",workspaceId:"fixture",workspaceName:"Authorized business",environment:"live",resource:"settings",canManage:true,isOwner:true,userId:"fixture"});
+  assert.ok(nodes.some(n=>n.type==="input"&&n.props.value===expected));
+  assert.equal(nodes.some(n=>n.props?.children==="Workspace data is unavailable. Try Refresh."),false);
+ }
+});
+
+test("team invite sharing uses a locale-neutral link while preserving server-issued capability",async()=>{
+ const raw=readFileSync(new URL("../src/components/payment-workspace-tools.tsx",import.meta.url),"utf8");
+ const code=ts.transpileModule(raw,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const states=[],refs=[],nodes=[];let si=0,ri=0;
+ const jsx=(type,props)=>{const node={type,props};nodes.push(node);return node;};
+ const member={id:"fixture-owner",name:"Fixture owner",role:"owner"},capability="A".repeat(43);
+ const react={
+  useState(initial){const i=si++;if(!(i in states))states[i]=initial;return [states[i],value=>{states[i]=typeof value==="function"?value(states[i]):value;}];},
+  useRef(initial){const i=ri++;return refs[i]??={current:initial};},useCallback:fn=>fn,useMemo:fn=>fn(),useEffect(){}
+ };
+ const dependencies={
+  react,"react/jsx-runtime":{jsx,jsxs:jsx},"next/navigation":{useRouter:()=>({refresh(){}})},
+  "./plan-resource-status":{PlanResourceStatus:()=>null,useResourceLimit:()=>({blocked:false,refresh:async()=>{}})},
+  "../lib/plan-resource-limits":{planLimitMessage:()=>""},
+  "./dashboard-initial-data":{useDashboardInitialData:()=>({data:{members:[member],invitations:[]}})},
+  "../lib/client/draft-navigation":{registerDraft:()=>()=>{}},
+  "./payment-privacy":{PaymentPrivacy:()=>null},"./payment-team-reference.css":{}
+ };
+ const exports={};
+ vm.runInNewContext(code,{exports,AbortSignal,window:{location:{origin:"https://example.test"}},
+  fetch:async(_url,request={})=>({ok:true,json:async()=>request.method==="POST"?{saved:true,invitation_token:capability}:{members:[member],invitations:[]}}),
+  require:id=>{if(!Object.hasOwn(dependencies,id))throw Error("Unexpected team dependency "+id);return dependencies[id];}
+ });
+ const render=()=>{si=0;ri=0;nodes.length=0;exports.PaymentWorkspaceTools({locale:"en",workspaceId:"fixture",workspaceName:"Fixture business",environment:"live",resource:"team",canManage:true,isOwner:true,userId:member.id,paymentPlanApplies:false});};
+ render();nodes.find(n=>n.type==="input"&&n.props.type==="email").props.onChange({target:{value:"invitee@example.invalid"}});
+ render();nodes.find(n=>n.type==="form").props.onSubmit({preventDefault(){}});await flush();render();
+ const url=nodes.find(n=>n.props?.["aria-label"]==="Private invitation URL")?.props.value;
+ assert.equal(url,"https://example.test/invite/"+capability);
+ assert.equal(url.includes("/en/invite/"),false);
+});

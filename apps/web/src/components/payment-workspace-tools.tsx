@@ -36,7 +36,7 @@ function at(value?:string,locale:"en"|"bn"="en"){
 }
 function isHttps(value:string){try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password&&!!u.hostname}catch{return false}}
 function formatSettings(body:Settings):Settings{return Object.fromEntries(Object.entries(body).map(([k,v])=>[k,v.trim()])) as unknown as Settings}
-export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId,paymentPlanApplies=true}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string;paymentPlanApplies?:boolean}){
+export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId,paymentPlanApplies=true,workspaceName=""}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string;paymentPlanApplies?:boolean;workspaceName?:string}){
  const router=useRouter(),bn=locale==="bn";
  const t=useCallback((en:string,bengali:string)=>bn?bengali:en,[bn]);
  // Payment subscription quotas apply only when Payments is enabled. AI-only
@@ -44,7 +44,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
  const teamLimit=useResourceLimit("team_members",workspaceId,environment,resource==="team"&&paymentPlanApplies);
  const base="/api/go/workspaces/"+workspaceId+"/workspace-tools";
  const seed=useDashboardInitialData<ApiData>("workspace");
- const initialSettings={...defaults,...seed?.data?.body};
+ const initialSettings={...defaults,...seed?.data?.body,name:seed?.data?.body?.name||workspaceName};
  const [members,setMembers]=useState<Member[]>(seed?.data?.members??[]),[invites,setInvites]=useState<Invitation[]>(seed?.data?.invitations??[]),[tickets,setTickets]=useState<Ticket[]>(seed?.data?.items??[]);
  const [body,setBody]=useState<Settings>(initialSettings),[version,setVersion]=useState(seed?.data?.version??0),[saved,setSaved]=useState<Settings>(initialSettings);
  const [grants,setGrants]=useState<Record<string,Record<string,boolean>>>(seed?.data?.grants??{});
@@ -75,15 +75,15 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
     setMembers(d.members);setInvites(d.invitations);setGrants(d.grants??{});setGrantDrafts({});setRoleDrafts({});
    }else if(resource==="settings"){
     if(!d.body||typeof d.version!=="number")throw Error("INVALID_SETTINGS_RESPONSE");
-    const value={...defaults,...d.body};setBody(value);setSaved(value);setVersion(d.version);
+    const value={...defaults,...d.body,name:d.body.name||workspaceName};setBody(value);setSaved(value);setVersion(d.version);
    }else{
     if(!Array.isArray(d.items))throw Error("INVALID_SUPPORT_RESPONSE");
     setTickets(d.items);
    }
    setLoaded(true);
-  }catch(e){if(!signal?.aborted)setError(t("Unable to load workspace data. Check the connection and retry.","ওয়ার্কস্পেসের তথ্য পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।")+" ("+(e instanceof Error?e.message:"UNKNOWN")+")")}
+  }catch(e){if(!signal?.aborted){if(resource==="settings")setLoaded(false);setError(t("Unable to load workspace data. Check the connection and retry.","ওয়ার্কস্পেসের তথ্য পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।")+" ("+(e instanceof Error?e.message:"UNKNOWN")+")")}}
   finally{if(!signal?.aborted)setLoading(false)}
- },[base,resource,environment,t]);
+ },[base,resource,environment,t,workspaceName]);
  useEffect(()=>{if(seed)return;const c=new AbortController();void Promise.resolve().then(()=>{if(!c.signal.aborted)return load(c.signal)});return()=>c.abort()},[load,seed]);
  const refresh=()=>{if(resource==="settings"&&dirty&&!window.confirm(t("Discard unsaved settings and reload?","সংরক্ষণ না করা সেটিংস বাদ দিয়ে আবার লোড করবেন?")))return;void load()};
  async function command(action:string,data:Record<string,unknown>,target?:string){
@@ -97,15 +97,16 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
    const json=await response.json() as Result;
    if(!response.ok)throw Error(json.error?.code||json.code||String(response.status));
    if(json.invitation_token){
-    setSecretLink(window.location.origin+"/"+locale+"/invite/"+json.invitation_token);
+    setSecretLink(window.location.origin+"/invite/"+json.invitation_token);
    }
    setPassword("");
    if(action==="settings"){
     const next=formatSettings(data.body as Settings);
-    setSaved(next);setBody(next);setVersion(current=>current+1);
+    setSaved(next);setBody(next);
    }
    setNotice(t("Changes saved.","পরিবর্তন সংরক্ষণ হয়েছে।"));
-   if(action!=="settings")await load();
+   // Reconcile the authoritative version, including the first-save 0 -> 2 case.
+   await load();
    if(resource==="team")await teamLimit.refresh();
    if(action==="settings"||action==="transfer-owner")router.refresh();
    return true;
@@ -113,7 +114,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
   finally{setBusy(false)}
  }
  const saveSettings=async()=>{
-  if(!canManage||busy)return false;
+  if(!canManage||busy||loading||!loaded)return false;
   const next=formatSettings(latest.current.body);
   if(next.name.length>0&&(next.name.length<2||next.name.length>120)){setError(t("Business name must be 2–120 characters.","ব্যবসার নাম ২–১২০ অক্ষরের হতে হবে।"));return false}
   for(const k of ["logo_url","support_url","legal_url"] as const)if(next[k]&&!isHttps(next[k])){setError(t("Use a valid HTTPS URL.","সঠিক HTTPS URL দিন।"));return false}
