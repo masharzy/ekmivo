@@ -52,3 +52,5 @@ try{
  console.error("PG02 context FAIL:",e instanceof Error?e.message:"unknown");
  process.exitCode=1;
 }finally{await sql.end({timeout:3});}
+
+if(!process.exitCode)await import("./briofold-business-context-smoke.mjs");
