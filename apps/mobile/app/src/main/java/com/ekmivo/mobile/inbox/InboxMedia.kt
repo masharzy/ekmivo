@@ -242,7 +242,7 @@ private object ActiveVoice {var player:MediaPlayer?=null}
     Box(Modifier.size(40.dp).clip(CircleShape).background(p.text)
      .clickable(enabled=enabled&&!busy){onSendText()},contentAlignment=Alignment.Center) {
      EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,size=20.dp,
-      description=if(bn)"পাঠান" else "Send")
+      description=if(bn)"মেসেজ পাঠান" else "Send message")
     }
    }else {
     Box(Modifier.size(40.dp).clip(CircleShape).background(p.text)
