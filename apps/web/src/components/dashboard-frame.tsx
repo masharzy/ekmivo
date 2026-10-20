@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { sections, type SectionKey } from "../lib/dashboard-sections";
 import { dashboardHref, navigation, searchableNavigation, searchableBusinesses, serviceEnabled, serviceNames, sectionInService, type Locale, type Service, type PaymentEnvironment } from "../lib/dashboard-navigation";
 import { DashboardIcon as Icon } from "./dashboard-icon";
+import {unifiedNavigation,enabledUnifiedService,unifiedSectionHref} from "../lib/unified-navigation";
+import {chooseUnifiedBusiness} from "../actions/unified-business";
 import { SiteControls } from "./site-controls";
 import { DashboardFeedback } from "./dashboard-feedback";
 import { PaymentNotifications } from "./payment-notifications";
@@ -16,7 +18,7 @@ import { activeDrafts,saveActiveDrafts,discardActiveDrafts } from "../lib/client
 type Space = { id: string; name: string; mode: "ai" | "commerce" | "both" | "off"; role: "owner" | "admin" | "editor" | "viewer" };
 type PaymentContext = { environment: PaymentEnvironment; status: "active" | "suspended"; availableEnvironments: PaymentEnvironment[]; liveOperational: false };
 
-type Props = { planFeatures?:PlanTerms["features"]|null; locale: Locale; service: Service; section: SectionKey; workspace: Space; spaces: Space[]; userName: string; platformAdmin: boolean; theme: "light" | "dark" | "system"; paymentContext?: PaymentContext; children: React.ReactNode; logout: React.ReactNode };
+type Props = { unified?:boolean; planFeatures?:PlanTerms["features"]|null; locale: Locale; service: Service; section: SectionKey; workspace: Space; spaces: Space[]; userName: string; platformAdmin: boolean; theme: "light" | "dark" | "system"; paymentContext?: PaymentContext; children: React.ReactNode; logout: React.ReactNode };
 const memoryKey=(workspaceId:string,service:Service)=>`ekmivo-last:${workspaceId}:${service}`;
 // Paused: Sandbox/Live preference in merchant UI.
 // const environmentKey=(workspaceId:string)=>`ekmivo-last-env:${workspaceId}`;
@@ -31,7 +33,7 @@ function rememberedSection(workspaceId:string,service:Service): SectionKey {
  }catch{ /* Browser storage unavailable: safe overview fallback. */ }
  return "overview";
 }
-export function DashboardFrame({ locale, service, section:initialSection, workspace, spaces, userName, platformAdmin, theme, paymentContext, planFeatures, children, logout }: Props) {
+export function DashboardFrame({ unified=false, locale, service, section:initialSection, workspace, spaces, userName, platformAdmin, theme, paymentContext, planFeatures, children, logout }: Props) {
  const bn=locale==="bn",router=useRouter(),pathname=usePathname();
  // Locale-neutral visible URL, with tolerance for old prefixed URLs.
  const requestedSection=pathname.match(/\/(?:bn\/|en\/)?w\/[^/]+\/(?:ai|payments)\/([^/?#]+)/)?.[1];
@@ -95,19 +97,21 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
  const allowed=(key:string)=>service!=="payments"||planSectionAllowed(key,planFeatures);
  const groups=navigation[service].map(g=>({...g,items:g.items.map(key=>service==="payments"&&key==="payment-links"&&!allowed(key)?"requests" as SectionKey:key).filter(allowed)})).filter(g=>g.items.length);
  const foundGroups=searchableNavigation(service,globalQuery).map(g=>({...g,items:g.items.filter(allowed)})).filter(g=>g.items.length);
- const foundKeys=foundGroups.flatMap(group=>group.items);
+ const foundKeys=unified?([] as SectionKey[]):foundGroups.flatMap(group=>group.items);
+ const unifiedItems=unifiedNavigation.filter(item=>enabledUnifiedService(workspace.mode,item.service));
+ const foundUnified=unified?unifiedItems.filter(item=>`${item.en} ${item.bn}`.toLocaleLowerCase().includes(globalQuery.trim().toLocaleLowerCase())):[];
  const foundBusinesses=searchableBusinesses(spaces,globalQuery);
- const resultCount=foundKeys.length+foundBusinesses.length;
+ const resultCount=foundKeys.length+foundUnified.length+foundBusinesses.length;
  const roleNames={owner:{bn:"মালিক",en:"Owner"},admin:{bn:"অ্যাডমিন",en:"Admin"},editor:{bn:"সম্পাদক",en:"Editor"},viewer:{bn:"দর্শক",en:"Viewer"}} as const;
  const visibleBusinesses=spaces.filter(space=>space.name.toLocaleLowerCase().includes(businessQuery.trim().toLocaleLowerCase()));
- const contextHref=useCallback((key:SectionKey,product:Service=service,businessId:string=workspace.id,env:PaymentEnvironment=environment)=>dashboardHref(locale,businessId,product,key,env),[locale,workspace.id,service,environment]);
+ const contextHref=useCallback((key:SectionKey,product:Service=service,businessId:string=workspace.id,env:PaymentEnvironment=environment)=>unified&&businessId===workspace.id?(unifiedSectionHref(key,product)??dashboardHref(locale,businessId,product,key,env)):dashboardHref(locale,businessId,product,key,env),[locale,workspace.id,service,environment,unified]);
 
  const goTo=useCallback((businessId:string,product:Service,env:PaymentEnvironment,nextSection:SectionKey)=>{
   setMobileOpen(false);
   setSearchOpen(false);
   if(serviceMenu.current)serviceMenu.current.open=false;
   if(businessMenu.current)businessMenu.current.open=false;
-  const next=dashboardHref(locale,businessId,product,nextSection,env);
+  const next=unified&&businessId===workspace.id?(unifiedSectionHref(nextSection,product)??dashboardHref(locale,businessId,product,nextSection,env)):dashboardHref(locale,businessId,product,nextSection,env);
   if(activeDrafts().length){setBlockedRoute(next);setDraftError("");return;}
   startTransition(()=>router.push(next));
  },[locale,router,startTransition]);
@@ -232,6 +236,12 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
  };
  const switchBusiness=(target:Space)=>{
   if(target.id===workspace.id){setSearchOpen(false);setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;return;}
+  if(unified&&target.mode!=="off"){
+   setSearchOpen(false);setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;
+   if(activeDrafts().length){setBlockedRoute(`/w/${target.id}/dashboard`);setDraftError("");return;}
+   startTransition(async()=>{if(await chooseUnifiedBusiness(target.id)){router.push("/dashboard");router.refresh();}});
+   return;
+  }
   if(target.mode==="off"){
    setSearchOpen(false);
    setMobileOpen(false);
@@ -260,12 +270,14 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
    if(key)nav(key);
    return;
   }
-  const business=foundBusinesses[index-foundKeys.length];
+  const unifiedResult=foundUnified[index-foundKeys.length];
+  if(unifiedResult){setSearchOpen(false);setMobileOpen(false);const next=unifiedResult.href;if(activeDrafts().length){setBlockedRoute(next);setDraftError("");return;}startTransition(()=>router.push(next));return;}
+  const business=foundBusinesses[index-foundKeys.length-foundUnified.length];
   if(business)switchBusiness(business);
  };
  const sidebar=(mobile=false)=><>
   <div className="ds-brand-row">
-   <Link href="/" className="ek-wordmark">ekmivo<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small></Link>
+   <Link href={unified?"/dashboard":"/"} className="ek-wordmark">ekmivo{!unified&&<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small>}</Link>
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
   <div className="ds-business-block"><details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
@@ -279,15 +291,15 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
   </details>
   </div>
   <nav ref={mobile?undefined:scrollableNav} className={"ds-navigation"+(navHasMore&&!mobile?" has-more":"")} aria-label={bn?`${serviceNames[service].bn} নেভিগেশন`:`${serviceNames[service].en} navigation`}>
-   {groups.filter(group=>!(service==="payments"&&group.items.length===1&&group.items[0]==="billing")).map(group=><section className="ds-nav-section" key={group.label.en}>
+   {unified?<section className="ds-nav-section"><h2>{bn?"ব্যবসা":"Business"}</h2>{unifiedItems.map(item=><Link key={item.key} href={item.href} className={pathname===item.href||pathname.startsWith(item.href+"/")?"is-current":undefined} aria-current={pathname===item.href?"page":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute(item.href);setDraftError("");return;}startTransition(()=>router.push(item.href));}}><Icon name={item.icon}/><span>{item[locale]}</span>{(pathname===item.href||pathname.startsWith(item.href+"/"))&&<span className="ds-active-mark"/>}</Link>)}</section>:groups.filter(group=>!(service==="payments"&&group.items.length===1&&group.items[0]==="billing")).map(group=><section className="ds-nav-section" key={group.label.en}>
     {service==="payments"&&group.label.en==="Commerce"?<details className="ds-unreleased-nav"><summary>{group.label[locale]} <small>{bn?"নির্মাণাধীন":"In development"}</small></summary><p>{bn?"কমার্সের এই কাজগুলো Payment phase-এর পরে চালু হবে।":"Commerce operations will follow the verified payment phase."}</p></details>:<h2>{group.label[locale]}</h2>}
     {!(service==="payments"&&group.label.en==="Commerce")&&group.items.filter(key=>!(service==="payments"&&key==="requests")).map(key=><Link key={key} href={key==="api-docs"?"/developers":contextHref(key)} target={key==="api-docs"?"_blank":undefined} rel={key==="api-docs"?"noopener noreferrer":undefined} className={section===key?"is-current":undefined} aria-current={section===key?"page":undefined} prefetch={key!=="api-docs"} onMouseEnter={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onFocus={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onClick={event=>{if(key!=="api-docs"){event.preventDefault();nav(key);}}}>
      <Icon name={key}/><span>{sections[key][locale]}</span>{key==="api-docs"&&<span aria-hidden="true">↗</span>}{section===key&&<span className="ds-active-mark"/>}</Link>)}
    </section>)}
   </nav>
-  {service==="payments"&&<div className="ds-nav-fixed-bottom"><Link href={contextHref("billing")} className={section==="billing"?"is-current":undefined} aria-current={section==="billing"?"page":undefined} onClick={event=>{event.preventDefault();nav("billing")}}><Icon name="billing"/><span>{sections.billing[locale]}</span></Link></div>}
+  {!unified&&service==="payments"&&<div className="ds-nav-fixed-bottom"><Link href={contextHref("billing")} className={section==="billing"?"is-current":undefined} aria-current={section==="billing"?"page":undefined} onClick={event=>{event.preventDefault();nav("billing")}}><Icon name="billing"/><span>{sections.billing[locale]}</span></Link></div>}
  </>;
- return <div className="ds-app" data-service={service} data-environment={environment}><DashboardFeedback locale={locale}/>
+ return <div className="ds-app" data-service={unified?"payments":service} data-unified={unified?"true":undefined} data-environment={environment}><DashboardFeedback locale={locale}/>
   <a className="ds-skip" href="#dashboard-content">{bn?"মূল অংশে যান":"Skip to content"}</a>
   <aside className="ds-sidebar">{sidebar()}</aside>
   <dialog ref={drawer} className="ds-mobile-dialog" aria-label={bn?"ওয়ার্কস্পেস মেনু":"Workspace menu"} onCancel={()=>setMobileOpen(false)} onClose={()=>setMobileOpen(false)}>{sidebar(true)}</dialog>
@@ -295,7 +307,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
    <header className="ds-topbar">
     <div className="ds-topbar-leading">
      <button type="button" className="ds-icon-button ds-mobile-trigger" ref={menuTrigger} aria-label={bn?"মেনু খুলুন":"Open menu"} aria-haspopup="dialog" aria-expanded={mobileOpen} onClick={()=>setMobileOpen(true)}><Icon name="menu"/></button>
-     <details className="ds-service-picker" ref={serviceMenu}>
+     {unified?<div className="ds-service-picker"><strong>{workspace.name}</strong></div>:<details className="ds-service-picker" ref={serviceMenu}>
       <summary><span className="ds-service-icon"><Icon name={service==="ai"?"ai-agent":"payments"}/></span><span><small>{bn?"সেবা নির্বাচন":"Product"}</small><strong>{serviceNames[service][locale]}</strong></span><Icon name="chevron"/></summary>
       <div className="ds-service-menu">
        <p>{bn?"সেবা পরিবর্তন করুন":"Switch product"}</p>
@@ -309,7 +321,7 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
        })}
        <p className="ds-service-note">{bn?"ব্যবসা অপরিবর্তিত থাকবে; আগের পৃষ্ঠা মনে রাখা হবে।":"Business stays selected. Your last page is remembered."}</p>
       </div>
-     </details>
+     </details>}
      {/* Paused Sandbox/Live picker (restore if public sandbox is revived).
      {service==="payments"&&<label className="ds-environment-picker">
       <span className="sr-only">{bn?"পেমেন্ট পরিবেশ":"Payment environment"}</span>
@@ -355,10 +367,10 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
    </div>}
    */}
 
-   <nav className="ds-breadcrumb" aria-label={bn?"ব্রেডক্রাম্ব":"Breadcrumb"}><Link href="/workspaces">{workspace.name}</Link><Icon name="chevron"/><Link href={contextHref("overview")}>{serviceNames[service][locale]}</Link><Icon name="chevron"/><strong aria-current="page">{sections[section][locale]}</strong></nav>
+   <nav className="ds-breadcrumb" aria-label={bn?"ব্রেডক্রাম্ব":"Breadcrumb"}>{unified?<><Link href="/dashboard">{workspace.name}</Link><Icon name="chevron"/><strong aria-current="page">{unifiedItems.find(item=>pathname===item.href||pathname.startsWith(item.href+"/"))?.[locale]??sections[section][locale]}</strong></>:<><Link href="/workspaces">{workspace.name}</Link><Icon name="chevron"/><Link href={contextHref("overview")}>{serviceNames[service][locale]}</Link><Icon name="chevron"/><strong aria-current="page">{sections[section][locale]}</strong></>}</nav>
    {isNavigating&&<div className="ds-navigation-progress" role="status">{bn?"পৃষ্ঠা খুলছে…":"Opening page…"}</div>}
    <main id="dashboard-content" className="ds-content" tabIndex={-1} aria-busy={isNavigating}>{children}</main>
-   <footer className="ds-footnote"><span>{serviceNames[service][locale]} · {workspace.name}</span><span>Asia/Dhaka</span></footer>
+   <footer className="ds-footnote"><span>{unified?workspace.name:serviceNames[service][locale]+" · "+workspace.name}</span><span>Asia/Dhaka</span></footer>
   </div>
   <dialog ref={searchDialog} className="ds-search-dialog" aria-label={bn?"ওয়ার্কস্পেস খুঁজুন":"Search workspace"} onCancel={()=>setSearchOpen(false)} onClose={()=>setSearchOpen(false)}>
    <div className="ds-search-top"><Icon name="search"/><input ref={searchInput} autoFocus role="combobox" aria-autocomplete="list" aria-expanded={searchOpen} aria-controls="ds-global-results" aria-activedescendant={resultCount?`ds-global-result-${Math.min(activeResult,resultCount-1)}`:undefined} value={globalQuery} onChange={event=>{setGlobalQuery(event.target.value);setActiveResult(0);}} placeholder={bn?"পৃষ্ঠা, পেমেন্ট, ইনভয়েস বা গ্রাহক খুঁজুন…":"Find pages, payments, invoices or customers…"} aria-label={bn?"পৃষ্ঠা বা পেমেন্ট রেকর্ড খুঁজুন":"Find pages or payment records"}
@@ -368,9 +380,10 @@ export function DashboardFrame({ locale, service, section:initialSection, worksp
       if(event.key==="Enter"&&resultCount){event.preventDefault();activateSearchResult(Math.min(activeResult,resultCount-1));}
      }}/><button type="button" className="ds-icon-button" onClick={()=>setSearchOpen(false)} aria-label={bn?"বন্ধ করুন":"Close search"}><Icon name="close"/></button></div>
    <div id="ds-global-results" className="ds-search-results" role="listbox" aria-label={bn?"ফলাফল":"Results"}>
+    {foundUnified.map((item,index)=><button id={`ds-global-result-${index}`} type="button" role="option" aria-selected={activeResult===index} onMouseEnter={()=>setActiveResult(index)} key={item.key} onClick={()=>{setSearchOpen(false);const next=item.href;if(activeDrafts().length){setBlockedRoute(next);setDraftError("");return;}startTransition(()=>router.push(next));}}><Icon name={item.icon}/><span>{item[locale]}</span></button>)}
     {foundKeys.map((key,index)=><button id={`ds-global-result-${index}`} type="button" role="option" aria-selected={activeResult===index} onMouseEnter={()=>setActiveResult(index)} key={key} onClick={()=>nav(key)}><Icon name={key}/><span>{sections[key][locale]}</span><small>{serviceNames[service][locale]}</small></button>)}
     {foundBusinesses.map((space,index)=>{
-     const position=foundKeys.length+index;
+     const position=foundKeys.length+foundUnified.length+index;
      return <button id={`ds-global-result-${position}`} type="button" role="option" aria-selected={activeResult===position} onMouseEnter={()=>setActiveResult(position)} key={space.id} onClick={()=>switchBusiness(space)}><Icon name="settings"/><span>{space.name}</span><small>{space.id===workspace.id?(bn?"বর্তমান ব্যবসা":"Current business"):(bn?"ব্যবসা পরিবর্তন":"Switch business")}</small></button>;
     })}
     {!resultCount&&<p role="status">{bn?"মেলা পৃষ্ঠা বা ব্যবসা নেই":"No matching pages or businesses"}</p>}
