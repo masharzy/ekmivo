@@ -49,7 +49,12 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  const [searchOpen,setSearchOpen]=useState(false);
  const [isNavigating,startTransition]=useTransition();
  const [noticeOpen,setNoticeOpen]=useState(false);
- const [blockedRoute,setBlockedRoute]=useState<string|null>(null);
+ const [blockedRoute,setBlockedRouteValue]=useState<string|null>(null);
+ const blockedBusiness=useRef<string|null>(null);
+ const setBlockedRoute=useCallback((route:string|null,businessId:string|null=null)=>{
+  blockedBusiness.current=businessId;
+  setBlockedRouteValue(route);
+ },[]);
  const [draftError,setDraftError]=useState("");
  const [draftSaving,setDraftSaving]=useState(false);
  const drawer=useRef<HTMLDialogElement>(null);
@@ -114,7 +119,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
   const next=unified&&businessId===workspace.id?(unifiedSectionHref(nextSection,product)??dashboardHref(locale,businessId,product,nextSection,env)):dashboardHref(locale,businessId,product,nextSection,env);
   if(activeDrafts().length){setBlockedRoute(next);setDraftError("");return;}
   startTransition(()=>router.push(next));
- },[locale,router,startTransition]);
+ },[locale,router,startTransition,unified,workspace.id]);
 
  useEffect(()=>{
   try{window.localStorage.setItem(memoryKey(workspace.id,service),section);}catch{/* Non-essential preference. */}
@@ -193,20 +198,35 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    document.removeEventListener("click",guardedAnchor,true);
   };
  },[]);
- const commitDraftNavigation=async()=>{
+ const finishDraftNavigation=async()=>{
   if(!blockedRoute)return;
+  const next=blockedRoute,businessId=blockedBusiness.current;
+  setDraftSaving(true);
+  try{
+   // Persist the authorized business only after the draft decision succeeds.
+   // A denied/revoked membership must leave this page and dialog in place.
+   if(businessId&&!await chooseUnifiedBusiness(businessId)){
+    setDraftError(bn?"ব্যবসা পরিবর্তন করা যায়নি। আপনার প্রবেশাধিকার আবার যাচাই করুন।":"Unable to switch business. Check your access and retry.");
+    return;
+   }
+   setBlockedRoute(null);
+   startTransition(()=>{router.push(next);if(businessId)router.refresh();});
+  }catch{
+   setDraftError(bn?"ব্যবসা পরিবর্তন করা যায়নি। আবার চেষ্টা করুন।":"Unable to switch business. Please retry.");
+  }finally{setDraftSaving(false);}
+ };
+ const commitDraftNavigation=async()=>{
+  if(!blockedRoute||draftSaving)return;
   setDraftSaving(true);
   const ok=await saveActiveDrafts();
   setDraftSaving(false);
   if(!ok){setDraftError(bn?"খসড়া সংরক্ষণ করা যায়নি। এই পৃষ্ঠায় থাকুন বা পরিবর্তন বাতিল করুন।":"Draft save failed. Stay on this page or discard changes.");return;}
-  const next=blockedRoute;setBlockedRoute(null);
-  startTransition(()=>router.push(next));
+  await finishDraftNavigation();
  };
  const discardDraftNavigation=()=>{
-  if(!blockedRoute)return;
+  if(!blockedRoute||draftSaving)return;
   if(!discardActiveDrafts()){setDraftError(bn?"পরিবর্তন বাতিল করা যায়নি":"Unable to discard the changes");return;}
-  const next=blockedRoute;setBlockedRoute(null);
-  startTransition(()=>router.push(next));
+  void finishDraftNavigation();
  };
  useEffect(()=>{
   const key=(event:KeyboardEvent)=>{
@@ -238,7 +258,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
   if(target.id===workspace.id){setSearchOpen(false);setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;return;}
   if(unified&&target.mode!=="off"){
    setSearchOpen(false);setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;
-   if(activeDrafts().length){setBlockedRoute(`/w/${target.id}/dashboard`);setDraftError("");return;}
+   if(activeDrafts().length){setBlockedRoute("/dashboard",target.id);setDraftError("");return;}
    startTransition(async()=>{if(await chooseUnifiedBusiness(target.id)){router.push("/dashboard");router.refresh();}});
    return;
   }
@@ -391,7 +411,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    {service==="payments"&&paymentContext&&<PaymentRecordSearch planFeatures={planFeatures} key={workspace.id+environment} locale={locale} workspaceId={workspace.id} environment={environment} query={globalQuery} open={searchOpen} onNavigate={openPaymentSearchResult}/>}
    {service!=="payments"&&<p className="ds-search-hint">{bn?"শুধু অনুমোদিত পৃষ্ঠা ও ব্যবসা দেখানো হচ্ছে।":"Only authorized pages and businesses appear."}</p>}
   </dialog>
-  <dialog ref={draftDialog} className="ds-draft-dialog" aria-label={bn?"সংরক্ষণ না করা পরিবর্তন":"Unsaved changes"} onCancel={()=>{setBlockedRoute(null);setDraftError("");}}>
+  <dialog ref={draftDialog} className="ds-draft-dialog" aria-label={bn?"সংরক্ষণ না করা পরিবর্তন":"Unsaved changes"} onCancel={event=>{if(draftSaving){event.preventDefault();return;}setBlockedRoute(null);setDraftError("");}}>
    <h2>{bn?"পরিবর্তন সংরক্ষণ করা হয়নি":"You have unsaved changes"}</h2>
    <p>{bn?"ব্যবসা, সেবা বা পরিবেশ পরিবর্তন করলে এই খসড়া হারাতে পারেন। কী করতে চান?":"Changing the business, product or environment may lose your draft. Choose an action."}</p>
    {draftError&&<p className="ds-draft-error" role="alert">{draftError}</p>}
