@@ -83,3 +83,36 @@ test("Inbox secondary navigation keeps canonical channel and device URLs",()=>{
  assert.match(inbox,/href="\/settings\/channels"/);assert.match(inbox,/href="\/settings\/devices"/);
  assert.doesNotMatch(inbox,/href=\{`\/w\//);
 });
+
+test("canonical resolver rejects inherited names and unknown routes for every business mode",()=>{
+ const invalid=["constructor","__proto__","prototype","toString","valueOf","hasOwnProperty","missing"];
+ for(const mode of ["ai","commerce","both","off"]){
+  for(const root of navigation.unifiedNavigation.map(item=>item.key)){
+   for(const segment of invalid)assert.equal(navigation.unifiedDestination(mode,root,[segment]),null,mode+"/"+root+"/"+segment);
+   assert.equal(navigation.unifiedDestination(mode,root,["devices","extra"]),null);
+  }
+  for(const root of invalid)assert.equal(navigation.unifiedDestination(mode,root,[]),null);
+ }
+});
+test("canonical product gates cover all roots, settings and valid subroutes",()=>{
+ for(const mode of ["ai","commerce","both","off"]){
+  for(const item of navigation.unifiedNavigation){
+   const result=navigation.unifiedDestination(mode,item.key,[]);
+   assert.equal(Boolean(result),navigation.enabledUnifiedService(mode,item.service),mode+"/"+item.key);
+   if(result){assert.equal(typeof result.section,"string");assert.ok(["ai","payments"].includes(result.service));}
+  }
+  for(const group of navigation.unifiedSettings)for(const item of group.items){
+   const result=navigation.unifiedDestination(mode,"settings",[item.slug]);
+   const enabled=!item.external&&navigation.enabledUnifiedService(mode,item.service);
+   assert.equal(Boolean(result),enabled,mode+"/settings/"+item.slug);
+  }
+ }
+ for(const part of ["transactions","links","refunds"]){
+  assert.equal(navigation.unifiedDestination("ai","payments",[part]),null);
+  for(const mode of ["commerce","both"])assert.equal(navigation.unifiedDestination(mode,"payments",[part]).service,"payments");
+ }
+ for(const part of ["comments","saved-replies","tickets","agent-desk"]){
+  assert.equal(navigation.unifiedDestination("commerce","inbox",[part]),null);
+  for(const mode of ["ai","both"])assert.equal(navigation.unifiedDestination(mode,"inbox",[part]).service,"ai");
+ }
+});
