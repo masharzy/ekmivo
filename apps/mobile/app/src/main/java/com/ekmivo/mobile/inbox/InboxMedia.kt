@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
@@ -122,7 +121,14 @@ private object ActiveVoice {var player:MediaPlayer?=null}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun InboxAttachments(thread:String,bn:Boolean,capabilities:JSONObject,enabled:Boolean,replyTo:String?=null,onRecordingChange:(Boolean)->Unit={},onSent:()->Unit){
+@Composable internal fun InboxAttachments(
+ thread:String,bn:Boolean,capabilities:JSONObject,enabled:Boolean,
+ hasText:Boolean,replyTo:String?=null,
+ onRecordingChange:(Boolean)->Unit={},
+ onSendText:()->Unit,
+ inputField:@Composable RowScope.()->Unit,
+ onSent:()->Unit
+){
  val api=rememberInboxApi();val app=LocalContext.current;val p=LocalEkmivoPalette.current;val scope=rememberCoroutineScope();val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current
  var sheet by remember{mutableStateOf(false)};var selection by rememberSaveable(thread){mutableStateOf(arrayListOf<String>())};var active by rememberSaveable{mutableIntStateOf(0)}
  var batch by rememberSaveable(thread){mutableStateOf(UUID.randomUUID().toString())};var cameraPath by rememberSaveable{mutableStateOf("")}
@@ -173,66 +179,114 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  }
  // Keep the microphone pointer target composed while recording, so holding
  // doesn't lose the release event during recomposition.
- Row(modifier=if(recorder!=null)Modifier.fillMaxWidth() else Modifier,
-   verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-  if(recorder==null) {
-   IconButton(onClick={sheet=true},enabled=enabled&&!busy,modifier=Modifier.size(34.dp)){
-    EkmivoReferenceIcon(EkmivoGlyph.CLIP,description=if(bn)"সংযুক্তি" else "Attachments")
-   }
-   IconButton(onClick={
-    val file=File(app.cacheDir,"inbox/camera-${UUID.randomUUID()}.jpg").apply{parentFile?.mkdirs()}
-    cameraPath=file.absolutePath
-    camera.launch(FileProvider.getUriForFile(app,app.packageName+".updates",file))
-   },enabled=enabled&&!busy,modifier=Modifier.size(34.dp)){
-    EkmivoReferenceIcon(EkmivoGlyph.CAM,description=if(bn)"ক্যামেরা" else "Camera")
-   }
-  }else {
-   IconButton(onClick={discard()},modifier=Modifier.size(34.dp)){EkmivoReferenceIcon(EkmivoGlyph.TRASH,tint=p.danger)}
-   Box(Modifier.size(8.dp).clip(CircleShape).background(p.danger))
-   Text(displayDigits("%d:%02d".format(duration/60000,(duration/1000)%60),bn),style=EkmivoType.meta,color=p.text)
-   Row(Modifier.weight(1f).height(28.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
-    samples.takeLast(22).forEach{a->Box(Modifier.width(2.dp).height((3+19*a).dp).clip(CircleShape).background(p.secondary))}
-   }
-   if(locked)IconButton(onClick={
-    if(paused){runCatching{recorder?.resume()};pauseSum+=System.currentTimeMillis()-pauseAt;paused=false}
-    else{runCatching{recorder?.pause()};pauseAt=System.currentTimeMillis();paused=true}
-   },modifier=Modifier.size(34.dp)){EkmivoReferenceIcon(if(paused)EkmivoGlyph.PLAY else EkmivoGlyph.PAUSE)}
-  }
-  Box(Modifier.size(42.dp).clip(CircleShape).background(if(recorder!=null)p.text else p.raised)
-   .pointerInput(enabled,busy){
-    var canceled=false
-    detectDragGesturesAfterLongPress(
-     onDragStart={
-      swipeX=0f;swipeY=0f;canceled=false
-      if(enabled&&!busy){
-       if(ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)begin()
-       else mic.launch(Manifest.permission.RECORD_AUDIO)
+ // The reference composer occupies the safe region above the gesture bar / IME.
+ // Keep it mounted while typing so attachments, camera, and voice retain state.
+ Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
+  .topHairline(p.border).background(p.canvas)
+  .padding(start=12.dp,end=12.dp,top=8.dp,bottom=14.dp),
+  verticalArrangement=Arrangement.spacedBy(6.dp)) {
+  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Bottom,
+   horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+   if(recorder==null) {
+    Row(
+     Modifier.weight(1f).heightIn(min=40.dp,max=104.dp)
+      .clip(RoundedCornerShape(20.dp)).background(p.surface)
+      .border(1.dp,p.border,RoundedCornerShape(20.dp))
+      .padding(start=8.dp,end=4.dp),
+     verticalAlignment=Alignment.Bottom
+    ) {
+     inputField()
+     Box(Modifier.width(32.dp).height(38.dp)
+       .clickable(enabled=enabled&&!busy){sheet=true},
+       contentAlignment=Alignment.Center) {
+      EkmivoReferenceIcon(EkmivoGlyph.CLIP,tint=p.secondary,size=20.dp,
+       description=if(bn)"সংযুক্ত করুন" else "Attachments")
+     }
+     if(!hasText)Box(Modifier.width(32.dp).height(38.dp)
+       .clickable(enabled=enabled&&!busy){
+        val file=File(app.cacheDir,"inbox/camera-${UUID.randomUUID()}.jpg").apply{parentFile?.mkdirs()}
+        cameraPath=file.absolutePath
+        camera.launch(FileProvider.getUriForFile(app,app.packageName+".updates",file))
+       },contentAlignment=Alignment.Center) {
+      EkmivoReferenceIcon(EkmivoGlyph.CAM,tint=p.secondary,size=20.dp,
+       description=if(bn)"ক্যামেরা" else "Camera")
+     }
+    }
+   }else {
+    Row(Modifier.weight(1f).heightIn(min=40.dp).clip(RoundedCornerShape(20.dp))
+      .background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp))
+      .padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically,
+      horizontalArrangement=Arrangement.spacedBy(8.dp)){
+     IconButton(onClick={discard()},modifier=Modifier.size(30.dp)){
+      EkmivoReferenceIcon(EkmivoGlyph.TRASH,tint=p.danger,size=20.dp)
+     }
+     Box(Modifier.size(7.dp).clip(CircleShape).background(p.danger))
+     Text(displayDigits("%d:%02d".format(duration/60000,(duration/1000)%60),bn),
+      style=EkmivoType.meta,color=p.text)
+     Row(Modifier.weight(1f).height(26.dp),verticalAlignment=Alignment.CenterVertically,
+       horizontalArrangement=Arrangement.spacedBy(2.dp)){
+      samples.takeLast(22).forEach{sample->
+       Box(Modifier.width(2.dp).height((3+19*sample).dp)
+        .clip(RoundedCornerShape(2.dp)).background(p.secondary))
       }
-     },
-     onDrag={change,drag->
-      change.consume()
-      if(recorder!=null&&!locked){
-       swipeX+=drag.x;swipeY+=drag.y
-       if(swipeX < -68.dp.toPx()){canceled=true;discard()}
-       else if(swipeY < -72.dp.toPx())locked=true
-      }
-     },
-     onDragEnd={if(recorder!=null&&!locked&&!canceled)finishVoice(true);swipeX=0f;swipeY=0f},
-     onDragCancel={if(recorder!=null&&!locked)discard();swipeX=0f;swipeY=0f}
-    )
-   }.clickable(enabled=enabled&&!busy){
-    if(recorder!=null)finishVoice(true)
-    else if(ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED){begin();locked=true}
-    else mic.launch(Manifest.permission.RECORD_AUDIO)
-   },contentAlignment=Alignment.Center){
-   EkmivoReferenceIcon(if(recorder!=null)EkmivoGlyph.SND else EkmivoGlyph.MIC,
-    tint=if(recorder!=null)p.onPrimary else p.text,size=21.dp,
-    description=if(recorder!=null)(if(bn)"ভয়েস পাঠান" else "Send voice")else(if(bn)"রেকর্ড করতে ধরে রাখুন" else "Hold to record"))
+     }
+     if(locked)IconButton(onClick={
+      if(paused){runCatching{recorder?.resume()};pauseSum+=System.currentTimeMillis()-pauseAt;paused=false}
+      else{runCatching{recorder?.pause()};pauseAt=System.currentTimeMillis();paused=true}
+     },modifier=Modifier.size(30.dp)){
+      EkmivoReferenceIcon(if(paused)EkmivoGlyph.PLAY else EkmivoGlyph.PAUSE,size=20.dp)
+     }
+    }
+   }
+   if(recorder==null && hasText) {
+    Box(Modifier.size(40.dp).clip(CircleShape).background(p.text)
+     .clickable(enabled=enabled&&!busy){onSendText()},contentAlignment=Alignment.Center) {
+     EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,size=20.dp,
+      description=if(bn)"পাঠান" else "Send")
+    }
+   }else {
+    Box(Modifier.size(40.dp).clip(CircleShape).background(p.text)
+     .pointerInput(enabled,busy) {
+      var canceled=false
+      detectDragGesturesAfterLongPress(
+       onDragStart={
+        swipeX=0f;swipeY=0f;canceled=false
+        if(enabled&&!busy){
+         if(ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)begin()
+         else mic.launch(Manifest.permission.RECORD_AUDIO)
+        }
+       },
+       onDrag={change,drag->
+        change.consume()
+        if(recorder!=null&&!locked){
+         swipeX+=drag.x;swipeY+=drag.y
+         if(swipeX < -68.dp.toPx()){canceled=true;discard()}
+         else if(swipeY < -72.dp.toPx())locked=true
+        }
+       },
+       onDragEnd={if(recorder!=null&&!locked&&!canceled)finishVoice(true);swipeX=0f;swipeY=0f},
+       onDragCancel={if(recorder!=null&&!locked)discard();swipeX=0f;swipeY=0f}
+      )
+     }.clickable(enabled=enabled&&!busy){
+      if(recorder!=null)finishVoice(true)
+      else if(ContextCompat.checkSelfPermission(app,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED){begin();locked=true}
+      else mic.launch(Manifest.permission.RECORD_AUDIO)
+     },contentAlignment=Alignment.Center) {
+     EkmivoReferenceIcon(if(recorder!=null)EkmivoGlyph.SND else EkmivoGlyph.MIC,
+      tint=p.onPrimary,size=20.dp,
+      description=if(recorder!=null)(if(bn)"ভয়েস পাঠান" else "Send voice")
+       else(if(bn)"ভয়েস রেকর্ড করুন" else "Record voice"))
+    }
+   }
   }
+  if(recorder!=null&&!locked)Text(
+   if(bn)"বাঁয়ে টানলে বাতিল · উপরে টানলে লক" else "Slide left to cancel · up to lock",
+   style=EkmivoType.meta,color=p.secondary)
+  if(recorder!=null&&locked)Text(if(paused)(if(bn)"পজ করা" else "Paused")
+   else(if(bn)"রেকর্ড হচ্ছে" else "Recording"),style=EkmivoType.meta,color=p.secondary)
+  if(error)Text(if(bn)"পাঠানো যায়নি। আবার চেষ্টা করুন।" else "Unable to send. Try again.",
+   style=EkmivoType.meta,color=p.danger)
  }
- if(recorder!=null&&!locked)Text(if(bn)"বাঁয়ে টানলে বাতিল · উপরে টানলে লক" else "Slide left to cancel · up to lock",style=EkmivoType.meta,color=p.secondary)
- if(recorder!=null&&locked)Text(if(paused)(if(bn)"পজ করা" else "Paused")else(if(bn)"রেকর্ড হচ্ছে" else "Recording"),style=EkmivoType.meta,color=p.secondary)
- if(error)Text(if(bn)"পাঠানো যায়নি। আবার চেষ্টা করুন।" else "Unable to send. Try again.",style=EkmivoType.meta,color=p.danger)
  if(sheet)ModalBottomSheet(onDismissRequest={sheet=false},containerColor=p.raised,tonalElevation=0.dp){Row(Modifier.fillMaxWidth().padding(18.dp),horizontalArrangement=Arrangement.SpaceEvenly){
   AttachmentChoice(EkmivoGlyph.IMG,if(bn)"গ্যালারি" else "Gallery"){gallery.launch(arrayOf("image/jpeg","image/png"))}
   AttachmentChoice(EkmivoGlyph.CAM,if(bn)"ক্যামেরা" else "Camera"){val file=File(app.cacheDir,"inbox/camera-${UUID.randomUUID()}.jpg").apply{parentFile?.mkdirs()};cameraPath=file.absolutePath;sheet=false;camera.launch(FileProvider.getUriForFile(app,app.packageName+".updates",file))}
