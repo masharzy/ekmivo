@@ -36,7 +36,7 @@ function at(value?:string,locale:"en"|"bn"="en"){
 }
 function isHttps(value:string){try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password&&!!u.hostname}catch{return false}}
 function formatSettings(body:Settings):Settings{return Object.fromEntries(Object.entries(body).map(([k,v])=>[k,v.trim()])) as unknown as Settings}
-export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string}){
+export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId,paymentPlanApplies=true}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string;paymentPlanApplies?:boolean}){
  const router=useRouter(),bn=locale==="bn";
  const t=useCallback((en:string,bengali:string)=>bn?bengali:en,[bn]);
  const teamLimit=useResourceLimit("team_members",workspaceId,environment,resource==="team");
