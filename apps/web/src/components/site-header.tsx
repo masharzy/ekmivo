@@ -61,7 +61,7 @@ export function SiteHeader({locale,initialTheme,authenticated=false}:{locale:Loc
  // The locale layout can be retained across client navigation: never let
  // public chrome leak into workspace or standalone account routes.
  const visiblePath=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
- if(["workspaces","w","account","admin","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:workspaces|w|account|admin|pay|checkout|receipt|invoice)(?:\/|$)/.test(visiblePath))return null;
+ if(["dashboard","workspaces","w","account","admin","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:dashboard|workspaces|w|account|admin|pay|checkout|receipt|invoice)(?:\/|$)/.test(visiblePath))return null;
  return <header className={`site-header ek-public-header${scrolled?" is-wide":""}${hidden?" is-hidden":""}${menuOpen?" menu-open":""}`}>
   <div className="header-inner">
    <Link className="brand" href="/" aria-label="Ekmivo home" onClick={closeMenu}>
@@ -69,11 +69,11 @@ export function SiteHeader({locale,initialTheme,authenticated=false}:{locale:Loc
    </Link>
    <nav id="ek-public-navigation" className={`header-nav${menuOpen?" open":""}`} aria-label={locale==="bn"?"মূল মেনু":"Main navigation"}>
     {pages.map(page=><Link key={page.path} aria-current={pathname.replace(/^\/(bn|en)(?=\/|$)/,"")===`/${page.path}`?"page":undefined} href={`/${page.path}`} onClick={closeMenu}>{page[locale]}</Link>)}
-    <Link className="mobile-account-link" href={authenticated?"/workspaces/open":"/login"} onClick={closeMenu}>{authenticated?(locale==="bn"?"ড্যাশবোর্ড":"Dashboard"):(locale==="bn"?"লগইন করুন":"Sign in")}</Link>
+    <Link className="mobile-account-link" href={authenticated?"/dashboard":"/login"} onClick={closeMenu}>{authenticated?(locale==="bn"?"ড্যাশবোর্ড":"Dashboard"):(locale==="bn"?"লগইন করুন":"Sign in")}</Link>
    </nav>
    <div className="header-right">
     <SiteControls locale={locale} initialTheme={initialTheme}/>
-    <Link className="header-cta ek-signin" href={authenticated?"/workspaces/open":visiblePath==="/login"?"/register":"/login"} onClick={closeMenu}>{authenticated?(locale==="bn"?"ড্যাশবোর্ড":"Dashboard"):visiblePath==="/login"?(locale==="bn"?"অ্যাকাউন্ট খুলুন":"Create account"):(locale==="bn"?"লগইন করুন":"Sign in")}<span aria-hidden="true">↗</span></Link>
+    <Link className="header-cta ek-signin" href={authenticated?"/dashboard":visiblePath==="/login"?"/register":"/login"} onClick={closeMenu}>{authenticated?(locale==="bn"?"ড্যাশবোর্ড":"Dashboard"):visiblePath==="/login"?(locale==="bn"?"অ্যাকাউন্ট খুলুন":"Create account"):(locale==="bn"?"লগইন করুন":"Sign in")}<span aria-hidden="true">↗</span></Link>
     <button className="menu-toggle" type="button" aria-label={menuOpen?t.closeMenu:t.menu} aria-controls="ek-public-navigation" aria-expanded={menuOpen} onClick={()=>setMenuOpen(x=>!x)}><span/><span/></button>
    </div>
   </div>
