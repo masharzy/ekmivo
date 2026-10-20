@@ -145,14 +145,14 @@ test("business setup preserves exact Store contract and persists private metadat
  assert.equal((await f.submit({name:"Fixture shop",business_type:"service",description:"Fixture summary",address:"Fixture address"})).location,"/setup");
  assert.equal(f.state().step,"services");assert.equal(f.state().businessName,"Fixture shop");
  assert.equal(f.state().category,"service");assert.equal(f.state().description,"Fixture summary");
- assert.deepEqual(f.state().profile.body,{name:"Fixture shop",logo:"",area:"Existing area",address:"Fixture address",phone:""});
+ assert.deepEqual(structuredClone(f.state().profile.body),{name:"Fixture shop",logo:"",area:"Existing area",address:"Fixture address",phone:""});
 });
 test("onboarding metadata failure rolls back Store identity and workspace name",async()=>{
  const f=fixture({step:"business",metadataError:true}),before=structuredClone(f.state());
  assert.equal((await f.submit({name:"Fixture shop",business_type:"online"})).status,"error");
  assert.deepEqual(f.state(),before);
 });
-for(const invalid of [{name:"bad\\u0000name"},{description:"x".repeat(61)},{address:"x".repeat(251)}])test("invalid business payload never advances setup: "+Object.keys(invalid)[0],async()=>{
+for(const invalid of [{name:"bad"+String.fromCharCode(0)+"name"},{description:"x".repeat(61)},{address:"x".repeat(251)}])test("invalid business payload never advances setup: "+Object.keys(invalid)[0],async()=>{
  const f=fixture({step:"business"}),before=structuredClone(f.state());
  assert.equal((await f.submit({name:"Fixture shop",business_type:"online",...invalid})).status,"error");
  assert.deepEqual(f.state(),before);

@@ -7,7 +7,7 @@ DO $$BEGIN
  THEN RAISE EXCEPTION '0132 requires the control database onboarding schema'; END IF;
 END $$;
 ALTER TABLE briofold_business_onboarding
- ADD COLUMN business_type text CHECK(business_type IN ('online','physical','service','other')),
- ADD COLUMN description text NOT NULL DEFAULT ''
+ ADD COLUMN IF NOT EXISTS business_type text CHECK(business_type IN ('online','physical','service','other')),
+ ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT ''
   CHECK(length(description)<=60 AND description!~'[[:cntrl:]]');
 COMMIT;
