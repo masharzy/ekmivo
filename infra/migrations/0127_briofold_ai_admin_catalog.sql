@@ -42,8 +42,8 @@ BEGIN
  INSERT INTO briofold_ai_credit_journal(workspace_id,operation_key,kind,available_delta_minor,reserved_delta_minor,
   available_after_minor,reserved_after_minor,actor_id,reason)
  VALUES(w,'admin:'||k::text,'correction',delta_minor,0,wallet.available_minor,wallet.reserved_minor,a,why);
- INSERT INTO platform_admin_audit(actor_id,action,subject_id,description)
- VALUES(a,'ai_credits.adjusted',w,'minor='||delta_minor::text||' | '||why);
+ INSERT INTO platform_admin_audit(actor_id,action,description)
+ VALUES(a,'ai_credits.adjusted','workspace='||w::text||'; minor='||delta_minor::text||' | '||why);
  RETURN jsonb_build_object('balance_minor',wallet.available_minor,'replayed',false);
 END $$;
 CREATE TABLE briofold_ai_tariff_versions (
@@ -100,8 +100,8 @@ BEGIN
   VALUES(m,next_revision,b,a,why,k) RETURNING id INTO v;
  INSERT INTO briofold_ai_tariff_catalog(model,current_version) VALUES(m,v)
   ON CONFLICT(model) DO UPDATE SET current_version=EXCLUDED.current_version;
- INSERT INTO platform_admin_audit(actor_id,action,subject_id,description)
-  VALUES(a,'ai_tariff.published',v,m||' v'||next_revision::text||' | '||why);
+ INSERT INTO platform_admin_audit(actor_id,action,description)
+  VALUES(a,'ai_tariff.published','version='||v::text||'; '||m||' v'||next_revision::text||' | '||why);
  RETURN v;
 END $$;
 CREATE FUNCTION briofold_ai_tariff_current(m text) RETURNS jsonb
