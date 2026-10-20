@@ -59,7 +59,7 @@ test("provider colors and no marketing header in standalone routes",()=>{
  assert.match(proxy,/headers.set\("x-ekmivo-internal-rewrite","1"\)/);
  const nextConfig=source("apps/web/next.config.ts");
  assert.doesNotMatch(nextConfig,/source: "\/:locale\(bn\|en\)/);
- assert.match(proxy,/if\(\/\^\\\/\(\?:setup\|dashboard\|inbox\|orders\|payments\|customers\|reports\|settings\|workspaces\|w\|account\|admin\)/);
+ assert.match(proxy,/if\(\/\^\\\/\(\?:setup\|dashboard\|inbox\|orders\|payments\|sms-data\|invoices\|customers\|reports\|settings\|workspaces\|w\|account\|admin\)/);
  const checkout=source("apps/web/src/components/checkout-experience.tsx");
  const document=source("apps/web/src/components/public-document.tsx");
  assert.match(checkout,/pg05-standalone/);
