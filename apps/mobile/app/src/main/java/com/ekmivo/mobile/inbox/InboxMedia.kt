@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -150,7 +152,38 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  var locked by remember{mutableStateOf(false)};var paused by remember{mutableStateOf(false)};var pauseAt by remember{mutableLongStateOf(0L)};var pauseSum by remember{mutableLongStateOf(0L)};var swipeX by remember{mutableFloatStateOf(0f)};var swipeY by remember{mutableFloatStateOf(0f)}
  fun toast(text:String){Toast.makeText(app,text,Toast.LENGTH_SHORT).show()}
  fun discard(){runCatching{recorder?.stop()};recorder?.release();recorder=null;recordFile?.delete();recordFile=null;samples=emptyList();locked=false;paused=false;pauseAt=0L;pauseSum=0L;swipeX=0f;swipeY=0f}
- fun begin(){try{val file=File(app.cacheDir,"inbox/record-${UUID.randomUUID()}.m4a").apply{parentFile?.mkdirs()};val r=if(android.os.Build.VERSION.SDK_INT>=31)MediaRecorder(app)else @Suppress("DEPRECATION") MediaRecorder();r.setAudioSource(MediaRecorder.AudioSource.MIC);r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);r.setAudioSamplingRate(44100);r.setOutputFile(file.absolutePath);r.setMaxDuration(60000);r.prepare();r.start();recordStart=System.currentTimeMillis();recordFile=file;recorder=r;duration=0;samples=emptyList();paused=false;pauseSum=0L;locked=false}catch(_:Exception){discard();error=true}}
+ // VOICE_COMMUNICATION requests the device's capture-side speech processing
+ // (noise suppression / gain / echo control when supported). MediaRecorder does
+ // not expose an AudioRecord session for manually attaching NoiseSuppressor.
+ fun begin(){
+  val file=File(app.cacheDir,"inbox/record-${UUID.randomUUID()}.m4a").apply{parentFile?.mkdirs()}
+  var lastError:Exception?=null
+  for(source in listOf(MediaRecorder.AudioSource.VOICE_COMMUNICATION,MediaRecorder.AudioSource.MIC)){
+   val r=if(android.os.Build.VERSION.SDK_INT>=31)MediaRecorder(app)
+    else @Suppress("DEPRECATION") MediaRecorder()
+   try {
+    r.setAudioSource(source)
+    r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+    r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+    r.setAudioChannels(1)
+    r.setAudioSamplingRate(48000)
+    r.setAudioEncodingBitRate(96000)
+    r.setOutputFile(file.absolutePath)
+    r.setMaxDuration(60000)
+    r.prepare();r.start()
+    recordStart=System.currentTimeMillis()
+    recordFile=file;recorder=r;duration=0;samples=emptyList()
+    paused=false;pauseSum=0L;locked=false
+    lastError=null
+    break
+   }catch(e:Exception){
+    lastError=e
+    runCatching{r.reset()};r.release()
+    file.delete()
+   }
+  }
+  if(lastError!=null){discard();toast(if(bn)"মাইক্রোফোন চালু হয়নি" else "Unable to start microphone")}
+ }
  val mic=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){
   toast(if(it)(if(bn)"রেকর্ড করতে মাইক চেপে ধরে রাখুন" else "Hold the microphone to record")
    else(if(bn)"মাইক্রোফোনের অনুমতি প্রয়োজন" else "Microphone permission is required"))
@@ -160,7 +193,11 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  LaunchedEffect(recorder){onRecordingChange(recorder!=null);while(recorder!=null){
   val now=System.currentTimeMillis()
   duration=(now-recordStart-pauseSum-(if(paused)now-pauseAt else 0L)).coerceAtLeast(0)
-  if(!paused)samples=(samples+runCatching{recorder!!.maxAmplitude/32767f}.getOrDefault(0f)).takeLast(40)
+  if(!paused){
+    val amplitude=runCatching{recorder!!.maxAmplitude/32767f}.getOrDefault(0f).coerceIn(0f,1f)
+    val level=kotlin.math.sqrt(amplitude).coerceIn(.06f,1f)
+    samples=(samples+level).takeLast(40)
+   }
   if(duration>=59000){discard();toast(if(bn)"ভয়েস সর্বোচ্চ ১ মিনিট" else "Voice limit is one minute")}
   delay(90)
  }}
@@ -217,10 +254,10 @@ private object ActiveVoice {var player:MediaPlayer?=null}
     Text(displayDigits("%d:%02d".format(duration/60000,(duration/1000)%60),bn),
      style=EkmivoType.shop,color=p.text)
     Row(Modifier.weight(1f).height(26.dp),verticalAlignment=Alignment.CenterVertically,
-     horizontalArrangement=Arrangement.End){
+     horizontalArrangement=Arrangement.Start){
      samples.takeLast(40).forEach{amp->
       Box(Modifier.padding(start=2.dp).width(2.5.dp).height((3+20*amp).dp)
-       .clip(RoundedCornerShape(2.dp)).background(p.text.copy(alpha=.55f)))
+       .clip(RoundedCornerShape(2.dp)).background(p.success))
      }
     }
    }
@@ -277,8 +314,8 @@ private object ActiveVoice {var player:MediaPlayer?=null}
        inputField()
        Box(Modifier.width(32.dp).height(38.dp).clickable(enabled=enabled&&!busy){sheet=true},
         contentAlignment=Alignment.Center){
-        EkmivoReferenceIcon(EkmivoGlyph.CLIP,tint=p.secondary,size=20.dp,
-         description=if(bn)"সংযুক্ত করুন" else "Attachments")
+        Icon(Icons.Outlined.AttachFile,contentDescription=if(bn)"সংযুক্ত করুন" else "Attachments",
+         modifier=Modifier.size(22.dp),tint=p.secondary)
        }
        if(!hasText)Box(Modifier.width(32.dp).height(38.dp)
         .clickable(enabled=enabled&&!busy){
@@ -318,6 +355,7 @@ private object ActiveVoice {var player:MediaPlayer?=null}
          vibrate()
          down.consume()
          val origin=down.position
+         val downAt=android.os.SystemClock.uptimeMillis()
          var canceled=false
          while(true){
           val ev=awaitPointerEvent()
@@ -329,7 +367,14 @@ private object ActiveVoice {var player:MediaPlayer?=null}
           if(!locked&&dx<=-96.dp.toPx()){canceled=true;discard();break}
           if(!locked&&dy<=-72.dp.toPx()){locked=true;vibrate()}
           if(!change.pressed){
-           if(recorder!=null&&!locked&&!canceled)finishVoice(true)
+           if(recorder!=null&&!locked&&!canceled){
+            val heldFor=android.os.SystemClock.uptimeMillis()-downAt
+            if(heldFor<300L && kotlin.math.abs(dx)<12.dp.toPx() && kotlin.math.abs(dy)<12.dp.toPx()){
+             locked=true
+             swipeX=0f;swipeY=0f
+             vibrate()
+            }else finishVoice(true)
+           }
            break
           }
           change.consume()
