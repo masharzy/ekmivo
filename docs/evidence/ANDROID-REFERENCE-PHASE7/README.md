@@ -1,5 +1,13 @@
 # Android reference Phase 7 — integration and release
 
+## Production workspace repair — 2026-10-20
+
+The owner reported a paired 0.3.0 APK looping at workspace loading. Production Render was still at `5413188`; control lacked `mobile_workspace_state`/`mobile_devices`, and financial realms lacked preview/adoption functions. Applied the exact repository migrations 0114/0116/0118–0121 to control and 0115/0117 to both independent financial databases, after isolated Neon branch migration and rolled-back fixture checks. The compiled existing operator's local preflight failed; it was not counted as success. Execution used Neon transactions around the same SQL files with the same database, realm and owner guards. No schema was copied between production realms. Existing control workspace/user and financial phone/intent/payment counts were unchanged.
+
+PR #86 merged as `f65e23ee3d9a5b60b18a27b193e0cc83a9ffc02f`. Render deploy `dep-dbbd8lei0phs738cn50g` became live at 02:40 UTC. Health returned 200; unsigned workspace-state correctly returned ACCESS_DENIED. All 13 active workspace scopes returned state under the actual restricted projection role, using its operator login. Runtime logs confirmed both receipt workers and workspace reconciler started. No emulator rerun was performed after the owner requested stopping them. A real handset retry is still needed to confirm its signed request and stored pairing end to end.
+
+Runtime logs also exposed the existing maintenance worker lacking EXECUTE on `payment_allowance_reconcile_expired(integer)`. Additive financial migration 0122 grants only that bounded function to `ekmivo_financial_worker`; it does not change allowance or payment logic. Applied to sandbox/live after isolated managed-plan branch checks. Actual restricted worker logins executed rolled-back probes successfully in both production realms. The guarded operator now includes this migration for future installs. Complete Meta/Firebase/private media operation still depends on the separate provider/storage configuration gates below.
+
 Requested 2026-10-20. Version **0.3.0 / versionCode 5**, application ID `com.ekmivo.mobile`; retain the existing pinned production signing certificate. No production migration, deployment, Meta approval or paid storage provisioning is implied by an APK build.
 
 ## Source corrections

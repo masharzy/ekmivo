@@ -25,7 +25,7 @@ jobs:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           printf '%s\n' "$SOURCE_SHA" > rollout-operator/source-commit.txt
-          cp infra/migrations/011[4-9]* infra/migrations/012[01]* rollout-operator/
+          cp infra/migrations/011[4-9]* infra/migrations/012[0-2]* rollout-operator/
           cd rollout-operator
           sha256sum financial-migrate *.sql > SHA256SUMS
       - uses: actions/upload-artifact@v4
