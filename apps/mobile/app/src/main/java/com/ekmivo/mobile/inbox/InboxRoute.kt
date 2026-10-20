@@ -123,6 +123,15 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
  var hasMore by remember{mutableStateOf(false)}
  var olderAvailable by remember{mutableStateOf(false)}
  val scroll=rememberLazyListState()
+ val voiceWorkspaceKey=workspace.id+"|"+workspace.environment
+ val localVoices=remember(thread,voiceWorkspaceKey) {
+  mutableStateListOf<LocalVoiceMessage>().apply {
+   if(thread!=null)addAll(VoiceOutbox.load(app,voiceWorkspaceKey,thread!!))
+  }
+ }
+ fun persistVoices(){
+  thread?.let{VoiceOutbox.save(app,voiceWorkspaceKey,it,localVoices)}
+ }
  var openingReadSequence by remember{mutableLongStateOf(0L)}
  var refreshNonce by remember{mutableIntStateOf(0)}
  var refreshing by remember{mutableStateOf(false)}
@@ -141,6 +150,13 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
   val fetched=response.getJSONArray("items").rows()
   if(older||messages.isEmpty())olderAvailable=fetched.size==50
   messages=if(older)(fetched+messages).distinctBy{it.getString("id")}else (messages.filter{m->fetched.firstOrNull()?.optLong("sequence")?.let{m.optLong("sequence")<it}==true}+fetched).distinctBy{it.getString("id")}
+  val deliveredIds=messages.mapNotNull{it.optJSONObject("content")?.optString("media_id")?.takeIf(String::isNotBlank)}.toSet()
+  val reconciled=localVoices.filter{it.mediaId in deliveredIds}
+  if(reconciled.isNotEmpty()){
+   localVoices.removeAll(reconciled)
+   persistVoices()
+   reconciled.forEach{runCatching{it.file.delete()}}
+  }
   if(initializedThread!=id&&fetched.isNotEmpty()) {
    val cursor=info?.optLong("read_sequence")?:0L
    openingReadSequence=cursor
@@ -192,6 +208,20 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
     val sequence=messages.filter{it.optString("id") in visible}.maxOfOrNull{it.optLong("sequence")}?:0L
     if(sequence>acknowledged)try{api.call("read",id,body=JSONObject().put("sequence",sequence));acknowledged=sequence}catch(e:CancellationException){throw e}catch(_:Exception){fail()}
    }
+  }
+ }
+ fun dispatchVoice(voice:LocalVoiceMessage){
+  if(voice.status=="pending"||voice.status=="sent")return
+  voice.status="pending"
+  persistVoices()
+  scope.launch{
+   try {
+    submitRecordedVoice(api,voice)
+    voice.status="sent"
+    persistVoices()
+    runCatching{loadMessages(voice.threadId)}
+   }catch(e:CancellationException){voice.status="failed";persistVoices();throw e}
+   catch(_:Exception){voice.status="failed";persistVoices()}
   }
  }
  fun action(name:String,body:JSONObject){val id=thread?:return;scope.launch{busy=true;try{api.call(name,id,body=body);loadMessages(id);failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}}
@@ -297,6 +327,9 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
       }
       }
      }
+     items(localVoices,key={it.id}){voice->
+      LocalVoiceBubble(voice,bn,onRetry={dispatchVoice(voice)})
+     }
     }
    }
    if(awayFromBottom)Box(Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=12.dp).size(40.dp).clip(CircleShape).background(p.raised).border(1.dp,p.border,CircleShape).clickable{scope.launch{scroll.animateScrollToItem((scroll.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}}.semantics{contentDescription=if(bn)"নিচে যান" else "Jump to latest"},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.DOWN,tint=p.text,size=21.dp)}
@@ -322,6 +355,21 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
     hasText=input.isNotBlank(),
     replyTo=reply?.optString("id"),
     onRecordingChange={recording=it},
+    onVoicePrepared={file,durationMs,quoteId->
+     val recorded=VoiceOutbox.preserve(app,file)
+     val mediaId=UUID.randomUUID().toString()
+     val voice=LocalVoiceMessage(
+      id="local-"+mediaId,threadId=thread!!,workspaceKey=voiceWorkspaceKey,
+      file=recorded,mediaId=mediaId,idempotencyKey=UUID.randomUUID().toString(),
+      batchId=UUID.randomUUID().toString(),durationMs=durationMs,replyTo=quoteId,
+      initialStatus="failed"
+     )
+     localVoices.add(voice)
+     persistVoices()
+     reply=null
+     dispatchVoice(voice)
+     scope.launch { kotlinx.coroutines.yield();scroll.animateScrollToItem((scroll.layoutInfo.totalItemsCount-1).coerceAtLeast(0)) }
+    },
     onSendText={
      if(input.isNotBlank()&&!busy&&net&&window) {
       val id=thread!!;val value=input;val quote=reply;val key=pendingKey?:UUID.randomUUID().toString().also{pendingKey=it}
