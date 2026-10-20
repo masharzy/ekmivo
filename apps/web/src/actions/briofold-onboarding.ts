@@ -21,10 +21,15 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
  if(step==="services"&&!["ai","commerce","both"].includes(mode))return fail("Choose AI, Payments, or Both.");
  if(step==="billing"&&plan.length>40)return fail("Invalid plan selection.");
  // Plan choices are authoritative catalog values, never a client-declared entitlement.
+ let paidGatewaySelection=false;
+ let freeGatewaySelection=false;
  if(step==="billing"&&workspace.mode!=="ai"){
   const published=await publicPaymentPlans();
   if(published.unavailable)return fail("Plan catalog is unavailable. Retry.");
-  if(!published.plans.some(p=>p.id===plan))return fail("Choose an available plan.");
+  const selected=published.plans.find(p=>p.id===plan);
+  if(!selected||selected.terms.kind==="custom")return fail("Choose an available plan.");
+  freeGatewaySelection=selected.terms.kind==="free";
+  paidGatewaySelection=!freeGatewaySelection;
  }
  try{
   const outcome=await database().begin(async tx=>{
@@ -64,6 +69,9 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
       WHERE workspace_id=${workspace.id}::uuid`;
    }
    if(step==="billing"){
+    // Free is a real subscription claim; a paid plan is NEVER activated
+    // until the existing verified billing purchase completes.
+    if(freeGatewaySelection)await tx`SELECT payment_plan_claim_free(${workspace.id}::uuid,${actor.id}::uuid,${plan})`;
     await tx`UPDATE briofold_business_onboarding SET step='complete',
      selected_gateway_plan_id=${workspace.mode==="ai"?null:plan||null},
      completed_at=now(),updated_at=now()
@@ -78,6 +86,6 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
  }
  revalidatePath("/dashboard");
  revalidatePath("/setup");
- if(step==="billing")redirect("/dashboard");
+ if(step==="billing")redirect(paidGatewaySelection?"/settings/billing#plan-"+encodeURIComponent(plan):"/dashboard");
  redirect("/setup");
 }
