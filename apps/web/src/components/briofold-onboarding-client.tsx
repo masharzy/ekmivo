@@ -4,8 +4,8 @@ import {submitBriofoldSetup,type SetupResult} from "../actions/briofold-onboardi
 import styles from "./briofold-onboarding.module.css";
 type Plan={id:string;name:string;description:string;kind:string;price:string};
 const initial:SetupResult={status:"idle",message:""};
-export function BriofoldOnboardingClient({locale,step,businessName,mode,plans}:{
- locale:"bn"|"en";step:"business"|"services"|"billing";businessName:string;
+export function BriofoldOnboardingClient({locale,step,businessId,businessName,mode,plans}:{
+ businessId:string;locale:"bn"|"en";step:"business"|"services"|"billing";businessName:string;
  mode:"ai"|"commerce"|"both"|"off";plans:Plan[];
 }){
  const bn=locale==="bn",t=(en:string,b:string)=>bn?b:en;
@@ -25,6 +25,7 @@ export function BriofoldOnboardingClient({locale,step,businessName,mode,plans}:{
     t("You can edit these settings later.","পরে সেটিংস থেকে পরিবর্তন করতে পারবেন।")}</p>
    <form action={action} className={styles.form}>
     <input type="hidden" name="step" value={step}/>
+    <input type="hidden" name="business_id" value={businessId}/>
     {step==="business"&&<>
      <label>{t("Store name","স্টোরের নাম")}<input name="name" defaultValue={businessName==="New business"?"":businessName} required minLength={2} maxLength={40} autoFocus/></label>
      <label>{t("Business type","ব্যবসার ধরন")}<select name="business_type" defaultValue="online">

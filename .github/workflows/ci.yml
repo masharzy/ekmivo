@@ -54,7 +54,7 @@ jobs:
         run: node --test scripts/briofold-unified-routes.test.mjs
       - name: Briofold Phase 4 and 5 onboarding and prepaid safety contract
         working-directory: apps/web
-        run: node --test scripts/briofold-onboarding-contract.test.mjs
+        run: node --test scripts/briofold-onboarding-contract.test.mjs scripts/briofold-onboarding-actions.test.mjs
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json
