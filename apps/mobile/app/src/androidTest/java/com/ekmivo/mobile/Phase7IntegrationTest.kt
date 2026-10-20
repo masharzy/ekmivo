@@ -47,6 +47,8 @@ class Phase7IntegrationTest {
     "messages"->{val rows=JSONArray().put(JSONObject().put("id","e0000000-0000-4000-8000-000000000001").put("sequence",1).put("sender","customer").put("type","text").put("body","Hello from fixture").put("state","received").put("created_at",now));sent.forEachIndexed{i,text->rows.put(JSONObject().put("id","f0000000-0000-4000-8000-${(i+1).toString().padStart(12,'0')}").put("sequence",i+2).put("sender","seller").put("type","text").put("body",text).put("state","sent").put("created_at",now))};JSONObject().put("thread",JSONObject().put("id",this.thread).put("name","Fixture customer").put("channel","wa").put("ai_enabled",true).put("read_sequence",0).put("window_open",true).put("capabilities",caps())).put("items",rows)}
     "read"->{reads.add(body!!.getLong("sequence"));JSONObject().put("saved",true)}
     "send"->{sent.add(body!!.getString("text"));JSONObject().put("saved",true)}
+    "info"->JSONObject().put("id",body!!.getString("message_id")).put("state","received")
+     .put("channel","wa").put("created_at",now)
     "profile"->JSONObject().put("id",this.thread).put("name","Fixture customer").put("channel","wa").put("phone","+8801700000000").put("contact",JSONObject()).put("note",note).put("note_version",version).put("ai_enabled",true).put("store","UI test workspace").put("messages",1).put("talks",1).put("first",JSONObject().put("at",now).put("text","Hello from fixture")).put("summary",JSONObject("""{"total":0,"ok":0,"cx":0,"rt":0,"run":0,"spend_minor":0}""")).put("orders",JSONArray())
     "note"->{check(body!!.getLong("version")==version);note=body.getString("text");version++;JSONObject().put("saved",true).put("version",version)}
     "media-get"->{val bitmap=Bitmap.createBitmap(220,150,Bitmap.Config.ARGB_8888);bitmap.eraseColor(android.graphics.Color.rgb(60,120,150));val out=ByteArrayOutputStream();bitmap.compress(Bitmap.CompressFormat.PNG,100,out);bitmap.recycle();JSONObject().put("data",Base64.encodeToString(out.toByteArray(),Base64.NO_WRAP)).put("mime","image/png").put("name","fixture.png")}
@@ -68,6 +70,24 @@ class Phase7IntegrationTest {
   assertEquals("Preserved draft",api.sent.single())
   rule.waitUntil(15000){api.reads.isNotEmpty()}
   capture("chat_restored_and_sent_en_light")
+ }
+ @Test fun selectedMessageToolbarReplacesHeaderAndInfoOpensDirectly(){
+  val api=Fixture(thread)
+  rule.setContent{CompositionLocalProvider(LocalInboxApi provides api){
+   EkmivoTheme(false){InboxRoute(false,workspace,initialThread=thread)}
+  }}
+  rule.waitUntil(15000){rule.onAllNodesWithText("Hello from fixture").fetchSemanticsNodes().isNotEmpty()}
+  rule.onNodeWithText("Hello from fixture").performTouchInput{longClick()}
+  rule.onNodeWithContentDescription("Reply").assertExists()
+  rule.onNodeWithContentDescription("Message info").assertExists()
+  rule.onNodeWithContentDescription("Copy").assertExists()
+  rule.onNodeWithContentDescription("Forward").assertExists()
+  rule.onNodeWithContentDescription("Cancel selection").assertExists()
+  rule.onAllNodesWithText("Fixture customer").assertCountEquals(0)
+  rule.onNodeWithContentDescription("Message info").performClick()
+  rule.waitUntil(15000){rule.onAllNodesWithText("Message information").fetchSemanticsNodes().isNotEmpty()}
+  rule.onAllNodesWithText("Send to another chat").assertCountEquals(0)
+  capture("message_info_direct_en_light")
  }
  @Test fun clearCustomerNoteIsDurableAndProfileHasNoFabricatedOrderRate(){
   val api=Fixture(thread)
