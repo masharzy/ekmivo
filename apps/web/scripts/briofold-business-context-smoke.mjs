@@ -61,6 +61,11 @@ try{
    eq((await exports.preferredWorkspaceFor(actor)).id,first);
    eq(await exports.selectDefaultWorkspace(actor,second),false);
    await redirected(()=>exports.requireWorkspace("en",second),"/workspaces");
+   await tx.unsafe("UPDATE app_users SET email_verified_at=NULL WHERE id=$1",[actor]);
+   eq((await exports.currentUser()).verified,false);
+   await redirected(()=>exports.requireUser("en"),"/verify-email");
+   await redirected(()=>exports.requireWorkspace("en",first),"/verify-email");
+   await tx.unsafe("UPDATE app_users SET email_verified_at=now() WHERE id=$1",[actor]);
    await tx.unsafe("UPDATE app_users SET disabled_at=now() WHERE id=$1",[actor]);
    eq(await exports.currentUser(),null);
    await redirected(()=>exports.requireWorkspace("en",first),"/login");
