@@ -21,9 +21,9 @@ const setupErrorBn:Record<string,string>={
  "Could not save setup. Check the details and retry.":"সেটআপ সংরক্ষণ করা যায়নি। তথ্য পরীক্ষা করে আবার চেষ্টা করুন।",
 };
 const initial:SetupResult={status:"idle",message:""};
-export function BriofoldOnboardingClient({locale,step,businessId,businessName,mode,plans}:{
+export function BriofoldOnboardingClient({locale,step,businessId,businessName,mode,plans,gatewayPlansUnavailable=false}:{
  businessId:string;locale:"bn"|"en";step:"business"|"services"|"billing";businessName:string;
- mode:"ai"|"commerce"|"both"|"off";plans:Plan[];
+ mode:"ai"|"commerce"|"both"|"off";plans:Plan[];gatewayPlansUnavailable?:boolean;
 }){
  const bn=locale==="bn",t=(en:string,b:string)=>bn?b:en;
  const [result,action,pending]=useActionState(submitBriofoldSetup,initial);
@@ -73,6 +73,7 @@ export function BriofoldOnboardingClient({locale,step,businessId,businessName,mo
        <span><strong>{plan.name} · {plan.price}</strong><small>{plan.description}</small></span>
       </label>)}
      </fieldset>}
+     {mode!=="ai"&&gatewayPlansUnavailable&&<p role="alert" className={styles.error}>{t("Gateway plans are unavailable. Your saved setup is safe. Retry to load available plans.","Gateway প্ল্যান এখন পাওয়া যাচ্ছে না। সংরক্ষিত সেটআপ ঠিক আছে। প্ল্যান আবার লোড করুন।")} <a href="/setup">{t("Retry","আবার চেষ্টা করুন")}</a></p>}
      {mode!=="commerce"&&<div className={styles.notice}>{t("AI uses separate prepaid credits based on actual metered usage. There is no unlimited AI plan.","AI-তে বাস্তব ব্যবহার অনুযায়ী prepaid credits কাটবে। Unlimited AI প্ল্যান নেই।")}</div>}
     </>}
     {result.status==="error"&&<p role="alert" className={styles.error}>{bn?(setupErrorBn[result.message]??result.message):result.message}</p>}
