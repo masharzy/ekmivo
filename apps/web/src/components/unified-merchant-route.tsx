@@ -24,6 +24,9 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
  // No client-provided workspace ID, query, locale or cookie grants financial access.
  const workspace=await preferredWorkspaceFor(user.id);
  if(!workspace||workspace.mode==="off")redirect("/workspaces");
+ // Keep previously issued /settings/account deep links working while serving
+ // the real session/MFA/account security screen rather than workspace settings.
+ if(root==="settings"&&view.length===1&&view[0]==="account")redirect("/account");
  const setup=await onboardingState(workspace,user.id);
  if(setup&&setup!=="complete")redirect("/setup");
  const destination=unifiedDestination(workspace.mode,root,view);
