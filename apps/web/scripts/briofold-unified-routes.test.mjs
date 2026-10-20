@@ -116,3 +116,78 @@ test("canonical product gates cover all roots, settings and valid subroutes",()=
   for(const mode of ["ai","both"])assert.equal(navigation.unifiedDestination(mode,"inbox",[part]).service,"ai");
  }
 });
+
+function renderDraftSwitch({save=true,discard=true,choose=true}={}){
+ const states=[],refs=[],nodes=[],events=[];
+ let stateIndex=0,refIndex=0,dirty=true;
+ const workspace={id:"10000000-0000-4000-8000-000000000001",name:"First",mode:"both",role:"owner"};
+ const target={...workspace,id:"10000000-0000-4000-8000-000000000002",name:"Second"};
+ const router={push:href=>events.push(["push",href]),refresh:()=>events.push(["refresh"]),prefetch:()=>{}};
+ const react={
+  useState(initial){const i=stateIndex++;if(!(i in states))states[i]=initial;return [states[i],value=>{states[i]=typeof value==="function"?value(states[i]):value;}];},
+  useRef(initial){const i=refIndex++;return refs[i]??=( {current:initial} );},
+  useEffect(){},useCallback:fn=>fn,useTransition:()=>[false,fn=>fn()]
+ };
+ const jsx=(type,props,key)=>{const node={type,props,key};nodes.push(node);return node;};
+ const exports={};
+ const compile=(text)=>ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const sections={};runInNewContext(compile(source("lib/dashboard-sections.ts")),{exports:sections});
+ const legacy={};runInNewContext(compile(source("lib/dashboard-navigation.ts")),{exports:legacy,require:()=>sections});
+ const deps={
+  react,"react/jsx-runtime":{jsx,jsxs:jsx,Fragment:"fragment"},
+  "next/navigation":{useRouter:()=>router,usePathname:()=>"/dashboard"},
+  "next/link":{default:()=>null},
+  "../lib/plan-features":{planSectionAllowed:()=>true},
+  "../lib/dashboard-sections":sections,"../lib/dashboard-navigation":legacy,
+  "../lib/unified-navigation":navigation,
+  "../actions/unified-business":{chooseUnifiedBusiness:async id=>{
+   events.push(["choose",id]);if(choose instanceof Error)throw choose;return choose;
+  }},
+  "../lib/client/draft-navigation":{
+   activeDrafts:()=>dirty?[{}]:[],
+   saveActiveDrafts:async()=>{events.push(["save"]);if(save)dirty=false;return save;},
+   discardActiveDrafts:()=>{events.push(["discard"]);if(discard)dirty=false;return discard;}
+  },
+  "./dashboard-icon":{DashboardIcon:()=>null},"./site-controls":{SiteControls:()=>null},
+  "./dashboard-feedback":{DashboardFeedback:()=>null},"./payment-notifications":{PaymentNotifications:()=>null},
+  "./payment-record-search":{PaymentRecordSearch:()=>null}
+ };
+ runInNewContext(compile(source("components/dashboard-frame.tsx")),{exports,require:id=>{
+  if(!Object.hasOwn(deps,id))throw Error("Unexpected frame dependency "+id);return deps[id];
+ }});
+ const render=()=>{stateIndex=0;refIndex=0;nodes.length=0;exports.DashboardFrame({
+  unified:true,locale:"en",service:"payments",section:"overview",workspace,spaces:[workspace,target],
+  userName:"Fixture",platformAdmin:false,theme:"light",children:null,logout:null
+ });};
+ const button=label=>nodes.find(n=>n.type==="button"&&n.props.children===label);
+ render();
+ nodes.find(n=>n.type==="button"&&n.key===target.id).props.onClick();
+ render();
+ return {events,render,button,nodes,target};
+}
+const drain=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
+for(const decision of ["Save draft","Discard"]){
+ test("dirty business switch "+decision+" selects the business before canonical navigation",async()=>{
+  const h=renderDraftSwitch();assert.deepEqual(h.events,[]);
+  h.button(decision).props.onClick();await drain();
+  assert.deepEqual(h.events,[[decision==="Discard"?"discard":"save"],["choose",h.target.id],["push","/dashboard"],["refresh"]]);
+ });
+}
+test("failed draft save/discard never changes the business or route",async()=>{
+ for(const [decision,options] of [["Save draft",{save:false}],["Discard",{discard:false}]]){
+  const h=renderDraftSwitch(options);h.button(decision).props.onClick();await drain();
+  assert.deepEqual(h.events,[[decision==="Discard"?"discard":"save"]]);
+  h.render();assert.ok(h.nodes.some(n=>n.props?.role==="alert"));
+ }
+});
+test("revoked membership and selection errors keep the draft dialog without navigation",async()=>{
+ for(const choose of [false,new Error("unavailable")]){
+  const h=renderDraftSwitch({choose});h.button("Discard").props.onClick();await drain();h.render();
+  assert.deepEqual(h.events,[["discard"],["choose",h.target.id]]);
+  assert.ok(h.nodes.some(n=>n.props?.role==="alert"));
+ }
+});
+test("Stay cancels pending business selection",async()=>{
+ const h=renderDraftSwitch();h.button("Stay").props.onClick();await drain();
+ assert.deepEqual(h.events,[]);
+});
