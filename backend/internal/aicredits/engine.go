@@ -14,6 +14,7 @@ import (
 var ErrUnavailable = errors.New("AI execution unavailable")
 var ErrPending = errors.New("AI execution requires recovery; do not repeat provider call")
 var ErrRejected = errors.New("AI request rejected before provider execution")
+var ErrWaived = errors.New("AI request credit reservation was released by an administrator")
 var ErrRequestConflict = errors.New("AI request key conflicts with previous input")
 var ErrInvalidRequest = errors.New("invalid AI execution request")
 
@@ -105,6 +106,9 @@ func (e Engine) Run(ctx context.Context, request Request) (Result, error) {
 	}
 	associated := "briofold-ai:" + request.Workspace + ":" + request.Key
 	if !claim.Fresh {
+		if claim.State == "waived" {
+			return empty, ErrWaived
+		}
 		if claim.State == "released" {
 			return empty, ErrRejected
 		}

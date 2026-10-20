@@ -147,6 +147,8 @@ func (s *Service) HandleAITest(w http.ResponseWriter, r *http.Request) {
 			fail(w, 409, "AI_REQUEST_RECOVERY_PENDING")
 		case errors.Is(err, aicredits.ErrRejected):
 			fail(w, 422, "AI_PROVIDER_REJECTED")
+		case errors.Is(err, aicredits.ErrWaived):
+			fail(w, 409, "AI_REQUEST_CREDITS_RELEASED")
 		default:
 			var pg *pgconn.PgError
 			if errors.As(err, &pg) {
