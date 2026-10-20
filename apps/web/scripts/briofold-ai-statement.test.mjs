@@ -8,9 +8,9 @@ const src=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
 function statementHelpers(){
  const source=src("lib/server/briofold-ai-statement.ts").replace(/^import "server-only";\s*/,"");
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const module={exports:{}};
- vm.runInNewContext(js,{module,exports:module.exports,Buffer,Date,Number,JSON,Error,String});
- return module.exports;
+ const cjsModule={exports:{}};
+ vm.runInNewContext(js,{module:cjsModule,exports:cjsModule.exports,Buffer,Date,Number,JSON,Error,String});
+ return cjsModule.exports;
 }
 test("Wallet statement cursor preserves strict (timestamp, ID) pagination",()=>{
  const h=statementHelpers();
