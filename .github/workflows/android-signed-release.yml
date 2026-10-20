@@ -54,7 +54,7 @@ jobs:
           sha256sum owner-signing/app-release-unsigned.apk > owner-signing/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: ekmivo-unsigned-v9-owner-signing
+          name: ekmivo-unsigned-v10-owner-signing
           path: owner-signing/
           if-no-files-found: error
           retention-days: 3
