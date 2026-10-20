@@ -3,7 +3,7 @@ import {useState} from "react";
 import type {WalletStatementEntry} from "../lib/server/briofold-ai-statement";
 import styles from "./briofold-ai-statement.module.css";
 
-export function BriofoldAiStatement({locale,initial,nextCursor}:{locale:"en"|"bn";initial:WalletStatementEntry[];nextCursor:string|null}){
+export function BriofoldAiStatement({workspaceId,locale,initial,nextCursor}:{workspaceId:string;locale:"en"|"bn";initial:WalletStatementEntry[];nextCursor:string|null}){
  const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en;
  const [rows,setRows]=useState(initial),[cursor,setCursor]=useState(nextCursor);
  const [busy,setBusy]=useState(false),[error,setError]=useState("");
@@ -17,7 +17,7 @@ export function BriofoldAiStatement({locale,initial,nextCursor}:{locale:"en"|"bn
   if(busy||!cursor)return;
   setBusy(true);setError("");
   try{
-   const response=await fetch("/api/ai-credits/statement?cursor="+encodeURIComponent(cursor),
+   const response=await fetch("/api/ai-credits/statement?cursor="+encodeURIComponent(cursor)+"&workspace_id="+encodeURIComponent(workspaceId),
     {credentials:"same-origin",cache:"no-store"});
    if(!response.ok)throw new Error("HTTP_"+response.status);
    const data:unknown=await response.json();
