@@ -18,7 +18,7 @@ test("migration 0131 is installed by real wallet smoke and preserves immutable t
 test("API binds ORIGINAL financial token digest before financial intent creation",()=>{
  const source=read("backend/internal/checkout/ai_credit_topup.go");
  const binding=source.indexOf("briofold_ai_topup_bind_proof");
- const write=source.indexOf("pg13_platform_checkout_create");
+ const write=source.indexOf("s.creationScoped(");
  assert.ok(binding>=0&&write>binding,"proof must be bound before issuing the financial checkout");
  assert.match(source,/briofold_ai_topup_payment_context/);
  assert.match(source,/SELECT pg13_platform_payment\(\$1\),pg05_checkout_view\(\$1\)->>'state'/);
