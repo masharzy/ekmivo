@@ -31,3 +31,29 @@ test("Prepaid AI must fail closed by default and use server verified money",()=>
  assert.match(wallet,/m\.role IN \('owner','admin'\)/);
  assert.match(wallet,/pg13_capability_override/);
 });
+
+test("Bengali setup shows localized errors for every known onboarding failure",()=>{
+ const action=read("actions/briofold-onboarding.ts");
+ const client=read("components/briofold-onboarding-client.tsx");
+ const reasons=[
+  "Business unavailable.",
+  "Your selected business changed. Refresh setup and try again.",
+  "Invalid setup step.",
+  "Check your business name and type.",
+  "Choose AI, Payments, or Both.",
+  "Invalid plan selection.",
+  "Store profile unavailable.",
+  "Service configuration unavailable.",
+  "Business services changed. Refresh setup.",
+  "Choose an available plan.",
+  "Owner access required.",
+  "This setup changed. Refresh and try again.",
+  "Could not save setup. Check the details and retry.",
+ ];
+ for(const message of reasons){
+  assert.ok(action.includes(message),`Action error contract changed: ${message}`);
+  assert.ok(client.includes(JSON.stringify(message)+":"),`Missing Bengali error translation: ${message}`);
+ }
+ assert.match(client,/setupErrorBn\[result\.message\]\?\?result\.message/);
+ assert.match(client,/role="alert"/);
+});
