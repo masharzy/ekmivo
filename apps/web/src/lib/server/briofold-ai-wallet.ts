@@ -30,7 +30,8 @@ export async function readAiWallet(workspaceId:string,actorId:string):Promise<Ai
   if(!member||member.capability_allowed===false)return unavailable;
   const [accountRows,journal,topups,tariff]=await Promise.all([
    db`SELECT available_minor,reserved_minor FROM briofold_ai_wallets WHERE workspace_id=${workspaceId}::uuid`,
-   db`SELECT id,kind,available_delta_minor,reserved_delta_minor,available_after_minor,reserved_after_minor,created_at
+   db`SELECT id,kind,available_delta_minor,reserved_delta_minor,available_after_minor,reserved_after_minor,
+     to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at
      FROM briofold_ai_credit_journal WHERE workspace_id=${workspaceId}::uuid ORDER BY created_at DESC,id DESC LIMIT 31`,
    db`SELECT id,amount_minor,status,created_at FROM briofold_ai_topups WHERE workspace_id=${workspaceId}::uuid ORDER BY created_at DESC LIMIT 25`,
    db`SELECT min(ceil(((v.terms->>'max_input_tokens')::numeric * (v.terms->>'input_minor_per_million')::numeric
