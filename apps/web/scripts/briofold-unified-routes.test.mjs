@@ -4,16 +4,16 @@ import {readFileSync,existsSync} from "node:fs";
 const at=(path)=>new URL("../src/"+path,import.meta.url);
 const source=(path)=>readFileSync(at(path),"utf8");
 
-test("all seven canonical merchant entry routes exist independently of /w workspace slugs",()=>{
+test("all nine canonical merchant entry routes exist independently of /w workspace slugs",()=>{
  assert.ok(existsSync(at("app/[locale]/dashboard/page.tsx")));
- for(const root of ["inbox","orders","payments","customers","reports","settings"])
+ for(const root of ["inbox","orders","payments","sms-data","invoices","customers","reports","settings"])
   assert.ok(existsSync(at(`app/[locale]/${root}/[[...view]]/page.tsx`)),`Missing canonical route: ${root}`);
 });
-test("navigation has exactly seven clean, prefixed-free merchant entries",()=>{
+test("navigation has exactly nine clean, prefixed-free merchant entries",()=>{
  const src=source("lib/unified-navigation.ts");
- for(const path of ["/dashboard","/inbox","/orders","/payments","/customers","/reports","/settings"])
+ for(const path of ["/dashboard","/inbox","/orders","/payments","/sms-data","/invoices","/customers","/reports","/settings"])
   assert.ok(src.includes(`href:"${path}"`),`Missing nav href ${path}`);
- assert.equal((src.match(/href:"\/(dashboard|inbox|orders|payments|customers|reports|settings)"/g)||[]).length,7);
+ assert.equal((src.match(/href:"\/(dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings)"/g)||[]).length,9);
  assert.doesNotMatch(src,/href:"\/(?:bn|en|w)\//);
  assert.match(src,/view\.length>1/);
  assert.match(src,/mode==="off"/);
@@ -33,7 +33,7 @@ test("authorized business context and realm resolution are server-side",()=>{
 test("global marketing header and footer do not render on unified application routes",()=>{
  for(const cssless of ["components/site-header.tsx","components/site-footer.tsx","proxy.ts"]){
   const src=source(cssless);
-  assert.match(src,/dashboard\|inbox\|orders\|payments\|customers\|reports\|settings/,`Missing route exclusion: ${cssless}`);
+  assert.match(src,/dashboard\|inbox\|orders\|payments\|sms-data\|invoices\|customers\|reports\|settings/,`Missing route exclusion: ${cssless}`);
  }
 });
 test("settings uses opt-in CSS module and preserves legacy payment screens",()=>{
@@ -46,4 +46,18 @@ test("settings uses opt-in CSS module and preserves legacy payment screens",()=>
  assert.match(frame,/unified\?"/);
  assert.match(frame,/data-service=\{unified\?"payments":service\}/);
  assert.match(frame,/!unified&&service==="payments"/);
+});
+
+test("simplified Payments has no request or reconciliation user-facing tab",()=>{
+ const nav=source("lib/unified-navigation.ts");
+ const tabs=source("components/unified-section-tabs.tsx");
+ const links=source("components/payment-documents.tsx");
+ assert.doesNotMatch(nav,/requests:\{section:"requests"/);
+ assert.doesNotMatch(nav,/reconciliation:\{section:"reconciliation"/);
+ const paymentTabs=tabs.split(" payments:[")[1]?.split(" customers:[")[0]??"";
+ assert.ok(paymentTabs.includes("/payments/links"));
+ assert.doesNotMatch(paymentTabs,/\/payments\/(?:requests|incoming|invoices|reconciliation)/);
+ assert.doesNotMatch(links,/className="tabs"><button className="on">\{t\("Payment links"/);
+ assert.match(nav,/href:"\/sms-data"/);
+ assert.match(nav,/href:"\/invoices"/);
 });
