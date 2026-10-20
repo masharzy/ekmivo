@@ -57,7 +57,7 @@ CREATE FUNCTION briofold_ai_wallet_reserve(w uuid,a uuid,k text,cost_minor bigin
  LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE existing uuid; balance bigint; rid uuid;
 BEGIN
- IF length(k) NOT BETWEEN 8 AND 128 OR cost_minor NOT BETWEEN 1 AND 100000000 THEN
+ IF k IS NULL OR cost_minor IS NULL OR length(k) NOT BETWEEN 8 AND 128 OR cost_minor NOT BETWEEN 1 AND 100000000 THEN
   RAISE EXCEPTION 'invalid reservation' USING ERRCODE='22023'; END IF;
  PERFORM pg13_actor(w,a,true);
  IF NOT EXISTS(SELECT 1 FROM workspace_product_access WHERE workspace_id=w AND product='ai' AND enabled)
@@ -87,7 +87,7 @@ CREATE FUNCTION briofold_ai_wallet_settle(w uuid,a uuid,k text,actual_cost_minor
 DECLARE reservation briofold_ai_reservations%ROWTYPE;release_amount bigint; wallet briofold_ai_wallets%ROWTYPE;
 BEGIN
  PERFORM pg13_actor(w,a,true);
- IF length(k) NOT BETWEEN 8 AND 128 OR actual_cost_minor<0 THEN
+ IF k IS NULL OR actual_cost_minor IS NULL OR length(k) NOT BETWEEN 8 AND 128 OR actual_cost_minor<0 THEN
   RAISE EXCEPTION 'invalid settlement' USING ERRCODE='22023';END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended('briofold:ai:'||w::text,0));
  SELECT * INTO reservation FROM briofold_ai_reservations
@@ -115,4 +115,6 @@ BEGIN
  RETURN jsonb_build_object('state',CASE WHEN actual_cost_minor=0 THEN 'released' ELSE 'completed' END,
   'available_minor',wallet.available_minor,'reserved_minor',wallet.reserved_minor);
 END $$;
+REVOKE ALL ON FUNCTION briofold_ai_wallet_reserve(uuid,uuid,text,bigint) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
+REVOKE ALL ON FUNCTION briofold_ai_wallet_settle(uuid,uuid,text,bigint) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;
