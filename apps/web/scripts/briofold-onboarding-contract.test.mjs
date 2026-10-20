@@ -26,5 +26,8 @@ test("Prepaid AI must fail closed by default and use server verified money",()=>
  const wallet=read("lib/server/briofold-ai-wallet.ts");
  assert.match(summary,/BRIOFOLD_AI_TOPUPS_ENABLED/);
  assert.match(summary,/wallet\.status==="unavailable"/);
- assert.match(wallet,/workspace_members WHERE workspace_id/);
+ assert.match(wallet,/FROM workspace_members m JOIN workspace_product_access p/);
+ assert.match(wallet,/m\.workspace_id=\$\{workspaceId\}::uuid AND m\.user_id=\$\{actorId\}::uuid/);
+ assert.match(wallet,/m\.role IN \('owner','admin'\)/);
+ assert.match(wallet,/pg13_capability_override/);
 });
