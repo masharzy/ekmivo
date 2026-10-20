@@ -45,6 +45,9 @@ object ReceiptTransport {
 }
 class ReceiptSyncWorker(context:Context,params:WorkerParameters):Worker(context,params){
  override fun doWork():Result {
+  if(!ReceiptStore(applicationContext).use{it.enabled()})return Result.success()
+  if(!WorkspaceAccessRepository.get(applicationContext).refreshBlocking())return Result.retry()
+  if(!WorkspaceAccessRepository.paymentAllowed(applicationContext))return Result.success()
   var inFlightId:String?=null
   return try { ReceiptStore(applicationContext).use {store->
    var phone=store.phone()

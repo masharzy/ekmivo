@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
 class InboxGroundworkTest {
- @Test fun inboxMustRemainHiddenUntilRealServerContract() {
-  assertFalse(InboxFeatureFlag.inboxEnabled)
+ @Test fun inboxHasRealServerContractButRemainsWorkspaceGated() {
+  assertTrue(InboxFeatureFlag.inboxEnabled)
  }
  @Test fun domainTypesCarryNoFakeMessages() = runBlocking {
   assertTrue(DisabledInboxRepository.observeThreads().first().isEmpty())

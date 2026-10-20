@@ -10,9 +10,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.dp
 
 private val EkmivoShapes = Shapes(
-    small = RoundedCornerShape(6.dp),   // --radius-control
-    medium = RoundedCornerShape(10.dp), // --radius-panel
-    large = RoundedCornerShape(12.dp)   // --radius-dialog
+    small = RoundedCornerShape(12.dp),  // reference controls
+    medium = RoundedCornerShape(18.dp), // reference profile card
+    large = RoundedCornerShape(24.dp)  // reference sheet
 )
 
 

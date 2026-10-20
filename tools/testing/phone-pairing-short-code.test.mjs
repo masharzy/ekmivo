@@ -30,8 +30,11 @@ test("one-time claim, 5 minute expiration, digest remain in database",()=>{
 test("Android eight-cell input never consumes before consent",()=>{
  const flow=readFileSync("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/PairingFlow.kt","utf8");
  assert.match(flow,/repeat\(PairingToken\.LENGTH\)/);
- assert.match(flow,/entered\.length == PairingToken\.LENGTH/);
- assert.match(flow,/page = PairPage\.CONFIRM/);
+ assert.match(flow,/R\.string\.pair_verify_code/);
+ assert.match(flow,/PairingToken\.parse\(input\)/);
+ assert.match(flow,/"pairing-preview"/);
+ assert.doesNotMatch(flow,/entered\.length == PairingToken\.LENGTH/);
+ assert.match(flow,/page=PairPage\.CONFIRM/);
  assert.match(flow,/PairTokenEntry\(/);
  const token=readFileSync("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/PairingToken.kt","utf8");
  assert.match(token,/const val LENGTH = 8/);

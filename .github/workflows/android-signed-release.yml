@@ -2,18 +2,89 @@ name: Signed Android production APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize]
+
+concurrency:
+  group: android-release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  native_ui:
+    name: Native emulator integration and screenshot checks
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'android-release'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Enable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install Android API 35 before instrumentation compile
+        run: |
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          sdk_manager="$(find "$sdk_root/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          "$sdk_manager" 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+      - name: Native regression and instrumentation compile
+        working-directory: apps/mobile
+        run: gradle --no-daemon --console=plain :app:testDebugUnitTest :app:assembleDebugAndroidTest -PekmivoApiBaseUrl=https://example.invalid
+      - name: Run reference UI journeys on Android 35
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          cores: 2
+          ram-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb shell wm size 720x1440
+            adb shell wm density 320
+            gradle -p apps/mobile --no-daemon --console=plain :app:connectedDebugAndroidTest -PekmivoApiBaseUrl=https://example.invalid || { mkdir -p phase7-evidence/failed; adb pull /sdcard/Pictures/Ekmivo-Phase7 phase7-evidence/failed/; exit 1; }
+            mkdir -p phase7-evidence/360dp
+            adb pull /sdcard/Pictures/Ekmivo-Phase7 phase7-evidence/360dp/
+            adb pull /sdcard/Pictures/Ekmivo-Phase6 phase7-evidence/360dp/
+            adb shell wm size 640x1280
+            adb shell settings put system font_scale 1.3
+            gradle -p apps/mobile --no-daemon --console=plain :app:connectedDebugAndroidTest -PekmivoApiBaseUrl=https://example.invalid -Pandroid.testInstrumentationRunnerArguments.class=com.ekmivo.mobile.Phase7IntegrationTest
+            mkdir -p phase7-evidence/320dp-font130
+            adb pull /sdcard/Pictures/Ekmivo-Phase7 phase7-evidence/320dp-font130/
+      - name: Save native UI evidence and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekmivo-phase7-native-evidence
+          path: |
+            phase7-evidence/
+            apps/mobile/app/build/reports/androidTests/
+            apps/mobile/app/build/outputs/androidTest-results/
+          retention-days: 14
   signed_release:
+    needs: native_ui
     name: Release APK (secure signing)
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-java@v4
         with:
@@ -49,6 +120,10 @@ jobs:
         env:
           EKMIVO_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/ekmivo-production-release.p12
           EKMIVO_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.EKMIVO_ANDROID_KEYSTORE_PASSWORD }}
+          EKMIVO_FIREBASE_APPLICATION_ID: ${{ vars.EKMIVO_FIREBASE_APPLICATION_ID }}
+          EKMIVO_FIREBASE_API_KEY: ${{ vars.EKMIVO_FIREBASE_API_KEY }}
+          EKMIVO_FIREBASE_PROJECT_ID: ${{ vars.EKMIVO_FIREBASE_PROJECT_ID }}
+          EKMIVO_FIREBASE_SENDER_ID: ${{ vars.EKMIVO_FIREBASE_SENDER_ID }}
         run: gradle --no-daemon --console=plain :app:assembleRelease
       - name: Verify APK signature and expected production certificate
         shell: bash
@@ -66,11 +141,23 @@ jobs:
             echo 'Unexpected APK signing certificate — refusing release.' >&2
             exit 1
           fi
-          sha256sum "$apk"
+          sha256sum "$apk" > "$RUNNER_TEMP/ekmivo-apk.sha256"
+          cat "$RUNNER_TEMP/ekmivo-apk.sha256"
+          "$sdk_root/build-tools/35.0.0/aapt" dump badging "$apk"  > "$RUNNER_TEMP/ekmivo-badging.txt"
+          head -1 "$RUNNER_TEMP/ekmivo-badging.txt"
+          python3 - <<'PYMETA'
+          import json, os, pathlib
+          event=json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          source=event.get('pull_request',{}).get('head',{}).get('sha',os.environ['GITHUB_SHA'])
+          pathlib.Path('apps/mobile/app/build/outputs/apk/release/release-metadata.json').write_text(json.dumps({'source_commit':source,'version_code':5,'version_name':'0.3.0','certificate_sha256':'52f54eef5bfeb351a0c2d615e1191048e30f1701b29f36aaa825359ca97276d9'},indent=2))
+          PYMETA
       - name: Save signed APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: ekmivo-production-release-apk
-          path: apps/mobile/app/build/outputs/apk/release/app-release.apk
+          path: |
+            apps/mobile/app/build/outputs/apk/release/app-release.apk
+            apps/mobile/app/build/outputs/apk/release/release-metadata.json
+            ${{ runner.temp }}/ekmivo-apk.sha256
           if-no-files-found: error
           retention-days: 14

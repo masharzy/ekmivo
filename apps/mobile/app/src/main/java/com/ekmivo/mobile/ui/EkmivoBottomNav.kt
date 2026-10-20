@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 
-/** Exactly two tabs: Live and Settings; no empty Inbox entry. */
+/** Legacy two-tab host; capability-aware reference navigation is below. */
 enum class EkmivoPage { LIVE, SETTINGS }
 
 @Composable
@@ -37,23 +37,36 @@ fun EkmivoBottomNav(bn:Boolean,page:EkmivoPage,onSelect:(EkmivoPage)->Unit) {
 
 @Composable
 private fun EkmivoNavLineIcon(page:EkmivoPage,ink:Color) {
- Canvas(Modifier.size(20.dp)){
-  val st=1.8.dp.toPx()
-  val w=size.width
-  if(page==EkmivoPage.LIVE) {
-   val coords=listOf(
-    Offset(0f,w*.55f),Offset(w*.24f,w*.55f),Offset(w*.38f,w*.17f),
-    Offset(w*.58f,w*.84f),Offset(w*.73f,w*.42f),Offset(w,w*.42f)
+ EkmivoReferenceIcon(if(page==EkmivoPage.LIVE) EkmivoGlyph.ACT else EkmivoGlyph.SET, tint=ink)
+}
+
+/** Visual contract only: the host must not expose an unimplemented inbox. */
+enum class EkmivoReferencePage { INBOX, SMS, SETTINGS }
+
+@Composable
+fun EkmivoReferenceBottomNav(
+ bn: Boolean,
+ pages: List<EkmivoReferencePage>,
+ selected: EkmivoReferencePage,
+ onSelect: (EkmivoReferencePage) -> Unit
+) {
+ val p = LocalEkmivoPalette.current
+ Row(Modifier.fillMaxWidth().topHairline(p.border).background(p.canvas)
+  .navigationBarsPadding().padding(start=12.dp,end=12.dp,top=8.dp,bottom=14.dp),
+  horizontalArrangement=Arrangement.SpaceAround, verticalAlignment=Alignment.CenterVertically) {
+  pages.forEach { page ->
+   EkmivoNavItem(
+    label=when(page) {
+     EkmivoReferencePage.INBOX -> if(bn) "ইনবক্স" else "Inbox"
+     EkmivoReferencePage.SMS -> "SMS"
+     EkmivoReferencePage.SETTINGS -> if(bn) "সেটিংস" else "Settings"
+    }, selected=page==selected, onClick={onSelect(page)}, compact=true,
+    icon={ EkmivoReferenceIcon(when(page) {
+     EkmivoReferencePage.INBOX -> EkmivoGlyph.MSG
+     EkmivoReferencePage.SMS -> EkmivoGlyph.ACT
+     EkmivoReferencePage.SETTINGS -> EkmivoGlyph.SET
+    }, tint=if(page==selected)p.text else p.secondary) }
    )
-   coords.zipWithNext{a,b->drawLine(ink,a,b,st,cap=StrokeCap.Round)}
-  } else {
-   for(y in listOf(.23f,.5f,.77f)){
-    drawLine(ink,Offset(w*.08f,w*y),Offset(w*.92f,w*y),st,cap=StrokeCap.Round)
-   }
-   drawCircle(ink,radius=3.0.dp.toPx(),
-    center=Offset(w*.40f,w*.23f))
-   drawCircle(ink,radius=3.0.dp.toPx(),center=Offset(w*.67f,w*.50f))
-   drawCircle(ink,radius=3.0.dp.toPx(),center=Offset(w*.31f,w*.77f))
   }
  }
 }

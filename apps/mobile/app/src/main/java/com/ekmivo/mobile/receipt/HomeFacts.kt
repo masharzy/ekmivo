@@ -14,6 +14,7 @@ data class FeedItem(
 data class HomeData(
  val items:List<FeedItem> = emptyList(), val acknowledged:Int=0, val pending:Int=0,
  val failed:Int=0, val lastForwarded:Long?=null, val retainedAmount:Double?=null,
+ val todayAcknowledged:Int?=null,val weekAcknowledged:Int?=null,
  val unavailable:Boolean=false
 )
 object HomeContent {
@@ -61,10 +62,16 @@ fun homeData(context:Context):HomeData=runCatching{
   }.sortedByDescending{it.timestamp}
   val forwarded=entries.filter{it.state==FeedState.SENT}
   val numeric=forwarded.mapNotNull{it.amount?.toDoubleOrNull()}
+  val origin=(store.phone()?:store.enrollment())?.optString("id").orEmpty()
+  val today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Dhaka"))
+  val tracking=context.getSharedPreferences("sms-metrics",Context.MODE_PRIVATE)
+  val first=tracking.getString("since",null)?:today.toString().also{tracking.edit().putString("since",it).commit()}
   HomeData(
    entries,forwarded.size,store.count(),room.values.count{it.status=="failed"},
    lastAckAt,
-   if(forwarded.isNotEmpty()&&numeric.size==forwarded.size)numeric.sum() else null
+   if(forwarded.isNotEmpty()&&numeric.size==forwarded.size)numeric.sum() else null,
+   todayAcknowledged=if(first<today.toString())dao.countSince(origin,today.toString()) else null,
+   weekAcknowledged=if(first<today.minusDays(6).toString())dao.countSince(origin,today.minusDays(6).toString()) else null
   )
  }
 }.getOrElse{HomeData(unavailable=true)}

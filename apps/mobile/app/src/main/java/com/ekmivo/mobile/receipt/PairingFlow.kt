@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.util.Base64
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.ekmivo.mobile.R
 import com.ekmivo.mobile.ui.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,7 +59,7 @@ import org.json.JSONObject
 import java.util.Locale
 import java.util.UUID
 
-private enum class PairPage { WELCOME, CAMERA, SCAN, CONFIRM, CONNECTING, CODE }
+private enum class PairPage { WELCOME, CAMERA, SCAN, LOADING, FAILED, CONFIRM, CONNECTING, CODE }
 
 /** Keeps the Ekmivo preference (BN/EN), not Android system language, authoritative. */
 private class PairCopy(context: Context, bn: Boolean) {
@@ -100,6 +102,34 @@ fun PairingFlow(
  var errorId by remember { mutableIntStateOf(0) }
  var torch by rememberSaveable { mutableStateOf(false) }
  var claimPending by remember { mutableStateOf(false) }
+ var previewJSON by rememberSaveable { mutableStateOf("") }
+ val workspace = remember(previewJSON) { runCatching { JSONObject(previewJSON) }.getOrNull() }
+ fun lookup(scanned: String) {
+  token=scanned; input=scanned; previewJSON=""; errorId=0; torch=false; page=PairPage.LOADING
+ }
+ BackHandler(enabled=page!=PairPage.WELCOME && page!=PairPage.CONNECTING) {
+  previewJSON=""; token=""; errorId=0; torch=false; page=PairPage.WELCOME
+ }
+ LaunchedEffect(page,token) {
+  if(page!=PairPage.LOADING) return@LaunchedEffect
+  try {
+   val result=withContext(Dispatchers.IO) {
+    ReceiptTransport.post(appContext,"pairing-preview","",UUID.randomUUID().toString(),
+     JSONObject().put("pairing_token",token).toString().toByteArray(Charsets.UTF_8))
+   }
+   if(result.first!=200) { errorId=pairFailure(result.first,result.second);page=PairPage.FAILED }
+   else {
+    val loaded=JSONObject(result.second)
+    require(loaded.optString("workspace_name").isNotBlank() && loaded.optString("workspace_id").isNotBlank())
+    require(loaded.optString("environment") in listOf("sandbox","live"))
+    val products=loaded.getJSONObject("products")
+    require(products.optBoolean("payments") || products.optBoolean("ai"))
+    previewJSON=result.second;page=PairPage.CONFIRM
+   }
+  } catch(e:CancellationException) { throw e }
+    catch(_:Exception) { errorId=R.string.pair_error_network;page=PairPage.FAILED }
+ }
+
 
  fun enterCode() { errorId = 0; page = PairPage.CODE }
  fun enterScanner() {
@@ -118,10 +148,7 @@ fun PairingFlow(
     errorId = R.string.pair_error_format
     page = PairPage.CODE
    } else {
-    token = parsed
-    input = parsed
-    errorId = 0
-    page = PairPage.CONFIRM // Only confirmation can consume the capability.
+    lookup(parsed) // Lookup is read-only. Only the consent button claims.
    }
   }
  }
@@ -141,7 +168,7 @@ fun PairingFlow(
   when (page) {
    PairPage.WELCOME -> {
     PairingWelcome(
-     copy, onScan = { enterScanner() }, onCode = { enterCode() }
+     copy, bn, onScan = { enterScanner() }, onCode = { enterCode() }
     )
    }
    PairPage.CAMERA -> {
@@ -168,11 +195,7 @@ fun PairingFlow(
       PairingCamera(
        torchRequested = torch,
        onToken = { scanned ->
-        token = scanned
-        input = scanned
-        torch = false
-        errorId = 0
-        page = PairPage.CONFIRM
+        lookup(scanned)
        },
        onCameraError = { errorId = R.string.pair_error_camera }
       )
@@ -190,6 +213,26 @@ fun PairingFlow(
      }
     }
     PairingBottom(null, null, copy.get(R.string.pair_code_link), { enterCode() })
+   }
+   PairPage.LOADING -> {
+    Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal=24.dp),
+     horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
+     PairIconTile("spinner")
+     Spacer(Modifier.height(18.dp))
+     PairTitle(copy.get(R.string.pair_lookup_title))
+     Spacer(Modifier.height(8.dp))
+     PairBody(copy.get(R.string.pair_lookup_body))
+    }
+   }
+   PairPage.FAILED -> {
+    Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal=24.dp),
+     horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
+     EkmivoReferenceIcon(EkmivoGlyph.ALT, tint=p.danger, size=32.dp)
+     Spacer(Modifier.height(18.dp))
+     PairTitle(copy.get(R.string.pair_lookup_failed))
+    }
+    PairingBottom(copy.get(R.string.pair_lookup_retry),{lookup(token)},
+     copy.get(R.string.pair_rescan),{enterScanner()})
    }
    PairPage.CONFIRM -> {
     PairViewport {
@@ -211,14 +254,27 @@ fun PairingFlow(
        Text("e.", style = EkmivoType.shop, color = p.onPrimary)
       }
       Column {
-       Text(copy.get(R.string.pair_confirm_generic), style = EkmivoType.shop, color = p.text)
-       Text(copy.get(R.string.pair_scan_ok), style = EkmivoType.meta, color = p.secondary)
+       Text(workspace?.optString("workspace_name").orEmpty(), style = EkmivoType.shop, color = p.text)
+       Text(copy.get(R.string.pair_workspace), style = EkmivoType.meta, color = p.secondary)
       }
      }
      Spacer(Modifier.height(10.dp))
-     Text(copy.get(R.string.pair_consent), style = EkmivoType.body, color = p.secondary)
+     val products=workspace?.optJSONObject("products")
+     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surface)) {
+      listOf("ai" to "AI Bot", "payments" to "Payment").forEach { (key,label) ->
+       if(products?.optBoolean(key)==true) Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=9.dp),
+        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+        EkmivoReferenceIcon(if(key=="ai") EkmivoGlyph.BOT else EkmivoGlyph.WAL,size=17.dp,tint=p.secondary)
+        Text(label,style=EkmivoType.settingsRow,color=p.text,modifier=Modifier.weight(1f))
+        EkmivoStatusTag(copy.get(R.string.pair_service_enabled),p.successBackground,p.success)
+       }
+      }
+     }
+     Spacer(Modifier.height(10.dp))
+     Text(copy.get(if(products?.optBoolean("payments")==true) R.string.pair_payment_notice else R.string.pair_ai_notice),
+      style=EkmivoType.body,color=p.secondary)
      Spacer(Modifier.height(14.dp))
-     EkmivoPrimaryButton(copy.get(R.string.pair_confirm_button), onClick = {
+     EkmivoPrimaryButton(copy.get(R.string.pair_connect), onClick = {
       if (!claimPending) {
        claimPending = true
        page = PairPage.CONNECTING
@@ -242,6 +298,8 @@ fun PairingFlow(
           require(claim.optString("id").isNotBlank() && claim.optString("environment").isNotBlank()) {
            "INVALID_CLAIM"
           }
+          require(claim.optString("workspace_id")==workspace?.optString("workspace_id") &&
+           claim.optString("environment")==workspace?.optString("environment")) { "PAIRING_SCOPE_CHANGED" }
           withContext(Dispatchers.IO) {
            ReceiptStore(appContext).use { store ->
             store.savePendingEnrollment(claim)
@@ -259,6 +317,7 @@ fun PairingFlow(
           input = ""
           onPaired()
          }
+        } catch (e: CancellationException) { throw e
         } catch (_: java.net.UnknownHostException) {
          errorId = R.string.pair_error_network
          page = PairPage.CONFIRM
@@ -272,8 +331,8 @@ fun PairingFlow(
        }
       }
      })
-     PairLink(copy.get(R.string.pair_cancel)) {
-      token = ""; errorId = 0; page = PairPage.WELCOME
+     PairLink(copy.get(R.string.pair_rescan)) {
+      token = ""; previewJSON=""; errorId = 0; enterScanner()
      }
     }
    }
@@ -303,10 +362,7 @@ fun PairingFlow(
       onValueChange = { entered ->
        input = entered
        errorId = 0
-       if (entered.length == PairingToken.LENGTH) {
-        token = entered
-        page = PairPage.CONFIRM  // Validate only; claim waits for explicit consent.
-       }
+
       }
      )
      PairLink(copy.get(R.string.pair_paste)) {
@@ -316,12 +372,14 @@ fun PairingFlow(
       val parsed = PairingToken.parse(pasted)
       if (parsed == null) errorId = R.string.pair_empty_clipboard
       else {
-       input = parsed; token = parsed; errorId = 0
-       page = PairPage.CONFIRM
+       input = parsed; errorId = 0
       }
      }
     }
-    PairingBottom(null, null, copy.get(R.string.pair_scan), { enterScanner() })
+    PairingBottom(copy.get(R.string.pair_verify_code), {
+     val parsed=PairingToken.parse(input)
+     if(parsed==null) errorId=R.string.pair_error_format else lookup(parsed)
+    }, copy.get(R.string.pair_scan), { enterScanner() })
    }
   }
   if (errorId != 0) {
@@ -358,7 +416,7 @@ private fun PairingHeader(title: String, subtitle: String?, bn: Boolean, onLangu
 }
 
 @Composable
-private fun ColumnScope.PairingWelcome(copy: PairCopy, onScan: () -> Unit, onCode: () -> Unit) {
+private fun ColumnScope.PairingWelcome(copy: PairCopy, bn: Boolean, onScan: () -> Unit, onCode: () -> Unit) {
  val p = LocalEkmivoPalette.current
  Column(
   Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp),
@@ -385,7 +443,7 @@ private fun ColumnScope.PairingWelcome(copy: PairCopy, onScan: () -> Unit, onCod
       contentAlignment = Alignment.Center
      ) {
       Text(
-       (index + 1).toString(), style = EkmivoType.meta, color = p.secondary,
+       displayDigits((index + 1).toString(), bn), style = EkmivoType.meta, color = p.secondary,
        fontSize = 11.sp
       )
      }
@@ -535,25 +593,8 @@ private fun PairIconTile(kind: String) {
     drawArc(p.text, -90f, 95f, false, style = Stroke(width, cap = StrokeCap.Round))
    }
   } else {
-   Canvas(Modifier.size(32.dp)) {
-    val stroke = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round)
-    val u = size.width / 32f
-    if (kind == "camera") {
-     drawRoundRect(p.text, topLeft = Offset(3*u, 8*u),
-      size = Size(26*u, 20*u), cornerRadius = androidx.compose.ui.geometry.CornerRadius(3*u),
-      style = stroke)
-     drawCircle(p.text, radius = 5*u, center = Offset(16*u, 18*u), style = stroke)
-     drawLine(p.text, Offset(9*u, 8*u), Offset(12*u, 4*u), stroke.width)
-     drawLine(p.text, Offset(12*u, 4*u), Offset(20*u, 4*u), stroke.width)
-     drawLine(p.text, Offset(20*u, 4*u), Offset(23*u, 8*u), stroke.width)
-    } else {
-     drawRoundRect(p.text, topLeft = Offset(9*u, 3*u),
-      size = Size(14*u, 26*u), cornerRadius = androidx.compose.ui.geometry.CornerRadius(3*u),
-      style = stroke)
-     drawLine(p.text, Offset(12*u, 24*u), Offset(20*u, 24*u), stroke.width)
-     drawCircle(p.text, radius = u, center = Offset(16*u, 26.5f*u))
-    }
-   }
+   EkmivoReferenceIcon(if(kind=="camera") EkmivoGlyph.CAM else EkmivoGlyph.PHN,size=32.dp)
+
   }
  }
 }

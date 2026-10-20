@@ -15,16 +15,25 @@ private val HindSiliguri = FontFamily(
     Font(R.font.hind_siliguri_medium, FontWeight.Medium)
 )
 
-private fun type(size: Int, height: Number, medium: Boolean = false) = TextStyle(
+private fun type(size: Number, height: Number, medium: Boolean = false) = TextStyle(
     fontFamily = HindSiliguri,
     fontWeight = if (medium) FontWeight.Medium else FontWeight.Normal,
-    fontSize = size.sp,
+    fontSize = size.toFloat().sp,
     lineHeight = height.toFloat().sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false)
 )
 
 // Exact roles from ekmivo-android-design-spec.md §2. No 600/700 weights.
 object EkmivoType {
+    val inboxTitle = type(17, 20.4f, true)
+    val chatName = type(14, 16.8f, true)
+    val chatMessage = type(13, 19.5f)
+    val messageSender = type(10.5f, 14.7f)
+    val messageTime = type(10, 10)
+    val profileName = type(19, 26.6f, true)
+    val profileSubtitle = type(12.5f, 17.5f)
+    val profileReason = type(12.5f, 19.375f)
+    val chip = type(12, 16.8f)
     val shop = type(14, 16.8f, true)
     val meta = type(11, 15.4f)
     val heroAmount = type(22, 26.4f, true)

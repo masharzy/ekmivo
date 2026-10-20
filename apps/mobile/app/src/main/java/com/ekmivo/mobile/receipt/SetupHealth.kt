@@ -36,12 +36,13 @@ data class SetupHealthSnapshot(
 
 /** Pure Phase-3 transition policy; OEM "acknowledged" is not "verified OK". */
 object SetupPlan {
- fun steps(samsung: Boolean) =
+ fun steps(samsung: Boolean, payments:Boolean=true) =
+  if(!payments) listOf(SetupStep.NOTIFICATION) else
   if(samsung) listOf(SetupStep.SMS, SetupStep.NOTIFICATION, SetupStep.BATTERY, SetupStep.OEM)
   else listOf(SetupStep.SMS, SetupStep.NOTIFICATION, SetupStep.BATTERY)
 
- fun firstMissing(snapshot: SetupHealthSnapshot): SetupStep? =
-  steps(snapshot.samsung).firstOrNull { step ->
+ fun firstMissing(snapshot: SetupHealthSnapshot,payments:Boolean=true): SetupStep? =
+  steps(snapshot.samsung,payments).firstOrNull { step ->
    if(step == SetupStep.OEM) !snapshot.oemGuideAcknowledged
    else snapshot.level(step) != HealthLevel.OK
   }

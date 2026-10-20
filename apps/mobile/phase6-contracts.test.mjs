@@ -4,11 +4,12 @@ import {readFileSync} from "node:fs";
 
 const read=(name)=>readFileSync(name,"utf8");
 
-test("a single shared brand header is used across both Live and Settings",()=>{
+test("shared reference header and dynamic product navigation are used",()=>{
  const app=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/ui/EkmivoApp.kt");
  const settings=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/EkmivoSettings.kt");
  const home=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/LiveHome.kt");
- assert.match(app,/topBar=\{\s*EkmivoBrandHeader\(/);
+ assert.match(app,/EkmivoReferenceHeader\(/);
+ assert.match(app,/EkmivoReferenceBottomNav\(/);
  assert.doesNotMatch(app,/if\(tab==Tab\.SETTINGS\) Row/);
  assert.doesNotMatch(settings,/SettingsHeading[\s\S]{0,350}Text\("e\."/);
  assert.doesNotMatch(home,/item\{HomeHeader\(bn,state\)\}/);
@@ -20,15 +21,19 @@ test("live state badge overlaps the pulse ring, never duplicates the header",()=
  assert.match(home,/Text\(if\(bn\)"সংরক্ষিত SMS\\nপাঠানো"/);
  assert.match(home,/EkmivoPulseRing\(/);
 });
-test("inbox is hard-disabled with a real data model and token registration seams",()=>{
+test("inbox is capability-gated with signed backend requests",()=>{
  const domain=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/inbox/InboxDomain.kt");
  const app=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/ui/EkmivoApp.kt");
  const manifest=read("apps/mobile/app/src/main/AndroidManifest.xml");
  const fcm=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/inbox/InboxPush.kt");
- assert.match(domain,/const val inboxEnabled = false/);
+ assert.match(domain,/interface InboxRepository/);
  assert.match(domain,/interface InboxRepository/);
  assert.match(domain,/data class InboxMessage/);
- assert.match(app,/Tab\.INBOX->if\(InboxFeatureFlag\.inboxEnabled\)/);
+ assert.match(app,/workspacePages\(ai,payments\)/);
+ const navigation=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/ui/WorkspaceNavigation.kt");
+ assert.match(navigation,/if\(ai\)add\(EkmivoReferencePage\.INBOX\)/);
+ const route=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/inbox/InboxRoute.kt");
+ assert.match(route,/ReceiptTransport\.post\(context,"inbox"/);
  assert.match(manifest,/InboxFirebaseService/);
  assert.match(fcm,/override fun onNewToken/);
  assert.match(fcm,/currentPhone\(context\)/);

@@ -154,6 +154,11 @@
     "path": "/v1/workspaces/{workspaceID}/operations/{resource}/{resourceID}",
     "public": false
   },
+  "previewMobileWorkspace": {
+    "method": "POST",
+    "path": "/v1/device/pairing-preview",
+    "public": true
+  },
   "getMerchantContext": {
     "method": "GET",
     "path": "/v1/merchant/context",

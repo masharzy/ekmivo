@@ -109,7 +109,7 @@ private fun Segments(values:List<String>,selected:Int,choose:(Int)->Unit){
 fun EkmivoSettingsScreen(
  bn:Boolean,language:Language,appearance:Appearance,
  changeLanguage:(Language)->Unit,changeAppearance:(Appearance)->Unit,
- onSetup:()->Unit,onDisconnected:()->Unit
+ onSetup:()->Unit,onDisconnected:()->Unit,access:WorkspaceAccess?=null
 ){
  val app=LocalContext.current.applicationContext
  val words=remember(bn){Words(app,bn)}
@@ -128,10 +128,14 @@ fun EkmivoSettingsScreen(
   return
  }
  Column(Modifier.fillMaxSize().background(p.canvas)){
-  SettingsHeading(w(R.string.settings_title))
+  if(access==null)SettingsHeading(w(R.string.settings_title))
   LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=24.dp)){
    item{
     SettingsGroup {
+     if(access!=null) {
+      Entry(if(bn)"ওয়ার্কস্পেস" else "Workspace",Icons.Outlined.Store,access.name,first=true)
+      Entry(if(bn)"চালু সার্ভিস" else "Enabled services",value=listOfNotNull(if(access.ai)"AI Bot" else null,if(access.payments)"Payment" else null).joinToString(" · "))
+     }
      Entry(w(R.string.settings_device),Icons.Outlined.Smartphone,
       (Build.MANUFACTURER+" "+Build.MODEL).trim(),first=true)
      Entry(w(R.string.settings_sync),Icons.Outlined.Sync,lastSync(last,bn,w(R.string.settings_never)))
@@ -143,7 +147,7 @@ fun EkmivoSettingsScreen(
       Triple(R.string.settings_sms,Icons.Outlined.Sms,snapshot.sms),
       Triple(R.string.settings_notification,Icons.Outlined.NotificationsNone,snapshot.notification),
       Triple(R.string.settings_battery,Icons.Outlined.BatteryStd,snapshot.battery)
-     ).forEachIndexed{idx,(name,icon,level)->
+     ).filter { access==null||access.payments||it.first==R.string.settings_notification }.forEachIndexed{idx,(name,icon,level)->
       Entry(w(name),icon,
        when(level){
         HealthLevel.OK->w(R.string.settings_on)
@@ -151,7 +155,7 @@ fun EkmivoSettingsScreen(
         HealthLevel.UNKNOWN->w(R.string.settings_unknown)
        },first=idx==0,warn=level!=HealthLevel.OK,onClick=onSetup)
      }
-     if(snapshot.samsung)Entry(w(R.string.settings_oem),Icons.Outlined.BatteryStd,
+     if((access==null||access.payments)&&snapshot.samsung)Entry(w(R.string.settings_oem),Icons.Outlined.BatteryStd,
       if(snapshot.oemGuideAcknowledged)w(R.string.settings_on) else w(R.string.settings_fix),
       warn=!snapshot.oemGuideAcknowledged,onClick=onSetup)
     }
@@ -218,7 +222,7 @@ fun EkmivoSettingsScreen(
           if(id.isBlank()||environment !in setOf("sandbox","live")) return@use "server"
           val payload=org.json.JSONObject().put("enrollment_id",id)
            .put("environment",environment).toString().toByteArray(Charsets.UTF_8)
-          val response=ReceiptTransport.post(app,"phone-disconnect",id,
+          val response=ReceiptTransport.post(app,if(access!=null)"mobile-disconnect" else "phone-disconnect",id,
            java.util.UUID.randomUUID().toString(),payload)
           if(response.first!=200) return@use "server"
           if(store.disconnect()) "done" else "pending"

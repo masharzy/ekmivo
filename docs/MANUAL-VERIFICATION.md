@@ -780,3 +780,24 @@ Manual pending: with a non-system workspace on an active finite Starter term, ch
 - With no saved theme, verify the Official merchant/method/payer/waiting/result flow; selected custom themes remain selected.
 - Changing checkout language keeps the public route locale-neutral; the webhook secret initially says it is hidden and reveals only after the authorized action.
 - Regression checks/evidence: `docs/evidence/CHECKOUT-CANONICAL-DEFAULT-20261019/README.md`. Actual money transfer is not claimed by code checks.
+
+## Android reference phases 1–2 (2026-10-19, PR #86)
+
+- Phase 1: compare native dark/light setup and Inbox shell against `docs/design/android-20261019/` at the same inner viewport/font scale; native assemble/unit CI passed for Phase 1, visual parity remains unverified.
+- Phase 2 preview: apply only additive 0114 control + 0115 financial via the guarded operator before testing this APK against that runtime. Production rollout has not been performed. Test physical camera and manual code, explicit Verify, loading/retry/rescan, expired/revoked/claimed code, network loss, process death and rotation. Verify lookup does not consume the code and the final explicit confirmation claims the displayed workspace/realm only.
+- Full Phase 2 remains open: AI-only control-plane enrollment, capability-driven permissions/background work/navigation, real-phone reconnect/queue preservation. No AI-only enrollment or complete Inbox/channel integration accepted.
+
+
+## Android reference phases 2–4 (2026-10-19) — manual pending
+
+Use an approved Meta test app/account, configured Firebase project and a real API-26+ Android phone. After operator migration/runtime rollout: pair AI-only, change to Payment-only while screen remains open, grant newly required SMS permissions; change to both and both-off and verify UI within the two-second foreground refresh. Deny/revoke permissions, background/resume, rotate and kill process; encrypted pending receipt evidence must survive. Reconnect the same device without duplicate identity; revoke from web and verify signed requests fail. Check notification-only AI setup on Samsung.
+
+Connect Messenger/Instagram professional/WhatsApp business accounts through OAuth; check callback actor mismatch/replay rejection, approved scopes, subscribed webhook delivery, duplicate webhook, known failed send retry versus uncertain timeout, and real sent/delivered/read events. Validate channel-specific messaging windows using provider accounts; no provider acceptance is inferred from SQL tests. Check data-only FCM delivery/background/deep link after revocation/workspace change, no other tenant message disclosure. Compare every phase 2–4 state against reference at 320/360dp in EN/BN, Light/Dark/System, large fonts and keyboard. These checks have NOT been run. Later media/forward/profile/reaction phases remain unimplemented.
+
+### Android reference phases 5–6 (2026-10-20, manual pending)
+
+Use an authorized configured Meta test account, private storage/scanner, and a paired Android device. Check 1/2/3/4/5+/10 images, eleventh-image refusal, gallery cancellation/removal/rotation, real camera, viewer swipes/pinch; deny/regrant mic, <1s voice rejection, recording interruption/background discard and single-player lifecycle; actual Meta image/audio/document bytes and reported status (Instagram capability restrictions); retry after transport loss without duplicate sends, partial album retry, closed-window forward denial, sender/source/target workspace isolation, reaction removal and provider rejection, actual event info. Verify profile verdict thresholds/unknown versus actual 0%, totals beyond three visible orders, contact omission/raw-number copy, complete note save/clear/relaunch/conflict/error, EN/BN and light/dark at 320dp/font scale. No production/provider/screenshot acceptance implied by CI.
+
+### Android reference Phase 7 release (2026-10-20)
+
+Automated emulator coverage and release identity live in `docs/evidence/ANDROID-REFERENCE-PHASE7/README.md` / PR #86. Distinguish those from pending real-device/provider acceptance: install over an existing production-signed release without uninstalling or clearing queued receipts; verify pairing/workspace lookup against the deployed compatible API, product changes in foreground, denial/regrant flows, Samsung screen-off/reboot and offline receipt ACK recovery, real camera/mic interruptions, Meta media/status/reactions, FCM, EN/BN/light/dark full reference parity and accessibility. Storage/scanner/Meta/Firebase configuration and control/finance migrations/runtime rollout are separate operator gates and were not executed by APK generation.

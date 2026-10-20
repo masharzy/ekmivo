@@ -13,7 +13,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.ekmivo.mobile.data.Appearance
 import com.ekmivo.mobile.data.Language
 import com.ekmivo.mobile.receipt.ConnectionState
-import com.ekmivo.mobile.receipt.EkmivoLiveHome
+import com.ekmivo.mobile.receipt.EkmivoSmsHome
 import com.ekmivo.mobile.receipt.EkmivoSettingsScreen
 import com.ekmivo.mobile.receipt.PairingFlow
 import com.ekmivo.mobile.receipt.SetupWizard
@@ -43,9 +43,9 @@ class Phase6ScreenshotTest {
      "wizard" -> SetupWizard(bn,onLanguageChange={},onDone={})
      "disconnected" -> EkmivoDisconnected(bn,0,onReconnect={},onQueue={})
      else -> Column(Modifier.fillMaxSize()) {
-      EkmivoBrandHeader(bn,onLanguageChange={})
+      EkmivoReferenceHeader(if(screen=="live")"UI test workspace" else if(bn)"সেটিংস" else "Settings",titleIsPage=screen!="live")
       Box(Modifier.weight(1f)) {
-       if(screen=="live") EkmivoLiveHome(bn,ConnectionState.Active,false,onFix={})
+       if(screen=="live") EkmivoSmsHome(bn,ConnectionState.Active,onRetry={})
        else EkmivoSettingsScreen(
         bn,if(bn)Language.BN else Language.EN,
         if(dark)Appearance.DARK else Appearance.LIGHT,
@@ -53,8 +53,9 @@ class Phase6ScreenshotTest {
         onSetup={},onDisconnected={}
        )
       }
-      EkmivoBottomNav(
-       bn,if(screen=="live")EkmivoPage.LIVE else EkmivoPage.SETTINGS,
+      EkmivoReferenceBottomNav(
+       bn,listOf(EkmivoReferencePage.SMS,EkmivoReferencePage.SETTINGS),
+       if(screen=="live")EkmivoReferencePage.SMS else EkmivoReferencePage.SETTINGS,
        onSelect={}
       )
      }
@@ -63,13 +64,10 @@ class Phase6ScreenshotTest {
   }
   rule.waitForIdle()
   val bitmap=rule.onRoot().captureToImage().asAndroidBitmap()
-  val folder=File(ctx.getExternalFilesDir(null),"phase6_screenshots").apply{mkdirs()}
   val locale=if(bn)"bn" else "en"
   val theme=if(dark)"dark" else "light"
   val filename=screen+"_"+width.toString()+"dp_"+locale+"_"+theme+".png"
-  FileOutputStream(File(folder,filename)).use { output ->
-   bitmap.compress(Bitmap.CompressFormat.PNG,100,output)
-  }
+  saveTestScreenshot(filename,bitmap,"Ekmivo-Phase6")
  }
 
  @Test fun pairingEnglishDark()=shot("pairing",false,true)

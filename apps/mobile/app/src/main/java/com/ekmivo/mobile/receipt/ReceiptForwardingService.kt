@@ -43,6 +43,8 @@ class ReceiptForwardingService:Service() {
   )
  }
  override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
+  if(!WorkspaceAccessRepository.paymentAllowed(this)){stopSelf();return START_NOT_STICKY}
+
   val allowed=ReceiptStore(applicationContext).use{it.enabled() && !it.isRevoked()}
   if(!allowed) { stopSelf();return START_NOT_STICKY }
   val open=PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java)

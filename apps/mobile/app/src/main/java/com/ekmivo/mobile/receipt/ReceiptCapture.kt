@@ -15,7 +15,7 @@ object ReceiptCapture {
  // Provider SMS originatingAddress identifies only the message source, not payer.
  fun accept(context:Context,source:String,binding:String,kind:String,text:String){
   ReceiptStore(context).use {store->
-   if(!store.enabled()||text.toByteArray(Charsets.UTF_8).size>6000)return
+   if(!WorkspaceAccessRepository.paymentAllowed(context)||!store.enabled()||text.toByteArray(Charsets.UTF_8).size>6000)return
    // PipraPay-style receipt forwarding: source/body/SIM go to the signed
    // physical phone endpoint. Financial payer and account stay unknown here.
    // Never collect arbitrary SMS, notifications, logins or OTPs.

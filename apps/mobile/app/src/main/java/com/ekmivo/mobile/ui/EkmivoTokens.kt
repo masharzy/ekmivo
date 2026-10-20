@@ -6,10 +6,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * Phase 0: semantic Android tokens copied from docs/design/tokens.css.
- * Canvas/surface/text are the --dashboard-* values. Status colours are
- * --color-success/warning/danger and their matching background roles.
- * These are NOT the reference HTML's placeholder colours.
+ * Native reference palette from the owner's 2026-10-19 HTML.
+ * Android tokens are deliberately independent of dashboard CSS.
  */
 @Immutable
 data class EkmivoPalette(
@@ -28,27 +26,28 @@ data class EkmivoPalette(
     val warning: Color,
     val warningBackground: Color,
     val danger: Color,
-    val dangerBackground: Color
+    val dangerBackground: Color,
+    val seen: Color = Color(0xFF1E90E0)
 )
 
 object EkmivoTokens {
     val Light = EkmivoPalette(
         canvas = Color(0xFFF4F3EE),
         surface = Color(0xFFFFFFFF),
-        raised = Color(0xFFFFFFFF),
-        subtle = Color(0xFFECEBE5),
-        border = Color(0xFFDDDCD5),
-        controlBorder = Color(0xFFBBB9B2),
+        raised = Color(0xFFECEAE2),
+        subtle = Color(0xFFECEAE2),
+        border = Color(0xFFD9D8D1),
+        controlBorder = Color(0xFFD9D8D1),
         text = Color(0xFF1B1B19),
         secondary = Color(0xFF6B6A64),
         muted = Color(0xFF6B6A64),
         onPrimary = Color.White,
-        success = Color(0xFF0F7A4B),
-        successBackground = Color(0xFFDDF5E8),
-        warning = Color(0xFF8A5A00),
+        success = Color(0xFF14935C),
+        successBackground = Color(0xFFDDF3E8),
+        warning = Color(0xFFB7791F),
         warningBackground = Color(0xFFFBEFD3),
-        danger = Color(0xFFB3382C),
-        dangerBackground = Color(0xFFFBE0DC)
+        danger = Color(0xFFD6453A),
+        dangerBackground = Color(0xFFF9DEDA)
     )
 
     val Dark = EkmivoPalette(
@@ -57,11 +56,11 @@ object EkmivoTokens {
         raised = Color(0xFF222220),
         subtle = Color(0xFF222220),
         border = Color(0xFF2C2C29),
-        controlBorder = Color(0xFF5C5B56),
+        controlBorder = Color(0xFF2C2C29),
         text = Color(0xFFF1F0EA),
         secondary = Color(0xFF8D8B84),
         muted = Color(0xFF8D8B84),
-        onPrimary = Color.Black,
+        onPrimary = Color(0xFF111111),
         success = Color(0xFF3DDC97),
         successBackground = Color(0xFF12301F),
         warning = Color(0xFFF5B544),
@@ -83,6 +82,15 @@ object EkmivoTokens {
         val scannerFrame = 150.dp
         val primaryButtonHeight = 46.dp
         val hairline = 1.dp
+        val inputHeight = 40.dp
+        val avatar = 40.dp
+        val iconButton = 34.dp
+        val icon = 20.dp
+        val profileAvatar = 76.dp
+        val sheetRadius = 24.dp
+        val cardRadius = 18.dp
+        val bubbleRadius = 16.dp
+        val bubbleTail = 5.dp
     }
 }
 

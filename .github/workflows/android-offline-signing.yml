@@ -1,0 +1,66 @@
+name: Verified Android release for offline signing
+on:
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  unsigned_release:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.label.name == 'android-offline-signing'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Require successful native evidence for the pinned source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          base='https://api.github.com/repos/masharzy/ekmivo/actions/runs/39355951378'
+          def get(url):
+            req=urllib.request.Request(url,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+            return json.load(urllib.request.urlopen(req))
+          assert get(base)['head_sha']=='b0330f75567e049e2d652e838b7abd58973da878'
+          assert any(j['name']=='Native emulator integration and screenshot checks' and j['conclusion']=='success' for j in get(base+'/jobs')['jobs'])
+          PY
+      - uses: actions/checkout@v4
+        with:
+          ref: b0330f75567e049e2d652e838b7abd58973da878
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK 35
+        run: |
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          sdk_manager="$(find "$sdk_root/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          "$sdk_manager" 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+      - name: Build unsigned release from the verified source
+        working-directory: apps/mobile
+        env:
+          EKMIVO_FIREBASE_APPLICATION_ID: ${{ vars.EKMIVO_FIREBASE_APPLICATION_ID }}
+          EKMIVO_FIREBASE_API_KEY: ${{ vars.EKMIVO_FIREBASE_API_KEY }}
+          EKMIVO_FIREBASE_PROJECT_ID: ${{ vars.EKMIVO_FIREBASE_PROJECT_ID }}
+          EKMIVO_FIREBASE_SENDER_ID: ${{ vars.EKMIVO_FIREBASE_SENDER_ID }}
+        run: gradle --no-daemon --console=plain :app:assembleRelease
+      - name: Prepare offline signing tools and identity
+        run: |
+          mkdir offline-signing
+          cp apps/mobile/app/build/outputs/apk/release/app-release-unsigned.apk offline-signing/
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          cp "$sdk_root/build-tools/35.0.0/lib/apksigner.jar" offline-signing/
+          "$sdk_root/build-tools/35.0.0/aapt" dump badging offline-signing/app-release-unsigned.apk | head -1 > offline-signing/package.txt
+          printf '%s\n' b0330f75567e049e2d652e838b7abd58973da878 > offline-signing/source-commit.txt
+          cd offline-signing
+          sha256sum app-release-unsigned.apk apksigner.jar > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ekmivo-verified-offline-signing-input
+          path: offline-signing/
+          if-no-files-found: error
+          retention-days: 7

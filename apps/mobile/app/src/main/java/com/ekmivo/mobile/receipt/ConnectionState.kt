@@ -52,5 +52,5 @@ object ConnectionMachine {
 /** One canonical policy for all signed, authenticated device HTTP responses. */
 object DeviceAuthPolicy {
  fun revoked(status: Int, action: String): Boolean =
-  action != "claim" && (status == 401 || status == 403)
+  action != "claim" && action != "pairing-preview" && action != "inbox" && (status == 401 || status == 403)
 }

@@ -214,6 +214,19 @@ try{
  for(let i=0;i<2;i++)execFileSync("go",["run","./cmd/financial-migrate"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg05Env,timeout:100000
  });
+ const pg06Env={...pg05Env,PG06_ALLOW_MIGRATION:"true",
+  PG08_NOTICE_ALLOW_MIGRATION:"true",
+  PG08_NOTICE_MIGRATION_FILE:new URL("../../../infra/migrations/0015_pg08_customer_notice.sql",import.meta.url).pathname,
+  PG06_PIPELINE_MIGRATION_FILE:new URL("../../../infra/migrations/0014_pg06_pg09_receipt_pipeline.sql",import.meta.url).pathname};
+ // Current API requires the scoped readiness contract even for PG05 HTTP reads.
+ // Install the real dependent schema on both disposable realms; never bypass readiness.
+ execFileSync("go",["run","./cmd/financial-migrate"],{
+  cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg06Env,timeout:100000
+ });
+ for(const realm of names){
+  const readiness=await readFile(new URL("../../../infra/migrations/0107_workspace_projection_readiness.sql",import.meta.url),"utf8");
+  await dbs[realm].unsafe(readiness).simple();
+ }
  const tenant=controls[0][1];
  const reader=postgres(ds("ekmivo_pg04_sandbox","ekmivo_finance_reader_sandbox",
    "pg04-sandbox-reader-only"),{max:1,prepare:false});
@@ -685,11 +698,7 @@ try{
  }
 
  // PG06-PG09: source-matched 0014 migration, both disposable realms only.
- // This executes AFTER the PG04/PG05 regressions, never on an owner DB.
- const pg06Env={...pg05Env,PG06_ALLOW_MIGRATION:"true",
-  PG08_NOTICE_ALLOW_MIGRATION:"true",
-  PG08_NOTICE_MIGRATION_FILE:new URL("../../../infra/migrations/0015_pg08_customer_notice.sql",import.meta.url).pathname,
-  PG06_PIPELINE_MIGRATION_FILE:new URL("../../../infra/migrations/0014_pg06_pg09_receipt_pipeline.sql",import.meta.url).pathname};
+ // Repeated operator pass verifies already-installed pipeline idempotency.
  for(let pass=0;pass<2;pass++){
   execFileSync("go",["run","./cmd/financial-migrate"],{
    cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env:pg06Env,timeout:100000
@@ -728,6 +737,47 @@ try{
   ok((await dbs[realm].unsafe("SELECT to_regclass('public.pg06_phone_forwarded') IS NOT NULL AS installed"))[0].installed,
     "Missing phone forwarder schema in "+realm);
  }
+ // Reference phases 2–4: actual additive control schema and functional assertions,
+ // isolated CI databases only. Entire transaction intentionally rolls back.
+ try {
+  await admin.begin(async tx=>{
+   for(const filename of ["0114_mobile_workspace_preview_control.sql","0116_mobile_devices_control.sql","0118_workspace_inbox.sql","0119_channel_oauth.sql","0120_inbox_push.sql","0121_inbox_media_profiles.sql"]){
+    const sql=await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8");
+    await tx.unsafe(sql.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple();
+   }
+   const checks=await readFile(new URL("../../../tools/testing/sql/mobile-foundation-control.sql",import.meta.url),"utf8");
+   await tx.unsafe(checks).simple();
+   await tx.unsafe(await readFile(new URL("../../../tools/testing/sql/inbox-media-profiles.sql",import.meta.url),"utf8")).simple();
+   throw rollback;
+  });
+ }catch(err){if(err!==rollback)throw err}
+ for(const realm of names){
+  try {await dbs[realm].begin(async tx=>{
+   const sql=await readFile(new URL("../../../infra/migrations/0117_mobile_device_financial_adoption.sql",import.meta.url),"utf8");
+   await tx.unsafe(sql.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple();
+   const device=randomUUID(),ws=randomUUID(),key=randomBytes(91);
+   await tx.unsafe("INSERT INTO financial_workspace_registry(workspace_id,environment,status,entitlement_version) VALUES($1::uuid,$2,'active',1)",[ws,realm]);
+   for(let attempt=0;attempt<2;attempt++){
+    const row=(await tx.unsafe("SELECT pg06_mobile_adopt($1::uuid,$2::uuid,$3,$4::bytea) AS ready",[device,ws,realm,key]))[0];
+    ok(row.ready,"AI-first same-ID financial adoption failed");
+   }
+   same((await tx.unsafe("SELECT count(*)::int AS n FROM pg06_phones WHERE id=$1::uuid",[device]))[0].n,1,"financial adoption duplicated phone");
+   throw rollback;
+  })}catch(err){if(err!==rollback)throw err}
+ }
+ // Current API uses restricted control-projection and financial-reader pools.
+ // Keep the actual additive contracts installed on these disposable DBs for HTTP tests.
+ for(const filename of ["0114_mobile_workspace_preview_control.sql","0116_mobile_devices_control.sql","0118_workspace_inbox.sql","0119_channel_oauth.sql","0120_inbox_push.sql","0121_inbox_media_profiles.sql"]){
+  const sql=await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8");
+  await admin.unsafe(sql).simple();
+ }
+ for(const realm of names){
+  for(const filename of ["0115_mobile_pairing_preview_financial.sql","0117_mobile_device_financial_adoption.sql"]){
+   const sql=await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8");
+   await dbs[realm].unsafe(sql).simple();
+  }
+ }
+ console.log("Android phases 2–4 control/dual-finance pairing, products, inbox, OAuth, push and status replay PASS (rolled back)");
  try{
   await dbs.sandbox.begin(async tx=>{
    const ws=controls[0][1];

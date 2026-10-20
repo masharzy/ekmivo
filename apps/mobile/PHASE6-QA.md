@@ -1,3 +1,5 @@
+> Historical pre-workspace Phase 6 checklist. Current reference phases 1–7 and release gates are in `docs/ANDROID-REDESIGN-STATUS.md` and `docs/evidence/ANDROID-REFERENCE-PHASE7/README.md`; older disabled-Inbox statements below no longer describe the current app.
+
 # Phase 6 QA checklist — Android
 
 ## Implementation scope

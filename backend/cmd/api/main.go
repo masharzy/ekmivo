@@ -63,6 +63,18 @@ func newHandlerWithRepository(repo *authz.Repository) http.Handler {
 }
 func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/inbox-connections", pay.HandleInboxConnection)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connections/{connectionID}/disconnect", pay.HandleInboxConnection)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connect", pay.HandleInboxOAuthBegin)
+	mux.HandleFunc("GET /v1/channels/meta/callback", pay.HandleInboxOAuthCallback)
+	mux.HandleFunc("GET /v1/channels/media/{mediaID}", pay.HandleInboxMedia)
+	mux.HandleFunc("GET /v1/channels/meta/webhook", pay.HandleInboxWebhook)
+	mux.HandleFunc("POST /v1/channels/meta/webhook", pay.HandleInboxWebhook)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connections", pay.HandleInboxConnection)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/mobile-devices", pay.HandleMobileDevices)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/mobile-devices", pay.HandleMobileDevices)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/mobile-devices/{mobileID}/{mobileAction}", pay.HandleMobileDevices)
 	mux.HandleFunc("GET /v1/platform/workspaces/{workspaceID}/payment-usage", pay.HandleAdminPlanUsage)
 	mux.HandleFunc("GET /v1/platform/workspaces/{workspaceID}/operations/{resource}", pay.HandleAdminWorkspaceOperations)
 	mux.HandleFunc("POST /v1/public-sandbox/receiver/{receiverID}", pay.HandlePublicSandboxReceiver)
@@ -420,6 +432,9 @@ func main() {
 	log.Printf("ekmivo-api listening on :%s", port)
 	runtimeContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if pg05 != nil && pg05.Pipeline != nil && os.Getenv("INBOX_SENDER_ENABLED") == "true" {
+		go pg05.RunInboxSender(runtimeContext)
+	}
 	workerConfigs, workerErr := workerruntime.HostedConfigs(os.Getenv)
 	if workerErr != nil {
 		log.Printf("API hosted workers not started: %v", workerErr)
@@ -433,7 +448,7 @@ func main() {
 	repair, closeProjection, repairErr := workerruntime.NewProjectionRepair(runtimeContext, projectionConfig)
 	if repairErr != nil {
 		log.Print("API on-demand workspace projection unavailable")
-	} else {
+	} else if pg05 != nil {
 		pg05.SyncProjection = repair
 		if repair != nil {
 			log.Print("API on-demand workspace projection active")

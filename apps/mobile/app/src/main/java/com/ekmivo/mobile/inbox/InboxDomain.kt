@@ -4,11 +4,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
- * Future customer conversation surface. Intentionally OFF until FCM,
+ * Future customer conversation surface. Activated only behind authoritative workspace AI access; FCM,
  * identity-based authorization, server routes and privacy review are complete.
  */
 object InboxFeatureFlag {
- const val inboxEnabled = false
+ const val inboxEnabled = true
 }
 
 enum class InboxMessageState { RECEIVED, READ, SENT, FAILED }

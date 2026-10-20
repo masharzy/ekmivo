@@ -36,4 +36,12 @@ class SetupPlanTest {
   assertFalse(snap().needsAttention)
   assertTrue(snap(battery=HealthLevel.UNKNOWN).needsAttention)
  }
+ @Test fun adoptingPaymentRequestsNewPermissionsButAIOnlyDoesNotReadSMS(){
+  val noGrants=snap(sms=HealthLevel.MISSING,notifications=HealthLevel.MISSING,battery=HealthLevel.MISSING,samsung=true)
+  assertEquals(listOf(SetupStep.NOTIFICATION),SetupPlan.steps(true,false))
+  assertEquals(SetupStep.NOTIFICATION,SetupPlan.firstMissing(noGrants,false))
+  val notificationGranted=noGrants.copy(notification=HealthLevel.OK)
+  assertNull(SetupPlan.firstMissing(notificationGranted,false))
+  assertEquals(SetupStep.SMS,SetupPlan.firstMissing(notificationGranted,true))
+ }
 }

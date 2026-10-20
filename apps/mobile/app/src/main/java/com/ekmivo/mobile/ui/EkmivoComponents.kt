@@ -50,7 +50,8 @@ fun Modifier.topHairline(color: Color) = this.drawBehind {
 fun EkmivoPrimaryButton(
     label: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val palette = LocalEkmivoPalette.current
     val interaction = remember { MutableInteractionSource() }
@@ -58,10 +59,10 @@ fun EkmivoPrimaryButton(
     Box(
         modifier.fillMaxWidth()
             .height(EkmivoTokens.Measure.primaryButtonHeight)
-            .graphicsLayer { alpha = if (pressed) .88f else 1f }
+            .graphicsLayer { alpha = if (!enabled) .45f else if (pressed) .88f else 1f }
             .clip(RoundedCornerShape(14.dp))
             .background(palette.text)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(label, style = EkmivoType.button, color = palette.onPrimary)
@@ -96,7 +97,8 @@ fun EkmivoNavItem(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
-    icon: @Composable () -> Unit
+    icon: @Composable () -> Unit,
+    compact: Boolean = false
 ) {
     val palette = LocalEkmivoPalette.current
     val color = if (selected) palette.text else palette.secondary
@@ -106,7 +108,7 @@ fun EkmivoNavItem(
             .clip(RoundedCornerShape(12.dp))
             .background(if (selected) palette.subtle else Color.Transparent)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 4.dp),
+            .padding(horizontal = if (compact) 12.dp else 18.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
@@ -196,5 +198,30 @@ fun EkmivoPulseRing(
             Ring(1400)
         }
         core()
+    }
+}
+
+/** Reference card without Material elevation or default content padding. */
+@Composable
+fun EkmivoReferenceCard(
+    modifier: Modifier = Modifier,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
+    val p = LocalEkmivoPalette.current
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(p.surface)
+        .border(1.dp, p.border, RoundedCornerShape(18.dp)).padding(14.dp), content = content)
+}
+
+@Composable
+fun EkmivoFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val p = LocalEkmivoPalette.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(Modifier.graphicsLayer { scaleX = if (pressed) .95f else 1f; scaleY = scaleX }
+        .clip(CircleShape).background(if (selected) p.text else Color.Transparent)
+        .border(1.dp, if (selected) p.text else p.border, CircleShape)
+        .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+        .padding(horizontal = 12.dp, vertical = 5.dp)) {
+        Text(label, style = EkmivoType.chip, color = if (selected) p.onPrimary else p.secondary)
     }
 }
