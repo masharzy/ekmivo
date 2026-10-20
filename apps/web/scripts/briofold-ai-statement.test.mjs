@@ -51,7 +51,9 @@ test("Ledger pages are tenant, role, subscription and permission restricted",()=
 });
 test("Low-balance warnings depend on live configured reservation, not guessed prices",()=>{
  const server=src("lib/server/briofold-ai-wallet.ts"),ui=src("components/briofold-ai-credit-summary.tsx");
- assert.match(server,/min\(\(v\.terms->>'max_request_minor'\)::bigint\)/);
+ assert.match(server,/min\(ceil\(\(\(v\.terms->>'max_input_tokens'\)::numeric/);
+ assert.match(server,/max_output_tokens/);
+ assert.match(server,/output_minor_per_million/);
  assert.match(server,/m\.role IN \('owner','admin'\)/);
  assert.match(ui,/wallet\.available_minor<wallet\.minimum_request_minor/);
  assert.match(ui,/BriofoldAiStatement/);
