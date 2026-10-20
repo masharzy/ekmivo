@@ -2,10 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 
-// Phase 1A: preserve the existing, owner-approved visual behavior.
-// This is deliberately read-only: no import moves, selector rewrites,
-// palette edits or cross-route layout changes in this checkpoint.
-// Actual physical stylesheet separation requires a separate visual-regression PR.
+// Phase 1B: isolate merchant-specific visual layers without changing token
+// values or approved layer ordering. The shared app/auth stylesheet debt remains
+// separately tracked; do not claim the entire CSS isolation is complete.
 const file=(path)=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
 const globalCss=file("app/globals.css");
 const paymentCss=file("app/dashboard-v2.css");
@@ -13,18 +12,23 @@ const marketingCss=file("styles/brand/brand-tokens.css");
 const homeDarkCss=file("styles/brand/home-dark.css");
 const adminCss=file("styles/admin/admin-tokens.css");
 const rootLayout=file("app/layout.tsx");
+const merchantBundle=file("components/merchant-payment-styles.css");
+const merchantFrame=file("components/dashboard-frame.tsx");
 
-test("current CSS cascade order is frozen until a screenshot-approved migration",()=>{
- const imports=[...globalCss.matchAll(/^@import\s+"([^"]+)";/gm)].map(match=>match[1]);
- const index=(part)=>imports.findIndex(path=>path.endsWith(part));
- const ordered=[
+test("public/Admin root excludes payment dashboard CSS; merchant bundle preserves its cascade",()=>{
+ const rootImports=[...globalCss.matchAll(/^@import\s+"([^"]+)";/gm)].map(match=>match[1]);
+ const rootIndex=name=>rootImports.findIndex(path=>path.endsWith(name));
+ const remaining=[
   "landing-v3.css","landing-ink-bone.css","brand-tokens.css",
-  "dashboard-refinement.css","dashboard-v2.css",
-  "dashboard-shell-v3.css","dashboard-pass2.css",
-  "admin-tokens.css","admin-theme.css","admin-components.css",
+  "dashboard-refinement.css","admin-tokens.css","admin-theme.css","admin-components.css"
  ];
- for(const name of ordered)assert.ok(index(name)>=0,`Missing current CSS layer: ${name}`);
- for(let i=1;i<ordered.length;i++)assert.ok(index(ordered[i-1])<index(ordered[i]),`Unexpected CSS cascade order: ${ordered[i]}`);
+ for(const name of remaining)assert.ok(rootIndex(name)>=0,`Missing shared public layer: ${name}`);
+ for(let i=1;i<remaining.length;i++)assert.ok(rootIndex(remaining[i-1])<rootIndex(remaining[i]),`Public cascade changed: ${remaining[i]}`);
+ for(const name of ["dashboard-v2.css","dashboard-shell-v3.css","dashboard-pass2.css"])
+  assert.equal(rootIndex(name),-1,`Merchant payment stylesheet leaked into public root: ${name}`);
+ const merchantImports=[...merchantBundle.matchAll(/^@import\s+"([^"]+)";/gm)].map(match=>match[1]);
+ assert.deepEqual(merchantImports.map(x=>x.split("/").pop()),["dashboard-v2.css","dashboard-shell-v3.css","dashboard-pass2.css"]);
+ assert.match(merchantFrame,/import "\.\/merchant-payment-styles\.css";/);
  assert.match(rootLayout,/import "\.\/globals\.css";/);
 });
 
@@ -63,6 +67,6 @@ test("public homepage and dashboard are not to share product-specific CSS direct
   .map(p=>file(p)).join("\n");
  assert.doesNotMatch(source,/import\s+["'][^"']*(?:landing-|home-dark|brand-tokens|globals\.css)/);
  assert.match(rootLayout,/import "\.\/globals\.css";/);
- // Explicit known technical debt: root globals is still loaded for all routes;
- // this guard does NOT claim physical route-level CSS isolation is complete.
+ // Remaining debt: app/globals.css still contains shared auth/workspace CSS;
+ // only payment visual layers are physically component-owned in this pass.
 });
