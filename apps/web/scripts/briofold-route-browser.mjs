@@ -24,11 +24,21 @@ export async function runBriofoldRouteBrowser({origin,browser,control,tenant,ses
   ]);
   const page=await context.newPage();page.setDefaultNavigationTimeout(90000);page.setDefaultTimeout(30000);
   for(const path of ["/dashboard","/inbox","/orders","/payments","/sms-data","/invoices","/customers","/reports","/settings"]){
-   const response=await page.goto(origin+path);
-   assert.equal(response.status(),path==="/inbox"&&!aiEnabled?404:200,"Canonical route failed: "+path);
-   assert.equal(new URL(page.url()).pathname,path,"Canonical URL changed: "+path);
-   if(response.status()===200)await page.locator('.ds-app[data-unified="true"]').waitFor();
+   // Each direct-entry probe owns a page: prior App Router hydration cannot
+   // race and cancel a subsequent hard navigation in the same tab.
+   const probe=await context.newPage();probe.setDefaultNavigationTimeout(90000);
+   try{
+    const response=await probe.goto(origin+path);
+    assert.equal(response.status(),path==="/inbox"&&!aiEnabled?404:200,"Canonical route failed: "+path);
+    assert.equal(new URL(probe.url()).pathname,path,"Canonical URL changed: "+path);
+    if(response.status()===200)await probe.locator('.ds-app[data-unified="true"]').waitFor();
+   }catch(error){
+    const diagnostic=await context.request.get(origin+path);
+    throw new Error("Canonical probe "+path+" failed; HTTP="+diagnostic.status()+" content-type="+diagnostic.headers()["content-type"]+" browser-path="+new URL(probe.url()).pathname+"; "+error.message);
+   }finally{await probe.close();}
   }
+  await page.goto(origin+"/settings");
+  await page.locator('.ds-app[data-unified="true"]').waitFor();
   await page.locator('.ds-navigation a[href="/payments"]').first().click();
   await page.waitForURL(url=>url.pathname==="/payments");
   await page.locator('.ds-navigation a[href="/invoices"]').first().click();
