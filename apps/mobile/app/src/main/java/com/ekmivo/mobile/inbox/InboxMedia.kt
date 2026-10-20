@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -199,7 +200,8 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  }
  val isHolding=recorder!=null&&!locked
  val micScale by animateFloatAsState(if(isHolding)1.65f else 1f,animationSpec=tween(150),label="voice-mic-scale")
- val lockProgress=((-swipeY)/72f).coerceIn(0f,1f)
+ val localDensity=LocalDensity.current
+ val lockProgress=with(localDensity){(-swipeY/72.dp.toPx()).coerceIn(0f,1f)}
  val blinkTransition=rememberInfiniteTransition(label="voice-record-pulse")
  val micAlpha by blinkTransition.animateFloat(1f,.35f,
   infiniteRepeatable(tween(500),RepeatMode.Reverse),label="voice-mic-blink")
