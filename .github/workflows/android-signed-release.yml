@@ -150,8 +150,8 @@ jobs:
           event=json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
           source=event.get('pull_request',{}).get('head',{}).get('sha',os.environ['GITHUB_SHA'])
           gradle=pathlib.Path('apps/mobile/app/build.gradle.kts').read_text()
-          code=re.search(r'versionCode\\s*=\\s*(\\d+)',gradle)
-          name=re.search(r'versionName\\s*=\\s*"([^\"]+)"',gradle)
+          code=re.search(r'versionCode\s*=\s*(\d+)',gradle)
+          name=re.search(r'versionName\s*=\s*"([^\"]+)"',gradle)
           if not code or not name:
               raise RuntimeError('Android version metadata is missing')
           pathlib.Path('apps/mobile/app/build/outputs/apk/release/release-metadata.json').write_text(json.dumps({'source_commit':source,'version_code':int(code.group(1)),'version_name':name.group(1),'certificate_sha256':'52f54eef5bfeb351a0c2d615e1191048e30f1701b29f36aaa825359ca97276d9'},indent=2))
