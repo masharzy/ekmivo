@@ -38,7 +38,7 @@ export function proxy(request:NextRequest){
  headers.delete("x-ekmivo-application");
  headers.delete("x-ekmivo-auth-page");
  headers.set("x-ekmivo-locale",locale);
- if(/^\/(?:dashboard|workspaces|w|account|admin)(?:\/|$)/.test(path))headers.set("x-ekmivo-application","1");
+ if(/^\/(?:dashboard|inbox|orders|payments|customers|reports|settings|workspaces|w|account|admin)(?:\/|$)/.test(path))headers.set("x-ekmivo-application","1");
  if(/^\/(?:login|register|forgot-password|verify-email)(?:\/|$)/.test(path))headers.set("x-ekmivo-auth-page","1");
  return NextResponse.rewrite(target,{request:{headers}});
 }
