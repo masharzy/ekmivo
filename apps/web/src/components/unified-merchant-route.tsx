@@ -9,6 +9,7 @@ import {WorkspaceInbox} from "./workspace-inbox";
 import {WorkspaceChannels} from "./workspace-channels";
 import {UnifiedSettingsIndex} from "./unified-settings-index";
 import {UnifiedSectionTabs} from "./unified-section-tabs";
+import {BriofoldAiCreditSummary} from "./briofold-ai-credit-summary";
 import {onboardingState} from "../lib/server/briofold-onboarding";
 
 export const unifiedDynamic="force-dynamic";
@@ -42,5 +43,6 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
    service={service} section={section} paymentContext={paymentContext}>
     <UnifiedSectionTabs locale={locale} root={root} mode={workspace.mode} view={view}/>
     {body}
+    {root==="settings"&&view[0]==="billing"&&workspace.mode!=="commerce"&&<BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/>}
    </AppShell>;
 }
