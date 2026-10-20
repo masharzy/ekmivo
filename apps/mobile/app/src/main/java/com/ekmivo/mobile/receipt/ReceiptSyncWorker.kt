@@ -31,8 +31,10 @@ object ReceiptTransport {
  fun post(context:Context,action:String,deviceID:String,eventID:String,bytes:ByteArray):Pair<Int,String>{
   val base=BuildConfig.API_BASE_URL.trimEnd('/');require(base.startsWith("https://")){"HTTPS API not configured"}
   val path="/v1/device/$action";val timestamp=(System.currentTimeMillis()/1000).toString()
-  val signature=AndroidKeystoreSigner("ekmivo-receipt-device").signCanonical(DeviceSignatureCanonicalizer.canonical("POST",path,timestamp,eventID,bytes))
-  val request=Request.Builder().url(base+path).header("X-Ekmivo-Device-ID",deviceID).header("X-Ekmivo-Event-ID",eventID).header("X-Ekmivo-Timestamp",timestamp).header("X-Ekmivo-Signature",signature).post(bytes.toRequestBody("application/json".toMediaType())).build()
+  // Read-only pairing preview is public and runs before consent/key creation.
+  // Claim and every enrolled-device action still require the device signature.
+  val signature=if(action=="pairing-preview") null else AndroidKeystoreSigner("ekmivo-receipt-device").signCanonical(DeviceSignatureCanonicalizer.canonical("POST",path,timestamp,eventID,bytes))
+  val request=Request.Builder().url(base+path).header("X-Ekmivo-Device-ID",deviceID).header("X-Ekmivo-Event-ID",eventID).header("X-Ekmivo-Timestamp",timestamp).apply{if(signature!=null)header("X-Ekmivo-Signature",signature)}.post(bytes.toRequestBody("application/json".toMediaType())).build()
   return try{
    val result=client.newCall(request).execute().use{it.code to (it.body?.string()?:"")}
    ReceiptRepository.get(context).onTransport(result.first,action,deviceID)
