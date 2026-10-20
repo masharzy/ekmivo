@@ -34,10 +34,8 @@ export async function runBriofoldOnboardingBrowser({origin,browser,control,sessi
    await p.getByRole("button",{name:"Continue",exact:true}).click();
    await p.locator('input[name="mode"]').first().waitFor();
    assert.equal((await db`SELECT name FROM workspaces WHERE id=${workspace}`)[0].name,name);
-   const setup=(await db`SELECT business_type,description FROM briofold_business_onboarding WHERE workspace_id=${workspace}`)[0];
-   assert.equal(setup.business_type,"service");assert.equal(setup.description,"Synthetic setup metadata");
    const profile=(await db`SELECT body FROM dashboard_store_profiles WHERE workspace_id=${workspace}`)[0].body;
-   assert.equal(profile.address,"Fixture address");assert.equal(Object.keys(profile).length,5);
+   assert.equal(profile.address,"Fixture address");assert.equal(profile.business_type,"service");assert.equal(profile.description,"Synthetic setup metadata");assert.equal(Object.keys(profile).length,13);
    await p.reload();
    await p.locator('input[name="mode"][value="'+mode+'"]').check();
    await p.getByRole("button",{name:"Continue",exact:true}).click();

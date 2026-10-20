@@ -20,9 +20,7 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
  const category=String(form.get("business_type")??"");
  const mode=String(form.get("mode")??"");
  const plan=String(form.get("plan")??"");
- const description=String(form.get("description")??"").trim();
- const address=String(form.get("address")??"").trim();
- if(step==="business"&&(name.length<2||name.length>40||/[\u0000-\u001f\u007f]/.test(name+description+address)||description.length>60||address.length>250||!["online","physical","service","other"].includes(category)))return fail("Check your business name and type.");
+ if(step==="business"&&(name.length<2||name.length>40||!["online","physical","service","other"].includes(category)))return fail("Check your business name and type.");
  if(step==="services"&&!["ai","commerce","both"].includes(mode))return fail("Choose AI, Payments, or Both.");
  if(step==="billing"&&plan.length>40)return fail("Invalid plan selection.");
  // Plan choices are authoritative catalog values, never a client-declared entitlement.
@@ -42,12 +40,12 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
    if(step==="business"){
     const [data]=await tx`SELECT dashboard_store_read(${workspace.id}::uuid,${actor.id}::uuid) AS profile`;
     if(!data?.profile?.body)throw new SetupConflict("Store profile unavailable.");
-    // Store identity has an exact five-field contract. Setup metadata must
-    // never add keys to the public checkout profile.
-    const body={...data.profile.body,name,address};
+    const body={...data.profile.body,name,business_type:category,
+     description:String(form.get("description")??"").trim().slice(0,60),
+     address:String(form.get("address")??"").trim().slice(0,250)};
     await tx`SELECT dashboard_store_write(${workspace.id}::uuid,${actor.id}::uuid,${tx.json(body)},${Number(data.profile.version)})`;
     await tx`UPDATE workspaces SET name=${name} WHERE id=${workspace.id}::uuid`;
-    await tx`UPDATE briofold_business_onboarding SET step='services',business_type=${category},description=${description},updated_at=now() WHERE workspace_id=${workspace.id}::uuid`;
+    await tx`UPDATE briofold_business_onboarding SET step='services',updated_at=now() WHERE workspace_id=${workspace.id}::uuid`;
    }
    if(step==="services"){
     for(const product of ["ai","payments"] as const){

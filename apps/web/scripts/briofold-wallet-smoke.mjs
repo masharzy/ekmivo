@@ -12,7 +12,7 @@ export async function runBriofoldWalletChecks(url){
  const equal=(actual,expected)=>{assert.deepEqual(actual,expected);count++;};
  const reject=async (callback,code)=>{await assert.rejects(callback,error=>error.code===code);count++;};
  try{
-  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql","0128_briofold_ai_topup_recovery.sql","0129_briofold_ai_execution_meter.sql","0130_briofold_ai_exception_resolution.sql","0131_briofold_ai_topup_proof_binding.sql","0132_briofold_onboarding_metadata.sql"]){
+  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql","0128_briofold_ai_topup_recovery.sql","0129_briofold_ai_execution_meter.sql","0130_briofold_ai_exception_resolution.sql","0131_briofold_ai_topup_proof_binding.sql"]){
    const migration=await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8");
    await db.begin(tx=>tx.unsafe(migration.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple());
   }
