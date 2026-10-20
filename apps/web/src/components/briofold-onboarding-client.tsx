@@ -43,7 +43,7 @@ export function BriofoldOnboardingClient({locale,step,businessName,mode,plans}:{
       {key:"commerce",title:t("Payment Gateway","পেমেন্ট গেটওয়ে"),desc:t("Verified payments, links and invoices","পেমেন্ট যাচাই, লিংক ও ইনভয়েস")},
       {key:"both",title:t("Both services","দুটিই"),desc:t("One business dashboard, separate billing","এক Dashboard, আলাদা বিলিং")}
      ].map(x=><label className={styles.option} key={x.key}>
-      <input type="radio" name="mode" value={x.key} defaultChecked={x.key==="both"} required/>
+      <input type="radio" name="mode" value={x.key} defaultChecked={x.key===mode} required/>
       <span><strong>{x.title}</strong><small>{x.desc}</small></span>
      </label>)}
     </fieldset>}
