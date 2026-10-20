@@ -33,7 +33,7 @@ test("authorized business context and realm resolution are server-side",()=>{
 test("global marketing header and footer do not render on unified application routes",()=>{
  for(const cssless of ["components/site-header.tsx","components/site-footer.tsx","proxy.ts"]){
   const src=source(cssless);
-  assert.match(src,/dashboard\|inbox\|orders\|payments\|customers\|reports\|settings/,`Missing route exclusion: ${cssless}`);
+  assert.match(src,/dashboard\|inbox\|orders\|payments\|sms-data\|invoices\|customers\|reports\|settings/,`Missing route exclusion: ${cssless}`);
  }
 });
 test("settings uses opt-in CSS module and preserves legacy payment screens",()=>{
