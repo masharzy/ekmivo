@@ -24,7 +24,7 @@ export async function BriofoldAiCreditSummary({workspaceId,actorId,locale}:{
     </p>:null}
     <p className={styles.note}>{t("Credits may only be added after an authoritative payment verification or authorized grant. AI usage rates and funding must be configured before paid AI is activated.","কর্তৃপক্ষের যাচাইকৃত পেমেন্ট বা অনুমোদিত ক্রেডিট গ্রান্ট ছাড়া ব্যালেন্স যোগ হবে না। AI usage rate ও funding সম্পন্ন হওয়ার আগে পেইড AI চালু হবে না।")}</p>
     <BriofoldAiTopupControls workspaceId={workspaceId} locale={locale} enabled={process.env.BRIOFOLD_AI_TOPUPS_ENABLED==="true"} topups={wallet.topups}/>
-    <BriofoldAiStatement workspaceId={workspaceId} locale={locale} initial={wallet.entries} nextCursor={wallet.next_cursor}/>
+    <BriofoldAiStatement key={workspaceId} workspaceId={workspaceId} locale={locale} initial={wallet.entries} nextCursor={wallet.next_cursor}/>
   </>}
  </section>;
 }
