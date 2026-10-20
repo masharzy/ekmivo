@@ -1,4 +1,5 @@
 import {runPaymentExtensions} from "./pg10-extension-smoke.mjs";
+import {runBriofoldWalletChecks} from "./briofold-wallet-smoke.mjs";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {randomUUID,randomBytes,createHmac,createHash,generateKeyPairSync,sign} from "node:crypto";
@@ -1608,6 +1609,7 @@ try{
   }
  }
  count+=await runPaymentExtensions({db:dbs.sandbox,live:dbs.live,control:admin,workspace:pg07WS,otherWorkspace:randomUUID()});
+ count+=await runBriofoldWalletChecks(control);
  console.log("PG10-PG17 extension source SQL cases executed against disposable realms; fictional evidence only");
  const controlEmpty=await admin`SELECT to_regclass('public.payment_intents') IS NULL AS no_payments`;
  ok(controlEmpty[0].no_payments,"financial tables leaked into control DB");
