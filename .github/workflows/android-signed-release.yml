@@ -13,6 +13,51 @@ permissions:
   contents: read
 
 jobs:
+  owner_unsigned_release:
+    name: Build unsigned release for local production-key signing
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'android-release'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          sdk_manager="$(find "$sdk_root/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          "$sdk_manager" 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+      - name: Assemble unsigned optimized production APK
+        working-directory: apps/mobile
+        run: gradle --no-daemon --console=plain :app:assembleRelease
+      - name: Package unsigned APK and signing utilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          mkdir -p owner-signing
+          cp apps/mobile/app/build/outputs/apk/release/app-release-unsigned.apk owner-signing/
+          cp "$sdk_root/build-tools/35.0.0/lib/apksigner.jar" owner-signing/
+          cp "$sdk_root/build-tools/35.0.0/zipalign" owner-signing/
+          chmod +x owner-signing/zipalign
+          "$sdk_root/build-tools/35.0.0/aapt" dump badging owner-signing/app-release-unsigned.apk | head -1 > owner-signing/package.txt
+          sha256sum owner-signing/app-release-unsigned.apk > owner-signing/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ekmivo-unsigned-v7-owner-signing
+          path: owner-signing/
+          if-no-files-found: error
+          retention-days: 3
   native_ui:
     name: Native emulator integration and screenshot checks
     if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'android-release'))
