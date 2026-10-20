@@ -12,7 +12,7 @@ export async function runBriofoldWalletChecks(url){
  const equal=(actual,expected)=>{assert.deepEqual(actual,expected);count++;};
  const reject=async (callback,code)=>{await assert.rejects(callback,error=>error.code===code);count++;};
  try{
-  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql"]){
+  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql"]){
    await db.unsafe(await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8")).simple();
   }
   const actor=randomUUID(),otherActor=randomUUID(),workspace=randomUUID(),receiver=randomUUID();
@@ -65,11 +65,20 @@ export async function runBriofoldWalletChecks(url){
     await tx.unsafe("SET LOCAL ROLE "+role);
     await tx`SELECT * FROM briofold_ai_wallets`;
    }),"42501");
-   await reject(()=>db.begin(async tx=>{
+   if(role==="ekmivo_financial_projection")await reject(()=>db.begin(async tx=>{
     await tx.unsafe("SET LOCAL ROLE "+role);
     await tx`SELECT briofold_ai_topup_apply_verified(${workspace},${actor},${topup},${proof},1000)`;
    }),"42501");
   }
+  const context=await db.begin(async tx=>{
+   await tx`SET LOCAL ROLE ekmivo_financial_runtime`;
+   return tx`SELECT * FROM briofold_ai_topup_context(${workspace},${actor},${topup})`;
+  });
+  equal([context[0].receiving_workspace_id,Number(context[0].amount_minor)],[receiver,1000]);
+  await reject(()=>db.begin(async tx=>{
+   await tx`SET LOCAL ROLE ekmivo_financial_runtime`;
+   await tx`SELECT * FROM briofold_ai_topup_context(${workspace},${otherActor},${topup})`;
+  }),"42501");
   const failedKey=randomUUID();
   await assert.rejects(()=>db.begin(async tx=>{
    await tx`SELECT briofold_ai_wallet_reserve(${workspace},${actor},${failedKey},100)`;
