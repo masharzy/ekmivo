@@ -101,3 +101,35 @@ test("first-time business preferences inherit the authorized name and preserve a
   assert.equal(nodes.some(n=>n.props?.children==="Workspace data is unavailable. Try Refresh."),false);
  }
 });
+
+test("team invite sharing uses a locale-neutral link while preserving server-issued capability",async()=>{
+ const raw=readFileSync(new URL("../src/components/payment-workspace-tools.tsx",import.meta.url),"utf8");
+ const code=ts.transpileModule(raw,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const states=[],refs=[],nodes=[];let si=0,ri=0;
+ const jsx=(type,props)=>{const node={type,props};nodes.push(node);return node;};
+ const member={id:"fixture-owner",name:"Fixture owner",role:"owner"},capability="A".repeat(43);
+ const react={
+  useState(initial){const i=si++;if(!(i in states))states[i]=initial;return [states[i],value=>{states[i]=typeof value==="function"?value(states[i]):value;}];},
+  useRef(initial){const i=ri++;return refs[i]??={current:initial};},useCallback:fn=>fn,useMemo:fn=>fn(),useEffect(){}
+ };
+ const dependencies={
+  react,"react/jsx-runtime":{jsx,jsxs:jsx},"next/navigation":{useRouter:()=>({refresh(){}})},
+  "./plan-resource-status":{PlanResourceStatus:()=>null,useResourceLimit:()=>({blocked:false,refresh:async()=>{}})},
+  "../lib/plan-resource-limits":{planLimitMessage:()=>""},
+  "./dashboard-initial-data":{useDashboardInitialData:()=>({data:{members:[member],invitations:[]}})},
+  "../lib/client/draft-navigation":{registerDraft:()=>()=>{}},
+  "./payment-privacy":{PaymentPrivacy:()=>null},"./payment-team-reference.css":{}
+ };
+ const exports={};
+ vm.runInNewContext(code,{exports,AbortSignal,window:{location:{origin:"https://example.test"}},
+  fetch:async(_url,request={})=>({ok:true,json:async()=>request.method==="POST"?{saved:true,invitation_token:capability}:{members:[member],invitations:[]}}),
+  require:id=>{if(!Object.hasOwn(dependencies,id))throw Error("Unexpected team dependency "+id);return dependencies[id];}
+ });
+ const render=()=>{si=0;ri=0;nodes.length=0;exports.PaymentWorkspaceTools({locale:"en",workspaceId:"fixture",workspaceName:"Fixture business",environment:"live",resource:"team",canManage:true,isOwner:true,userId:member.id,paymentPlanApplies:false});};
+ render();nodes.find(n=>n.type==="input"&&n.props.type==="email").props.onChange({target:{value:"invitee@example.invalid"}});
+ render();nodes.find(n=>n.type==="form").props.onSubmit({preventDefault(){}});await flush();render();
+ const text=value=>Array.isArray(value)?value.map(text).join(" "):value&&typeof value==="object"?text(value.props?.children):typeof value==="string"?value:"";
+ const visible=nodes.map(n=>text(n.props.children)).join(" ");
+ assert.ok(visible.includes("https://example.test/invite/"+capability));
+ assert.equal(visible.includes("https://example.test/en/invite/"),false);
+});

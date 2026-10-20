@@ -97,7 +97,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
    const json=await response.json() as Result;
    if(!response.ok)throw Error(json.error?.code||json.code||String(response.status));
    if(json.invitation_token){
-    setSecretLink(window.location.origin+"/"+locale+"/invite/"+json.invitation_token);
+    setSecretLink(window.location.origin+"/invite/"+json.invitation_token);
    }
    setPassword("");
    if(action==="settings"){
