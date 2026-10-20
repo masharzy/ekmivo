@@ -327,9 +327,9 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
       }
       }
      }
-     items(localVoices,key={it.id}){voice->
-      LocalVoiceBubble(voice,bn,onRetry={dispatchVoice(voice)})
-     }
+    }
+    items(localVoices,key={it.id}){voice->
+     LocalVoiceBubble(voice,bn,onRetry={dispatchVoice(voice)})
     }
    }
    if(awayFromBottom)Box(Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=12.dp).size(40.dp).clip(CircleShape).background(p.raised).border(1.dp,p.border,CircleShape).clickable{scope.launch{scroll.animateScrollToItem((scroll.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}}.semantics{contentDescription=if(bn)"নিচে যান" else "Jump to latest"},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.DOWN,tint=p.text,size=21.dp)}
