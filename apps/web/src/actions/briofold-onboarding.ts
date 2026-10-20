@@ -86,6 +86,6 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
  }
  revalidatePath("/dashboard");
  revalidatePath("/setup");
- if(step==="billing")redirect(paidGatewaySelection?"/settings/billing#plan-"+encodeURIComponent(plan):"/dashboard");
+ if(step==="billing")redirect(paidGatewaySelection?"/settings/billing?tab=plans&plan="+encodeURIComponent(plan):"/dashboard");
  redirect("/setup");
 }
