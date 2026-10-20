@@ -29,7 +29,9 @@ test("inbox is capability-gated with signed backend requests",()=>{
  assert.match(domain,/interface InboxRepository/);
  assert.match(domain,/interface InboxRepository/);
  assert.match(domain,/data class InboxMessage/);
- assert.match(app,/if\(ai\)add\(EkmivoReferencePage\.INBOX\)/);
+ assert.match(app,/workspacePages\(ai,payments\)/);
+ const navigation=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/ui/WorkspaceNavigation.kt");
+ assert.match(navigation,/if\(ai\)add\(EkmivoReferencePage\.INBOX\)/);
  const route=read("apps/mobile/app/src/main/java/com/ekmivo/mobile/inbox/InboxRoute.kt");
  assert.match(route,/ReceiptTransport\.post\(context,"inbox"/);
  assert.match(manifest,/InboxFirebaseService/);

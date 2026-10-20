@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -41,11 +42,11 @@ import org.json.JSONObject
 import java.io.File
 import java.util.UUID
 
-internal suspend fun fetchMedia(context:Context,thread:String,id:String):File=withContext(Dispatchers.IO) {
+internal suspend fun fetchMedia(context:Context,thread:String,id:String,api:InboxApi=SignedInboxApi(context)):File=withContext(Dispatchers.IO) {
  require(id.matches(Regex("[a-fA-F0-9-]{36}")))
  val dir=File(context.cacheDir,"inbox/$thread").apply{mkdirs()};val target=File(dir,id)
  if(!target.exists()) {
-  val r=inboxRequest(context,"media-get",thread,body=JSONObject().put("media_id",id))
+  val r=api.call("media-get",thread,body=JSONObject().put("media_id",id))
   val bytes=Base64.decode(r.getString("data"),Base64.NO_WRAP)
   check(bytes.size<=5242880)
   val temporary=File(dir,"$id.part");temporary.writeBytes(bytes);check(temporary.renameTo(target))
@@ -56,11 +57,11 @@ internal suspend fun fetchMedia(context:Context,thread:String,id:String):File=wi
 @Composable internal fun MediaImage(uri:String,modifier:Modifier=Modifier,scale:ContentScale=ContentScale.Crop) {
  val app=LocalContext.current
  val bitmap by produceState<android.graphics.Bitmap?>(null,uri){value=withContext(Dispatchers.IO){runCatching{val options=BitmapFactory.Options().apply{inJustDecodeBounds=true};app.contentResolver.openInputStream(Uri.parse(uri))?.use{BitmapFactory.decodeStream(it,null,options)};options.inSampleSize=maxOf(1,maxOf(options.outWidth,options.outHeight)/1600);options.inJustDecodeBounds=false;app.contentResolver.openInputStream(Uri.parse(uri))?.use{BitmapFactory.decodeStream(it,null,options)}}.getOrNull()}}
- bitmap?.let{Image(it.asImageBitmap(),contentDescription=null,modifier=modifier,contentScale=scale)}?:Box(modifier.background(Color.DarkGray),contentAlignment=Alignment.Center){CircularProgressIndicator(Modifier.size(22.dp),color=Color.White)}
+ bitmap?.let{Image(it.asImageBitmap(),contentDescription=null,modifier=modifier.testTag("media-image"),contentScale=scale)}?:Box(modifier.background(Color.DarkGray),contentAlignment=Alignment.Center){CircularProgressIndicator(Modifier.size(22.dp),color=Color.White)}
 }
 
 @Composable internal fun InboxMessageContent(m:JSONObject,group:List<JSONObject>,thread:String,bn:Boolean,ink:Color) {
- val app=LocalContext.current;val scope=rememberCoroutineScope();val p=LocalEkmivoPalette.current;val kind=m.optString("type");val c=m.optJSONObject("content")?:JSONObject()
+ val api=rememberInboxApi();val app=LocalContext.current;val scope=rememberCoroutineScope();val p=LocalEkmivoPalette.current;val kind=m.optString("type");val c=m.optJSONObject("content")?:JSONObject()
  var viewer by remember{mutableStateOf<List<String>?>(null)};var viewerIndex by remember{mutableIntStateOf(0)};var error by remember{mutableStateOf(false)}
  when(kind) {
   "image"->{
@@ -71,8 +72,8 @@ internal suspend fun fetchMedia(context:Context,thread:String,id:String):File=wi
     rows.forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){row.forEach{image->
      val id=image.optJSONObject("content")?.optString("media_id").orEmpty()
      var file by remember(id){mutableStateOf<File?>(null)}
-     LaunchedEffect(id){try{file=fetchMedia(app,thread,id)}catch(e:CancellationException){throw e}catch(_:Exception){error=true}}
-     Box(Modifier.weight(1f).height(if(images.size==1)240.dp else if(images.size==2||(images.size==3&&row.size==1))150.dp else if(images.size==3)100.dp else 108.dp).clickable{scope.launch{try{val files=images.map{fetchMedia(app,thread,it.getJSONObject("content").getString("media_id")).toURI().toString()};viewerIndex=images.indexOf(image);file=File(Uri.parse(files[viewerIndex]).path!!);error=false;viewer=files}catch(_:Exception){error=true}}},contentAlignment=Alignment.Center){
+     LaunchedEffect(id){try{file=fetchMedia(app,thread,id,api)}catch(e:CancellationException){throw e}catch(_:Exception){error=true}}
+     Box(Modifier.weight(1f).height(if(images.size==1)240.dp else if(images.size==2||(images.size==3&&row.size==1))150.dp else if(images.size==3)100.dp else 108.dp).clickable{scope.launch{try{val files=images.map{fetchMedia(app,thread,it.getJSONObject("content").getString("media_id"),api).toURI().toString()};viewerIndex=images.indexOf(image);file=File(Uri.parse(files[viewerIndex]).path!!);error=false;viewer=files}catch(_:Exception){error=true}}},contentAlignment=Alignment.Center){
       file?.let{MediaImage(it.toURI().toString(),Modifier.fillMaxSize())}
       if(images.size>4&&image===shown.last())Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.5f)),contentAlignment=Alignment.Center){Text("+${images.size-4}",style=EkmivoType.heroAmount,color=Color.White)}
      }
@@ -80,9 +81,9 @@ internal suspend fun fetchMedia(context:Context,thread:String,id:String):File=wi
    }
   }
   "audio"->VoiceMessage(thread,c,bn,ink)
-  "document"->Row(Modifier.widthIn(max=220.dp).clickable{scope.launch{try{val file=fetchMedia(app,thread,c.getString("media_id"));val uri=FileProvider.getUriForFile(app,app.packageName+".updates",file);app.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri,c.optString("mime")).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))}catch(_:Exception){error=true}}},verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){EkmivoReferenceIcon(EkmivoGlyph.DOC,tint=ink,size=34.dp);Column{Text(c.optString("name"),style=EkmivoType.chatMessage,color=ink,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.widthIn(max=130.dp));Text(displayDigits("${c.optLong("size_bytes")/1024} KB",bn),style=EkmivoType.meta,color=ink.copy(alpha=.65f))}}
+  "document"->Row(Modifier.widthIn(max=220.dp).clickable{scope.launch{try{val file=fetchMedia(app,thread,c.getString("media_id"),api);val uri=FileProvider.getUriForFile(app,app.packageName+".updates",file);app.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri,c.optString("mime")).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))}catch(_:Exception){error=true}}},verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){EkmivoReferenceIcon(EkmivoGlyph.DOC,tint=ink,size=34.dp);Column{Text(c.optString("name"),style=EkmivoType.chatMessage,color=ink,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.widthIn(max=130.dp));Text(displayDigits("${c.optLong("size_bytes")/1024} KB",bn),style=EkmivoType.meta,color=ink.copy(alpha=.65f))}}
   "product"->Column(Modifier.width(210.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
-   val image=c.optString("image_media_id").takeUnless{it.isBlank()||it=="null"};if(image!=null){var file by remember(image){mutableStateOf<File?>(null)};LaunchedEffect(image){runCatching{fetchMedia(app,thread,image)}.onSuccess{file=it}};file?.let{MediaImage(it.toURI().toString(),Modifier.fillMaxWidth().height(110.dp))}}
+   val image=c.optString("image_media_id").takeUnless{it.isBlank()||it=="null"};if(image!=null){var file by remember(image){mutableStateOf<File?>(null)};LaunchedEffect(image){runCatching{fetchMedia(app,thread,image,api)}.onSuccess{file=it}};file?.let{MediaImage(it.toURI().toString(),Modifier.fillMaxWidth().height(110.dp))}}
    Text(c.optString("name"),style=EkmivoType.chatName,color=ink);if(c.optString("sizes").isNotBlank())Text(c.optString("sizes"),style=EkmivoType.meta,color=ink);Text(money(c.optLong("price_minor"),bn),style=EkmivoType.shop,color=ink)
   }
   "unsupported"->Text(if(bn)"এই ধরনের মেসেজ এখানে দেখানো যায় না।" else "This message type cannot be displayed here.",style=EkmivoType.chatMessage.copy(fontStyle=androidx.compose.ui.text.font.FontStyle.Italic),color=ink.copy(alpha=.65f))
@@ -95,11 +96,11 @@ internal suspend fun fetchMedia(context:Context,thread:String,id:String):File=wi
 
 private object ActiveVoice {var player:MediaPlayer?=null}
 @Composable private fun VoiceMessage(thread:String,c:JSONObject,bn:Boolean,ink:Color){
- val app=LocalContext.current;val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current;val scope=rememberCoroutineScope();var player by remember{mutableStateOf<MediaPlayer?>(null)};var playing by remember{mutableStateOf(false)};var progress by remember{mutableFloatStateOf(0f)};var elapsed by remember{mutableIntStateOf(0)};var measuredDuration by remember{mutableIntStateOf(0)};var error by remember{mutableStateOf(false)}
+ val api=rememberInboxApi();val app=LocalContext.current;val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current;val scope=rememberCoroutineScope();var player by remember{mutableStateOf<MediaPlayer?>(null)};var playing by remember{mutableStateOf(false)};var progress by remember{mutableFloatStateOf(0f)};var elapsed by remember{mutableIntStateOf(0)};var measuredDuration by remember{mutableIntStateOf(0)};var error by remember{mutableStateOf(false)}
  DisposableEffect(owner){val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_STOP)runCatching{player?.pause()}};owner.lifecycle.addObserver(observer);onDispose{owner.lifecycle.removeObserver(observer);if(ActiveVoice.player===player)ActiveVoice.player=null;player?.release()}}
  LaunchedEffect(player){while(isActive){val v=player;playing=runCatching{v?.isPlaying==true}.getOrDefault(false);if(v!=null){measuredDuration=runCatching{v.duration/1000}.getOrDefault(0);elapsed=runCatching{v.currentPosition/1000}.getOrDefault(0);progress=runCatching{v.currentPosition.toFloat()/v.duration.coerceAtLeast(1)}.getOrDefault(0f)};delay(90)}}
  Row(Modifier.width(210.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)){
-  Box(Modifier.size(32.dp).clickable{scope.launch{try{if(player?.isPlaying==true)player?.pause()else{ActiveVoice.player?.takeUnless{it===player}?.pause();if(player==null){val f=fetchMedia(app,thread,c.getString("media_id"));player=MediaPlayer().apply{setDataSource(f.absolutePath);prepare()}};ActiveVoice.player=player;player?.start()}}catch(_:Exception){error=true}}},contentAlignment=Alignment.Center){EkmivoReferenceIcon(if(playing)EkmivoGlyph.PAUSE else EkmivoGlyph.PLAY,tint=ink)}
+  Box(Modifier.size(32.dp).clickable{scope.launch{try{if(player?.isPlaying==true)player?.pause()else{ActiveVoice.player?.takeUnless{it===player}?.pause();if(player==null){val f=fetchMedia(app,thread,c.getString("media_id"),api);player=MediaPlayer().apply{setDataSource(f.absolutePath);prepare()}};ActiveVoice.player=player;player?.start()}}catch(_:Exception){error=true}}},contentAlignment=Alignment.Center){EkmivoReferenceIcon(if(playing)EkmivoGlyph.PAUSE else EkmivoGlyph.PLAY,tint=ink)}
   Row(Modifier.weight(1f).height(28.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){repeat(26){i->Box(Modifier.weight(1f).height(14.dp).background(ink.copy(alpha=if(i/26f<=progress)1f else .3f),RoundedCornerShape(2.dp)))}}
   Text(if(playing)displayDigits("${elapsed}s",bn)else if(measuredDuration>0)displayDigits("${measuredDuration}s",bn)else if(c.optInt("duration_ms")>0)displayDigits("${c.optInt("duration_ms")/1000}s",bn)else "—",style=EkmivoType.meta,color=ink)
  }
@@ -120,7 +121,7 @@ private object ActiveVoice {var player:MediaPlayer?=null}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun InboxAttachments(thread:String,bn:Boolean,capabilities:JSONObject,enabled:Boolean,replyTo:String?=null,onRecordingChange:(Boolean)->Unit={},onSent:()->Unit){
- val app=LocalContext.current;val p=LocalEkmivoPalette.current;val scope=rememberCoroutineScope();val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current
+ val api=rememberInboxApi();val app=LocalContext.current;val p=LocalEkmivoPalette.current;val scope=rememberCoroutineScope();val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current
  var sheet by remember{mutableStateOf(false)};var selection by rememberSaveable(thread){mutableStateOf(arrayListOf<String>())};var active by rememberSaveable{mutableIntStateOf(0)}
  var batch by rememberSaveable(thread){mutableStateOf(UUID.randomUUID().toString())};var cameraPath by rememberSaveable{mutableStateOf("")}
  var pendingVoiceMs by rememberSaveable(thread){mutableLongStateOf(0L)}
@@ -144,8 +145,8 @@ private object ActiveVoice {var player:MediaPlayer?=null}
    val mediaID=UUID.nameUUIDFromBytes("$thread|$savedBatch|$raw".toByteArray()).toString();val key=UUID.nameUUIDFromBytes("send|$mediaID".toByteArray()).toString()
    var name=uri.lastPathSegment?:"attachment";app.contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())name=it.getString(0)}
    val mime=if(voiceMs>0)"audio/mp4"else app.contentResolver.getType(uri)?:if(name.endsWith(".pdf",true))"application/pdf"else "image/jpeg"
-   inboxRequest(app,"media-upload",thread,body=JSONObject().put("media_id",mediaID).put("data",Base64.encodeToString(bytes,Base64.NO_WRAP)).put("mime",mime).put("name",name).put("duration_ms",voiceMs))
-   inboxRequest(app,"send-media",thread,body=JSONObject().put("media_id",mediaID).put("idempotency_key",key).put("batch_id",savedBatch).apply{if(replyTo!=null)put("reply_to",replyTo)})
+   api.call("media-upload",thread,body=JSONObject().put("media_id",mediaID).put("data",Base64.encodeToString(bytes,Base64.NO_WRAP)).put("mime",mime).put("name",name).put("duration_ms",voiceMs))
+   api.call("send-media",thread,body=JSONObject().put("media_id",mediaID).put("idempotency_key",key).put("batch_id",savedBatch).apply{if(replyTo!=null)put("reply_to",replyTo)})
   }
   selection=arrayListOf();pendingVoiceMs=0;batch=UUID.randomUUID().toString();onSent()
  }
@@ -165,7 +166,7 @@ private object ActiveVoice {var player:MediaPlayer?=null}
   AttachmentChoice(EkmivoGlyph.IMG,if(bn)"গ্যালারি" else "Gallery"){gallery.launch(arrayOf("image/jpeg","image/png"))}
   AttachmentChoice(EkmivoGlyph.CAM,if(bn)"ক্যামেরা" else "Camera"){val file=File(app.cacheDir,"inbox/camera-${UUID.randomUUID()}.jpg").apply{parentFile?.mkdirs()};cameraPath=file.absolutePath;sheet=false;camera.launch(FileProvider.getUriForFile(app,app.packageName+".updates",file))}
   if(capabilities.optBoolean("document"))AttachmentChoice(EkmivoGlyph.DOC,if(bn)"ডকুমেন্ট" else "Document"){sheet=false;document.launch(arrayOf("application/pdf","text/plain"))}
-  AttachmentChoice(EkmivoGlyph.BAG,if(bn)"পণ্য" else "Products"){sheet=false;scope.launch{try{val a=inboxRequest(app,"products",thread).getJSONArray("items");products=(0 until a.length()).map{a.getJSONObject(it)}}catch(_:Exception){error=true}}}
+  AttachmentChoice(EkmivoGlyph.BAG,if(bn)"পণ্য" else "Products"){sheet=false;scope.launch{try{val a=api.call("products",thread).getJSONArray("items");products=(0 until a.length()).map{a.getJSONObject(it)}}catch(_:Exception){error=true}}}
  }}
  if(selection.isNotEmpty())Dialog(onDismissRequest={if(!busy)selection=arrayListOf()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)){
   Column(Modifier.fillMaxSize().background(Color.Black).systemBarsPadding()){
@@ -176,6 +177,6 @@ private object ActiveVoice {var player:MediaPlayer?=null}
    EkmivoPrimaryButton(if(busy)(if(bn)"পাঠানো হচ্ছে…" else "Sending…")else displayDigits(if(bn)"${selection.size}টি পাঠান" else "Send ${selection.size}",bn),enabled=!busy&&enabled,onClick={val chosen=selection.toList();scope.launch{busy=true;try{sendFiles(chosen,pendingVoiceMs);error=false}catch(_:Exception){error=true}finally{busy=false}}},modifier=Modifier.padding(12.dp))
   }
  }
- products?.let{items->ModalBottomSheet(onDismissRequest={products=null},containerColor=p.raised){Column(Modifier.fillMaxWidth().heightIn(max=420.dp).verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text(if(bn)"পণ্য বাছাই" else "Choose a product",style=EkmivoType.button,color=p.text);if(items.isEmpty())Text(if(bn)"কোনো পণ্য যোগ করা হয়নি" else "No products added",color=p.secondary);items.forEach{product->Row(Modifier.fillMaxWidth().clickable(enabled=!busy&&enabled){scope.launch{busy=true;try{inboxRequest(app,"send-product",thread,body=JSONObject().put("product_id",product.getString("id")).put("idempotency_key",UUID.nameUUIDFromBytes("$batch|${product.getString("id")}".toByteArray()).toString()).apply{if(replyTo!=null)put("reply_to",replyTo)});batch=UUID.randomUUID().toString();products=null;onSent()}catch(_:Exception){error=true}finally{busy=false}}}.padding(10.dp)){Text(product.optString("name"),modifier=Modifier.weight(1f),color=p.text);Text(money(product.optLong("price_minor"),bn),color=p.text)}}}}}
+ products?.let{items->ModalBottomSheet(onDismissRequest={products=null},containerColor=p.raised){Column(Modifier.fillMaxWidth().heightIn(max=420.dp).verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text(if(bn)"পণ্য বাছাই" else "Choose a product",style=EkmivoType.button,color=p.text);if(items.isEmpty())Text(if(bn)"কোনো পণ্য যোগ করা হয়নি" else "No products added",color=p.secondary);items.forEach{product->Row(Modifier.fillMaxWidth().clickable(enabled=!busy&&enabled){scope.launch{busy=true;try{api.call("send-product",thread,body=JSONObject().put("product_id",product.getString("id")).put("idempotency_key",UUID.nameUUIDFromBytes("$batch|${product.getString("id")}".toByteArray()).toString()).apply{if(replyTo!=null)put("reply_to",replyTo)});batch=UUID.randomUUID().toString();products=null;onSent()}catch(_:Exception){error=true}finally{busy=false}}}.padding(10.dp)){Text(product.optString("name"),modifier=Modifier.weight(1f),color=p.text);Text(money(product.optLong("price_minor"),bn),color=p.text)}}}}}
 }
 @Composable private fun AttachmentChoice(glyph:EkmivoGlyph,label:String,onClick:()->Unit){val p=LocalEkmivoPalette.current;Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.clickable(onClick=onClick)){Box(Modifier.size(52.dp).clip(CircleShape).background(p.surface),contentAlignment=Alignment.Center){EkmivoReferenceIcon(glyph)};Spacer(Modifier.height(6.dp));Text(label,style=EkmivoType.meta,color=p.secondary)}}

@@ -14,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -24,6 +25,7 @@ import org.json.JSONObject
 
 @Composable
 internal fun CustomerProfile(thread:String,bn:Boolean,onClose:()->Unit,onChanged:()->Unit) {
+ val api=rememberInboxApi()
  val app=LocalContext.current.applicationContext;val p=LocalEkmivoPalette.current;val scope=rememberCoroutineScope()
  var data by remember(thread){mutableStateOf<JSONObject?>(null)};var error by remember{mutableStateOf(false)}
  var note by rememberSaveable(thread){mutableStateOf("")};var original by remember{mutableStateOf("")};var version by remember{mutableLongStateOf(0)}
@@ -31,7 +33,7 @@ internal fun CustomerProfile(thread:String,bn:Boolean,onClose:()->Unit,onChanged
  var busy by remember{mutableStateOf(false)};var expanded by rememberSaveable{mutableStateOf(false)};var retry by remember{mutableIntStateOf(0)}
  var confirmClose by remember{mutableStateOf(false)}
  fun close(){if(note!=original)confirmClose=true else onClose()}
- LaunchedEffect(thread,retry){try{val latest=inboxRequest(app,"profile",thread);val serverNote=latest.optString("note");if(!initialized||note==original){note=serverNote}else if(serverNote!=original){changedNote=serverNote};original=serverNote;data=latest;version=latest.optLong("note_version");initialized=true;error=false}catch(e:CancellationException){throw e}catch(_:Exception){error=true}}
+ LaunchedEffect(thread,retry){try{val latest=api.call("profile",thread);val serverNote=latest.optString("note");if(!initialized||note==original){note=serverNote}else if(serverNote!=original){changedNote=serverNote};original=serverNote;data=latest;version=latest.optLong("note_version");initialized=true;error=false}catch(e:CancellationException){throw e}catch(_:Exception){error=true}}
  Dialog(onDismissRequest={close()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
  BackHandler{close()}
  Column(Modifier.fillMaxSize().background(p.canvas).systemBarsPadding()) {
@@ -46,7 +48,7 @@ internal fun CustomerProfile(thread:String,bn:Boolean,onClose:()->Unit,onChanged
    Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
     ProfileAction(if(bn)"মেসেজ" else "Message",Modifier.weight(1f)){close()}
     if(phone!=null)ProfileAction(if(bn)"নম্বর কপি" else "Copy number",Modifier.weight(1f)){(app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("",phone))}
-    ProfileAction(if(d.optBoolean("ai_enabled"))(if(bn)"AI বন্ধ করুন" else "Turn AI off")else(if(bn)"AI চালু করুন" else "Turn AI on"),Modifier.weight(1f)){if(!busy)scope.launch{busy=true;try{inboxRequest(app,"ai",thread,body=JSONObject().put("enabled",!d.optBoolean("ai_enabled")));data=JSONObject(d.toString()).put("ai_enabled",!d.optBoolean("ai_enabled"));onChanged();error=false}catch(_:Exception){error=true}finally{busy=false}}}
+    ProfileAction(if(d.optBoolean("ai_enabled"))(if(bn)"AI বন্ধ করুন" else "Turn AI off")else(if(bn)"AI চালু করুন" else "Turn AI on"),Modifier.weight(1f)){if(!busy)scope.launch{busy=true;try{api.call("ai",thread,body=JSONObject().put("enabled",!d.optBoolean("ai_enabled")));data=JSONObject(d.toString()).put("ai_enabled",!d.optBoolean("ai_enabled"));onChanged();error=false}catch(_:Exception){error=true}finally{busy=false}}}
    }
    ProfileCard {
     if(v.completed>0) {
@@ -84,8 +86,8 @@ internal fun CustomerProfile(thread:String,bn:Boolean,onClose:()->Unit,onChanged
    val interests=contact.optJSONArray("interests");if(interests!=null&&interests.length()>0)ProfileCard(if(bn)"যা নিয়ে জানতে চেয়েছেন" else "Interests"){repeat(interests.length()){Text(interests.optString(it),style=EkmivoType.heroNote,color=p.text)}}
    ProfileCard(if(bn)"আপনার নোট" else "Your notes") {
     changedNote?.let{remote->Text(if(bn)"অন্য জায়গা থেকে নোট বদলেছে। আপনার লেখা রাখা আছে; মিলিয়ে সেভ করুন।" else "The note changed elsewhere. Your draft is preserved; review before saving.",color=p.warning,style=EkmivoType.heroNote);Text(remote,color=p.secondary,style=EkmivoType.heroNote)}
-    androidx.compose.foundation.text.BasicTextField(note,{note=it.take(8000)},textStyle=EkmivoType.chatMessage.copy(color=p.text),modifier=Modifier.fillMaxWidth().heightIn(min=70.dp).clip(RoundedCornerShape(12.dp)).background(p.surface).padding(10.dp))
-    EkmivoPrimaryButton(if(busy)(if(bn)"সেভ হচ্ছে…" else "Saving…")else(if(bn)"সেভ করুন" else "Save"),enabled=!busy&&note!=original,onClick={scope.launch{busy=true;try{val result=inboxRequest(app,"note",thread,body=JSONObject().put("text",note).put("version",version));version=result.getLong("version");original=note;changedNote=null;error=false}catch(_:Exception){error=true}finally{busy=false}}})
+    androidx.compose.foundation.text.BasicTextField(note,{note=it.take(8000)},textStyle=EkmivoType.chatMessage.copy(color=p.text),modifier=Modifier.testTag("profile-note").fillMaxWidth().heightIn(min=70.dp).clip(RoundedCornerShape(12.dp)).background(p.surface).padding(10.dp))
+    EkmivoPrimaryButton(if(busy)(if(bn)"সেভ হচ্ছে…" else "Saving…")else(if(bn)"সেভ করুন" else "Save"),enabled=!busy&&note!=original,onClick={scope.launch{busy=true;try{val result=api.call("note",thread,body=JSONObject().put("text",note).put("version",version));version=result.getLong("version");original=note;changedNote=null;error=false}catch(_:Exception){error=true}finally{busy=false}}})
    }
   }
  }

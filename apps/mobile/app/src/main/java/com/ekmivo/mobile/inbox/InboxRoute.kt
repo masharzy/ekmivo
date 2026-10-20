@@ -36,6 +36,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
@@ -43,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import com.ekmivo.mobile.receipt.*
 import com.ekmivo.mobile.ui.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collectLatest
+import androidx.lifecycle.repeatOnLifecycle
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -72,6 +75,7 @@ internal suspend fun inboxRequest(context:Context,action:String,thread:String?=n
 @OptIn(ExperimentalFoundationApi::class,androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolean)->Unit={},initialThread:String?=null) {
+ val api=rememberInboxApi()
  val app=LocalContext.current.applicationContext
  val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current
  val p=LocalEkmivoPalette.current
@@ -93,8 +97,8 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
  var actionsMessage by remember{mutableStateOf<JSONObject?>(null)}
  var selected by remember{mutableStateOf<JSONObject?>(null)}
  var reply by remember{mutableStateOf<JSONObject?>(null)}
- var input by rememberSaveable{mutableStateOf("")}
- var pendingKey by rememberSaveable{mutableStateOf<String?>(null)}
+ var input by rememberSaveable(thread){mutableStateOf("")}
+ var pendingKey by rememberSaveable(thread){mutableStateOf<String?>(null)}
  var failure by remember{mutableStateOf(false)}
  var loaded by remember{mutableStateOf(false)}
  var recording by remember{mutableStateOf(false)}
@@ -117,7 +121,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
  fun fail(){failure=true}
  suspend fun loadMessages(id:String,older:Boolean=false) {
   val before=if(older)messages.firstOrNull()?.optLong("sequence") else null
-  val response=inboxRequest(app,"messages",id,before=before)
+  val response=api.call("messages",id,before=before)
   info=response.getJSONObject("thread")
   val fetched=response.getJSONArray("items").rows()
   if(older||messages.isEmpty())olderAvailable=fetched.size==50
@@ -129,7 +133,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    scroll.scrollToItem((if(firstUnread>=0)firstUnread else messages.lastIndex)+if(olderAvailable)1 else 0)
    initializedThread=id
   }
-  fetched.lastOrNull()?.let{inboxRequest(app,"read",id,body=JSONObject().put("sequence",it.getLong("sequence")))}
+
  }
  fun quoteOriginal(id:String){scope.launch {
   try {
@@ -138,7 +142,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    if(index>=0){scroll.animateScrollToItem(index+if(olderAvailable)1 else 0);flashed=id;delay(1200);flashed=null}
   }catch(e:CancellationException){throw e}catch(_:Exception){fail()}
  }}
- LaunchedEffect(thread){onDetailChange(thread!=null);profileOpen=false;actionsMessage=null;selected=null;reply=null;input="";pendingKey=null;initializedThread=null;messages=emptyList();info=null}
+ LaunchedEffect(thread){onDetailChange(thread!=null);profileOpen=false;actionsMessage=null;selected=null;reply=null;initializedThread=null;messages=emptyList();info=null}
  DisposableEffect(Unit){onDispose{onDetailChange(false)}}
  BackHandler(enabled=thread!=null||filterOpen){if(filterOpen)filterOpen=false else if(selected!=null)selected=null else thread=null}
  LaunchedEffect(channel,unread,mode,days,query,listPage,refreshNonce){
@@ -148,7 +152,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    net=online(app)
    try {
     val f=JSONObject().put("channel",channel).put("unread",unread).put("mode",mode).put("days",days).put("q",query).put("offset",listPage*50)
-    val result=(0..listPage).flatMap{page->inboxRequest(app,"list",filters=JSONObject(f.toString()).put("offset",page*50)).getJSONArray("items").rows()}
+    val result=(0..listPage).flatMap{page->api.call("list",filters=JSONObject(f.toString()).put("offset",page*50)).getJSONArray("items").rows()}
     hasMore=result.size==(listPage+1)*50
     threads=result.distinctBy{it.getString("id")}
     failure=false;loaded=true
@@ -165,7 +169,17 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    delay(2000)
   }
  }
- fun action(name:String,body:JSONObject){val id=thread?:return;scope.launch{busy=true;try{inboxRequest(app,name,id,body=body);loadMessages(id);failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}}
+ LaunchedEffect(thread){
+  val id=thread?:return@LaunchedEffect
+  var acknowledged=0L
+  owner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED){
+   snapshotFlow{scroll.layoutInfo.visibleItemsInfo.map{it.key.toString()}}.collectLatest{visible->
+    val sequence=messages.filter{it.optString("id") in visible}.maxOfOrNull{it.optLong("sequence")}?:0L
+    if(sequence>acknowledged)try{api.call("read",id,body=JSONObject().put("sequence",sequence));acknowledged=sequence}catch(e:CancellationException){throw e}catch(_:Exception){fail()}
+   }
+  }
+ }
+ fun action(name:String,body:JSONObject){val id=thread?:return;scope.launch{busy=true;try{api.call(name,id,body=body);loadMessages(id);failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}}
  Column(Modifier.fillMaxSize().background(p.canvas)) {
   if(thread==null) {
    EkmivoReferenceHeader(if(bn)"ইনবক্স" else "Inbox",titleIsPage=true,trailing={
@@ -260,11 +274,11 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    if(!window&&info!=null)Column(Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(14.dp)).background(p.surface).padding(12.dp)){Text(if(bn)"২৪ ঘণ্টা পার হয়ে গেছে" else "24 hours have passed",style=EkmivoType.shop,color=p.text);Text(if(bn)"কাস্টমার নতুন মেসেজ দিলে আবার উত্তর দেওয়া যাবে।" else "You can reply when the customer sends a new message.",style=EkmivoType.heroNote,color=p.secondary)}
    else Row(Modifier.fillMaxWidth().topHairline(p.border).imePadding().padding(start=12.dp,end=12.dp,top=8.dp,bottom=14.dp),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
     InboxAttachments(thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),net&&!busy&&window,replyTo=reply?.optString("id"),onRecordingChange={recording=it}){reply=null;scope.launch{loadMessages(thread!!)}}
-    if(!recording)BasicTextField(input,{input=it.take(8000);pendingKey=null},enabled=net&&!busy&&window,textStyle=EkmivoType.chatMessage.copy(color=p.text),maxLines=4,modifier=Modifier.weight(1f).heightIn(min=40.dp,max=96.dp).clip(RoundedCornerShape(20.dp)).background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp)).padding(10.dp),decorationBox={inner->if(input.isEmpty())Text(if(bn)"মেসেজ লিখুন…" else "Write a message…",style=EkmivoType.chatMessage,color=p.secondary);inner()})
+    if(!recording)BasicTextField(input,{input=it.take(8000);pendingKey=null},enabled=net&&!busy&&window,textStyle=EkmivoType.chatMessage.copy(color=p.text),maxLines=4,modifier=Modifier.testTag("chat-input").weight(1f).heightIn(min=40.dp,max=96.dp).clip(RoundedCornerShape(20.dp)).background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp)).padding(10.dp),decorationBox={inner->if(input.isEmpty())Text(if(bn)"মেসেজ লিখুন…" else "Write a message…",style=EkmivoType.chatMessage,color=p.secondary);inner()})
     if(!recording)Box(Modifier.size(40.dp).clip(CircleShape).background(p.text).clickable(enabled=input.isNotBlank()&&!busy&&net&&window){
      val id=thread!!;val text=input;val quote=reply;val key=pendingKey?:UUID.randomUUID().toString().also{pendingKey=it}
-     scope.launch{busy=true;try{val body=JSONObject().put("text",text).put("idempotency_key",key);if(quote!=null)body.put("reply_to",quote.getString("id"));inboxRequest(app,"send",id,body=body);pendingKey=null;input="";reply=null;loadMessages(id);scroll.animateScrollToItem((messages.size-1).coerceAtLeast(0));failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}
-    },contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary)}
+     scope.launch{busy=true;try{val body=JSONObject().put("text",text).put("idempotency_key",key);if(quote!=null)body.put("reply_to",quote.getString("id"));api.call("send",id,body=body);pendingKey=null;input="";reply=null;loadMessages(id);scroll.animateScrollToItem((messages.size-1).coerceAtLeast(0));failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}
+    },contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,description=if(bn)"মেসেজ পাঠান" else "Send message")}
    }
   }
  }

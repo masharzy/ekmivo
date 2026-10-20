@@ -58,12 +58,8 @@ fun EkmivoApp(preferences:AppPreferences,incomingPairingLink:String?=null,incomi
    ReceiptSyncWorker.scheduleNow(app)
   }else ReceiptForwardingService.stop(app)
  }
- val pages=buildList {
-  if(ai)add(EkmivoReferencePage.INBOX)
-  if(payments)add(EkmivoReferencePage.SMS)
-  add(EkmivoReferencePage.SETTINGS)
- }
- val page=if(selected in pages)selected else pages.first()
+ val pages=workspacePages(ai,payments)
+ val page=workspacePage(selected,ai,payments)
  EkmivoTheme(dark) {
   when {
    connection==ConnectionState.Revoked&&!reconnecting -> EkmivoDisconnected(bn,0,onReconnect={
