@@ -2,6 +2,7 @@
 import {revalidatePath} from "next/cache";
 import {createHash} from "node:crypto";
 import {database} from "../lib/server/db";
+import {aiMoneyMinor} from "../lib/ai-credit-tariff";
 import {requireFreshSuperAdmin} from "../lib/server/platform-admin";
 export type AdminCatalogState={status:"idle"|"success"|"error";message:string};
 const codePattern=/^[a-z][a-z0-9_]{1,39}$/;
@@ -69,29 +70,18 @@ export async function saveAdminProvider(_previous:AdminCatalogState,form:FormDat
 }
 export async function adjustAdminAiCredits(_previous:AdminCatalogState,form:FormData):Promise<AdminCatalogState>{
  const actor=await requireFreshSuperAdmin();if(!actor)return result("error","Super Admin MFA verification is required.");
- const workspace=field(form,"workspace_id"),delta=Number(field(form,"delta")),reason=field(form,"reason");
- if(!uuid.test(workspace)||!Number.isSafeInteger(delta)||delta===0||Math.abs(delta)>1000000||reason.length<10||reason.length>500)
-  return result("error","Choose a workspace, a nonzero credit amount (up to one million), and an audit reason.");
+ const workspace=field(form,"workspace_id"),amount=field(form,"delta"),reason=field(form,"reason"),key=field(form,"operation_key");
+ const magnitude=aiMoneyMinor(amount.startsWith("-")?amount.slice(1):amount);
+ const delta=magnitude===null?null:(amount.startsWith("-")?-magnitude:magnitude);
+ if(!uuid.test(workspace)||!uuid.test(key)||delta===null||delta===0||reason.length<10||reason.length>500)
+  return result("error","Choose a workspace, a nonzero amount in BDT and an audit reason.");
  try{
-  await database().begin(async tx=>{
-   const [actorRows,workspaces]=await Promise.all([
-    tx`SELECT 1 FROM platform_administrators WHERE user_id=${actor.user.id}::uuid AND role='super_admin' FOR UPDATE`,
-    tx`SELECT id FROM workspaces WHERE id=${workspace}::uuid LIMIT 1`
-   ]);
-   if(!actorRows.length||!workspaces.length)throw Error("PERMISSION");
-   await tx`INSERT INTO platform_ai_credit_balances(workspace_id,balance) VALUES(${workspace}::uuid,0) ON CONFLICT(workspace_id) DO NOTHING`;
-   const old=await tx`SELECT balance FROM platform_ai_credit_balances WHERE workspace_id=${workspace}::uuid FOR UPDATE`;
-   const next=Number(old[0].balance)+delta;
-   if(!Number.isSafeInteger(next)||next<0)throw Error("BALANCE");
-   await tx`UPDATE platform_ai_credit_balances SET balance=${next},updated_at=now() WHERE workspace_id=${workspace}::uuid`;
-   await tx`INSERT INTO platform_ai_credit_ledger(workspace_id,actor_id,delta,balance_after,reason)
-    VALUES(${workspace}::uuid,${actor.user.id}::uuid,${delta},${next},${reason})`;
-   await tx`INSERT INTO platform_admin_audit(actor_id,action,subject_id,description)
-    VALUES(${actor.user.id}::uuid,'ai_credits.adjusted',${workspace}::uuid,${"delta="+delta+"; balance="+next+" | "+reason})`;
-  });
+  await database()`SELECT briofold_ai_admin_adjust(${actor.user.id}::uuid,${workspace}::uuid,${key}::uuid,${delta},${reason})`;
+  revalidatePath("/admin/credits");
+  revalidatePath("/settings/billing");
   for(const locale of ["en","bn"])revalidatePath("/"+locale+"/admin/credits");
-  return result("success","Credit adjustment saved to the immutable ledger.");
- }catch(e){console.error("[admin/credits]",e instanceof Error?e.message:"unknown");return result("error","Could not adjust credits. Check the balance, permissions or migration.");}
+  return result("success","Prepaid wallet adjustment saved to the immutable journal.");
+ }catch(e){console.error("[admin/credits]",e instanceof Error?e.name:"unknown");return result("error","Could not adjust credits. Check the available balance, permissions or migration.");}
 }
 
 /** Super Admin can provision a workspace for an already-verified merchant, using the same
