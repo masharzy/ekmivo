@@ -35,6 +35,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -144,7 +148,7 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  var recorder by remember{mutableStateOf<MediaRecorder?>(null)};var recordFile by remember{mutableStateOf<File?>(null)};var recordStart by remember{mutableLongStateOf(0L)};var duration by remember{mutableLongStateOf(0L)};var samples by remember{mutableStateOf<List<Float>>(emptyList())}
  var locked by remember{mutableStateOf(false)};var paused by remember{mutableStateOf(false)};var pauseAt by remember{mutableLongStateOf(0L)};var pauseSum by remember{mutableLongStateOf(0L)};var swipeX by remember{mutableFloatStateOf(0f)};var swipeY by remember{mutableFloatStateOf(0f)}
  fun toast(text:String){Toast.makeText(app,text,Toast.LENGTH_SHORT).show()}
- fun discard(){runCatching{recorder?.stop()};recorder?.release();recorder=null;recordFile?.delete();recordFile=null;samples=emptyList();locked=false;paused=false;pauseAt=0L;pauseSum=0L}
+ fun discard(){runCatching{recorder?.stop()};recorder?.release();recorder=null;recordFile?.delete();recordFile=null;samples=emptyList();locked=false;paused=false;pauseAt=0L;pauseSum=0L;swipeX=0f;swipeY=0f}
  fun begin(){try{val file=File(app.cacheDir,"inbox/record-${UUID.randomUUID()}.m4a").apply{parentFile?.mkdirs()};val r=if(android.os.Build.VERSION.SDK_INT>=31)MediaRecorder(app)else @Suppress("DEPRECATION") MediaRecorder();r.setAudioSource(MediaRecorder.AudioSource.MIC);r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);r.setAudioSamplingRate(44100);r.setOutputFile(file.absolutePath);r.setMaxDuration(60000);r.prepare();r.start();recordStart=System.currentTimeMillis();recordFile=file;recorder=r;duration=0;samples=emptyList();paused=false;pauseSum=0L;locked=false}catch(_:Exception){discard();error=true}}
  val mic=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){
   toast(if(it)(if(bn)"রেকর্ড করতে মাইক চেপে ধরে রাখুন" else "Hold the microphone to record")
@@ -184,6 +188,7 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  fun finishVoice(send:Boolean){
   val file=recordFile
   val elapsed=durationNow()
+  swipeX=0f;swipeY=0f
   if(!send){discard();return}
   val stopped=runCatching{if(paused)recorder?.resume();recorder?.stop()}.isSuccess
   recorder?.release();recorder=null;recordFile=null;paused=false;locked=false;samples=emptyList()
@@ -194,6 +199,10 @@ private object ActiveVoice {var player:MediaPlayer?=null}
  }
  val isHolding=recorder!=null&&!locked
  val micScale by animateFloatAsState(if(isHolding)1.65f else 1f,animationSpec=tween(150),label="voice-mic-scale")
+ val lockProgress=((-swipeY)/72f).coerceIn(0f,1f)
+ val blinkTransition=rememberInfiniteTransition(label="voice-record-pulse")
+ val micAlpha by blinkTransition.animateFloat(1f,.35f,
+  infiniteRepeatable(tween(500),RepeatMode.Reverse),label="voice-mic-blink")
  Column(
   Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
    .topHairline(p.border).background(p.canvas)
@@ -247,12 +256,15 @@ private object ActiveVoice {var player:MediaPlayer?=null}
        .background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp))
        .padding(start=12.dp,end=10.dp),verticalAlignment=Alignment.CenterVertically,
        horizontalArrangement=Arrangement.spacedBy(8.dp)){
-       EkmivoReferenceIcon(EkmivoGlyph.MIC,tint=p.danger,size=18.dp)
+       EkmivoReferenceIcon(EkmivoGlyph.MIC,tint=p.danger,size=18.dp,modifier=Modifier.graphicsLayer{alpha=micAlpha})
        Text(displayDigits("%d:%02d".format(duration/60000,(duration/1000)%60),bn),
         style=EkmivoType.shop,color=p.text)
        Spacer(Modifier.weight(1f))
        Text(if(bn)"‹ বাতিল করতে স্লাইড করুন" else "‹ Slide to cancel",
-        style=EkmivoType.meta,color=p.secondary,maxLines=1)
+        modifier=Modifier.graphicsLayer{
+         translationX=swipeX*.6f
+         alpha=(1f+swipeX/150f).coerceIn(0f,1f)
+        },style=EkmivoType.meta,color=p.secondary,maxLines=1)
       }
      }else{
       Row(Modifier.weight(1f).heightIn(min=40.dp,max=104.dp)
@@ -311,6 +323,7 @@ private object ActiveVoice {var player:MediaPlayer?=null}
           if(change==null){if(!locked)discard();break}
           val dx=change.position.x-origin.x
           val dy=change.position.y-origin.y
+          swipeX=dx;swipeY=dy
           if(!locked&&dx<=-96.dp.toPx()){canceled=true;discard();break}
           if(!locked&&dy<=-72.dp.toPx()){locked=true;vibrate()}
           if(!change.pressed){
@@ -327,13 +340,14 @@ private object ActiveVoice {var player:MediaPlayer?=null}
      }
     }
     if(isHolding)Column(
-     Modifier.align(Alignment.BottomEnd).offset(x=0.dp,y=(-62).dp)
+     Modifier.align(Alignment.BottomEnd).offset(x=0.dp,y=(-62-16*lockProgress).dp)
       .size(width=40.dp,height=68.dp).clip(RoundedCornerShape(20.dp))
-      .background(p.raised).border(1.dp,p.border,RoundedCornerShape(20.dp)),
+      .background(if(lockProgress>=.85f)p.text else p.raised).border(1.dp,p.border,RoundedCornerShape(20.dp)),
      horizontalAlignment=Alignment.CenterHorizontally,
      verticalArrangement=Arrangement.SpaceEvenly){
-     EkmivoReferenceIcon(EkmivoGlyph.LOCK_OPEN,tint=p.text,size=18.dp)
-     EkmivoReferenceIcon(EkmivoGlyph.CHEVRON_UP,tint=p.text,size=18.dp)
+     EkmivoReferenceIcon(if(lockProgress>=.85f)EkmivoGlyph.LOCK else EkmivoGlyph.LOCK_OPEN,
+      tint=if(lockProgress>=.85f)p.onPrimary else p.text,size=18.dp)
+     if(lockProgress<.85f)EkmivoReferenceIcon(EkmivoGlyph.CHEVRON_UP,tint=p.text,size=18.dp)
     }
    }
   }
