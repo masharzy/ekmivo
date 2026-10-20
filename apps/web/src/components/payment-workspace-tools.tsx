@@ -36,10 +36,12 @@ function at(value?:string,locale:"en"|"bn"="en"){
 }
 function isHttps(value:string){try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password&&!!u.hostname}catch{return false}}
 function formatSettings(body:Settings):Settings{return Object.fromEntries(Object.entries(body).map(([k,v])=>[k,v.trim()])) as unknown as Settings}
-export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string}){
+export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,canManage,isOwner,userId,paymentPlanApplies=true}:{locale:"en"|"bn";workspaceId:string;environment:string;resource:Resource;canManage:boolean;isOwner:boolean;userId:string;paymentPlanApplies?:boolean}){
  const router=useRouter(),bn=locale==="bn";
  const t=useCallback((en:string,bengali:string)=>bn?bengali:en,[bn]);
- const teamLimit=useResourceLimit("team_members",workspaceId,environment,resource==="team");
+ // Payment subscription quotas apply only when Payments is enabled. AI-only
+ // workspaces are explicitly exempt in payment_plan_control_limit() SQL.
+ const teamLimit=useResourceLimit("team_members",workspaceId,environment,resource==="team"&&paymentPlanApplies);
  const base="/api/go/workspaces/"+workspaceId+"/workspace-tools";
  const seed=useDashboardInitialData<ApiData>("workspace");
  const initialSettings={...defaults,...seed?.data?.body};

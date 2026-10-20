@@ -37,8 +37,13 @@ export async function googleAccount(flow:GoogleFlow,identity:Awaited<ReturnType<
   if(!users.length)throw Error("GOOGLE_LINK_REQUIRED");
   const userId=String(users[0].id);
   await tx`INSERT INTO auth_google_identities(subject,user_id) VALUES(${identity.subject},${userId}::uuid)`;
-  const workspace=await tx`INSERT INTO workspaces(name,service_mode,created_by) VALUES(${(identity.name+"'s workspace").slice(0,100)},'commerce',${userId}::uuid) RETURNING id`;
+  const workspace=await tx`INSERT INTO workspaces(name,service_mode,created_by) VALUES('New business','commerce',${userId}::uuid) RETURNING id`;
   await tx`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${workspace[0].id}::uuid,${userId}::uuid,'owner')`;
+  // Google signups follow the same staged business setup; existing accounts
+  // and older databases without this additive migration remain unchanged.
+  const [onboarding]=await tx`SELECT to_regclass('public.briofold_business_onboarding') AS ready`;
+  if(onboarding?.ready)await tx`INSERT INTO briofold_business_onboarding(workspace_id,owner_id)
+   VALUES(${workspace[0].id}::uuid,${userId}::uuid)`;
   return {userId,created:true,linked:false};
  });
 }

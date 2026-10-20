@@ -1,0 +1,8 @@
+.section{margin-top:24px;padding:22px;border-radius:12px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text)}
+.section h2{font-size:17px;font-weight:650;margin:0 0 6px}.section p{font-size:13px;line-height:1.6;color:var(--color-text-muted);margin:0 0 16px}
+.section dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.section dl>div{border-radius:8px;padding:16px;border:1px solid var(--color-border)}.section dt{font-size:12px;color:var(--color-text-muted)}.section dd{font-size:20px;font-weight:650;margin:8px 0 0;font-variant-numeric:tabular-nums}
+.section p.note{padding:11px;border-radius:7px;background:var(--color-hover);font-size:12px}
+.section summary{cursor:pointer;font-size:13px;font-weight:600}.section ul{padding:0;list-style:none;display:grid;gap:8px}.section li{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+@media(max-width:500px){.section{padding:15px}.section dl{grid-template-columns:1fr}}
+
+.section p.warning{padding:12px 14px;border:1px solid var(--color-border);background:var(--color-hover);border-radius:8px;color:var(--color-text);font-weight:500}

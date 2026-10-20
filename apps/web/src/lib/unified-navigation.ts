@@ -18,7 +18,7 @@ export const unifiedNavigation:readonly UnifiedNavItem[]=[
 export type UnifiedSetting={slug:string;en:string;bn:string;section:SectionKey;service:"ai"|"payments"|"common";external?:boolean};
 export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:readonly UnifiedSetting[]}[]=[
  {slug:"business",en:"Business & verification",bn:"ব্যবসা ও যাচাই",items:[
-  {slug:"business",en:"Store profile",bn:"স্টোর পরিচিতি",section:"store",service:"payments"},
+  {slug:"business",en:"Business profile",bn:"ব্যবসার পরিচিতি",section:"store",service:"common"},
   {slug:"account",en:"Account & security",bn:"অ্যাকাউন্ট ও নিরাপত্তা",section:"settings",service:"common"},
   {slug:"checkout",en:"Checkout appearance",bn:"চেকআউট ডিজাইন",section:"checkout-themes",service:"payments"},
  ]},
@@ -31,7 +31,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  ]},
  {slug:"payment",en:"Payment setup",bn:"পেমেন্ট সেটআপ",items:[
   {slug:"payment-methods",en:"Payment methods",bn:"পেমেন্ট মাধ্যম",section:"gateways",service:"payments"},
-  {slug:"devices",en:"SMS devices",bn:"SMS ডিভাইস",section:"devices",service:"payments"},
+  {slug:"devices",en:"Devices",bn:"ডিভাইস",section:"devices",service:"common"},
  ]},
  {slug:"developers",en:"Developers & integrations",bn:"ডেভেলপার ও ইন্টিগ্রেশন",items:[
   {slug:"api-keys",en:"API keys",bn:"API Keys",section:"developers",service:"payments"},
@@ -48,7 +48,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help",en:"Help & feedback",bn:"সহায়তা ও মতামত",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;kind?:"inbox"|"channels"|"settings-index"};
+export type UnifiedDestination={section:SectionKey;service:Service;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"};
 export const unifiedSectionPaths:Partial<Record<SectionKey,string>>={
  overview:"/dashboard",inbox:"/inbox",comments:"/inbox/comments","saved-replies":"/inbox/saved-replies",tickets:"/inbox/tickets",
  orders:"/orders",products:"/orders/products",inventory:"/orders/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/orders/coupons",
@@ -93,7 +93,10 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   const setting=unifiedSettings.flatMap(g=>g.items).find(item=>item.slug===part);
   if(!setting||setting.external)return null;
   destination={section:setting.section,service:setting.service==="common"?defaultService:setting.service};
+  if(part==="business"&&mode==="ai")destination.kind="business-profile";
   if(part==="channels")destination.kind="channels";
+  if(part==="devices"&&mode==="ai")destination.kind="devices";
+  if(part==="devices"&&mode==="both")destination.kind="mixed-devices";
  }else destination=main[root][part];
  if(!destination)return null;
  if(destination.service==="payments"&&!payments)return null;

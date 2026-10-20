@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/masharzy/ekmivo/backend/internal/financial"
 	"github.com/riverqueue/river"
+	"os"
 	"strings"
 	"time"
 )
@@ -76,6 +77,7 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 	if w.Realm != "live" || len(w.TokenKey) < 32 {
 		return nil
 	}
+	topupErr := reconcileAITopups(ctx, w.Control, w.Pool, w.TokenKey, w.Realm, os.Getenv("BRIOFOLD_AI_TOPUPS_ENABLED") == "true")
 	var raw []byte
 	if w.Control.QueryRow(ctx, "SELECT pg13_pending_billing()").Scan(&raw) != nil {
 		return errors.New("billing reconciliation unavailable")
@@ -119,5 +121,5 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 			return errors.New("billing renewal unconfirmed")
 		}
 	}
-	return nil
+	return topupErr
 }

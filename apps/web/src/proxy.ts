@@ -10,7 +10,7 @@ export function proxy(request:NextRequest){
     /\.[a-z0-9]{2,8}$/i.test(path))return NextResponse.next();
  const legacy=path.match(/^\/(bn|en)(?=\/|$)/);
  const preference=request.cookies.get("ekmivo-locale")?.value;
- const locale=preference==="en"||preference==="bn"?preference:(legacy?.[1]==="en"?"en":"bn");
+ const locale=preference==="en"||preference==="bn"?preference:(legacy?.[1]==="bn"?"bn":"en");
  // Internal App Router rewrites can visit /<locale>/... again. A request
  // header added only to our own rewrite distinguishes that internal traversal
  // from a browser's legacy /bn or /en URL, preventing redirect loops.
@@ -38,7 +38,7 @@ export function proxy(request:NextRequest){
  headers.delete("x-ekmivo-application");
  headers.delete("x-ekmivo-auth-page");
  headers.set("x-ekmivo-locale",locale);
- if(/^\/(?:dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin)(?:\/|$)/.test(path))headers.set("x-ekmivo-application","1");
+ if(/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin)(?:\/|$)/.test(path))headers.set("x-ekmivo-application","1");
  if(/^\/(?:login|register|forgot-password|verify-email)(?:\/|$)/.test(path))headers.set("x-ekmivo-auth-page","1");
  return NextResponse.rewrite(target,{request:{headers}});
 }

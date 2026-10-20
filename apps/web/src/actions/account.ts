@@ -22,10 +22,11 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
  const locale=safeLocale(localeParam),t=strings[locale];
  const name=asText(form.get("name")),email=asText(form.get("email")).toLowerCase();
  const password=form.get("password"),confirm=form.get("confirm");
- const workspaceName=asText(form.get("workspace_name"));
+ // The business details are collected after verification, never at signup.
+ const workspaceName="New business";
  const fields:Record<string,string>={};
  if(!validatedName(name))fields.name=locale==="bn"?"নাম অন্তত ২ অক্ষরের হতে হবে।":"Enter 2–100 characters.";
- if(!validatedName(workspaceName))fields.workspace_name=locale==="bn"?"ওয়ার্কস্পেসের নাম ২–১০০ অক্ষর হতে হবে।":"Enter a workspace name (2–100 characters).";
+
  if(!validEmail(email))fields.email=locale==="bn"?"সঠিক ইমেইল দিন।":"Enter a valid email.";
  if(typeof password!=="string"||!strongPassword(password))fields.password=locale==="bn"?"৮–২৫৬ অক্ষর, অন্তত একটি অক্ষর ও একটি সংখ্যা দিন।":"Use 8–256 characters, including a letter and a number.";
  if(password!==confirm)fields.confirm=locale==="bn"?"পাসওয়ার্ড দুটি মিলছে না।":"Passwords don't match.";
@@ -45,6 +46,11 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
    const workspaceId=String(spaces[0].id);
    await sql`INSERT INTO workspace_members(workspace_id,user_id,role)
     VALUES(${workspaceId}::uuid,${userId}::uuid,'owner')`;
+   // Only registrations AFTER the additive migration enter the new onboarding.
+   // Existing merchant accounts are never backfilled or unexpectedly blocked.
+   const [feature]=await sql`SELECT to_regclass('public.briofold_business_onboarding') AS ready`;
+   if(feature?.ready)await sql`INSERT INTO briofold_business_onboarding(workspace_id,owner_id)
+    VALUES(${workspaceId}::uuid,${userId}::uuid)`;
    return {userId,workspaceId};
   });
   if(!account)return fail(t.duplicate,{email:t.duplicate});

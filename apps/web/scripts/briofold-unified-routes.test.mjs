@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {runInNewContext} from "node:vm";
+import ts from "typescript";
 import {readFileSync,existsSync} from "node:fs";
 const at=(path)=>new URL("../src/"+path,import.meta.url);
 const source=(path)=>readFileSync(at(path),"utf8");
@@ -60,4 +62,24 @@ test("simplified Payments has no request or reconciliation user-facing tab",()=>
  assert.doesNotMatch(links,/className="tabs"><button className="on">\{t\("Payment links"/);
  assert.match(nav,/href:"\/sms-data"/);
  assert.match(nav,/href:"\/invoices"/);
+});
+
+const navigation={};
+runInNewContext(ts.transpileModule(source("lib/unified-navigation.ts"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:navigation});
+test("AI-only device settings use generic pairing while payment devices preserve their existing adapter",()=>{
+ const ai=navigation.unifiedDestination("ai","settings",["devices"]);
+ assert.equal(ai.kind,"devices");assert.equal(ai.service,"ai");
+ const payments=navigation.unifiedDestination("commerce","settings",["devices"]);
+ assert.equal(payments.service,"payments");assert.equal(payments.kind,undefined);
+ const both=navigation.unifiedDestination("both","settings",["devices"]);
+ assert.equal(both.service,"payments");assert.equal(both.kind,"mixed-devices");
+ assert.equal(navigation.unifiedDestination("off","settings",["devices"]),null);
+ assert.equal(navigation.unifiedDestination("ai","settings",["payment-methods"]),null);
+ const device=navigation.unifiedSettings.flatMap(g=>g.items).find(item=>item.slug==="devices");
+ assert.equal(navigation.enabledUnifiedService("ai",device.service),true);
+});
+test("Inbox secondary navigation keeps canonical channel and device URLs",()=>{
+ const inbox=source("components/workspace-inbox.tsx");
+ assert.match(inbox,/href="\/settings\/channels"/);assert.match(inbox,/href="\/settings\/devices"/);
+ assert.doesNotMatch(inbox,/href=\{`\/w\//);
 });

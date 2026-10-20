@@ -6,7 +6,7 @@ import {createContext,useContext} from "react";
 // resolved by proxy.ts in the server root layout and share it with every
 // client-side loading/error boundary. Do not infer language from usePathname().
 export type InterfaceLocale="bn"|"en";
-const InterfaceLocaleContext=createContext<InterfaceLocale>("bn");
+const InterfaceLocaleContext=createContext<InterfaceLocale>("en");
 
 export function InterfaceLocaleProvider({locale,children}:{locale:InterfaceLocale;children:React.ReactNode}){
  return <InterfaceLocaleContext.Provider value={locale}>{children}</InterfaceLocaleContext.Provider>;

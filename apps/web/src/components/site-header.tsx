@@ -61,7 +61,7 @@ export function SiteHeader({locale,initialTheme,authenticated=false}:{locale:Loc
  // The locale layout can be retained across client navigation: never let
  // public chrome leak into workspace or standalone account routes.
  const visiblePath=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
- if(["dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","workspaces","w","account","admin","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin|pay|checkout|receipt|invoice)(?:\/|$)/.test(visiblePath))return null;
+ if(["setup","dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","workspaces","w","account","admin","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin|pay|checkout|receipt|invoice)(?:\/|$)/.test(visiblePath))return null;
  return <header className={`site-header ek-public-header${scrolled?" is-wide":""}${hidden?" is-hidden":""}${menuOpen?" menu-open":""}`}>
   <div className="header-inner">
    <Link className="brand" href="/" aria-label="Ekmivo home" onClick={closeMenu}>

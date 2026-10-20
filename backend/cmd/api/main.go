@@ -66,6 +66,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/inbox-connections", pay.HandleInboxConnection)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connections/{connectionID}/disconnect", pay.HandleInboxConnection)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/test", pay.HandleAITest)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connect", pay.HandleInboxOAuthBegin)
 	mux.HandleFunc("GET /v1/channels/meta/callback", pay.HandleInboxOAuthCallback)
 	mux.HandleFunc("GET /v1/channels/media/{mediaID}", pay.HandleInboxMedia)
@@ -121,6 +122,15 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		pay.HandleBilling(w, r)
 	})
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/billing/{invoiceID}/{billingAction}", pay.HandleBilling)
+	// Verified-only prepaid AI credit purchases; separate from gateway subscriptions.
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai-credits/purchase", func(w http.ResponseWriter, r *http.Request) {
+		r.SetPathValue("aiCreditAction", "purchase")
+		pay.HandleAICreditTopup(w, r)
+	})
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai-credits/{topupID}/reconcile", func(w http.ResponseWriter, r *http.Request) {
+		r.SetPathValue("aiCreditAction", "reconcile")
+		pay.HandleAICreditTopup(w, r)
+	})
 	for _, method := range []string{"GET", "POST", "PATCH"} {
 		mux.HandleFunc(method+" /v1/workspaces/{workspaceID}/documents/{document}", pay.HandleDocuments)
 		mux.HandleFunc(method+" /v1/workspaces/{workspaceID}/documents/{document}/{documentID}", pay.HandleDocuments)
