@@ -3,14 +3,17 @@ import {redirect} from "next/navigation";
 import {revalidatePath} from "next/cache";
 import {requireUser,preferredWorkspaceFor} from "../lib/server/auth";
 import {database} from "../lib/server/db";
-import {publicPaymentPlans} from "../lib/server/payment-plans";
+import type {PaymentPlan} from "../lib/payment-plans";
 
 export type SetupResult={status:"idle"|"error";message:string};
 const fail=(message:string):SetupResult=>({status:"error",message});
+class SetupConflict extends Error {}
 export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):Promise<SetupResult>{
  const actor=await requireUser("bn");
  const workspace=await preferredWorkspaceFor(actor.id);
  if(!workspace)return fail("Business unavailable.");
+ // This is a stale-tab guard, never authorization: current membership is locked below.
+ if(form.get("business_id")!==workspace.id)return fail("Your selected business changed. Refresh setup and try again.");
  const step=String(form.get("step")??"");
  if(!["business","services","billing"].includes(step))return fail("Invalid setup step.");
  const name=String(form.get("name")??"").trim();
@@ -22,17 +25,9 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
  if(step==="billing"&&plan.length>40)return fail("Invalid plan selection.");
  // Plan choices are authoritative catalog values, never a client-declared entitlement.
  let paidGatewaySelection=false;
- let freeGatewaySelection=false;
- if(step==="billing"&&workspace.mode!=="ai"){
-  const published=await publicPaymentPlans();
-  if(published.unavailable)return fail("Plan catalog is unavailable. Retry.");
-  const selected=published.plans.find(p=>p.id===plan);
-  if(!selected||selected.terms.kind==="custom")return fail("Choose an available plan.");
-  freeGatewaySelection=selected.terms.kind==="free";
-  paidGatewaySelection=!freeGatewaySelection;
- }
+ let outcome:string;
  try{
-  const outcome=await database().begin(async tx=>{
+  outcome=await database().begin(async tx=>{
    const [owner]=await tx`SELECT role FROM workspace_members WHERE workspace_id=${workspace.id}::uuid
       AND user_id=${actor.id}::uuid FOR UPDATE`;
    if(!owner||owner.role!=="owner")return "forbidden";
@@ -43,7 +38,7 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
    if(record.step!==step)return "conflict";
    if(step==="business"){
     const [data]=await tx`SELECT dashboard_store_read(${workspace.id}::uuid,${actor.id}::uuid) AS profile`;
-    if(!data?.profile?.body)return "missing";
+    if(!data?.profile?.body)throw new SetupConflict("Store profile unavailable.");
     const body={...data.profile.body,name,business_type:category,
      description:String(form.get("description")??"").trim().slice(0,60),
      address:String(form.get("address")??"").trim().slice(0,250)};
@@ -56,7 +51,7 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
      const enabled=product==="ai"?mode!=="commerce":mode!=="ai";
      const [current]=await tx`SELECT enabled FROM workspace_product_access
       WHERE workspace_id=${workspace.id}::uuid AND product=${product} FOR UPDATE`;
-     if(!current)return "missing";
+     if(!current)throw new SetupConflict("Service configuration unavailable.");
      if(Boolean(current.enabled)!==enabled){
       await tx`UPDATE workspace_product_access SET enabled=${enabled},updated_at=now()
        WHERE workspace_id=${workspace.id}::uuid AND product=${product}`;
@@ -69,21 +64,38 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
       WHERE workspace_id=${workspace.id}::uuid`;
    }
    if(step==="billing"){
+    // Re-read and lock entitlements inside this transaction. The page's business
+    // mode may be stale after an administrator changes service access.
+    const access=await tx`SELECT product,enabled FROM workspace_product_access
+     WHERE workspace_id=${workspace.id}::uuid ORDER BY product FOR UPDATE`;
+    const paymentsEnabled=access.some(x=>x.product==="payments"&&x.enabled);
+    const aiEnabled=access.some(x=>x.product==="ai"&&x.enabled);
+    if(!paymentsEnabled&&!aiEnabled)throw new SetupConflict("Business services changed. Refresh setup.");
+    let freeGatewaySelection=false;
+    if(paymentsEnabled){
+     const [catalogue]=await tx`SELECT payment_plan_public() AS plans`;
+     const selected=(catalogue?.plans as PaymentPlan[]|undefined)?.find(p=>p.id===plan);
+     if(!selected||selected.terms.kind==="custom")throw new SetupConflict("Choose an available plan.");
+     freeGatewaySelection=selected.terms.kind==="free";
+     paidGatewaySelection=!freeGatewaySelection;
+    }else if(plan)throw new SetupConflict("Business services changed. Refresh setup.");
     // Free is a real subscription claim; a paid plan is NEVER activated
     // until the existing verified billing purchase completes.
     if(freeGatewaySelection)await tx`SELECT payment_plan_claim_free(${workspace.id}::uuid,${actor.id}::uuid,${plan})`;
     await tx`UPDATE briofold_business_onboarding SET step='complete',
-     selected_gateway_plan_id=${workspace.mode==="ai"?null:plan||null},
+     selected_gateway_plan_id=${paymentsEnabled?plan:null},
      completed_at=now(),updated_at=now()
      WHERE workspace_id=${workspace.id}::uuid`;
    }
    return "ok";
   });
-  if(outcome!=="ok"&&outcome!=="already")return fail(outcome==="forbidden"?"Owner access required.":"This setup changed. Refresh and try again.");
  }catch(error){
+  if(error instanceof SetupConflict)return fail(error.message);
   console.error("[briofold setup]",error instanceof Error?error.name:"unknown");
   return fail("Could not save setup. Check the details and retry.");
  }
+ if(outcome==="already")redirect("/dashboard");
+ if(outcome!=="ok")return fail(outcome==="forbidden"?"Owner access required.":"This setup changed. Refresh and try again.");
  revalidatePath("/dashboard");
  revalidatePath("/setup");
  if(step==="billing")redirect(paidGatewaySelection?"/settings/billing?tab=plans&plan="+encodeURIComponent(plan):"/dashboard");

@@ -17,8 +17,8 @@ export default async function BriofoldSetup({params}:{params:Promise<{locale:str
  const plans=catalogue.plans.filter(p=>p.terms.kind!=="custom").map(p=>({
   id:p.id,name:locale==="bn"&&p.terms.name_bn?p.terms.name_bn:p.terms.name,
   description:locale==="bn"&&p.terms.description_bn?p.terms.description_bn:p.terms.description,
-  kind:p.terms.kind,price:p.terms.kind==="free"?"Free":new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT",maximumFractionDigits:0}).format(p.terms.amount_minor/100)
+  kind:p.terms.kind,price:p.terms.kind==="free"?"Free":new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(p.terms.amount_minor/100)
  }));
  return <BriofoldOnboardingClient key={workspace.id+step} locale={locale} step={step}
-    mode={workspace.mode} businessName={workspace.name} plans={plans}/>;
+    businessId={workspace.id} mode={workspace.mode} businessName={workspace.name} plans={plans}/>;
 }

@@ -17,7 +17,7 @@ test("AI-only and Both selection preserve the chosen value",()=>{
  const ui=read("components/briofold-onboarding-client.tsx");
  assert.match(ui,/defaultChecked=\{x\.key===mode\}/);
  const submit=read("actions/briofold-onboarding.ts");
- assert.match(submit,/publicPaymentPlans\(\)/);
+ assert.match(submit,/payment_plan_public\(\)/);
  assert.match(submit,/selected\.terms\.kind==="free"/);
  assert.match(submit,/step==="billing"/);
 });
