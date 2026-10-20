@@ -34,7 +34,7 @@ Local unit/race/build outcomes and full CI are recorded in the associated PR/Iss
 
 ## Remaining code work (not manual/provider verification)
 
-- Generation recovery/explicit audited operator resolution for uncertain executions, including cases where no generation ID was returned.
+- Automatic generation recovery from provider records remains separate. Migration `0130` adds explicit Super Admin customer-credit waivers for uncertain/stale requests, with reason, audit, idempotency and terminal late-settlement protection; no provider usage is fabricated. The Admin Credits page exposes unresolved holds using the existing Admin design.
 - Agent instruction/version/knowledge UI and actual channel automation must call this one engine; they are Phase 6 work, not delivered by an isolated test endpoint.
 - Full remaining feature-parity ledger and Phase 1–10 scope remain open. Do not infer phase completeness from this checkpoint.
 

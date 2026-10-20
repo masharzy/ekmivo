@@ -12,7 +12,7 @@ export async function runBriofoldWalletChecks(url){
  const equal=(actual,expected)=>{assert.deepEqual(actual,expected);count++;};
  const reject=async (callback,code)=>{await assert.rejects(callback,error=>error.code===code);count++;};
  try{
-  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql","0128_briofold_ai_topup_recovery.sql","0129_briofold_ai_execution_meter.sql"]){
+  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql","0128_briofold_ai_topup_recovery.sql","0129_briofold_ai_execution_meter.sql","0130_briofold_ai_exception_resolution.sql"]){
    const migration=await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8");
    await db.begin(tx=>tx.unsafe(migration.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple());
   }
@@ -193,6 +193,33 @@ export async function runBriofoldWalletChecks(url){
   equal((await db`SELECT count(*)::int AS n FROM briofold_ai_executions WHERE workspace_id=${receiver}`)[0].n,0);
   equal((await db`SELECT current_version FROM briofold_ai_tariff_catalog WHERE model=${model}`)[0].current_version,third);
   await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT * FROM briofold_ai_executions`;}),"42501");
+  const waiveKey=randomUUID(),waiverOp=randomUUID(),reason="Synthetic unresolved provider timeout credit waiver";
+  const waive=(key=waiveKey,op=waiverOp,why=reason,a=actor)=>db`SELECT briofold_ai_admin_waive(${a},${workspace},${key},${op},${why}) AS result`;
+  await beginExecution(waiveKey);await failExecution(waiveKey,false,"fixture-waived");
+  equal(await balance(),[1883,94]);
+  await reject(()=>waive(waiveKey,waiverOp,reason,otherActor),"42501");
+  for(const role of ["ekmivo_financial_runtime","ekmivo_financial_projection"]){
+   await reject(()=>db.begin(async tx=>{await tx.unsafe("SET LOCAL ROLE "+role);return tx`SELECT briofold_ai_admin_waive(${actor},${workspace},${waiveKey},${waiverOp},${reason})`;}),"42501");
+  }
+  const waivers=await Promise.all(Array.from({length:12},()=>waive()));
+  equal(waivers.filter(x=>!x[0].result.replayed).length,1);equal(await balance(),[1977,0]);
+  equal((await beginExecution(waiveKey))[0].result.state,"waived");
+  equal((await db`SELECT usage,waiver_reason FROM briofold_ai_executions WHERE workspace_id=${workspace} AND request_key=${waiveKey}`)[0],{usage:null,waiver_reason:reason});
+  await reject(()=>completeExecution(waiveKey,1000,0,100,"fixture-waived"),"23505");
+  await failExecution(waiveKey,false);equal(await balance(),[1977,0]);
+  await reject(()=>waive(waiveKey,randomUUID()),"23505");
+  await reject(()=>waive(waiveKey,waiverOp,reason+" changed"),"23505");
+  await reject(()=>waive(executionKey,randomUUID()),"23505");
+  const staleKey=randomUUID();await beginExecution(staleKey);
+  await reject(()=>waive(staleKey,randomUUID()),"23505");
+  await db`UPDATE briofold_ai_executions SET created_at=now()-interval '6 minutes' WHERE workspace_id=${workspace} AND request_key=${staleKey}`;
+  await waive(staleKey,randomUUID());equal(await balance(),[1977,0]);
+  const raceKey=randomUUID();await beginExecution(raceKey);await failExecution(raceKey,false);
+  const race=await Promise.allSettled([completeExecution(raceKey),waive(raceKey,randomUUID())]);
+  equal(race.filter(x=>x.status==="fulfilled").length,1);
+  const outcome=(await beginExecution(raceKey))[0].result;
+  equal(["completed","waived"].includes(outcome.state),true);
+  equal(await balance(),[outcome.state==="completed"?1967:1977,0]);
   console.log(`Briofold prepaid wallet PASS: ${count} actual PostgreSQL assertions; synthetic fixtures only`);
   return count;
  }finally{await db.end({timeout:3});}

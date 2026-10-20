@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {randomUUID} from "node:crypto";
+import {AdminAiExceptions,type AiException} from "./admin-ai-exceptions";
 import {AdminAiTariffs} from "./admin-ai-tariffs";
 import type {AiTariffRow} from "../lib/ai-credit-tariff";
 import {database} from "../lib/server/db";
@@ -22,9 +23,10 @@ export async function AdminProvidersPage({isSuper,locale}:{isSuper:boolean;local
 export async function AdminCreditsPage({isSuper,locale}:{isSuper:boolean;locale:"bn"|"en"}){
  let workspaces:Array<{id:string;name:string;balance:number;reserved:number}>|null=null;
  let tariffs:AiTariffRow[]=[];
+ let exceptions:AiException[]=[];
  let history:Array<{id:string;workspace:string;delta:number;balance_after:number;reason:string;actor:string;created_at:string}>=[];
  try{
- const [all,entries,rates]=await Promise.all([
+ const [all,entries,rates,unresolved]=await Promise.all([
  database()`SELECT w.id,w.name,coalesce(c.available_minor,0) AS balance,coalesce(c.reserved_minor,0) AS reserved FROM workspaces w
   LEFT JOIN briofold_ai_wallets c ON c.workspace_id=w.id WHERE EXISTS (SELECT 1 FROM workspace_product_access p WHERE p.workspace_id=w.id AND p.product='ai' AND p.enabled=true) ORDER BY w.name LIMIT 500`,
  database()`SELECT l.id,w.name AS workspace,l.available_delta_minor AS delta,l.available_after_minor AS balance_after,l.reason,l.created_at,u.display_name AS actor
@@ -32,14 +34,19 @@ export async function AdminCreditsPage({isSuper,locale}:{isSuper:boolean;locale:
   WHERE l.kind='correction' AND l.actor_id IS NOT NULL ORDER BY l.created_at DESC LIMIT 100`,
  database()`SELECT v.id,v.model,v.revision,v.terms,v.created_at,(c.current_version=v.id) AS active
  FROM briofold_ai_tariff_versions v LEFT JOIN briofold_ai_tariff_catalog c ON c.model=v.model
- ORDER BY v.created_at DESC LIMIT 100`
+ ORDER BY v.created_at DESC LIMIT 100`,
+ database()`SELECT e.workspace_id,w.name AS workspace_name,e.request_key,v.model,r.reserved_minor,e.created_at,e.state,e.provider_ref
+ FROM briofold_ai_executions e JOIN workspaces w ON w.id=e.workspace_id
+ JOIN briofold_ai_tariff_versions v ON v.id=e.tariff_id JOIN briofold_ai_reservations r ON r.id=e.reservation_id
+ WHERE e.state='unknown' OR (e.state='running' AND e.created_at<now()-interval '5 minutes') ORDER BY e.created_at DESC LIMIT 100`
  ]);
  workspaces=all.map(x=>({id:String(x.id),name:String(x.name),balance:Number(x.balance),reserved:Number(x.reserved)}));
  history=entries.map(x=>({id:String(x.id),workspace:String(x.workspace),delta:Number(x.delta),
  balance_after:Number(x.balance_after),reason:String(x.reason),actor:String(x.actor),created_at:new Date(String(x.created_at)).toISOString()}));
+ exceptions=unresolved.map(x=>({workspace_id:String(x.workspace_id),workspace_name:String(x.workspace_name),request_key:String(x.request_key),model:String(x.model),reserved_minor:Number(x.reserved_minor),created_at:new Date(x.created_at).toISOString(),state:String(x.state),provider_ref:String(x.provider_ref||""),operation_key:randomUUID()}));
  tariffs=rates.map(x=>({id:String(x.id),model:String(x.model),revision:Number(x.revision),terms:x.terms as AiTariffRow["terms"],active:x.active===true,created_at:new Date(x.created_at).toISOString()}));
  }catch(error){console.error("[admin/credits]",error instanceof Error?error.name:"unknown");}
- return workspaces?<><AdminAiCreditsManager canEdit={isSuper} locale={locale} workspaces={workspaces} entries={history} operationKey={randomUUID()}/><AdminAiTariffs rows={tariffs} canEdit={isSuper} locale={locale} operationKey={randomUUID()}/></>:<><div className="pa-page-head"><h1>AI Credits</h1></div><DbMissing name="Prepaid AI wallet and model rates" migration="0127_briofold_ai_admin_catalog.sql"/></>;
+ return workspaces?<><AdminAiCreditsManager canEdit={isSuper} locale={locale} workspaces={workspaces} entries={history} operationKey={randomUUID()}/><AdminAiTariffs rows={tariffs} canEdit={isSuper} locale={locale} operationKey={randomUUID()}/><AdminAiExceptions items={exceptions} canEdit={isSuper} locale={locale}/></>:<><div className="pa-page-head"><h1>AI Credits</h1></div><DbMissing name="Prepaid AI wallet and model rates" migration="0130_briofold_ai_exception_resolution.sql"/></>;
 }
 export async function AdminSubscriptionsPage({locale,query}:{locale:AdminLocale;query:string}){
  const base="/"+locale+"/admin",q=query.slice(0,80),term="%"+q+"%";

@@ -4,6 +4,23 @@ import {database} from "../lib/server/db";
 import {requireFreshSuperAdmin} from "../lib/server/platform-admin";
 import {aiTariffTerms} from "../lib/ai-credit-tariff";
 export type AdminAiTariffState={status:"idle"|"success"|"error";message:string};
+export async function waiveAdminAiRequest(_previous:AdminAiTariffState,form:FormData):Promise<AdminAiTariffState>{
+ const actor=await requireFreshSuperAdmin();
+ if(!actor)return {status:"error",message:"Verified Super Admin access is required."};
+ const workspace=String(form.get("workspace_id")??""),key=String(form.get("request_key")??""),operation=String(form.get("operation_key")??"");
+ const reason=String(form.get("reason")??"").trim(),uuid=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+ if(!uuid.test(workspace)||!uuid.test(operation)||!/^[A-Za-z0-9_.:-]{16,128}$/.test(key)||reason.length<20||reason.length>500)
+  return {status:"error",message:"Select an unresolved request and give a reason (20–500 characters)."};
+ try{
+  await database()`SELECT briofold_ai_admin_waive(${actor.user.id}::uuid,${workspace}::uuid,${key},${operation}::uuid,${reason})`;
+  revalidatePath("/admin/credits");revalidatePath("/settings/billing");
+  for(const locale of ["en","bn"])revalidatePath("/"+locale+"/admin/credits");
+  return {status:"success",message:"Reserved credits released. Provider usage remains unverified."};
+ }catch(error){
+  console.error("[admin/AI exception]",error instanceof Error?error.name:"unknown");
+  return {status:"error",message:"Credits could not be released. The request may have settled already; refresh and check."};
+ }
+}
 export async function publishAdminAiTariff(_previous:AdminAiTariffState,form:FormData):Promise<AdminAiTariffState>{
  const actor=await requireFreshSuperAdmin();
  if(!actor)return {status:"error",message:"Verified Super Admin access is required."};

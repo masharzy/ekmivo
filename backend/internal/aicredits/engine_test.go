@@ -244,3 +244,23 @@ func TestMalformedAIRequestDoesNotCreateReservation(t *testing.T) {
 		t.Fatal("invalid role accepted")
 	}
 }
+
+func TestWaivedAIRequestNeverExecutesAgain(t *testing.T) {
+	store := newEngineStore()
+	engine := Engine{Store: store, Codec: engineTestCodec{}, Provider: providerFunc(func(context.Context, string, int64, []Message) (Output, error) { return Output{}, ErrPending })}
+	request := engineRequest()
+	_, _ = engine.Run(context.Background(), request)
+	row := store.rows[request.Workspace+request.Key]
+	row.claim.State = "waived"
+	store.rows[request.Workspace+request.Key] = row
+	engine.Provider = providerFunc(func(context.Context, string, int64, []Message) (Output, error) {
+		t.Fatal("waived request called provider")
+		return Output{}, nil
+	})
+	if _, err := engine.Run(context.Background(), request); !errors.Is(err, ErrWaived) {
+		t.Fatalf("expected waived terminal state, got %v", err)
+	}
+	if store.settlements != 0 {
+		t.Fatal("waived retry settled")
+	}
+}
