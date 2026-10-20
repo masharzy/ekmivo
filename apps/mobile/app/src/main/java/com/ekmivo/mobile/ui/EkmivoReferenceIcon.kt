@@ -2,6 +2,8 @@ package com.ekmivo.mobile.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.size
@@ -62,6 +64,12 @@ fun EkmivoReferenceIcon(
     size: Dp = 20.dp,
     description: String? = null
 ) {
-    Icon(painterResource(glyph.drawable), contentDescription = description,
-        modifier = modifier.size(size), tint = tint)
+    if (glyph == EkmivoGlyph.CLIP) {
+        // Use the maintained Material icon instead of the malformed legacy clip vector.
+        Icon(Icons.Outlined.AttachFile,contentDescription=description,
+            modifier=modifier.size(size),tint=tint)
+    } else {
+        Icon(painterResource(glyph.drawable),contentDescription=description,
+            modifier=modifier.size(size),tint=tint)
+    }
 }
