@@ -66,6 +66,9 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
    record("owner UI disables new requests without an active plan; financial writes fail closed");
   }
 
+  const {runBriofoldRouteBrowser}=await import("./briofold-route-browser.mjs");
+  await runBriofoldRouteBrowser({origin,browser,control,tenant,sessions});
+
   // Checkout below uses a genuine Go-signed sandbox token created and
   // payer-locked in PG04's actual isolated financial database above.
   const checkoutUrl=origin+"/en/checkout/"+token;

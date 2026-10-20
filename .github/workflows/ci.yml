@@ -108,6 +108,11 @@ jobs:
         env:
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
         run: node scripts/pg03-credentials-smoke.mjs
+      - name: PG02 workspace/server environment authorization checks
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg02-tenant-context-smoke.mjs
       - name: Install browser for real PG05 checkout journeys
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
@@ -131,11 +136,6 @@ jobs:
           name: pg09-browser-ui-mocked-api-evidence
           path: apps/web/test-results/pg09/
           if-no-files-found: ignore
-      - name: PG02 workspace/server environment authorization checks
-        working-directory: apps/web
-        env:
-          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
-        run: node scripts/pg02-tenant-context-smoke.mjs
       - name: PG02 account-scoped draft security and persistence contracts
         working-directory: apps/web
         run: node scripts/pg02-draft-smoke.mjs
