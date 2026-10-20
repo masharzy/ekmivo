@@ -34,7 +34,8 @@ function rememberedSection(workspaceId:string,service:Service): SectionKey {
  return "overview";
 }
 export function DashboardFrame({ unified=false, locale, service, section:initialSection, workspace, spaces, userName, platformAdmin, theme, paymentContext, planFeatures, children, logout }: Props) {
- const bn=locale==="bn",router=useRouter(),pathname=usePathname();
+ // Internal locale rewrites and the visible URL must render identical nav.
+ const bn=locale==="bn",router=useRouter(),pathname=usePathname().replace(/^\/(?:bn|en)(?=\/|$)/,"")||"/";
  // Locale-neutral visible URL, with tolerance for old prefixed URLs.
  const requestedSection=pathname.match(/\/(?:bn\/|en\/)?w\/[^/]+\/(?:ai|payments)\/([^/?#]+)/)?.[1];
  const section=sectionInService(service,requestedSection??"")?requestedSection as SectionKey:initialSection;
