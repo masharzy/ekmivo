@@ -1,4 +1,5 @@
 "use client";
+import "./merchant-payment-styles.css";
 import {planSectionAllowed} from "../lib/plan-features";
 import type {PlanTerms} from "../lib/payment-plans";
 import Link from "next/link";
