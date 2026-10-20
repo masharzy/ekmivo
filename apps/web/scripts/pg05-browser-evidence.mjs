@@ -68,6 +68,8 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
 
   const {runBriofoldRouteBrowser}=await import("./briofold-route-browser.mjs");
   await runBriofoldRouteBrowser({origin,browser,control,tenant,sessions});
+  const {runBriofoldSettingsBrowser}=await import("./briofold-settings-browser.mjs");
+  await runBriofoldSettingsBrowser({origin,browser,control,sessions});
 
   // Checkout below uses a genuine Go-signed sandbox token created and
   // payer-locked in PG04's actual isolated financial database above.
