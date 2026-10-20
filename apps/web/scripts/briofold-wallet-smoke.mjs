@@ -13,7 +13,8 @@ export async function runBriofoldWalletChecks(url){
  const reject=async (callback,code)=>{await assert.rejects(callback,error=>error.code===code);count++;};
  try{
   for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql"]){
-   await db.unsafe(await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8")).simple();
+   const migration=await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8");
+   await db.begin(tx=>tx.unsafe(migration.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple());
   }
   const actor=randomUUID(),otherActor=randomUUID(),workspace=randomUUID(),receiver=randomUUID();
   for(const [u,w] of [[actor,workspace],[otherActor,receiver]]){
