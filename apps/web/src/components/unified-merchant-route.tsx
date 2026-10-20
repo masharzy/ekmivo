@@ -6,6 +6,7 @@ import {unifiedDestination,type UnifiedRoot} from "../lib/unified-navigation";
 import {AppShell} from "./app-shell";
 import {DashboardContent} from "./dashboard-content";
 import {WorkspaceInbox} from "./workspace-inbox";
+import {WorkspaceMobileDevices} from "./workspace-mobile-devices";
 import {WorkspaceChannels} from "./workspace-channels";
 import {UnifiedSettingsIndex} from "./unified-settings-index";
 import {UnifiedSectionTabs} from "./unified-section-tabs";
@@ -37,12 +38,16 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
    ?<WorkspaceInbox key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
    :kind==="channels"
     ?<WorkspaceChannels key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
+    :kind==="devices"
+     ?<WorkspaceMobileDevices key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
+    :root==="settings"&&view[0]==="billing"&&workspace.mode==="ai"
+     ?<><h1>{locale==="bn"?"বিলিং ও ব্যবহার":"Billing & usage"}</h1><BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/></>
     :<DashboardContent locale={locale} user={user} workspace={workspace}
       section={section} service={service} paymentContext={paymentContext} framed/>;
  return <AppShell unified locale={locale} user={user} workspace={workspace}
    service={service} section={section} paymentContext={paymentContext}>
     <UnifiedSectionTabs locale={locale} root={root} mode={workspace.mode} view={view}/>
     {body}
-    {root==="settings"&&view[0]==="billing"&&workspace.mode!=="commerce"&&<BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/>}
+    {root==="settings"&&view[0]==="billing"&&workspace.mode==="both"&&<BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/>}
    </AppShell>;
 }

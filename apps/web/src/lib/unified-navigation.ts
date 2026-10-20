@@ -31,7 +31,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  ]},
  {slug:"payment",en:"Payment setup",bn:"পেমেন্ট সেটআপ",items:[
   {slug:"payment-methods",en:"Payment methods",bn:"পেমেন্ট মাধ্যম",section:"gateways",service:"payments"},
-  {slug:"devices",en:"Devices",bn:"ডিভাইস",section:"devices",service:"payments"},
+  {slug:"devices",en:"Devices",bn:"ডিভাইস",section:"devices",service:"common"},
  ]},
  {slug:"developers",en:"Developers & integrations",bn:"ডেভেলপার ও ইন্টিগ্রেশন",items:[
   {slug:"api-keys",en:"API keys",bn:"API Keys",section:"developers",service:"payments"},
@@ -48,7 +48,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help",en:"Help & feedback",bn:"সহায়তা ও মতামত",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;kind?:"inbox"|"channels"|"settings-index"};
+export type UnifiedDestination={section:SectionKey;service:Service;kind?:"inbox"|"channels"|"devices"|"settings-index"};
 export const unifiedSectionPaths:Partial<Record<SectionKey,string>>={
  overview:"/dashboard",inbox:"/inbox",comments:"/inbox/comments","saved-replies":"/inbox/saved-replies",tickets:"/inbox/tickets",
  orders:"/orders",products:"/orders/products",inventory:"/orders/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/orders/coupons",
@@ -94,6 +94,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   if(!setting||setting.external)return null;
   destination={section:setting.section,service:setting.service==="common"?defaultService:setting.service};
   if(part==="channels")destination.kind="channels";
+  if(part==="devices"&&mode==="ai")destination.kind="devices";
  }else destination=main[root][part];
  if(!destination)return null;
  if(destination.service==="payments"&&!payments)return null;
