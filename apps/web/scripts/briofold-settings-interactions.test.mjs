@@ -66,3 +66,17 @@ test("empty support filter does not claim the existing collection has no request
  assert.ok(h.text().includes("No matching support requests."));
  assert.equal(h.text().includes("No support requests yet."),false);
 });
+
+test("business preferences stay separate from personal account security in all enabled product modes",()=>{
+ const navigation={};
+ const body=readFileSync(new URL("../src/lib/unified-navigation.ts",import.meta.url),"utf8");
+ vm.runInNewContext(ts.transpileModule(body,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:navigation});
+ for(const mode of ["ai","commerce","both"]){
+  const d=navigation.unifiedDestination(mode,"settings",["preferences"]);
+  assert.equal(d.section,"settings");assert.equal(d.kind,undefined);
+  assert.equal(d.service,mode==="ai"?"ai":"payments");
+ }
+ assert.equal(navigation.unifiedDestination("off","settings",["preferences"]),null);
+ const item=navigation.unifiedSettings.flatMap(group=>group.items).find(item=>item.slug==="preferences");
+ assert.equal(item.service,"common");
+});
