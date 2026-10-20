@@ -48,7 +48,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help",en:"Help & feedback",bn:"সহায়তা ও মতামত",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;kind?:"inbox"|"channels"|"devices"|"settings-index"};
+export type UnifiedDestination={section:SectionKey;service:Service;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"settings-index"};
 export const unifiedSectionPaths:Partial<Record<SectionKey,string>>={
  overview:"/dashboard",inbox:"/inbox",comments:"/inbox/comments","saved-replies":"/inbox/saved-replies",tickets:"/inbox/tickets",
  orders:"/orders",products:"/orders/products",inventory:"/orders/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/orders/coupons",
@@ -95,6 +95,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   destination={section:setting.section,service:setting.service==="common"?defaultService:setting.service};
   if(part==="channels")destination.kind="channels";
   if(part==="devices"&&mode==="ai")destination.kind="devices";
+  if(part==="devices"&&mode==="both")destination.kind="mixed-devices";
  }else destination=main[root][part];
  if(!destination)return null;
  if(destination.service==="payments"&&!payments)return null;
