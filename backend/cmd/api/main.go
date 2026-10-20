@@ -121,6 +121,15 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		pay.HandleBilling(w, r)
 	})
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/billing/{invoiceID}/{billingAction}", pay.HandleBilling)
+	// Verified-only prepaid AI credit purchases; separate from gateway subscriptions.
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai-credits/purchase", func(w http.ResponseWriter,r *http.Request) {
+		r.SetPathValue("aiCreditAction","purchase")
+		pay.HandleAICreditTopup(w,r)
+	})
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai-credits/{topupID}/reconcile",func(w http.ResponseWriter,r *http.Request){
+		r.SetPathValue("aiCreditAction","reconcile")
+		pay.HandleAICreditTopup(w,r)
+	})
 	for _, method := range []string{"GET", "POST", "PATCH"} {
 		mux.HandleFunc(method+" /v1/workspaces/{workspaceID}/documents/{document}", pay.HandleDocuments)
 		mux.HandleFunc(method+" /v1/workspaces/{workspaceID}/documents/{document}/{documentID}", pay.HandleDocuments)
