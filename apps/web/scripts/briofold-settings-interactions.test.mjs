@@ -80,3 +80,24 @@ test("business preferences stay separate from personal account security in all e
  const item=navigation.unifiedSettings.flatMap(group=>group.items).find(item=>item.slug==="preferences");
  assert.equal(item.service,"common");
 });
+
+test("first-time business preferences inherit the authorized name and preserve an explicit saved name",()=>{
+ const raw=readFileSync(new URL("../src/components/payment-workspace-tools.tsx",import.meta.url),"utf8");
+ const code=ts.transpileModule(raw,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ for(const [body,expected] of [[{},"Authorized business"],[{name:"Saved business"},"Saved business"]]){
+  const exports={},nodes=[],jsx=(type,props)=>{const node={type,props};nodes.push(node);return node;};
+  const dependencies={
+   react:{useState:initial=>[initial,()=>{}],useRef:initial=>({current:initial}),useCallback:fn=>fn,useMemo:fn=>fn(),useEffect(){}},
+   "react/jsx-runtime":{jsx,jsxs:jsx},"next/navigation":{useRouter:()=>({refresh(){}})},
+   "./plan-resource-status":{PlanResourceStatus:()=>null,useResourceLimit:()=>({blocked:false})},
+   "../lib/plan-resource-limits":{planLimitMessage:()=>""},
+   "./dashboard-initial-data":{useDashboardInitialData:()=>({data:{body,version:0}})},
+   "../lib/client/draft-navigation":{registerDraft:()=>()=>{}},
+   "./payment-privacy":{PaymentPrivacy:()=>null},"./payment-team-reference.css":{}
+  };
+  vm.runInNewContext(code,{exports,require:id=>{if(!Object.hasOwn(dependencies,id))throw Error("Unexpected settings dependency "+id);return dependencies[id];}});
+  exports.PaymentWorkspaceTools({locale:"en",workspaceId:"fixture",workspaceName:"Authorized business",environment:"live",resource:"settings",canManage:true,isOwner:true,userId:"fixture"});
+  assert.ok(nodes.some(n=>n.type==="input"&&n.props.value===expected));
+  assert.equal(nodes.some(n=>n.props?.children==="Workspace data is unavailable. Try Refresh."),false);
+ }
+});
