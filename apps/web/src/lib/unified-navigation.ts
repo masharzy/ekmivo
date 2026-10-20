@@ -31,7 +31,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  ]},
  {slug:"payment",en:"Payment setup",bn:"পেমেন্ট সেটআপ",items:[
   {slug:"payment-methods",en:"Payment methods",bn:"পেমেন্ট মাধ্যম",section:"gateways",service:"payments"},
-  {slug:"devices",en:"SMS devices",bn:"SMS ডিভাইস",section:"devices",service:"payments"},
+  {slug:"devices",en:"Devices",bn:"ডিভাইস",section:"devices",service:"payments"},
  ]},
  {slug:"developers",en:"Developers & integrations",bn:"ডেভেলপার ও ইন্টিগ্রেশন",items:[
   {slug:"api-keys",en:"API keys",bn:"API Keys",section:"developers",service:"payments"},
