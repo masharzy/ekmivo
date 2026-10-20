@@ -13,7 +13,7 @@ test("navigation has exactly nine clean, prefixed-free merchant entries",()=>{
  const src=source("lib/unified-navigation.ts");
  for(const path of ["/dashboard","/inbox","/orders","/payments","/sms-data","/invoices","/customers","/reports","/settings"])
   assert.ok(src.includes(`href:"${path}"`),`Missing nav href ${path}`);
- assert.equal((src.match(/href:"\/(dashboard|inbox|orders|payments|customers|reports|settings)"/g)||[]).length,7);
+ assert.equal((src.match(/href:"\/(dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings)"/g)||[]).length,7);
  assert.doesNotMatch(src,/href:"\/(?:bn|en|w)\//);
  assert.match(src,/view\.length>1/);
  assert.match(src,/mode==="off"/);
