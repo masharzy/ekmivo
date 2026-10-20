@@ -214,6 +214,20 @@ export async function runBriofoldWalletChecks(url){
   equal((await db`SELECT count(*)::int AS n FROM inbox_messages WHERE thread_id=${thread.id} AND sender='ai'`)[0].n,0);
   await reject(()=>beginExecution(randomUUID(),fp,receiver,otherActor),"P0001");
   equal((await db`SELECT count(*)::int AS n FROM briofold_ai_executions WHERE workspace_id=${receiver}`)[0].n,0);
+  // Zero AI credit must not block permitted HUMAN replies. Queue only: no
+  // provider delivery or invented payment/AI completion is asserted here.
+  const [manualChannel]=await db`SELECT inbox_connection(${receiver},'live','ms',${"zero-credit-"+receiver},decode('abcd','hex')) AS id`;
+  await db`SELECT inbox_ingest(${manualChannel.id},'zero-credit-incoming','zero-credit-contact','Fictional human-only contact','Hello','text',now())`;
+  const [manualThread]=await db`SELECT id FROM inbox_threads WHERE connection_id=${manualChannel.id}`;
+  const manualKey=randomUUID(),manualBody={text:"Synthetic manual reply",idempotency_key:manualKey,reader_kind:"user"};
+  const sendManual=()=>db`SELECT inbox_action(${receiver},'live',${otherActor},${manualThread.id},'send',${db.json(manualBody)}) AS item`;
+  const human=await sendManual();equal(human[0].item.state,"queued");equal(human[0].item.sender,"seller");
+  equal((await sendManual())[0].item.id,human[0].item.id);
+  equal((await db`SELECT count(*)::int AS n FROM inbox_messages WHERE thread_id=${manualThread.id} AND sender='seller'`)[0].n,1);
+  equal(Number((await db`SELECT coalesce((SELECT available_minor FROM briofold_ai_wallets WHERE workspace_id=${receiver}),0) AS n`)[0].n),0);
+  equal((await db`SELECT count(*)::int AS n FROM briofold_ai_executions WHERE workspace_id=${receiver}`)[0].n,0);
+  equal((await db`SELECT enabled FROM workspace_product_access WHERE workspace_id=${receiver} AND product='payments'`)[0].enabled,true);
+
   equal((await db`SELECT current_version FROM briofold_ai_tariff_catalog WHERE model=${model}`)[0].current_version,third);
   await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT * FROM briofold_ai_executions`;}),"42501");
   const waiveKey=randomUUID(),waiverOp=randomUUID(),reason="Synthetic unresolved provider timeout credit waiver";
