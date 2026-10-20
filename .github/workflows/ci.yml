@@ -49,6 +49,9 @@ jobs:
       - name: Briofold Phase 1 design boundary and responsive contract
         working-directory: apps/web
         run: node --test scripts/briofold-design-boundary.test.mjs scripts/dashboard-responsive-cascade.test.mjs
+      - name: Briofold Phase 2 and 3 canonical route and authorization contract
+        working-directory: apps/web
+        run: node --test scripts/briofold-unified-routes.test.mjs
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json
