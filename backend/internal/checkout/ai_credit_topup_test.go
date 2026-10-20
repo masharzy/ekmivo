@@ -33,3 +33,19 @@ func TestAICreditTopupNeedsAuthoritativeServices(t *testing.T) {
   t.Fatalf("unavailable financial services must fail closed, got %d",recorder.Code)
  }
 }
+
+func TestAICreditProofDigestValidation(t *testing.T) {
+ for _,tc:=range []struct{value string;valid bool}{
+  {"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",true},
+  {"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",true},
+  {"",false},
+  {"not-a-payment-hash",false},
+  {"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",false},
+  {"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaag",false},
+  {"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",false},
+ }{
+  if validAICreditProofDigest(tc.value)!=tc.valid {
+   t.Fatalf("digest acceptance changed, valid=%v, len=%d",tc.valid,len(tc.value))
+  }
+ }
+}
