@@ -1,0 +1,35 @@
+name: Build guarded mobile migration operator
+on:
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+jobs:
+  operator:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.label.name == 'mobile-rollout-operator'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Compile the existing guarded operator
+        working-directory: backend
+        run: CGO_ENABLED=0 go build -trimpath -o ../rollout-operator/financial-migrate ./cmd/financial-migrate
+      - name: Record source and checksums
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          printf '%s\n' "$SOURCE_SHA" > rollout-operator/source-commit.txt
+          cp infra/migrations/011[4-9]* infra/migrations/012[01]* rollout-operator/
+          cd rollout-operator
+          sha256sum financial-migrate *.sql > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-guarded-migration-operator
+          path: rollout-operator/
+          retention-days: 3
