@@ -69,10 +69,10 @@ runInNewContext(ts.transpileModule(source("lib/unified-navigation.ts"),{compiler
 test("AI-only device settings use generic pairing while payment devices preserve their existing adapter",()=>{
  const ai=navigation.unifiedDestination("ai","settings",["devices"]);
  assert.equal(ai.kind,"devices");assert.equal(ai.service,"ai");
- for(const mode of ["commerce","both"]){
-  const result=navigation.unifiedDestination(mode,"settings",["devices"]);
-  assert.equal(result.service,"payments");assert.equal(result.kind,undefined);
- }
+ const payments=navigation.unifiedDestination("commerce","settings",["devices"]);
+ assert.equal(payments.service,"payments");assert.equal(payments.kind,undefined);
+ const both=navigation.unifiedDestination("both","settings",["devices"]);
+ assert.equal(both.service,"payments");assert.equal(both.kind,"mixed-devices");
  assert.equal(navigation.unifiedDestination("off","settings",["devices"]),null);
  assert.equal(navigation.unifiedDestination("ai","settings",["payment-methods"]),null);
  const device=navigation.unifiedSettings.flatMap(g=>g.items).find(item=>item.slug==="devices");
