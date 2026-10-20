@@ -4,6 +4,7 @@ import (
  "database/sql"
  "encoding/json"
  "net/http"
+ "os"
 
  "github.com/jackc/pgx/v5"
 )
@@ -12,6 +13,7 @@ import (
 // browser redirect nor client-submitted "paid" flag may credit the account.
 // Verification reads authoritative financial evidence for the platform receiver.
 func (s *Service) HandleAICreditTopup(w http.ResponseWriter,r *http.Request){
+ if os.Getenv("BRIOFOLD_AI_TOPUPS_ENABLED")!="true"{fail(w,503,"AI_TOPUPS_NOT_ENABLED");return}
  if s==nil||s.Auth==nil||s.Pipeline==nil{fail(w,503,"AI_CREDITS_UNAVAILABLE");return}
  cookie,e:=r.Cookie("ekmivo-session")
  if e!=nil{fail(w,401,"UNAUTHENTICATED");return}
