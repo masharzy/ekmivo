@@ -128,8 +128,7 @@ test("team invite sharing uses a locale-neutral link while preserving server-iss
  const render=()=>{si=0;ri=0;nodes.length=0;exports.PaymentWorkspaceTools({locale:"en",workspaceId:"fixture",workspaceName:"Fixture business",environment:"live",resource:"team",canManage:true,isOwner:true,userId:member.id,paymentPlanApplies:false});};
  render();nodes.find(n=>n.type==="input"&&n.props.type==="email").props.onChange({target:{value:"invitee@example.invalid"}});
  render();nodes.find(n=>n.type==="form").props.onSubmit({preventDefault(){}});await flush();render();
- const text=value=>Array.isArray(value)?value.map(text).join(" "):value&&typeof value==="object"?text(value.props?.children):typeof value==="string"?value:"";
- const visible=nodes.map(n=>text(n.props.children)).join(" ");
- assert.ok(visible.includes("https://example.test/invite/"+capability));
- assert.equal(visible.includes("https://example.test/en/invite/"),false);
+ const url=nodes.find(n=>n.props?.["aria-label"]==="Private invitation URL")?.props.value;
+ assert.equal(url,"https://example.test/invite/"+capability);
+ assert.equal(url.includes("/en/invite/"),false);
 });
