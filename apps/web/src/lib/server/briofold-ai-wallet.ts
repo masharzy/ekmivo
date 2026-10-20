@@ -33,7 +33,8 @@ export async function readAiWallet(workspaceId:string,actorId:string):Promise<Ai
    db`SELECT id,kind,available_delta_minor,reserved_delta_minor,available_after_minor,reserved_after_minor,created_at
      FROM briofold_ai_credit_journal WHERE workspace_id=${workspaceId}::uuid ORDER BY created_at DESC,id DESC LIMIT 31`,
    db`SELECT id,amount_minor,status,created_at FROM briofold_ai_topups WHERE workspace_id=${workspaceId}::uuid ORDER BY created_at DESC LIMIT 25`,
-   db`SELECT min((v.terms->>'max_request_minor')::bigint) AS minimum_request_minor
+   db`SELECT min(ceil(((v.terms->>'max_input_tokens')::numeric * (v.terms->>'input_minor_per_million')::numeric
+      + (v.terms->>'max_output_tokens')::numeric * (v.terms->>'output_minor_per_million')::numeric) / 1000000)::bigint) AS minimum_request_minor
      FROM briofold_ai_tariff_catalog c JOIN briofold_ai_tariff_versions v ON v.id=c.current_version`,
   ]);
   const row=accountRows[0],entries=journal.slice(0,30).map(e=>statementEntry(e));
