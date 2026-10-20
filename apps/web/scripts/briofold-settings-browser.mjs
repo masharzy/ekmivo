@@ -40,6 +40,8 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
    assert.equal(response.status(),200,"Owner business preference save failed");
   };
   await save(changed);
+  await save(original); // A second save without reload must use the actual DB version.
+  await save(changed);
   await page.reload();await waitLoaded(changed);
   await save(original);
   const restored=await context.request.get(base);

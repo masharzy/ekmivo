@@ -81,7 +81,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
     setTickets(d.items);
    }
    setLoaded(true);
-  }catch(e){if(!signal?.aborted)setError(t("Unable to load workspace data. Check the connection and retry.","ওয়ার্কস্পেসের তথ্য পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।")+" ("+(e instanceof Error?e.message:"UNKNOWN")+")")}
+  }catch(e){if(!signal?.aborted){if(resource==="settings")setLoaded(false);setError(t("Unable to load workspace data. Check the connection and retry.","ওয়ার্কস্পেসের তথ্য পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।")+" ("+(e instanceof Error?e.message:"UNKNOWN")+")")}}
   finally{if(!signal?.aborted)setLoading(false)}
  },[base,resource,environment,t,workspaceName]);
  useEffect(()=>{if(seed)return;const c=new AbortController();void Promise.resolve().then(()=>{if(!c.signal.aborted)return load(c.signal)});return()=>c.abort()},[load,seed]);
@@ -102,10 +102,11 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
    setPassword("");
    if(action==="settings"){
     const next=formatSettings(data.body as Settings);
-    setSaved(next);setBody(next);setVersion(current=>current+1);
+    setSaved(next);setBody(next);
    }
    setNotice(t("Changes saved.","পরিবর্তন সংরক্ষণ হয়েছে।"));
-   if(action!=="settings")await load();
+   // Reconcile the authoritative version, including the first-save 0 -> 2 case.
+   await load();
    if(resource==="team")await teamLimit.refresh();
    if(action==="settings"||action==="transfer-owner")router.refresh();
    return true;
@@ -113,7 +114,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
   finally{setBusy(false)}
  }
  const saveSettings=async()=>{
-  if(!canManage||busy)return false;
+  if(!canManage||busy||loading||!loaded)return false;
   const next=formatSettings(latest.current.body);
   if(next.name.length>0&&(next.name.length<2||next.name.length>120)){setError(t("Business name must be 2–120 characters.","ব্যবসার নাম ২–১২০ অক্ষরের হতে হবে।"));return false}
   for(const k of ["logo_url","support_url","legal_url"] as const)if(next[k]&&!isHttps(next[k])){setError(t("Use a valid HTTPS URL.","সঠিক HTTPS URL দিন।"));return false}
