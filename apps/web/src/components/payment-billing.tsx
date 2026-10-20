@@ -35,6 +35,24 @@ export function PaymentBilling({locale,workspaceId,canManage}:{locale:'en'|'bn';
  const term=(terms:PlanTerms)=>terms.period_days===30?t('month','মাস'):t(`${terms.period_days} days`,`${number(terms.period_days)} দিন`);
  const load=useCallback(async(signal?:AbortSignal)=>{setLoading(true);setError('');try{const r=await fetch(base,{cache:'no-store',signal});if(!r.ok)throw Error();const d=await r.json();if(!Array.isArray(d.plans)||!Array.isArray(d.invoices))throw Error();if(!signal?.aborted)setData(d)}catch{if(!signal?.aborted)setError(t('Billing records are unavailable. Retry.','বিলিং তথ্য পাওয়া যাচ্ছে না। আবার চেষ্টা করুন।'))}finally{if(!signal?.aborted)setLoading(false)}},[base,t]);
  useEffect(()=>{const abort=new AbortController(),timer=setTimeout(()=>{setClock(Date.now());if(!seed)void load(abort.signal)},0),tick=setInterval(()=>setClock(Date.now()),60000);return()=>{abort.abort();clearTimeout(timer);clearInterval(tick)}},[load,seed]);
+ // An onboarding plan is only a selection; it cannot grant paid access
+ // or debit money. Reuse the existing quote and explicit confirmation dialog.
+ const onboardingSelectionHandled=useRef(false);
+ useEffect(()=>{
+  if(onboardingSelectionHandled.current||!data||!canManage)return;
+  const planId=searchParams.get("plan");
+  if(!planId||!/^[-a-z0-9_]{2,40}$/.test(planId))return;
+  onboardingSelectionHandled.current=true;
+  const selected=data.plans.find(p=>p.id===planId&&p.terms.kind==="paid");
+  setTab("plans");
+  if(selected&&selected.id!==data.effective?.plan_id){
+   setActivation("now");
+   setCycles(1);
+   setQuote(null);
+   setChoice({plan:selected,renew:false});
+  }
+  router.replace("/settings/billing?tab=plans",{scroll:false});
+ },[canManage,data,searchParams,router]);
  const loadUsage=useCallback(async(signal?:AbortSignal)=>{setUsageLoading(true);setUsageError('');try{const r=await fetch(`${base}/usage?period=${period}`,{cache:'no-store',signal});if(!r.ok)throw Error();const d=await r.json();if(!Array.isArray(d.daily)||!Array.isArray(d.methods)||!Array.isArray(d.sources))throw Error();if(!signal?.aborted)setUsage(d)}catch{if(!signal?.aborted)setUsageError(t('Usage source unavailable. Retry.','ব্যবহারের তথ্য পাওয়া যাচ্ছে না। আবার চেষ্টা করুন।'))}finally{if(!signal?.aborted)setUsageLoading(false)}},[base,period,t]);
  useEffect(()=>{if(tab!=='usage')return;const abort=new AbortController(),timer=setTimeout(()=>void loadUsage(abort.signal),0);return()=>{abort.abort();clearTimeout(timer)}},[tab,loadUsage]);
  useEffect(()=>{if(!choice)return;const abort=new AbortController();const timer=setTimeout(()=>{if(choice.plan.terms.kind!=='paid')return;const active=data?.effective?.active,old=data?.effective?.terms;const lower=active&&old&&choice.plan.id!==data?.effective?.plan_id&&choice.plan.terms.amount_minor/choice.plan.terms.period_days<=old.amount_minor/old.period_days;if(lower)return;setQuoteLoading(true);setQuote(null);setQuoteError('');void fetch(base+'/quote',{method:'POST',signal:abort.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({plan_id:choice.plan.id,cycles,activation_timing:choice.renew?'now':activation})}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(q=>{if(!abort.signal.aborted)setQuote(q)}).catch(()=>{if(!abort.signal.aborted)setQuoteError(t('A current quote is unavailable. Close and retry.','বর্তমান দাম পাওয়া যাচ্ছে না। বন্ধ করে আবার চেষ্টা করুন।'))}).finally(()=>{if(!abort.signal.aborted)setQuoteLoading(false)})},0);return()=>{abort.abort();clearTimeout(timer)}},[choice,cycles,activation,base,data?.effective?.active,data?.effective?.terms,data?.effective?.plan_id,t]);
