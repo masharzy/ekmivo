@@ -18,7 +18,10 @@ function fixture(options={}){
   const tx=async (parts,...values)=>{
    const query=parts.join("?").replace(/\s+/g," ").trim();
    if(query.startsWith("SELECT role FROM workspace_members"))return draft.role?[{role:draft.role}]:[];
-   if(query.startsWith("SELECT step FROM briofold_business_onboarding"))return draft.step?[{step:draft.step}]:[];
+   if(query.startsWith("SELECT step FROM briofold_business_onboarding")){
+    if(draft.originalOwnerTransferred&&query.includes("owner_id="))return [];
+    return draft.step?[{step:draft.step}]:[];
+   }
    if(query.startsWith("SELECT enabled FROM workspace_product_access"))return values[1] in draft.products?[{enabled:draft.products[values[1]]}]:[];
    if(query.startsWith("UPDATE workspace_product_access")){draft.products[values[2]]=values[0];return [];}
    if(query.startsWith("INSERT INTO workspace_product_access_audit")){draft.audit.push(values);return [];}
@@ -108,4 +111,19 @@ test("invited members are not redirected into owner-only setup",async()=>{
   runInNewContext(code,{exports,require:name=>name==="server-only"?{}:{database:()=>sql}});
   assert.equal(await exports.onboardingState({id:"business-a"},"member"),role==="owner"?"business":null);
  }
+});
+
+test("transferred current owner can complete business setup without historical creator access",async()=>{
+ const f=fixture({originalOwnerTransferred:true});
+ assert.equal((await f.submit({mode:"ai"})).location,"/setup");
+ assert.equal(f.state().step,"billing");
+ const read=readFileSync(new URL("../src/lib/server/briofold-onboarding.ts",import.meta.url),"utf8");
+ assert.match(read,/JOIN workspace_members m ON m\.workspace_id=o\.workspace_id AND m\.user_id=\$\{userId\}::uuid/);
+ assert.match(read,/m\.role='owner'/);
+ assert.doesNotMatch(read,/o\.owner_id=\$\{userId\}/);
+});
+test("former owner who is now admin cannot mutate unfinished onboarding",async()=>{
+ const f=fixture({role:"admin",originalOwnerTransferred:true});
+ assert.equal((await f.submit({mode:"ai"})).status,"error");
+ assert.equal(f.state().step,"services");
 });
