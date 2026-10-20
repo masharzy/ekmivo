@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/masharzy/ekmivo/backend/internal/authz"
 )
 
 func (s *Service) handleMobileInbox(w http.ResponseWriter, r *http.Request, raw []byte) {
@@ -14,28 +16,59 @@ func (s *Service) handleMobileInbox(w http.ResponseWriter, r *http.Request, raw 
 	}
 	s.executeInboxRequest(w, r, raw, d, "device")
 }
+// Capability comes from a bounded action, never a client-declared role.
+func webInboxCapability(action string) (authz.Capability, bool) {
+ switch action {
+ case "list", "messages", "profile", "products", "info", "media-get", "read":
+  return authz.InboxRead, true
+ case "send", "retry", "media-upload", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
+  return authz.InboxSend, true
+ case "ai", "product-save":
+  return authz.InboxManage, true
+ default:
+  return "", false
+ }
+}
 func (s *Service) HandleWebInbox(w http.ResponseWriter, r *http.Request) {
-	ws, e := r.PathValue("workspaceID"), explicitRealm(r)
-	if !originAllowed(r) {
-		fail(w, 403, "ORIGIN_DENIED")
-		return
-	}
-	if err := s.mobileSession(r, ws, e); err != nil {
-		authError(w, err)
-		return
-	}
-	c, _ := r.Cookie("ekmivo-session")
-	actor, err := s.Auth.Authenticate(r.Context(), c.Value)
-	if err != nil {
-		authError(w, err)
-		return
-	}
-	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 7340032))
-	if err != nil {
-		fail(w, 413, "BODY_TOO_LARGE")
-		return
-	}
-	s.executeInboxRequest(w, r, raw, mobileIdentity{ID: actor.UserID, Workspace: ws, Environment: e}, "user")
+ if r.Method != http.MethodPost || !originAllowed(r) {
+  fail(w, 403, "ORIGIN_DENIED")
+  return
+ }
+ if s == nil || s.Auth == nil || s.Pipeline == nil || s.Pipeline.Control == nil {
+  fail(w, 503, "INBOX_UNAVAILABLE")
+  return
+ }
+ c, err := r.Cookie("ekmivo-session")
+ if err != nil {
+  authError(w, authz.ErrUnauthorized)
+  return
+ }
+ actor, err := s.Auth.Authenticate(r.Context(), c.Value)
+ if err != nil {
+  authError(w, err)
+  return
+ }
+ raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 7340032))
+ if err != nil {
+  fail(w, 413, "BODY_TOO_LARGE")
+  return
+ }
+ var request struct { Action string `json:"action"` }
+ if json.Unmarshal(raw, &request) != nil {
+  fail(w, 422, "INVALID_REQUEST")
+  return
+ }
+ capability, valid := webInboxCapability(request.Action)
+ if !valid {
+  fail(w, 422, "INVALID_ACTION")
+  return
+ }
+ workspace, environment := r.PathValue("workspaceID"), explicitRealm(r)
+ if _, err = s.Auth.AuthorizeWorkspace(r.Context(), actor, workspace, authz.Environment(environment), capability); err != nil {
+  authError(w, err)
+  return
+ }
+ s.executeInboxRequest(w, r, raw, mobileIdentity{ID: actor.UserID, Workspace: workspace, Environment: environment}, "user")
 }
 func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, raw []byte, d mobileIdentity, reader string) {
 	var err error

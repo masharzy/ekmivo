@@ -30,6 +30,9 @@ const (
 	PaymentsManage    Capability = "payments:manage"
 	WorkspaceSettings Capability = "workspace:settings"
 	MembersManage     Capability = "members:manage"
+	InboxRead         Capability = "inbox:read"
+	InboxSend         Capability = "inbox:send"
+	InboxManage       Capability = "inbox:manage"
 )
 
 type Environment string
@@ -129,11 +132,11 @@ func (r *Repository) Authenticate(ctx context.Context, token string) (Principal,
 func validEnvironment(e Environment) bool { return e == Sandbox || e == Live }
 func permits(role string, c Capability) bool {
 	switch c {
-	case PaymentsRead:
+	case PaymentsRead, InboxRead:
 		return role == "owner" || role == "admin" || role == "editor" || role == "viewer"
-	case PaymentsIssue:
+	case PaymentsIssue, InboxSend:
 		return role == "owner" || role == "admin" || role == "editor"
-	case PaymentsManage, WorkspaceSettings, MembersManage:
+	case PaymentsManage, WorkspaceSettings, MembersManage, InboxManage:
 		return role == "owner" || role == "admin"
 	default:
 		return false
@@ -141,6 +144,8 @@ func permits(role string, c Capability) bool {
 }
 func serviceAllows(mode string, capability Capability) bool {
 	switch capability {
+	case InboxRead, InboxSend, InboxManage:
+		return mode == "ai" || mode == "both"
 	case PaymentsRead, PaymentsIssue, PaymentsManage:
 		return mode == "commerce" || mode == "both"
 	default:
@@ -198,10 +203,17 @@ func (r *Repository) AuthorizeWorkspace(ctx context.Context, principal Principal
 	if err != nil {
 		return result, ErrUnavailable
 	}
-	if capability == PaymentsRead || capability == PaymentsIssue || capability == PaymentsManage {
+	product := ""
+	switch capability {
+	case PaymentsRead, PaymentsIssue, PaymentsManage:
+		product = "payments"
+	case InboxRead, InboxSend, InboxManage:
+		product = "ai"
+	}
+	if product != "" {
 		var enabled bool
 		err = tx.QueryRowContext(ctx, `SELECT enabled FROM workspace_product_access
-   WHERE workspace_id=$1::uuid AND product='payments' LIMIT 1`, workspaceID).Scan(&enabled)
+   WHERE workspace_id=$1::uuid AND product=$2 LIMIT 1`, workspaceID, product).Scan(&enabled)
 		if errors.Is(err, sql.ErrNoRows) || err == nil && !enabled {
 			return result, ErrForbidden
 		}

@@ -44,3 +44,20 @@ func TestFailClosedWithoutDatabase(t *testing.T){
  if _,err:=r.AuthorizeWorkspace(t.Context(),Principal{UserID:"abc"},"invalid",Live,PaymentsRead);!errors.Is(err,ErrUnavailable){t.Fatalf("want unavailable: %v",err)}
  if _,err:=r.AuthorizePlatform(t.Context(),Principal{},true);!errors.Is(err,ErrUnavailable){t.Fatalf("want unavailable: %v",err)}
 }
+
+func TestInboxLeastPrivilegeAndIndependentProductAccess(t *testing.T) {
+ for _, role := range []string{"owner", "admin", "editor", "viewer", "unknown", ""} {
+  for _, check := range []struct { capability Capability; allowed bool }{
+   {InboxRead, role == "owner" || role == "admin" || role == "editor" || role == "viewer"},
+   {InboxSend, role == "owner" || role == "admin" || role == "editor"},
+   {InboxManage, role == "owner" || role == "admin"},
+  } {
+   if permits(role, check.capability) != check.allowed { t.Fatalf("%s %s permission mismatch", role, check.capability) }
+  }
+ }
+ for _, capability := range []Capability{InboxRead, InboxSend, InboxManage} {
+  if !serviceAllows("ai", capability) || !serviceAllows("both", capability) || serviceAllows("commerce", capability) || serviceAllows("off", capability) {
+   t.Fatalf("incorrect AI entitlement gate for %s", capability)
+  }
+ }
+}
