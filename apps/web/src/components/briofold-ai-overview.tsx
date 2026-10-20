@@ -29,12 +29,12 @@ async function readOverview(workspaceId:string,userId:string):Promise<Result>{
    db`SELECT
      (SELECT count(*)::bigint FROM inbox_threads t JOIN inbox_connections c
        ON c.id=t.connection_id AND c.workspace_id=t.workspace_id
-       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live') AS conversations,
+       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true) AS conversations,
      (SELECT count(*)::bigint FROM (
        SELECT DISTINCT ON(m.thread_id) m.thread_id,m.sender FROM inbox_messages m
        JOIN inbox_threads t ON t.id=m.thread_id AND t.workspace_id=m.workspace_id
        JOIN inbox_connections c ON c.id=t.connection_id
-       WHERE m.workspace_id=${workspaceId}::uuid AND c.environment='live'
+       WHERE m.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true
        ORDER BY m.thread_id,m.sequence DESC
      ) latest WHERE latest.sender='customer') AS waiting,
      (SELECT count(*)::bigint FROM inbox_connections c
@@ -43,7 +43,7 @@ async function readOverview(workspaceId:string,userId:string):Promise<Result>{
    db`SELECT t.id,t.customer_name,c.provider,t.last_activity_at
        FROM inbox_threads t JOIN inbox_connections c
        ON c.id=t.connection_id AND c.workspace_id=t.workspace_id
-       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live'
+       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true
        ORDER BY t.last_activity_at DESC,t.id DESC LIMIT 6`,
    db`SELECT to_regclass('public.briofold_ai_executions') AS rel`
   ]);
