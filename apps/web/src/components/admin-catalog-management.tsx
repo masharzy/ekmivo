@@ -2,7 +2,7 @@
 import {useActionState,useState} from "react";
 import {adjustAdminAiCredits,saveAdminProvider,createAdminWorkspace,type AdminCatalogState} from "../actions/admin-catalog";
 type Provider={code:string;display_name:string;logo_url:string;provider_type:string;status:string;visible_in_add_account:boolean;checkout_enabled:boolean;live_enabled:boolean;verification_supported:boolean;sort_order:number};
-type Workspace={id:string;name:string;balance:number};
+type Workspace={id:string;name:string;balance:number;reserved:number};
 type CreditEntry={id:string;workspace:string;delta:number;balance_after:number;reason:string;actor:string;created_at:string};
 const empty:AdminCatalogState={status:"idle",message:""};
 const supported=new Set(["bkash","nagad","rocket"]);
@@ -60,20 +60,22 @@ export function AdminProviderManager({providers,canEdit,locale}:{providers:Provi
   {selected!==undefined&&<ProviderForm key={selected?.code||"new"} provider={selected||undefined} locale={locale} onClose={()=>setSelected(undefined)}/>}
  </>;
 }
-export function AdminAiCreditsManager({workspaces,entries,canEdit,locale}:{workspaces:Workspace[];entries:CreditEntry[];canEdit:boolean;locale:"en"|"bn"}){
+export function AdminAiCreditsManager({workspaces,entries,canEdit,locale,operationKey}:{workspaces:Workspace[];entries:CreditEntry[];canEdit:boolean;locale:"en"|"bn";operationKey:string}){
  const t=(en:string,bn:string)=>locale==="bn"?bn:en;
  const [state,run,pending]=useActionState(adjustAdminAiCredits,empty);
+ const money=(minor:number)=>new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(minor/100);
  const [workspace,setWorkspace]=useState(workspaces[0]?.id||"");
  return <>
   <div className="pa-page-head"><div><h1>{t("AI Credits","এআই ক্রেডিট")}</h1><p>{t("Manage AI workspace credits with audited adjustments.","Audit-সহ AI ওয়ার্কস্পেসের ক্রেডিট পরিচালনা করুন।")}</p></div></div>
   <div className="pa-admin-two-col">
    <section className="pa-surface pa-table-card"><div className="pa-split-head pa-admin-section-head"><h2>{t("Balances","ব্যালেন্স")}</h2><span className="pa-subtle">{workspaces.length} {t("workspaces","ওয়ার্কস্পেস")}</span></div>
-    <div className="pa-table-wrap"><table><thead><tr><th>{t("Workspace","ওয়ার্কস্পেস")}</th><th>{t("Credits","ক্রেডিট")}</th></tr></thead><tbody>{workspaces.map(w=><tr key={w.id}><td>{w.name}</td><td>{w.balance.toLocaleString()}</td></tr>)}{!workspaces.length&&<tr><td colSpan={2} className="pa-empty-row">{t("No AI-enabled workspaces.","AI চালু থাকা ওয়ার্কস্পেস নেই।")}</td></tr>}</tbody></table></div>
+    <div className="pa-table-wrap"><table><thead><tr><th>{t("Workspace","ওয়ার্কস্পেস")}</th><th>{t("Available","ব্যবহারযোগ্য")}</th><th>{t("Reserved","রিজার্ভ")}</th></tr></thead><tbody>{workspaces.map(w=><tr key={w.id}><td>{w.name}</td><td>{money(w.balance)}</td><td>{money(w.reserved)}</td></tr>)}{!workspaces.length&&<tr><td colSpan={3} className="pa-empty-row">{t("No AI-enabled workspaces.","AI চালু থাকা ওয়ার্কস্পেস নেই।")}</td></tr>}</tbody></table></div>
    </section>
    <section className="pa-surface pa-admin-credit-form"><h2>{t("Adjust credits","ক্রেডিট পরিবর্তন")}</h2>
     {canEdit?<form action={run} className="pa-admin-fields">
+     <input type="hidden" name="operation_key" value={operationKey}/>
      <label>{t("Workspace","ওয়ার্কস্পেস")}<select name="workspace_id" value={workspace} onChange={e=>setWorkspace(e.target.value)} required>{workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-     <label>{t("Credits (+ grant, − deduct)","ক্রেডিট (+ যোগ, − বিয়োগ)")}<input name="delta" type="number" min="-1000000" max="1000000" defaultValue="1000" required/></label>
+     <label>{t("Amount in BDT (+ grant, − deduct)","টাকা (+ যোগ, − বিয়োগ)")}<input name="delta" type="number" min="-1000000" max="1000000" step="0.01" required/></label>
      <label>Audit reason<textarea name="reason" minLength={10} maxLength={500} required/></label>
      {state.status!=="idle"&&<p role="status" className={state.status==="error"?"pa-action-error":"pa-action-success"}>{state.message}</p>}
      <button className="pa-button pa-button-primary" disabled={pending||!workspace}>{pending?t("Saving…","সংরক্ষণ হচ্ছে…"):t("Apply adjustment","পরিবর্তন সংরক্ষণ")}</button>
@@ -83,7 +85,7 @@ export function AdminAiCreditsManager({workspaces,entries,canEdit,locale}:{works
   </div>
   <section className="pa-surface pa-table-card"><div className="pa-split-head pa-admin-section-head"><h2>{t("Adjustment history","পরিবর্তনের ইতিহাস")}</h2><span className="pa-subtle">{t("Latest 100","সর্বশেষ ১০০")}</span></div>
    <div className="pa-table-wrap"><table><thead><tr><th>{t("Date","তারিখ")}</th><th>{t("Workspace","ওয়ার্কস্পেস")}</th><th>{t("Change","পরিবর্তন")}</th><th>{t("Balance after","পরের ব্যালেন্স")}</th><th>{t("Actor","যিনি করেছেন")}</th><th>{t("Reason","কারণ")}</th></tr></thead><tbody>
-    {entries.map(e=><tr key={e.id}><td>{new Date(e.created_at).toLocaleDateString()}</td><td>{e.workspace}</td><td>{e.delta>0?"+":""}{e.delta}</td><td>{e.balance_after.toLocaleString()}</td><td>{e.actor}</td><td>{e.reason}</td></tr>)}
+    {entries.map(e=><tr key={e.id}><td>{new Date(e.created_at).toLocaleDateString()}</td><td>{e.workspace}</td><td>{e.delta>0?"+":""}{money(e.delta)}</td><td>{money(e.balance_after)}</td><td>{e.actor}</td><td>{e.reason}</td></tr>)}
     {!entries.length&&<tr><td colSpan={6} className="pa-empty-row">{t("No adjustments yet.","এখনো কোনো পরিবর্তন নেই।")}</td></tr>}
    </tbody></table></div>
   </section>

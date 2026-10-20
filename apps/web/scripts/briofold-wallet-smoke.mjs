@@ -12,7 +12,7 @@ export async function runBriofoldWalletChecks(url){
  const equal=(actual,expected)=>{assert.deepEqual(actual,expected);count++;};
  const reject=async (callback,code)=>{await assert.rejects(callback,error=>error.code===code);count++;};
  try{
-  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql"]){
+  for(const name of ["0123_briofold_business_onboarding.sql","0124_briofold_ai_prepaid_wallet.sql","0125_briofold_ai_verified_topups.sql","0126_briofold_ai_topup_runtime_access.sql","0127_briofold_ai_admin_catalog.sql"]){
    const migration=await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8");
    await db.begin(tx=>tx.unsafe(migration.replace(/^(BEGIN|COMMIT);\s*$/gm,"")).simple());
   }
@@ -87,6 +87,37 @@ export async function runBriofoldWalletChecks(url){
   }));count++;
   equal(await balance(),[940,0]);
   equal((await db`SELECT count(*)::int AS n FROM briofold_ai_reservations WHERE request_key=${failedKey}`)[0].n,0);
+  // Admin and merchant now operate on this SAME wallet and append-only journal.
+  await db`INSERT INTO platform_administrators(user_id,role) VALUES(${actor},'super_admin'),(${otherActor},'admin')`;
+  const adjustmentKey=randomUUID();
+  const adjust=()=>db`SELECT briofold_ai_admin_adjust(${actor},${workspace},${adjustmentKey},60,'Synthetic CI wallet grant')`;
+  await Promise.all(Array.from({length:12},adjust));equal(await balance(),[1000,0]);
+  equal((await db`SELECT count(*)::int AS n FROM briofold_ai_credit_journal WHERE operation_key=${"admin:"+adjustmentKey}`)[0].n,1);
+  await reject(()=>db`SELECT briofold_ai_admin_adjust(${otherActor},${workspace},${randomUUID()},1,'Non-super grant denied')`,"42501");
+  await reject(()=>db`SELECT briofold_ai_admin_adjust(${actor},${workspace},${adjustmentKey},61,'Synthetic CI wallet grant')`,"23505");
+  const heldKey=randomUUID();await reserve(heldKey,100);
+  await reject(()=>db`SELECT briofold_ai_admin_adjust(${actor},${workspace},${randomUUID()},-901,'Cannot deduct held funds')`,"22023");
+  equal(await balance(),[900,100]);await settle(heldKey,0);
+  const model="fixture/model-"+randomUUID(),tariffKey=randomUUID();
+  const terms={provider:"openrouter",currency:"BDT",rounding:"ceil_minor",input_minor_per_million:1000,cached_input_minor_per_million:100,
+   output_minor_per_million:2000,max_input_tokens:10000,max_output_tokens:2000,max_request_minor:100};
+  const publish=(key,expected,body=terms,a=actor)=>db`SELECT briofold_ai_tariff_publish(${a},${key},${model},${expected},${db.json(body)},'Synthetic tariff publish') AS id`;
+  const versions=await Promise.all(Array.from({length:12},()=>publish(tariffKey,null)));
+  const first=versions[0][0].id;equal(new Set(versions.map(x=>x[0].id)).size,1);
+  await reject(()=>publish(randomUUID(),first,terms,otherActor),"42501");
+  await reject(()=>publish(tariffKey,null,{...terms,output_minor_per_million:2001}),"23505");
+  await reject(()=>publish(randomUUID(),first,{...terms,max_request_minor:1}),"22023");
+  await reject(()=>publish(randomUUID(),first,{...terms,cached_input_minor_per_million:1001}),"22023");
+  const second=(await publish(randomUUID(),first,{...terms,input_minor_per_million:2000}))[0].id;
+  equal((await db`SELECT briofold_ai_tariff_current(${model}) AS value`)[0].value.id,second);
+  equal((await db`SELECT terms FROM briofold_ai_tariff_versions WHERE id=${first}`)[0].terms.input_minor_per_million,1000);
+  await reject(()=>publish(randomUUID(),first),"40001");
+  await reject(()=>db`UPDATE briofold_ai_tariff_versions SET terms='{}' WHERE id=${first}`,"42501");
+  await reject(()=>db`DELETE FROM briofold_ai_tariff_versions WHERE id=${first}`,"42501");
+  const current=await db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT briofold_ai_tariff_current(${model}) AS value`;});
+  equal(current[0].value.id,second);
+  await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT briofold_ai_admin_adjust(${actor},${workspace},${randomUUID()},1,'Runtime grant forbidden')`;}),"42501");
+  await reject(()=>db.begin(async tx=>{await tx`SET LOCAL ROLE ekmivo_financial_runtime`;return tx`SELECT * FROM briofold_ai_tariff_versions`;}),"42501");
   console.log(`Briofold prepaid wallet PASS: ${count} actual PostgreSQL assertions; synthetic fixtures only`);
   return count;
  }finally{await db.end({timeout:3});}
