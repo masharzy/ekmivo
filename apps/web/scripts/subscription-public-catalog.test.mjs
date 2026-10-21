@@ -27,16 +27,20 @@ test("catalog maps approved exact money and three distinct product/term rules",(
  assert.equal(annualOfferSavings("bad","110000"),null);
  assert.throws(()=>priceInBdt("1.5","en"));
 });
-test("public query has a strict published-current-version, visible Gateway and tenant-free boundary",()=>{
- const source=read("lib/server/public-subscription-offers.ts");
- assert.match(source,/o\.status='published'/);
- assert.match(source,/v\.id=o\.current_version_id/);
- assert.match(source,/c\.status='published'/);
- assert.match(source,/c\.visibility='public'/);
- assert.match(source,/v\.amount_minor::text/);
- assert.match(source,/o\.product='ai_credit'/);
- assert.doesNotMatch(source,/platform_subscription_offer_admin/);
- assert.doesNotMatch(source,/SELECT \*/);
+test("catalog projection is SECURITY DEFINER, current-version-only and never returns draft/private prices",()=>{
+ const reader=read("lib/server/public-subscription-offers.ts");
+ const migration=readFileSync(new URL("../../../infra/migrations/0144_platform_subscription_public_catalog.sql",import.meta.url),"utf8");
+ assert.match(reader,/SELECT public\.platform_subscription_offers_public\(\) AS offers/);
+ assert.match(migration,/SECURITY DEFINER SET search_path=pg_catalog,public,pg_temp/);
+ assert.match(migration,/o\.status='published'/);
+ assert.match(migration,/v\.id=o\.current_version_id/);
+ assert.match(migration,/c\.status='published'/);
+ assert.match(migration,/c\.visibility='public'/);
+ assert.match(migration,/v\.amount_minor::text/);
+ assert.match(migration,/o\.product='ai_credit'/);
+ assert.match(migration,/REVOKE ALL ON FUNCTION public\.platform_subscription_offers_public\(\) FROM PUBLIC/);
+ assert.match(migration,/GRANT EXECUTE ON FUNCTION public\.platform_subscription_offers_public\(\) TO ekmivo_runtime/);
+ assert.doesNotMatch(reader,/platform_subscription_offer_admin|SELECT \*/);
 });
 test("home and pricing use the same catalog data; unpublished offers keep existing Gateway fallback",()=>{
  const pricing=read("components/public-pricing.tsx"),home=read("app/[locale]/page.tsx");
