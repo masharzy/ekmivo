@@ -20,6 +20,8 @@
 @import "./dashboard-v2.css";
 @import "./dashboard-shell-v3.css";
 @import "./dashboard-pass2.css";
+/* Dashboard Store identity only; independent of landing and Admin tokens. */
+@import "../components/primary-store-badge.css";
 @import "./workspaces-v2.css";
 @import "./admin-console.css";
 @import "./managed-plans.css";

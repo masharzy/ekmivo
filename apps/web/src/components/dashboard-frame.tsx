@@ -14,7 +14,7 @@ import { DashboardFeedback } from "./dashboard-feedback";
 import { PaymentNotifications } from "./payment-notifications";
 import { PaymentRecordSearch } from "./payment-record-search";
 import { activeDrafts,saveActiveDrafts,discardActiveDrafts } from "../lib/client/draft-navigation";
-import "./primary-store-badge.css";
+
 
 type Space = { id: string; name: string; mode: "ai" | "commerce" | "both" | "off"; role: "owner" | "admin" | "editor" | "viewer" };
 type PaymentContext = { environment: PaymentEnvironment; status: "active" | "suspended"; availableEnvironments: PaymentEnvironment[]; liveOperational: false };
