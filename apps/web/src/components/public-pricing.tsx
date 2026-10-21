@@ -8,14 +8,15 @@ export async function PublicPricing({locale,compact=false}:{locale:"en"|"bn";com
  const bn=locale==="bn",t=(a:string,b:string)=>bn?b:a;
  // Never show conflicting legacy prices alongside a published price pinned to
  // the SAME current Gateway plan version. Unmatched legacy plans remain live.
+ const displayedOffers=compact?offers.filter(o=>o.product==="payments"):offers;
  const remaining=offers.length?plans.filter(plan=>!offers.some(o=>o.product==="payments"&&o.gateway_plan_version_id===plan.version_id)):plans;
  const empty=<p className="mp-message">{t("No public pricing has been published yet.","এখনো কোনো পাবলিক মূল্য প্রকাশ করা হয়নি।")}</p>;
  const cards=(variant:"default"|"landing")=><>
-  <SubscriptionOfferPricing locale={locale} offers={offers} compact={variant==="landing"}/>
+  <SubscriptionOfferPricing locale={locale} offers={displayedOffers} compact={variant==="landing"}/>
   {remaining.length>0&&<PaymentPlanCards plans={remaining} locale={locale} variant={variant}/>}
  </>;
  if(compact)return <div className="ekm-plan-data">
-  {unavailable&&!offers.length?<p className="mp-message" role="status">{t("Pricing is temporarily unavailable. Please try again later.","প্ল্যানের তথ্য এখন পাওয়া যাচ্ছে না। একটু পরে আবার দেখুন।")}</p>:!remaining.length&&!offers.length?empty:cards("landing")}
+  {unavailable&&!displayedOffers.length?<p className="mp-message" role="status">{t("Pricing is temporarily unavailable. Please try again later.","প্ল্যানের তথ্য এখন পাওয়া যাচ্ছে না। একটু পরে আবার দেখুন।")}</p>:!remaining.length&&!displayedOffers.length?empty:cards("landing")}
  </div>;
  const Heading=compact?"h2":"h1"; return <section className="mp-public" id="pricing" lang={locale}>
   <header><span className="mp-eyebrow">{t("PAYMENT GATEWAY PRICING","পেমেন্ট গেটওয়ের প্ল্যান")}</span><Heading>{t("One Store. Every integration.","এক স্টোরে আপনার সব ইন্টিগ্রেশন।")}</Heading><p>{t("Choose your successful-payment allowance. Connect your websites, apps and bots.","সফল পেমেন্টের প্রয়োজন অনুযায়ী প্ল্যান নিন। যুক্ত করুন আপনার website, app ও bot।")}</p><Link href="/ai-bot">{t("AI Bot uses separate prepaid billing","AI Bot-এর prepaid billing আলাদা")} ↗</Link></header>

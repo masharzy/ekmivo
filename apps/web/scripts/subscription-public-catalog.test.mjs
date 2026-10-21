@@ -38,6 +38,7 @@ test("home and pricing use the same catalog data; unpublished offers keep existi
  const pricing=read("components/public-pricing.tsx"),home=read("app/[locale]/page.tsx");
  assert.match(pricing,/Promise\.all\(\[publicPaymentPlans\(\),publicSubscriptionOffers\(\)\]\)/);
  assert.match(pricing,/SubscriptionOfferPricing/);
+ assert.match(pricing,/compact\?offers\.filter\(o=>o\.product==="payments"\):offers/);
  assert.match(pricing,/remaining\.length>0&&<PaymentPlanCards/);
  assert.match(home,/<PublicPricing locale=\{locale\} compact\/>/);
  assert.match(read("app/[locale]/pricing/page.tsx"),/<PublicPricing locale=\{locale\}\/>/);
