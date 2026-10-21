@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {publicSubscriptionOffers} from "../../../../lib/server/public-subscription-offers";
 import {quotePublishedPrice} from "../../../../lib/public-subscription-quote";
-import type {SubscriptionTerm} from "../../../../lib/public-subscription-offers";
+import {publishedPriceComparison,type SubscriptionTerm} from "../../../../lib/public-subscription-offers";
 
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"no-store, max-age=0"};
@@ -23,6 +23,7 @@ export async function GET(request:Request){
   offer_key:result.offer.key,version_id:result.offer.version_id,product:result.offer.product,
   term:result.offer.term,currency:result.currency,
   catalog_price_minor:result.catalog_price_minor,
+  published_comparison:publishedPriceComparison(catalog.offers,result.offer),
   gateway_plan_version_id:result.offer.gateway_plan_version_id,
   included_ai_credits:result.offer.included_ai_credits,
   checkout_enabled:false

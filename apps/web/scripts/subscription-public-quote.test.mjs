@@ -23,6 +23,7 @@ test("read-only API re-reads published catalog and never enables checkout",()=>{
  assert.match(route,/publicSubscriptionOffers\(\)/);
  assert.match(route,/quotePublishedPrice\(catalog\.offers/);
  assert.match(route,/checkout_enabled:false/);
+ assert.match(route,/published_comparison:publishedPriceComparison\(catalog\.offers,result\.offer\)/);
  assert.match(route,/"PRICE_CHANGED"/);
  assert.match(route,/\"Cache-Control\":\"no-store, max-age=0\"/);
  assert.doesNotMatch(route,/INSERT INTO|UPDATE |payment_plan_claim_free|CheckoutExperience|paymentIntent/i);

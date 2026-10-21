@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {createRequire} from "node:module";
 import {runInNewContext} from "node:vm";
-import {parsePublishedSubscriptionOffer,priceInBdt} from "../src/lib/public-subscription-offers.ts";
+import {parsePublishedSubscriptionOffer,priceInBdt,publishedPriceComparison} from "../src/lib/public-subscription-offers.ts";
 const require=createRequire(new URL("../package.json",import.meta.url));
 const ts=require("typescript"),React=require("react"),jsx=require("react/jsx-runtime"),server=require("react-dom/server");
 const source=readFileSync(new URL("../src/components/subscription-offer-pricing.tsx",import.meta.url),"utf8");
@@ -12,7 +12,7 @@ const mod={exports:{}};
 runInNewContext(js,{module:mod,exports:mod.exports,require:name=>{
  if(name==="react")return React;
  if(name==="react/jsx-runtime")return jsx;
- if(name==="../lib/public-subscription-offers")return {priceInBdt};
+ if(name==="../lib/public-subscription-offers")return {priceInBdt,publishedPriceComparison};
  throw Error("Unexpected dependency: "+name);
 },Intl,BigInt});
 const version="6f757833-36d8-45bb-91dc-dc4df6b0638a",plan="24f75419-3903-4b93-8910-3f6959485e12";
