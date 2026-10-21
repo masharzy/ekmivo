@@ -56,3 +56,5 @@ test("published price cards fit narrow-to-desktop, Bengali/English and both them
   }
  }finally{await browser.close()}
 });
+
+// Screenshot fixtures are synthetic; no provider, wallet or production data read.
