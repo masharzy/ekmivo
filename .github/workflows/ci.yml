@@ -52,6 +52,9 @@ jobs:
       - name: Briofold Phase 2 and 3 canonical route and authorization contract
         working-directory: apps/web
         run: node --test scripts/briofold-unified-routes.test.mjs scripts/briofold-locale-routing.test.mjs scripts/briofold-account-settings-routing.test.mjs scripts/briofold-unified-devices.test.mjs scripts/briofold-ai-overview.test.mjs scripts/briofold-ai-business-profile.test.mjs scripts/briofold-ai-team-quota.test.mjs scripts/briofold-settings-interactions.test.mjs
+      - name: Single Store signup, switching and typography regression contracts
+        working-directory: apps/web
+        run: node --test scripts/primary-store-binding-contract.test.mjs
       - name: Briofold Phase 4 and 5 onboarding and prepaid safety contract
         working-directory: apps/web
         run: node --test scripts/briofold-onboarding-client.test.mjs scripts/signup-transaction-smoke.mjs scripts/briofold-onboarding-contract.test.mjs scripts/briofold-onboarding-actions.test.mjs scripts/briofold-ai-tariff.test.mjs scripts/briofold-topup-proxy.test.mjs scripts/briofold-topup-proof-integrity.test.mjs

@@ -1,15 +1,15 @@
 import {cookies} from "next/headers";
 import {redirect} from "next/navigation";
-import {requireUser,workspacesFor,preferredWorkspaceFor} from "../../../lib/server/auth";
+import {requireUser,workspacesFor,preferredWorkspaceFor,primaryStoreFor} from "../../../lib/server/auth";
 import {WorkspacesV2} from "../../../components/workspaces-v2";
 export const dynamic="force-dynamic";
 export default async function WorkspacesPage({params}:{params:Promise<{locale:string}>}){
  const {locale:raw}=await params,locale=raw==="en"?"en":"bn";
  const user=await requireUser(locale);
- const [spaces,preferred,jar]=await Promise.all([workspacesFor(user.id),preferredWorkspaceFor(user.id),cookies()]);
+ const [spaces,preferred,jar,bound]=await Promise.all([workspacesFor(user.id),preferredWorkspaceFor(user.id),cookies(),primaryStoreFor(user.id)]);
  // New one-Store accounts go straight to setup/dashboard; the old picker is
  // retained only for legacy multi-membership accounts until an approved migration.
- if(spaces.length===1)redirect("/workspaces/open");
+ if(bound||spaces.length===1)redirect("/workspaces/open");
  const stored=jar.get("ekmivo-theme")?.value;
  const theme=stored==="light"||stored==="dark"?stored:"system";
  const chosen=jar.get("ekmivo-selected-plan")?.value??"";

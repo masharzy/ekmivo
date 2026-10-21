@@ -15,7 +15,8 @@ for(const scenario of ["success","legacy-success","duplicate","workspace-failure
   const sql=async parts=>{const query=parts.join("?");
    if(query.includes("INSERT INTO app_users")){if(scenario==="duplicate")return [];staged.push("user");return [{id:"user-id"}]}
    if(query.includes("INSERT INTO workspaces")){if(scenario==="workspace-failure")throw Error("simulated workspace failure");staged.push("workspace");return [{id:"workspace-id"}]}
-   if(query.includes("to_regclass"))return [{ready:scenario!=="legacy-success"?"briofold_business_onboarding":null}];
+   if(query.includes("to_regclass"))return [{ready:scenario!=="legacy-success"?"briofold_business_onboarding":null,primary_ready:scenario!=="legacy-success"?"platform_primary_stores":null}];
+   if(query.includes("INSERT INTO platform_primary_stores")){staged.push("primary-store");return []}
    if(query.includes("INSERT INTO briofold_business_onboarding")){if(scenario==="onboarding-failure")throw Error("simulated onboarding failure");staged.push("onboarding");return []}
    if(query.includes("INSERT INTO workspace_members")){staged.push("owner-membership");return []}
    throw Error("Unexpected SQL operation");
@@ -35,7 +36,7 @@ for(const scenario of ["success","legacy-success","duplicate","workspace-failure
  runInNewContext(code,{module:actionModule,exports:actionModule.exports,require:name=>{assert.ok(mocks[name],"Unexpected import "+name);return mocks[name]},console:{error:()=>{}}});
  const form=new FormData();for(const [k,v] of Object.entries({email:"unit@example.invalid",password:scenario==="invalid-password"?"12345678":"hello123",confirm:scenario==="invalid-password"?"12345678":"hello123",name:"Unit Test",workspace_name:"Test Business"}))form.set(k,v);
  let result;try{result=await actionModule.exports.registerAction("en",{status:"idle",message:""},form)}catch(e){assert.ok(["success","legacy-success"].includes(scenario));assert.equal(e.path,"/workspaces/open")}
- if(["success","legacy-success"].includes(scenario)){assert.deepEqual(writes,["user","workspace","owner-membership",...(scenario==="success"?["onboarding"]:[])]);assert.deepEqual(authEvents,["session","default-workspace"])}
+ if(["success","legacy-success"].includes(scenario)){assert.deepEqual(writes,["user","workspace","owner-membership",...(scenario==="success"?["primary-store","onboarding"]:[])]);assert.deepEqual(authEvents,["session","default-workspace"])}
  else{assert.deepEqual(writes,[]);assert.deepEqual(authEvents,[]);assert.equal(result.status,"error")}
  console.log("PASS (simulation): signup "+scenario);
 }

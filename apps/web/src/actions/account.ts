@@ -48,7 +48,12 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
     VALUES(${workspaceId}::uuid,${userId}::uuid,'owner')`;
    // Only registrations AFTER the additive migration enter the new onboarding.
    // Existing merchant accounts are never backfilled or unexpectedly blocked.
-   const [feature]=await sql`SELECT to_regclass('public.briofold_business_onboarding') AS ready`;
+   const [feature]=await sql`SELECT to_regclass('public.briofold_business_onboarding') AS ready,
+    to_regclass('public.platform_primary_stores') AS primary_ready`;
+   // Bind the only customer Store in the SAME signup transaction, so a failed
+   // setup/email-account write cannot leave an orphan identity or Store.
+   if(feature?.primary_ready)await sql`INSERT INTO platform_primary_stores(user_id,workspace_id,bound_by)
+    VALUES(${userId}::uuid,${workspaceId}::uuid,${userId}::uuid)`;
    if(feature?.ready)await sql`INSERT INTO briofold_business_onboarding(workspace_id,owner_id)
     VALUES(${workspaceId}::uuid,${userId}::uuid)`;
    return {userId,workspaceId};
@@ -96,7 +101,7 @@ export async function loginAction(localeParam:string,_previous:FormErrorState,fo
   if(e && typeof e==="object" && "digest" in e && String(e.digest).startsWith("NEXT_REDIRECT"))throw e;
   report("login",e);return fail(t.generic);
  }
- redirect(asText(form.get("admin"))==="1"?"/"+locale+"/admin/verify":"/workspaces/open");
+ redirect(asText(form.get("admin"))==="1"?"/admin/verify":"/workspaces/open");
 }
 
 export async function createWorkspaceAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -130,6 +135,9 @@ async function insertUserWorkspace(userId:string,name:string,mode:"ai"|"commerce
    VALUES (${name},${mode},${userId}::uuid) RETURNING id`;
   await sql`INSERT INTO workspace_members (workspace_id,user_id,role)
    VALUES (${w[0].id}::uuid,${userId}::uuid,'owner')`;
+  const [feature]=await sql`SELECT to_regclass('public.platform_primary_stores') AS primary_ready`;
+  if(feature?.primary_ready)await sql`INSERT INTO platform_primary_stores(user_id,workspace_id,bound_by)
+   VALUES(${userId}::uuid,${w[0].id}::uuid,${userId}::uuid)`;
   return String(w[0].id);
  });
 }
@@ -175,18 +183,16 @@ export async function setDefaultWorkspaceOnListAction(localeParam:string,id:stri
 }
 
 
-export async function setDefaultWorkspaceAction(localeParam:string,workspaceId:string){
- const locale=safeLocale(localeParam);
+export async function setDefaultWorkspaceAction(_localeParam:string,workspaceId:string){
  const user=await currentUser();
- if(!user)redirect(`/${locale}/login`);
- if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId))redirect(`/${locale}/workspaces`);
+ if(!user)redirect("/login");
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId))redirect("/workspaces");
  const allowed=await selectDefaultWorkspace(user.id,workspaceId);
- if(!allowed)redirect(`/${locale}/workspaces`);
- redirect(`/${locale}/workspaces`);
+ if(!allowed)redirect("/workspaces");
+ redirect("/workspaces");
 }
 
-export async function logoutAction(localeParam:string){
- const locale=safeLocale(localeParam);
+export async function logoutAction(_localeParam:string){
  try{await revokeSession();}catch(e){report("logout",e);(await cookies()).delete("ekmivo-session");}
- redirect(`/${locale}/login`);
+ redirect("/login");
 }
