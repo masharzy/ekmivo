@@ -10,7 +10,8 @@ export async function runBriofoldAiChannel({control,sessions}){
   await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${workspace},${actor},'owner')`;
   const write=async(kind,body)=>(await db`SELECT briofold_ai_studio_write(${workspace},${actor},${randomUUID()},${kind},${db.json(body)}) AS data`)[0].data;
   const read=async()=>(await db`SELECT briofold_ai_studio_read(${workspace},${actor},0,0) AS data`)[0].data;
-  const config={instructions:'Answer only verified facts.',mode:'live',language:'auto',tone:'neutral',model:'test/fictional'};
+  const model=(await db`SELECT model FROM briofold_ai_tariff_catalog ORDER BY model LIMIT 1`)[0]?.model;assert.ok(model,'meter tariff fixture missing');
+  const config={instructions:'Answer only verified facts.',mode:'live',language:'auto',tone:'neutral',model};
   await write('draft',{revision:0,config});
   const source=randomUUID();await write('source',{id:source,expected_version:null,title:'Orchid policy',kind:'text',content:'Orchid delivery takes three days.'});
   let data=await read();await write('publish',{revision:data.revision,confirmed:true,reason:'Fictional channel acceptance'});data=await read();
@@ -50,6 +51,29 @@ export async function runBriofoldAiChannel({control,sessions}){
   await db`SELECT briofold_ai_channel_finish(${changed.id},${changed.lease_id},'','AI_REQUEST_UNKNOWN')`;
   for(const role of ['ekmivo_financial_runtime','ekmivo_financial_projection'])assert.equal((await db`SELECT has_table_privilege(${role},'briofold_ai_channel_jobs','SELECT') AS ok`)[0].ok,false);
   assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_ai_credit_journal WHERE workspace_id=${workspace}`)[0].n),0,'unmetered job changed credits');
-  console.log('Phase6 AI CHANNEL PASS: published grounding, burst coalescing, unique lease, unmetered finish denied, takeover/revocation/source/publication guards, unknown worker outcome, no-grounding review, private job storage, zero unmetered charges');
+  const reviews=(await db`SELECT briofold_ai_review_read(${workspace},'live',${actor},0,'') AS data`)[0].data;
+  assert.ok(reviews.items.some(x=>x.id===job.id));
+  const operation=randomUUID();const reviewed=()=>db`SELECT briofold_ai_review_done(${workspace},'live',${actor},${job.id},${operation}) AS data`;
+  assert.deepEqual(await reviewed(),await reviewed(),'review retry was not idempotent');
+  await assert.rejects(()=>db`SELECT briofold_ai_review_done(${workspace},'live',${actor},${next.id},${operation})`,e=>e.code==='23505');
+  await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${workspace} AND user_id=${actor}`;
+  await db`SELECT briofold_ai_review_read(${workspace},'live',${actor},0,'')`;
+  await assert.rejects(()=>db`SELECT briofold_ai_review_done(${workspace},'live',${actor},${next.id},${randomUUID()})`,e=>e.code==='42501');
+  await db`UPDATE workspace_members SET role='owner' WHERE workspace_id=${workspace} AND user_id=${actor}`;
+  // Synthetic CI-only grant uses the real audited admin function, never direct wallet edits.
+  const admin=(await db`SELECT user_id FROM platform_administrators WHERE role='super_admin' LIMIT 1`)[0].user_id;
+  await db`SELECT briofold_ai_admin_adjust(${admin},${workspace},${randomUUID()},10000,'Fictional isolated channel acceptance grant')`;
+  await ingest('Orchid');const paid=await claim();assert.ok(paid);
+  await db`SELECT briofold_ai_request_begin(${workspace},${actor},${paid.request_key},${model},${'c'.repeat(64)},1000,${thread})`;
+  await db`SELECT briofold_ai_request_complete(${workspace},${paid.request_key},${'fictional-'+paid.id},100,0,10,decode(${'ab'.repeat(32)},'hex'))`;
+  const finish=async(body='Orchid delivery takes three days.')=>(await db`SELECT briofold_ai_channel_finish(${paid.id},${paid.lease_id},${body},'') AS data`)[0].data;
+  const outputs=await Promise.all([finish(),finish()]);assert.deepEqual(outputs[0],outputs[1]);assert.equal(outputs[0].queued,true);
+  await assert.rejects(()=>finish('Conflicting output'),e=>e.code==='23505');
+  assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE idempotency_key=${paid.id}`)[0].n),1,'finish retry queued twice');
+  assert.equal((await db`SELECT briofold_ai_channel_valid(${paid.id}) AS ok`)[0].ok,true);
+  await db`UPDATE briofold_ai_knowledge_sources SET active=false WHERE id=${source}`;
+  await db`SELECT inbox_next_send_v1()`;
+  assert.equal((await db`SELECT state,error_code FROM inbox_messages WHERE id=${outputs[0].id}`)[0].error_code,'AI_CONTEXT_CHANGED','archived source allowed queued delivery');
+  console.log('Phase6 AI CHANNEL PASS: published grounding, burst coalescing, unique lease, unmetered finish denied, takeover/revocation/source/publication guards, unknown worker outcome, no-grounding review, private job storage, zero unmetered charges, actual meter completion, concurrent exactly-once queueing and dispatch source guard');
  }finally{await db.end({timeout:3});}
 }

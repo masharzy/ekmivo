@@ -112,4 +112,29 @@ CREATE OR REPLACE FUNCTION inbox_next_send_v1() RETURNS jsonb LANGUAGE plpgsql S
  UPDATE inbox_messages SET state='sending',attempt_at=now(),attempts=attempts+1 WHERE id=m.id;
  SELECT jsonb_build_object('id',m.id,'workspace_id',m.workspace_id,'text',m.body,'channel',c.provider,'account',c.external_id,'recipient',t.external_id,'credential',encode(c.credential_cipher,'base64')) INTO result FROM inbox_threads t JOIN inbox_connections c ON c.id=t.connection_id WHERE t.id=m.thread_id;RETURN result;
 END $$;
+CREATE FUNCTION briofold_ai_review_read(w uuid,e text,a uuid,off integer,q text) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$BEGIN
+ PERFORM briofold_inbox_actor(w,a,'inbox:read');
+ IF e IS DISTINCT FROM 'live' OR off IS NULL OR off NOT BETWEEN 0 AND 10000 OR q IS NULL OR length(q)>100 THEN RAISE EXCEPTION 'Invalid AI review filters' USING ERRCODE='22023';END IF;
+ RETURN jsonb_build_object('items',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.created_at DESC,x.id) FROM (
+  SELECT j.id,j.thread_id,j.reason,j.created_at,t.customer_name,m.body AS question FROM briofold_ai_channel_jobs j JOIN inbox_threads t ON t.id=j.thread_id JOIN inbox_connections c ON c.id=t.connection_id AND c.environment=e AND c.enabled JOIN inbox_messages m ON m.id=j.inbound_id
+  WHERE j.workspace_id=w AND j.state='review' AND (q='' OR t.customer_name ILIKE '%'||q||'%' OR to_tsvector('simple',m.body)@@websearch_to_tsquery('simple',q)) ORDER BY j.created_at DESC,j.id OFFSET off LIMIT 50)x),'[]'),
+  'can_send',EXISTS(SELECT 1 FROM workspace_members WHERE workspace_id=w AND user_id=a AND role IN ('owner','admin','editor')) AND pg13_capability_override(w,a,'inbox:send') IS DISTINCT FROM false);
+END $$;
+CREATE FUNCTION briofold_ai_review_done(w uuid,e text,a uuid,job_id uuid,op uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE j briofold_ai_channel_jobs;prior briofold_inbox_events;fp text:=encode(digest(job_id::text,'sha256'),'hex');result jsonb;BEGIN
+ PERFORM briofold_inbox_actor(w,a,'inbox:send');
+ IF e IS DISTINCT FROM 'live' OR op IS NULL OR job_id IS NULL THEN RAISE EXCEPTION 'Invalid AI review request' USING ERRCODE='22023';END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('briofold:inbox:'||w::text,0));
+ SELECT * INTO prior FROM briofold_inbox_events WHERE workspace_id=w AND operation_key=op;
+ IF FOUND THEN IF prior.actor_id<>a OR prior.action<>'ai-review' OR prior.request_hash<>fp THEN RAISE EXCEPTION 'Review request conflict' USING ERRCODE='23505';END IF;RETURN prior.result;END IF;
+ SELECT x.* INTO j FROM briofold_ai_channel_jobs x JOIN inbox_threads t ON t.id=x.thread_id JOIN inbox_connections c ON c.id=t.connection_id AND c.environment=e AND c.enabled WHERE x.workspace_id=w AND x.id=job_id FOR UPDATE OF x;
+ IF j.id IS NULL THEN RAISE EXCEPTION 'Review request unavailable' USING ERRCODE='42501';END IF;
+ IF j.state<>'review' THEN RAISE EXCEPTION 'Review state changed' USING ERRCODE='40001';END IF;
+ UPDATE briofold_ai_channel_jobs SET state='cancelled',reason='HUMAN_REVIEWED',updated_at=now() WHERE id=job_id;
+ result:=jsonb_build_object('reviewed',true);
+ INSERT INTO briofold_inbox_events(workspace_id,operation_key,thread_id,actor_id,action,request_hash,result) VALUES(w,op,j.thread_id,a,'ai-review',fp,result);
+ RETURN result;
+END $$;
+REVOKE ALL ON FUNCTION briofold_ai_review_read(uuid,text,uuid,integer,text),briofold_ai_review_done(uuid,text,uuid,uuid,uuid) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
+GRANT EXECUTE ON FUNCTION briofold_ai_review_read(uuid,text,uuid,integer,text),briofold_ai_review_done(uuid,text,uuid,uuid,uuid) TO ekmivo_financial_runtime,ekmivo_financial_projection;
+
 COMMIT;

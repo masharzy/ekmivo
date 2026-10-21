@@ -1,4 +1,5 @@
 "use client";
+import {AiReviewQueue} from "./ai-review-queue";
 import {AiStudioTest} from "./ai-studio-test";
 import {useCallback,useEffect,useRef,useState,useTransition} from "react";
 import {loadAiStudio,readAiKnowledge,saveAiStudio,searchAiKnowledge} from "../actions/ai-studio";
@@ -97,6 +98,7 @@ export function AiStudio({workspaceId,locale,initial,view,runtimeEnabled}:{works
      <button className="ss-btn" type="submit" disabled={disabled||dirty||!confirmed||reason.trim().length<10||current.revision===0}>{rollbackTarget?t("Restore as new publication","নতুন প্রকাশ হিসেবে ফেরত"):t("Publish configuration","সেটিংস প্রকাশ")}</button>
     </div>
    </form>
+   <AiReviewQueue workspaceId={workspaceId} bn={bn}/>
    <AiStudioTest workspaceId={workspaceId} revision={current.revision} publicationId={current.published_id} disabled={disabled||dirty} runtimeEnabled={runtimeEnabled} bn={bn}/>
   </>:<>
    <form className="ss-panel" onSubmit={e=>{e.preventDefault();void saveSource();}}><div className="ss-section"><h2>{t("Knowledge source","নলেজের উৎস")}</h2><div className="ss-grid">

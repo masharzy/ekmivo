@@ -23,9 +23,9 @@ func (s *Service) handleMobileInbox(w http.ResponseWriter, r *http.Request, raw 
 // Capability comes from a bounded action, never a client-declared role.
 func webInboxCapability(action string) (authz.Capability, bool) {
  switch action {
- case "work-read", "list", "messages", "profile", "products", "info", "media-get", "read":
+ case "ai-review-read", "work-read", "list", "messages", "profile", "products", "info", "media-get", "read":
   return authz.InboxRead, true
- case "work", "takeover", "release", "ticket", "duty", "work-note", "send", "retry", "media-upload", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
+ case "ai-review-done", "work", "takeover", "release", "ticket", "duty", "work-note", "send", "retry", "media-upload", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
   return authz.InboxSend, true
  case "saved-reply", "archive-reply", "ai", "product-save":
   return authz.InboxManage, true
@@ -108,6 +108,16 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 	}
 	b.Body["reader_kind"] = reader
 	var result []byte
+ if reader=="user" && (b.Action=="ai-review-read" || b.Action=="ai-review-done") {
+  if b.Action=="ai-review-read" {
+   offset,valid:=inboxWorkOffset(b.Filters["offset"]);query,_:=b.Filters["q"].(string);if !valid || utf8.RuneCountInString(query)>100 {fail(w,422,"INVALID_FILTER");return}
+   err=s.Pipeline.Control.QueryRow(r.Context(),"SELECT briofold_ai_review_read($1::uuid,$2,$3::uuid,$4,$5)",d.Workspace,d.Environment,d.ID,offset,query).Scan(&result)
+  }else{
+   job,_:=b.Body["job_id"].(string);key,_:=b.Body["operation_key"].(string);if !uuidPattern.MatchString(job)||!uuidPattern.MatchString(key){fail(w,422,"INVALID_OPERATION_KEY");return}
+   err=s.Pipeline.Control.QueryRow(r.Context(),"SELECT briofold_ai_review_done($1::uuid,$2,$3::uuid,$4::uuid,$5::uuid)",d.Workspace,d.Environment,d.ID,job,key).Scan(&result)
+  }
+  if err!=nil {inboxWorkFailure(w,err);return};write(w,200,json.RawMessage(result));return
+ }
  if reader=="user" && (b.Action=="work-read" || b.Action=="work" || b.Action=="takeover" || b.Action=="release" || b.Action=="ticket" || b.Action=="duty" || b.Action=="work-note" || b.Action=="saved-reply" || b.Action=="archive-reply") {
   if b.Action=="work-read" {
    offset,valid:=inboxWorkOffset(b.Filters["reply_offset"]);tickets,ticketValid:=inboxWorkOffset(b.Filters["ticket_offset"]);history,historyValid:=inboxWorkOffset(b.Filters["history_offset"]);if !valid || !ticketValid || !historyValid {fail(w,422,"INVALID_FILTER");return}
