@@ -18,7 +18,7 @@ export function AiReviewQueue({workspaceId,bn}:{workspaceId:string;bn:boolean}){
   try{
    if(operation.current?.id!==id)operation.current={id,key:crypto.randomUUID()};
    const response=await fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"ai-review-done",body:{job_id:id,operation_key:operation.current.key}})});
-   if(!response.ok)throw Error();setData(await read());operation.current=null;setError(false);
+   if(!response.ok){if(response.status===401||response.status===403)setData(null);throw Error();}setData(await read());operation.current=null;setError(false);
   }catch{setError(true);}finally{lock.current=false;setBusy(false);}
  }
  return <section className="ss-panel"><div className="ss-section"><h2>{t("Questions needing a human","মানুষের সহায়তা প্রয়োজন")}</h2><p>{t("These questions were held for review. Open the conversation to reply or add the missing knowledge. Marking reviewed does not send a message or retry paid AI.","এই প্রশ্নগুলো পর্যালোচনার জন্য রাখা হয়েছে। কথোপকথন খুলে উত্তর দিন অথবা প্রয়োজনীয় নলেজ যোগ করুন। পর্যালোচিত করলে মেসেজ বা পেইড AI অনুরোধ যাবে না।")}</p>

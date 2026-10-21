@@ -16,7 +16,7 @@ const errors:Record<AiStudioError,[string,string]>={
  "rate-limit":["Too many changes. Wait a minute and retry.","অনেক পরিবর্তন হয়েছে। এক মিনিট পরে আবার চেষ্টা করুন।"],
  unavailable:["AI configuration is unavailable. Your unsaved text is preserved; retry.","AI সেটিংস এখন পাওয়া যাচ্ছে না। আপনার লেখা আছে; আবার চেষ্টা করুন।"]
 };
-export function AiStudio({workspaceId,locale,initial,view,runtimeEnabled}:{workspaceId:string;locale:"en"|"bn";initial:AiStudioView;view:"assistant"|"knowledge";runtimeEnabled:boolean}){
+export function AiStudio({workspaceId,actorId,locale,initial,view,runtimeEnabled}:{workspaceId:string;actorId:string;locale:"en"|"bn";initial:AiStudioView;view:"assistant"|"knowledge";runtimeEnabled:boolean}){
  const bn=locale==="bn",t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const [state,setState]=useState(initial),[config,setConfig]=useState<AiStudioConfig>(initial.status==="ready"?initial.data.config:emptyConfig);
  const [doc,setDoc]=useState<KnowledgeDocument>(emptyDocument),[savedDoc,setSavedDoc]=useState(emptyDocument);
@@ -99,7 +99,7 @@ export function AiStudio({workspaceId,locale,initial,view,runtimeEnabled}:{works
     </div>
    </form>
    <AiReviewQueue workspaceId={workspaceId} bn={bn}/>
-   <AiStudioTest workspaceId={workspaceId} revision={current.revision} publicationId={current.published_id} disabled={disabled||dirty} runtimeEnabled={runtimeEnabled} bn={bn}/>
+   <AiStudioTest actorId={actorId} currentConfig={current.config} onProposal={setConfig} workspaceId={workspaceId} revision={current.revision} publicationId={current.published_id} disabled={disabled||dirty} runtimeEnabled={runtimeEnabled} bn={bn}/>
   </>:<>
    <form className="ss-panel" onSubmit={e=>{e.preventDefault();void saveSource();}}><div className="ss-section"><h2>{t("Knowledge source","নলেজের উৎস")}</h2><div className="ss-grid">
     <label className="ss-field"><span>{t("Title or question","শিরোনাম অথবা প্রশ্ন")}</span><input aria-label={t("Title or question","শিরোনাম অথবা প্রশ্ন")} value={doc.title} required maxLength={160} disabled={disabled} onChange={e=>setDoc({...doc,title:e.target.value})}/></label>

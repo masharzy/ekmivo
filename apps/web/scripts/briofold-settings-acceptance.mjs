@@ -47,7 +47,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  try{
   await ready(apiOrigin+"/healthz",200,api);
   server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
-   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false"},stdio:["ignore","pipe","pipe"]
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false"},stdio:["ignore","pipe","pipe"]
   });
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});

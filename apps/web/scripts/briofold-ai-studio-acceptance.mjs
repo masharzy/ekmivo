@@ -87,6 +87,28 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   await page.goto(origin+'/settings/ai');
   try{await page.getByLabel('Instructions',{exact:true}).waitFor({timeout:5000});}catch{throw Error('Studio editor unavailable at '+page.url()+'; browser errors: '+JSON.stringify(errors)+'; rendered fixture page: '+(await page.locator('body').innerText()).slice(-6000));}
+  // Only Next's UI flag is enabled in this isolated harness. Go remains paid-off.
+  await page.getByLabel('Test question',{exact:true}).fill('Fictional practice question');
+  await page.getByLabel('I agree to use AI credits for this test.',{exact:true}).check();
+  await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('Paid AI testing is paused.',{exact:true}).waitFor();
+  const requestKeys=[];let dropped=false;
+  const proposal={...config,instructions:'Fictional proposed concise instructions'};
+  await page.route('**/api/go/workspaces/'+workspace+'/ai/studio-test',async route=>{
+   const body=route.request().postDataJSON();requestKeys.push(route.request().headers()['idempotency-key']);
+   if(body.purpose==='edit')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({proposal,base_revision:body.revision,cost_minor:7})});
+   if(!dropped){dropped=true;return route.abort('failed');}
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:'Fictional practice response',cost_minor:7})});
+  });
+  await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('The result could not be loaded. Retry preserves the request key.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('Fictional practice response',{exact:true}).waitFor();assert.equal(requestKeys[0],requestKeys[1],'practice retry changed paid request key');
+  await page.getByLabel('Practice task',{exact:true}).selectOption('edit');await page.getByLabel('Requested change',{exact:true}).fill('Make the instructions concise');
+  const beforeProposal=(await read()).config.instructions;
+  await page.getByRole('button',{name:'Propose edit',exact:true}).click();await page.getByText('Compare before applying. This proposal has not been saved or published.',{exact:true}).waitFor();
+  assert.equal((await read()).config.instructions,beforeProposal,'proposal silently wrote configuration');
+  await page.getByRole('button',{name:'Apply to unsaved draft',exact:true}).click();assert.equal(await page.getByLabel('Instructions',{exact:true}).inputValue(),proposal.instructions);
+  assert.equal((await read()).config.instructions,beforeProposal,'accept silently saved draft');
+  await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
+  assert.equal((await read()).config.instructions,proposal.instructions);assert.notEqual((await read()).published.instructions,proposal.instructions,'save silently published proposal');
   await page.getByLabel('Instructions',{exact:true}).fill('Browser persisted instructions. Never invent a paid payment.');
   await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
   await page.reload();assert.equal(await page.getByLabel('Instructions',{exact:true}).inputValue(),'Browser persisted instructions. Never invent a paid payment.');
@@ -103,6 +125,6 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   assert.equal(await page.getByRole('button',{name:'Save source',exact:true}).count(),0);
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;await denied(read,'42501');
   assert.deepEqual(errors,[],'Studio browser runtime errors');
-  console.log('Phase6 STUDIO ACCEPTANCE PASS: actual draft/publish/concurrent retry/rollback/immutable knowledge/tenant and role denial; real Next save/reload/publish/retrieval/permission browser');
+  console.log('Phase6 STUDIO ACCEPTANCE PASS: actual draft/publish/concurrent retry/rollback/immutable knowledge/tenant and role denial; real Next save/reload/publish/retrieval/permission browser; paid-off API enforced; mocked proposal comparison/apply/save and request retry UI');
  }finally{if(context)await context.close();await db.end({timeout:3});}
 }

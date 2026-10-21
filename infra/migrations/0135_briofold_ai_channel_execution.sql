@@ -17,21 +17,31 @@ CREATE TABLE briofold_ai_channel_jobs (
 );
 CREATE INDEX briofold_ai_channel_jobs_queue ON briofold_ai_channel_jobs(created_at,id) WHERE state='queued';
 CREATE INDEX briofold_ai_channel_jobs_scope ON briofold_ai_channel_jobs(workspace_id,thread_id,created_at DESC);
+CREATE INDEX briofold_ai_channel_running_workspace ON briofold_ai_channel_jobs(workspace_id) WHERE state='running';
 CREATE UNIQUE INDEX briofold_ai_channel_running_thread ON briofold_ai_channel_jobs(thread_id) WHERE state='running';
 ALTER TABLE briofold_ai_channel_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE briofold_ai_channel_jobs FORCE ROW LEVEL SECURITY;
 DO $$BEGIN EXECUTE format('CREATE POLICY briofold_ai_channel_jobs_owner ON briofold_ai_channel_jobs TO %I USING(true) WITH CHECK(true)',current_user);END $$;
 REVOKE ALL ON briofold_ai_channel_jobs FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
 CREATE FUNCTION briofold_ai_studio_context(w uuid,a uuid,revision bigint,published boolean,pub uuid,q text) RETURNS jsonb
- LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE d briofold_ai_studio_drafts;cfg jsonb;docs jsonb;products jsonb;BEGIN
+ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE d briofold_ai_studio_drafts;cfg jsonb;docs jsonb;products jsonb;query tsquery;lexeme text;BEGIN
  PERFORM briofold_ai_studio_actor(w,a);
  IF q IS NULL OR length(trim(q)) NOT BETWEEN 1 AND 8000 OR published IS NULL THEN RAISE EXCEPTION 'Question required' USING ERRCODE='22023';END IF;
  SELECT * INTO d FROM briofold_ai_studio_drafts WHERE workspace_id=w;
  IF d.revision IS DISTINCT FROM revision OR (published AND (pub IS NULL OR d.published_id IS DISTINCT FROM pub)) THEN RAISE EXCEPTION 'Assistant changed; review again' USING ERRCODE='40001';END IF;
  IF published THEN SELECT config INTO cfg FROM briofold_ai_studio_versions WHERE workspace_id=w AND id=pub;ELSE cfg:=d.config;END IF;
  IF cfg IS NULL OR coalesce(cfg->>'model','')='' THEN RAISE EXCEPTION 'Configured metered model required' USING ERRCODE='22023';END IF;
- docs:=briofold_ai_knowledge_search(w,a,left(q,1000),published);
- SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.id),'[]') INTO products FROM (SELECT id,name,price_minor,currency,sizes FROM inbox_products WHERE workspace_id=w AND environment='live' AND active AND to_tsvector('simple',name||' '||sizes)@@websearch_to_tsquery('simple',left(q,1000)) ORDER BY id LIMIT 5)x;
+ -- Natural customer sentences should retrieve relevant terms instead of requiring
+ -- every greeting and filler word to appear in the source. Never interpolate raw tsquery.
+ FOR lexeme IN SELECT unnest(tsvector_to_array(to_tsvector('simple',left(q,1000)))) LIMIT 32 LOOP
+  IF query IS NULL THEN query:=plainto_tsquery('simple',lexeme);ELSE query:=query||plainto_tsquery('simple',lexeme);END IF;
+ END LOOP;
+ SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.score DESC,x.id),'[]') INTO docs FROM (
+  SELECT v.id,v.source_id,v.title,left(v.content,4000) AS content,ts_rank_cd(v.search_vector,query) AS score
+  FROM briofold_ai_knowledge_versions v JOIN briofold_ai_knowledge_sources s ON s.workspace_id=v.workspace_id AND s.id=v.source_id AND s.active
+  WHERE v.workspace_id=w AND v.search_vector@@query AND ((NOT published AND s.current_version=v.id) OR (published AND EXISTS(SELECT 1 FROM briofold_ai_studio_sources z WHERE z.workspace_id=w AND z.publication_id=pub AND z.source_version_id=v.id)))
+  ORDER BY score DESC,v.id LIMIT 5)x;
+ SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.id),'[]') INTO products FROM (SELECT id,name,price_minor,currency,sizes FROM inbox_products WHERE workspace_id=w AND environment='live' AND active AND to_tsvector('simple',name||' '||sizes)@@query ORDER BY id LIMIT 5)x;
  RETURN jsonb_build_object('config',cfg,'publication_id',CASE WHEN published THEN pub END,'revision',d.revision,'knowledge',docs,'products',products,'question',q);
 END $$;
 CREATE FUNCTION briofold_ai_channel_enqueue() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE pub briofold_ai_studio_versions;j uuid:=gen_random_uuid();BEGIN
@@ -47,8 +57,9 @@ CREATE TRIGGER briofold_ai_channel_enqueue AFTER INSERT ON inbox_messages FOR EA
 CREATE FUNCTION briofold_ai_channel_claim() RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE j briofold_ai_channel_jobs;t inbox_threads;msg inbox_messages;ctx jsonb;lease uuid:=gen_random_uuid();BEGIN
  -- A lost worker is an unknown outcome requiring review, never a second provider call.
  WITH expired AS (SELECT id FROM briofold_ai_channel_jobs WHERE state='running' AND leased_at<now()-interval '2 minutes' ORDER BY leased_at LIMIT 100 FOR UPDATE SKIP LOCKED) UPDATE briofold_ai_channel_jobs x SET state='review',reason='WORKER_OUTCOME_UNKNOWN',updated_at=now() FROM expired WHERE x.id=expired.id;
- SELECT x.* INTO j FROM briofold_ai_channel_jobs x JOIN inbox_threads z ON z.id=x.thread_id JOIN inbox_connections c ON c.id=z.connection_id AND c.enabled AND c.environment='live' JOIN workspace_product_access p ON p.workspace_id=x.workspace_id AND p.product='ai' AND p.enabled WHERE x.state='queued' AND NOT EXISTS(SELECT 1 FROM briofold_ai_channel_jobs active_job WHERE active_job.thread_id=x.thread_id AND active_job.state='running') ORDER BY x.created_at,x.id FOR UPDATE OF z,x SKIP LOCKED LIMIT 1;
+ SELECT x.* INTO j FROM briofold_ai_channel_jobs x JOIN inbox_threads z ON z.id=x.thread_id JOIN inbox_connections c ON c.id=z.connection_id AND c.enabled AND c.environment='live' JOIN workspace_product_access p ON p.workspace_id=x.workspace_id AND p.product='ai' AND p.enabled WHERE x.state='queued' AND (SELECT count(*) FROM briofold_ai_channel_jobs busy WHERE busy.workspace_id=x.workspace_id AND busy.state='running')<2 AND NOT EXISTS(SELECT 1 FROM briofold_ai_channel_jobs active_job WHERE active_job.thread_id=x.thread_id AND active_job.state='running') ORDER BY x.created_at,x.id FOR UPDATE OF z,x SKIP LOCKED LIMIT 1;
  IF j.id IS NULL THEN RETURN NULL;END IF;
+ IF NOT pg_try_advisory_xact_lock(hashtextextended('briofold:ai-channel:'||j.workspace_id::text,0)) OR (SELECT count(*) FROM briofold_ai_channel_jobs WHERE workspace_id=j.workspace_id AND state='running')>=2 THEN RETURN NULL;END IF;
  SELECT * INTO t FROM inbox_threads WHERE id=j.thread_id;SELECT * INTO msg FROM inbox_messages WHERE id=j.inbound_id;
  IF NOT t.ai_enabled OR t.last_customer_at<=now()-interval '24 hours' OR EXISTS(SELECT 1 FROM briofold_inbox_work WHERE thread_id=t.id AND (disputed OR status IN ('resolved','snoozed'))) OR EXISTS(SELECT 1 FROM briofold_inbox_tickets WHERE thread_id=t.id AND category IN ('complaint','refund','return') AND status<>'resolved') OR EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t.id AND sender='customer' AND sequence>msg.sequence) OR NOT EXISTS(SELECT 1 FROM briofold_ai_studio_drafts d JOIN briofold_ai_studio_versions v ON v.id=d.published_id WHERE d.workspace_id=j.workspace_id AND d.published_id=j.publication_id AND v.config->>'mode'='live') THEN
   UPDATE briofold_ai_channel_jobs SET state='cancelled',reason='CONVERSATION_OR_PUBLICATION_CHANGED',updated_at=now() WHERE id=j.id;RETURN NULL;
@@ -62,6 +73,8 @@ CREATE FUNCTION briofold_ai_channel_claim() RETURNS jsonb LANGUAGE plpgsql SECUR
  UPDATE briofold_ai_channel_jobs SET state='review',reason='ASSISTANT_CONTEXT_CHANGED',updated_at=now() WHERE id=j.id;RETURN NULL;
  END;
  IF jsonb_array_length(ctx->'knowledge')=0 AND jsonb_array_length(ctx->'products')=0 THEN UPDATE briofold_ai_channel_jobs SET state='review',reason='NO_GROUNDED_SOURCE',updated_at=now() WHERE id=j.id;RETURN NULL;END IF;
+ ctx:=ctx||jsonb_build_object('history',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.sequence) FROM (
+  SELECT sender,left(body,700) AS text,sequence FROM inbox_messages WHERE workspace_id=j.workspace_id AND thread_id=t.id AND sequence<msg.sequence AND type='text' AND length(body)>0 AND state IN ('received','sent','delivered','seen') ORDER BY sequence DESC LIMIT 8)x),'[]'));
  UPDATE briofold_ai_channel_jobs SET state='running',lease_id=lease,leased_at=now(),thread_ai_version=t.ai_version,context=ctx,updated_at=now() WHERE id=j.id;
  RETURN jsonb_build_object('id',j.id,'workspace_id',j.workspace_id,'thread_id',j.thread_id,'actor_id',j.actor_id,'request_key',j.request_key,'lease_id',lease,'context',ctx);
 END $$;
@@ -74,7 +87,7 @@ CREATE FUNCTION briofold_ai_channel_valid(job_id uuid) RETURNS boolean LANGUAGE 
  AND EXISTS(SELECT 1 FROM briofold_ai_studio_drafts d JOIN briofold_ai_studio_versions v ON v.id=d.published_id WHERE d.workspace_id=j.workspace_id AND d.published_id=j.publication_id AND v.config->>'mode'='live')
  AND NOT EXISTS(SELECT 1 FROM inbox_messages x WHERE x.thread_id=t.id AND x.sender='customer' AND x.sequence>(SELECT sequence FROM inbox_messages WHERE id=j.inbound_id))
  AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(j.context->'knowledge') doc WHERE NOT EXISTS(SELECT 1 FROM briofold_ai_knowledge_sources s WHERE s.workspace_id=j.workspace_id AND s.id=(doc->>'source_id')::uuid AND s.active))
- AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(j.context->'products') product WHERE NOT EXISTS(SELECT 1 FROM inbox_products x WHERE x.workspace_id=j.workspace_id AND x.id=(product->>'id')::uuid AND x.active AND x.environment='live' AND x.name=product->>'name' AND x.price_minor=(product->>'price_minor')::bigint AND x.currency=product->>'currency' AND x.sizes=product->>'sizes')));
+ AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(j.context->'products') fact(value) WHERE NOT EXISTS(SELECT 1 FROM inbox_products x WHERE x.workspace_id=j.workspace_id AND x.id=(fact.value->>'id')::uuid AND x.active AND x.environment='live' AND x.name=fact.value->>'name' AND x.price_minor=(fact.value->>'price_minor')::bigint AND x.currency=fact.value->>'currency' AND x.sizes=fact.value->>'sizes')));
 $$;
 REVOKE ALL ON FUNCTION briofold_ai_channel_valid(uuid) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
 CREATE FUNCTION briofold_ai_channel_finish(job_id uuid,lease uuid,body text,safe_reason text DEFAULT '') RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE j briofold_ai_channel_jobs;t inbox_threads;output_id uuid;h text;BEGIN
@@ -92,7 +105,7 @@ CREATE FUNCTION briofold_ai_channel_finish(job_id uuid,lease uuid,body text,safe
  IF body IS NULL OR length(trim(body)) NOT BETWEEN 1 AND 8000 THEN RAISE EXCEPTION 'Invalid AI output' USING ERRCODE='22023';END IF;
  IF NOT EXISTS(SELECT 1 FROM briofold_ai_executions WHERE workspace_id=j.workspace_id AND request_key=j.request_key AND actor_id=j.actor_id AND thread_id=j.thread_id AND state='completed') THEN RAISE EXCEPTION 'Metered completed generation required' USING ERRCODE='42501';END IF;
  SELECT * INTO t FROM inbox_threads WHERE id=j.thread_id;
- IF NOT briofold_ai_channel_valid(j.id) OR NOT t.ai_enabled OR t.ai_version IS DISTINCT FROM j.thread_ai_version OR t.last_customer_at<=now()-interval '24 hours' OR EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t.id AND sender='customer' AND sequence>(SELECT sequence FROM inbox_messages WHERE id=j.inbound_id)) OR NOT EXISTS(SELECT 1 FROM briofold_ai_studio_drafts WHERE workspace_id=j.workspace_id AND published_id=j.publication_id) OR EXISTS(SELECT 1 FROM jsonb_array_elements(j.context->'knowledge') doc WHERE NOT EXISTS(SELECT 1 FROM briofold_ai_knowledge_sources s WHERE s.workspace_id=j.workspace_id AND s.id=(doc->>'source_id')::uuid AND s.active)) OR EXISTS(SELECT 1 FROM jsonb_array_elements(j.context->'products') product WHERE NOT EXISTS(SELECT 1 FROM inbox_products p WHERE p.workspace_id=j.workspace_id AND p.id=(product->>'id')::uuid AND p.active AND p.environment='live' AND p.name=product->>'name' AND p.price_minor=(product->>'price_minor')::bigint AND p.currency=product->>'currency' AND p.sizes=product->>'sizes')) THEN
+ IF NOT briofold_ai_channel_valid(j.id) OR NOT t.ai_enabled OR t.ai_version IS DISTINCT FROM j.thread_ai_version OR t.last_customer_at<=now()-interval '24 hours' OR EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t.id AND sender='customer' AND sequence>(SELECT sequence FROM inbox_messages WHERE id=j.inbound_id)) OR NOT EXISTS(SELECT 1 FROM briofold_ai_studio_drafts WHERE workspace_id=j.workspace_id AND published_id=j.publication_id) OR EXISTS(SELECT 1 FROM jsonb_array_elements(j.context->'knowledge') doc WHERE NOT EXISTS(SELECT 1 FROM briofold_ai_knowledge_sources s WHERE s.workspace_id=j.workspace_id AND s.id=(doc->>'source_id')::uuid AND s.active)) OR EXISTS(SELECT 1 FROM jsonb_array_elements(j.context->'products') fact(value) WHERE NOT EXISTS(SELECT 1 FROM inbox_products p WHERE p.workspace_id=j.workspace_id AND p.id=(fact.value->>'id')::uuid AND p.active AND p.environment='live' AND p.name=fact.value->>'name' AND p.price_minor=(fact.value->>'price_minor')::bigint AND p.currency=fact.value->>'currency' AND p.sizes=fact.value->>'sizes')) THEN
   UPDATE briofold_ai_channel_jobs SET state='review',reason='CONVERSATION_OR_SOURCE_CHANGED',updated_at=now() WHERE id=job_id;RETURN jsonb_build_object('queued',false,'state','review');
  END IF;
  h:=encode(digest(body,'sha256'),'hex');

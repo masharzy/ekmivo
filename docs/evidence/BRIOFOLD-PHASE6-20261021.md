@@ -16,7 +16,7 @@ Critical Phase 5 proof-binding migration, recovery code and proof-integrity test
 
 ## Open gates
 
-Phase 6 is **not sealed**. Remaining code and acceptance include published-config integration with the metered AI/channel execution path; grounded assistant tests; ownership/handover and queued-send cancellation; auto-revert policy; labels/status/SLA/alerts/saved replies/tickets/duty; web attachment interactions; comment rules, post targeting, review/moderation, throttling, audit and dry-run; website origin/rate-limited chat; PDF/Word/URL ingestion; complete mock-provider end-to-end journeys. Live delivery additionally needs authorized provider accounts and is separate from code acceptance.
+Phase 6 is **not sealed**. Remaining code and acceptance include current-tree acceptance of grounded metered AI/channel execution, instruction proposals/review queue and web attachment interactions; persistent alert delivery; comment rules, post targeting, review/moderation, throttling, audit and dry-run; website origin/rate-limited chat; PDF/Word/URL ingestion; complete mock-provider end-to-end journeys. Live delivery additionally needs authorized provider accounts and is separate from code acceptance.
 
 Phases 7–10 are **not sealed**. Their CRM identity, central order/inventory/delivery, financial read parity and growth/reporting/release gates must be implemented and tested under the canonical roadmap. Existing legacy screens or green baseline CI are not proof that these phases are complete.
 
@@ -34,3 +34,12 @@ Initial source run `39540052481` passed the Go/container/Kotlin jobs and the Pos
 Migration 0135 adds private durable AI jobs, published knowledge/catalog context, burst coalescing, one running job per conversation, no automatic provider retry after lost leases, and lease/idempotency guards. The Go runtime uses the existing prepaid engine; no alternate billing path or financial truth tools were added. Completion requires a completed metered execution. Human takeover, publisher revocation, new inbound messages, publication changes and source/catalog changes invalidate queued output at completion and dispatch. Practice testing has a server-authoritative context endpoint and explicit credit consent UI. Paid runtime remains operator-gated; no flags or production migrations were changed.
 
 Local TypeScript, focused ESLint and 28 Studio/draft/route tests pass. New Go tests and isolated PostgreSQL channel tests require the current-tree CI run. This is not a Phase 6 completion claim. Core comments/site/attachment interactions and remaining canonical gates still require implementation.
+
+
+## Current execution verification
+
+Human workflow/library head `84d48ed942581a762a79ec7f427bafc7f7de10e5` remains the latest fully green checkpoint (run `39540906903`). Grounded execution/attachment run `39559293014` passed Go tests, API/container compilation and Kotlin build, but failed applying migration 0135: an unqualified JSON product alias collided with the outer entitlement `product` text column. Explicit `fact.value` references correct that source defect; a new current-tree run is required. No SQL/channel/attachment acceptance is inferred from that failed run.
+
+Further source adds bounded worker concurrency (four global, two per business), bounded delivered conversation context, conversational term retrieval, natural-language instruction proposals with comparison and explicit unsaved-draft acceptance, and durable account/business-scoped paid-test retry keys. No proposal auto-saves or auto-publishes. The isolated browser harness enables only Next's UI flag and leaves Go's paid flag false; mocked practice/proposal results are UI evidence, not live model quality or metered-provider evidence. The actual SQL acceptance separately exercises audited synthetic credit grant, reserve/complete, exactly-once output queueing and source-change dispatch cancellation.
+
+Local current-source checks: TypeScript and focused ESLint pass; 32 Studio/draft/route/request/attachment tests pass. Additional Go tests await CI. Web attachments use the existing required scan/private storage backend; no scan bypass or public file host was added. Browser fixture storage is explicitly mocked; the real proxy scanner-unavailable failure is separately exercised. New migrations 0133–0135 remain unapplied to production.

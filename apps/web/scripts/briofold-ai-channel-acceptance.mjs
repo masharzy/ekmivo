@@ -17,6 +17,7 @@ export async function runBriofoldAiChannel({control,sessions}){
   let data=await read();await write('publish',{revision:data.revision,confirmed:true,reason:'Fictional channel acceptance'});data=await read();
   const context=async(revision=data.revision,pub=data.published_id)=>(await db`SELECT briofold_ai_studio_context(${workspace},${actor},${revision},true,${pub},'Orchid') AS data`)[0].data;
   assert.equal((await context()).knowledge.length,1);
+  assert.equal((await db`SELECT briofold_ai_studio_context(${workspace},${actor},${data.revision},true,${data.published_id},'Hello can you tell me about Orchid delivery please?') AS data`)[0].data.knowledge.length,1,'conversational wording lost retrieval');
   await assert.rejects(()=>context(0),e=>e.code==='40001');
   const connection=(await db`SELECT inbox_connection(${workspace},'live','ms',${'ai-channel-'+workspace},decode('abcd','hex')) AS id`)[0].id;
   const ingest=async(text)=>(await db`SELECT inbox_ingest(${connection},${randomUUID()},'fictional-ai-customer','Fictional AI customer',${text},'text',now())`);
