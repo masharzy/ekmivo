@@ -42,6 +42,7 @@ CREATE FUNCTION briofold_customers_read(w uuid,e text,a uuid,cid uuid,off intege
  IF item IS NULL THEN RAISE EXCEPTION 'Customer unavailable' USING ERRCODE='42501';END IF;
  IF pii THEN SELECT item||jsonb_build_object('email',c.email,'phone',c.phone,'notes',c.notes,'reason',c.reason) INTO item FROM briofold_customers c WHERE c.id=cid;END IF;
  RETURN jsonb_build_object('customer',item,'can_manage',role_name IN ('owner','admin','editor'),'can_contact',pii,'can_export',pii,
+ 'archives',CASE WHEN pii THEN coalesce((WITH RECURSIVE ids(id) AS(SELECT cid UNION SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) SELECT jsonb_agg(to_jsonb(z)) FROM (SELECT x.id,x.name,x.email,x.phone,x.notes,x.tags FROM briofold_customers x WHERE x.id IN(SELECT id FROM ids) AND x.id<>cid ORDER BY x.created_at,x.id LIMIT 51 OFFSET off) z),'[]') ELSE '[]'::jsonb END,
  'sources',coalesce((SELECT jsonb_agg(to_jsonb(s)-'workspace_id'-'environment') FROM briofold_customer_sources s WHERE s.customer_id=cid),'[]'),
  'proofs',CASE WHEN pii THEN coalesce((SELECT jsonb_agg(jsonb_build_object('id',p.id,'kind',p.kind,'value',p.value,'verified_at',p.verified_at,'revoked_at',p.revoked_at)) FROM briofold_customer_proofs p WHERE p.customer_id=cid),'[]') ELSE '[]'::jsonb END,
  'followups',coalesce((SELECT jsonb_agg(to_jsonb(f)-'workspace_id'-'environment'-'body'||jsonb_build_object('body',CASE WHEN pii THEN f.body ELSE '' END) ORDER BY f.due_at) FROM briofold_customer_followups f WHERE f.customer_id=cid),'[]'),
@@ -82,10 +83,10 @@ CREATE FUNCTION briofold_customers_write(w uuid,e text,a uuid,k uuid,act text,b 
   IF b->>'status' IS NULL OR b->>'status' NOT IN ('done','cancelled') THEN RAISE EXCEPTION 'Invalid follow-up status' USING ERRCODE='22023';END IF;UPDATE briofold_customer_followups SET status=b->>'status' WHERE id=(b->>'followup_id')::uuid AND customer_id=cid AND status='scheduled';IF NOT FOUND THEN RAISE EXCEPTION 'Follow-up unavailable' USING ERRCODE='40001';END IF;
  ELSIF act='delete' THEN
   PERFORM briofold_customer_actor(w,a,'contact');IF b->>'confirmed' IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'Deletion confirmation required' USING ERRCODE='22023';END IF;
-  WITH RECURSIVE ids(id) AS(SELECT cid UNION ALL SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) DELETE FROM briofold_customer_challenges WHERE customer_id IN(SELECT id FROM ids);
-  WITH RECURSIVE ids(id) AS(SELECT cid UNION ALL SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) DELETE FROM briofold_customer_proofs WHERE customer_id IN(SELECT id FROM ids);
+  WITH RECURSIVE ids(id) AS(SELECT cid UNION SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) DELETE FROM briofold_customer_challenges WHERE customer_id IN(SELECT id FROM ids);
+  WITH RECURSIVE ids(id) AS(SELECT cid UNION SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) DELETE FROM briofold_customer_proofs WHERE customer_id IN(SELECT id FROM ids);
   UPDATE briofold_customer_followups SET body='Deleted',status='cancelled' WHERE customer_id=cid;
-  WITH RECURSIVE ids(id) AS(SELECT cid UNION ALL SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) UPDATE briofold_customers SET name='Deleted customer',email='',phone='',notes='',reason='',tags='{}',assignee=NULL,deleted_at=now(),preferences='{"marketing":"opted-out","do_not_contact":true}' WHERE id IN(SELECT id FROM ids);
+  WITH RECURSIVE ids(id) AS(SELECT cid UNION SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) UPDATE briofold_customers SET name='Deleted customer',email='',phone='',notes='',reason='',tags='{}',assignee=NULL,deleted_at=now(),preferences='{"marketing":"opted-out","do_not_contact":true}' WHERE id IN(SELECT id FROM ids);
  ELSIF act='link' THEN
   PERFORM briofold_customer_actor(w,a,'contact');IF b->>'kind' NOT IN ('thread','finance-customer','invoice','payment','order','api') OR b->>'kind' IS NULL THEN RAISE EXCEPTION 'Invalid source' USING ERRCODE='22023';END IF;
   -- Only trusted Go can validate references in the physically separate finance realm.
@@ -105,10 +106,11 @@ CREATE FUNCTION briofold_customer_challenge(w uuid,e text,a uuid,cid uuid,d text
  IF (SELECT count(*) FROM briofold_customer_challenges WHERE workspace_id=w AND value=c.email AND created_at>now()-interval '1 hour')>=3 THEN RAISE EXCEPTION 'Verification rate limited' USING ERRCODE='54000';END IF;
  INSERT INTO briofold_customer_challenges(digest,workspace_id,environment,customer_id,value) VALUES(d,w,e,cid,c.email);RETURN jsonb_build_object('email',c.email,'created',true);
 END $$;
-CREATE FUNCTION briofold_customer_export(w uuid,e text,a uuid,cid uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE result jsonb;BEGIN
+CREATE FUNCTION briofold_customer_export(w uuid,e text,a uuid,cid uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE result jsonb;ids uuid[];BEGIN
  PERFORM briofold_customer_actor(w,a,'export');result:=briofold_customers_read(w,e,a,cid,0,'','');
- IF (SELECT count(*) FROM briofold_customer_events WHERE customer_id=cid)>10000 THEN RAISE EXCEPTION 'Use paginated audit export' USING ERRCODE='54000';END IF;
- result:=result||jsonb_build_object('events',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.sequence) FROM (SELECT sequence,action,detail,created_at FROM briofold_customer_events WHERE customer_id=cid) x),'[]'));
+ WITH RECURSIVE related(id) AS(SELECT cid UNION SELECT x.id FROM briofold_customers x JOIN related ON x.merged_into=related.id) SELECT array_agg(id) INTO ids FROM related;
+ IF cardinality(ids)>10000 OR (SELECT count(*) FROM briofold_customer_events WHERE customer_id=ANY(ids))>10000 THEN RAISE EXCEPTION 'Use paginated audit export' USING ERRCODE='54000';END IF;
+ result:=result||jsonb_build_object('archives',coalesce((SELECT jsonb_agg(to_jsonb(x)-'workspace_id') FROM briofold_customers x WHERE x.id=ANY(ids) AND x.id<>cid),'[]'),'events',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.sequence) FROM (SELECT sequence,customer_id,action,detail,created_at FROM briofold_customer_events WHERE customer_id=ANY(ids)) x),'[]'));
  INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,actor_id,action) VALUES(w,e,cid,a,'export');RETURN result;
 END $$;
 -- Invoked only after the Meta signature and connected WABA have been checked.
@@ -125,7 +127,7 @@ CREATE FUNCTION briofold_customer_finance_import(w uuid,e text,a uuid,rows jsonb
  PERFORM pg_advisory_xact_lock(hashtextextended('crm:'||w::text,0));
  FOR row IN SELECT value FROM jsonb_array_elements(rows) LOOP
   IF NOT EXISTS(SELECT 1 FROM briofold_customer_sources WHERE workspace_id=w AND environment=e AND kind='finance-customer' AND source_id=(row->>'id')::uuid) THEN
-   INSERT INTO briofold_customers(workspace_id,environment,name,email,phone) VALUES(w,e,left(coalesce(nullif(row->'body'->>'name',''),'Financial customer'),160),left(coalesce(row->'body'->>'email',''),254),left(coalesce(row->'body'->>'phone',''),32)) RETURNING id INTO cid;
+   INSERT INTO briofold_customers(workspace_id,environment,name,email,phone,preferences) VALUES(w,e,left(coalesce(nullif(row->'body'->>'name',''),'Financial customer'),160),CASE WHEN row->'body'->>'email'~'^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' THEN left(row->'body'->>'email',254) ELSE '' END,CASE WHEN row->'body'->>'source' IS DISTINCT FROM 'checkout_payer' AND row->'body'->>'phone'~'^\+?[0-9]{7,15}$' THEN row->'body'->>'phone' ELSE '' END,jsonb_build_object('marketing','unknown','do_not_contact',coalesce(row->'body'->>'source'='checkout_payer',false))) RETURNING id INTO cid;
    INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES(w,e,cid,'finance-customer',(row->>'id')::uuid);INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,actor_id,action) VALUES(w,e,cid,a,'finance-source-imported');n:=n+1;
   END IF;
  END LOOP;RETURN n;
