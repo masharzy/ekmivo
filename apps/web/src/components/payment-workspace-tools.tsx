@@ -21,7 +21,9 @@ const caps=[
  ["product:payments","Payment service","পেমেন্ট সেবা"],["payments:read","View payments","পেমেন্ট দেখা"],
  ["payments:issue","Create payment requests","পেমেন্ট রিকোয়েস্ট তৈরি"],["payments:manage","Manage payments","পেমেন্ট পরিচালনা"],
  ["payments:export","Export payment records","পেমেন্ট export"],["workspace:settings","Edit business settings","ব্যবসার সেটিংস"],
- ["members:manage","Manage team","সদস্য পরিচালনা"]
+ ["members:manage","Manage team","সদস্য পরিচালনা"],
+ ["product:ai","AI / Inbox service","AI / ইনবক্স সেবা"],["inbox:read","View Inbox","ইনবক্স দেখা"],
+ ["inbox:send","Reply in Inbox","ইনবক্সে উত্তর"],["inbox:manage","Manage Inbox automation","ইনবক্স অটোমেশন পরিচালনা"]
 ] as const;
 const fields={
  name:["Business name","ব্যবসার নাম"],checkout_title:["Checkout heading","চেকআউট শিরোনাম"],

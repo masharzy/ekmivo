@@ -42,7 +42,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
   :kind==="business-profile"
    ?<StoreProfileEditor key={workspace.id} locale={locale} workspaceId={workspace.id} canManage={workspace.role==="owner"||workspace.role==="admin"}/>
   :kind==="inbox"
-   ?<WorkspaceInbox key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
+   ?<WorkspaceInbox key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"} role={workspace.role}/>
    :kind==="channels"
     ?<WorkspaceChannels key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
     :kind==="devices"
