@@ -17,6 +17,12 @@
  background:var(--color-canvas);color:var(--color-text);
  font-family:var(--font-ui);font-size:14px;line-height:1.5;
 }
+/* Bengali dashboard content must use the locally hosted Hind Siliguri face
+   instead of inheriting the Latin-first Geist stack. Preserve the Payments
+   dashboard's independent spacing and color tokens. */
+html:lang(bn) .ds-app[data-service="payments"]{
+ --font-ui:var(--font-hind-siliguri),"Hind Siliguri",system-ui,sans-serif;
+}
 :root[data-theme="dark"] .ds-app[data-service="payments"]{
  --color-canvas:#0a0b0e;--color-surface:#131418;--color-surface-raised:#131418;
  --color-surface-subtle:#1a1b21;--color-hover:#1a1b21;

@@ -45,3 +45,12 @@ test("single-Store routes stay canonical without locale path segments",()=>{
 // All new Store purchase redirects use canonical, locale-neutral URLs.
 
 // CSS loaded through the existing dashboard cascade avoids VM harness imports.
+
+test("Bengali UI uses Hind Siliguri even within independently themed Payments dashboard",()=>{
+ const css=readFileSync(new URL("../src/app/dashboard-v2.css",import.meta.url),"utf8");
+ const tokens=readFileSync(new URL("../../../docs/design/tokens.css",import.meta.url),"utf8");
+ assert.match(css,/html:lang\(bn\) \.ds-app\[data-service="payments"\]/);
+ assert.match(css,/--font-ui:var\(--font-hind-siliguri\)/);
+ assert.match(tokens,/:root:lang\(bn\)/);
+ assert.ok(read("lib/server/auth.ts").includes("(?:[0-9a-f]{4}-){3}"),"full UUID format must not reject authorized Store deep links");
+});
