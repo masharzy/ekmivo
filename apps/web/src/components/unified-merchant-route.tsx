@@ -14,6 +14,7 @@ import {UnifiedSectionTabs} from "./unified-section-tabs";
 import {UnifiedDevicesSettings} from "./unified-devices-settings";
 import {BriofoldAiCreditSummary} from "./briofold-ai-credit-summary";
 import {onboardingState} from "../lib/server/briofold-onboarding";
+import {AiStudioPage} from "./ai-studio-page";
 
 export const unifiedDynamic="force-dynamic";
 
@@ -39,6 +40,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
   :undefined;
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :service==="ai"&&(section==="ai-agent"||section==="knowledge")
+   ?<AiStudioPage workspaceId={workspace.id} actorId={user.id} locale={locale} view={section==="knowledge"?"knowledge":"assistant"}/>
   :kind==="business-profile"
    ?<StoreProfileEditor key={workspace.id} locale={locale} workspaceId={workspace.id} canManage={workspace.role==="owner"||workspace.role==="admin"}/>
   :kind==="inbox"
