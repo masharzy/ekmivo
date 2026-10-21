@@ -85,7 +85,9 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
    {name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
    {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
-  await page.goto(origin+'/settings/ai');await page.getByLabel('Instructions',{exact:true}).fill('Browser persisted instructions. Never invent a paid payment.');
+  await page.goto(origin+'/settings/ai');
+  try{await page.getByLabel('Instructions',{exact:true}).waitFor({timeout:5000});}catch{throw Error('Studio editor unavailable at '+page.url()+'; browser errors: '+JSON.stringify(errors)+'; rendered fixture page: '+(await page.locator('body').innerText()).slice(-6000));}
+  await page.getByLabel('Instructions',{exact:true}).fill('Browser persisted instructions. Never invent a paid payment.');
   await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
   await page.reload();assert.equal(await page.getByLabel('Instructions',{exact:true}).inputValue(),'Browser persisted instructions. Never invent a paid payment.');
   await page.getByLabel('Reason (10–500 characters)',{exact:true}).fill('Browser confirmed publication');
