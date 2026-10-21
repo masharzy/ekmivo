@@ -801,3 +801,11 @@ Use an authorized configured Meta test account, private storage/scanner, and a p
 ### Android reference Phase 7 release (2026-10-20)
 
 Automated emulator coverage and release identity live in `docs/evidence/ANDROID-REFERENCE-PHASE7/README.md` / PR #86. Distinguish those from pending real-device/provider acceptance: install over an existing production-signed release without uninstalling or clearing queued receipts; verify pairing/workspace lookup against the deployed compatible API, product changes in foreground, denial/regrant flows, Samsung screen-off/reboot and offline receipt ACK recovery, real camera/mic interruptions, Meta media/status/reactions, FCM, EN/BN/light/dark full reference parity and accessibility. Storage/scanner/Meta/Firebase configuration and control/finance migrations/runtime rollout are separate operator gates and were not executed by APK generation.
+
+## Briofold Phase 7 — Customers (2026-10-21, PR #132) — manual pending
+
+Code and automated acceptance evidence: `docs/evidence/BRIOFOLD-PHASE7-20261021.md`. Production rollout is separate: apply control migration 0140 before the compatible API; financial realms are unchanged. No Phase 7 production deployment has been performed.
+
+With an authorized operator SMTP account and HTTPS CRM_PUBLIC_ORIGIN, request a customer-consented email confirmation, receive the actual message, confirm the fragment is removed, and verify expiry/single use/contact-change rejection. With an approved WhatsApp test account, verify actual signed inbound sender proof and cross-business/account isolation; fictional signed webhook tests are not provider proof. No unsolicited customer message is authorized by this checklist.
+
+With owner/admin/editor/viewer test memberships, review Customers, Leads and Follow-ups at 320/768/1024/desktop in EN/BN and Light/Dark/System, keyboard and large text; verify contact masking, stale business tabs, dirty navigation, offline/retry recovery, merged history/export, dispute suppression and confirmed CRM erasure. Confirm retained financial/channel records are explained. Follow-ups are internal reminders; outbound campaigns belong to a later phase. These manual/provider checks remain pending and do not block the explicitly scoped code-and-automated-acceptance seal.
