@@ -127,7 +127,7 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   const scanned=await context.request.post(importPath,{headers:{Origin:origin},data:{name:'Fictional.docx',data:Buffer.from('Fictional scanner probe').toString('base64')}});
   assert.equal(scanned.status(),503);assert.equal((await scanned.json()).error?.code,'FILE_SCAN_UNCONFIRMED');
   await page.route('**/api/go/workspaces/'+workspace+'/ai/knowledge-import',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:'Fictional imported Word warranty is two years.',name:'Fictional Word.docx',kind:'text'})}));
-  await page.getByLabel('Import Word file',{exact:true}).setInputFiles({name:'Fictional Word.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:Buffer.from('Mocked document parser transport')});
+  await page.getByLabel('Import document',{exact:true}).setInputFiles({name:'Fictional Word.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:Buffer.from('Mocked document parser transport')});
   await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Content or answer"]')?.value==='Fictional imported Word warranty is two years.');
   assert.equal((await read()).sources.some(x=>x.title==='Fictional Word.docx'),false,'Word preview silently persisted a source');
   await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByText('Fictional Word.docx',{exact:true}).waitFor();

@@ -2,6 +2,7 @@ package checkout
 
 import (
 	"encoding/base64"
+	"errors"
 	"github.com/masharzy/ekmivo/backend/internal/knowledge"
 	"net/http"
 	"path/filepath"
@@ -80,7 +81,7 @@ func (s *Service) HandleKnowledgeImport(w http.ResponseWriter, r *http.Request) 
 		write(w, 200, map[string]any{"text": text, "name": string(title), "kind": "text"})
 		return
 	}
-	if len(input.Name) > 200 || !strings.EqualFold(filepath.Ext(input.Name), ".docx") {
+	if len(input.Name) > 200 || (!strings.EqualFold(filepath.Ext(input.Name), ".docx") && !strings.EqualFold(filepath.Ext(input.Name), ".pdf")) {
 		fail(w, 422, "INVALID_DOCUMENT")
 		return
 	}
@@ -93,7 +94,16 @@ func (s *Service) HandleKnowledgeImport(w http.ResponseWriter, r *http.Request) 
 		fail(w, 503, "FILE_SCAN_UNCONFIRMED")
 		return
 	}
-	text, err := knowledge.Word(data)
+	var text string
+	if strings.EqualFold(filepath.Ext(input.Name), ".pdf") {
+		text, err = knowledge.PDF(r.Context(), data)
+	} else {
+		text, err = knowledge.Word(data)
+	}
+	if errors.Is(err, knowledge.ErrExtractorUnavailable) {
+		fail(w, 503, "DOCUMENT_EXTRACTOR_UNAVAILABLE")
+		return
+	}
 	if err != nil {
 		fail(w, 422, "DOCUMENT_EXTRACTION_FAILED")
 		return

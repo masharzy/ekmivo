@@ -1,0 +1,11 @@
+PDF text extraction uses the separate Poppler pdftotext executable and util-linux prlimit, installed from Alpine Linux v3.24 package repositories. The exact package versions installed at build time are recorded in packages.txt. Package license files, where shipped by the repository, are retained alongside this notice.
+
+Poppler: GPL-2.0-or-later; https://poppler.freedesktop.org/
+Poppler data: https://poppler.freedesktop.org/
+util-linux: https://github.com/util-linux/util-linux
+Alpine package metadata and corresponding source build recipes:
+https://pkgs.alpinelinux.org/packages?name=poppler*&branch=v3.24
+https://pkgs.alpinelinux.org/packages?name=util-linux*&branch=v3.24
+https://gitlab.alpinelinux.org/alpine/aports/-/tree/3.24-stable
+
+The API invokes only the text extractor, with no inherited credentials, bounded input/output, a five-second wall deadline and process address-space/CPU/file-descriptor limits. JavaScript, embedded actions and attachments are not executed or imported. Scanned/textless or password-protected files return an extraction error rather than invented knowledge.
