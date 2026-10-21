@@ -14,10 +14,10 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  orders:[
   {en:"Orders",bn:"অর্ডার",href:"/orders",service:"common"},
   {en:"Products",bn:"পণ্য",href:"/orders/products",service:"common"},
-  {en:"Inventory",bn:"স্টক",href:"/orders/inventory",service:"payments"},
-  {en:"Delivery",bn:"ডেলিভারি",href:"/orders/delivery",service:"payments"},
-  {en:"Returns",bn:"রিটার্ন",href:"/orders/returns",service:"payments"},
-  {en:"Coupons",bn:"কুপন",href:"/orders/coupons",service:"payments"},
+  {en:"Inventory",bn:"স্টক",href:"/orders/inventory",service:"common"},
+  {en:"Delivery",bn:"ডেলিভারি",href:"/orders/delivery",service:"common"},
+  {en:"Returns",bn:"রিটার্ন",href:"/orders/returns",service:"common"},
+  {en:"Coupons",bn:"কুপন",href:"/orders/coupons",service:"common"},
  ],
  payments:[
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},

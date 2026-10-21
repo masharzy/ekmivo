@@ -58700,6 +58700,322 @@
         }
       }
     },
+    "/v1/commerce/orders": {
+      "get": {
+        "operationId": "readCommerceOrders",
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Read scoped operational orders",
+        "description": "Requires orders:read. Financial links are operational references, not a new payment authority.",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "live",
+                "sandbox"
+              ]
+            }
+          },
+          {
+            "name": "item",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized order list or detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Authorization, validation or dependency failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message",
+                        "retryable",
+                        "correlation_id"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "INVALID_ENVIRONMENT",
+                            "INVALID_API_KEY",
+                            "SCOPE_OR_ENVIRONMENT_DENIED",
+                            "AUTH_SERVICE_UNAVAILABLE"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        },
+                        "correlation_id": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{24}$"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createCommerceOrder",
+        "tags": [
+          "Merchant"
+        ],
+        "summary": "Create a draft operational order with server catalog prices",
+        "description": "Requires orders:write. No financial payment is created. Caller prices, paid flags and source attribution are rejected. Confirm separately through the merchant workspace to reserve stock.",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "live",
+                "sandbox"
+              ]
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "reference",
+                  "warehouse_id",
+                  "recipient",
+                  "lines"
+                ],
+                "properties": {
+                  "reference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "warehouse_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "customer_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "recipient": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "phone",
+                      "address"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                      },
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+?[0-9]{7,15}$"
+                      },
+                      "address": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 1000
+                      }
+                    }
+                  },
+                  "lines": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "variant_id",
+                        "quantity"
+                      ],
+                      "properties": {
+                        "variant_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000
+                        }
+                      }
+                    }
+                  },
+                  "coupon": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "shipping_minor": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000000
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft order created or idempotently replayed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "saved"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "saved": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Validation, authorization, rate limit or source failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message",
+                        "retryable",
+                        "correlation_id"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "INVALID_ENVIRONMENT",
+                            "INVALID_API_KEY",
+                            "SCOPE_OR_ENVIRONMENT_DENIED",
+                            "AUTH_SERVICE_UNAVAILABLE"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        },
+                        "correlation_id": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{24}$"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/public/checkout/{token}/notices/{noticeAction}": {
       "post": {
         "operationId": "customerReceiptNotice",
@@ -59673,7 +59989,9 @@
                           "invoices:write",
                           "refunds:read",
                           "refunds:write",
-                          "webhooks:manage"
+                          "webhooks:manage",
+                          "orders:read",
+                          "orders:write"
                         ]
                       }
                     },
@@ -62994,7 +63312,9 @@
                 "invoices:write",
                 "refunds:read",
                 "refunds:write",
-                "webhooks:manage"
+                "webhooks:manage",
+                "orders:read",
+                "orders:write"
               ]
             }
           },
@@ -63015,7 +63335,9 @@
           "invoices:write",
           "refunds:read",
           "refunds:write",
-          "webhooks:manage"
+          "webhooks:manage",
+          "orders:read",
+          "orders:write"
         ]
       },
       "ApiError": {

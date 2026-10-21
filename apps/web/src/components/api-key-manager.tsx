@@ -7,7 +7,7 @@ import {RefIcon,RefModal,RefStatus} from "./reference-ui";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 export type ApiKeyRow={id:string;publicId:string;name:string;scopes:string[];expired:boolean;createdAt:string;expiresAt:string;revokedAt:string|null;lastUsedAt:string|null};
 const initial:KeyActionState={status:"idle",message:""};
-const scopes=["payments:read","payments:write","customers:read","customers:write","invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage"];
+const scopes=["payments:read","payments:write","customers:read","customers:write","invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage","orders:read","orders:write"];
 export function ApiKeyManager({locale,userId,workspaceId,environment,keys,enabledEnvironments,onSwitchEnvironment}:{locale:Locale;userId:string;workspaceId:string;environment:PaymentEnvironment;keys:ApiKeyRow[];enabledEnvironments?:PaymentEnvironment[];onSwitchEnvironment?:(realm:PaymentEnvironment)=>void}){
  const bn=locale==='bn',t=(en:string,be:string)=>bn?be:en;
  const [create,createAction,creating]=useActionState(createMerchantKey.bind(null,locale),initial),[rotate,rotateAction,rotating]=useActionState(rotateMerchantKey.bind(null,locale),initial),[revoke,revokeAction,revoking]=useActionState(revokeMerchantKey.bind(null,locale),initial);

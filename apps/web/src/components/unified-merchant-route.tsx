@@ -17,6 +17,7 @@ import {onboardingState} from "../lib/server/briofold-onboarding";
 import {InboxLibrary} from "./inbox-library";
 import {AiStudioPage} from "./ai-studio-page";
 import {WebsiteChatSettings} from "./website-chat-settings";
+import {CommercePage} from "./commerce-page";
 import {CustomerCRMPage} from "./customer-crm-page";
 import {CommentAutomation} from "./comment-automation";
 
@@ -51,6 +52,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread}:{
    ?<WebsiteChatSettings key={user.id+":"+workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :service==="ai"&&section==="comments"
    ?<CommentAutomation key={user.id+":"+workspace.id} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}/>
+  :root==="orders"
+   ?<CommercePage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} environment={paymentContext?.environment??"live"}/>
   :root==="customers"&&["","leads","follow-ups"].includes(view[0]??"")
    ?<CustomerCRMPage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} financeEnabled={workspace.mode!=="ai"} environment={paymentContext?.environment??"live"}/>
   :kind==="business-profile"

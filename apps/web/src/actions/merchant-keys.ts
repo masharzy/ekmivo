@@ -13,7 +13,7 @@ export type KeyActionState={
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const SCOPES=new Set([
  "payments:read","payments:write","customers:read","customers:write",
- "invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage"
+ "invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage","orders:read","orders:write"
 ]);
 type Operation="create"|"rotate"|"revoke";
 function error(bn:boolean,code:"bad"|"denied"|"reauth"|"limit"|"missing"|"offline"|"plan"|"planLimit"):KeyActionState{
@@ -45,7 +45,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
  const scopes=selected.filter((v):v is string=>typeof v==="string");
  if(operation==="create" && (
   name.length<2||name.length>80||/[\u0000-\u001F\u007F]/.test(name)||
-  ![0,7,30,90,365].includes(days)||scopes.length<1||scopes.length>9||
+  ![0,7,30,90,365].includes(days)||scopes.length<1||scopes.length>11||
   new Set(scopes).size!==scopes.length||scopes.some(scope=>!SCOPES.has(scope))
  ))return error(bn,"bad");
  try{
