@@ -28,3 +28,5 @@ test("bound dashboard hides switch controls and enforces direct-link Store isola
  assert.match(frame,/ds-business-static/);
  assert.match(auth,/if\(bound&&bound!==id\)redirect\("\/dashboard"\)/);
 });
+
+// Legacy multi-Store owners remain unbound until explicitly migrated.
