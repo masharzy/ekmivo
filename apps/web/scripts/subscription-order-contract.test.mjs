@@ -50,5 +50,7 @@ test("one Store is enforced transactionally on creation while legacy selection s
  const list=read("app/[locale]/workspaces/page.tsx");
  assert.match(create,/pg_advisory_xact_lock\(hashtextextended/);
  assert.match(create,/if\(existing\.length\)throw new Error\("STORE_ALREADY_EXISTS"\)/);
- assert.match(list,/if\(spaces\.length===1\)redirect\("\/workspaces\/open"\)/);
+ assert.match(list,/if\(bound\|\|spaces\.length===1\)redirect\("\/workspaces\/open"\)/);
+ const auth=read("lib/server/auth.ts");
+ assert.match(auth,/if\(bound && workspaceId!==bound\)return false/);
 });
