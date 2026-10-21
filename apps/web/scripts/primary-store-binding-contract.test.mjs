@@ -41,3 +41,5 @@ test("single-Store routes stay canonical without locale path segments",()=>{
  const frame=read("components/dashboard-frame.tsx");
  assert.match(frame,/spaces\.length>1\?searchableBusinesses/);
 });
+
+// All new Store purchase redirects use canonical, locale-neutral URLs.
