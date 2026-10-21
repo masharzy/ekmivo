@@ -54,3 +54,5 @@ test("Bengali UI uses Hind Siliguri even within independently themed Payments da
  assert.match(tokens,/:root:lang\(bn\)/);
  assert.ok(read("lib/server/auth.ts").includes("(?:[0-9a-f]{4}-){3}"),"full UUID format must not reject authorized Store deep links");
 });
+
+// Phase 1 CI includes this check before deployment or seal.
