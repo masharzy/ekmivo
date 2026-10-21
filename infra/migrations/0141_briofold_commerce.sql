@@ -156,7 +156,7 @@ BEGIN
   IF next_state='confirmed' THEN
    IF o.coupon_id IS NOT NULL THEN
     SELECT * INTO c FROM commerce_coupons WHERE id=o.coupon_id;
-    IF NOT c.active OR c.starts_at>now() OR c.expires_at<=now() OR (cardinality(c.audience)>0 AND NOT o.customer_id=ANY(c.audience)) OR (SELECT count(*) FROM commerce_coupon_claims WHERE coupon_id=c.id AND status<>'released')>=c.usage_limit OR (SELECT count(*) FROM commerce_coupon_claims WHERE coupon_id=c.id AND customer_id=o.customer_id AND status<>'released')>=c.per_customer_limit THEN RAISE EXCEPTION 'Coupon limit or expiry reached' USING ERRCODE='23514';END IF;
+    IF NOT c.active OR c.starts_at>now() OR c.expires_at<=now() OR (cardinality(c.audience)>0 AND NOT o.customer_id=ANY(c.audience)) OR (SELECT count(*) FROM commerce_coupon_claims WHERE coupon_id=c.id AND status<>'released')>=c.usage_limit OR (WITH RECURSIVE identity_ids(id) AS(SELECT o.customer_id UNION SELECT cx.id FROM briofold_customers cx JOIN identity_ids pi ON cx.merged_into=pi.id) SELECT count(*) FROM commerce_coupon_claims WHERE coupon_id=c.id AND customer_id IN(SELECT id FROM identity_ids) AND status<>'released')>=c.per_customer_limit THEN RAISE EXCEPTION 'Coupon limit or expiry reached' USING ERRCODE='23514';END IF;
     INSERT INTO commerce_coupon_claims VALUES(c.id,cid,o.customer_id,'reserved') ON CONFLICT(order_id) DO UPDATE SET status='reserved';
    END IF;
    FOR l IN SELECT * FROM commerce_lines WHERE order_id=cid ORDER BY variant_id LOOP PERFORM commerce_move(w,e,a,o.warehouse_id,l.variant_id,0,l.quantity,'Order reserved',cid);END LOOP;
@@ -240,7 +240,7 @@ BEGIN
   FOR row IN SELECT value FROM jsonb_array_elements(b->'rows') LOOP
    ix:=ix+1;IF length(btrim(coalesce(row->>'name',''))) NOT BETWEEN 1 AND 200 OR length(btrim(coalesce(row->>'sku',''))) NOT BETWEEN 1 AND 80 OR coalesce(row->>'price_minor','')!~'^[0-9]{1,12}$' OR (row->>'price_minor')::bigint>100000000000 THEN RAISE EXCEPTION 'Invalid import row %',ix USING ERRCODE='22023';END IF;
    SELECT * INTO v FROM commerce_variants WHERE workspace_id=w AND environment=e AND sku=btrim(row->>'sku');SELECT * INTO p FROM commerce_products WHERE id=v.product_id;
-   rows_out:=rows_out||jsonb_build_array(jsonb_build_object('name',btrim(row->>'name'),'sku',btrim(row->>'sku'),'price_minor',(row->>'price_minor')::bigint,'barcode',coalesce(row->>'barcode',''),'product_id',p.id,'variant_id',v.id,'revision',p.revision,'previous_minor',v.price_minor,'group',coalesce(row->>'group',row->>'sku'),'options',coalesce(row->'options',v.options,'{}'),'change',CASE WHEN v.id IS NULL THEN 'create' ELSE 'update' END));
+   rows_out:=rows_out||jsonb_build_array(jsonb_build_object('name',btrim(row->>'name'),'sku',btrim(row->>'sku'),'price_minor',(row->>'price_minor')::bigint,'barcode',coalesce(row->>'barcode',''),'product_id',p.id,'variant_id',v.id,'revision',p.revision,'previous_minor',v.price_minor,'previous_name',p.name,'previous_barcode',v.barcode,'previous_options',v.options,'group',coalesce(row->>'group',row->>'sku'),'options',coalesce(row->'options',v.options,'{}'),'change',CASE WHEN v.id IS NULL THEN 'create' ELSE 'update' END));
   END LOOP;
   IF (SELECT count(DISTINCT x->>'sku') FROM jsonb_array_elements(rows_out) x)<>jsonb_array_length(rows_out) THEN RAISE EXCEPTION 'Duplicate import SKU' USING ERRCODE='23505';END IF;
   INSERT INTO commerce_imports(id,workspace_id,environment,actor_id,rows,fingerprint) VALUES(cid,w,e,a,rows_out,encode(sha256(convert_to(rows_out::text,'UTF8')),'hex'));res:=jsonb_build_object('id',cid,'rows',rows_out);
