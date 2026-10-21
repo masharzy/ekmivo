@@ -122,6 +122,7 @@
 .pa-root.pa-admin-design .pa-admin-coupon-transition select{width:130px}
 .pa-root.pa-admin-design .pa-admin-coupon-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .pa-root.pa-admin-design .pa-admin-coupon-pagination>div{display:flex;gap:8px}
+.pa-root.pa-admin-design .pa-admin-legal-readiness{display:flex;gap:16px;flex-wrap:wrap;padding:10px 0}
 .pa-root.pa-admin-design .pa-admin-modal-backdrop{position:fixed;inset:0;z-index:140;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}
 .pa-root.pa-admin-design .pa-admin-modal{width:100%;max-width:480px;max-height:90vh;overflow:auto;box-shadow:var(--sh);position:relative;margin:0}
 .pa-root.pa-admin-design .pa-admin-fields{display:grid;gap:12px}

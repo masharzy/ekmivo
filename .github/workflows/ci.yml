@@ -60,7 +60,7 @@ jobs:
         run: node --test scripts/briofold-ai-statement.test.mjs scripts/briofold-ai-studio.test.mjs scripts/briofold-inbox-drafts.test.mjs scripts/briofold-inbox-attachments.test.mjs scripts/briofold-studio-requests.test.mjs
       - name: Store subscription order, legal policy and coupon safety contracts
         working-directory: apps/web
-        run: node --test scripts/subscription-order-contract.test.mjs scripts/subscription-coupons-contract.test.mjs
+        run: node --test scripts/subscription-order-contract.test.mjs scripts/subscription-coupons-contract.test.mjs scripts/subscription-policies-contract.test.mjs
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json

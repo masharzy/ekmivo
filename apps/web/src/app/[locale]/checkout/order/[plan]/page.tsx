@@ -3,7 +3,7 @@ import {notFound,redirect} from "next/navigation";
 import {requireUser,preferredWorkspaceFor} from "../../../../../lib/server/auth";
 import {publicPaymentPlans} from "../../../../../lib/server/payment-plans";
 import {SubscriptionOrderSummary} from "../../../../../components/subscription-order-summary";
-import {safePolicyUrl} from "../../../../../lib/subscription-order";
+import {publishedSubscriptionPolicies} from "../../../../../lib/server/subscription-policies";
 
 export const dynamic="force-dynamic";
 export const metadata:Metadata={title:"Review your order · Ekmivo",robots:{index:false,follow:false},referrer:"no-referrer"};
@@ -12,7 +12,7 @@ export default async function SubscriptionOrderPage({params}:{params:Promise<{lo
  const {locale,plan}=await params;
  if((locale!=="bn"&&locale!=="en")||!/^[a-z][a-z0-9_-]{1,39}$/.test(plan))notFound();
  const user=await requireUser(locale);
- const [{plans,unavailable},workspace]=await Promise.all([publicPaymentPlans(),preferredWorkspaceFor(user.id)]);
+ const [{plans,unavailable},workspace,policies]=await Promise.all([publicPaymentPlans(),preferredWorkspaceFor(user.id),publishedSubscriptionPolicies()]);
  if(unavailable)throw new Error("Public pricing is unavailable");
  const selected=plans.find(item=>item.id===plan);
  if(!selected)notFound();
@@ -21,6 +21,7 @@ export default async function SubscriptionOrderPage({params}:{params:Promise<{lo
  if(workspace.role!=="owner"&&workspace.role!=="admin")redirect("/pricing");
  return <SubscriptionOrderSummary
   locale={locale} plan={selected} storeId={workspace.id} storeName={workspace.name} purchaseEnabled={false}
-  legalLinks={{terms:safePolicyUrl(process.env.EKMIVO_TERMS_URL),privacy:safePolicyUrl(process.env.EKMIVO_PRIVACY_URL),refund:safePolicyUrl(process.env.EKMIVO_REFUND_URL)}}
+  legalLinks={{terms:policies.terms?.url||null,privacy:policies.privacy?.url||null,refund:policies.refund?.url||null}}
+  legalVersions={{terms:policies.terms?.version||null,privacy:policies.privacy?.version||null,refund:policies.refund?.version||null}}
  />;
 }

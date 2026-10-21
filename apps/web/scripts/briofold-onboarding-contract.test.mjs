@@ -7,7 +7,8 @@ test("Onboarding preserves the chosen paid plan through the dedicated summary, n
  const action=read("actions/briofold-onboarding.ts");
  const billing=read("components/payment-billing.tsx");
  const subscribe=read("app/[locale]/subscribe/[plan]/route.ts");
- assert.match(action,/redirect\("\/subscribe\/"\+encodeURIComponent\(plan\)\)/);
+ assert.match(action,/redirect\("\/checkout\/order\/"\+encodeURIComponent\(plan\)\)/);
+ assert.match(action,/dashboardHref\("bn",workspace\.id,"payments","billing"\)/);
  assert.match(subscribe,/\/checkout\/order\/\$\{encodeURIComponent\(plan\)\}/);
  assert.match(subscribe,/onboardingState\(workspace,user\.id\)/);
  assert.match(billing,/searchParams\.get\("plan"\)/);

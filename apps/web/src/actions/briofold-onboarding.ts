@@ -5,6 +5,7 @@ import {cookies} from "next/headers";
 import {requireUser,preferredWorkspaceFor} from "../lib/server/auth";
 import {database} from "../lib/server/db";
 import type {PaymentPlan} from "../lib/payment-plans";
+import {dashboardHref} from "../lib/dashboard-navigation";
 
 export type SetupResult={status:"idle"|"error";message:string};
 const fail=(message:string):SetupResult=>({status:"error",message});
@@ -101,7 +102,13 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
  revalidatePath("/dashboard");
  revalidatePath("/setup");
  if(step==="billing"){
-  if(paidGatewaySelection)redirect("/subscribe/"+encodeURIComponent(plan));
+  if(paidGatewaySelection){
+   // The setup action is already authenticated and has locked the selected
+   // store. Preserve that context rather than performing a second auth check
+   // in a route handler during the server-action redirect handoff.
+   if(process.env.EKMIVO_SUBSCRIPTION_ORDER_PREVIEW==="1")redirect("/checkout/order/"+encodeURIComponent(plan));
+   redirect(dashboardHref("bn",workspace.id,"payments","billing")+"?tab=plans&plan="+encodeURIComponent(plan));
+  }
   (await cookies()).delete("ekmivo-selected-plan");
   redirect("/dashboard");
  }

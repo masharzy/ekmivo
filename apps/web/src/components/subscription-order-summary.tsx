@@ -12,7 +12,7 @@ type LegalKey="terms"|"privacy"|"refund";
 type LegalLinks=Record<LegalKey,string|null>;
 type Data={plans:{id:string;terms:{kind:string}}[];effective?:{active:boolean;plan_id?:string;terms?:{kind:string;amount_minor:number;period_days:number}};scheduled?:{prepaid?:boolean}|null};
 
-export function SubscriptionOrderSummary({locale,plan,storeId,storeName,legalLinks,purchaseEnabled}:{locale:"bn"|"en";plan:PaymentPlan;storeId:string;storeName:string;legalLinks:LegalLinks;purchaseEnabled:boolean}){
+export function SubscriptionOrderSummary({locale,plan,storeId,storeName,legalLinks,legalVersions,purchaseEnabled}:{locale:"bn"|"en";plan:PaymentPlan;storeId:string;storeName:string;legalLinks:LegalLinks;legalVersions:Record<LegalKey,string|null>;purchaseEnabled:boolean}){
  const bn=locale==="bn",t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const router=useRouter();
  const [cycles,setCycles]=useState(1),[activation,setActivation]=useState<BillingActivation>("now");
@@ -77,7 +77,7 @@ export function SubscriptionOrderSummary({locale,plan,storeId,storeName,legalLin
   }finally{setBusy(false)}
  }
 
- function consent(key:LegalKey,label:string){const href=legalLinks[key];return <label className="ek-order-consent" key={key}><input type="checkbox" checked={consents[key]} onChange={event=>setConsents(current=>({...current,[key]:event.target.checked}))} disabled={!href||busy}/><span>{t("I have read and agree to the","আমি পড়েছি ও সম্মতি দিচ্ছি:")} {href?<a href={href} target="_blank" rel="noopener noreferrer">{label}</a>:<span>{label}</span>}</span></label>}
+ function consent(key:LegalKey,label:string){const href=legalLinks[key];return <label className="ek-order-consent" key={key}><input type="checkbox" checked={consents[key]} onChange={event=>setConsents(current=>({...current,[key]:event.target.checked}))} disabled={!href||busy}/><span>{t("I have read and agree to the","আমি পড়েছি ও সম্মতি দিচ্ছি:")} {href?<a href={href} target="_blank" rel="noopener noreferrer">{label}{legalVersions[key]?` (${legalVersions[key]})`:""}</a>:<span>{label}</span>}</span></label>}
 
  return <main className="ek-order" lang={locale}>
   <div className="ek-order-shell">
