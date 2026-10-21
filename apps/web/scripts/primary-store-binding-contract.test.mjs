@@ -43,3 +43,5 @@ test("single-Store routes stay canonical without locale path segments",()=>{
 });
 
 // All new Store purchase redirects use canonical, locale-neutral URLs.
+
+// CSS loaded through the existing dashboard cascade avoids VM harness imports.
