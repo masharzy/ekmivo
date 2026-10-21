@@ -143,7 +143,7 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   await page.getByLabel('Test question',{exact:true}).fill('Marigold');await page.getByRole('button',{name:'Search sources',exact:true}).click();await page.getByText('Marigold warranty is one year.',{exact:true}).waitFor();
   await page.reload();await page.getByText('Browser warranty',{exact:true}).waitFor();
   await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${workspace} AND user_id=${actor}`;
-  await page.reload();await page.getByText('Owner or permitted admin access is required.',{exact:true}).waitFor();
+  await page.reload();await page.getByRole('alert').filter({hasText:'Owner or permitted admin access is required.'}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Save source',exact:true}).count(),0);
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;await denied(read,'42501');
   assert.deepEqual(errors,[],'Studio browser runtime errors');
