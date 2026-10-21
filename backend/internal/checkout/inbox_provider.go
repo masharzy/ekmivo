@@ -329,6 +329,10 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			if json.Unmarshal(raw, &job) != nil {
 				continue
 			}
+			if job.Channel == "site" {
+				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,$2,'sent','')", job.ID, "site:"+job.ID)
+				continue
+			}
 			state, id, safe := "failed", "", "CHANNEL_NOT_CONFIGURED"
 			version := os.Getenv("META_GRAPH_VERSION")
 			encoded, err := base64.StdEncoding.DecodeString(job.Credential)
