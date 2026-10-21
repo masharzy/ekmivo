@@ -26,7 +26,7 @@ const sandbox={
  exports:{},CustomEvent:TestEvent,document:doc,window:win,
  require(id){
   if(id==="next/navigation")return {usePathname:()=>"/bn/w/11111111-1111-4111-a111-111111111111/payments/overview"};
-  if(id==="react")return {useState:initial=>[initial,()=>{}],useEffect:fn=>fn()};
+  if(id==="react")return {useState:initial=>[initial,()=>{}],useRef:initial=>({current:initial}),useEffect:fn=>fn()};
   if(id==="react/jsx-runtime")return {jsx,jsxs:jsx};
   throw Error("Unexpected module "+id);
  }

@@ -70,7 +70,7 @@ const controlsSandbox={exports:{},document:documentState,
  localStorage:{setItem(){}}
  },require(id){
  if(id==="next/navigation")return {usePathname:()=>"/"+currentLocale+"/workspaces"};
- if(id==="react")return {useState:initial=>[initial,()=>{}],useEffect:fn=>fn()};
+ if(id==="react")return {useState:initial=>[initial,()=>{}],useRef:initial=>({current:initial}),useEffect:fn=>fn()};
  if(id==="react/jsx-runtime")return {jsx:(type,props)=>{const node={type,props};nodes.push(node);return node;},jsxs:(type,props)=>{const node={type,props};nodes.push(node);return node;}};
  throw Error("Unexpected controls dependency "+id);
 }};
