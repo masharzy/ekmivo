@@ -26,3 +26,16 @@ export function studioErrorCode(error:unknown):AiStudioError{
  if(["22023","22P02","23514"].includes(code))return "invalid";
  return "unavailable";
 }
+
+export function validAiStudioPayload(kind:unknown,value:unknown):boolean{
+ if(!value||typeof value!=="object"||Array.isArray(value))return false;
+ const b=value as Record<string,unknown>;
+ const revision=()=>Number.isSafeInteger(b.revision)&&Number(b.revision)>=0;
+ const exact=(keys:string[])=>Object.keys(b).length===keys.length&&keys.every(key=>Object.hasOwn(b,key));
+ if(kind==="draft")return exact(["revision","config"])&&revision()&&validAiStudioConfig(b.config);
+ if(kind==="publish"||kind==="rollback")return exact(kind==="publish"?["revision","reason","confirmed"]:["revision","reason","confirmed","target"])&&revision()&&b.confirmed===true&&typeof b.reason==="string"&&b.reason.trim().length>=10&&b.reason.trim().length<=500&&(kind!=="rollback"||(typeof b.target==="string"&&studioUuid.test(b.target)));
+ if(kind!=="source"&&kind!=="archive")return false;
+ if(typeof b.id!=="string"||!studioUuid.test(b.id)||(b.expected_version!==null&&(typeof b.expected_version!=="string"||!studioUuid.test(b.expected_version))))return false;
+ if(kind==="archive")return exact(["id","expected_version"])&&b.expected_version!==null;
+ return exact(["id","expected_version","title","kind","content"])&&typeof b.title==="string"&&b.title.trim().length>=1&&b.title.trim().length<=160&&typeof b.content==="string"&&b.content.trim().length>=1&&b.content.length<=100000&&!b.content.includes("\0")&&typeof b.kind==="string"&&["text","qa","markdown","csv"].includes(b.kind);
+}

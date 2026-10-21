@@ -4,7 +4,7 @@ import type postgres from "postgres";
 import {requireUser,preferredWorkspaceFor} from "../lib/server/auth";
 import {database} from "../lib/server/db";
 import {readAiStudio} from "../lib/server/ai-studio";
-import {studioErrorCode,studioUuid,validAiStudioConfig,type AiStudioCommand,type AiStudioData,type AiStudioResult,type KnowledgeDocument,type KnowledgeMatch} from "../lib/ai-studio";
+import {studioErrorCode,studioUuid,validAiStudioPayload,type AiStudioCommand,type AiStudioData,type AiStudioResult,type KnowledgeDocument,type KnowledgeMatch} from "../lib/ai-studio";
 
 async function context(workspace:string){
  const actor=await requireUser("en"),selected=await preferredWorkspaceFor(actor.id);
@@ -20,9 +20,7 @@ export async function loadAiStudio(workspace:string,sourceOffset=0,versionOffset
 export async function saveAiStudio(workspace:string,operation:string,kind:AiStudioCommand,payload:unknown):Promise<AiStudioResult>{
  const ctx=await context(workspace);
  if(!ctx)return {status:"error",code:"stale-business"};
- if(!studioUuid.test(operation)||!["draft","publish","rollback","source","archive"].includes(kind)||!payload||typeof payload!=="object"||Array.isArray(payload))return {status:"error",code:"invalid"};
- const input=payload as Record<string,unknown>;
- if(kind==="draft"&&!validAiStudioConfig(input.config))return {status:"error",code:"invalid"};
+ if(!studioUuid.test(operation)||!validAiStudioPayload(kind,payload))return {status:"error",code:"invalid"};
  try{
   const encoded=JSON.stringify(payload);
   if(Buffer.byteLength(encoded)>420000||encoded.includes("\\u0000"))return {status:"error",code:"invalid"};
