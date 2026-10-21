@@ -4,6 +4,7 @@ import {spawn} from "node:child_process";
 import {chromium} from "@playwright/test";
 import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
 import {runBriofoldOnboardingBrowser} from "./briofold-onboarding-browser.mjs";
+import {runBriofoldInboxWorkflow} from "./briofold-inbox-workflow-acceptance.mjs";
 import {runBriofoldInboxDrafts} from "./briofold-inbox-drafts-acceptance.mjs";
 import {runBriofoldAiStudioAcceptance} from "./briofold-ai-studio-acceptance.mjs";
 import {runBriofoldInboxAccess} from "./briofold-inbox-access.mjs";
@@ -26,6 +27,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   if(!details.ready)await apply("0099_store_details.sql");
   await apply("0132_briofold_inbox_permissions.sql");
   await apply("0133_briofold_ai_studio.sql");
+  await apply("0134_briofold_inbox_operations.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false"},stdio:["ignore","pipe","pipe"]});
@@ -52,6 +54,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldInboxAccess({origin,browser,control,sessions});
   await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});
   await runBriofoldInboxDrafts({origin,browser,control,sessions});
+  await runBriofoldInboxWorkflow({origin,browser,control,sessions});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }
