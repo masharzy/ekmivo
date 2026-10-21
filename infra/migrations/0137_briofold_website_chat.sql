@@ -81,9 +81,19 @@ CREATE FUNCTION briofold_website_visit(sid uuid,o text,act text,secret text,peer
   END IF;
  END IF;
  SELECT jsonb_build_object('items',coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.sequence),'[]')) INTO result FROM (
-  SELECT sequence,sender,body,type,state,created_at FROM inbox_messages WHERE thread_id=v.thread_id AND workspace_id=s.workspace_id AND (sender='customer' OR state IN ('sent','delivered','seen')) AND (before_seq=0 OR sequence<before_seq) ORDER BY sequence DESC LIMIT 50
+  SELECT sequence,sender,body,type,state,created_at,CASE WHEN type IN ('image','audio','document') THEN content->>'media_id' END AS media_id FROM inbox_messages WHERE thread_id=v.thread_id AND workspace_id=s.workspace_id AND (sender='customer' OR state IN ('sent','delivered','seen')) AND (before_seq=0 OR sequence<before_seq) ORDER BY sequence DESC LIMIT 50
  ) x;RETURN result;
+END $$;
+CREATE FUNCTION briofold_website_media(sid uuid,o text,secret text,peer text,media uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE s briofold_website_sites;v briofold_website_visitors;result jsonb;BEGIN
+ SELECT * INTO s FROM briofold_website_sites WHERE id=sid FOR SHARE;
+ IF s.id IS NULL OR NOT briofold_website_origin(sid,o) OR secret IS NULL OR secret!~'^[0-9a-f]{64}$' OR peer IS NULL OR peer!~'^[0-9a-f]{64}$' OR media IS NULL THEN RAISE EXCEPTION 'Media unavailable' USING ERRCODE='42501';END IF;
+ SELECT * INTO v FROM briofold_website_visitors WHERE site_id=sid AND secret_hash=secret AND expires_at>now();IF v.thread_id IS NULL THEN RAISE EXCEPTION 'Visitor unavailable' USING ERRCODE='42501';END IF;
+ PERFORM briofold_website_limit(sid,'peer:'||peer,1800);PERFORM briofold_website_limit(sid,'visitor:'||secret,60);
+ SELECT jsonb_build_object('object_key',f.object_key,'name',f.name,'mime',f.mime) INTO result FROM inbox_media f WHERE f.id=media AND f.workspace_id=s.workspace_id AND EXISTS(SELECT 1 FROM inbox_messages m WHERE m.thread_id=v.thread_id AND m.workspace_id=s.workspace_id AND m.sender IN ('seller','ai') AND m.state IN ('sent','delivered','seen') AND m.type IN ('image','audio','document') AND m.content->>'media_id'=f.id::text);
+ IF result IS NULL THEN RAISE EXCEPTION 'Media unavailable' USING ERRCODE='42501';END IF;RETURN result;
 END $$;
 REVOKE ALL ON FUNCTION briofold_website_read(uuid,uuid),briofold_website_save(uuid,uuid,text,boolean,bigint,uuid),briofold_website_origin(uuid,text),briofold_website_limit(uuid,text,integer),briofold_website_visit(uuid,text,text,text,text,text,text,bigint) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
 GRANT EXECUTE ON FUNCTION briofold_website_read(uuid,uuid),briofold_website_save(uuid,uuid,text,boolean,bigint,uuid),briofold_website_origin(uuid,text),briofold_website_visit(uuid,text,text,text,text,text,text,bigint) TO ekmivo_financial_runtime,ekmivo_financial_projection;
+REVOKE ALL ON FUNCTION briofold_website_media(uuid,text,text,text,uuid) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
+GRANT EXECUTE ON FUNCTION briofold_website_media(uuid,text,text,text,uuid) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;

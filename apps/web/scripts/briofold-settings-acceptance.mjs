@@ -63,7 +63,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});
   await runBriofoldInboxDrafts({origin,browser,control,sessions});
   await runBriofoldInboxWorkflow({origin,browser,control,sessions});
-  await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin});
+  await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }

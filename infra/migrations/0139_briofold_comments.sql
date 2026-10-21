@@ -9,6 +9,7 @@ CREATE TABLE briofold_comments(
  FOREIGN KEY(workspace_id,connection_id) REFERENCES inbox_connections(workspace_id,id),UNIQUE(connection_id,external_id),UNIQUE(workspace_id,id)
 );
 CREATE INDEX briofold_comments_page ON briofold_comments(workspace_id,created_at DESC,id);
+CREATE INDEX briofold_comments_workspace_state ON briofold_comments(workspace_id,state);
 CREATE INDEX briofold_comments_queue ON briofold_comments(state,created_at,id) WHERE state IN ('pending','processing','queued','sending');
 CREATE TABLE briofold_comment_audit(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,workspace_id uuid NOT NULL REFERENCES workspaces(id),comment_id uuid,actor_id uuid,action text NOT NULL,detail jsonb NOT NULL CHECK(pg_column_size(detail)<=32768),created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(workspace_id,comment_id) REFERENCES briofold_comments(workspace_id,id));
 CREATE INDEX briofold_comment_audit_scope ON briofold_comment_audit(workspace_id,created_at DESC,id);

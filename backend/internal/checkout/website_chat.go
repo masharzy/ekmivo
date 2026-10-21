@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"net"
@@ -127,8 +128,9 @@ func (s *Service) HandleWebsiteChat(w http.ResponseWriter, r *http.Request) {
 		Text   string `json:"text"`
 		Key    string `json:"key"`
 		Before int64  `json:"before"`
+		Media  string `json:"media_id"`
 	}
-	if decodeBounded(w, r, &b, 32768) != nil || (b.Action != "start" && b.Action != "read" && b.Action != "send") || b.Before < 0 {
+	if decodeBounded(w, r, &b, 32768) != nil || (b.Action != "start" && b.Action != "read" && b.Action != "send" && b.Action != "media-get") || b.Before < 0 {
 		fail(w, 422, "INVALID_REQUEST")
 		return
 	}
@@ -155,6 +157,33 @@ func (s *Service) HandleWebsiteChat(w http.ResponseWriter, r *http.Request) {
 	mac := hmac.New(sha256.New, s.Pipeline.Key)
 	mac.Write([]byte("website-peer|" + site + "|" + peer))
 	peerHash := hex.EncodeToString(mac.Sum(nil))
+	if b.Action == "media-get" {
+		if !uuidPattern.MatchString(b.Media) {
+			fail(w, 422, "INVALID_MEDIA")
+			return
+		}
+		var metadata []byte
+		if err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_website_media($1::uuid,$2,$3,$4,$5::uuid)", site, origin, websiteHash(b.Secret), peerHash, b.Media).Scan(&metadata); err != nil {
+			inboxWorkFailure(w, err)
+			return
+		}
+		var file struct {
+			Key  string `json:"object_key"`
+			Name string `json:"name"`
+			Mime string `json:"mime"`
+		}
+		if json.Unmarshal(metadata, &file) != nil || file.Key == "" {
+			fail(w, 503, "MEDIA_UNAVAILABLE")
+			return
+		}
+		content, err := objectRequest(r.Context(), "GET", file.Key, nil)
+		if err != nil || len(content) > inboxMediaLimit {
+			fail(w, 503, "PRIVATE_STORAGE_UNAVAILABLE")
+			return
+		}
+		write(w, 200, map[string]any{"data": base64.StdEncoding.EncodeToString(content), "name": file.Name, "mime": file.Mime})
+		return
+	}
 	var raw []byte
 	e = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_website_visit($1::uuid,$2,$3,$4,$5,$6,$7,$8)", site, origin, b.Action, websiteHash(b.Secret), peerHash, b.Text, b.Key, b.Before).Scan(&raw)
 	if e != nil {
