@@ -61,3 +61,18 @@ test('invalid or unbounded input never reaches a write transaction',async()=>{
  for(const [key,kind,payload] of [['bad','draft',{config}],[op,'unknown',{}],[op,'draft',{config:{...config,mode:['off']}}],[op,'source',{content:'x'.repeat(420001)}],[op,'source',{content:'\0'}]])assert.equal((await f.api.saveAiStudio(workspace,key,kind,payload)).code,'invalid');
  assert.equal(f.calls.length,0);
 });
+
+test('publication consent and optimistic revision reject JSON coercion',()=>{
+ const publication={revision:2,reason:'Reviewed fixture configuration',confirmed:true};
+ assert.equal(exports.validAiStudioPayload('publish',publication),true);
+ for(const patch of [{revision:'2'},{revision:2.1},{revision:-1},{revision:Number.MAX_SAFE_INTEGER+1},{confirmed:'true'},{reason:['Reviewed fixture configuration']},{extra:true}])assert.equal(exports.validAiStudioPayload('publish',{...publication,...patch}),false);
+ assert.equal(exports.validAiStudioPayload('rollback',{...publication,target:op}),true);
+ assert.equal(exports.validAiStudioPayload('rollback',{...publication,target:'foreign path'}),false);
+});
+test('knowledge mutation validates source version and Unicode body within byte budget',()=>{
+ const source={id:op,expected_version:null,title:'বাংলা উৎস',kind:'text',content:'ক'.repeat(100000)};
+ assert.equal(exports.validAiStudioPayload('source',source),true);
+ assert.equal(exports.validAiStudioPayload('archive',{id:op,expected_version:null}),false);
+ assert.equal(exports.validAiStudioPayload('archive',{id:op,expected_version:actor}),true);
+ for(const patch of [{content:'ক'.repeat(100001)},{content:'\0'},{title:' '},{expected_version:'bad'},{kind:['text']}])assert.equal(exports.validAiStudioPayload('source',{...source,...patch}),false);
+});

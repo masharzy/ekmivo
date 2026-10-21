@@ -17,7 +17,10 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultNavigationTimeout(90000);page.setDefaultTimeout(30000);
   await page.goto(origin+'/inbox');
   const choose=async n=>{await page.getByRole('button',{name:new RegExp('Draft fixture customer '+n)}).click();await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();};
-  await choose(0);await page.getByRole('textbox',{name:'Message',exact:true}).fill('Unsent first conversation');
+  await choose(0);
+  await page.getByRole('button',{name:'Older messages',exact:true}).click();await page.getByText('Fictional long conversation 1',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Latest messages',exact:true}).click();await page.getByText('Fictional long conversation 65',{exact:true}).last().waitFor();
+  await page.getByRole('textbox',{name:'Message',exact:true}).fill('Unsent first conversation');
   await choose(1);await page.getByRole('textbox',{name:'Message',exact:true}).fill('Unsent second conversation');
   await choose(0);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Unsent first conversation');
   await page.getByRole('link',{name:'Channels',exact:true}).last().click();
