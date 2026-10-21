@@ -8,7 +8,7 @@ export async function PublicPricing({locale,compact=false}:{locale:"en"|"bn";com
  const bn=locale==="bn",t=(a:string,b:string)=>bn?b:a;
  // Never show conflicting legacy prices alongside a published price pinned to
  // the SAME current Gateway plan version. Unmatched legacy plans remain live.
- const remaining=offers.length?plans.filter(plan=>!offers.some(o=>o.gateway_plan_version_id===plan.version_id)):plans;
+ const remaining=offers.length?plans.filter(plan=>!offers.some(o=>o.product==="payments"&&o.gateway_plan_version_id===plan.version_id)):plans;
  const empty=<p className="mp-message">{t("No public pricing has been published yet.","এখনো কোনো পাবলিক মূল্য প্রকাশ করা হয়নি।")}</p>;
  const cards=(variant:"default"|"landing")=><>
   <SubscriptionOfferPricing locale={locale} offers={offers} compact={variant==="landing"}/>

@@ -28,7 +28,7 @@ export function parsePublishedSubscriptionOffer(raw:unknown):PublishedSubscripti
  if(!/^[a-z][a-z0-9_-]{2,63}$/.test(key)||!uuid.test(version_id)
   ||!["payments","ai_credit","bundle"].includes(String(product))
   ||!["monthly","yearly","one_time"].includes(String(term))
-  ||v.currency!=="BDT"||!minor.test(amount_minor)||BigInt(amount_minor)>100000000000n
+  ||v.currency!=="BDT"||!minor.test(amount_minor)||BigInt(amount_minor)>BigInt("100000000000")
   ||name.trim().length<2)return null;
  if(product==="ai_credit"){
   if(term!=="one_time"||gateway_plan_version_id!==null||!included_ai_credits||!credit.test(included_ai_credits))return null;
@@ -43,7 +43,7 @@ export function parsePublishedSubscriptionOffer(raw:unknown):PublishedSubscripti
 export function priceInBdt(minorUnits:string,locale:"en"|"bn"):string{
  if(!/^[0-9]{1,12}$/.test(minorUnits))throw Error("Invalid minor-unit amount");
  const value=BigInt(minorUnits),language=locale==="bn"?"bn-BD":"en-BD";
- const whole=new Intl.NumberFormat(language).format(value/100n);
- const fraction=new Intl.NumberFormat(language,{useGrouping:false,minimumIntegerDigits:2}).format(Number(value%100n));
- return "৳"+whole+(value%100n===0n?"":"."+fraction);
+ const whole=new Intl.NumberFormat(language).format(value/BigInt(100));
+ const fraction=new Intl.NumberFormat(language,{useGrouping:false,minimumIntegerDigits:2}).format(Number(value%BigInt(100)));
+ return "৳"+whole+(value%BigInt(100)===BigInt(0)?"":"."+fraction);
 }
