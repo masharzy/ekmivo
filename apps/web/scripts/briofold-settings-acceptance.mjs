@@ -4,6 +4,7 @@ import {spawn} from "node:child_process";
 import {chromium} from "@playwright/test";
 import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
 import {runBriofoldOnboardingBrowser} from "./briofold-onboarding-browser.mjs";
+import {runBriofoldInboxDrafts} from "./briofold-inbox-drafts-acceptance.mjs";
 import {runBriofoldAiStudioAcceptance} from "./briofold-ai-studio-acceptance.mjs";
 import {runBriofoldInboxAccess} from "./briofold-inbox-access.mjs";
 
@@ -50,6 +51,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldOnboardingBrowser({origin,browser,control,sessions});
   await runBriofoldInboxAccess({origin,browser,control,sessions});
   await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});
+  await runBriofoldInboxDrafts({origin,browser,control,sessions});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }
