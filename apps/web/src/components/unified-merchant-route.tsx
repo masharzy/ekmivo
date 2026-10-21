@@ -14,12 +14,17 @@ import {UnifiedSectionTabs} from "./unified-section-tabs";
 import {UnifiedDevicesSettings} from "./unified-devices-settings";
 import {BriofoldAiCreditSummary} from "./briofold-ai-credit-summary";
 import {onboardingState} from "../lib/server/briofold-onboarding";
+import {InboxLibrary} from "./inbox-library";
+import {AiStudioPage} from "./ai-studio-page";
+import {WebsiteChatSettings} from "./website-chat-settings";
+import {CommentAutomation} from "./comment-automation";
 
 export const unifiedDynamic="force-dynamic";
 
-export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
- locale:string;root:UnifiedRoot;view?:string[];
+export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread}:{
+ locale:string;root:UnifiedRoot;view?:string[];thread?:string;
 }){
+ if(thread&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(thread))notFound();
  const locale=raw==="en"?"en":"bn";
  const user=await requireUser(locale);
  // Preferred business is rechecked against memberships on every server read.
@@ -39,10 +44,18 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[]}:{
   :undefined;
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :service==="ai"&&(section==="ai-agent"||section==="knowledge")
+   ?<AiStudioPage workspaceId={workspace.id} actorId={user.id} locale={locale} view={section==="knowledge"?"knowledge":"assistant"}/>
+  :service==="ai"&&section==="website"
+   ?<WebsiteChatSettings key={user.id+":"+workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
+  :service==="ai"&&section==="comments"
+   ?<CommentAutomation key={user.id+":"+workspace.id} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}/>
   :kind==="business-profile"
    ?<StoreProfileEditor key={workspace.id} locale={locale} workspaceId={workspace.id} canManage={workspace.role==="owner"||workspace.role==="admin"}/>
+  :service==="ai"&&(section==="saved-replies"||section==="tickets")
+   ?<InboxLibrary key={user.id+":"+workspace.id+":"+section} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} kind={section==="tickets"?"tickets":"replies"}/>
   :kind==="inbox"
-   ?<WorkspaceInbox key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"} role={workspace.role}/>
+   ?<WorkspaceInbox key={user.id+":"+workspace.id} actorId={user.id} workspaceId={workspace.id} initialThread={thread} bn={locale==="bn"} role={workspace.role}/>
    :kind==="channels"
     ?<WorkspaceChannels key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
     :kind==="devices"

@@ -66,7 +66,16 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/inbox-connections", pay.HandleInboxConnection)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connections/{connectionID}/disconnect", pay.HandleInboxConnection)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/comments", pay.HandleComments)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/comments", pay.HandleComments)
+	mux.HandleFunc("POST /v1/channels/website/{siteID}", pay.HandleWebsiteChat)
+	mux.HandleFunc("OPTIONS /v1/channels/website/{siteID}", pay.HandleWebsiteChat)
+	mux.HandleFunc("GET /v1/channels/website/widget.js", pay.HandleWebsiteWidget)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/test", pay.HandleAITest)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/studio-test", pay.HandleStudioTest)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/knowledge-import", pay.HandleKnowledgeImport)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connect", pay.HandleInboxOAuthBegin)
 	mux.HandleFunc("GET /v1/channels/meta/callback", pay.HandleInboxOAuthCallback)
 	mux.HandleFunc("GET /v1/channels/media/{mediaID}", pay.HandleInboxMedia)
@@ -444,6 +453,12 @@ func main() {
 	defer stop()
 	if pg05 != nil && pg05.Pipeline != nil && os.Getenv("INBOX_SENDER_ENABLED") == "true" {
 		go pg05.RunInboxSender(runtimeContext)
+	}
+	if pg05 != nil && os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" {
+		go pg05.RunStudioAI(runtimeContext)
+	}
+	if pg05 != nil && os.Getenv("BRIOFOLD_COMMENTS_ENABLED") == "true" {
+		go pg05.RunComments(runtimeContext)
 	}
 	workerConfigs, workerErr := workerruntime.HostedConfigs(os.Getenv)
 	if workerErr != nil {

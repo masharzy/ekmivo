@@ -2,8 +2,12 @@ package checkout
 
 import (
 	"encoding/json"
+	"errors"
+	"github.com/jackc/pgx/v5/pgconn"
 	"io"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/masharzy/ekmivo/backend/internal/authz"
 )
@@ -16,59 +20,62 @@ func (s *Service) handleMobileInbox(w http.ResponseWriter, r *http.Request, raw 
 	}
 	s.executeInboxRequest(w, r, raw, d, "device")
 }
+
 // Capability comes from a bounded action, never a client-declared role.
 func webInboxCapability(action string) (authz.Capability, bool) {
- switch action {
- case "list", "messages", "profile", "products", "info", "media-get", "read":
-  return authz.InboxRead, true
- case "send", "retry", "media-upload", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
-  return authz.InboxSend, true
- case "ai", "product-save":
-  return authz.InboxManage, true
- default:
-  return "", false
- }
+	switch action {
+	case "ai-review-read", "work-read", "list", "messages", "profile", "products", "info", "media-get", "read":
+		return authz.InboxRead, true
+	case "ai-review-done", "work", "takeover", "release", "ticket", "duty", "work-note", "send", "retry", "media-upload", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
+		return authz.InboxSend, true
+	case "saved-reply", "archive-reply", "ai", "product-save":
+		return authz.InboxManage, true
+	default:
+		return "", false
+	}
 }
 func (s *Service) HandleWebInbox(w http.ResponseWriter, r *http.Request) {
- if r.Method != http.MethodPost || !originAllowed(r) {
-  fail(w, 403, "ORIGIN_DENIED")
-  return
- }
- if s == nil || s.Auth == nil || s.Pipeline == nil || s.Pipeline.Control == nil {
-  fail(w, 503, "INBOX_UNAVAILABLE")
-  return
- }
- c, err := r.Cookie("ekmivo-session")
- if err != nil {
-  authError(w, authz.ErrUnauthorized)
-  return
- }
- actor, err := s.Auth.Authenticate(r.Context(), c.Value)
- if err != nil {
-  authError(w, err)
-  return
- }
- raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 7340032))
- if err != nil {
-  fail(w, 413, "BODY_TOO_LARGE")
-  return
- }
- var request struct { Action string `json:"action"` }
- if json.Unmarshal(raw, &request) != nil {
-  fail(w, 422, "INVALID_REQUEST")
-  return
- }
- capability, valid := webInboxCapability(request.Action)
- if !valid {
-  fail(w, 422, "INVALID_ACTION")
-  return
- }
- workspace, environment := r.PathValue("workspaceID"), explicitRealm(r)
- if _, err = s.Auth.AuthorizeWorkspace(r.Context(), actor, workspace, authz.Environment(environment), capability); err != nil {
-  authError(w, err)
-  return
- }
- s.executeInboxRequest(w, r, raw, mobileIdentity{ID: actor.UserID, Workspace: workspace, Environment: environment}, "user")
+	if r.Method != http.MethodPost || !originAllowed(r) {
+		fail(w, 403, "ORIGIN_DENIED")
+		return
+	}
+	if s == nil || s.Auth == nil || s.Pipeline == nil || s.Pipeline.Control == nil {
+		fail(w, 503, "INBOX_UNAVAILABLE")
+		return
+	}
+	c, err := r.Cookie("ekmivo-session")
+	if err != nil {
+		authError(w, authz.ErrUnauthorized)
+		return
+	}
+	actor, err := s.Auth.Authenticate(r.Context(), c.Value)
+	if err != nil {
+		authError(w, err)
+		return
+	}
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 7340032))
+	if err != nil {
+		fail(w, 413, "BODY_TOO_LARGE")
+		return
+	}
+	var request struct {
+		Action string `json:"action"`
+	}
+	if json.Unmarshal(raw, &request) != nil {
+		fail(w, 422, "INVALID_REQUEST")
+		return
+	}
+	capability, valid := webInboxCapability(request.Action)
+	if !valid {
+		fail(w, 422, "INVALID_ACTION")
+		return
+	}
+	workspace, environment := r.PathValue("workspaceID"), explicitRealm(r)
+	if _, err = s.Auth.AuthorizeWorkspace(r.Context(), actor, workspace, authz.Environment(environment), capability); err != nil {
+		authError(w, err)
+		return
+	}
+	s.executeInboxRequest(w, r, raw, mobileIdentity{ID: actor.UserID, Workspace: workspace, Environment: environment}, "user")
 }
 func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, raw []byte, d mobileIdentity, reader string) {
 	var err error
@@ -94,7 +101,7 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 	if b.Filters == nil {
 		b.Filters = map[string]any{}
 	}
-	if off, ok := b.Filters["offset"].(float64); ok && (off < 0 || off > 10000) {
+	if _, ok := inboxWorkOffset(b.Filters["offset"]); !ok {
 		fail(w, 422, "INVALID_FILTER")
 		return
 	}
@@ -104,6 +111,62 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 	}
 	b.Body["reader_kind"] = reader
 	var result []byte
+	if reader == "user" && (b.Action == "ai-review-read" || b.Action == "ai-review-done") {
+		if b.Action == "ai-review-read" {
+			offset, valid := inboxWorkOffset(b.Filters["offset"])
+			query, _ := b.Filters["q"].(string)
+			if !valid || utf8.RuneCountInString(query) > 100 {
+				fail(w, 422, "INVALID_FILTER")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_ai_review_read($1::uuid,$2,$3::uuid,$4,$5)", d.Workspace, d.Environment, d.ID, offset, query).Scan(&result)
+		} else {
+			job, _ := b.Body["job_id"].(string)
+			key, _ := b.Body["operation_key"].(string)
+			if !uuidPattern.MatchString(job) || !uuidPattern.MatchString(key) {
+				fail(w, 422, "INVALID_OPERATION_KEY")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_ai_review_done($1::uuid,$2,$3::uuid,$4::uuid,$5::uuid)", d.Workspace, d.Environment, d.ID, job, key).Scan(&result)
+		}
+		if err != nil {
+			inboxWorkFailure(w, err)
+			return
+		}
+		write(w, 200, json.RawMessage(result))
+		return
+	}
+	if reader == "user" && (b.Action == "work-read" || b.Action == "work" || b.Action == "takeover" || b.Action == "release" || b.Action == "ticket" || b.Action == "duty" || b.Action == "work-note" || b.Action == "saved-reply" || b.Action == "archive-reply") {
+		if b.Action == "work-read" {
+			offset, valid := inboxWorkOffset(b.Filters["reply_offset"])
+			tickets, ticketValid := inboxWorkOffset(b.Filters["ticket_offset"])
+			history, historyValid := inboxWorkOffset(b.Filters["history_offset"])
+			if !valid || !ticketValid || !historyValid {
+				fail(w, 422, "INVALID_FILTER")
+				return
+			}
+			filters, _ := json.Marshal(b.Filters)
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_inbox_work_read($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7,$8::jsonb)", d.Workspace, d.Environment, d.ID, thread, offset, tickets, history, filters).Scan(&result)
+		} else {
+			key, _ := b.Body["operation_key"].(string)
+			if !uuidPattern.MatchString(key) {
+				fail(w, 422, "INVALID_OPERATION_KEY")
+				return
+			}
+			action := b.Action
+			if action == "work-note" {
+				action = "note"
+			}
+			body, _ := json.Marshal(b.Body)
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_inbox_work_write($1::uuid,$2,$3::uuid,$4::uuid,$5::uuid,$6,$7::jsonb)", d.Workspace, d.Environment, d.ID, thread, key, action, body).Scan(&result)
+		}
+		if err != nil {
+			inboxWorkFailure(w, err)
+			return
+		}
+		write(w, 200, json.RawMessage(result))
+		return
+	}
 	if b.Action == "media-upload" || b.Action == "media-get" {
 		if thread == nil {
 			fail(w, 422, "INVALID_THREAD")
@@ -156,7 +219,7 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 		if b.Action == "send" {
 			text, _ := b.Body["text"].(string)
 			id, _ := b.Body["idempotency_key"].(string)
-			if text == "" || len(text) > 16000 || !uuidPattern.MatchString(id) {
+			if !validInboxText(text) || !uuidPattern.MatchString(id) {
 				fail(w, 422, "INVALID_MESSAGE")
 				return
 			}
@@ -172,4 +235,37 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 		return
 	}
 	write(w, 200, json.RawMessage(result))
+}
+
+func validInboxText(text string) bool {
+	return len(text) <= 32000 && utf8.ValidString(text) && utf8.RuneCountInString(text) <= 8000 && strings.TrimSpace(text) != ""
+}
+func inboxWorkOffset(value any) (int, bool) {
+	if value == nil {
+		return 0, true
+	}
+	n, ok := value.(float64)
+	if !ok || n < 0 || n > 10000 || n != float64(int(n)) {
+		return 0, false
+	}
+	return int(n), true
+}
+
+func inboxWorkFailure(w http.ResponseWriter, err error) {
+	var pg *pgconn.PgError
+	if errors.As(err, &pg) {
+		switch pg.Code {
+		case "40001", "40P01":
+			fail(w, 409, "WORKFLOW_CHANGED")
+			return
+		case "54000":
+			w.Header().Set("Retry-After", "60")
+			fail(w, 429, "WORKFLOW_RATE_LIMIT")
+			return
+		case "22P02", "22007", "22008":
+			fail(w, 422, "INVALID_WORKFLOW")
+			return
+		}
+	}
+	mapped(w, err)
 }

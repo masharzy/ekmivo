@@ -57,7 +57,7 @@ jobs:
         run: node --test scripts/briofold-onboarding-client.test.mjs scripts/signup-transaction-smoke.mjs scripts/briofold-onboarding-contract.test.mjs scripts/briofold-onboarding-actions.test.mjs scripts/briofold-ai-tariff.test.mjs scripts/briofold-topup-proxy.test.mjs scripts/briofold-topup-proof-integrity.test.mjs
       - name: Briofold full AI wallet statement and low balance contract
         working-directory: apps/web
-        run: node --test scripts/briofold-ai-statement.test.mjs
+        run: node --test scripts/briofold-ai-statement.test.mjs scripts/briofold-ai-studio.test.mjs scripts/briofold-inbox-drafts.test.mjs scripts/briofold-inbox-attachments.test.mjs scripts/briofold-studio-requests.test.mjs
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json
@@ -116,6 +116,9 @@ jobs:
       - name: Install browser for real PG05 checkout journeys
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
+      - name: Website widget retry, history, XSS and keyboard acceptance
+        working-directory: apps/web
+        run: node --test scripts/briofold-website-widget.test.mjs
       - name: PG04 independent financial River + realm migration and durability
         working-directory: apps/web
         env:

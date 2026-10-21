@@ -138,41 +138,45 @@ func (s *Service) HandleAITest(w http.ResponseWriter, r *http.Request) {
 	engine := aicredits.Engine{Store: aiExecutionStore{db: s.Auth.DB}, Provider: aicredits.NewOpenRouter(os.Getenv("OPENROUTER_API_KEY")), Codec: aiExecutionCodec{key: s.Pipeline.Key}}
 	result, err := engine.Run(r.Context(), aicredits.Request{Workspace: workspace, Actor: actor.UserID, Key: r.Header.Get("Idempotency-Key"), Model: input.Model, Messages: messages})
 	if err != nil {
-		switch {
-		case errors.Is(err, aicredits.ErrInvalidRequest), errors.Is(err, aicredits.ErrInvalidTariff):
-			fail(w, 422, "INVALID_AI_REQUEST")
-		case errors.Is(err, aicredits.ErrRequestConflict):
-			fail(w, 409, "AI_REQUEST_KEY_CONFLICT")
-		case errors.Is(err, aicredits.ErrPending):
-			fail(w, 409, "AI_REQUEST_RECOVERY_PENDING")
-		case errors.Is(err, aicredits.ErrRejected):
-			fail(w, 422, "AI_PROVIDER_REJECTED")
-		case errors.Is(err, aicredits.ErrWaived):
-			fail(w, 409, "AI_REQUEST_CREDITS_RELEASED")
-		default:
-			var pg *pgconn.PgError
-			if errors.As(err, &pg) {
-				switch pg.Code {
-				case "42501":
-					fail(w, 403, "ACCESS_DENIED")
-					return
-				case "P0001":
-					fail(w, 402, "AI_CREDITS_INSUFFICIENT")
-					return
-				case "P0002":
-					fail(w, 422, "AI_MODEL_NOT_CONFIGURED")
-					return
-				case "54000":
-					fail(w, 429, "AI_CONCURRENCY_LIMIT")
-					return
-				case "22023":
-					fail(w, 422, "AI_REQUEST_LIMIT_EXCEEDED")
-					return
-				}
-			}
-			fail(w, 503, "AI_RUNTIME_UNAVAILABLE")
-		}
+		aiExecutionFailure(w, err)
 		return
 	}
 	write(w, 200, result)
+}
+
+func aiExecutionFailure(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, aicredits.ErrInvalidRequest), errors.Is(err, aicredits.ErrInvalidTariff):
+		fail(w, 422, "INVALID_AI_REQUEST")
+	case errors.Is(err, aicredits.ErrRequestConflict):
+		fail(w, 409, "AI_REQUEST_KEY_CONFLICT")
+	case errors.Is(err, aicredits.ErrPending):
+		fail(w, 409, "AI_REQUEST_RECOVERY_PENDING")
+	case errors.Is(err, aicredits.ErrRejected):
+		fail(w, 422, "AI_PROVIDER_REJECTED")
+	case errors.Is(err, aicredits.ErrWaived):
+		fail(w, 409, "AI_REQUEST_CREDITS_RELEASED")
+	default:
+		var pg *pgconn.PgError
+		if errors.As(err, &pg) {
+			switch pg.Code {
+			case "42501":
+				fail(w, 403, "ACCESS_DENIED")
+				return
+			case "P0001":
+				fail(w, 402, "AI_CREDITS_INSUFFICIENT")
+				return
+			case "P0002":
+				fail(w, 422, "AI_MODEL_NOT_CONFIGURED")
+				return
+			case "54000":
+				fail(w, 429, "AI_CONCURRENCY_LIMIT")
+				return
+			case "22023":
+				fail(w, 422, "AI_REQUEST_LIMIT_EXCEEDED")
+				return
+			}
+		}
+		fail(w, 503, "AI_RUNTIME_UNAVAILABLE")
+	}
 }

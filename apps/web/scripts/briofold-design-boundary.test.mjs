@@ -45,7 +45,11 @@ test("the approved payment dashboard remains a locally scoped visual authority",
 });
 
 test("marketing tokens remain opt-in, not the payment dashboard palette",()=>{
- assert.match(marketingCss,/:where\(\.ek-brand,\.em,body:has\(main\.em\)\)/);
+ const scope=marketingCss.match(/:where\(([^{}]+)\)\s*\{/)?.[1];
+ assert.ok(scope,"Missing opt-in marketing token scope");
+ const selectors=scope.split(",").map(selector=>selector.trim());
+ for(const required of [".ek-brand",".em","body:has(main.em)"])assert.ok(selectors.includes(required),`Missing marketing scope: ${required}`);
+ for(const selector of selectors)assert.ok([".ek-brand",".em",".ekm-landing","body:has(main.em)","body:has(main.ekm-landing)"].includes(selector),`Unscoped marketing tokens: ${selector}`);
  assert.doesNotMatch(marketingCss,/(?:^|\n)\s*:root\s*\{\s*--brand-/);
  assert.match(homeDarkCss,/:root\[data-theme="dark"\]\s+\.em/);
  assert.match(paymentCss,/--color-canvas:#fafafa/);

@@ -75,6 +75,7 @@ func (s *Service) HandleInboxOAuthBegin(w http.ResponseWriter, r *http.Request) 
 	}
 	var b struct {
 		Provider string `json:"provider"`
+		Comments bool   `json:"comments"`
 	}
 	if decodeBounded(w, r, &b, 512) != nil || !(b.Provider == "wa" || b.Provider == "ig" || b.Provider == "ms") {
 		fail(w, 422, "INVALID_CHANNEL")
@@ -96,7 +97,11 @@ func (s *Service) HandleInboxOAuthBegin(w http.ResponseWriter, r *http.Request) 
 		fail(w, 503, "ENTROPY_UNAVAILABLE")
 		return
 	}
-	if _, err = s.Pipeline.Control.Exec(r.Context(), "SELECT inbox_oauth_begin($1,$2::uuid,$3,$4::uuid,$5)", digest(state), ws, e, actor.UserID, b.Provider); err != nil {
+	beginQuery := "SELECT inbox_oauth_begin($1,$2::uuid,$3,$4::uuid,$5)"
+	if b.Comments {
+		beginQuery = "SELECT briofold_comment_oauth_begin($1,$2::uuid,$3,$4::uuid,$5)"
+	}
+	if _, err = s.Pipeline.Control.Exec(r.Context(), beginQuery, digest(state), ws, e, actor.UserID, b.Provider); err != nil {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
@@ -112,6 +117,12 @@ func (s *Service) HandleInboxOAuthBegin(w http.ResponseWriter, r *http.Request) 
 		scope := "pages_show_list,pages_manage_metadata,pages_messaging"
 		if b.Provider == "ig" {
 			scope += ",instagram_basic,instagram_manage_messages"
+		}
+		if b.Comments {
+			scope += ",pages_read_engagement,pages_manage_engagement"
+			if b.Provider == "ig" {
+				scope += ",instagram_manage_comments"
+			}
 		}
 		query.Set("scope", scope)
 	}
@@ -151,6 +162,7 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 		Workspace   string `json:"workspace_id"`
 		Environment string `json:"environment"`
 		Provider    string `json:"provider"`
+		Comments    bool   `json:"comment_access"`
 	}
 	if json.Unmarshal(scope, &target) != nil {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
@@ -244,9 +256,20 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 		if target.Provider != "wa" {
 			fields = "messages,messaging_postbacks,message_deliveries,message_reads"
 		}
+		if target.Comments && target.Provider == "ms" {
+			fields += ",feed"
+		}
 		if err = metaSubscribe(r, version, account, key, fields); err != nil {
 			fail(w, 503, "CHANNEL_SUBSCRIPTION_UNAVAILABLE")
 			return
+		}
+	}
+	if target.Comments && target.Provider == "ig" {
+		for account, key := range accounts {
+			if err = metaSubscribe(r, version, account, key, "comments"); err != nil {
+				fail(w, 503, "COMMENT_SUBSCRIPTION_UNAVAILABLE")
+				return
+			}
 		}
 	}
 	tx, err := s.Pipeline.Control.Begin(r.Context())
