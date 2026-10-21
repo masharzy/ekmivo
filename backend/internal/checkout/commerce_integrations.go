@@ -242,6 +242,9 @@ func (s *Service) HandleCommerceAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet {
+		if !s.budget(w, "commerce-api-read:"+cred.WorkspaceID, 120) {
+			return
+		}
 		off := 0
 		var parseErr error
 		if value := r.URL.Query().Get("cursor"); value != "" {
@@ -276,6 +279,10 @@ func (s *Service) HandleCommerceAPI(w http.ResponseWriter, r *http.Request) {
 	if !s.budget(w, "commerce-api:"+cred.WorkspaceID, 60) {
 		return
 	}
+	if !validCommerceAPIBody(b) {
+		fail(w, 422, "INVALID_ORDER_LINES_OR_RECIPIENT")
+		return
+	}
 	encoded, _ := json.Marshal(b)
 	var raw []byte
 	if err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_api_write($1::uuid,$2,$3::uuid,$4::uuid,$5::jsonb)", cred.WorkspaceID, realm, cred.KeyID, key, encoded).Scan(&raw); err != nil {
@@ -283,4 +290,37 @@ func (s *Service) HandleCommerceAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, 201, json.RawMessage(raw))
+}
+
+// API schemas reject caller-owned prices even inside line items. A number is
+// accepted only when it is an exact bounded integer in the decoded JSON.
+func validCommerceAPIBody(b map[string]any) bool {
+	lines, ok := b["lines"].([]any)
+	if !ok || len(lines) < 1 || len(lines) > 100 {
+		return false
+	}
+	for _, raw := range lines {
+		line, ok := raw.(map[string]any)
+		if !ok || len(line) != 2 {
+			return false
+		}
+		id, ok := line["variant_id"].(string)
+		if !ok || !uuidPattern.MatchString(id) {
+			return false
+		}
+		q, ok := line["quantity"].(float64)
+		if !ok || q < 1 || q > 10000 || q != float64(int64(q)) {
+			return false
+		}
+	}
+	recipient, ok := b["recipient"].(map[string]any)
+	if !ok || len(recipient) != 3 {
+		return false
+	}
+	for _, key := range []string{"name", "phone", "address"} {
+		if _, ok := recipient[key].(string); !ok {
+			return false
+		}
+	}
+	return true
 }

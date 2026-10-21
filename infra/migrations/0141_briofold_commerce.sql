@@ -168,7 +168,7 @@ BEGIN
    FOR l IN SELECT * FROM commerce_lines WHERE order_id=cid ORDER BY variant_id LOOP PERFORM commerce_move(w,e,a,o.warehouse_id,l.variant_id,-l.quantity,-l.quantity,'Order shipped',cid);END LOOP;
    UPDATE commerce_coupon_claims SET status='redeemed' WHERE order_id=cid;
   ELSIF next_state='delivered' THEN UPDATE commerce_deliveries SET status='delivered',revision=revision+1 WHERE order_id=cid;END IF;
-  IF next_state='cancelled' AND EXISTS(SELECT 1 FROM commerce_deliveries WHERE order_id=cid AND status NOT IN ('ready','cancelled')) THEN RAISE EXCEPTION 'Resolve courier booking before cancellation' USING ERRCODE='23514';END IF;
+  IF next_state IN ('cancelled','hold') AND EXISTS(SELECT 1 FROM commerce_deliveries WHERE order_id=cid AND status NOT IN ('ready','cancelled')) THEN RAISE EXCEPTION 'Resolve courier booking before cancellation' USING ERRCODE='23514';END IF;
   UPDATE commerce_orders SET status=next_state,revision=revision+1,updated_at=now() WHERE id=cid;
  ELSIF act IN ('courier-read','courier-status-record') THEN
   SELECT * INTO d FROM commerce_deliveries WHERE id=cid AND workspace_id=w AND environment=e;
@@ -179,6 +179,7 @@ BEGIN
   SELECT * INTO d FROM commerce_deliveries WHERE id=cid AND workspace_id=w AND environment=e FOR UPDATE;
   SELECT * INTO o FROM commerce_orders WHERE id=d.order_id;
   IF d.id IS NULL OR d.provider<>'steadfast' OR d.status<>'ready' OR o.status NOT IN ('confirmed','packed') OR e<>'live' THEN RAISE EXCEPTION 'Courier booking unavailable; reconcile existing attempt' USING ERRCODE='23514';END IF;
+  IF coalesce(o.recipient->>'phone','')!~'^(\+?88)?01[3-9][0-9]{8}$' OR length(coalesce(o.recipient->>'name',''))>100 THEN RAISE EXCEPTION 'Steadfast requires Bangladesh recipient phone and name within 100 characters' USING ERRCODE='22023';END IF;
   UPDATE commerce_deliveries SET status='booking',revision=revision+1 WHERE id=cid;
   res:=jsonb_build_object('id',cid,'order_id',o.id,'recipient',o.recipient,'reference',o.reference,'cod_minor',d.cod_minor,'notes',o.notes,'revision',d.revision+1,'replayed',false);
  ELSIF act='delivery' THEN
@@ -193,7 +194,7 @@ BEGIN
   IF next_state IS NULL OR NOT ((d.status='ready' AND next_state IN ('booking','booked','cancelled')) OR (d.status='booking' AND next_state IN ('booked','unknown','cancelled')) OR (d.status='unknown' AND next_state IN ('booked','cancelled')) OR (d.status='booked' AND next_state IN ('handed-over','cancelled')) OR (d.status IN ('handed-over','delivered') AND next_state='returned')) THEN RAISE EXCEPTION 'Invalid delivery transition; reconcile unknown outcomes first' USING ERRCODE='22023';END IF;
   IF next_state='booked' AND length(btrim(coalesce(b->>'consignment',''))) NOT BETWEEN 1 AND 120 THEN RAISE EXCEPTION 'Courier consignment required' USING ERRCODE='22023';END IF;
   IF next_state='handed-over' AND length(btrim(coalesce(b->>'receipt',''))) NOT BETWEEN 3 AND 500 THEN RAISE EXCEPTION 'Handover receipt required' USING ERRCODE='22023';END IF;
-  IF d.status IN ('booking','unknown') AND next_state='cancelled' AND (b->>'confirmed_no_booking') IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'Confirm provider has no active consignment' USING ERRCODE='22023';END IF;
+  IF d.status IN ('booking','unknown','booked') AND next_state='cancelled' AND (b->>'confirmed_no_booking') IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'Confirm provider has no active consignment' USING ERRCODE='22023';END IF;
   UPDATE commerce_deliveries SET status=next_state,consignment=coalesce(b->>'consignment',consignment),tracking_url=coalesce(b->>'tracking_url',tracking_url),handover_receipt=coalesce(b->>'receipt',handover_receipt),revision=revision+1 WHERE id=cid;
  ELSIF act='cod-receipt' THEN
   IF role_name NOT IN ('owner','admin') THEN RAISE EXCEPTION 'COD manager required' USING ERRCODE='42501';END IF;
