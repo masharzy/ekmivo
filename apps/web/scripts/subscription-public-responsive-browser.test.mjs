@@ -12,8 +12,8 @@ const require=createRequire(new URL("../package.json",import.meta.url));
 const ts=require("typescript"),React=require("react"),jsx=require("react/jsx-runtime"),htmlServer=require("react-dom/server");
 const tsx=readFileSync(new URL("../src/components/subscription-offer-pricing.tsx",import.meta.url),"utf8");
 const compiled=ts.transpileModule(tsx,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
-const module={exports:{}};
-runInNewContext(compiled,{module,exports:module.exports,require:name=>{
+const isolatedModule={exports:{}};
+runInNewContext(compiled,{module:isolatedModule,exports:isolatedModule.exports,require:name=>{
  if(name==="react")return React;
  if(name==="react/jsx-runtime")return jsx;
  if(name==="../lib/public-subscription-offers")return {priceInBdt,annualOfferSavings};
@@ -31,7 +31,7 @@ const screenshots=resolve("test-results","subscription-pricing");
 mkdirSync(screenshots,{recursive:true});
 const baseCSS="*{box-sizing:border-box}html,body{margin:0;padding:0;max-width:100%}body{font:16px/1.5 system-ui,sans-serif;padding:16px;background:var(--color-canvas)}main{width:min(1120px,100%);margin:0 auto}";
 function markup(locale){
- const component=React.createElement(module.exports.SubscriptionOfferPricing,{offers,locale});
+ const component=React.createElement(isolatedModule.exports.SubscriptionOfferPricing,{offers,locale});
  return htmlServer.renderToStaticMarkup(component);
 }
 test("published price cards fit narrow-to-desktop, Bengali/English and both themes",async t=>{
