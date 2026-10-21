@@ -86,7 +86,20 @@ export async function workspacesFor(userId:string):Promise<Workspace[]>{
 
 const DEFAULT_WORKSPACE_COOKIE="ekmivo-default-workspace";
 const YEAR=365*24*60*60;
+export async function primaryStoreFor(userId:string):Promise<string|null>{
+ // Old offline development databases may predate the additive 0133 migration.
+ // Never suppress permissions/connection errors (only PostgreSQL undefined_table).
+ try{
+  const rows=await database()`SELECT workspace_id FROM platform_primary_stores WHERE user_id=${userId}::uuid LIMIT 1`;
+  return rows.length?String(rows[0].workspace_id):null;
+ }catch(error){
+  if(error && typeof error==="object" && "code" in error && error.code==="42P01")return null;
+  throw error;
+ }
+}
 export async function selectDefaultWorkspace(userId:string,workspaceId:string){
+ const bound=await primaryStoreFor(userId);
+ if(bound && workspaceId!==bound)return false;
  const rows=await database()`SELECT 1 FROM workspace_members WHERE user_id=${userId}::uuid AND workspace_id=${workspaceId}::uuid LIMIT 1`;
  if(!rows.length)return false;
  (await cookies()).set(DEFAULT_WORKSPACE_COOKIE,userId+":"+workspaceId,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:YEAR});
@@ -95,6 +108,10 @@ export async function selectDefaultWorkspace(userId:string,workspaceId:string){
 export async function preferredWorkspaceFor(userId:string){
  const spaces=await workspacesFor(userId);
  if(!spaces.length)return null;
+ // The primary Store always wins over an old default-workspace cookie. Legacy
+ // multi-workspace accounts without a binding retain their compatibility path.
+ const bound=await primaryStoreFor(userId);
+ if(bound)return spaces.find(space=>space.id===bound)??null;
  const encoded=(await cookies()).get(DEFAULT_WORKSPACE_COOKIE)?.value||"";
  const chosen=encoded.startsWith(userId+":")?encoded.slice(userId.length+1):"";
  return spaces.find(w=>w.id===chosen)??spaces[0];
