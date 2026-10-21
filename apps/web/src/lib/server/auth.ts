@@ -116,7 +116,7 @@ export async function preferredWorkspaceFor(userId:string){
 }
 export const requireWorkspace=cache(async function requireWorkspace(locale:"bn"|"en",id:string){
  const user=await requireUser(locale);
- if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))redirect("/workspaces");
+ if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))redirect("/workspaces");
  // Direct /w/UUID links must obey the same one-Store binding as the sidebar.
  const bound=await primaryStoreFor(user.id);
  if(bound&&bound!==id)redirect("/dashboard");
