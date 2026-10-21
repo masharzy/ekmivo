@@ -34,7 +34,7 @@ export function LandingPricing({locale,pricing}:{locale:Locale;pricing?:ReactNod
   return <>
     <div className="hd">
       <h2>{t("Plans follow your successful payments.")}</h2>
-      <p>{t("Only confirmed payments count. Created, attempted, failed and cancelled payments don't, and the allowance resets every billing cycle. The AI bot is pay as you go: ৳30 free once when you sign up, then recharge your credit.")}</p>
+      <p>{locale==="bn"?"শুধু সফলভাবে যাচাই করা পেমেন্ট প্ল্যানের allowance-এ গণনা হয়। AI ক্রেডিট আলাদাভাবে প্রিপেইড রিচার্জ করা যায়; মূল্য ও মেয়াদ প্রকাশিত প্ল্যান অনুযায়ী দেখানো হবে।":"Only successfully verified payments count against plan allowances. AI credits are separately prepaid; pricing and periods follow the published catalog."}</p>
     </div>
     <div className="ptabs" role="tablist" aria-label={t("Pricing")}>{sections.map(({id,label})=><button
       key={id} role="tab" type="button" id={`ekm-tab-${id}`} aria-controls={`ekm-panel-${id}`}
