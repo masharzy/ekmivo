@@ -294,6 +294,13 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if fresh {
+		for _, comment := range parseComments(raw) {
+			var accepted bool
+			if err = tx.QueryRow(r.Context(), "SELECT briofold_comment_ingest($1,$2,$3,$4,$5,$6,$7)", provider, comment.Account, comment.ID, comment.Post, comment.Author, comment.Text, comment.Removed).Scan(&accepted); err != nil {
+				fail(w, 503, "SOURCE_UNAVAILABLE")
+				return
+			}
+		}
 		if err = s.persistInboxMedia(r.Context(), tx, provider, raw); err != nil {
 			fail(w, 503, "SOURCE_UNAVAILABLE")
 			return
@@ -308,6 +315,7 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 
 // An ambiguous timeout is UNCERTAIN, never silently auto-resends a customer message.
 func (s *Service) RunInboxSender(ctx context.Context) {
+	ticks := 0
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
@@ -315,8 +323,12 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			ticks++
 			if s.Pipeline != nil && s.Pipeline.Control != nil {
 				s.sendInboxPush(ctx)
+				if ticks%10 == 0 {
+					_, _ = s.Pipeline.Control.Exec(ctx, "SELECT briofold_inbox_alert_sweep()")
+				}
 			}
 			var raw []byte
 			if s.Pipeline == nil || s.Pipeline.Control == nil {

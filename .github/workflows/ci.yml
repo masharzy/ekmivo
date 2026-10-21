@@ -116,6 +116,9 @@ jobs:
       - name: Install browser for real PG05 checkout journeys
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
+      - name: Website widget retry, history, XSS and keyboard acceptance
+        working-directory: apps/web
+        run: node --test scripts/briofold-website-widget.test.mjs
       - name: PG04 independent financial River + realm migration and durability
         working-directory: apps/web
         env:

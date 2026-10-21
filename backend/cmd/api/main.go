@@ -68,6 +68,8 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/comments", pay.HandleComments)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/comments", pay.HandleComments)
 	mux.HandleFunc("POST /v1/channels/website/{siteID}", pay.HandleWebsiteChat)
 	mux.HandleFunc("OPTIONS /v1/channels/website/{siteID}", pay.HandleWebsiteChat)
 	mux.HandleFunc("GET /v1/channels/website/widget.js", pay.HandleWebsiteWidget)
@@ -454,6 +456,9 @@ func main() {
 	}
 	if pg05 != nil && os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" {
 		go pg05.RunStudioAI(runtimeContext)
+	}
+	if pg05 != nil && os.Getenv("BRIOFOLD_COMMENTS_ENABLED") == "true" {
+		go pg05.RunComments(runtimeContext)
 	}
 	workerConfigs, workerErr := workerruntime.HostedConfigs(os.Getenv)
 	if workerErr != nil {
