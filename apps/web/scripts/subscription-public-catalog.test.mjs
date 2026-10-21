@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {parsePublishedSubscriptionOffer,priceInBdt} from "../src/lib/public-subscription-offers.ts";
+import {annualOfferSavings,parsePublishedSubscriptionOffer,priceInBdt} from "../src/lib/public-subscription-offers.ts";
 const read=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
 const row={
  key:"payments_starter_monthly",version_id:"b2f21b52-dff6-4abd-9152-b13475a2a62b",
@@ -21,6 +21,10 @@ test("catalog maps approved exact money and three distinct product/term rules",(
  assert.equal(priceInBdt("10001","en"),"৳100.01");
  assert.equal(priceInBdt("10000","en"),"৳100");
  assert.equal(priceInBdt("1","en"),"৳0.01");
+ assert.equal(annualOfferSavings("10000","110000"),"10000");
+ assert.equal(annualOfferSavings("10000","120000"),null);
+ assert.equal(annualOfferSavings("10000","130000"),null);
+ assert.equal(annualOfferSavings("bad","110000"),null);
  assert.throws(()=>priceInBdt("1.5","en"));
 });
 test("public query has a strict published-current-version, visible Gateway and tenant-free boundary",()=>{

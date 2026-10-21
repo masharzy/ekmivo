@@ -57,7 +57,7 @@ jobs:
         run: node --test scripts/primary-store-binding-contract.test.mjs
       - name: Published subscription pricing contracts (Phase 2)
         working-directory: apps/web
-        run: node --test scripts/subscription-public-catalog.test.mjs scripts/subscription-public-quote.test.mjs
+        run: node --test scripts/subscription-public-catalog.test.mjs scripts/subscription-public-quote.test.mjs scripts/subscription-offer-render.test.mjs
       - name: Briofold Phase 4 and 5 onboarding and prepaid safety contract
         working-directory: apps/web
         run: node --test scripts/briofold-onboarding-client.test.mjs scripts/signup-transaction-smoke.mjs scripts/briofold-onboarding-contract.test.mjs scripts/briofold-onboarding-actions.test.mjs scripts/briofold-ai-tariff.test.mjs scripts/briofold-topup-proxy.test.mjs scripts/briofold-topup-proof-integrity.test.mjs

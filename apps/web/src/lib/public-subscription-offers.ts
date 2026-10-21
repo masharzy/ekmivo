@@ -41,9 +41,16 @@ export function parsePublishedSubscriptionOffer(raw:unknown):PublishedSubscripti
   amount_minor,currency:"BDT",gateway_plan_version_id,name,name_bn,description,description_bn,included_ai_credits};
 }
 export function priceInBdt(minorUnits:string,locale:"en"|"bn"):string{
- if(!/^[0-9]{1,12}$/.test(minorUnits))throw Error("Invalid minor-unit amount");
+ if(!/^[0-9]{1,16}$/.test(minorUnits))throw Error("Invalid minor-unit amount");
  const value=BigInt(minorUnits),language=locale==="bn"?"bn-BD":"en-BD";
  const whole=new Intl.NumberFormat(language).format(value/BigInt(100));
  const fraction=new Intl.NumberFormat(language,{useGrouping:false,minimumIntegerDigits:2}).format(Number(value%BigInt(100)));
  return "৳"+whole+(value%BigInt(100)===BigInt(0)?"":"."+fraction);
+}
+
+/** Informational exact-money comparison, ONLY for admin-published same-plan monthly+yearly pairs. */
+export function annualOfferSavings(monthlyMinor:string,yearlyMinor:string):string|null {
+ if(!/^[1-9][0-9]{0,11}$/.test(monthlyMinor)||!/^[1-9][0-9]{0,11}$/.test(yearlyMinor))return null;
+ const difference=BigInt(monthlyMinor)*BigInt(12)-BigInt(yearlyMinor);
+ return difference>BigInt(0)?difference.toString():null;
 }
