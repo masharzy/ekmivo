@@ -1,78 +1,57 @@
-/* Shared, opt-in Ekmivo brand roles. Import this file and add .ek-brand to a
- * future consumer; product dashboards are deliberately not opted in.
- * .em and its surrounding home chrome are the only current consumers.
- * Missing data-theme means System; explicit Light always wins over the OS. */
-:where(.ek-brand,.em,body:has(main.em)){
- --brand-bg:#fcfbf6;
- --brand-surface:#fffefa;
- --brand-surface-raised:#fffefa;
- --brand-text:#17233b;
- --brand-text-muted:#59657b;
- --brand-border:#d3dce1;
- --brand-accent:#ffd65f;
- --brand-accent-contrast:#19243a;
- --brand-highlight:#f5c8bf;
- --brand-tint-blue:#e1f1fa;
- --brand-tint-yellow:#fff0ad;
- --brand-tint-cream:#f5f1e7;
- --brand-tint-edge:#aacfe2;
- --brand-action:#17233b;
- --brand-action-contrast:#fffefa;
- --brand-stroke:#17233b;
- --brand-mask:#000;
- --brand-shadow:0 24px 54px rgb(35 49 69 / 9%);
- --brand-shadow-hover:0 10px 0 rgb(28 45 70 / 10%);
- --brand-shadow-card-hover:0 26px 60px rgb(0 0 0 / 13%);
- --brand-shadow-pill:0 3px 9px #0001;
- --brand-shadow-deck:0 22px 36px rgb(35 49 69 / 7%);
+/* Ekmivo marketing aliases. Canonical Light/Dark/System values live in
+ * docs/design/tokens.css. Dashboard/admin component palettes stay separate. */
+:where(.ek-brand, .em, .ekm-landing, body:has(main.em), body:has(main.ekm-landing)) {
+  --brand-bg: var(--color-canvas);
+  --brand-surface: var(--color-surface);
+  --brand-surface-raised: var(--color-card);
+  --brand-text: var(--color-text);
+  --brand-text-muted: var(--color-text-secondary);
+  --brand-border: var(--color-border);
+  --brand-accent: var(--color-accent);
+  --brand-accent-contrast: var(--color-on-accent);
+  --brand-highlight: var(--color-accent-peach);
+  --brand-tint-blue: var(--color-accent-blue);
+  --brand-tint-yellow: var(--color-accent-soft);
+  --brand-tint-cream: var(--color-surface-subtle);
+  --brand-tint-edge: var(--color-border);
+  --brand-action: var(--color-primary);
+  --brand-action-contrast: var(--color-on-primary);
+  --brand-stroke: var(--color-text);
+  --brand-mask: #000;
+  --brand-shadow: 0 24px 54px rgb(10 31 18 / 9%);
+  --brand-shadow-hover: 0 10px 0 rgb(10 31 18 / 10%);
+  --brand-shadow-card-hover: 0 26px 60px rgb(0 0 0 / 13%);
+  --brand-shadow-pill: 0 3px 9px rgb(0 0 0 / 7%);
+  --brand-shadow-deck: 0 22px 36px rgb(10 31 18 / 7%);
+
+  /* Names in the supplied immutable landing reference. */
+  --bg: var(--color-canvas);
+  --soft: var(--color-surface-subtle);
+  --ink: var(--color-text);
+  --mute: var(--color-text-secondary);
+  --line: var(--color-border);
+  --ac: var(--color-accent);
+  --acx: var(--color-accent-readable);
+  --forest: var(--color-forest);
+  --onf: var(--color-on-forest);
+  --card: var(--color-card);
+  --warn: var(--color-warning);
 }
-:root[data-theme="dark"] :where(.ek-brand,.em,body:has(main.em)){
- --brand-bg:#121110;
- --brand-surface:#171614;
- --brand-surface-raised:#1c1b18;
- --brand-text:#f5f1e8;
- --brand-text-muted:#b9b6ad;
- --brand-border:rgb(255 255 255 / 14%);
- --brand-accent:#ffd65f;
- --brand-accent-contrast:#19243a;
- --brand-highlight:rgb(211 133 145 / 30%);
- --brand-tint-blue:#0f1a24;
- --brand-tint-yellow:#241d0c;
- --brand-tint-cream:#23211c;
- --brand-tint-edge:#334958;
- --brand-action:#f5f1e8;
- --brand-action-contrast:#17233b;
- --brand-stroke:#f5f1e8;
- --brand-mask:#000;
- --brand-shadow:0 22px 52px rgb(0 0 0 / 35%);
- --brand-shadow-hover:0 10px 0 rgb(0 0 0 / 24%);
- --brand-shadow-card-hover:0 26px 60px rgb(0 0 0 / 45%);
- --brand-shadow-pill:0 3px 9px rgb(0 0 0 / 24%);
- --brand-shadow-deck:0 22px 36px rgb(0 0 0 / 25%);
+
+/* Only shadows need a separate marketing-specific dark treatment. */
+:root[data-theme="dark"] :where(.ek-brand, .em, .ekm-landing, body:has(main.em), body:has(main.ekm-landing)) {
+  --brand-shadow: 0 22px 52px rgb(0 0 0 / 35%);
+  --brand-shadow-hover: 0 10px 0 rgb(0 0 0 / 24%);
+  --brand-shadow-card-hover: 0 26px 60px rgb(0 0 0 / 45%);
+  --brand-shadow-pill: 0 3px 9px rgb(0 0 0 / 24%);
+  --brand-shadow-deck: 0 22px 36px rgb(0 0 0 / 25%);
 }
-@media(prefers-color-scheme:dark){
-:root:not([data-theme="light"]):not([data-theme="dark"]) :where(.ek-brand,.em,body:has(main.em)){
- --brand-bg:#121110;
- --brand-surface:#171614;
- --brand-surface-raised:#1c1b18;
- --brand-text:#f5f1e8;
- --brand-text-muted:#b9b6ad;
- --brand-border:rgb(255 255 255 / 14%);
- --brand-accent:#ffd65f;
- --brand-accent-contrast:#19243a;
- --brand-highlight:rgb(211 133 145 / 30%);
- --brand-tint-blue:#0f1a24;
- --brand-tint-yellow:#241d0c;
- --brand-tint-cream:#23211c;
- --brand-tint-edge:#334958;
- --brand-action:#f5f1e8;
- --brand-action-contrast:#17233b;
- --brand-stroke:#f5f1e8;
- --brand-mask:#000;
- --brand-shadow:0 22px 52px rgb(0 0 0 / 35%);
- --brand-shadow-hover:0 10px 0 rgb(0 0 0 / 24%);
- --brand-shadow-card-hover:0 26px 60px rgb(0 0 0 / 45%);
- --brand-shadow-pill:0 3px 9px rgb(0 0 0 / 24%);
- --brand-shadow-deck:0 22px 36px rgb(0 0 0 / 25%);
-}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) :where(.ek-brand, .em, .ekm-landing, body:has(main.em), body:has(main.ekm-landing)) {
+    --brand-shadow: 0 22px 52px rgb(0 0 0 / 35%);
+    --brand-shadow-hover: 0 10px 0 rgb(0 0 0 / 24%);
+    --brand-shadow-card-hover: 0 26px 60px rgb(0 0 0 / 45%);
+    --brand-shadow-pill: 0 3px 9px rgb(0 0 0 / 24%);
+    --brand-shadow-deck: 0 22px 36px rgb(0 0 0 / 25%);
+  }
 }

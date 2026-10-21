@@ -1,7 +1,22 @@
 import Link from "next/link";
 import {featureLabels,limitLabels,planName,planPrice,type PaymentPlan} from "../lib/payment-plans";
-export function PaymentPlanCards({plans,locale,preview=false}:{plans:PaymentPlan[];locale:"en"|"bn";preview?:boolean}){
+export function PaymentPlanCards({plans,locale,preview=false,variant="default"}:{plans:PaymentPlan[];locale:"en"|"bn";preview?:boolean;variant?:"default"|"landing"}){
  const bn=locale==="bn",t=(en:string,b:string)=>bn?b:en;
+ if(variant==="landing")return <div className="p4">
+ {plans.map(plan=>{
+   const x=plan.terms, custom=x.kind==="custom", featured=!!x.badge||!!x.badge_bn;
+   const href=custom?(x.contact_url||`/${locale}/#contact`):`/${locale}/subscribe/${encodeURIComponent(plan.id)}`;
+   return <article className={`pcard${featured?" rec":""}`} key={plan.id}>
+     <div className="pt"><h3 title={planName(x,bn)}>{planName(x,bn)}</h3>{featured&&<span className="bd">{bn&&x.badge_bn?x.badge_bn:x.badge}</span>}</div>
+     <div className="amt">{custom?t("Let's talk","কথা বলুন"):planPrice(x,bn)}{x.kind==="paid"&&<small>{t(` / ${x.period_days} days`,` / ${x.period_days} দিন`)}</small>}</div>
+     <ul>
+       <li>{x.payment_limit===null?t("Custom volume and terms","নিজের ভলিউম ও শর্ত অনুযায়ী") : t(`${x.payment_limit.toLocaleString("en-US")} successful payments`,`${x.payment_limit.toLocaleString("en-US")}টি সফল পেমেন্ট`)}</li>
+       {Object.entries(featureLabels).filter(([key])=>x.features[key as keyof typeof x.features]).slice(0,5).map(([key,labels])=><li key={key}>{labels[bn?1:0]}</li>)}
+     </ul>
+     {preview?<span className="btn out">{t("Plan preview","প্ল্যান প্রিভিউ")}</span>:<Link prefetch={false} className={`btn${featured?" lime":" out"}`} href={href}>{custom?t("Contact us","যোগাযোগ করুন"):x.kind==="free"?t("Start free","ফ্রি শুরু করুন"):t("Choose plan","প্ল্যান বেছে নিন")}</Link>}
+   </article>;
+ })}
+ </div>;
  return <div className="mp-price-grid">{plans.map(p=>{const x=p.terms;const href=x.kind==="custom"?(x.contact_url||`/${locale}/#contact`):`/${locale}/subscribe/${encodeURIComponent(p.id)}`;
  return <article className={"mp-price-card"+(x.badge?" mp-highlight":"")} key={p.id}>
   {(x.badge||x.badge_bn)&&<span className="mp-badge">{bn&&x.badge_bn?x.badge_bn:x.badge}</span>}

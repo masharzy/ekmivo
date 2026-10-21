@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
+import { Figtree, Outfit } from "next/font/google";
 import "@fontsource-variable/geist";
 import "./globals.css";
 import {InterfaceLocaleProvider} from "../components/interface-locale-provider";
@@ -16,6 +17,9 @@ const hindSiliguri = localFont({
   display: "swap",
 });
 
+const outfit = Outfit({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-outfit", display: "swap" });
+const figtree = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-figtree", display: "swap" });
+
 export const metadata: Metadata = {
   title: "Ekmivo — Conversations and commerce, together",
   description: "A clearer workspace for customer conversations, AI assistance, orders and automatic payment verification.",
@@ -26,5 +30,5 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const cookieLocale = requestHeaders.get("cookie")?.match(/(?:^|;\s*)ekmivo-locale=(en|bn)(?:;|$)/)?.[1];
   const locale = requestHeaders.get("x-ekmivo-locale") === "en" ? "en" : requestHeaders.get("x-ekmivo-locale") === "bn" ? "bn" : cookieLocale === "bn" ? "bn" : "en";
   const theme = requestHeaders.get("cookie")?.match(/(?:^|;\s*)ekmivo-theme=(light|dark)(?:;|$)/)?.[1];
-  return <html lang={locale} data-theme={theme} className={hindSiliguri.variable} suppressHydrationWarning><body><InterfaceLocaleProvider locale={locale}>{children}</InterfaceLocaleProvider></body></html>;
+  return <html lang={locale} data-theme={theme} className={`${hindSiliguri.variable} ${outfit.variable} ${figtree.variable}`} suppressHydrationWarning><body><InterfaceLocaleProvider locale={locale}>{children}</InterfaceLocaleProvider></body></html>;
 }

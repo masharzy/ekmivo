@@ -1,308 +1,814 @@
 "use client";
+import { useEffect } from "react";
+import type { CSSProperties } from "react";
+import copy from "../../lib/landing-copy-pairs.json";
+import { LandingSprite } from "./landing-sprite";
+import { LandingPricing } from "./landing-pricing";
+type Locale = "en" | "bn";
+const translation = new Map(copy.pairs.map(p => [p.en, p.bn] as const));
 
-import { useState } from "react";
-import Link from "next/link";
-import type { LandingLocale } from "../../lib/landing-content";
-
-type Locale = LandingLocale;
-type WorkflowMode = "payments" | "ai";
-
-const copy = {
- en: {
-  eyebrow: "PAYMENTS  /  CUSTOMER CONVERSATIONS",
-  heroLine1: "GET PAID.",
-  heroLine2: "KEEP MOVING.",
-  heroLead: "Manage payment links, invoices and checkout for your business. Ekmivo verifies eligible wallet receipts, while an AI workspace for customer conversations is in development.",
-  explore: "Explore payments", aiAction: "Discover AI workspace", scroll: "Explore services",
-  serviceEyebrow: "01 / WHAT YOU CAN DO", servicesTitle: "Payments or AI.", servicesMarked: "Your choice.",
-  servicesLead: "Use payment tools on their own, or explore what’s coming to customer communication.",
-  payNumber: "01 / PAYMENTS", payName: "Links, invoices or checkout.",
-  payBody: "Create payment requests through links, invoices, or checkout on your website or app. Keep track of payment status without relying on customer screenshots.",
-  payBullets: ["Links, invoices & hosted checkout", "bKash, Nagad & Rocket payment options", "Receipt-based payment verification", "Merchant API, status checks & webhooks"],
-  payExplore: "Explore payments", aiNumber: "02 / AI WORKSPACE", aiName: "Make room for better conversations.",
-  aiBody: "An upcoming workspace for customer messages, AI-assisted answers and smooth handover to your team.",
-  aiBullets: ["Unified customer inbox", "Business-aware AI assistance", "Human handover", "Follow-ups & customer context"],
-  aiExplore: "See the AI roadmap", aiStatus: "IN DEVELOPMENT", payStatus: "PAYMENT TOOLS",
-  howEyebrow: "02 / HOW IT WORKS", howTitle: "Four steps.", howMarked: "One clear flow.",
-  howLead: "",
-  tabPayments: "Payments", tabAI: "AI workspace", demo: "ILLUSTRATIVE WORKFLOW",
-  paySteps: [
-   {title:"Create a payment request",body:"Use a payment link, invoice, hosted checkout or merchant API."},
-   {title:"Customer pays",body:"They send money using their selected supported mobile wallet."},
-   {title:"Evidence is checked",body:"Eligible merchant payment evidence is securely checked before a request is confirmed."},
-   {title:"Receive the result",body:"A unique match verifies the payment. Check its status in the dashboard or via webhook."}
-  ],
-  aiSteps: [
-   {title:"Connect a supported channel",body:"Bring authorized conversations into one workspace."},
-   {title:"Add your business context",body:"Give the assistant approved product facts and answers."},
-   {title:"Help customers faster",body:"AI suggests or handles supported replies with your controls."},
-   {title:"Step in when it matters",body:"Your team takes over and keeps the conversation moving."}
-  ],
-  howFoot:"AI tools are in development; channel availability depends on approval.",
-  benefitEyebrow:"03 / WHY EKMIVO", benefitTitle:"Less chasing.", benefitMarked:"More time for business.",
-  benefitLead:"",
-  benefitCards:[
-   {n:"01",icon:"link",title:"Less chasing",text:"Share one payment request instead of asking again and again for proof."},
-   {n:"02",icon:"spark",title:"Less repetition",text:"Let helpful workflows handle routine steps, with people in control."},
-   {n:"03",icon:"layers",title:"A clearer picture",text:"Keep payment states, conversations and decisions easier to follow."}
-  ],
-  payStoryEyebrow:"A CLOSER LOOK / PAYMENTS", payStoryTitle:"From checkout",payStoryMarked:"to verification.",
-  payStoryBody:"Start with a payment link, invoice or API-powered checkout. Payment evidence is checked securely before a request is marked verified. Follow the result in your dashboard or receive an update through webhooks.",
-  payStoryButton:"Get started with payments", paymentPreview:"SAMPLE CHECKOUT · NOT LIVE DATA", linkLabel:"Your payment request", sampleMethod:"bKash · Nagad · Rocket", sampleAmount:"৳ 1,250", sampleContinue:"Continue to checkout", proofMessage:"Verification checks the receipt, not a screenshot.",
-  aiStoryEyebrow:"A CLOSER LOOK / AI", aiStoryTitle:"A good answer matters.", aiStoryMarked:"So does a human.",
-  aiStoryBody:"Give your team the context behind each customer question. AI assistance and human handover are being developed for supported channels.",
-  aiStoryButton:"Explore the AI roadmap", aiPreview:"ILLUSTRATIVE CONVERSATION · IN DEVELOPMENT",
-  customerPrompt:"Is the blue one available?", agentReply:"Let me check the available options for you.", handoff:"Bring in a teammate", agentName:"Your assistant", customerName:"Customer",
-  audienceEyebrow:"04 / WHO IT’S FOR", audienceTitle:"Built around", audienceMarked:"your kind of work.",
-  audienceCards:[
-   {n:"01 / SELL",title:"Online sellers",body:"Take payments through checkout on your store or with a shareable payment link.",icon:"bag"},
-   {n:"02 / SERVE",title:"Service businesses",body:"Issue invoices or requests for bookings, projects and services, and check their status.",icon:"calendar"},
-   {n:"03 / BUILD",title:"Developers & teams",body:"Connect your own product to payment requests, status checks and merchant webhooks.",icon:"code"}
-  ],
-  promiseEyebrow:"05 / PAYMENT INTEGRITY", promiseTitle:"A verified payment", promiseMarked:"must earn its check.",
-  promiseText:"Every payment is checked against eligible receipt evidence before confirmation. Missing or uncertain proof does not become an automatic success.",
-  promiseItems:["No customer TrxID form in the normal flow","No automatic success from an ambiguous receipt","People remain responsible for exceptions and refunds"],
-  pricingEyebrow:"PRICING & AVAILABILITY", pricingTitle:"Plan details are on the way.", pricingNote:"Final pricing and AI launch dates have not been announced.", pricingCTA:"Create your workspace",
-  faqEyebrow:"GOOD QUESTIONS", faqTitle:"Before you get started.",
-  faqs:[
-   ["What can I use Ekmivo for?","Ekmivo offers payment links, invoices, hosted checkout and merchant API/webhooks with evidence-based payment verification. AI tools for customer conversations are being developed separately."],
-   ["Do my customers need to install Ekmivo?","No. They open the checkout from a payment link or your integrated website/app and use their payment wallet. An enrolled Android forwarder on the merchant side supplies supported receipt SMS."],
-   ["Does Ekmivo automatically verify every payment?","Only when eligible payment evidence can be confirmed securely. If confirmation is uncertain or unavailable, the request remains pending or requires merchant attention."],
-   ["Can I use payments without AI?","Yes. The services are designed to be independent. You do not need to use the AI workspace to set up payment tools."],
-   ["Are all AI and third-party integrations live?","No. Several AI, social-channel and commerce integrations are planned or awaiting the necessary approvals and testing. The relevant product pages will reflect availability."]
-  ],
-  finalEyebrow:"YOUR BUSINESS, YOUR SETUP", finalTitle:"Build a payment setup",finalMarked:"that fits your business.",
-  finalBody:"Choose payment links, invoices or integrated checkout to suit the way your customers pay. Start by setting up your Ekmivo workspace.",
-  finalButton:"Create your workspace", finalSecondary:"See how it works",
-  footerHint:"Two independent services. One thoughtful direction."
- },
-bn: {
- eyebrow:"পেমেন্ট ও AI সেবা",
- heroLine1:"পেমেন্ট নিন সহজে।",
- heroLine2:"ব্যবসা চালান নিশ্চিন্তে।",
- heroLead:"পেমেন্ট লিংক, ইনভয়েস বা ওয়েবসাইটের চেকআউট—যেভাবেই টাকা নিন, পেমেন্টের অবস্থা রাখুন নজরে। কাস্টমারের মেসেজ সামলানোর জন্য AI Bot-ও তৈরি হচ্ছে।",
- explore:"Payment Gateway দেখুন",aiAction:"AI Bot সম্পর্কে জানুন",scroll:"আমাদের সেবাগুলো",
- serviceEyebrow:"০১ / Ekmivo-তে যা পাবেন",servicesTitle:"পেমেন্টের কাজ আলাদা।",servicesMarked:"AI-এর কাজও আলাদা।",
- servicesLead:"আপনার প্রয়োজন অনুযায়ী যে সেবা দরকার, সেটি বেছে নিন।",
- payNumber:"০১ / PAYMENT GATEWAY",payName:"আপনার ব্যবসার জন্য পেমেন্ট গেটওয়ে।",
- payBody:"পেমেন্ট লিংক বা ইনভয়েস তৈরি করুন। নিজের ওয়েবসাইট বা অ্যাপে Ekmivo Checkout যুক্ত করুন। পেমেন্ট হলে প্রয়োজনীয় SMS যাচাই করে ড্যাশবোর্ডে তার অবস্থা জানাবে Ekmivo।",
- payBullets:["পেমেন্ট লিংক, ইনভয়েস ও হোস্টেড চেকআউট","বিকাশ, নগদ ও রকেটের মাধ্যমে পেমেন্ট","পেমেন্টের SMS থেকে স্বয়ংক্রিয় যাচাই","ওয়েবসাইট ও অ্যাপের জন্য API ও ওয়েবহুক"],
- payExplore:"Payment Gateway বিস্তারিত",aiNumber:"০২ / AI BOT",aiName:"কাস্টমারের মেসেজের জন্য AI Bot।",
- aiBody:"কাস্টমারের মেসেজ এক জায়গায় দেখা, সাধারণ প্রশ্নের উত্তর দিতে AI-এর সাহায্য নেওয়া এবং প্রয়োজনে টিমের কারও সরাসরি কথা বলার সুবিধা নিয়ে কাজ শুরু হবে শিগগিরই।",
- aiBullets:["বিভিন্ন চ্যানেলের মেসেজ এক ইনবক্সে","ব্যবসার তথ্য ব্যবহার করে AI-এর সাহায্যে উত্তর","দরকার হলে টিম নিজে কথা বলবে","কাস্টমারের আগের কথোপকথন দেখা"],
- aiExplore:"AI Bot-এর পরিকল্পনা দেখুন",aiStatus:"শিগগিরই কাজ শুরু হবে",payStatus:"পেমেন্ট সেবা",
- howEyebrow:"০২ / যেভাবে কাজ করে",howTitle:"পেমেন্ট নেওয়ার",howMarked:"চারটি সহজ ধাপ।",
- howLead:"",
- tabPayments:"Payment Gateway",tabAI:"AI Bot",demo:"পেমেন্ট প্রক্রিয়ার নমুনা",
- paySteps:[
-  {title:"পেমেন্ট তৈরি করুন",body:"লিংক, ইনভয়েস বা ওয়েবসাইটের চেকআউট থেকে পেমেন্টের অনুরোধ তৈরি করুন।"},
-  {title:"কাস্টমার টাকা পাঠাবেন",body:"বিকাশ, নগদ বা রকেটের যেকোনো একটি মাধ্যম বেছে নিয়ে টাকা পাঠাবেন।"},
-  {title:"SMS যাচাই হবে",body:"মার্চেন্টের সংযুক্ত ফোন থেকে পাওয়া পেমেন্টের SMS নিরাপদে সার্ভারে যাচাই করা হবে।"},
-  {title:"পেমেন্টের অবস্থা দেখুন",body:"যাচাই শেষে ড্যাশবোর্ডে আপডেট পাবেন। প্রয়োজনে ওয়েবহুক দিয়ে নিজের সিস্টেমেও জানাতে পারবেন।"}
- ],
- aiSteps:[
-  {title:"অনুমোদিত চ্যানেল যুক্ত করুন",body:"যেসব চ্যানেল সমর্থিত হবে, সেগুলোর মেসেজ একটি ইনবক্সে দেখা যাবে।"},
-  {title:"ব্যবসার তথ্য দিন",body:"আপনার পণ্য, দাম ও সাধারণ প্রশ্নের উত্তর AI-কে জানাতে পারবেন।"},
-  {title:"উত্তর দেওয়ার সময় বাঁচান",body:"সাধারণ প্রশ্নের উত্তর দিতে AI সাহায্য করবে।"},
-  {title:"প্রয়োজনে নিজে কথা বলুন",body:"কোনো কাস্টমারের সঙ্গে সরাসরি কথা বলতে চাইলে টিম দায়িত্ব নিতে পারবে।"}
- ],
- howFoot:"AI Bot এখনো চালু হয়নি। চ্যানেলগুলো চালুর আগে পরীক্ষা ও অনুমোদন প্রয়োজন।",
- benefitEyebrow:"০৩ / কেন Ekmivo",benefitTitle:"পেমেন্টের ঝামেলা কমান।",benefitMarked:"সময় বাঁচান।",
- benefitLead:"",
- benefitCards:[
-  {n:"০১",icon:"link",title:"স্ক্রিনশটের অপেক্ষা কম",text:"সঠিকভাবে যাচাই হওয়া পেমেন্টের জন্য কাস্টমারের কাছে বারবার স্ক্রিনশট চাইতে হবে না।"},
-  {n:"০২",icon:"spark",title:"AI Bot-ও আসছে",text:"কাস্টমারের সাধারণ প্রশ্ন সামলাতে AI-এর সাহায্য নেওয়ার সুবিধা নিয়ে কাজ শুরু হবে।"},
-  {n:"০৩",icon:"layers",title:"পেমেন্টের হিসাব এক জায়গায়",text:"কোন পেমেন্ট যাচাই হয়েছে, কোনটি এখনো অপেক্ষমাণ—ড্যাশবোর্ডে দেখুন।"}
- ],
- payStoryEyebrow:"PAYMENT GATEWAY",payStoryTitle:"পেমেন্ট তৈরি করুন।",payStoryMarked:"অবস্থা জেনে নিন।",
- payStoryBody:"পেমেন্ট লিংক, ইনভয়েস বা API দিয়ে চেকআউট শুরু করুন। কাস্টমার টাকা পাঠানোর পর SMS যাচাই করে Ekmivo পেমেন্টের অবস্থা আপডেট করবে। ড্যাশবোর্ডে দেখুন, প্রয়োজনে ওয়েবহুকেও আপডেট নিন।",
- payStoryButton:"Payment Gateway দেখুন",paymentPreview:"চেকআউটের নমুনা",linkLabel:"পেমেন্টের পরিমাণ",sampleMethod:"বিকাশ · নগদ · রকেট",sampleAmount:"৳ ১,২৫০",sampleContinue:"পেমেন্ট করুন",proofMessage:"যাচাই হলে পেমেন্টের অবস্থা আপডেট হবে।",
- aiStoryEyebrow:"AI BOT / তৈরি হচ্ছে",aiStoryTitle:"প্রশ্নের উত্তর দিতে",aiStoryMarked:"AI-এর সাহায্য নিন।",
- aiStoryBody:"কাস্টমার কী জানতে চাইছেন, আগের কথোপকথনে কী হয়েছে—এসব তথ্য দেখে উত্তর দেওয়ার ব্যবস্থা নিয়ে কাজ হবে। দরকার হলে আপনার টিম নিজেই কথা বলবে।",
- aiStoryButton:"AI Bot সম্পর্কে জানুন",aiPreview:"নমুনা কথোপকথন · সেবা চালু হয়নি",
- customerPrompt:"নীল রঙেরটা আছে?",agentReply:"কোন সাইজটি লাগবে জানাবেন?",handoff:"টিমের সঙ্গে কথা বলুন",agentName:"AI সহকারী",customerName:"কাস্টমার",
- audienceEyebrow:"০৪ / যাদের জন্য",audienceTitle:"অনলাইন দোকান হোক",audienceMarked:"বা নিজের অ্যাপ।",
- audienceCards:[
-  {n:"০১ / অনলাইন শপ",title:"অনলাইন বিক্রেতা",body:"ওয়েবসাইটে চেকআউট যুক্ত করুন অথবা মেসেজে আসা অর্ডারের জন্য পেমেন্ট লিংক দিন।",icon:"bag"},
-  {n:"০২ / সেবাভিত্তিক ব্যবসা",title:"কোর্স ও সেবা প্রদানকারী",body:"কোর্স ফি, বুকিং বা কাজের বিলের জন্য ইনভয়েস পাঠান। পেমেন্ট এসেছে কি না, দেখে নিন।",icon:"calendar"},
-  {n:"০৩ / সফটওয়্যার",title:"ডেভেলপার ও টিম",body:"API দিয়ে পেমেন্ট তৈরি করুন। ওয়েবহুক ব্যবহার করে নিজের সিস্টেমে আপডেট নিন।",icon:"code"}
- ],
- promiseEyebrow:"০৫ / পেমেন্ট যাচাই",promiseTitle:"যাচাই না করে",promiseMarked:"পেমেন্ট সফল নয়।",
- promiseText:"কোনো পেমেন্ট নিশ্চিত হওয়ার আগে Ekmivo প্রয়োজনীয় রসিদ যাচাই করে। যাচাই না হলে বা সমস্যা থাকলে সেটি সফল দেখানো হয় না।",
- promiseItems:["সাধারণ পেমেন্টে কাস্টমারের TrxID লেখার প্রয়োজন নেই","যাচাই নিশ্চিত না হলে স্বয়ংক্রিয়ভাবে সফল দেখাবে না","সমস্যা বা টাকা ফেরতের অনুরোধ মার্চেন্ট দেখতে পারবেন"],
- pricingEyebrow:"মূল্য ও প্যাকেজ",pricingTitle:"প্যাকেজের দাম পরে জানানো হবে।",pricingNote:"Payment Gateway ও AI Bot-এর প্যাকেজ এখনো চূড়ান্ত হয়নি।",pricingCTA:"অ্যাকাউন্ট তৈরি করুন",
- faqEyebrow:"সাধারণ কিছু প্রশ্ন",faqTitle:"শুরু করার আগে জেনে নিন",
- faqs:[
-  ["Ekmivo কী কাজে ব্যবহার করা যায়?","পেমেন্ট লিংক, ইনভয়েস ও চেকআউট দিয়ে টাকা নেওয়া এবং পেমেন্টের অবস্থা দেখার কাজে Ekmivo ব্যবহার করা যায়। নিজের অ্যাপে API ও ওয়েবহুক যুক্ত করতে পারবেন। AI Bot সেবা এখনো চালু হয়নি।"],
-  ["কাস্টমারকে কি Ekmivo অ্যাপ ইনস্টল করতে হবে?","না। কাস্টমার ওয়েব চেকআউট খুলে নিজের বিকাশ, নগদ বা রকেট অ্যাপ ব্যবহার করবেন। SMS পাঠানোর Android অ্যাপটি মার্চেন্টের ফোনে লাগে।"],
-  ["সব পেমেন্ট কি সঙ্গে সঙ্গে সফল দেখাবে?","না। পেমেন্টের রসিদ সার্ভারে পৌঁছে যাচাই হতে হবে। যাচাই নিশ্চিত না হওয়া পর্যন্ত পেমেন্ট সফল দেখাবে না।"],
-  ["AI Bot ছাড়াই কি পেমেন্ট নেওয়া যাবে?","হ্যাঁ। Payment Gateway ও AI Bot আলাদা সেবা। শুধু পেমেন্ট সেবাও ব্যবহার করতে পারবেন।"],
-  ["AI Bot কি এখনই ব্যবহার করতে পারব?","না। AI Bot এখনো চালু হয়নি। সেবাটির মূল কাজ শিগগিরই শুরু হবে।"]
- ],
- finalEyebrow:"আপনার ব্যবসার জন্য",finalTitle:"Ekmivo-তে অ্যাকাউন্ট খুলুন।",finalMarked:"পেমেন্ট নেওয়া শুরু করুন।",
- finalBody:"ব্যবসার পেমেন্ট অ্যাকাউন্ট যুক্ত করে প্রয়োজন অনুযায়ী পেমেন্ট লিংক, ইনভয়েস বা চেকআউট ব্যবহার করুন।",
- finalButton:"অ্যাকাউন্ট তৈরি করুন",finalSecondary:"যেভাবে কাজ করে",
- footerHint:"পেমেন্ট সেবা চালু আছে। AI Bot-এর কাজ শুরু হবে শিগগিরই।"
-}
-
-} as const;
-
-function Doodle({type="spark",className=""}:{type?:"spark"|"arrow"|"loop";className?:string}){
- if(type==="arrow")return <svg className={className} viewBox="0 0 116 74" fill="none" aria-hidden="true"><path d="M4 59C42 62 62 17 105 12M82 3l24 8-18 20" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 66C34 69 62 38 73 32" stroke="currentColor" strokeWidth="1" opacity=".4"/></svg>;
- if(type==="loop")return <svg className={className} viewBox="0 0 174 65" fill="none" aria-hidden="true"><path d="M3 28C26 5 46 7 51 33C57 66 91 43 93 23C93 4 71 9 76 30C87 57 122 12 169 27" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M156 17l15 10-17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
- return <svg className={className} viewBox="0 0 66 66" fill="none" aria-hidden="true"><path d="M33 1l5 19 18-9-10 18 19 4-19 5 10 18-18-10-5 19-5-19-18 10 10-18L1 33l19-4-10-18 18 9 5-19z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>;
-}
-
-function LineIcon({name}:{name:string}){
- const common={fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round" as const,strokeLinejoin:"round" as const};
- if(name==="link")return <svg viewBox="0 0 74 74" aria-hidden="true" {...common}><rect x="16" y="22" width="42" height="31" rx="6" transform="rotate(-9 37 37)"/><path d="M25 35l12-10M24 47h22M17 57l-6 7m50-46 6-6M11 16l-5-7"/></svg>;
- if(name==="spark")return <svg viewBox="0 0 74 74" aria-hidden="true" {...common}><path d="M38 7l6 23 23 7-23 7-6 23-7-23-23-7 23-7 7-23z"/><path d="M60 8l2 8 8 2-8 2-2 8-2-8-8-2 8-2z"/></svg>;
- if(name==="layers")return <svg viewBox="0 0 74 74" aria-hidden="true" {...common}><path d="m37 8 27 15-27 15L10 23 37 8zm-27 29 27 16 27-16M10 49l27 16 27-16"/></svg>;
- if(name==="bag")return <svg viewBox="0 0 74 74" aria-hidden="true" {...common}><path d="M17 27h40l5 35H12l5-35zM26 29v-8a11 11 0 0 1 22 0v8M25 46h24"/></svg>;
- if(name==="calendar")return <svg viewBox="0 0 74 74" aria-hidden="true" {...common}><rect x="12" y="19" width="50" height="45" rx="5"/><path d="M23 10v18M51 10v18M12 33h50m-38 12h7m10 0h7m-24 10h7"/></svg>;
- return <svg viewBox="0 0 74 74" aria-hidden="true" {...common}><rect x="9" y="14" width="56" height="46" rx="7"/><path d="M9 26h56M29 37l-9 7 9 7m16-14 9 7-9 7"/></svg>;
-}
-
-function SectionHead({eyebrow,title,marked,lead,center=false}:{eyebrow:string;title:string;marked:string;lead?:string;center?:boolean}){
- return <div className={"em-heading"+(center?" em-centered":"")}>
-  <span className="em-kicker">{eyebrow.replace(/^[0-9০-৯]+\s*\/\s*/, "")}</span>
-  <h2>{title} <span className="em-brush em-brush-small">{marked}</span></h2>
-  {lead&&<p>{lead}</p>}
- </div>;
-}
-
+/** Static product narrative. Live payment plans arrive through the server slot. */
 export function MarketingExperience({locale,pricing}:{locale:Locale;pricing?:import("react").ReactNode}){
- const t=copy[locale];
- const [mode,setMode]=useState<WorkflowMode>("payments");
- const steps=mode==="payments"?t.paySteps:t.aiSteps;
- return <main className="em" id="main" lang={locale}>
-  <section className="em-hero" id="top" aria-labelledby="em-title">
-   <div className="em-hero-grain" aria-hidden="true"/>
-   <Doodle type="spark" className="em-scribble em-scribble-a"/>
-   <Doodle type="loop" className="em-scribble em-scribble-b"/>
-   <Doodle type="arrow" className="em-scribble em-scribble-c"/>
-   <div className="em-hero-inner">
-    <span className="em-hero-eyebrow"><span className="em-dot"/> {t.eyebrow}</span>
-    <h1 id="em-title"><span>{t.heroLine1}</span><span className="em-brush em-hero-highlight">{t.heroLine2}</span></h1>
-    <p className="em-hero-lead">{t.heroLead}</p>
-    <div className="em-actions"><Link href={`/${locale}/payment-gateway`} className="em-button em-button-primary">{t.explore}<span aria-hidden="true">↗</span></Link><Link href={`/${locale}/ai-bot`} className="em-button em-button-secondary">{t.aiAction}<span aria-hidden="true">↗</span></Link></div>
-   </div>
-   <a href="#services" className="em-scroll-link"><span>{t.scroll}</span><span className="em-scroll-down" aria-hidden="true">↓</span></a>
-  </section>
-
-  <section className="em-section em-services" id="services">
-   <div className="em-container">
-    <SectionHead eyebrow={t.serviceEyebrow} title={t.servicesTitle} marked={t.servicesMarked} center/>
-    <div className="em-service-grid">
-     <article className="em-service-card em-service-pay" id="commerce">
-      <div className="em-service-card-top"><span>{t.payNumber.replace(/^[0-9০-৯]+\s*\/\s*/, "")}</span><span className="em-service-status">{t.payStatus}</span></div>
-      <div className="em-service-mark em-symbol-wallet" aria-hidden="true"><LineIcon name="link"/><span>৳</span></div>
-      <h3>{t.payName}</h3><p>{t.payBody}</p>
-      <ul>{t.payBullets.map(item=><li key={item}><span aria-hidden="true">↗</span>{item}</li>)}</ul>
-      <Link className="em-card-link" href={`/${locale}/payment-gateway`}>{t.payExplore}<span aria-hidden="true">↗</span></Link>
-      <Doodle type="arrow" className="em-card-doodle"/>
-     </article>
-     <article className="em-service-card em-service-ai" id="ai">
-      <div className="em-service-card-top"><span>{t.aiNumber.replace(/^[0-9০-৯]+\s*\/\s*/, "")}</span><span className="em-service-status">{t.aiStatus}</span></div>
-      <div className="em-service-mark em-symbol-ai" aria-hidden="true"><LineIcon name="spark"/><span>AI</span></div>
-      <h3>{t.aiName}</h3><p>{t.aiBody}</p>
-      <ul>{t.aiBullets.map(item=><li key={item}><span aria-hidden="true">↗</span>{item}</li>)}</ul>
-      <Link className="em-card-link" href={`/${locale}/ai-bot`}>{t.aiExplore}<span aria-hidden="true">↗</span></Link>
-      <Doodle type="loop" className="em-card-doodle"/>
-     </article>
-    </div>
-   </div>
-  </section>
-
-  <section className="em-section em-workflow" id="workflow">
-   <div className="em-container">
-    <SectionHead eyebrow={t.howEyebrow} title={t.howTitle} marked={t.howMarked} lead={t.howLead} center/>
-    <div className="em-workflow-switch" role="group" aria-label={t.howTitle}>
-     <button type="button" onClick={()=>setMode("payments")} className={mode==="payments"?"is-current":""} aria-pressed={mode==="payments"}>{t.tabPayments}</button>
-     <button type="button" onClick={()=>setMode("ai")} className={mode==="ai"?"is-current":""} aria-pressed={mode==="ai"}>{t.tabAI}</button>
-    </div>
-    <div className="em-workflow-grid" aria-live="polite">
-     {steps.map((item,i)=><article className="em-step" key={mode+String(i)}>
-      <span className="em-step-number">0{i+1}</span>
-      <div className="em-step-line" aria-hidden="true"/><h3>{item.title}</h3><p>{item.body}</p>
-     </article>)}
-    </div>
-    <p className="em-workflow-footnote"><span aria-hidden="true">◌</span> {mode==="ai"?t.howFoot:t.demo}</p>
-   </div>
-  </section>
-
-  <section className="em-section em-benefits">
-   <div className="em-container">
-    <SectionHead eyebrow={t.benefitEyebrow} title={t.benefitTitle} marked={t.benefitMarked} lead={t.benefitLead} center/>
-    <div className="em-benefits-grid">
-     {t.benefitCards.map((item,i)=><article className={"em-benefit-card em-tilt-"+i} key={item.n}>
-      <div className="em-benefit-icon"><LineIcon name={item.icon}/></div>
-      <h3>{item.title}</h3><p>{item.text}</p><span className="em-benefit-squiggle" aria-hidden="true">⌁⌁⌁</span>
-     </article>)}
-    </div>
-    <Doodle type="spark" className="em-benefit-spark"/>
-   </div>
-  </section>
-
-  <section className="em-section em-product em-product-payment" id="payments">
-   <div className="em-container em-product-grid">
-    <div className="em-product-copy"><SectionHead eyebrow={t.payStoryEyebrow} title={t.payStoryTitle} marked={t.payStoryMarked}/>
-     <p>{t.payStoryBody}</p><Link href={`/${locale}/register`} className="em-button em-button-primary">{t.payStoryButton}<span aria-hidden="true">↗</span></Link>
-     <Doodle type="arrow" className="em-product-arrow"/>
-    </div>
-    <div className="em-product-visual em-pay-visual">
-     <div className="em-demo-orbit" aria-hidden="true"/>
-     <div className="em-payment-demo">
-      <div className="em-demo-top"><span className="em-demo-brand">ekmivo<span>.</span></span><span>↗</span></div>
-      <span className="em-demo-subtitle">{t.linkLabel}</span><strong>{t.sampleAmount}</strong>
-      <div className="em-demo-methods">{t.sampleMethod}</div>
-      <div className="em-demo-button">{t.sampleContinue} <span>→</span></div><small>{t.paymentPreview}</small>
-     </div>
-     <div className="em-receipt-note"><span className="em-note-seal" aria-hidden="true">✓</span><p>{t.proofMessage}</p></div>
-     <Doodle type="loop" className="em-pay-doodle"/>
-    </div>
-   </div>
-  </section>
-
-  <section className="em-section em-product em-product-ai" id="ai-story">
-   <div className="em-container em-product-grid">
-    <div className="em-product-visual em-chat-visual">
-     <div className="em-chat-board">
-      <div className="em-chat-header"><span className="em-avatar em-avatar-a">C</span><div><strong>{t.customerName}</strong><small>{t.aiPreview}</small></div><span className="em-chat-more" aria-hidden="true">•••</span></div>
-      <div className="em-chat-bubble em-from-customer">{t.customerPrompt}</div>
-      <div className="em-chat-bubble em-from-agent"><span className="em-chat-spark" aria-hidden="true">✳</span>{t.agentReply}</div>
-      <div className="em-chat-handoff"><span className="em-avatar em-avatar-b">E</span><span>{t.handoff}</span><span aria-hidden="true">↗</span></div>
-     </div>
-     <Doodle type="spark" className="em-chat-doodle"/>
-    </div>
-    <div className="em-product-copy"><SectionHead eyebrow={t.aiStoryEyebrow} title={t.aiStoryTitle} marked={t.aiStoryMarked}/>
-     <p>{t.aiStoryBody}</p><Link className="em-button em-button-secondary" href={`/${locale}/ai-bot`}>{t.aiStoryButton}<span aria-hidden="true">↗</span></Link>
-    </div>
-   </div>
-  </section>
-
-  <section className="em-section em-audience" id="solutions">
-   <div className="em-container">
-    <SectionHead eyebrow={t.audienceEyebrow} title={t.audienceTitle} marked={t.audienceMarked} center/>
-    <div className="em-audience-grid">{t.audienceCards.map(item=><article className="em-audience-card" key={item.title}>
-     <div className="em-audience-icon"><LineIcon name={item.icon}/></div><h3>{item.title}</h3><p>{item.body}</p><span className="em-audience-arrow" aria-hidden="true">↗</span>
-    </article>)}</div>
-   </div>
-  </section>
-
-  <section className="em-section em-trust" id="principles">
-   <div className="em-container em-trust-layout">
-    <div className="em-trust-intro"><SectionHead eyebrow={t.promiseEyebrow} title={t.promiseTitle} marked={t.promiseMarked}/><p>{t.promiseText}</p></div>
-    <div className="em-trust-notes">{t.promiseItems.map(item=><div className="em-trust-note" key={item}><p>{item}</p><span aria-hidden="true" className="em-trust-check">✓</span></div>)}</div>
-   </div>
-  </section>
-
-
-  {pricing}
-  <section className="em-section em-faq" id="faq"><div className="em-container em-faq-grid"><SectionHead eyebrow={t.faqEyebrow} title={t.faqTitle} marked=""/><div className="em-questions">
-   {t.faqs.map(([question,answer])=><details key={question}><summary><strong>{question}</strong><span className="em-faq-plus" aria-hidden="true">+</span></summary><p>{answer}</p></details>)}
-  </div></div></section>
-
-  <section className="em-ending" id="contact"><div className="em-ending-ink" aria-hidden="true"/><Doodle type="loop" className="em-ending-doodle"/><div className="em-container em-ending-content"><span className="em-kicker">{t.finalEyebrow}</span><h2>{t.finalTitle} <span className="em-brush">{t.finalMarked}</span></h2><p>{t.finalBody}</p><div className="em-actions"><Link href={`/${locale}/register`} className="em-button em-button-primary">{t.finalButton}<span aria-hidden="true">↗</span></Link></div></div></section>
+ const t = (english:string) => locale === "bn" ? (translation.get(english) ?? english) : english;
+ useEffect(() => {
+  const root=document.querySelector<HTMLElement>("main.ekm-landing");
+  if(!root)return;
+  const find=(id:string)=>root.querySelector<HTMLElement>(`#${id}`);
+  const cards=["b1","b2","b3","sm","ck","r1"];
+  const checks=Array.from(root.querySelectorAll<HTMLElement>("#ck span"));
+  const status=find("pv");
+  const motion=window.matchMedia("(prefers-reduced-motion: reduce)");
+  const verified=locale==="bn"?(translation.get("Verified")??"যাচাইকৃত"):"Verified";
+  const waiting=locale==="bn"?(translation.get("Waiting")??"অপেক্ষমাণ"):"Waiting";
+  const timers:number[]=[];
+  let active=true;
+  function clear(){while(timers.length)window.clearTimeout(timers.pop())}
+  function final(){
+   cards.forEach(id=>{const el=find(id);if(el){el.style.opacity="1";el.style.transform="none"}});
+   checks.forEach(el=>el.classList.add("on"));
+   if(status){status.textContent=verified;status.classList.add("ok")}
+  }
+  function later(ms:number,task:()=>void){timers.push(window.setTimeout(()=>{if(active)task()},ms))}
+  function reveal(id:string){const el=find(id);if(el){el.style.opacity="1";el.style.transform="translateY(0)"}}
+  function run(){
+   clear();
+   if(document.hidden||motion.matches){final();return}
+   cards.forEach(id=>{const el=find(id);if(el){el.style.opacity="0";el.style.transform="translateY(10px)";el.style.transition="opacity .4s ease, transform .4s ease"}});
+   for(const id of ["d1","d2"]){const wire=find(id);if(wire){wire.style.opacity="0";wire.style.left="0";wire.style.transition="none"}}
+   checks.forEach(el=>el.classList.remove("on"));
+   if(status){status.textContent=waiting;status.classList.remove("ok")}
+   later(300,()=>reveal("b1"));
+   later(1400,()=>{reveal("b2");reveal("r1")});
+   later(2800,()=>reveal("b3"));
+   const pulse=(id:string)=>{
+    const dot=find(id);
+    if(!dot)return;
+    dot.style.transition="none";dot.style.left="0";dot.style.opacity="1";
+    void dot.offsetWidth;
+    dot.style.transition="left .9s ease-in-out";
+    dot.style.left="calc(100% - 12px)";
+    later(950,()=>{dot.style.opacity="0"});
+   };
+   later(3400,()=>pulse("d1"));
+   later(4400,()=>reveal("sm"));
+   later(4900,()=>reveal("ck"));
+   [5400,5850,6300,6750].forEach((at,index)=>later(at,()=>checks[index]?.classList.add("on")));
+   later(7100,()=>pulse("d2"));
+   later(8100,()=>{
+    if(status){status.textContent=verified;status.classList.add("ok")}
+    const dashboard=find("s3");
+    dashboard?.animate([{transform:"scale(1)"},{transform:"scale(1.03)"},{transform:"scale(1)"}],{duration:420});
+   });
+   later(10800,run);
+  }
+  const restart=()=>{if(document.hidden){clear();final()}else run()};
+  motion.addEventListener("change",restart);
+  document.addEventListener("visibilitychange",restart);
+  run();
+  return ()=>{active=false;clear();motion.removeEventListener("change",restart);document.removeEventListener("visibilitychange",restart)};
+ }, [locale]);
+ return <main className="ekm-landing" id="main" lang={locale}>
+ <LandingSprite />
+<header className="hero">
+<div className="w">
+<span className="pill">
+<i>
+</i>
+{t("For social commerce sellers")}
+</span>
+<h1>
+{t("Orders arrive in chat.")}
+<span>
+{t("Payments verify themselves.")}
+</span>
+</h1>
+<p className="s">
+{t("Ekmivo's AI answers your customers and takes their orders. Every payment is matched from your phone's SMS, so there are no screenshots and no transaction IDs.")}
+</p>
+<div className="cta">
+<a className="btn" href="#together">
+{t("See how it works")}
+</a>
+<a className="btn out" href="#pricing">
+{t("View pricing")}
+</a>
+</div>
+<div className="scene" id="scene" aria-label="Animation: a customer orders in chat, the SMS is matched, the dashboard shows verified">
+<div className="sc" id="s1">
+<h4>
+<svg className="i">
+<use href="#chat">
+</use>
+</svg>
+{t("Customer chat")}
+</h4>
+<div className="bb c" id="b1">
+<svg className="i" style={{"width": "14px", "height": "14px", "verticalAlign": "-2px"}}>
+<use href="#img">
+</use>
+</svg>
+{t("Is this available?")}
+</div>
+<div className="bb a" id="b2">
+{t("Yes, ৳1,250. Pay here and I'll confirm your order.")}
+</div>
+<div className="bb c" id="b3">
+{t("Paid!")}
+</div>
+</div>
+<div className="wire">
+<u id="d1">
+</u>
+</div>
+<div className="sc" id="s2">
+<h4>
+<svg className="i">
+<use href="#phone">
+</use>
+</svg>
+{t("Seller's phone")}
+</h4>
+<div className="sms" id="sm">
+<b>
+{t("SMS received")}
+</b>
+{t("You have received ৳1,250 from 01•••••••••")}
+</div>
+<div className="ck" id="ck">
+<span>
+{t("Wallet")}
+</span>
+<span>
+{t("Amount")}
+</span>
+<span>
+{t("Sender no.")}
+</span>
+<span>
+{t("Time")}
+</span>
+</div>
+</div>
+<div className="wire">
+<u id="d2">
+</u>
+</div>
+<div className="sc" id="s3">
+<h4>
+<svg className="i">
+<use href="#dash">
+</use>
+</svg>
+{t("Dashboard")}
+</h4>
+<div className="ro" id="r1">
+<span>
+{t("Order #4821 · ৳1,250")}
+</span>
+<span className="st" id="pv">
+{t("Waiting")}
+</span>
+</div>
+<div className="ro">
+<span>
+{t("Order #4820 · ৳980")}
+</span>
+<span className="st ok">
+{t("Verified")}
+</span>
+</div>
+<div className="ro">
+<span>
+{t("Order #4819 · ৳2,400")}
+</span>
+<span className="st ok">
+{t("Verified")}
+</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<section id="payments">
+<div className="w">
+<div className="hd">
+<span className="tag">
+{t("Payment automation")}
+</span>
+<h2>
+{t("Customers pay. Orders confirm themselves.")}
+</h2>
+<p>
+{t("Install the Ekmivo app on the seller's phone. It reads incoming payment SMS and matches each one to an order.")}
+</p>
+</div>
+<div className="ba">
+<div className="pc old">
+<h3>
+<svg className="i">
+<use href="#user">
+</use>
+</svg>
+{t("Before")}
+</h3>
+<ol>
+<li>
+{t("Customer orders on your website")}
+</li>
+<li>
+{t("Customer pays from their mobile wallet")}
+</li>
+<li>
+{t("Customer enters the transaction ID")}
+</li>
+<li>
+{t("You check it manually")}
+</li>
+</ol>
+<div className="trx">
+<div>
+<small>
+{t("Transaction ID")}
+</small>
+<code>
+{t("8N7A5XQ2K1")}
+</code>
+<em>
+{t("Checking by hand…")}
+</em>
+</div>
+</div>
+</div>
+<div className="pc new">
+<h3>
+<svg className="i">
+<use href="#shield">
+</use>
+</svg>
+{t("With Ekmivo")}
+</h3>
+<div className="pg">
+<ol>
+<li>
+{t("Customer taps Pay on your website")}
+</li>
+<li>
+{t("Ekmivo creates the payment and opens its page")}
+</li>
+<li>
+{t("Customer pays from their mobile wallet")}
+</li>
+<li>
+{t("Ekmivo verifies it from the SMS and sends them back to your site")}
+</li>
+</ol>
+<div className="phone" aria-hidden="true">
+<div>
+<div className="ph">
+<b>
+{t("Ekmivo")}
+</b>
+<em>
+{t("Connected · listening for SMS")}
+</em>
+</div>
+<div className="it">
+<small>
+{t("bKash")}
+<span>
+{t("10:42 pm")}
+</span>
+</small>
+<b>
+{t("Received ৳1,250")}
+</b>
+<span>
+{t("Matched · #4821")}
+</span>
+</div>
+<div className="it">
+<small>
+{t("Nagad")}
+<span>
+{t("10:31 pm")}
+</span>
+</small>
+<b>
+{t("Received ৳980")}
+</b>
+<span>
+{t("Matched · #4820")}
+</span>
+</div>
+<div className="it">
+<small>
+{t("bKash")}
+<span>
+{t("10:08 pm")}
+</span>
+</small>
+<b>
+{t("Received ৳2,400")}
+</b>
+<span>
+{t("Matched · #4819")}
+</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="ai" style={{"paddingTop": "0"}}>
+<div className="w">
+<div className="hd">
+<span className="tag">
+{t("AI bot")}
+</span>
+<h2>
+{t("It answers your customers. And knows your catalog.")}
+</h2>
+<p>
+{t("Connect your social media pages. The bot replies, searches products from images and keeps posts and comments in order.")}
+</p>
+</div>
+<div className="g4">
+<div>
+<svg className="i">
+<use href="#chat">
+</use>
+</svg>
+<span>
+<h3>
+{t("Replies to customers")}
+</h3>
+<p>
+{t("Answers messages on your connected social media page.")}
+</p>
+</span>
+</div>
+<div>
+<svg className="i">
+<use href="#img">
+</use>
+</svg>
+<span>
+<h3>
+{t("Finds a product from a photo")}
+</h3>
+<p>
+{t("Customer sends an image; the bot searches your products for it.")}
+</p>
+</span>
+</div>
+<div>
+<svg className="i">
+<use href="#vid">
+</use>
+</svg>
+<span>
+<h3>
+{t("Works from video screenshots")}
+</h3>
+<p>
+{t("A frame from a video still gets you close results.")}
+</p>
+</span>
+</div>
+<div>
+<svg className="i">
+<use href="#cmt">
+</use>
+</svg>
+<span>
+<h3>
+{t("Manages posts and comments")}
+</h3>
+<p>
+{t("Keeps up with your posts and the comments under them.")}
+</p>
+</span>
+</div>
+</div>
+<div className="vs">
+<div className="q photo" id="q">
+<svg viewBox="0 0 120 100" style={{"--c": "#B8693A", "transform": "rotate(-9deg) scale(1.08)"} as CSSProperties} role="img" aria-label="Photo of a tan tote bag">
+<use href="#bagA">
+</use>
+</svg>
+<u id="scan">
+</u>
+<span className="cap">
+{t("Customer's photo")}
+</span>
+</div>
+<div className="res">
+<div className="rs on">
+<i>
+<svg viewBox="0 0 120 100" style={{"--c": "#B8693A"} as CSSProperties}>
+<use href="#bagA">
+</use>
+</svg>
+</i>
+<b>
+{t("Best match")}
+</b>
+<small>
+{t("Leather tote")}
+</small>
+<small>
+{t("৳1,450")}
+</small>
+</div>
+<div className="rs">
+<i>
+<svg viewBox="0 0 120 100" style={{"--c": "#C98A5B"} as CSSProperties}>
+<use href="#bagB">
+</use>
+</svg>
+</i>
+<b>
+{t("Similar")}
+</b>
+<small>
+{t("Box crossbody")}
+</small>
+<small>
+{t("৳1,350")}
+</small>
+</div>
+<div className="rs">
+<i>
+<svg viewBox="0 0 120 100" style={{"--c": "#7A4B2A"} as CSSProperties}>
+<use href="#bagC">
+</use>
+</svg>
+</i>
+<b>
+{t("Similar")}
+</b>
+<small>
+{t("Bucket bag")}
+</small>
+<small>
+{t("৳1,590")}
+</small>
+</div>
+</div>
+<p className="n">
+{t("Exact match: one product. No exact match: a carousel of the closest ones. Powered by a vector database.")}
+</p>
+</div>
+</div>
+</section>
+<section id="together" style={{"paddingTop": "0"}}>
+<div className="w">
+<div className="big">
+<div>
+<span className="pill">
+{t("AI bot + payments")}
+</span>
+<h2 style={{"marginTop": "20px"}}>
+{t("Order in chat. Payment verified automatically.")}
+</h2>
+<p className="s">
+{t("The bot takes the order, asks the payment server to verify, and the dashboard shows the result. Your customers never send proof.")}
+</p>
+<ul className="sp">
+<li>
+<svg className="i">
+<use href="#chat">
+</use>
+</svg>
+<div>
+{t("Customer orders in the chat")}
+<span>
+{t("The AI collects the order details.")}
+</span>
+</div>
+</li>
+<li>
+<svg className="i">
+<use href="#link">
+</use>
+</svg>
+<div>
+{t("AI asks the payment server")}
+<span>
+{t("Amount, sender number and time are checked.")}
+</span>
+</div>
+</li>
+<li>
+<svg className="i">
+<use href="#dash">
+</use>
+</svg>
+<div>
+{t("Dashboard shows the result")}
+<span>
+{t("Verified or not verified, no guessing.")}
+</span>
+</div>
+</li>
+<li>
+<svg className="i">
+<use href="#user">
+</use>
+</svg>
+<div>
+{t("Unsure? It asks, politely")}
+<span>
+{t("If a payment can't be matched, or the customer says they paid but the time is unclear, the AI asks for the sender number and time and keeps it pending.")}
+</span>
+</div>
+</li>
+</ul>
+</div>
+<div className="cw">
+<h4>
+{t("Chat · Order #4822")}
+</h4>
+<div className="bb c">
+{t("I'll take two.")}
+</div>
+<div className="bb a">
+{t("Total ৳2,500. Pay here and I'll confirm your order.")}
+</div>
+<br />
+<div className="bb c">
+{t("Done, paid.")}
+</div>
+<div className="chip">
+<svg className="i" style={{"width": "15px", "height": "15px"}}>
+<use href="#check">
+</use>
+</svg>
+{t("Payment verified")}
+</div>
+<div className="ro" style={{"marginTop": "6px"}}>
+<span>
+{t("Dashboard · #4822 · ৳2,500")}
+</span>
+<span className="st ok">
+{t("Verified")}
+</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section style={{"paddingTop": "0"}}>
+<div className="w">
+<div className="hd">
+<h2>
+{t("A payment is verified only when it matches.")}
+</h2>
+</div>
+<div className="rl">
+<div>
+<svg className="i">
+<use href="#shield">
+</use>
+</svg>
+<div>
+<h3>
+{t("All four must match")}
+</h3>
+<p>
+{t("Wallet, amount, sender number and time. If any one differs, it is not verified.")}
+</p>
+</div>
+</div>
+<div>
+<svg className="i">
+<use href="#check">
+</use>
+</svg>
+<div>
+<h3>
+{t("No transaction ID typed")}
+</h3>
+<p>
+{t("Your customers never fill a TrxID form in the normal flow.")}
+</p>
+</div>
+</div>
+<div>
+<svg className="i">
+<use href="#user">
+</use>
+</svg>
+<div>
+<h3>
+{t("Unclear stays pending")}
+</h3>
+<p>
+{t("When it can't be matched, the AI asks for details instead of guessing.")}
+</p>
+</div>
+</div>
+<div>
+<svg className="i">
+<use href="#dash">
+</use>
+</svg>
+<div>
+<h3>
+{t("Exceptions come to you")}
+</h3>
+<p>
+{t("Late, partial or duplicate payments are held for your review. You decide to accept or refund.")}
+</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="privacy" style={{"paddingTop": "0"}}>
+<div className="w">
+<div className="hd">
+<span className="tag">
+{t("Privacy and money")}
+</span>
+<h2>
+{t("Your phone, your data, your money.")}
+</h2>
+</div>
+<div className="rl">
+<div>
+<svg className="i">
+<use href="#shield">
+</use>
+</svg>
+<div>
+<h3>
+{t("Only payment SMS")}
+</h3>
+<p>
+{t("Only payment SMS from your wallet is sent to Ekmivo. Everything else stays on your phone.")}
+</p>
+</div>
+</div>
+<div>
+<svg className="i">
+<use href="#dash">
+</use>
+</svg>
+<div>
+<h3>
+{t("See what is sent")}
+</h3>
+<p>
+{t("Every SMS field that reaches the server is visible to you in your workspace.")}
+</p>
+</div>
+</div>
+<div>
+<svg className="i">
+<use href="#link">
+</use>
+</svg>
+<div>
+<h3>
+{t("Money stays with you")}
+</h3>
+<p>
+{t("Payments go straight to your wallet. Ekmivo does not hold your money or take a cut.")}
+</p>
+</div>
+</div>
+</div>
+<div className="perks">
+<span>
+{t("Works with bKash and Nagad")}
+</span>
+<span>
+{t("Seller's phone must be Android")}
+</span>
+<span>
+{t("Customers can use any phone")}
+</span>
+</div>
+</div>
+</section>
+<section id="pricing" className="ekm-pricing-host">
+<div className="w">
+<LandingPricing locale={locale} pricing={pricing} />
+</div>
+</section>
+<section id="faq" style={{"paddingTop": "0"}}>
+<div className="w">
+<div className="faq">
+<div className="fh">
+<h2>
+{t("Quick answers.")}
+</h2>
+</div>
+<div className="fl">
+<details>
+<summary>
+{t("How does it know a payment arrived?")}
+</summary>
+<p>
+{t("The Ekmivo app on the seller's phone reads payment SMS. Each one is matched to a payment by wallet, amount, sender number and time.")}
+</p>
+</details>
+<details>
+<summary>
+{t("Is Ekmivo a payment gateway?")}
+</summary>
+<p>
+{t("No. Customers pay your own wallet directly. Ekmivo doesn't hold or move money and takes no share of your sales. It only verifies that the payment arrived.")}
+</p>
+</details>
+<details>
+<summary>
+{t("What does the app read?")}
+</summary>
+<p>
+{t("Only payment SMS from your wallet are sent to Ekmivo, and you can see every field that is sent.")}
+</p>
+</details>
+<details>
+<summary>
+{t("Which phones does it work on?")}
+</summary>
+<p>
+{t("The seller's phone needs to be Android. Customers can pay from any phone.")}
+</p>
+</details>
+<details>
+<summary>
+{t("How do I install the app?")}
+</summary>
+<p>
+{t("Download the Ekmivo app (APK) from your workspace and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.")}
+</p>
+</details>
+<details>
+<summary>
+{t("Do customers need to install anything?")}
+</summary>
+<p>
+{t("No. They tap Pay, use the Ekmivo payment page and return to your site.")}
+</p>
+</details>
+<details>
+<summary>
+{t("Can I use the payments without the AI bot?")}
+</summary>
+<p>
+{t("Yes. The payment system works on its own, and so does the AI bot. Together they work best.")}
+</p>
+</details>
+<details>
+<summary>
+{t("What if a payment can't be matched?")}
+</summary>
+<p>
+{t("It stays pending, not verified. If the SMS arrives late, it is matched using the time on the SMS, so a late phone connection doesn't fail a payment made in time. Late, partial or duplicate payments go to you for review.")}
+</p>
+</details>
+<details>
+<summary>
+{t("Can I try the AI bot for free?")}
+</summary>
+<p>
+{t("Yes. You get ৳30 of free credit once, when you sign up. After that, recharge your credit and pay as you go.")}
+</p>
+</details>
+<details>
+<summary>
+{t("Which social platforms does the AI bot connect to?")}
+</summary>
+<p>
+{t("Talk to us for the current list of supported platforms.")}
+</p>
+</details>
+<details>
+<summary>
+{t("Is there a discount for using both?")}
+</summary>
+<p>
+{t("Yes. The AI bot stays pay as you go, and every payments plan gets a discount when you use both.")}
+</p>
+</details>
+</div>
+</div>
+</div>
+</section>
+<div className="w">
+<div className="end">
+<h2>
+{t("Let your customers pay. Skip the chasing.")}
+</h2>
+<a className="btn" href={`/${locale}/register`} data-go="signup">
+{t("Create a workspace")}
+</a>
+</div>
+</div>
  </main>;
 }

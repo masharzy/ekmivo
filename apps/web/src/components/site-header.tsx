@@ -7,6 +7,13 @@ import {SiteControls} from "./site-controls";
 import {siteCopy,type Locale} from "../lib/site-copy";
 
 type Theme="system"|"light"|"dark";
+const landingLinks=[
+ {id:"payments",en:"Payments",bn:"পেমেন্ট"},
+ {id:"ai",en:"AI Bot",bn:"এআই বট"},
+ {id:"together",en:"Together",bn:"একসাথে"},
+ {id:"pricing",en:"Pricing",bn:"মূল্য"},
+ {id:"faq",en:"FAQ",bn:"প্রশ্নোত্তর"}
+] as const;
 const pages=[
  {path:"payment-gateway",en:"Payment Gateway",bn:"Payment Gateway"},
  {path:"ai-bot",en:"AI Bot",bn:"AI Bot"},
@@ -62,6 +69,14 @@ export function SiteHeader({locale,initialTheme,authenticated=false}:{locale:Loc
  // public chrome leak into workspace or standalone account routes.
  const visiblePath=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
  if(["setup","dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","workspaces","w","account","admin","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin|pay|checkout|receipt|invoice)(?:\/|$)/.test(visiblePath))return null;
+ if(visiblePath==="/")return <header className="ekm-nav" aria-label={locale==="bn"?"প্রধান নেভিগেশন":"Main navigation"}>
+  <Link className="ekm-nav-logo" href="/" aria-label="Ekmivo home">ekmivo<b>.</b></Link>
+  <nav className="ekm-nav-links" aria-label={locale==="bn"?"মূল মেনু":"Sections"}>
+   {landingLinks.map(link=><a href={`#${link.id}`} key={link.id}>{link[locale]}</a>)}
+  </nav>
+  <SiteControls locale={locale} initialTheme={initialTheme} marketing/>
+  <Link className="ekm-nav-signin" href={authenticated?"/dashboard":"/login"}>{authenticated?(locale==="bn"?"ড্যাশবোর্ড":"Dashboard"):(locale==="bn"?"লগইন":"Sign in")}</Link>
+ </header>;
  return <header className={`site-header ek-public-header${scrolled?" is-wide":""}${hidden?" is-hidden":""}${menuOpen?" menu-open":""}`}>
   <div className="header-inner">
    <Link className="brand" href="/" aria-label="Ekmivo home" onClick={closeMenu}>

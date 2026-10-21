@@ -10,6 +10,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
  if (locale !== "bn" && locale !== "en") notFound();
  return <>
   <a className="skip-link" href="#main">{locale === "bn" ? "মূল অংশে যান" : "Skip to content"}</a>
-  <MarketingExperience locale={locale} pricing={<Suspense fallback={<p className="mp-message" role="status">{locale==="bn"?"প্ল্যানের তথ্য লোড হচ্ছে…":"Loading plans…"}</p>}><PublicPricing locale={locale} compact/></Suspense>}/>
+  <MarketingExperience locale={locale} pricing={<Suspense fallback={<div className="ekm-plan-skeleton" role="status" aria-label={locale==="bn"?"প্ল্যানের তথ্য লোড হচ্ছে":"Loading plans"}><span/><span/><span/><span/></div>}><PublicPricing locale={locale} compact/></Suspense>}/>
  </>;
 }

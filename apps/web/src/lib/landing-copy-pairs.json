@@ -1,0 +1,929 @@
+{
+  "_note": "Source of truth for EN/BN copy on the Ekmivo landing page. Matching is whole-string. Taka amounts keep Latin digits in both languages.",
+  "pairs": [
+    {
+      "en": "Customer's photo",
+      "bn": "কাস্টমারের পাঠানো ছবি"
+    },
+    {
+      "en": "Leather tote",
+      "bn": "লেদার টোট ব্যাগ"
+    },
+    {
+      "en": "Box crossbody",
+      "bn": "বক্স ক্রসবডি ব্যাগ"
+    },
+    {
+      "en": "Bucket bag",
+      "bn": "বাকেট ব্যাগ"
+    },
+    {
+      "en": "Wallet",
+      "bn": "ওয়ালেট"
+    },
+    {
+      "en": "All four must match",
+      "bn": "চারটাই মিলতে হবে"
+    },
+    {
+      "en": "The AI creates the order and payment",
+      "bn": "এআই অর্ডার ও পেমেন্ট তৈরি করে"
+    },
+    {
+      "en": "As soon as the customer confirms, before any money is sent.",
+      "bn": "কাস্টমার কনফার্ম করার সাথে সাথেই, টাকা পাঠানোর আগে।"
+    },
+    {
+      "en": "Customer pays from their wallet",
+      "bn": "কাস্টমার নিজের ওয়ালেট থেকে পেমেন্ট করে"
+    },
+    {
+      "en": "The SMS reaches the seller's phone.",
+      "bn": "এসএমএস বিক্রেতার ফোনে পৌঁছায়।"
+    },
+    {
+      "en": "The payment server checks the match",
+      "bn": "পেমেন্ট সার্ভার মিলিয়ে দেখে"
+    },
+    {
+      "en": "Wallet, amount, sender number and time must all match the payment.",
+      "bn": "ওয়ালেট, টাকার পরিমাণ, প্রেরকের নম্বর ও সময়, সব পেমেন্টের সাথে মিলতে হবে।"
+    },
+    {
+      "en": "Verified or not verified, no guessing. If it can't be matched, the AI asks for the sender number.",
+      "bn": "ভেরিফাইড কি না, সরাসরি দেখা যায়। মেলাতে না পারলে এআই প্রেরকের নম্বর চায়।"
+    },
+    {
+      "en": "Total ৳2,500. Order #4822 is created. Pay here and I'll confirm.",
+      "bn": "মোট ৳2,500। অর্ডার #4822 তৈরি হয়েছে। এখানে পেমেন্ট করুন, আমি কনফার্ম করে দেব।"
+    },
+    {
+      "en": "Payment created · waiting",
+      "bn": "পেমেন্ট তৈরি · অপেক্ষায়"
+    },
+    {
+      "en": "Prepaid credit, billed separately from payments",
+      "bn": "প্রিপেইড ক্রেডিট, পেমেন্ট থেকে আলাদা বিল"
+    },
+    {
+      "en": "৳30 free credit",
+      "bn": "৳30 ফ্রি ক্রেডিট"
+    },
+    {
+      "en": "Free every month. After that, top up your prepaid credit.",
+      "bn": "প্রতি মাসে ফ্রি। এরপর দরকার হলে প্রিপেইড ক্রেডিট রিচার্জ করে নিন।"
+    },
+    {
+      "en": "Can I try the AI bot for free?",
+      "bn": "এআই বট কি ফ্রিতে চালিয়ে দেখা যায়?"
+    },
+    {
+      "en": "Yes. You get ৳30 of free credit every month. After that, top up your prepaid credit.",
+      "bn": "হ্যাঁ। প্রতি মাসে ৳30 ফ্রি ক্রেডিট পাবেন। এরপর প্রিপেইড ক্রেডিট রিচার্জ করে চালাতে পারবেন।"
+    },
+    {
+      "en": "Best match",
+      "bn": "সবচেয়ে কাছের"
+    },
+    {
+      "en": "Similar",
+      "bn": "কাছাকাছি"
+    },
+    {
+      "en": "I'll take two.",
+      "bn": "দুইটা নিচ্ছি।"
+    },
+    {
+      "en": "Total ৳2,500. Pay here and I'll confirm your order.",
+      "bn": "মোট ৳2,500। এখানে পেমেন্ট করলেই অর্ডার কনফার্ম করে দেব।"
+    },
+    {
+      "en": "Done, paid.",
+      "bn": "পেমেন্ট করে দিয়েছি।"
+    },
+    {
+      "en": "Exceptions come to you",
+      "bn": "ব্যতিক্রম আপনার কাছে আসে"
+    },
+    {
+      "en": "Late, partial or duplicate payments are held for your review. You decide to accept or refund.",
+      "bn": "দেরিতে আসা, কম টাকার বা ডাবল পেমেন্ট আপনার রিভিউয়ের জন্য রাখা হয়। গ্রহণ করবেন, না ফেরত দেবেন, সিদ্ধান্ত আপনার।"
+    },
+    {
+      "en": "Privacy and money",
+      "bn": "গোপনীয়তা ও টাকা"
+    },
+    {
+      "en": "Your phone, your data, your money.",
+      "bn": "আপনার ফোন, আপনার তথ্য, আপনার টাকা।"
+    },
+    {
+      "en": "Only payment SMS",
+      "bn": "শুধু পেমেন্টের এসএমএস"
+    },
+    {
+      "en": "Only payment SMS from your wallet is sent to Ekmivo. Everything else stays on your phone.",
+      "bn": "শুধু আপনার ওয়ালেটের পেমেন্ট এসএমএস Ekmivo-তে যায়। বাকি সব আপনার ফোনেই থাকে।"
+    },
+    {
+      "en": "See what is sent",
+      "bn": "কী যাচ্ছে, দেখতে পান"
+    },
+    {
+      "en": "Every SMS field that reaches the server is visible to you in your workspace.",
+      "bn": "সার্ভারে যে এসএমএস-তথ্য পৌঁছায়, তার সবটাই আপনি ওয়ার্কস্পেসে দেখতে পারেন।"
+    },
+    {
+      "en": "Money stays with you",
+      "bn": "টাকা থাকে আপনার কাছেই"
+    },
+    {
+      "en": "Payments go straight to your wallet. Ekmivo does not hold your money or take a cut.",
+      "bn": "পেমেন্ট সরাসরি আপনার ওয়ালেটে যায়। Ekmivo টাকা ধরে রাখে না, কোনো ভাগও নেয় না।"
+    },
+    {
+      "en": "Works with bKash and Nagad",
+      "bn": "bKash ও Nagad-এ কাজ করে"
+    },
+    {
+      "en": "Seller's phone must be Android",
+      "bn": "বিক্রেতার ফোন অ্যান্ড্রয়েড হতে হবে"
+    },
+    {
+      "en": "Customers can use any phone",
+      "bn": "কাস্টমার যেকোনো ফোন ব্যবহার করতে পারে"
+    },
+    {
+      "en": "Plans follow your successful payments.",
+      "bn": "প্ল্যান নির্ভর করে আপনার সফল পেমেন্টের ওপর।"
+    },
+    {
+      "en": "Only confirmed payments count. Created, attempted, failed and cancelled payments don't, and the allowance resets every billing cycle. The AI bot runs on its own prepaid credit, with ৳30 free every month.",
+      "bn": "শুধু নিশ্চিত হওয়া পেমেন্ট গোনা হয়। তৈরি, চেষ্টা করা, ব্যর্থ বা বাতিল পেমেন্ট গোনা হয় না, আর প্রতি বিলিং সাইকেলে সীমা নতুন করে শুরু হয়। এআই বট নিজের প্রিপেইড ক্রেডিটে চলে, প্রতি মাসে ৳30 ফ্রি।"
+    },
+    {
+      "en": "Free, Starter, Growth and Business",
+      "bn": "ফ্রি, স্টার্টার, গ্রোথ ও বিজনেস"
+    },
+    {
+      "en": "Free to start",
+      "bn": "ফ্রি দিয়ে শুরু"
+    },
+    {
+      "en": "Priced by",
+      "bn": "দাম নির্ভর করে"
+    },
+    {
+      "en": "Confirmed payments",
+      "bn": "নিশ্চিত পেমেন্টের ওপর"
+    },
+    {
+      "en": "Failed payments",
+      "bn": "ব্যর্থ পেমেন্ট"
+    },
+    {
+      "en": "Don't count",
+      "bn": "গোনা হয় না"
+    },
+    {
+      "en": "Retries",
+      "bn": "রিট্রাই"
+    },
+    {
+      "en": "Repeat verification",
+      "bn": "বারবার ভেরিফাই"
+    },
+    {
+      "en": "Never double counted",
+      "bn": "দুবার গোনা হয় না"
+    },
+    {
+      "en": "Plan limits and prices are listed inside your workspace.",
+      "bn": "প্ল্যানের সীমা ও দাম ওয়ার্কস্পেসের ভেতরেই দেখা যায়।"
+    },
+    {
+      "en": "No cut from your sales",
+      "bn": "আপনার বিক্রি থেকে কোনো ভাগ নেই"
+    },
+    {
+      "en": "Is Ekmivo a payment gateway?",
+      "bn": "Ekmivo কি পেমেন্ট গেটওয়ে?"
+    },
+    {
+      "en": "No. Customers pay your own wallet directly. Ekmivo doesn't hold or move money and takes no share of your sales. It only verifies that the payment arrived.",
+      "bn": "না। কাস্টমার সরাসরি আপনার নিজের ওয়ালেটে টাকা পাঠায়। Ekmivo টাকা ধরে রাখে না, সরায়ও না, আপনার বিক্রির কোনো ভাগও নেয় না। শুধু যাচাই করে যে পেমেন্ট এসেছে কি না।"
+    },
+    {
+      "en": "What does the app read?",
+      "bn": "অ্যাপ কী কী পড়ে?"
+    },
+    {
+      "en": "Only payment SMS from your wallet are sent to Ekmivo, and you can see every field that is sent.",
+      "bn": "শুধু আপনার ওয়ালেটের পেমেন্ট এসএমএস Ekmivo-তে যায়, আর কোন তথ্য যাচ্ছে তার সবটাই আপনি দেখতে পারেন।"
+    },
+    {
+      "en": "Which phones does it work on?",
+      "bn": "কোন ফোনে কাজ করে?"
+    },
+    {
+      "en": "The seller's phone needs to be Android. Customers can pay from any phone.",
+      "bn": "বিক্রেতার ফোন অ্যান্ড্রয়েড হতে হবে। কাস্টমার যেকোনো ফোন থেকে পেমেন্ট করতে পারে।"
+    },
+    {
+      "en": "How do I install the app?",
+      "bn": "অ্যাপ কীভাবে ইনস্টল করব?"
+    },
+    {
+      "en": "Download the Ekmivo app (APK) from your workspace and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.",
+      "bn": "ওয়ার্কস্পেস থেকে Ekmivo অ্যাপ (APK) ডাউনলোড করে এসএমএস অ্যাক্সেস দিন। নতুন অ্যান্ড্রয়েড ভার্সনে অ্যাপের জন্য restricted settings-ও চালু করতে হতে পারে।"
+    },
+    {
+      "en": "Payments",
+      "bn": "পেমেন্ট"
+    },
+    {
+      "en": "AI Bot",
+      "bn": "এআই বট"
+    },
+    {
+      "en": "Together",
+      "bn": "একসাথে"
+    },
+    {
+      "en": "Pricing",
+      "bn": "প্রাইসিং"
+    },
+    {
+      "en": "FAQ",
+      "bn": "প্রশ্নোত্তর"
+    },
+    {
+      "en": "Sign in",
+      "bn": "সাইন ইন"
+    },
+    {
+      "en": "Language",
+      "bn": "ভাষা"
+    },
+    {
+      "en": "Theme",
+      "bn": "থিম"
+    },
+    {
+      "en": "System",
+      "bn": "সিস্টেম"
+    },
+    {
+      "en": "Light",
+      "bn": "লাইট"
+    },
+    {
+      "en": "Dark",
+      "bn": "ডার্ক"
+    },
+    {
+      "en": "For social commerce sellers",
+      "bn": "সোশ্যাল মিডিয়ায় যারা বিক্রি করেন, তাদের জন্য"
+    },
+    {
+      "en": "Orders arrive in chat.",
+      "bn": "অর্ডার আসে চ্যাটে।"
+    },
+    {
+      "en": "Payments verify themselves.",
+      "bn": "পেমেন্ট মিলে যায় নিজে নিজেই।"
+    },
+    {
+      "en": "Ekmivo's AI answers your customers and takes their orders. Every payment is matched from your phone's SMS, so there are no screenshots and no transaction IDs.",
+      "bn": "Ekmivo-র এআই কাস্টমারের মেসেজের উত্তর দেয়, অর্ডার নেয়। আর আপনার ফোনের এসএমএস দেখে পেমেন্ট মিলিয়ে নেয়, তাই স্ক্রিনশট বা ট্রানজেকশন আইডি চাইতে হয় না।"
+    },
+    {
+      "en": "See how it works",
+      "bn": "কীভাবে কাজ করে দেখুন"
+    },
+    {
+      "en": "View pricing",
+      "bn": "প্ল্যান ও দাম দেখুন"
+    },
+    {
+      "en": "Customer chat",
+      "bn": "কাস্টমারের চ্যাট"
+    },
+    {
+      "en": "Is this available?",
+      "bn": "এটা কি স্টকে আছে?"
+    },
+    {
+      "en": "Yes, ৳1,250. Pay here and I'll confirm your order.",
+      "bn": "জি, দাম ৳1,250। এখানে পেমেন্ট করলেই অর্ডার কনফার্ম করে দেব।"
+    },
+    {
+      "en": "Paid!",
+      "bn": "পেমেন্ট হয়ে গেছে!"
+    },
+    {
+      "en": "Seller's phone",
+      "bn": "বিক্রেতার ফোন"
+    },
+    {
+      "en": "SMS received",
+      "bn": "নতুন এসএমএস"
+    },
+    {
+      "en": "You have received ৳1,250 from 01•••••••••",
+      "bn": "আপনি 01••••••••• নম্বর থেকে ৳1,250 পেয়েছেন"
+    },
+    {
+      "en": "Amount",
+      "bn": "টাকার পরিমাণ"
+    },
+    {
+      "en": "Sender no.",
+      "bn": "প্রেরকের নম্বর"
+    },
+    {
+      "en": "Time",
+      "bn": "সময়"
+    },
+    {
+      "en": "Dashboard",
+      "bn": "ড্যাশবোর্ড"
+    },
+    {
+      "en": "Order #4821 · ৳1,250",
+      "bn": "অর্ডার #4821 · ৳1,250"
+    },
+    {
+      "en": "Order #4820 · ৳980",
+      "bn": "অর্ডার #4820 · ৳980"
+    },
+    {
+      "en": "Order #4819 · ৳2,400",
+      "bn": "অর্ডার #4819 · ৳2,400"
+    },
+    {
+      "en": "Waiting",
+      "bn": "অপেক্ষায়"
+    },
+    {
+      "en": "Verified",
+      "bn": "ভেরিফাইড"
+    },
+    {
+      "en": "Payment automation",
+      "bn": "অটো পেমেন্ট ভেরিফিকেশন"
+    },
+    {
+      "en": "Customers pay. Orders confirm themselves.",
+      "bn": "কাস্টমার পেমেন্ট করলেই অর্ডার কনফার্ম।"
+    },
+    {
+      "en": "Install the Ekmivo app on the seller's phone. It reads incoming payment SMS and matches each one to an order.",
+      "bn": "বিক্রেতার ফোনে Ekmivo অ্যাপ থাকবে। পেমেন্টের এসএমএস এলেই অ্যাপ সেটা পড়ে সঠিক অর্ডারের সাথে মিলিয়ে দেয়।"
+    },
+    {
+      "en": "Before",
+      "bn": "আগে"
+    },
+    {
+      "en": "With Ekmivo",
+      "bn": "Ekmivo-র সাথে"
+    },
+    {
+      "en": "Customer orders on your website",
+      "bn": "কাস্টমার আপনার সাইটে অর্ডার করে"
+    },
+    {
+      "en": "Customer pays from their mobile wallet",
+      "bn": "মোবাইল ওয়ালেট থেকে টাকা পাঠায়"
+    },
+    {
+      "en": "Customer enters the transaction ID",
+      "bn": "ট্রানজেকশন আইডি লিখে জমা দেয়"
+    },
+    {
+      "en": "You check it manually",
+      "bn": "আপনি নিজে মিলিয়ে দেখেন"
+    },
+    {
+      "en": "Customer taps Pay on your website",
+      "bn": "কাস্টমার আপনার সাইটে Pay-তে ক্লিক করে"
+    },
+    {
+      "en": "Ekmivo creates the payment and opens its page",
+      "bn": "Ekmivo পেমেন্ট তৈরি করে তার পেজ খোলে"
+    },
+    {
+      "en": "Ekmivo verifies it from the SMS and sends them back to your site",
+      "bn": "এসএমএস দেখে Ekmivo নিজেই ভেরিফাই করে, কাস্টমার আপনার সাইটে ফিরে যায়"
+    },
+    {
+      "en": "Connected · listening for SMS",
+      "bn": "কানেক্টেড · এসএমএসের অপেক্ষায়"
+    },
+    {
+      "en": "Received ৳1,250",
+      "bn": "৳1,250 এসেছে"
+    },
+    {
+      "en": "Received ৳980",
+      "bn": "৳980 এসেছে"
+    },
+    {
+      "en": "Received ৳2,400",
+      "bn": "৳2,400 এসেছে"
+    },
+    {
+      "en": "Matched · #4821",
+      "bn": "মিলেছে · #4821"
+    },
+    {
+      "en": "Matched · #4820",
+      "bn": "মিলেছে · #4820"
+    },
+    {
+      "en": "Matched · #4819",
+      "bn": "মিলেছে · #4819"
+    },
+    {
+      "en": "AI bot",
+      "bn": "এআই সেলস বট"
+    },
+    {
+      "en": "It answers your customers. And knows your catalog.",
+      "bn": "কাস্টমারের প্রশ্নের উত্তর দেয়, আপনার প্রোডাক্টও চেনে।"
+    },
+    {
+      "en": "Connect your social media pages. The bot replies, searches products from images and keeps posts and comments in order.",
+      "bn": "আপনার সোশ্যাল মিডিয়া পেজ কানেক্ট করুন। বট মেসেজের উত্তর দেয়, ছবি দেখে প্রোডাক্ট খুঁজে দেয়, আর পোস্ট ও কমেন্টও সামলায়।"
+    },
+    {
+      "en": "Replies to customers",
+      "bn": "কাস্টমারের মেসেজের উত্তর দেয়"
+    },
+    {
+      "en": "Answers messages on your connected social media page.",
+      "bn": "কানেক্ট করা পেজে আসা মেসেজের উত্তর দেয়।"
+    },
+    {
+      "en": "Finds a product from a photo",
+      "bn": "ছবি দেখেই প্রোডাক্ট খুঁজে দেয়"
+    },
+    {
+      "en": "Customer sends an image; the bot searches your products for it.",
+      "bn": "কাস্টমার ছবি পাঠালে বট আপনার প্রোডাক্ট তালিকা থেকে সেটা বের করে।"
+    },
+    {
+      "en": "Works from video screenshots",
+      "bn": "ভিডিওর স্ক্রিনশটেও কাজ করে"
+    },
+    {
+      "en": "A frame from a video still gets you close results.",
+      "bn": "ভিডিও থেকে নেওয়া স্ক্রিনশট দিলেও কাছাকাছি প্রোডাক্ট পাওয়া যায়।"
+    },
+    {
+      "en": "Manages posts and comments",
+      "bn": "পোস্ট ও কমেন্ট সামলায়"
+    },
+    {
+      "en": "Keeps up with your posts and the comments under them.",
+      "bn": "আপনার পোস্ট আর তার নিচের কমেন্টের দিকে নজর রাখে।"
+    },
+    {
+      "en": "Exact match: one product. No exact match: a carousel of the closest ones. Powered by a vector database.",
+      "bn": "হুবহু মিললে একটি প্রোডাক্ট দেখায়। না মিললে সবচেয়ে কাছাকাছি কয়েকটা ক্যারোসেল আকারে দেয়। পেছনে আছে ভেক্টর ডাটাবেস।"
+    },
+    {
+      "en": "AI bot + payments",
+      "bn": "এআই বট + পেমেন্ট"
+    },
+    {
+      "en": "Order in chat. Payment verified automatically.",
+      "bn": "চ্যাটে অর্ডার, পেমেন্ট নিজে থেকেই ভেরিফাই।"
+    },
+    {
+      "en": "The bot takes the order, asks the payment server to verify, and the dashboard shows the result. Your customers never send proof.",
+      "bn": "বট অর্ডার নেয়, পেমেন্ট সার্ভারকে যাচাই করতে বলে, আর ফলাফল আপনার ড্যাশবোর্ডে দেখা যায়। কাস্টমারকে আর কোনো প্রমাণ পাঠাতে হয় না।"
+    },
+    {
+      "en": "Customer orders in the chat",
+      "bn": "কাস্টমার চ্যাটেই অর্ডার করে"
+    },
+    {
+      "en": "The AI collects the order details.",
+      "bn": "এআই অর্ডারের তথ্য নিয়ে নেয়।"
+    },
+    {
+      "en": "AI asks the payment server",
+      "bn": "এআই পেমেন্ট সার্ভারকে যাচাই করতে বলে"
+    },
+    {
+      "en": "Amount, sender number and time are checked.",
+      "bn": "টাকার পরিমাণ, প্রেরকের নম্বর আর সময় মিলিয়ে দেখা হয়।"
+    },
+    {
+      "en": "Dashboard shows the result",
+      "bn": "ড্যাশবোর্ডেই ফলাফল"
+    },
+    {
+      "en": "Verified or not verified, no guessing.",
+      "bn": "ভেরিফাইড কি না, সরাসরি দেখা যায়। আন্দাজ নয়।"
+    },
+    {
+      "en": "Unsure? It asks, politely",
+      "bn": "মিলছে না? ভদ্রভাবে জিজ্ঞেস করে"
+    },
+    {
+      "en": "If a payment can't be matched, the AI asks for the sender number and keeps it pending.",
+      "bn": "পেমেন্ট মেলাতে না পারলে এআই কাস্টমারের কাছে প্রেরকের নম্বর চায় এবং মেলা পর্যন্ত পেন্ডিং রাখে।"
+    },
+    {
+      "en": "Chat · Order #4822",
+      "bn": "চ্যাট · অর্ডার #4822"
+    },
+    {
+      "en": "I want two. Sent the money just now.",
+      "bn": "দুইটা নেব। এই মাত্র টাকা পাঠালাম।"
+    },
+    {
+      "en": "I couldn't match it yet. What time did you send it?",
+      "bn": "পেমেন্টটা এখনো খুঁজে পাইনি। কটার সময় পাঠিয়েছিলেন?"
+    },
+    {
+      "en": "10:42 pm",
+      "bn": "রাত ১০:৪২"
+    },
+    {
+      "en": "Payment verified",
+      "bn": "পেমেন্ট ভেরিফাইড"
+    },
+    {
+      "en": "Dashboard · #4822 · ৳2,500",
+      "bn": "ড্যাশবোর্ড · #4822 · ৳2,500"
+    },
+    {
+      "en": "A payment is verified only when it matches.",
+      "bn": "সব মিললে তবেই পেমেন্ট ভেরিফাইড।"
+    },
+    {
+      "en": "All three must match",
+      "bn": "তিনটাই মিলতে হবে"
+    },
+    {
+      "en": "Wallet, amount, sender number and time. If any one differs, it is not verified.",
+      "bn": "ওয়ালেট, টাকার পরিমাণ, প্রেরকের নম্বর ও সময়। একটাও না মিললে ভেরিফাই হয় না।"
+    },
+    {
+      "en": "No transaction ID typed",
+      "bn": "ট্রানজেকশন আইডি লিখতে হয় না"
+    },
+    {
+      "en": "Your customers never fill a TrxID form in the normal flow.",
+      "bn": "সাধারণ ক্ষেত্রে কাস্টমারকে TrxID দেওয়ার ফর্ম পূরণ করতে হয় না।"
+    },
+    {
+      "en": "Unclear stays pending",
+      "bn": "নিশ্চিত না হলে পেন্ডিং থাকে"
+    },
+    {
+      "en": "When it can't be matched, the AI asks for details instead of guessing.",
+      "bn": "মেলাতে না পারলে আন্দাজে ধরে না নিয়ে এআই কাস্টমারের কাছে তথ্য চায়।"
+    },
+    {
+      "en": "Pick a plan by payment volume.",
+      "bn": "যত পেমেন্ট, সেই অনুযায়ী প্ল্যান বেছে নিন।"
+    },
+    {
+      "en": "Payment plans are based on successful payments. The AI bot runs on its own prepaid credit, with ৳30 free every month.",
+      "bn": "পেমেন্ট প্ল্যানের দাম নির্ভর করে সফল পেমেন্টের সংখ্যার ওপর। এআই বটের বিল আলাদা, আগে রিচার্জ করে ব্যবহার করতে হয়।"
+    },
+    {
+      "en": "Free",
+      "bn": "ফ্রি"
+    },
+    {
+      "en": "Free for 14 days from activation",
+      "bn": "চালু হওয়ার পর ১৪ দিন ফ্রি"
+    },
+    {
+      "en": "successful payments every 7 days",
+      "bn": "প্রতি ৭ দিনে সফল পেমেন্ট"
+    },
+    {
+      "en": "Starter",
+      "bn": "স্টার্টার"
+    },
+    {
+      "en": "Every 30 days",
+      "bn": "প্রতি ৩০ দিনে"
+    },
+    {
+      "en": "successful payments each calendar month, Dhaka time",
+      "bn": "প্রতি ক্যালেন্ডার মাসে সফল পেমেন্ট (ঢাকার সময় অনুযায়ী)"
+    },
+    {
+      "en": "Live API keys",
+      "bn": "লাইভ এপিআই কী"
+    },
+    {
+      "en": "Team members",
+      "bn": "টিম সদস্য"
+    },
+    {
+      "en": "Connected devices",
+      "bn": "কানেক্টেড ডিভাইস"
+    },
+    {
+      "en": "Receiving accounts",
+      "bn": "রিসিভিং অ্যাকাউন্ট"
+    },
+    {
+      "en": "Invoices",
+      "bn": "ইনভয়েস"
+    },
+    {
+      "en": "Payment links",
+      "bn": "পেমেন্ট লিংক"
+    },
+    {
+      "en": "Reports",
+      "bn": "রিপোর্ট"
+    },
+    {
+      "en": "Exports",
+      "bn": "এক্সপোর্ট"
+    },
+    {
+      "en": "Included",
+      "bn": "আছে"
+    },
+    {
+      "en": "Not included",
+      "bn": "নেই"
+    },
+    {
+      "en": "Start free",
+      "bn": "ফ্রি শুরু করুন"
+    },
+    {
+      "en": "Choose plan",
+      "bn": "এই প্ল্যান নিন"
+    },
+    {
+      "en": "Billed separately from payments",
+      "bn": "পেমেন্ট থেকে আলাদা বিল"
+    },
+    {
+      "en": "Prepaid",
+      "bn": "প্রিপেইড"
+    },
+    {
+      "en": "Customer replies",
+      "bn": "কাস্টমারকে উত্তর"
+    },
+    {
+      "en": "Image search",
+      "bn": "ছবি দিয়ে খোঁজা"
+    },
+    {
+      "en": "Posts & comments",
+      "bn": "পোস্ট ও কমেন্ট"
+    },
+    {
+      "en": "Order taking",
+      "bn": "অর্ডার নেওয়া"
+    },
+    {
+      "en": "Talk to us",
+      "bn": "আমাদের সাথে কথা বলুন"
+    },
+    {
+      "en": "Unlimited sites, apps & bots",
+      "bn": "যত খুশি সাইট, অ্যাপ ও বট"
+    },
+    {
+      "en": "Failed payments are free",
+      "bn": "ব্যর্থ পেমেন্টে কোনো চার্জ নেই"
+    },
+    {
+      "en": "Retries are free",
+      "bn": "আবার চেষ্টা করলেও চার্জ নেই"
+    },
+    {
+      "en": "Wallet fees are separate",
+      "bn": "ওয়ালেটের নিজস্ব ফি আলাদা"
+    },
+    {
+      "en": "Quick answers.",
+      "bn": "সচরাচর প্রশ্ন।"
+    },
+    {
+      "en": "How does it know a payment arrived?",
+      "bn": "পেমেন্ট যে এসেছে, সেটা কীভাবে বোঝা যায়?"
+    },
+    {
+      "en": "The Ekmivo app on the seller's phone reads payment SMS. Each one is matched to a payment by wallet, amount, sender number and time.",
+      "bn": "বিক্রেতার ফোনে থাকা Ekmivo অ্যাপ পেমেন্টের এসএমএস পড়ে। ওয়ালেট, টাকার পরিমাণ, প্রেরকের নম্বর ও সময় দেখে সেটা সঠিক পেমেন্টের সাথে মেলানো হয়।"
+    },
+    {
+      "en": "Do customers need to install anything?",
+      "bn": "কাস্টমারকে কি কিছু ইনস্টল করতে হবে?"
+    },
+    {
+      "en": "No. They tap Pay, use the Ekmivo payment page and return to your site.",
+      "bn": "না। Pay-তে ক্লিক করলে Ekmivo-র পেমেন্ট পেজ খোলে, সেখানে পেমেন্ট করে কাস্টমার আপনার সাইটে ফিরে আসে।"
+    },
+    {
+      "en": "Can I use the payments without the AI bot?",
+      "bn": "এআই বট ছাড়া কি শুধু পেমেন্ট নেওয়া যায়?"
+    },
+    {
+      "en": "Yes. The payment system works on its own, and so does the AI bot. Together they work best.",
+      "bn": "হ্যাঁ। পেমেন্ট সিস্টেম আর এআই বট আলাদাভাবেও চলে। তবে দুটো একসাথে নিলে সবচেয়ে ভালো কাজ করে।"
+    },
+    {
+      "en": "What if a payment can't be matched?",
+      "bn": "পেমেন্ট না মিললে কী হবে?"
+    },
+    {
+      "en": "It stays pending, not verified. If the SMS arrives late, it is matched using the time on the SMS, so a late phone connection doesn't fail a payment made in time. Late, partial or duplicate payments go to you for review.",
+      "bn": "সেটা পেন্ডিং থাকে, ভেরিফাইড হয় না। SMS দেরিতে এলে SMS-এ লেখা সময় দিয়ে মেলানো হয়, তাই ফোনে দেরিতে নেটওয়ার্ক এলেও সময়মতো করা পেমেন্ট ব্যর্থ হয় না। দেরিতে আসা, কম টাকার বা ডাবল পেমেন্ট আপনার রিভিউয়ে যায়।"
+    },
+    {
+      "en": "Which social platforms does the AI bot connect to?",
+      "bn": "এআই বট কোন কোন সোশ্যাল প্ল্যাটফর্মে চলে?"
+    },
+    {
+      "en": "Talk to us for the current list of supported platforms.",
+      "bn": "এখন কোন প্ল্যাটফর্ম সাপোর্ট করছে, জানতে আমাদের সাথে যোগাযোগ করুন।"
+    },
+    {
+      "en": "Let your customers pay. Skip the chasing.",
+      "bn": "কাস্টমার পেমেন্ট করুক, আপনাকে আর পেছনে ছুটতে হবে না।"
+    },
+    {
+      "en": "Create a workspace",
+      "bn": "ওয়ার্কস্পেস খুলুন"
+    },
+    {
+      "en": "Service status",
+      "bn": "সার্ভিস স্ট্যাটাস"
+    },
+    {
+      "en": "Only confirmed payments count. Created, attempted, failed and cancelled payments don't, and the allowance resets every billing cycle. The AI bot is pay as you go: ৳30 free once when you sign up, then recharge your credit.",
+      "bn": "শুধু কনফার্মড পেমেন্ট গণনা হয়। তৈরি, চেষ্টা করা, ব্যর্থ ও বাতিল পেমেন্ট গণনায় আসে না, আর লিমিট প্রতি বিলিং সাইকেলে রিসেট হয়। এআই বট পে-অ্যাজ-ইউ-গো: সাইন আপে একবারই ৳30 ফ্রি, এরপর ক্রেডিট রিচার্জ করে চালান।"
+    },
+    {
+      "en": "AI + Payments",
+      "bn": "এআই + পেমেন্ট"
+    },
+    {
+      "en": "Monthly",
+      "bn": "মাসিক"
+    },
+    {
+      "en": "Yearly",
+      "bn": "বার্ষিক"
+    },
+    {
+      "en": "2 months free",
+      "bn": "২ মাস ফ্রি"
+    },
+    {
+      "en": "Growth",
+      "bn": "গ্রোথ"
+    },
+    {
+      "en": "Custom",
+      "bn": "কাস্টম"
+    },
+    {
+      "en": "Recommended",
+      "bn": "প্রস্তাবিত"
+    },
+    {
+      "en": "/month",
+      "bn": "/মাস"
+    },
+    {
+      "en": "/year",
+      "bn": "/বছর"
+    },
+    {
+      "en": "50 payments / month",
+      "bn": "প্রতি মাসে 50টি পেমেন্ট"
+    },
+    {
+      "en": "500 payments / month",
+      "bn": "প্রতি মাসে 500টি পেমেন্ট"
+    },
+    {
+      "en": "2,000 payments / month",
+      "bn": "প্রতি মাসে 2,000টি পেমেন্ট"
+    },
+    {
+      "en": "Automatic SMS verification",
+      "bn": "স্বয়ংক্রিয় এসএমএস ভেরিফিকেশন"
+    },
+    {
+      "en": "Exceptions held for your review",
+      "bn": "ব্যতিক্রম আপনার রিভিউয়ের জন্য রাখা হয়"
+    },
+    {
+      "en": "Let's talk",
+      "bn": "কথা বলুন"
+    },
+    {
+      "en": "Custom volume and terms",
+      "bn": "নিজের ভলিউম ও শর্ত অনুযায়ী"
+    },
+    {
+      "en": "Built around your payment volume",
+      "bn": "আপনার পেমেন্ট ভলিউম অনুযায়ী"
+    },
+    {
+      "en": "Contact us",
+      "bn": "যোগাযোগ করুন"
+    },
+    {
+      "en": "free credit, once, when you sign up",
+      "bn": "ফ্রি ক্রেডিট, সাইন আপের সময় একবারই"
+    },
+    {
+      "en": "No monthly reset. Recharge your credit when you need it. No subscription.",
+      "bn": "প্রতি মাসে রিসেট হয় না। দরকার হলে ক্রেডিট রিচার্জ করুন। কোনো সাবস্ক্রিপশন নেই।"
+    },
+    {
+      "en": "Pay as you go",
+      "bn": "পে-অ্যাজ-ইউ-গো"
+    },
+    {
+      "en": "Use both. Pay less for payments.",
+      "bn": "দুটোই নিন, পেমেন্টে কম দিন।"
+    },
+    {
+      "en": "The AI bot stays pay as you go. Every payments plan gets a discount when you use both.",
+      "bn": "এআই বট পে-অ্যাজ-ইউ-গোই থাকে। দুটো একসাথে নিলে প্রতিটি পেমেন্ট প্ল্যানে ডিসকাউন্ট পাবেন।"
+    },
+    {
+      "en": "15% off",
+      "bn": "15% ছাড়"
+    },
+    {
+      "en": "every payments plan",
+      "bn": "প্রতিটি পেমেন্ট প্ল্যানে"
+    },
+    {
+      "en": "Failed payments don't count",
+      "bn": "ব্যর্থ পেমেন্ট গণনায় আসে না"
+    },
+    {
+      "en": "Retries don't count",
+      "bn": "রিট্রাই গণনায় আসে না"
+    },
+    {
+      "en": "Repeat verification is never double counted",
+      "bn": "একই পেমেন্টের রিভেরিফিকেশন দুইবার গণনা হয় না"
+    },
+    {
+      "en": "Transaction ID",
+      "bn": "ট্রানজেকশন আইডি"
+    },
+    {
+      "en": "Checking by hand…",
+      "bn": "হাতে মিলিয়ে দেখা হচ্ছে…"
+    },
+    {
+      "en": "Is there a discount for using both?",
+      "bn": "দুটো একসাথে নিলে কি ছাড় আছে?"
+    },
+    {
+      "en": "Yes. The AI bot stays pay as you go, and every payments plan gets a discount when you use both.",
+      "bn": "হ্যাঁ। এআই বট পে-অ্যাজ-ইউ-গোই থাকে, আর দুটো একসাথে নিলে প্রতিটি পেমেন্ট প্ল্যানে ডিসকাউন্ট পাবেন।"
+    },
+    {
+      "en": "Yes. You get ৳30 of free credit once, when you sign up. After that, recharge your credit and pay as you go.",
+      "bn": "হ্যাঁ। সাইন আপের সময় একবারই ৳30 ফ্রি ক্রেডিট পাবেন। এরপর ক্রেডিট রিচার্জ করে পে-অ্যাজ-ইউ-গো চালাতে পারবেন।"
+    },
+    {
+      "en": "If a payment can't be matched, or the customer says they paid but the time is unclear, the AI asks for the sender number and time and keeps it pending.",
+      "bn": "পেমেন্ট মেলাতে না পারলে, বা কাস্টমার পেমেন্ট করেছেন বললেও সময় স্পষ্ট না হলে, এআই প্রেরকের নম্বর ও সময় চায় এবং পেমেন্ট পেন্ডিং রাখে।"
+    },
+    {
+      "en": "1 month free",
+      "bn": "১ মাস ফ্রি"
+    },
+    {
+      "en": "Prices are unavailable right now.",
+      "bn": "দাম এই মুহূর্তে দেখানো যাচ্ছে না।"
+    },
+    {
+      "en": "See plans in your workspace",
+      "bn": "ওয়ার্কস্পেসে প্ল্যান দেখুন"
+    },
+    {
+      "en": "Loading plans",
+      "bn": "প্ল্যান লোড হচ্ছে"
+    }
+  ]
+}

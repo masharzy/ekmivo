@@ -3,6 +3,9 @@ import {publicPaymentPlans} from "../lib/server/payment-plans";
 import {PaymentPlanCards} from "./payment-plan-cards";
 export async function PublicPricing({locale,compact=false}:{locale:"en"|"bn";compact?:boolean}){
  const {plans,unavailable}=await publicPaymentPlans(),bn=locale==="bn",t=(a:string,b:string)=>bn?b:a;
+ if(compact) return <div className="ekm-plan-data">
+  {unavailable?<p className="mp-message" role="status">{t("Pricing is temporarily unavailable. Please try again later.","প্ল্যানের তথ্য এখন পাওয়া যাচ্ছে না। একটু পরে আবার দেখুন।")}</p>:!plans.length?<p className="mp-message">{t("Public plans have not been published yet.","পাবলিক প্ল্যান এখনো প্রকাশ করা হয়নি।")}</p>:<PaymentPlanCards plans={plans} locale={locale} variant="landing"/>}
+ </div>;
  const Heading=compact?"h2":"h1"; return <section className="mp-public" id="pricing" lang={locale}>
   <header><span className="mp-eyebrow">{t("PAYMENT GATEWAY PRICING","পেমেন্ট গেটওয়ের প্ল্যান")}</span><Heading>{t("One workspace. Every integration.","এক ওয়ার্কস্পেসে আপনার সব integration।")}</Heading><p>{t("Choose your successful-payment allowance. Connect your websites, apps and bots.","সফল পেমেন্টের প্রয়োজন অনুযায়ী প্ল্যান নিন। যুক্ত করুন আপনার website, app ও bot।")}</p><Link href={`/${locale}/ai-bot`}>{t("AI Bot uses separate prepaid billing","AI Bot-এর prepaid billing আলাদা")} ↗</Link></header>
   {unavailable?<p className="mp-message" role="status">{t("Pricing is temporarily unavailable. Please try again later.","প্ল্যানের তথ্য এখন পাওয়া যাচ্ছে না। একটু পরে আবার দেখুন।")}</p>:!plans.length?<p className="mp-message">{t("Public plans have not been published yet.","পাবলিক প্ল্যান এখনো প্রকাশ করা হয়নি।")}</p>:<PaymentPlanCards plans={plans} locale={locale}/>}

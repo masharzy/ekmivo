@@ -24,10 +24,21 @@
 @import "./admin-console.css";
 @import "./managed-plans.css";
 @import "../styles/brand/home-dark.css";
+/* Reference-faithful public homepage chrome (scoped; never affects admin). */
+@import "./landing-chrome.css";
 /* Admin styles load last so marketing/merchant defaults cannot re-skin Admin. */
 @import "../styles/admin/admin-tokens.css";
 @import "../styles/admin/admin-theme.css";
 @import "../styles/admin/admin-components.css";
+
+/* The currency glyph uses the same local Bengali face in both languages. */
+@font-face {
+  font-family: "Taka";
+  src: local("Noto Sans Bengali"), local("Nirmala UI"), local("Kohinoor Bangla"), local("Shonar Bangla"), local("Hind Siliguri");
+  unicode-range: U+09F3;
+  size-adjust: 112%;
+  font-display: swap;
+}
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 100px; }
