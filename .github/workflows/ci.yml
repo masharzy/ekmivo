@@ -55,6 +55,9 @@ jobs:
       - name: Single Store signup, switching and typography regression contracts
         working-directory: apps/web
         run: node --test scripts/primary-store-binding-contract.test.mjs
+      - name: Published subscription pricing contracts (Phase 2)
+        working-directory: apps/web
+        run: node --test scripts/subscription-public-catalog.test.mjs scripts/subscription-public-quote.test.mjs scripts/subscription-offer-render.test.mjs
       - name: Briofold Phase 4 and 5 onboarding and prepaid safety contract
         working-directory: apps/web
         run: node --test scripts/briofold-onboarding-client.test.mjs scripts/signup-transaction-smoke.mjs scripts/briofold-onboarding-contract.test.mjs scripts/briofold-onboarding-actions.test.mjs scripts/briofold-ai-tariff.test.mjs scripts/briofold-topup-proxy.test.mjs scripts/briofold-topup-proof-integrity.test.mjs
@@ -122,6 +125,16 @@ jobs:
       - name: Install browser for real PG05 checkout journeys
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
+      - name: Phase 2 published subscription pricing responsive browser acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-public-responsive-browser.test.mjs
+      - name: Archive Phase 2 pricing screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-public-pricing-screenshots
+          path: apps/web/test-results/subscription-pricing/
+          if-no-files-found: ignore
       - name: Website widget retry, history, XSS and keyboard acceptance
         working-directory: apps/web
         run: node --test scripts/briofold-website-widget.test.mjs

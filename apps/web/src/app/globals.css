@@ -10,6 +10,8 @@
 @import "./pg13-reports.css";
 @import "./customer-pay.css";
 @import "./public-experience.css";
+/* Publish-only subscription catalog UI; does not alter seller checkout/Admin. */
+@import "./subscription-offer-pricing.css";
 @import "./public-polish.css";
 @import "./public-developers.css";
 @import "./payment-editorial.css";

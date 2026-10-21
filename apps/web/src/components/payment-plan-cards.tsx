@@ -5,7 +5,7 @@ export function PaymentPlanCards({plans,locale,preview=false,variant="default"}:
  if(variant==="landing")return <div className="p4">
  {plans.map(plan=>{
    const x=plan.terms, custom=x.kind==="custom", featured=!!x.badge||!!x.badge_bn;
-   const href=custom?(x.contact_url||`/${locale}/#contact`):`/${locale}/subscribe/${encodeURIComponent(plan.id)}`;
+   const href=custom?(x.contact_url||"/#contact"):`/subscribe/${encodeURIComponent(plan.id)}`;
    return <article className={`pcard${featured?" rec":""}`} key={plan.id}>
      <div className="pt"><h3 title={planName(x,bn)}>{planName(x,bn)}</h3>{featured&&<span className="bd">{bn&&x.badge_bn?x.badge_bn:x.badge}</span>}</div>
      <div className="amt">{custom?t("Let's talk","কথা বলুন"):planPrice(x,bn)}{x.kind==="paid"&&<small>{t(` / ${x.period_days} days`,` / ${x.period_days} দিন`)}</small>}</div>
@@ -17,7 +17,7 @@ export function PaymentPlanCards({plans,locale,preview=false,variant="default"}:
    </article>;
  })}
  </div>;
- return <div className="mp-price-grid">{plans.map(p=>{const x=p.terms;const href=x.kind==="custom"?(x.contact_url||`/${locale}/#contact`):`/${locale}/subscribe/${encodeURIComponent(p.id)}`;
+ return <div className="mp-price-grid">{plans.map(p=>{const x=p.terms;const href=x.kind==="custom"?(x.contact_url||"/#contact"):`/subscribe/${encodeURIComponent(p.id)}`;
  return <article className={"mp-price-card"+(x.badge?" mp-highlight":"")} key={p.id}>
   {(x.badge||x.badge_bn)&&<span className="mp-badge">{bn&&x.badge_bn?x.badge_bn:x.badge}</span>}
   <h3>{planName(x,bn)}</h3><p>{bn&&x.description_bn?x.description_bn:x.description}</p>
