@@ -280,3 +280,6 @@
 .pa-root.pa-admin-design .pa-system-receiving-form .pa-button{justify-content:center;align-self:center}
 .pa-root.pa-admin-design .pa-system-receiving-form p{grid-column:1/-1;margin:0;font-size:12px}
 @media(max-width:600px){.pa-root.pa-admin-design .pa-system-receiving{align-items:stretch;flex-direction:column}.pa-root.pa-admin-design .pa-system-receiving-form{width:100%;grid-template-columns:minmax(0,1fr) auto}}
+
+.pa-root.pa-admin-design .pa-admin-offer-version{display:flex;flex-direction:column;gap:3px;margin:0 0 8px;white-space:nowrap}
+.pa-root.pa-admin-design .pa-admin-offer-version small{font-size:11px;color:var(--mu)}

@@ -9,7 +9,7 @@ Date: 2026-10-21 (Asia/Dhaka). Owner specifically authorized direct production m
 - Existing invoices, subscription grants, Store memberships, wallets, two financial databases, and historical records were not updated or deleted by the migration. No coupon, offer, policy document or payment was seeded.
 - Read-only privilege verification: all 12 tables have `relrowsecurity` and `relforcerowsecurity`; zero grant `SELECT/INSERT/UPDATE/DELETE` privileges to `ekmivo_financial_runtime`. Future Go handlers must expose restricted and audited mutations.
 - Future replay: `backend/cmd/financial-migrate/dashboard_reference.go` lists the migration under the checksum-controlled control-only coordinator. Do not hand-apply the same file twice.
-- Not done: isolated database test (owner waived), Go backend implementation/tests (`go` unavailable in current environment), admin coupon UI, live yearly/bundle prices, three-consent confirmation, payment handoff, browser E2E, code commit/push, API/web production deploy. The purchase preview remains disabled.
+- At the original 0133-only checkpoint: isolated DB branch test (owner waived), Go endpoints, Admin, yearly/bundle offers, consent confirmation, payment handoff and end-to-end verification were pending. Subsequent incremental progress is recorded below; purchase activation remains disabled.
 - Rollback policy: no destructive drop rollback was attempted. Retain inert additive tables until a separately reviewed rollback/migration is authorized.
 
 ## Admin coupon schema/function follow-up — 2026-10-21
@@ -29,3 +29,10 @@ Date: 2026-10-21 (Asia/Dhaka). Owner specifically authorized direct production m
 - `0142_platform_subscription_policy_kind_qualification.sql`: checksum `bcbf205232d49d99b09e0e41da6b36c8aac5c3052d458d842bd9369fc8e13130`; qualifies a previously ambiguous PL/pgSQL column reference. Both hotfixes preserve the immutable applied 0140 file/ledger.
 - Final create→publish smoke **passed inside savepoint and was rolled back before commit**: no `QATEST_20261021` record and zero published documents remained. Failed prior smoke calls committed nothing. Active Ekmivo Terms, Privacy and Refund URLs are **not** configured until the owner provides approved versions and content hashes.
 - Admin Settings → Legal & contact provides actual versioned controls, and the order preview now reads versioned published URLs via `platform_subscription_policy_public()`, with no unversioned environment fallback. Server-side acceptance persistence/confirm remains pending and checkout is still payment-disabled.
+
+## Versioned subscription offer admin (0143)
+
+- Control migration `0143_platform_subscription_offer_admin.sql` applied directly to production Ekmivo Neon per owner instruction. SHA-256: `347ba59969a3c4fca3702a3f09f082cf13d846acdb8a2efbd7f353b4a5afaa98`.
+- Added Admin → Billing & Revenue → Offers for immutable monthly/yearly Gateway prices, one-time AI credit packs and combined AI + Pay offers. No offer or price was seeded or published.
+- Production SQL QA ran draft → publish → archive for a synthetic AI-credit offer **inside a savepoint**, rolled back to that savepoint, and confirmed `residual_offers=0` and `residual_audit=0`. This validates catalog mechanics, not financial settlement or entitlement delivery.
+- Checkout stays disabled until server-backed quotes, coupon redemptions, three immutable policy acceptances, system receiving payment verification and invoice/entitlement handoff are verified. Admin offers are configuration, **not** an enabled payment pathway.

@@ -174,3 +174,8 @@ Implementation can build configurable support and fixtures while these are undec
 
 - Control migrations `0140`–`0142` are applied to production and checksum-ledgered. Admin Settings → Legal & contact can register immutable version/URL/SHA-256 fingerprints and publish/archive documents atomically. Order Summary uses **only** the currently published versioned Terms/Privacy/Refund links; no fallback to unsigned environment variables.
 - Final production DB create→publish verification was run within a savepoint and rolled back: no test policy or published legal URL remains. No buyer consent was accepted or persisted; this is only administrative infrastructure. Three owner-approved documents and backend acceptance/confirm remain required before enabling purchases.
+
+### Immutable pricing and AI-bundle offer drafts (partial phase 2)
+
+- Production control migration `0143` checksum `347ba59969a3c4fca3702a3f09f082cf13d846acdb8a2efbd7f353b4a5afaa98` applied. Admin Billing & Revenue → Offers supports versioned draft, publish and archive operations for monthly/yearly Payments, AI prepaid credit packs and bundled descriptions, with published Gateway plan-version pinning, price in integer BDT minor units, MFA Super Admin controls and audit.
+- A synthetic AI-credit offer was drafted/published/archived transactionally and then rolled back in production; no live offer or campaign was created. This catalog does **not** automatically alter `pg13` billing prices, AI wallet balance or plan activation. Server price quote and fulfillment adapters are still pending; no unapproved prices have been published.
