@@ -54,8 +54,9 @@ function fixture(options={}){
   "next/headers":{cookies:async()=>({delete:()=>{}})},
   "../lib/server/auth":{requireUser:async()=>({id:"owner-a"}),preferredWorkspaceFor:async()=>workspace},
   "../lib/server/db":{database:()=>db},
+  "../lib/dashboard-navigation":{dashboardHref:(_locale,id,service,section)=>`/w/${id}/${service}/${section}`},
  };
- runInNewContext(compiled,{exports,require:name=>modules[name]??realRequire(name),console:{error:()=>{}}});
+ runInNewContext(compiled,{exports,require:name=>modules[name]??realRequire(name),console:{error:()=>{}},process:{env:{EKMIVO_SUBSCRIPTION_ORDER_PREVIEW:options.preview?"1":"0"}}});
  return {state:()=>state,submit:async fields=>{
   const form=new FormData();
   for(const [key,value] of Object.entries({business_id:workspace.id,step:state.step,...fields}))form.set(key,value);
@@ -103,7 +104,12 @@ test("free plan claims the actual subscription; failure rolls back setup",async(
  const failed=fixture({step:"billing",products:{payments:true},claimError:true});assert.equal((await failed.submit({plan:"free"})).status,"error");assert.equal(failed.state().step,"billing");
 });
 test("paid plan navigates to explicit confirmation without granting a subscription",async()=>{
- const f=fixture({step:"billing",products:{payments:true}});assert.equal((await f.submit({plan:"paid"})).location,"/subscribe/paid");assert.deepEqual(f.state().claims,[]);
+ const f=fixture({step:"billing",products:{payments:true}});
+ assert.equal((await f.submit({plan:"paid"})).location,"/w/business-a/payments/billing?tab=plans&plan=paid");
+ assert.deepEqual(f.state().claims,[]);
+ const preview=fixture({step:"billing",products:{payments:true},preview:true});
+ assert.equal((await preview.submit({plan:"paid"})).location,"/checkout/order/paid");
+ assert.deepEqual(preview.state().claims,[]);
 });
 test("replaying a completed billing step goes to dashboard without another purchase",async()=>{
  const f=fixture({step:"complete",products:{payments:true}});assert.equal((await f.submit({step:"billing",plan:"paid"})).location,"/dashboard");assert.deepEqual(f.state().claims,[]);
