@@ -56,3 +56,5 @@ test("responsive catalog styles are scoped with focus and mobile guards",()=>{
  assert.match(css,/@media\(max-width:600px\)/);
  assert.doesNotMatch(css,/(?:^|\n)\s*(?:body|html|\.ds-app|\.pa-root)\s*[\{:]/);
 });
+
+// Phase 2: render approved examples only; production prices come solely from SQL.
