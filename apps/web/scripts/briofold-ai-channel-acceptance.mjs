@@ -24,7 +24,7 @@ export async function runBriofoldAiChannel({control,sessions}){
   const thread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${connection}`)[0].id;
   const jobs=async()=>(await db`SELECT * FROM briofold_ai_channel_jobs WHERE workspace_id=${workspace} ORDER BY created_at,id`);
   assert.equal((await jobs()).length,1);
-  await ingest('Orchid price');assert.equal((await jobs()).filter(j=>j.state==='queued').length,1,'burst not coalesced');
+  await ingest('Orchid');assert.equal((await jobs()).filter(j=>j.state==='queued').length,1,'burst not coalesced');
   const claim=async()=>(await db`SELECT briofold_ai_channel_claim() AS data`)[0].data;
   const job=await claim();assert.equal(job.workspace_id,workspace);assert.equal(job.context.knowledge.length,1);
   assert.equal(await claim(),null,'running thread claimed twice');

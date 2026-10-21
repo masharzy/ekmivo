@@ -36,10 +36,39 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   await page.getByRole('button',{name:'Send',exact:true}).click();await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Message"]')?.value==='');
   assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller' AND body='Unsent first conversation'`)[0].n),1,'lost-response retry queued duplicate reply');
   await choose(1);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Unsent second conversation');
+  await choose(0);
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXS0AAAAASUVORK5CYII=','base64');
+  let mediaId='',lostMedia=false;
+  // The browser fixture replaces private file storage/scanning only. Queueing and
+  // authorization still run through the real Next proxy, Go API and PostgreSQL.
+  await page.route(endpoint,async route=>{
+   const body=route.request().postDataJSON();
+   if(body?.action==='media-upload'){
+    mediaId=body.body.media_id;
+    const raw=Buffer.from(body.body.data,'base64');
+    const result=(await db`SELECT inbox_media_save(${workspace},'live',${body.thread_id},${mediaId},${'fictional-ci/'+mediaId},${body.body.name},'image/png',${raw.length},${createHash('sha256').update(raw).digest('hex')},0) AS data`)[0].data;
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+   }else if(body?.action==='media-get'){
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({data:png.toString('base64'),mime:'image/png',name:'Fictional attachment.png'})});
+   }else if(body?.action==='send-media'&&!lostMedia){await route.fetch();lostMedia=true;await route.abort('failed');}
+   else await route.fallback();
+  });
+  await page.getByLabel('Attach file',{exact:true}).setInputFiles({name:'Fictional attachment.png',mimeType:'image/png',buffer:png});
+  await page.getByText('Fictional attachment.png · 1 KB',{exact:true}).waitFor();
+  const attachmentFailed=page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send-media';}catch{return false;}}});
+  await page.getByRole('button',{name:'Send attachment',exact:true}).click();await attachmentFailed;
+  await page.getByText('Could not confirm the attachment.',{exact:false}).waitFor();
+  await page.reload();await choose(0);await page.getByRole('button',{name:'Send attachment',exact:true}).click();
+  await page.getByRole('button',{name:'Discard attachment',exact:true}).waitFor({state:'detached'});
+  assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller' AND content->>'media_id'=${mediaId}`)[0].n),1,'lost attachment response queued twice');
+  await page.getByRole('button',{name:/Open attachment/}).last().click();await page.getByRole('img',{name:'Fictional attachment.png',exact:true}).waitFor();
+  // A payload over the former 32-KB proxy cap must reach the real Go scanner.
+  const scan=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live',{headers:{Origin:origin},data:{action:'media-upload',thread_id:(await db`SELECT id FROM inbox_threads WHERE workspace_id=${workspace} AND customer_name='Draft fixture customer 0'`)[0].id,body:{media_id:randomUUID(),data:Buffer.alloc(100000,65).toString('base64'),mime:'text/plain',name:'Fictional scanner probe.txt'}}});
+  assert.equal(scan.status(),503);assert.equal((await scan.json()).code,'FILE_SCAN_UNCONFIRMED','proxy blocked before secure scanner or scanner was bypassed');
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
   await page.getByText('You no longer have access to this Inbox. Retrying when access is restored.',{exact:true}).waitFor();
   assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).count(),0,'revocation retained conversation composer');
   assert.deepEqual(errors,[]);
-  console.log('Phase6 INBOX DRAFT PASS: 8 long conversations across 3 mock channels, thread isolation, saved navigation/reload, lost-response retry exactly once, revoked-access clearing');
+  console.log('Phase6 INBOX DRAFT PASS: 8 long conversations across 3 mock channels, thread isolation, saved navigation/reload, lost-response text and attachment retry exactly once, mock private attachment rendering, real proxy scanner fail-closed, revoked-access clearing');
  }finally{if(context)await context.close();await db.end({timeout:3});}
 }
