@@ -94,7 +94,7 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   // Only Next's UI flag is enabled in this isolated harness. Go remains paid-off.
   await page.getByLabel('Test question',{exact:true}).fill('Fictional practice question');
   await page.getByLabel('I agree to use AI credits for this test.',{exact:true}).check();
-  await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('Paid AI testing is paused.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByRole('alert').filter({hasText:'Paid AI testing is paused.'}).waitFor();
   const requestKeys=[];let dropped=false;
   const proposal={...config,instructions:'Fictional proposed concise instructions'};
   await page.route('**/api/go/workspaces/'+workspace+'/ai/studio-test',async route=>{
@@ -103,7 +103,7 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
    if(!dropped){dropped=true;return route.abort('failed');}
    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:'Fictional practice response',cost_minor:7})});
   });
-  await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('The result could not be loaded. Retry preserves the request key.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByRole('alert').filter({hasText:'The result could not be loaded. Retry preserves the request key.'}).waitFor();
   await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('Fictional practice response',{exact:true}).waitFor();assert.equal(requestKeys[0],requestKeys[1],'practice retry changed paid request key');
   await page.reload();await page.getByLabel('Test question',{exact:true}).fill('Fictional practice question');await page.getByLabel('I agree to use AI credits for this test.',{exact:true}).check();
   await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('Fictional practice response',{exact:true}).waitFor();assert.equal(requestKeys[0],requestKeys[2],'reload changed paid request key');
@@ -131,6 +131,13 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Content or answer"]')?.value==='Fictional imported Word warranty is two years.');
   assert.equal((await read()).sources.some(x=>x.title==='Fictional Word.docx'),false,'Word preview silently persisted a source');
   await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByText('Fictional Word.docx',{exact:true}).waitFor();
+  const privateURL=await context.request.post(importPath,{headers:{Origin:origin},data:{url:'https://169.254.169.254/latest/meta-data'}});
+  assert.equal(privateURL.status(),422);assert.equal((await privateURL.json()).error?.code,'URL_IMPORT_FAILED');
+  await page.route('**/api/go/workspaces/'+workspace+'/ai/knowledge-import',route=>{const request=route.request().postDataJSON();return request.url?route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:'Fictional imported public page delivery policy.',name:'public.example/policy',kind:'text'})}):route.fallback();});
+  await page.getByLabel('Knowledge URL',{exact:true}).fill('https://public.example/policy');await page.getByRole('button',{name:'Import page text',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Content or answer"]')?.value==='Fictional imported public page delivery policy.');
+  assert.equal((await read()).sources.some(x=>x.title==='public.example/policy'),false,'URL preview silently persisted a source');
+  await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByText('public.example/policy',{exact:true}).waitFor();
   await page.getByLabel('Title or question',{exact:true}).fill('Browser warranty');await page.getByLabel('Content or answer',{exact:true}).fill('Marigold warranty is one year.');
   await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
   await page.getByLabel('Test question',{exact:true}).fill('Marigold');await page.getByRole('button',{name:'Search sources',exact:true}).click();await page.getByText('Marigold warranty is one year.',{exact:true}).waitFor();
