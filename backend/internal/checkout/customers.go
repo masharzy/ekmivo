@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/masharzy/ekmivo/backend/internal/authz"
 	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
 	"net/http"
@@ -115,7 +116,7 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 		if b.Action == "link" {
 			source, _ := b.Body["source_id"].(string)
 			kind, _ := b.Body["kind"].(string)
-			if !uuidPattern.MatchString(id) || !uuidPattern.MatchString(source) {
+			if !uuidPattern.MatchString(id) || !validCRMSourceID(source) {
 				fail(w, 422, "INVALID_SOURCE")
 				return
 			}
@@ -144,7 +145,14 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 						ID string `json:"id"`
 					} `json:"items"`
 				}
-				if err != nil || json.Unmarshal(finance, &result) != nil || len(result.Items) != 1 || result.Items[0].ID != source {
+				decoded := json.Unmarshal(finance, &result) == nil
+				found := false
+				for _, item := range result.Items {
+					if strings.EqualFold(item.ID, source) {
+						found = true
+					}
+				}
+				if err != nil || !decoded || !found {
 					fail(w, 403, "SOURCE_UNAVAILABLE")
 					return
 				}
@@ -264,4 +272,9 @@ func (s *Service) HandleCustomerAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	_, _ = w.Write(raw)
+}
+
+func validCRMSourceID(value string) bool {
+	var id pgtype.UUID
+	return len(value) == 36 && id.Scan(value) == nil && id.Valid
 }
