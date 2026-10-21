@@ -98,7 +98,7 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 	if b.Filters == nil {
 		b.Filters = map[string]any{}
 	}
-	if off, ok := b.Filters["offset"].(float64); ok && (off < 0 || off > 10000) {
+	if _, ok := inboxWorkOffset(b.Filters["offset"]); !ok {
 		fail(w, 422, "INVALID_FILTER")
 		return
 	}
@@ -111,7 +111,7 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
  if reader=="user" && (b.Action=="work-read" || b.Action=="work" || b.Action=="takeover" || b.Action=="release" || b.Action=="ticket" || b.Action=="duty" || b.Action=="work-note" || b.Action=="saved-reply" || b.Action=="archive-reply") {
   if b.Action=="work-read" {
    offset,valid:=inboxWorkOffset(b.Filters["reply_offset"]);tickets,ticketValid:=inboxWorkOffset(b.Filters["ticket_offset"]);history,historyValid:=inboxWorkOffset(b.Filters["history_offset"]);if !valid || !ticketValid || !historyValid {fail(w,422,"INVALID_FILTER");return}
-   err=s.Pipeline.Control.QueryRow(r.Context(),"SELECT briofold_inbox_work_read($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7)",d.Workspace,d.Environment,d.ID,thread,offset,tickets,history).Scan(&result)
+   filters,_:=json.Marshal(b.Filters);err=s.Pipeline.Control.QueryRow(r.Context(),"SELECT briofold_inbox_work_read($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7,$8::jsonb)",d.Workspace,d.Environment,d.ID,thread,offset,tickets,history,filters).Scan(&result)
   }else{
    key,_:=b.Body["operation_key"].(string);if !uuidPattern.MatchString(key){fail(w,422,"INVALID_OPERATION_KEY");return}
    action:=b.Action;if action=="work-note"{action="note"};body,_:=json.Marshal(b.Body)

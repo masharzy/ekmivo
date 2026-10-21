@@ -66,19 +66,21 @@ CREATE FUNCTION briofold_inbox_actor(w uuid,a uuid,cap text) RETURNS text
  THEN RAISE EXCEPTION 'Inbox workflow access denied' USING ERRCODE='42501'; END IF;
  RETURN role;
 END $$;
-CREATE FUNCTION briofold_inbox_work_read(w uuid,e text,a uuid,t uuid,off integer DEFAULT 0,ticket_offset integer DEFAULT 0,history_offset integer DEFAULT 0) RETURNS jsonb
+CREATE FUNCTION briofold_inbox_work_read(w uuid,e text,a uuid,t uuid,off integer DEFAULT 0,ticket_offset integer DEFAULT 0,history_offset integer DEFAULT 0,filters jsonb DEFAULT '{}') RETURNS jsonb
  LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE v inbox_threads;r jsonb;BEGIN
  PERFORM briofold_inbox_actor(w,a,'inbox:read');
  IF e IS NULL OR e NOT IN ('live','sandbox') OR off IS NULL OR off NOT BETWEEN 0 AND 10000 OR ticket_offset IS NULL OR ticket_offset NOT BETWEEN 0 AND 10000 OR history_offset IS NULL OR history_offset NOT BETWEEN 0 AND 10000 THEN RAISE EXCEPTION 'Invalid workflow page' USING ERRCODE='22023'; END IF;
+ IF jsonb_typeof(filters) IS DISTINCT FROM 'object' OR pg_column_size(filters)>8192 OR length(coalesce(filters->>'q',''))>100 OR length(coalesce(filters->>'member_query',''))>100 OR length(coalesce(filters->>'category',''))>80 THEN RAISE EXCEPTION 'Invalid search filter' USING ERRCODE='22023'; END IF;
  IF t IS NOT NULL THEN v:=inbox_scope(w,e,t);END IF;
  SELECT jsonb_build_object('server_time',now(),
   'work',CASE WHEN t IS NOT NULL THEN coalesce((SELECT to_jsonb(x)-'workspace_id' FROM briofold_inbox_work x WHERE thread_id=t),jsonb_build_object('thread_id',t,'revision',0,'owner_id',NULL,'status','open','priority','normal','labels','[]'::jsonb,'due_at',NULL,'snooze_until',NULL,'return_at',NULL,'disputed',false,'handover_reason','')) END,
-  'members',coalesce((SELECT jsonb_agg(jsonb_build_object('id',u.id,'name',u.display_name) ORDER BY u.display_name,u.id) FROM workspace_members m JOIN app_users u ON u.id=m.user_id WHERE m.workspace_id=w AND m.role IN ('owner','admin','editor') AND u.disabled_at IS NULL AND pg13_capability_override(w,u.id,'inbox:send') IS DISTINCT FROM false),'[]'),
+  'members',coalesce((SELECT jsonb_agg(jsonb_build_object('id',u.id,'name',u.display_name) ORDER BY u.display_name,u.id) FROM (SELECT u.id,u.display_name FROM workspace_members m JOIN app_users u ON u.id=m.user_id WHERE m.workspace_id=w AND m.role IN ('owner','admin','editor') AND u.disabled_at IS NULL AND pg13_capability_override(w,u.id,'inbox:send') IS DISTINCT FROM false AND u.display_name ILIKE '%'||coalesce(filters->>'member_query','')||'%' ORDER BY u.display_name,u.id LIMIT 50) u),'[]'),
+  'more_members',(SELECT count(*)>50 FROM workspace_members m JOIN app_users u ON u.id=m.user_id WHERE m.workspace_id=w AND m.role IN ('owner','admin','editor') AND u.disabled_at IS NULL AND pg13_capability_override(w,u.id,'inbox:send') IS DISTINCT FROM false AND u.display_name ILIKE '%'||coalesce(filters->>'member_query','')||'%'),
   'duty',coalesce((SELECT state FROM briofold_inbox_duty WHERE workspace_id=w AND user_id=a AND environment=e),'away'),
-  'saved_replies',coalesce((SELECT jsonb_agg(to_jsonb(x)-'workspace_id' ORDER BY x.updated_at DESC,x.id) FROM (SELECT * FROM briofold_inbox_saved_replies WHERE workspace_id=w AND environment=e AND active ORDER BY updated_at DESC,id OFFSET off LIMIT 50)x),'[]'),
-  'more_replies',(SELECT count(*)>off+50 FROM briofold_inbox_saved_replies WHERE workspace_id=w AND environment=e AND active),
-  'tickets',coalesce((SELECT jsonb_agg(to_jsonb(x)-'workspace_id' ORDER BY x.created_at DESC,x.id) FROM (SELECT * FROM briofold_inbox_tickets WHERE workspace_id=w AND thread_id=t ORDER BY created_at DESC,id OFFSET ticket_offset LIMIT 50)x),'[]'),
-  'more_tickets',(SELECT count(*)>ticket_offset+50 FROM briofold_inbox_tickets WHERE workspace_id=w AND thread_id=t),
+  'saved_replies',coalesce((SELECT jsonb_agg(to_jsonb(x)-'workspace_id' ORDER BY x.updated_at DESC,x.id) FROM (SELECT * FROM briofold_inbox_saved_replies WHERE workspace_id=w AND environment=e AND active AND (coalesce(filters->>'q','')='' OR title ILIKE '%'||(filters->>'q')||'%' OR body ILIKE '%'||(filters->>'q')||'%') AND (coalesce(filters->>'category','')='' OR category=filters->>'category') ORDER BY updated_at DESC,id OFFSET off LIMIT 50)x),'[]'),
+  'more_replies',(SELECT count(*)>off+50 FROM briofold_inbox_saved_replies WHERE workspace_id=w AND environment=e AND active AND (coalesce(filters->>'q','')='' OR title ILIKE '%'||(filters->>'q')||'%' OR body ILIKE '%'||(filters->>'q')||'%') AND (coalesce(filters->>'category','')='' OR category=filters->>'category')),
+  'tickets',coalesce((SELECT jsonb_agg(to_jsonb(x)-'workspace_id' ORDER BY x.created_at DESC,x.id) FROM (SELECT q.*,z.customer_name FROM briofold_inbox_tickets q JOIN inbox_threads z ON z.id=q.thread_id JOIN inbox_connections c ON c.id=z.connection_id WHERE q.workspace_id=w AND (t IS NULL OR q.thread_id=t) AND c.environment=e AND c.enabled AND (coalesce(filters->>'q','')='' OR q.title ILIKE '%'||(filters->>'q')||'%' OR q.detail ILIKE '%'||(filters->>'q')||'%' OR z.customer_name ILIKE '%'||(filters->>'q')||'%') AND (coalesce(filters->>'ticket_status','')='' OR q.status=filters->>'ticket_status') ORDER BY q.created_at DESC,q.id OFFSET ticket_offset LIMIT 50)x),'[]'),
+  'more_tickets',(SELECT count(*)>ticket_offset+50 FROM briofold_inbox_tickets q JOIN inbox_threads z ON z.id=q.thread_id JOIN inbox_connections c ON c.id=z.connection_id WHERE q.workspace_id=w AND (t IS NULL OR q.thread_id=t) AND c.environment=e AND c.enabled AND (coalesce(filters->>'q','')='' OR q.title ILIKE '%'||(filters->>'q')||'%' OR q.detail ILIKE '%'||(filters->>'q')||'%' OR z.customer_name ILIKE '%'||(filters->>'q')||'%') AND (coalesce(filters->>'ticket_status','')='' OR q.status=filters->>'ticket_status')),
   'more_history',(SELECT count(*)>history_offset+50 FROM briofold_inbox_events WHERE workspace_id=w AND thread_id=t),
   'history',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.created_at DESC,x.operation_key) FROM (SELECT operation_key,actor_id,action,created_at FROM briofold_inbox_events WHERE workspace_id=w AND thread_id=t ORDER BY created_at DESC,operation_key OFFSET history_offset LIMIT 50)x),'[]'),
   'note',coalesce(v.note,''),'note_version',coalesce(v.note_version,0),
@@ -216,6 +218,38 @@ CREATE OR REPLACE FUNCTION inbox_next_send_v1() RETURNS jsonb LANGUAGE plpgsql S
  UPDATE inbox_messages SET state='sending',attempt_at=now(),attempts=attempts+1 WHERE id=m.id;
  SELECT jsonb_build_object('id',m.id,'workspace_id',m.workspace_id,'text',m.body,'channel',c.provider,'account',c.external_id,'recipient',t.external_id,'credential',encode(c.credential_cipher,'base64')) INTO result FROM inbox_threads t JOIN inbox_connections c ON c.id=t.connection_id WHERE t.id=m.thread_id;RETURN result;
 END $$;
-REVOKE ALL ON FUNCTION briofold_inbox_actor(uuid,uuid,text),briofold_inbox_work_read(uuid,text,uuid,uuid,integer,integer,integer),briofold_inbox_work_write(uuid,text,uuid,uuid,uuid,text,jsonb),briofold_inbox_due_returns() FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
-GRANT EXECUTE ON FUNCTION briofold_inbox_work_read(uuid,text,uuid,uuid,integer,integer,integer),briofold_inbox_work_write(uuid,text,uuid,uuid,uuid,text,jsonb) TO ekmivo_financial_runtime,ekmivo_financial_projection;
+REVOKE ALL ON FUNCTION briofold_inbox_actor(uuid,uuid,text),briofold_inbox_work_read(uuid,text,uuid,uuid,integer,integer,integer,jsonb),briofold_inbox_work_write(uuid,text,uuid,uuid,uuid,text,jsonb),briofold_inbox_due_returns() FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
+GRANT EXECUTE ON FUNCTION briofold_inbox_work_read(uuid,text,uuid,uuid,integer,integer,integer,jsonb),briofold_inbox_work_write(uuid,text,uuid,uuid,uuid,text,jsonb) TO ekmivo_financial_runtime,ekmivo_financial_projection;
+-- Filtering happens before pagination so matches on later pages are never hidden.
+CREATE INDEX briofold_inbox_message_search ON inbox_messages USING gin(to_tsvector('simple',body));
+ALTER FUNCTION inbox_page(uuid,text,uuid,uuid,bigint,jsonb) RENAME TO inbox_page_media;
+CREATE FUNCTION inbox_page(w uuid,e text,d uuid,t uuid,before_seq bigint,f jsonb) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE result jsonb;rk text:=coalesce(f->>'reader_kind','device');off integer:=coalesce((f->>'offset')::integer,0);queue text:=coalesce(f->>'queue','all');q text:=coalesce(f->>'q','');BEGIN
+ IF rk='user' THEN PERFORM briofold_inbox_actor(w,d,'inbox:read');END IF;
+ IF NOT EXISTS(SELECT 1 FROM workspace_product_access WHERE workspace_id=w AND product='ai' AND enabled) THEN RAISE EXCEPTION 'AI disabled' USING ERRCODE='42501';END IF;
+ IF t IS NOT NULL THEN RETURN inbox_page_media(w,e,d,t,before_seq,f);END IF;
+ IF e IS NULL OR e NOT IN ('live','sandbox') OR length(q)>200 OR off NOT BETWEEN 0 AND 10000 OR queue NOT IN ('all','unread','mine','unassigned','attention','resolved','snoozed') OR coalesce(f->>'channel','') NOT IN ('','ms','ig','wa') THEN RAISE EXCEPTION 'Invalid conversation filters' USING ERRCODE='22023';END IF;
+ SELECT jsonb_build_object('items',coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.last_activity_at DESC,x.id),'[]')) INTO result FROM (
+  SELECT a.id,a.customer_name AS name,c.provider AS channel,a.ai_enabled,a.last_activity_at,
+   latest.body AS preview,latest.sender AS preview_sender,
+   (SELECT count(*) FROM inbox_messages m WHERE m.thread_id=a.id AND m.sender='customer' AND m.sequence>coalesce(rc.sequence,0)) AS unread,
+   coalesce(wf.owner_id::text,'') AS owner_id,coalesce(wf.status,'open') AS status,coalesce(wf.priority,'normal') AS priority,coalesce(wf.labels,'{}') AS labels,wf.due_at,
+   coalesce(wf.due_at<now() AND wf.status<>'resolved',false) AS overdue,
+   coalesce(a.last_customer_at>now()-interval '24 hours',false) AS window_open,inbox_capabilities(c.provider) AS capabilities
+  FROM inbox_threads a JOIN inbox_connections c ON c.id=a.connection_id
+  LEFT JOIN briofold_inbox_work wf ON wf.thread_id=a.id
+  LEFT JOIN inbox_read_cursors rc ON rc.thread_id=a.id AND rc.device_id=d AND rc.reader_kind=rk
+  LEFT JOIN LATERAL(SELECT body,sender FROM inbox_messages WHERE thread_id=a.id ORDER BY sequence DESC LIMIT 1)latest ON true
+  WHERE a.workspace_id=w AND c.enabled AND c.environment=e
+  AND (q='' OR a.customer_name ILIKE '%'||q||'%' OR coalesce(a.contact->>'phone','') ILIKE '%'||q||'%' OR (c.provider='wa' AND a.external_id ILIKE '%'||q||'%') OR EXISTS(SELECT 1 FROM inbox_messages m WHERE m.workspace_id=w AND m.thread_id=a.id AND to_tsvector('simple',m.body)@@websearch_to_tsquery('simple',q)) OR EXISTS(SELECT 1 FROM inbox_orders o WHERE o.workspace_id=w AND o.thread_id=a.id AND o.reference ILIKE '%'||q||'%'))
+  AND (coalesce(f->>'channel','')='' OR c.provider=f->>'channel')
+  AND (coalesce(f->>'mode','')='' OR (f->>'mode'='ai' AND a.ai_enabled) OR (f->>'mode'='seller' AND NOT a.ai_enabled) OR (f->>'mode'='waiting' AND latest.sender='customer'))
+  AND (coalesce((f->>'days')::integer,0)=0 OR a.last_activity_at>=now()-make_interval(days=>(f->>'days')::integer))
+  AND (coalesce((f->>'unread')::boolean,false)=false OR EXISTS(SELECT 1 FROM inbox_messages m WHERE m.thread_id=a.id AND m.sender='customer' AND m.sequence>coalesce(rc.sequence,0)))
+  AND (queue='all' OR (queue='unread' AND EXISTS(SELECT 1 FROM inbox_messages m WHERE m.thread_id=a.id AND m.sender='customer' AND m.sequence>coalesce(rc.sequence,0))) OR (queue='mine' AND wf.owner_id=d) OR (queue='unassigned' AND wf.owner_id IS NULL) OR (queue='attention' AND coalesce(wf.status,'open')<>'resolved' AND (coalesce(wf.disputed,false) OR wf.due_at<now() OR latest.sender='customer')) OR (queue='resolved' AND wf.status='resolved') OR (queue='snoozed' AND wf.status='snoozed' AND wf.snooze_until>now()))
+  ORDER BY a.last_activity_at DESC,a.id OFFSET off LIMIT 50
+ )x;RETURN result;
+END $$;
+REVOKE ALL ON FUNCTION inbox_page(uuid,text,uuid,uuid,bigint,jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION inbox_page(uuid,text,uuid,uuid,bigint,jsonb) TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;

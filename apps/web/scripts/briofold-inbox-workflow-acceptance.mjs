@@ -65,6 +65,24 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await denied(()=>db`UPDATE briofold_inbox_events SET action='rewrite' WHERE workspace_id=${workspace}`,'42501');
   for(const table of ['briofold_inbox_work','briofold_inbox_events','briofold_inbox_saved_replies','briofold_inbox_tickets','briofold_inbox_duty'])assert.equal((await db`SELECT has_table_privilege('ekmivo_financial_runtime',${table},'SELECT') AS allowed`)[0].allowed,false);
   assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_ai_credit_journal WHERE workspace_id=${workspace}`)[0].n),0);
+  await db`INSERT INTO briofold_inbox_saved_replies(id,workspace_id,environment,title,body) SELECT gen_random_uuid(),${workspace},'live','Page fixture '||n,'Fictional saved text' FROM generate_series(1,51) n`;
+  await db`INSERT INTO briofold_inbox_tickets(id,workspace_id,thread_id,category,title,detail) SELECT gen_random_uuid(),${workspace},${thread},'question','Page ticket '||n,'Fictional ticket detail' FROM generate_series(1,51) n`;
+  const firstPage=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},${thread},0,0,0) AS data`)[0].data;
+  const nextPage=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},${thread},50,50,0) AS data`)[0].data;
+  assert.equal(firstPage.saved_replies.length,50);assert.equal(firstPage.more_replies,true);assert.equal(nextPage.saved_replies.length,2);assert.equal(nextPage.more_replies,false);
+  assert.equal(new Set([...firstPage.saved_replies,...nextPage.saved_replies].map(x=>x.id)).size,52);
+  assert.equal(firstPage.tickets.length,50);assert.equal(firstPage.more_tickets,true);assert.equal(nextPage.tickets.length,2);assert.equal(nextPage.more_tickets,false);
+  const filtered=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},NULL,0,0,0,'{"q":"delivery dispute"}') AS data`)[0].data;assert.equal(filtered.tickets.length,1);
+  await db`UPDATE briofold_inbox_saved_replies SET updated_at=now()+interval '1 second' WHERE id=${reply}`;
+  const list=async filters=>(await db`SELECT inbox_page(${workspace},'live',${actor},NULL,NULL,${db.json({reader_kind:'user',...filters})}) AS data`)[0].data.items;
+  assert.equal((await list({queue:'mine'})).length,1);assert.equal((await list({queue:'unassigned'})).length,0);
+  assert.equal((await list({queue:'attention'})).length,1);assert.equal((await list({queue:'resolved'})).length,0);
+  assert.equal((await list({q:'complaint'})).length,1,'message content search missed conversation');assert.equal((await list({channel:'ig'})).length,0);
+  await db`INSERT INTO briofold_inbox_events(workspace_id,operation_key,thread_id,actor_id,action,request_hash,result) SELECT ${workspace},gen_random_uuid(),${thread},${actor},'fixture',repeat('a',64),'{}' FROM generate_series(1,40)`;
+  const h1=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},${thread},0,0,0) AS data`)[0].data;
+  const h2=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},${thread},0,0,50) AS data`)[0].data;
+  assert.equal(h1.history.length,50);assert.equal(h1.more_history,true);assert.ok(h2.history.length>0);assert.equal(h2.more_history,false);
+  assert.equal(new Set([...h1.history,...h2.history].map(x=>x.operation_key)).size,h1.history.length+h2.history.length);
   context=await browser.newContext();await context.addCookies([
    {name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},
    {name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
@@ -74,8 +92,18 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   const save=async(action,button)=>{const response=page.waitForResponse(r=>{try{return r.request().postDataJSON()?.action===action;}catch{return false;}});await page.getByRole('button',{name:button,exact:true}).click();assert.equal((await response).status(),200);};
   await page.getByLabel('Internal note',{exact:true}).fill('Browser internal note persisted');await save('work-note','Save note');assert.equal((await read()).note,'Browser internal note persisted');
   await page.getByLabel('Labels (comma separated)',{exact:true}).fill('browser,follow-up');await save('work','Save conversation');assert.deepEqual((await read()).work.labels,['browser','follow-up']);
-  await page.getByRole('button',{name:'Insert draft',exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Hello Workflow fictional customer, we are checking delivery.');
+  await page.getByRole('listitem').filter({has:page.getByText('Delivery reply',{exact:true})}).getByRole('button',{name:'Insert draft',exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Hello Workflow fictional customer, we are checking delivery.');
   assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller'`)[0].n),0,'saved reply was automatically sent');
+  await page.getByRole('textbox',{name:'Message',exact:true}).fill('');
+  await page.goto(origin+'/inbox/saved-replies');await page.getByRole('textbox',{name:'Search',exact:true}).waitFor();
+  await page.getByRole('textbox',{name:'Search',exact:true}).fill('delivery');await page.getByText('Delivery reply',{exact:true}).waitFor();
+  await page.getByRole('textbox',{name:'Search',exact:true}).fill('');
+  await page.getByLabel('Reply title',{exact:true}).fill('Browser library reply');await page.getByLabel('Reply text',{exact:true}).fill('Hi {{customer_name}}, this is a saved draft.');
+  await save('saved-reply','Save reply');assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_inbox_saved_replies WHERE workspace_id=${workspace} AND title='Browser library reply'`)[0].n),1);
+  await page.waitForFunction(()=>document.querySelector('input[aria-label="Reply title"]')?.value==='');
+  await page.goto(origin+'/inbox/tickets');await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('resolved');await page.getByText('Fictional delivery dispute',{exact:true}).waitFor();
+  await page.getByRole('link',{name:'Open conversation and ticket',exact:true}).click();await page.waitForURL('**/inbox?thread='+thread);
+  await page.getByLabel('Internal note',{exact:true}).waitFor();assert.equal(await page.getByLabel('Internal note',{exact:true}).inputValue(),'Browser internal note persisted');
   // A real Unicode manual send remains permitted with zero AI credit.
   const endpoint=origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live';
   const sent=await context.request.post(endpoint,{headers:{Origin:origin},data:{action:'send',thread_id:thread,body:{text:'ক'.repeat(8000),idempotency_key:randomUUID()}}});assert.equal(sent.status(),200,'Bangla reply hit an incorrect byte/character limit');
