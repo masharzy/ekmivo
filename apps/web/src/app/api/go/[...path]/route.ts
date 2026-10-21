@@ -9,7 +9,7 @@ const adminWorkspaceRead=/^platform\/workspaces\/[0-9a-f-]{36}\/operations\/(pay
 const operationPath=/^workspaces\/[0-9a-f-]{36}\/operations\/(payments|incoming|gateways|devices|webhooks|deliveries|events|parsers|overview|notices)(?:\/[0-9a-f-]{36}(?:\/(revoke|rename|reprocess|enable|disable|rotate|activate_rotation|revoke_previous|replay|retry))?)?$/i;
 const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources))$/i;
 const mobilePath=/^workspaces\/[0-9a-f-]{36}\/(?:mobile-devices(?:\/[0-9a-f-]{36}\/(?:revoke|reconnect|delete))?|inbox-connect|inbox|inbox-connections(?:\/[0-9a-f-]{36}\/disconnect)?)$/i;
-const aiRuntimePath=/^workspaces\/[0-9a-f-]{36}\/ai\/test$/i;
+const aiRuntimePath=/^workspaces\/[0-9a-f-]{36}\/ai\/(?:test|studio-test)$/i;
 const aiCreditPath=/^workspaces\/[0-9a-f-]{36}\/ai-credits\/(?:purchase|[0-9a-f-]{36}\/reconcile)$/i;
 const phonePath=/^workspaces\/[0-9a-f-]{36}\/phones(?:\/[0-9a-f-]{36}\/(?:attach|detach|rename|revoke|reconnect|delete|edit-account))?$/i;
 const documentPath=/^workspaces\/[0-9a-f-]{36}\/(?:documents\/(?:customers|invoices|payment-links)(?:\/(?:[0-9a-f-]{36}|commands)(?:\/(?:publish|archive|disable|delete|issue|cancel|correct|send|remind|import|import-preview|export))?)?|refunds(?:\/[0-9a-f-]{36}(?:\/(?:review|approve|reject|report-returned|cancel))?)?|reconciliation(?:\/(?:statement-preview|statement-import|settlement-link))?)$/i;
@@ -43,7 +43,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   const value = incoming.searchParams.get(key);
   if (value) target.searchParams.set(key, value);
  }
- const body = read ? undefined : await boundedBody(request,aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?32768:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/settings$/i.test(path)?8192:4096);
+ const body = read ? undefined : await boundedBody(request,aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/settings$/i.test(path)?8192:4096);
  if (body === null)
   return Response.json({ code: "BODY_TOO_LARGE" }, { status: 413 });
  try {

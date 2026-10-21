@@ -138,6 +138,13 @@ func (s *Service) HandleAITest(w http.ResponseWriter, r *http.Request) {
 	engine := aicredits.Engine{Store: aiExecutionStore{db: s.Auth.DB}, Provider: aicredits.NewOpenRouter(os.Getenv("OPENROUTER_API_KEY")), Codec: aiExecutionCodec{key: s.Pipeline.Key}}
 	result, err := engine.Run(r.Context(), aicredits.Request{Workspace: workspace, Actor: actor.UserID, Key: r.Header.Get("Idempotency-Key"), Model: input.Model, Messages: messages})
 	if err != nil {
+		aiExecutionFailure(w, err)
+		return
+	}
+	write(w, 200, result)
+}
+
+func aiExecutionFailure(w http.ResponseWriter, err error) {
 		switch {
 		case errors.Is(err, aicredits.ErrInvalidRequest), errors.Is(err, aicredits.ErrInvalidTariff):
 			fail(w, 422, "INVALID_AI_REQUEST")
@@ -172,7 +179,4 @@ func (s *Service) HandleAITest(w http.ResponseWriter, r *http.Request) {
 			}
 			fail(w, 503, "AI_RUNTIME_UNAVAILABLE")
 		}
-		return
-	}
-	write(w, 200, result)
 }

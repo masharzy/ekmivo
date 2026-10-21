@@ -1,4 +1,5 @@
 "use client";
+import {AiStudioTest} from "./ai-studio-test";
 import {useCallback,useEffect,useRef,useState,useTransition} from "react";
 import {loadAiStudio,readAiKnowledge,saveAiStudio,searchAiKnowledge} from "../actions/ai-studio";
 import {registerDraft} from "../lib/client/draft-navigation";
@@ -96,6 +97,7 @@ export function AiStudio({workspaceId,locale,initial,view,runtimeEnabled}:{works
      <button className="ss-btn" type="submit" disabled={disabled||dirty||!confirmed||reason.trim().length<10||current.revision===0}>{rollbackTarget?t("Restore as new publication","নতুন প্রকাশ হিসেবে ফেরত"):t("Publish configuration","সেটিংস প্রকাশ")}</button>
     </div>
    </form>
+   <AiStudioTest workspaceId={workspaceId} revision={current.revision} publicationId={current.published_id} disabled={disabled||dirty} runtimeEnabled={runtimeEnabled} bn={bn}/>
   </>:<>
    <form className="ss-panel" onSubmit={e=>{e.preventDefault();void saveSource();}}><div className="ss-section"><h2>{t("Knowledge source","নলেজের উৎস")}</h2><div className="ss-grid">
     <label className="ss-field"><span>{t("Title or question","শিরোনাম অথবা প্রশ্ন")}</span><input aria-label={t("Title or question","শিরোনাম অথবা প্রশ্ন")} value={doc.title} required maxLength={160} disabled={disabled} onChange={e=>setDoc({...doc,title:e.target.value})}/></label>

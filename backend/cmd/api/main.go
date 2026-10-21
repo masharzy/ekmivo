@@ -67,6 +67,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connections/{connectionID}/disconnect", pay.HandleInboxConnection)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/test", pay.HandleAITest)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/studio-test", pay.HandleStudioTest)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connect", pay.HandleInboxOAuthBegin)
 	mux.HandleFunc("GET /v1/channels/meta/callback", pay.HandleInboxOAuthCallback)
 	mux.HandleFunc("GET /v1/channels/media/{mediaID}", pay.HandleInboxMedia)
@@ -444,6 +445,9 @@ func main() {
 	defer stop()
 	if pg05 != nil && pg05.Pipeline != nil && os.Getenv("INBOX_SENDER_ENABLED") == "true" {
 		go pg05.RunInboxSender(runtimeContext)
+	}
+	if pg05 != nil && os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" {
+		go pg05.RunStudioAI(runtimeContext)
 	}
 	workerConfigs, workerErr := workerruntime.HostedConfigs(os.Getenv)
 	if workerErr != nil {

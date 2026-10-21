@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import {createHash,randomUUID} from 'node:crypto';
+import postgres from 'postgres';
+export async function runBriofoldAiChannel({control,sessions}){
+ const target=new URL(control);if(!['localhost','127.0.0.1','[::1]'].includes(target.hostname)||/prod/i.test(target.pathname))throw Error('AI channel acceptance refuses shared databases');
+ const db=postgres(control,{max:3,prepare:false}),workspace=randomUUID();
+ try{
+  const actor=(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(sessions.owner).digest('hex')}`)[0].user_id;
+  await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${workspace},'Fictional AI channel business','ai',${actor})`;
+  await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${workspace},${actor},'owner')`;
+  const write=async(kind,body)=>(await db`SELECT briofold_ai_studio_write(${workspace},${actor},${randomUUID()},${kind},${db.json(body)}) AS data`)[0].data;
+  const read=async()=>(await db`SELECT briofold_ai_studio_read(${workspace},${actor},0,0) AS data`)[0].data;
+  const config={instructions:'Answer only verified facts.',mode:'live',language:'auto',tone:'neutral',model:'test/fictional'};
+  await write('draft',{revision:0,config});
+  const source=randomUUID();await write('source',{id:source,expected_version:null,title:'Orchid policy',kind:'text',content:'Orchid delivery takes three days.'});
+  let data=await read();await write('publish',{revision:data.revision,confirmed:true,reason:'Fictional channel acceptance'});data=await read();
+  const context=async(revision=data.revision,pub=data.published_id)=>(await db`SELECT briofold_ai_studio_context(${workspace},${actor},${revision},true,${pub},'Orchid') AS data`)[0].data;
+  assert.equal((await context()).knowledge.length,1);
+  await assert.rejects(()=>context(0),e=>e.code==='40001');
+  const connection=(await db`SELECT inbox_connection(${workspace},'live','ms',${'ai-channel-'+workspace},decode('abcd','hex')) AS id`)[0].id;
+  const ingest=async(text)=>(await db`SELECT inbox_ingest(${connection},${randomUUID()},'fictional-ai-customer','Fictional AI customer',${text},'text',now())`);
+  await ingest('Orchid delivery');
+  const thread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${connection}`)[0].id;
+  const jobs=async()=>(await db`SELECT * FROM briofold_ai_channel_jobs WHERE workspace_id=${workspace} ORDER BY created_at,id`);
+  assert.equal((await jobs()).length,1);
+  await ingest('Orchid price');assert.equal((await jobs()).filter(j=>j.state==='queued').length,1,'burst not coalesced');
+  const claim=async()=>(await db`SELECT briofold_ai_channel_claim() AS data`)[0].data;
+  const job=await claim();assert.equal(job.workspace_id,workspace);assert.equal(job.context.knowledge.length,1);
+  assert.equal(await claim(),null,'running thread claimed twice');
+  await assert.rejects(()=>db`SELECT briofold_ai_channel_finish(${job.id},${randomUUID()},'Unmetered output','')`,e=>e.code==='23505');
+  await assert.rejects(()=>db`SELECT briofold_ai_channel_finish(${job.id},${job.lease_id},'Unmetered output','')`,e=>e.code==='42501');
+  assert.equal((await db`SELECT briofold_ai_channel_valid(${job.id}) AS ok`)[0].ok,true);
+  await db`UPDATE inbox_threads SET ai_enabled=false,ai_version=ai_version+1 WHERE id=${thread}`;
+  assert.equal((await db`SELECT briofold_ai_channel_valid(${job.id}) AS ok`)[0].ok,false,'human takeover did not invalidate generation');
+  await db`UPDATE briofold_ai_channel_jobs SET leased_at=now()-interval '3 minutes' WHERE id=${job.id}`;
+  await claim();assert.equal((await jobs()).find(j=>j.id===job.id).reason,'WORKER_OUTCOME_UNKNOWN');
+  await db`UPDATE inbox_threads SET ai_enabled=true WHERE id=${thread}`;
+  await ingest('Orchid delivery');const next=await claim();assert.ok(next);
+  await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${workspace} AND user_id=${actor}`;
+  assert.equal((await db`SELECT briofold_ai_channel_valid(${next.id}) AS ok`)[0].ok,false,'publisher revocation ignored');
+  await db`UPDATE workspace_members SET role='owner' WHERE workspace_id=${workspace} AND user_id=${actor}`;
+  await db`UPDATE briofold_ai_knowledge_sources SET active=false WHERE id=${source}`;
+  assert.equal((await db`SELECT briofold_ai_channel_valid(${next.id}) AS ok`)[0].ok,false,'source removal ignored');
+  await db`SELECT briofold_ai_channel_finish(${next.id},${next.lease_id},'','AI_REQUEST_UNKNOWN')`;
+  await ingest('Orchid delivery');assert.equal(await claim(),null);assert.ok((await jobs()).some(j=>j.reason==='NO_GROUNDED_SOURCE'));
+  await db`UPDATE briofold_ai_knowledge_sources SET active=true WHERE id=${source}`;
+  await ingest('Orchid delivery');const changed=await claim();assert.ok(changed);
+  data=await read();await write('publish',{revision:data.revision,confirmed:true,reason:'Fictional replacement publication'});
+  assert.equal((await db`SELECT briofold_ai_channel_valid(${changed.id}) AS ok`)[0].ok,false,'publication replacement ignored');
+  await db`SELECT briofold_ai_channel_finish(${changed.id},${changed.lease_id},'','AI_REQUEST_UNKNOWN')`;
+  for(const role of ['ekmivo_financial_runtime','ekmivo_financial_projection'])assert.equal((await db`SELECT has_table_privilege(${role},'briofold_ai_channel_jobs','SELECT') AS ok`)[0].ok,false);
+  assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_ai_credit_journal WHERE workspace_id=${workspace}`)[0].n),0,'unmetered job changed credits');
+  console.log('Phase6 AI CHANNEL PASS: published grounding, burst coalescing, unique lease, unmetered finish denied, takeover/revocation/source/publication guards, unknown worker outcome, no-grounding review, private job storage, zero unmetered charges');
+ }finally{await db.end({timeout:3});}
+}
