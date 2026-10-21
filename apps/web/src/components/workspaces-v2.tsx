@@ -125,7 +125,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
  return <main className="wk2-root" lang={locale}>
   {navigating&&<div className="wk2-progress" role="progressbar" aria-label={locale==="bn"?"ওয়ার্কস্পেস খোলা হচ্ছে":"Opening workspace"}/>}
   <header className="wk2-header">
-   <Link href={`/${locale}/workspaces`} className="wk2-logo">ekmivo</Link>
+   <Link href="/workspaces" className="wk2-logo">ekmivo</Link>
    <div className="wk2-header-right"><WorkspaceHeaderControls locale={locale} initialTheme={initialTheme}/><span className="wk2-user-name">{user.name}</span><span className="wk2-avatar">{user.name.trim().charAt(0).toUpperCase()}</span></div>
   </header>
   <div className="wk2-content">
@@ -136,7 +136,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
      <span className="wk2-avatar" aria-hidden="true">{w.name.trim().charAt(0).toUpperCase()}</span>
      <div className="wk2-row-info"><div className="wk2-name"><strong>{w.name}</strong>{w.id===defaultId&&<span className="wk2-default">{t.default}</span>}</div><small>{meta(w)}</small></div>
      <div className="wk2-row-actions"><button type="button" className="wk2-button" onClick={()=>openManage(w.id)}>{t.manage}</button>
-      <Link href={selectedPlan&&(w.mode==="commerce"||w.mode==="both")?`/${locale}/subscribe/${selectedPlan}?workspace=${w.id}`:`/${locale}/w/${w.id}/dashboard`} prefetch={false} onClick={()=>setNavigating(true)} className="wk2-button wk2-primary">{selectedPlan&&(w.mode==="commerce"||w.mode==="both")?(locale==="bn"?"প্ল্যান বেছে নিন":"Choose plan"):t.open}</Link></div>
+      <Link href={selectedPlan&&(w.mode==="commerce"||w.mode==="both")?`/subscribe/${selectedPlan}?workspace=${w.id}`:`/w/${w.id}/dashboard`} prefetch={false} onClick={()=>setNavigating(true)} className="wk2-button wk2-primary">{selectedPlan&&(w.mode==="commerce"||w.mode==="both")?(locale==="bn"?"প্ল্যান বেছে নিন":"Choose plan"):t.open}</Link></div>
     </div>)}
    </section>
   </div>

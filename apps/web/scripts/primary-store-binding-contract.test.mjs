@@ -31,3 +31,13 @@ test("bound dashboard hides switch controls and enforces direct-link Store isola
 });
 
 // Legacy multi-Store owners remain unbound until explicitly migrated.
+
+test("single-Store routes stay canonical without locale path segments",()=>{
+ const view=read("components/workspaces-v2.tsx"),actions=read("actions/account.ts");
+ assert.doesNotMatch(view,/href=\{`\/\$\{locale\}\/workspaces/);
+ assert.match(view,/href="\/workspaces"/);
+ assert.match(actions,/redirect\("\/login"\)/);
+ assert.match(actions,/redirect\("\/admin\/verify"\)/);
+ const frame=read("components/dashboard-frame.tsx");
+ assert.match(frame,/spaces\.length>1\?searchableBusinesses/);
+});

@@ -107,7 +107,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  const foundKeys=unified?([] as SectionKey[]):foundGroups.flatMap(group=>group.items);
  const unifiedItems=unifiedNavigation.filter(item=>enabledUnifiedService(workspace.mode,item.service));
  const foundUnified=unified?unifiedItems.filter(item=>`${item.en} ${item.bn}`.toLocaleLowerCase().includes(globalQuery.trim().toLocaleLowerCase())):[];
- const foundBusinesses=searchableBusinesses(spaces,globalQuery);
+ const foundBusinesses=spaces.length>1?searchableBusinesses(spaces,globalQuery):[];
  const resultCount=foundKeys.length+foundUnified.length+foundBusinesses.length;
  const roleNames={owner:{bn:"মালিক",en:"Owner"},admin:{bn:"অ্যাডমিন",en:"Admin"},editor:{bn:"সম্পাদক",en:"Editor"},viewer:{bn:"দর্শক",en:"Viewer"}} as const;
  const visibleBusinesses=spaces.filter(space=>space.name.toLocaleLowerCase().includes(businessQuery.trim().toLocaleLowerCase()));

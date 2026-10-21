@@ -101,7 +101,7 @@ export async function loginAction(localeParam:string,_previous:FormErrorState,fo
   if(e && typeof e==="object" && "digest" in e && String(e.digest).startsWith("NEXT_REDIRECT"))throw e;
   report("login",e);return fail(t.generic);
  }
- redirect(asText(form.get("admin"))==="1"?"/"+locale+"/admin/verify":"/workspaces/open");
+ redirect(asText(form.get("admin"))==="1"?"/admin/verify":"/workspaces/open");
 }
 
 export async function createWorkspaceAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -183,18 +183,16 @@ export async function setDefaultWorkspaceOnListAction(localeParam:string,id:stri
 }
 
 
-export async function setDefaultWorkspaceAction(localeParam:string,workspaceId:string){
- const locale=safeLocale(localeParam);
+export async function setDefaultWorkspaceAction(_localeParam:string,workspaceId:string){
  const user=await currentUser();
- if(!user)redirect(`/${locale}/login`);
- if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId))redirect(`/${locale}/workspaces`);
+ if(!user)redirect("/login");
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId))redirect("/workspaces");
  const allowed=await selectDefaultWorkspace(user.id,workspaceId);
- if(!allowed)redirect(`/${locale}/workspaces`);
- redirect(`/${locale}/workspaces`);
+ if(!allowed)redirect("/workspaces");
+ redirect("/workspaces");
 }
 
-export async function logoutAction(localeParam:string){
- const locale=safeLocale(localeParam);
+export async function logoutAction(_localeParam:string){
  try{await revokeSession();}catch(e){report("logout",e);(await cookies()).delete("ekmivo-session");}
- redirect(`/${locale}/login`);
+ redirect("/login");
 }
