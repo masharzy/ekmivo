@@ -211,7 +211,7 @@ func (s *Service) commerceIntegration(w http.ResponseWriter, r *http.Request, ws
 	if known {
 		next["status"] = "booked"
 		next["consignment"] = strconv.FormatInt(result.Consignment.ID, 10)
-		next["tracking_url"] = "https://steadfast.com.bd/t/" + url.PathEscape(result.Consignment.Tracking)
+		next["tracking_code"] = result.Consignment.Tracking
 	}
 	raw, err = s.commerceCommand(r, ws, realm, actor, newUUID(), "delivery-state", next)
 	if err != nil || !known {

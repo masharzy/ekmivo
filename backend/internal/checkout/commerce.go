@@ -87,7 +87,7 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch cmd.Action {
-		case "warehouse", "product", "adjust-stock", "transfer-stock", "coupon", "create-order", "review-order", "order-state", "delivery", "delivery-state", "cod-receipt", "return-request", "return-state", "exchange-link", "post-map", "import-preview", "import-apply":
+		case "warehouse", "product", "adjust-stock", "transfer-stock", "coupon", "create-order", "review-order", "edit-order", "order-state", "delivery", "delivery-state", "cod-receipt", "return-request", "return-state", "exchange-link", "post-map", "import-preview", "import-apply":
 		case "finance-link":
 			if _, err = s.Auth.AuthorizeWorkspace(r.Context(), actor, ws, authz.Environment(realm), authz.PaymentsRead); err != nil {
 				authError(w, err)
@@ -109,7 +109,7 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			fail(w, 422, "INVALID_COMMAND")
 			return
 		}
-		if cmd.Action == "create-order" || cmd.Action == "review-order" {
+		if cmd.Action == "create-order" || cmd.Action == "review-order" || cmd.Action == "edit-order" {
 			for _, f := range []string{"source", "paid", "payment_status", "total_minor", "subtotal_minor", "unit_minor", "status"} {
 				if _, ok := cmd.Body[f]; ok {
 					fail(w, 422, "SERVER_OWNED_FIELD")
