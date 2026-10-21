@@ -53,6 +53,13 @@ func commerceMoney(raw string) (int64, error) {
 	}
 	return n*100 + f, nil
 }
+func wooCurrencyIsBDT(reader io.Reader) bool {
+	var setting struct {
+		ID    string `json:"id"`
+		Value string `json:"value"`
+	}
+	return json.NewDecoder(io.LimitReader(reader, 65536)).Decode(&setting) == nil && setting.ID == "woocommerce_currency" && setting.Value == "BDT"
+}
 func (s *Service) commerceWooPreview(w http.ResponseWriter, r *http.Request, ws, realm, actor, key string, b map[string]any, cred commerceCredentials) {
 	page := 1
 	if n, ok := b["page"].(float64); ok {
@@ -61,6 +68,23 @@ func (s *Service) commerceWooPreview(w http.ResponseWriter, r *http.Request, ws,
 			return
 		}
 		page = int(n)
+	}
+	currencyRequest, currencyErr := http.NewRequestWithContext(r.Context(), "GET", cred.Origin+"/wp-json/wc/v3/settings/general/woocommerce_currency", nil)
+	if currencyErr != nil {
+		fail(w, 422, "WOOCOMMERCE_BDT_CURRENCY_REQUIRED")
+		return
+	}
+	currencyRequest.SetBasicAuth(cred.APIKey, cred.Secret)
+	currencyResponse, currencyErr := commerceHTTPRequest(r.Context(), currencyRequest)
+	if currencyErr != nil {
+		fail(w, 503, "WOOCOMMERCE_CURRENCY_UNAVAILABLE")
+		return
+	}
+	validCurrency := currencyResponse.StatusCode == 200 && wooCurrencyIsBDT(currencyResponse.Body)
+	currencyResponse.Body.Close()
+	if !validCurrency {
+		fail(w, 422, "WOOCOMMERCE_BDT_CURRENCY_REQUIRED")
+		return
 	}
 	load := func(path string) ([]wooProduct, int, error) {
 		req, err := http.NewRequestWithContext(r.Context(), "GET", cred.Origin+"/wp-json/wc/v3/"+path, nil)
@@ -80,7 +104,10 @@ func (s *Service) commerceWooPreview(w http.ResponseWriter, r *http.Request, ws,
 		if err = json.NewDecoder(io.LimitReader(response.Body, 2097152)).Decode(&rows); err != nil {
 			return nil, 0, err
 		}
-		pages, _ := strconv.Atoi(response.Header.Get("X-WP-TotalPages"))
+		pages, parseErr := strconv.Atoi(response.Header.Get("X-WP-TotalPages"))
+		if len(rows) > 0 && (parseErr != nil || pages < 1) {
+			return nil, 0, errors.New("store pagination unavailable")
+		}
 		return rows, pages, nil
 	}
 	products, pages, err := load("products?per_page=10&page=" + strconv.Itoa(page) + "&status=publish")

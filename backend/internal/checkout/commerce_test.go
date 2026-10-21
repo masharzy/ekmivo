@@ -3,6 +3,7 @@ package checkout
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -37,6 +38,17 @@ func TestCommerceMissingRuntimeFailsClosed(t *testing.T) {
 		handler(w, r)
 		if w.Code != 403 && w.Code != 503 {
 			t.Fatalf("runtime failure returned %d", w.Code)
+		}
+	}
+}
+
+func TestWooCommerceCurrencyCannotBeRelabeled(t *testing.T) {
+	for _, test := range []struct {
+		body string
+		want bool
+	}{{`{"id":"woocommerce_currency","value":"BDT"}`, true}, {`{"id":"woocommerce_currency","value":"USD"}`, false}, {`{"value":"BDT"}`, false}, {`{"id":"woocommerce_currency","value":null}`, false}, {`not-json`, false}} {
+		if got := wooCurrencyIsBDT(strings.NewReader(test.body)); got != test.want {
+			t.Fatalf("currency confirmation %q got %v", test.body, got)
 		}
 	}
 }
