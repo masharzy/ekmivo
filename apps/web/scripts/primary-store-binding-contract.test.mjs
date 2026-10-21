@@ -37,7 +37,8 @@ test("single-Store routes stay canonical without locale path segments",()=>{
  assert.doesNotMatch(view,/href=\{`\/\$\{locale\}\/workspaces/);
  assert.match(view,/href="\/workspaces"/);
  assert.match(actions,/redirect\("\/login"\)/);
- assert.match(actions,/redirect\("\/admin\/verify"\)/);
+ assert.match(actions,/"\/admin\/verify"/);
+ assert.match(actions,/"\/workspaces\/open"/);
  const frame=read("components/dashboard-frame.tsx");
  assert.match(frame,/spaces\.length>1\?searchableBusinesses/);
 });
