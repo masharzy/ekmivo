@@ -1,9 +1,10 @@
 import "server-only";
+import {cache} from "react";
 import {database} from "./db";
 import {parsePublishedSubscriptionOffer,type PublishedSubscriptionOffer} from "../public-subscription-offers";
 
 /** Public projection ONLY: no drafts, private plans, arbitrary prices, or buyer identifiers. */
-export async function publicSubscriptionOffers():Promise<{offers:PublishedSubscriptionOffer[];unavailable:boolean}>{
+export const publicSubscriptionOffers=cache(async function publicSubscriptionOffers():Promise<{offers:PublishedSubscriptionOffer[];unavailable:boolean}>{
  try {
   const rows=await database()`SELECT o.offer_key AS key,o.product,v.id::text AS version_id,v.term,
     v.amount_minor::text AS amount_minor,v.currency,v.payment_plan_version_id::text AS gateway_plan_version_id,
@@ -26,4 +27,4 @@ export async function publicSubscriptionOffers():Promise<{offers:PublishedSubscr
   // or break the existing Gateway plan fallback.
   return {offers:[],unavailable:true};
  }
-}
+});

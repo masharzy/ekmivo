@@ -45,6 +45,10 @@ test("home and pricing use the same catalog data; unpublished offers keep existi
  assert.match(pricing,/compact\?offers\.filter\(o=>o\.product==="payments"\):offers/);
  assert.match(pricing,/remaining\.length>0&&<PaymentPlanCards/);
  assert.match(home,/<PublicPricing locale=\{locale\} compact\/>/);
+ assert.match(home,/PublicSubscriptionOfferSlot locale=\{locale\} product="ai_credit"/);
+ assert.match(home,/PublicSubscriptionOfferSlot locale=\{locale\} product="bundle"/);
+ assert.match(read("components/landing/landing-pricing.tsx"),/\{aiPricing\}/);
+ assert.match(read("components/landing/landing-pricing.tsx"),/\{bundlePricing\}/);
  assert.match(read("app/[locale]/pricing/page.tsx"),/<PublicPricing locale=\{locale\}\/>/);
  assert.match(read("components/subscription-offer-pricing.tsx"),/aria-pressed/);
  assert.match(read("components/subscription-offer-pricing.tsx"),/Purchase handoff opens after verified checkout release/);
