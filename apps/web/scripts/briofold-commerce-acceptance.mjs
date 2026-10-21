@@ -46,7 +46,7 @@ export async function runBriofoldCommerce({control,sessions,apiOrigin,origin,bro
   let stock=(await read('inventory')).items.find(s=>s.warehouse_id===wh);assert.equal(stock.on_hand,0);assert.equal(stock.reserved,0);
   detail=await read('orders',winner);await command('order-state',{id:winner,revision:detail.order.revision,status:'delivered'});
   await command('cod-receipt',{id:delivery,revision:4,amount_minor:12502,receipt:'Fictional settlement receipt'});
-  detail=await read('orders',winner);assert.equal(detail.finance_links.filter(f=>f.kind==='payment').reduce((n,f)=>n+f.amount_minor,0),6000,'COD falsely became gateway payment');
+  detail=await read('orders',winner);assert.equal(detail.finance_links.filter(f=>f.kind==='payment').reduce((n,f)=>n+f.amount_minor,0),6000,'COD falsely became gateway payment');assert.ok(detail.events.some(e=>e.action==='delivery-state'),'courier events missing from order history');assert.ok(detail.events.some(e=>e.action==='cod-receipt'),'COD receipt missing from order history');
   const ret=(await command('return-request',{line_id:detail.lines[0].id,quantity:2,reason:'Wrong size reported'})).id;
   await assert.rejects(()=>command('return-state',{id:ret,revision:1,status:'inspected',restocked:2,damaged:0,inspection:'Cannot skip approval'}),e=>e.code==='22023');
   await command('return-state',{id:ret,revision:1,status:'approved'});await command('return-state',{id:ret,revision:2,status:'inspected',restocked:1,damaged:1,inspection:'One sellable, one damaged'});assert.equal((await read('inventory')).items.find(s=>s.warehouse_id===wh).on_hand,1);assert.equal((await read('orders',winner)).order.status,'returned');
