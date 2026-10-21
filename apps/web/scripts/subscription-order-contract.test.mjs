@@ -54,3 +54,5 @@ test("one Store is enforced transactionally on creation while legacy selection s
  const auth=read("lib/server/auth.ts");
  assert.match(auth,/if\(bound && workspaceId!==bound\)return false/);
 });
+
+// Primary-bound users must not fall back to the legacy Store picker.
