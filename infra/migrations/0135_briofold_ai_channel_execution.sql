@@ -46,7 +46,7 @@ CREATE FUNCTION briofold_ai_studio_context(w uuid,a uuid,revision bigint,publish
 END $$;
 CREATE FUNCTION briofold_ai_channel_enqueue() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE pub briofold_ai_studio_versions;j uuid:=gen_random_uuid();BEGIN
  IF NEW.sender<>'customer' OR NEW.type<>'text' OR length(trim(NEW.body))=0 THEN RETURN NEW;END IF;
- SELECT v.* INTO pub FROM briofold_ai_studio_drafts d JOIN briofold_ai_studio_versions v ON v.workspace_id=d.workspace_id AND v.id=d.published_id JOIN inbox_threads t ON t.id=NEW.thread_id JOIN inbox_connections c ON c.id=t.connection_id AND c.enabled AND c.environment='live' JOIN workspace_product_access p ON p.workspace_id=d.workspace_id AND p.product='ai' AND p.enabled WHERE d.workspace_id=NEW.workspace_id AND v.config->>'mode'='live' AND t.ai_enabled;
+ SELECT v.* INTO pub FROM briofold_ai_studio_drafts d JOIN briofold_ai_studio_versions v ON v.workspace_id=d.workspace_id AND v.id=d.published_id JOIN inbox_threads t ON t.id=NEW.thread_id JOIN inbox_connections c ON c.id=t.connection_id AND c.enabled AND c.environment='live' JOIN workspace_product_access p ON p.workspace_id=d.workspace_id AND p.product='ai' AND p.enabled WHERE d.workspace_id=NEW.workspace_id AND v.config->>'mode'='live' AND t.ai_enabled AND t.last_customer_at IS NOT NULL AND NEW.created_at>=t.last_customer_at;
  IF pub.id IS NULL THEN RETURN NEW;END IF;
  -- Coalesce a burst to its newest question; a running generation is version-checked at finish.
  UPDATE briofold_ai_channel_jobs SET state='cancelled',reason='NEWER_CUSTOMER_MESSAGE',updated_at=now() WHERE thread_id=NEW.thread_id AND state='queued';
@@ -61,7 +61,7 @@ CREATE FUNCTION briofold_ai_channel_claim() RETURNS jsonb LANGUAGE plpgsql SECUR
  IF j.id IS NULL THEN RETURN NULL;END IF;
  IF NOT pg_try_advisory_xact_lock(hashtextextended('briofold:ai-channel:'||j.workspace_id::text,0)) OR (SELECT count(*) FROM briofold_ai_channel_jobs WHERE workspace_id=j.workspace_id AND state='running')>=2 THEN RETURN NULL;END IF;
  SELECT * INTO t FROM inbox_threads WHERE id=j.thread_id;SELECT * INTO msg FROM inbox_messages WHERE id=j.inbound_id;
- IF NOT t.ai_enabled OR t.last_customer_at<=now()-interval '24 hours' OR EXISTS(SELECT 1 FROM briofold_inbox_work WHERE thread_id=t.id AND (disputed OR status IN ('resolved','snoozed'))) OR EXISTS(SELECT 1 FROM briofold_inbox_tickets WHERE thread_id=t.id AND category IN ('complaint','refund','return') AND status<>'resolved') OR EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t.id AND sender='customer' AND sequence>msg.sequence) OR NOT EXISTS(SELECT 1 FROM briofold_ai_studio_drafts d JOIN briofold_ai_studio_versions v ON v.id=d.published_id WHERE d.workspace_id=j.workspace_id AND d.published_id=j.publication_id AND v.config->>'mode'='live') THEN
+ IF NOT t.ai_enabled OR t.last_customer_at IS NULL OR msg.created_at<t.last_customer_at OR t.last_customer_at<=now()-interval '24 hours' OR EXISTS(SELECT 1 FROM briofold_inbox_work WHERE thread_id=t.id AND (disputed OR status IN ('resolved','snoozed'))) OR EXISTS(SELECT 1 FROM briofold_inbox_tickets WHERE thread_id=t.id AND category IN ('complaint','refund','return') AND status<>'resolved') OR EXISTS(SELECT 1 FROM inbox_messages WHERE thread_id=t.id AND sender='customer' AND sequence>msg.sequence) OR NOT EXISTS(SELECT 1 FROM briofold_ai_studio_drafts d JOIN briofold_ai_studio_versions v ON v.id=d.published_id WHERE d.workspace_id=j.workspace_id AND d.published_id=j.publication_id AND v.config->>'mode'='live') THEN
   UPDATE briofold_ai_channel_jobs SET state='cancelled',reason='CONVERSATION_OR_PUBLICATION_CHANGED',updated_at=now() WHERE id=j.id;RETURN NULL;
  END IF;
  IF NOT EXISTS(SELECT 1 FROM workspace_members m JOIN app_users u ON u.id=m.user_id WHERE m.workspace_id=j.workspace_id AND m.user_id=j.actor_id AND m.role IN ('owner','admin') AND u.disabled_at IS NULL) OR pg13_capability_override(j.workspace_id,j.actor_id,'inbox:manage') IS FALSE OR pg13_capability_override(j.workspace_id,j.actor_id,'workspace:settings') IS FALSE THEN
@@ -129,8 +129,8 @@ CREATE FUNCTION briofold_ai_review_read(w uuid,e text,a uuid,off integer,q text)
  PERFORM briofold_inbox_actor(w,a,'inbox:read');
  IF e IS DISTINCT FROM 'live' OR off IS NULL OR off NOT BETWEEN 0 AND 10000 OR q IS NULL OR length(q)>100 THEN RAISE EXCEPTION 'Invalid AI review filters' USING ERRCODE='22023';END IF;
  RETURN jsonb_build_object('items',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.created_at DESC,x.id) FROM (
-  SELECT j.id,j.thread_id,j.reason,j.created_at,t.customer_name,m.body AS question FROM briofold_ai_channel_jobs j JOIN inbox_threads t ON t.id=j.thread_id JOIN inbox_connections c ON c.id=t.connection_id AND c.environment=e AND c.enabled JOIN inbox_messages m ON m.id=j.inbound_id
-  WHERE j.workspace_id=w AND j.state='review' AND (q='' OR t.customer_name ILIKE '%'||q||'%' OR to_tsvector('simple',m.body)@@websearch_to_tsquery('simple',q)) ORDER BY j.created_at DESC,j.id OFFSET off LIMIT 50)x),'[]'),
+  SELECT j.id,j.thread_id,CASE WHEN j.state='running' THEN 'WORKER_OUTCOME_UNKNOWN' ELSE j.reason END AS reason,j.created_at,t.customer_name,m.body AS question FROM briofold_ai_channel_jobs j JOIN inbox_threads t ON t.id=j.thread_id JOIN inbox_connections c ON c.id=t.connection_id AND c.environment=e AND c.enabled JOIN inbox_messages m ON m.id=j.inbound_id
+  WHERE j.workspace_id=w AND (j.state='review' OR (j.state='running' AND j.leased_at<now()-interval '2 minutes')) AND (q='' OR t.customer_name ILIKE '%'||q||'%' OR to_tsvector('simple',m.body)@@websearch_to_tsquery('simple',q)) ORDER BY j.created_at DESC,j.id OFFSET off LIMIT 50)x),'[]'),
   'can_send',EXISTS(SELECT 1 FROM workspace_members WHERE workspace_id=w AND user_id=a AND role IN ('owner','admin','editor')) AND pg13_capability_override(w,a,'inbox:send') IS DISTINCT FROM false);
 END $$;
 CREATE FUNCTION briofold_ai_review_done(w uuid,e text,a uuid,job_id uuid,op uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE j briofold_ai_channel_jobs;prior briofold_inbox_events;fp text:=encode(digest(job_id::text,'sha256'),'hex');result jsonb;BEGIN
@@ -141,7 +141,7 @@ CREATE FUNCTION briofold_ai_review_done(w uuid,e text,a uuid,job_id uuid,op uuid
  IF FOUND THEN IF prior.actor_id<>a OR prior.action<>'ai-review' OR prior.request_hash<>fp THEN RAISE EXCEPTION 'Review request conflict' USING ERRCODE='23505';END IF;RETURN prior.result;END IF;
  SELECT x.* INTO j FROM briofold_ai_channel_jobs x JOIN inbox_threads t ON t.id=x.thread_id JOIN inbox_connections c ON c.id=t.connection_id AND c.environment=e AND c.enabled WHERE x.workspace_id=w AND x.id=job_id FOR UPDATE OF x;
  IF j.id IS NULL THEN RAISE EXCEPTION 'Review request unavailable' USING ERRCODE='42501';END IF;
- IF j.state<>'review' THEN RAISE EXCEPTION 'Review state changed' USING ERRCODE='40001';END IF;
+ IF j.state<>'review' AND NOT(j.state='running' AND j.leased_at<now()-interval '2 minutes') THEN RAISE EXCEPTION 'Review state changed' USING ERRCODE='40001';END IF;
  UPDATE briofold_ai_channel_jobs SET state='cancelled',reason='HUMAN_REVIEWED',updated_at=now() WHERE id=job_id;
  result:=jsonb_build_object('reviewed',true);
  INSERT INTO briofold_inbox_events(workspace_id,operation_key,thread_id,actor_id,action,request_hash,result) VALUES(w,op,j.thread_id,a,'ai-review',fp,result);

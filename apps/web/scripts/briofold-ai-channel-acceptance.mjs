@@ -25,6 +25,8 @@ export async function runBriofoldAiChannel({control,sessions}){
   const thread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${connection}`)[0].id;
   const jobs=async()=>(await db`SELECT * FROM briofold_ai_channel_jobs WHERE workspace_id=${workspace} ORDER BY created_at,id`);
   assert.equal((await jobs()).length,1);
+  await db`SELECT inbox_ingest(${connection},${randomUUID()},'fictional-ai-customer','Fictional AI customer','Old Orchid question','text',now()-interval '1 hour')`;
+  assert.equal((await jobs()).length,1,'late older inbound replaced the newest queued question');
   await ingest('Orchid');assert.equal((await jobs()).filter(j=>j.state==='queued').length,1,'burst not coalesced');
   const claim=async()=>(await db`SELECT briofold_ai_channel_claim() AS data`)[0].data;
   const job=await claim();assert.equal(job.workspace_id,workspace);assert.equal(job.context.knowledge.length,1);
@@ -35,6 +37,7 @@ export async function runBriofoldAiChannel({control,sessions}){
   await db`UPDATE inbox_threads SET ai_enabled=false,ai_version=ai_version+1 WHERE id=${thread}`;
   assert.equal((await db`SELECT briofold_ai_channel_valid(${job.id}) AS ok`)[0].ok,false,'human takeover did not invalidate generation');
   await db`UPDATE briofold_ai_channel_jobs SET leased_at=now()-interval '3 minutes' WHERE id=${job.id}`;
+  assert.ok((await db`SELECT briofold_ai_review_read(${workspace},'live',${actor},0,'') AS data`)[0].data.items.some(x=>x.id===job.id&&x.reason==='WORKER_OUTCOME_UNKNOWN'),'expired worker hidden while paid runtime is paused');
   await claim();assert.equal((await jobs()).find(j=>j.id===job.id).reason,'WORKER_OUTCOME_UNKNOWN');
   await db`UPDATE inbox_threads SET ai_enabled=true WHERE id=${thread}`;
   await ingest('Orchid delivery');const next=await claim();assert.ok(next);
@@ -75,6 +78,15 @@ export async function runBriofoldAiChannel({control,sessions}){
   await db`UPDATE briofold_ai_knowledge_sources SET active=false WHERE id=${source}`;
   await db`SELECT inbox_next_send_v1()`;
   assert.equal((await db`SELECT state,error_code FROM inbox_messages WHERE id=${outputs[0].id}`)[0].error_code,'AI_CONTEXT_CHANGED','archived source allowed queued delivery');
-  console.log('Phase6 AI CHANNEL PASS: published grounding, burst coalescing, unique lease, unmetered finish denied, takeover/revocation/source/publication guards, unknown worker outcome, no-grounding review, private job storage, zero unmetered charges, actual meter completion, concurrent exactly-once queueing and dispatch source guard');
+  await db`UPDATE briofold_ai_knowledge_sources SET active=true WHERE id=${source}`;
+  for(let i=0;i<3;i++)await db`SELECT inbox_ingest(${connection},${randomUUID()},${'concurrency-'+i},'Fictional concurrent customer','Orchid','text',now())`;
+  const concurrent=(await Promise.all([claim(),claim(),claim(),claim()])).filter(Boolean);
+  assert.ok(concurrent.length>=1&&concurrent.length<=2,'workspace worker bound exceeded');
+  while((await db`SELECT count(*)::int AS n FROM briofold_ai_channel_jobs WHERE workspace_id=${workspace} AND state='running'`)[0].n<2){const extra=await claim();assert.ok(extra);concurrent.push(extra);}
+  assert.equal(await claim(),null,'third concurrent workspace generation allowed');
+  for(const held of concurrent)await db`SELECT briofold_ai_channel_finish(${held.id},${held.lease_id},'','AI_REQUEST_UNKNOWN')`;
+  const waiting=await claim();assert.ok(waiting,'workspace capacity did not recover after completed workers');
+  await db`SELECT briofold_ai_channel_finish(${waiting.id},${waiting.lease_id},'','AI_REQUEST_UNKNOWN')`;
+  console.log('Phase6 AI CHANNEL PASS: published grounding, burst coalescing, unique lease, unmetered finish denied, takeover/revocation/source/publication guards, unknown worker outcome, no-grounding review, private job storage, zero unmetered charges, actual meter completion, bounded concurrent workspace claims, concurrent exactly-once queueing and dispatch source guard');
  }finally{await db.end({timeout:3});}
 }

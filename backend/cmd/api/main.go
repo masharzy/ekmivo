@@ -68,6 +68,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/test", pay.HandleAITest)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/studio-test", pay.HandleStudioTest)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai/knowledge-import", pay.HandleKnowledgeImport)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connect", pay.HandleInboxOAuthBegin)
 	mux.HandleFunc("GET /v1/channels/meta/callback", pay.HandleInboxOAuthCallback)
 	mux.HandleFunc("GET /v1/channels/media/{mediaID}", pay.HandleInboxMedia)

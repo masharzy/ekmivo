@@ -30,6 +30,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0133_briofold_ai_studio.sql");
   await apply("0134_briofold_inbox_operations.sql");
   await apply("0135_briofold_ai_channel_execution.sql");
+  await apply("0136_briofold_knowledge_import.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false"},stdio:["ignore","pipe","pipe"]});
@@ -54,8 +55,8 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldSettingsBrowser({origin,browser,control,sessions});
   await runBriofoldOnboardingBrowser({origin,browser,control,sessions});
   await runBriofoldInboxAccess({origin,browser,control,sessions});
-  await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});
   await runBriofoldAiChannel({control,sessions});
+  await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});
   await runBriofoldInboxDrafts({origin,browser,control,sessions});
   await runBriofoldInboxWorkflow({origin,browser,control,sessions});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}

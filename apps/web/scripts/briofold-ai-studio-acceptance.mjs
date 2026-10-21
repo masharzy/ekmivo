@@ -87,6 +87,10 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   await page.goto(origin+'/settings/ai');
   try{await page.getByLabel('Instructions',{exact:true}).waitFor({timeout:5000});}catch{throw Error('Studio editor unavailable at '+page.url()+'; browser errors: '+JSON.stringify(errors)+'; rendered fixture page: '+(await page.locator('body').innerText()).slice(-6000));}
+  await context.addCookies([{name:'ekmivo-default-workspace',value:actor+':'+foreign,url:origin,httpOnly:true,sameSite:'Lax'}]);
+  const stalePaid=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/ai/studio-test',{headers:{Origin:origin,'Idempotency-Key':'studio-test:'+randomUUID()},data:{revision:(await read()).revision,question:'Fictional stale tab'}});
+  assert.equal(stalePaid.status(),409);assert.equal((await stalePaid.json()).code,'STALE_BUSINESS');
+  await context.addCookies([{name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'}]);
   // Only Next's UI flag is enabled in this isolated harness. Go remains paid-off.
   await page.getByLabel('Test question',{exact:true}).fill('Fictional practice question');
   await page.getByLabel('I agree to use AI credits for this test.',{exact:true}).check();
@@ -101,6 +105,8 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   });
   await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('The result could not be loaded. Retry preserves the request key.',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('Fictional practice response',{exact:true}).waitFor();assert.equal(requestKeys[0],requestKeys[1],'practice retry changed paid request key');
+  await page.reload();await page.getByLabel('Test question',{exact:true}).fill('Fictional practice question');await page.getByLabel('I agree to use AI credits for this test.',{exact:true}).check();
+  await page.getByRole('button',{name:'Test answer',exact:true}).click();await page.getByText('Fictional practice response',{exact:true}).waitFor();assert.equal(requestKeys[0],requestKeys[2],'reload changed paid request key');
   await page.getByLabel('Practice task',{exact:true}).selectOption('edit');await page.getByLabel('Requested change',{exact:true}).fill('Make the instructions concise');
   const beforeProposal=(await read()).config.instructions;
   await page.getByRole('button',{name:'Propose edit',exact:true}).click();await page.getByText('Compare before applying. This proposal has not been saved or published.',{exact:true}).waitFor();
@@ -116,7 +122,16 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   await page.getByLabel('I confirm this publication replaces the active configuration.',{exact:true}).check();
   await page.getByRole('button',{name:'Publish configuration',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
   assert.equal((await read()).published.instructions,'Browser persisted instructions. Never invent a paid payment.');
-  await page.goto(origin+'/settings/knowledge');await page.getByLabel('Title or question',{exact:true}).fill('Browser warranty');await page.getByLabel('Content or answer',{exact:true}).fill('Marigold warranty is one year.');
+  await page.goto(origin+'/settings/knowledge');
+  const importPath=origin+'/api/go/workspaces/'+workspace+'/ai/knowledge-import';
+  const scanned=await context.request.post(importPath,{headers:{Origin:origin},data:{name:'Fictional.docx',data:Buffer.from('Fictional scanner probe').toString('base64')}});
+  assert.equal(scanned.status(),503);assert.equal((await scanned.json()).error?.code,'FILE_SCAN_UNCONFIRMED');
+  await page.route('**/api/go/workspaces/'+workspace+'/ai/knowledge-import',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:'Fictional imported Word warranty is two years.',name:'Fictional Word.docx',kind:'text'})}));
+  await page.getByLabel('Import Word file',{exact:true}).setInputFiles({name:'Fictional Word.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:Buffer.from('Mocked document parser transport')});
+  await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Content or answer"]')?.value==='Fictional imported Word warranty is two years.');
+  assert.equal((await read()).sources.some(x=>x.title==='Fictional Word.docx'),false,'Word preview silently persisted a source');
+  await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByText('Fictional Word.docx',{exact:true}).waitFor();
+  await page.getByLabel('Title or question',{exact:true}).fill('Browser warranty');await page.getByLabel('Content or answer',{exact:true}).fill('Marigold warranty is one year.');
   await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
   await page.getByLabel('Test question',{exact:true}).fill('Marigold');await page.getByRole('button',{name:'Search sources',exact:true}).click();await page.getByText('Marigold warranty is one year.',{exact:true}).waitFor();
   await page.reload();await page.getByText('Browser warranty',{exact:true}).waitFor();

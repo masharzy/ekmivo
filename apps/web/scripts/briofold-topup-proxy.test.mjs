@@ -6,12 +6,13 @@ import {webcrypto} from "node:crypto";
 import ts from "typescript";
 const code=ts.transpileModule(readFileSync(new URL("../src/app/api/go/[...path]/route.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const workspace="10000000-0000-4000-8000-000000000001",topup="10000000-0000-4000-8000-000000000002";
-function fixture({signedIn=true}={}){
+function fixture({signedIn=true,selected=workspace,authUnavailable=false}={}){
  const exports={},calls=[];
  runInNewContext(code,{exports,URL,Request,Response,Headers,AbortSignal,crypto:webcrypto,console,process:{env:{GO_WEB_ORIGIN:"https://web.example"}},
   fetch:async(url,options)=>{calls.push({url:String(url),...options});return Response.json({payment_status:"pending"},{status:201});},
   require:name=>name==="next/headers"?{cookies:async()=>({get:()=>signedIn?{value:"fixture-session"}:undefined})}:
    name.endsWith("bounded-body")?{boundedBody:async(request,limit)=>{const body=await request.text();return Buffer.byteLength(body)>limit?null:body;}}:
+   name.endsWith("/auth")?{currentUser:async()=>{if(authUnavailable)throw Error("unavailable");return signedIn?{id:workspace}:null;},preferredWorkspaceFor:async()=>({id:selected})}:
    name.endsWith("go-origin")?{goOrigin:()=>"https://api.example"}:undefined,
  });
  return {calls,call:async(action="purchase",method="POST",origin="https://web.example",body="{}",namespace="ai-credits")=>{
@@ -43,4 +44,10 @@ test("top-up mutations reject bad origin, missing session and oversize body",asy
 test("proxy exposes only the two top-up POST commands, never a credit/grant API",async()=>{
  for(const action of ["grant","credit",`${topup}/credit`,"anything/reconcile"]){const f=fixture();assert.equal((await f.call(action)).status,404);assert.equal(f.calls.length,0);}
  for(const method of ["GET","PATCH"]){const f=fixture();assert.equal((await f.call("purchase",method)).status,405);assert.equal(f.calls.length,0);}
+});
+
+test("paid Studio proxy rejects stale business and unavailable authority before provider forwarding",async()=>{
+ const stale=fixture({selected:topup});assert.equal((await stale.call("studio-test","POST","https://web.example","{}","ai")).status,409);assert.equal(stale.calls.length,0);
+ const unavailable=fixture({authUnavailable:true});assert.equal((await unavailable.call("studio-test","POST","https://web.example","{}","ai")).status,503);assert.equal(unavailable.calls.length,0);
+ const current=fixture();assert.equal((await current.call("studio-test","POST","https://web.example","{}","ai")).status,201);assert.equal(current.calls.length,1);
 });

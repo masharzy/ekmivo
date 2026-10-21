@@ -129,7 +129,9 @@ func (s *Service) runStudioJob(ctx context.Context) {
  if err!=nil { reason="AI_CONTEXT_TOO_LARGE" } else {
   run,cancel:=context.WithTimeout(ctx,75*time.Second)
   result,runErr:=s.studioEngine().Run(run,aicredits.Request{Workspace:job.Workspace,Actor:job.Actor,Thread:job.Thread,Key:job.Key,Model:job.Context.Config.Model,Messages:messages});cancel()
-  if runErr!=nil { reason="AI_REQUEST_UNKNOWN";var pg *pgconn.PgError;if errors.As(runErr,&pg) && pg.Code=="P0001" { reason="AI_CREDITS_REQUIRED" };if errors.Is(runErr,aicredits.ErrRejected) { reason="AI_REQUEST_REJECTED" } } else { body=result.Text;if !utf8.ValidString(body) || strings.TrimSpace(body)=="" || utf8.RuneCountInString(body)>8000 { reason="AI_INVALID_OUTPUT";body="" } }
+  if runErr!=nil { reason="AI_REQUEST_UNKNOWN";var pg *pgconn.PgError;if errors.As(runErr,&pg) && pg.Code=="P0001" { reason="AI_CREDITS_REQUIRED" };if errors.Is(runErr,aicredits.ErrRejected) || errors.Is(runErr,aicredits.ErrWaived) { reason="AI_REQUEST_REJECTED" }
+   if errors.Is(runErr,aicredits.ErrInvalidRequest) { reason="AI_CONTEXT_TOO_LARGE" }
+   if errors.Is(runErr,aicredits.ErrInvalidTariff) || errors.Is(runErr,aicredits.ErrUnavailable) || (pg!=nil && (pg.Code=="42501" || pg.Code=="P0002" || pg.Code=="54000")) { reason="AI_RUNTIME_UNAVAILABLE" } } else { body=result.Text;if !utf8.ValidString(body) || strings.TrimSpace(body)=="" || utf8.RuneCountInString(body)>8000 { reason="AI_INVALID_OUTPUT";body="" } }
  }
  finish,cancel:=context.WithTimeout(context.WithoutCancel(ctx),5*time.Second);defer cancel()
  var result []byte

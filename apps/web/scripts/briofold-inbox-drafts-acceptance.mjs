@@ -64,7 +64,7 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   await page.getByRole('button',{name:/Open attachment/}).last().click();await page.getByRole('img',{name:'Fictional attachment.png',exact:true}).waitFor();
   // A payload over the former 32-KB proxy cap must reach the real Go scanner.
   const scan=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live',{headers:{Origin:origin},data:{action:'media-upload',thread_id:(await db`SELECT id FROM inbox_threads WHERE workspace_id=${workspace} AND customer_name='Draft fixture customer 0'`)[0].id,body:{media_id:randomUUID(),data:Buffer.alloc(100000,65).toString('base64'),mime:'text/plain',name:'Fictional scanner probe.txt'}}});
-  assert.equal(scan.status(),503);assert.equal((await scan.json()).code,'FILE_SCAN_UNCONFIRMED','proxy blocked before secure scanner or scanner was bypassed');
+  assert.equal(scan.status(),503);assert.equal((await scan.json()).error?.code,'FILE_SCAN_UNCONFIRMED','proxy blocked before secure scanner or scanner was bypassed');
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
   await page.getByText('You no longer have access to this Inbox. Retrying when access is restored.',{exact:true}).waitFor();
   assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).count(),0,'revocation retained conversation composer');

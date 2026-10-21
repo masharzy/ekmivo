@@ -24,7 +24,7 @@ export function InboxAttachmentComposer({workspaceId,actorId,threadId,bn,disable
  }
  async function send(){
   if(lock.current||disabled||!draft)return;lock.current=true;setBusy(true);onBusy(true);setError("");
-  const api=async(action:string,body:object)=>{const response=await fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,thread_id:threadId,body})});if(!response.ok){const result=await response.json();throw Error(String(result.code));}return response.json();};
+  const api=async(action:string,body:object)=>{const response=await fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,thread_id:threadId,body})});if(!response.ok){const result=await response.json();throw Error(String(result.error?.code??result.code));}return response.json();};
   try{
    if(!draft.uploaded){
     if(!file.current){setError(t("Choose the same file again to resume this upload.","আপলোড চালাতে একই ফাইল আবার বেছে নিন।"));return;}
