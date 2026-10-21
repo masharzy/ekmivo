@@ -1,0 +1,68 @@
+import assert from 'node:assert/strict';
+import {createHash,createHmac,randomUUID} from 'node:crypto';
+import postgres from 'postgres';
+export async function runBriofoldCustomers({control,sessions,apiOrigin,origin,browser}){
+ const target=new URL(control);if(!['localhost','127.0.0.1','[::1]'].includes(target.hostname)||/prod/i.test(target.pathname))throw Error('CRM acceptance refuses shared databases');
+ const db=postgres(control,{max:8,prepare:false});let context;
+ try{
+  const actor=async token=>(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(token).digest('hex')}`)[0].user_id;
+  const owner=await actor(sessions.owner),viewer=await actor(sessions.viewer),ws=randomUUID(),foreign=randomUUID();
+  await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${ws},'Fictional CRM business','both',${owner}),(${foreign},'Foreign CRM business','ai',${owner})`;
+  await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${ws},${owner},'owner'),(${ws},${viewer},'viewer')`;
+  const write=async(action,body,key=randomUUID(),user=owner,workspace=ws,env='live')=>(await db`SELECT briofold_customers_write(${workspace},${env},${user},${key},${action},${db.json(body)}) AS result`)[0].result;
+  const read=async(id=null,user=owner,workspace=ws,env='live',offset=0,q='',filter='')=>(await db`SELECT briofold_customers_read(${workspace},${env},${user},${id},${offset},${q},${filter}) AS data`)[0].data;
+  const profile={name:'Same fictional customer',email:'customer@example.invalid',phone:'+8801712345678',notes:'Private CRM note',reason:'Private qualification',tags:['বাংলা','prospect'],stage:'qualified',temperature:'hot',preferences:{marketing:'unknown',do_not_contact:false}};
+  const key=randomUUID(),first=await write('save',profile,key);assert.deepEqual(await write('save',profile,key),first);
+  await assert.rejects(()=>write('save',{...profile,name:'Changed payload'},key),e=>e.code==='23505');
+  const second=await write('save',profile);assert.notEqual(second.id,first.id,'unverified matching email/name/phone merged');
+  assert.equal((await read()).items.length,2);assert.equal((await read(null,owner,ws,'sandbox')).items.length,0);
+  await assert.rejects(()=>read(first.id,viewer,foreign),e=>e.code==='42501');
+  const masked=await read(first.id,viewer);assert.equal(masked.customer.email,undefined);assert.equal(masked.customer.phone,undefined);assert.equal(masked.customer.notes,undefined);assert.equal(masked.proofs.length,0);
+  assert.equal((await read(null,viewer,ws,'live',0,'customer@example.invalid')).items.length,0,'contact search leaked masked PII');
+  await assert.rejects(()=>write('save',profile,randomUUID(),viewer),e=>e.code==='42501');
+  await assert.rejects(()=>write('merge',{id:first.id,revision:first.revision,target:second.id,confirmed:true}),e=>e.code==='42501');
+  const updated=await write('save',{...profile,id:first.id,revision:first.revision,name:'Updated fictional customer'});
+  await assert.rejects(()=>write('save',{...profile,id:first.id,revision:first.revision}),e=>e.code==='40001');
+  const raceBody={...profile,id:first.id,revision:updated.revision};const races=await Promise.allSettled([write('save',raceBody),write('save',raceBody)]);assert.equal(races.filter(r=>r.status==='fulfilled').length,1,'concurrent revision race accepted both');
+  for(const id of [first.id,second.id]){
+   const token='fixture-'+randomUUID(),digest=createHash('sha256').update(token).digest('hex');
+   const challenge=(await db`SELECT briofold_customer_challenge(${ws},'live',${owner},${id},${digest}) AS data`)[0].data;assert.equal(challenge.created,true);assert.equal((await db`SELECT briofold_customer_challenge(${ws},'live',${owner},${id},${digest}) AS data`)[0].data.created,false);
+   assert.equal((await db`SELECT briofold_customer_verify(${digest}) AS ok`)[0].ok,true);await assert.rejects(()=>db`SELECT briofold_customer_verify(${digest})`,e=>e.code==='42501');
+  }
+  const cid=first.id,revision=(await read(cid)).customer.revision,followup=randomUUID();
+  await write('followup',{id:cid,revision,followup_id:followup,due_at:new Date(Date.now()-60000).toISOString(),time_zone:'Asia/Dhaka',body:'Consented team reminder'});
+  assert.equal((await read(null,owner,ws,'live',0,'','due')).items.length,1);
+  await assert.rejects(()=>write('followup',{id:cid,revision:(first.revision),followup_id:randomUUID(),due_at:new Date().toISOString(),time_zone:'Not/AZone',body:'Invalid'}));
+  const exported=(await db`SELECT briofold_customer_export(${ws},'live',${owner},${cid}) AS data`)[0].data;assert.equal(exported.customer.notes,profile.notes);assert.ok(exported.events.some(e=>e.action==='email-verified'));
+  await assert.rejects(()=>db`SELECT briofold_customer_export(${ws},'live',${viewer},${cid})`,e=>e.code==='42501');
+  const account='crm-ms-'+randomUUID(),conn=(await db`SELECT inbox_connection(${ws},'live','ms',${account},decode('abcd','hex')) AS id`)[0].id;
+  await db`SELECT inbox_ingest(${conn},'crm-inbound-1','same-name-source','Same fictional customer','Hello','text',now())`;
+  const thread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${conn} AND external_id='same-name-source'`)[0].id;
+  const autoSource=(await db`SELECT * FROM briofold_customer_sources WHERE source_id=${thread}`)[0];assert.ok(autoSource.customer_id);assert.notEqual(autoSource.customer_id,cid);
+  const merge=await write('merge',{id:cid,revision:(await read(cid)).customer.revision,target:second.id,confirmed:true});assert.equal(merge.id,cid,'oldest profile is deterministic canonical');
+  assert.equal((await read(second.id)).customer.merged_into,cid);assert.equal((await read(cid)).customer.preferences.marketing,'unknown');
+  const attachKey=randomUUID();await db`INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES(${ws},'live',${cid},'api',${attachKey})`;
+  const source=(await read(cid)).sources.find(s=>s.source_id===attachKey);
+  const separated=await write('dispute',{id:cid,revision:(await read(cid)).customer.revision,source:source.id,confirmed:true});assert.notEqual(separated.id,cid);assert.equal((await read(separated.id)).customer.preferences.do_not_contact,true);assert.ok((await read(cid)).proofs.every(p=>p.revoked_at));
+  await db`UPDATE workspace_members SET role='editor' WHERE workspace_id=${ws} AND user_id=${viewer}`;
+  assert.equal((await read(cid,viewer)).can_manage,true);await assert.rejects(()=>write('save',{...profile,id:cid,revision:(updated.revision)},randomUUID(),viewer));
+  const editorCustomer=(await read(cid,viewer)).customer;assert.ok(await write('save',{id:cid,revision:editorCustomer.revision,name:'Editor updated',tags:[],stage:'contacted',temperature:'warm'},randomUUID(),viewer));
+  await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${ws} AND user_id=${viewer}`;
+  const waAccount='crm-wa-'+randomUUID(),wa=(await db`SELECT inbox_connection(${ws},'live','wa',${waAccount},decode('abcd','hex')) AS id`)[0].id;
+  const payload=JSON.stringify({object:'whatsapp_business_account',entry:[{id:'waba-fixture',changes:[{field:'messages',value:{metadata:{phone_number_id:waAccount},contacts:[{wa_id:'8801777777777',profile:{name:'WA fictional customer'}}],messages:[{from:'8801777777777',id:'wamid.crm-fixture',timestamp:String(Math.floor(Date.now()/1000)),type:'text',text:{body:'Hello CRM'}}]}}]}]});
+  const wh=await fetch(apiOrigin+'/v1/channels/meta/webhook',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Signature-256':'sha256='+createHmac('sha256','phase6-comment-test-secret').update(payload).digest('hex')},body:payload});assert.equal(wh.status,200,await wh.text());
+  assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_customer_proofs p JOIN briofold_customer_sources s ON s.customer_id=p.customer_id JOIN inbox_threads t ON t.id=s.source_id WHERE t.connection_id=${wa} AND p.kind='phone' AND p.revoked_at IS NULL`)[0].n),1,'signed WhatsApp sender did not establish scoped identity');
+  context=await browser.newContext();await context.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:owner+':'+ws,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+  const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
+  await page.goto(origin+'/customers');await page.getByRole('heading',{name:'Customers',exact:true}).waitFor();await page.getByRole('button',{name:'New customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill('Browser CRM customer');await page.getByLabel('Email',{exact:true}).fill('browser@example.invalid');await page.getByRole('button',{name:'Save profile',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();await page.reload();await page.getByRole('button',{name:'Browser CRM customer',exact:true}).click();assert.equal(await page.getByLabel('Email',{exact:true}).inputValue(),'browser@example.invalid');
+  const api=origin+`/api/go/workspaces/${ws}/crm?environment=live`;const httpRead=await context.request.get(api);assert.equal(httpRead.status(),200);const before=(await read(cid)).customer;
+  const stale=await context.request.post(api,{headers:{Origin:origin},data:{action:'save',operation_key:randomUUID(),body:{...profile,id:cid,revision:0}}});assert.equal(stale.status(),409);
+  const invalidLink=await context.request.post(api,{headers:{Origin:origin},data:{action:'link',operation_key:randomUUID(),body:{id:cid,revision:before.revision,kind:'finance-customer',source_id:randomUUID()}}});assert.equal(invalidLink.status(),403);
+  const consent=await context.request.post(api,{headers:{Origin:origin},data:{action:'verify-email',operation_key:randomUUID(),body:{id:cid,consented:false}}});assert.equal(consent.status(),422);
+  await write('delete',{id:cid,revision:(await read(cid)).customer.revision,confirmed:true});const deleted=await read(cid);assert.equal(deleted.customer.email,'');assert.equal(deleted.customer.notes,'');assert.equal((await read(second.id)).customer.email,'','merged source PII survived deletion');assert.equal(deleted.proofs.length,0);assert.ok(deleted.followups.every(f=>f.body==='Deleted'));
+  await db`SELECT inbox_ingest(${conn},'crm-inbound-2','same-name-source','Same fictional customer','Again','text',now())`;assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_customer_sources WHERE source_id=${thread}`)[0].n),1,'source identity duplication');
+  for(const table of ['briofold_customers','briofold_customer_sources','briofold_customer_proofs','briofold_customer_challenges','briofold_customer_events','briofold_customer_commands','briofold_customer_followups'])assert.equal((await db`SELECT has_table_privilege('ekmivo_financial_runtime',${table},'SELECT') AS ok`)[0].ok,false);
+  await assert.rejects(()=>db`UPDATE briofold_customer_events SET action='tampered' WHERE customer_id=${cid}`,e=>e.code==='42501');
+  console.log('Phase7 CRM PASS: real PostgreSQL tenant/realm/role masking, no unverified merge, verified deterministic merge, challenge replay, source/phone proof, concurrency/idempotency, dispute/suppression, reminders, complete CRM export and merged-cluster erasure; actual HTTP and browser save/reload');
+ }finally{if(context)await context.close();await db.end({timeout:3});}
+}

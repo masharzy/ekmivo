@@ -224,7 +224,14 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 			return queryErr
 		} // durable raw event retained for connections not linked yet
 		var accepted bool
-		return tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,$6,$7)", connection, id, from, name, text, kind, at).Scan(&accepted)
+		if err := tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,$6,$7)", connection, id, from, name, text, kind, at).Scan(&accepted); err != nil {
+			return err
+		}
+		if provider == "wa" && accepted {
+			_, err := tx.Exec(r.Context(), "SELECT briofold_customer_whatsapp_identity($1::uuid,$2)", connection, from)
+			return err
+		}
+		return nil
 	}
 	if fresh {
 		for _, status := range parseInboxStatuses(raw) {

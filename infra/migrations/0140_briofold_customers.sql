@@ -1,0 +1,157 @@
+-- Control CRM. Financial documents and contact claims remain separate authorities.
+BEGIN;
+DO $$BEGIN IF to_regclass('public.briofold_comments') IS NULL OR to_regclass('public.financial_realm') IS NOT NULL THEN RAISE EXCEPTION '0140 requires control schema';END IF;END $$;
+CREATE TABLE briofold_customers(
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),workspace_id uuid NOT NULL REFERENCES workspaces(id),environment text NOT NULL CHECK(environment IN ('live','sandbox')),
+ name text NOT NULL CHECK(length(name) BETWEEN 1 AND 160),email text NOT NULL DEFAULT '' CHECK(length(email)<=254),phone text NOT NULL DEFAULT '' CHECK(length(phone)<=32),notes text NOT NULL DEFAULT '' CHECK(length(notes)<=4000),tags text[] NOT NULL DEFAULT '{}' CHECK(cardinality(tags)<=20),
+ stage text NOT NULL DEFAULT 'new' CHECK(stage IN ('new','contacted','qualified','proposal','won','lost')),temperature text NOT NULL DEFAULT 'warm' CHECK(temperature IN ('hot','warm','cold')),reason text NOT NULL DEFAULT '' CHECK(length(reason)<=500),assignee uuid REFERENCES app_users(id),
+ preferences jsonb NOT NULL DEFAULT '{"marketing":"unknown","do_not_contact":false}' CHECK(pg_column_size(preferences)<=1000),revision bigint NOT NULL DEFAULT 1,merged_into uuid,deleted_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),UNIQUE(workspace_id,environment,id),FOREIGN KEY(workspace_id,environment,merged_into) REFERENCES briofold_customers(workspace_id,environment,id));
+CREATE TABLE briofold_customer_sources(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),workspace_id uuid NOT NULL,environment text NOT NULL,customer_id uuid NOT NULL,kind text NOT NULL CHECK(kind IN ('thread','finance-customer','invoice','payment','order','api')),source_id uuid NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(workspace_id,environment,kind,source_id),FOREIGN KEY(workspace_id,environment,customer_id) REFERENCES briofold_customers(workspace_id,environment,id));
+CREATE TABLE briofold_customer_proofs(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),workspace_id uuid NOT NULL,environment text NOT NULL,customer_id uuid NOT NULL,kind text NOT NULL CHECK(kind IN ('email','phone')),value text NOT NULL,verified_at timestamptz NOT NULL DEFAULT now(),revoked_at timestamptz,FOREIGN KEY(workspace_id,environment,customer_id) REFERENCES briofold_customers(workspace_id,environment,id));
+CREATE INDEX briofold_customer_verified ON briofold_customer_proofs(workspace_id,environment,kind,value) WHERE revoked_at IS NULL;
+CREATE TABLE briofold_customer_challenges(digest text PRIMARY KEY CHECK(digest~'^[0-9a-f]{64}$'),workspace_id uuid NOT NULL,environment text NOT NULL,customer_id uuid NOT NULL,value text NOT NULL,expires_at timestamptz NOT NULL DEFAULT now()+interval '15 minutes',used_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(workspace_id,environment,customer_id) REFERENCES briofold_customers(workspace_id,environment,id));
+CREATE TABLE briofold_customer_followups(id uuid PRIMARY KEY,workspace_id uuid NOT NULL,environment text NOT NULL,customer_id uuid NOT NULL,due_at timestamptz NOT NULL,time_zone text NOT NULL,body text NOT NULL CHECK(length(body) BETWEEN 1 AND 2000),status text NOT NULL DEFAULT 'scheduled' CHECK(status IN ('scheduled','done','cancelled')),created_by uuid NOT NULL REFERENCES app_users(id),created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(workspace_id,environment,customer_id) REFERENCES briofold_customers(workspace_id,environment,id));
+CREATE TABLE briofold_customer_events(sequence bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,workspace_id uuid NOT NULL,environment text NOT NULL,customer_id uuid NOT NULL,actor_id uuid,action text NOT NULL,detail jsonb NOT NULL DEFAULT '{}',created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(workspace_id,environment,customer_id) REFERENCES briofold_customers(workspace_id,environment,id));
+CREATE TABLE briofold_customer_commands(workspace_id uuid NOT NULL,actor_id uuid NOT NULL,operation_key uuid NOT NULL,fingerprint text NOT NULL,result jsonb NOT NULL,PRIMARY KEY(workspace_id,actor_id,operation_key));
+CREATE INDEX briofold_customer_list ON briofold_customers(workspace_id,environment,updated_at DESC,id);
+CREATE INDEX briofold_customer_source_profile ON briofold_customer_sources(workspace_id,environment,customer_id);
+CREATE INDEX briofold_customer_followup_due ON briofold_customer_followups(workspace_id,environment,due_at,id) WHERE status='scheduled';
+DO $$DECLARE t text;BEGIN FOREACH t IN ARRAY ARRAY['briofold_customers','briofold_customer_sources','briofold_customer_proofs','briofold_customer_challenges','briofold_customer_followups','briofold_customer_events','briofold_customer_commands'] LOOP EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY',t);EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY',t);EXECUTE format('REVOKE ALL ON %I FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection',t);END LOOP;END $$;
+CREATE FUNCTION briofold_customer_event_immutable() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'Immutable CRM audit' USING ERRCODE='42501';END $$;
+CREATE TRIGGER briofold_customer_audit_immutable BEFORE UPDATE OR DELETE ON briofold_customer_events FOR EACH ROW EXECUTE FUNCTION briofold_customer_event_immutable();
+CREATE FUNCTION briofold_customer_actor(w uuid,a uuid,cap text) RETURNS text LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE role_name text;BEGIN
+ SELECT m.role INTO role_name FROM workspace_members m JOIN app_users u ON u.id=m.user_id JOIN workspaces x ON x.id=m.workspace_id WHERE m.workspace_id=w AND m.user_id=a AND u.disabled_at IS NULL AND x.service_mode<>'off';
+ IF role_name IS NULL OR cap NOT IN ('read','manage','contact','export') OR (cap='manage' AND role_name NOT IN ('owner','admin','editor')) OR (cap IN ('contact','export') AND role_name NOT IN ('owner','admin')) THEN RAISE EXCEPTION 'Customer access denied' USING ERRCODE='42501';END IF;RETURN role_name;
+END $$;
+CREATE FUNCTION briofold_customer_attach_thread() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE cid uuid;e text;BEGIN
+ SELECT environment INTO e FROM inbox_connections WHERE id=NEW.connection_id;
+ INSERT INTO briofold_customers(workspace_id,environment,name) VALUES(NEW.workspace_id,e,left(coalesce(nullif(NEW.customer_name,''),'Customer'),160)) RETURNING id INTO cid;
+ INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES(NEW.workspace_id,e,cid,'thread',NEW.id);RETURN NEW;
+END $$;
+CREATE TRIGGER briofold_customer_new_thread AFTER INSERT ON inbox_threads FOR EACH ROW EXECUTE FUNCTION briofold_customer_attach_thread();
+-- Each existing source receives its own profile: names and phone claims never merge.
+DO $$DECLARE t record;cid uuid;BEGIN FOR t IN SELECT i.*,c.environment FROM inbox_threads i JOIN inbox_connections c ON c.id=i.connection_id ORDER BY i.id LOOP INSERT INTO briofold_customers(workspace_id,environment,name) VALUES(t.workspace_id,t.environment,left(coalesce(nullif(t.customer_name,''),'Customer'),160)) RETURNING id INTO cid;INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES(t.workspace_id,t.environment,cid,'thread',t.id);END LOOP;END $$;
+CREATE FUNCTION briofold_customers_read(w uuid,e text,a uuid,cid uuid,off integer,q text,filter text) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE role_name text;pii boolean;items jsonb;item jsonb;BEGIN
+ role_name:=briofold_customer_actor(w,a,'read');pii:=role_name IN ('owner','admin');
+ IF e NOT IN ('live','sandbox') OR e IS NULL OR off IS NULL OR off<0 OR off>10000 OR length(coalesce(q,''))>100 OR filter NOT IN ('','new','contacted','qualified','proposal','won','lost','due') THEN RAISE EXCEPTION 'Invalid CRM filter' USING ERRCODE='22023';END IF;
+ IF cid IS NULL THEN
+  SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]') INTO items FROM (SELECT c.id,c.name,c.stage,c.temperature,c.tags,c.assignee,c.revision,c.updated_at,CASE WHEN pii THEN c.email ELSE '' END email,CASE WHEN pii THEN c.phone ELSE '' END phone,EXISTS(SELECT 1 FROM briofold_customer_followups f WHERE f.customer_id=c.id AND f.status='scheduled' AND f.due_at<=now()) AS due FROM briofold_customers c WHERE c.workspace_id=w AND c.environment=e AND c.deleted_at IS NULL AND c.merged_into IS NULL AND (q='' OR c.name ILIKE '%'||q||'%' OR (pii AND (c.email ILIKE '%'||q||'%' OR c.phone ILIKE '%'||q||'%')) OR EXISTS(SELECT 1 FROM unnest(c.tags) tag WHERE tag ILIKE '%'||q||'%')) AND (filter='' OR c.stage=filter OR (filter='due' AND EXISTS(SELECT 1 FROM briofold_customer_followups f WHERE f.customer_id=c.id AND f.status='scheduled' AND f.due_at<=now()))) ORDER BY c.updated_at DESC,c.id LIMIT 51 OFFSET off) x;
+  RETURN jsonb_build_object('items',items,'can_manage',role_name IN ('owner','admin','editor'),'can_contact',pii,'can_export',pii,'members',coalesce((SELECT jsonb_agg(jsonb_build_object('id',u.id,'name',u.display_name)) FROM workspace_members m JOIN app_users u ON u.id=m.user_id WHERE m.workspace_id=w AND u.disabled_at IS NULL),'[]'));
+ END IF;
+ SELECT to_jsonb(c)-'workspace_id'-'email'-'phone'-'notes'-'reason' INTO item FROM briofold_customers c WHERE c.workspace_id=w AND c.environment=e AND c.id=cid;
+ IF item IS NULL THEN RAISE EXCEPTION 'Customer unavailable' USING ERRCODE='42501';END IF;
+ IF pii THEN SELECT item||jsonb_build_object('email',c.email,'phone',c.phone,'notes',c.notes,'reason',c.reason) INTO item FROM briofold_customers c WHERE c.id=cid;END IF;
+ RETURN jsonb_build_object('customer',item,'can_manage',role_name IN ('owner','admin','editor'),'can_contact',pii,'can_export',pii,
+ 'sources',coalesce((SELECT jsonb_agg(to_jsonb(s)-'workspace_id'-'environment') FROM briofold_customer_sources s WHERE s.customer_id=cid),'[]'),
+ 'proofs',CASE WHEN pii THEN coalesce((SELECT jsonb_agg(jsonb_build_object('id',p.id,'kind',p.kind,'value',p.value,'verified_at',p.verified_at,'revoked_at',p.revoked_at)) FROM briofold_customer_proofs p WHERE p.customer_id=cid),'[]') ELSE '[]'::jsonb END,
+ 'followups',coalesce((SELECT jsonb_agg(to_jsonb(f)-'workspace_id'-'environment'-'body'||jsonb_build_object('body',CASE WHEN pii THEN f.body ELSE '' END) ORDER BY f.due_at) FROM briofold_customer_followups f WHERE f.customer_id=cid),'[]'),
+ 'events',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.sequence DESC) FROM (SELECT sequence,action,detail,created_at FROM briofold_customer_events WHERE customer_id=cid ORDER BY sequence DESC LIMIT 51 OFFSET off) x),'[]'));
+END $$;
+CREATE FUNCTION briofold_customers_write(w uuid,e text,a uuid,k uuid,act text,b jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE c briofold_customers;other briofold_customers;old briofold_customer_commands;fp text;res jsonb;cid uuid:=(b->>'id')::uuid;target uuid;rev bigint;fid uuid;BEGIN
+ PERFORM briofold_customer_actor(w,a,'manage');
+ IF e IS NULL OR e NOT IN ('live','sandbox') OR k IS NULL OR jsonb_typeof(b) IS DISTINCT FROM 'object' OR pg_column_size(b)>16384 OR act IS NULL OR act NOT IN ('save','merge','unlink','dispute','followup','followup-status','delete','link') THEN RAISE EXCEPTION 'Invalid customer command' USING ERRCODE='22023';END IF;
+ fp:=encode(sha256(convert_to(e||act||b::text,'UTF8')),'hex');PERFORM pg_advisory_xact_lock(hashtextextended('crm:'||w::text,0));
+ SELECT * INTO old FROM briofold_customer_commands WHERE workspace_id=w AND actor_id=a AND operation_key=k;IF old.operation_key IS NOT NULL THEN IF old.fingerprint<>fp THEN RAISE EXCEPTION 'Operation key conflict' USING ERRCODE='23505';END IF;RETURN old.result;END IF;
+ IF act='save' AND cid IS NULL THEN INSERT INTO briofold_customers(workspace_id,environment,name) VALUES(w,e,'Customer') RETURNING id INTO cid;ELSE SELECT * INTO c FROM briofold_customers WHERE id=cid AND workspace_id=w AND environment=e FOR UPDATE;IF c.id IS NULL OR c.deleted_at IS NOT NULL OR c.merged_into IS NOT NULL THEN RAISE EXCEPTION 'Customer unavailable' USING ERRCODE='42501';END IF;IF (b->>'revision')::bigint IS DISTINCT FROM c.revision THEN RAISE EXCEPTION 'Customer changed; reload' USING ERRCODE='40001';END IF;END IF;
+ IF act='save' THEN
+  IF length(trim(coalesce(b->>'name','')))=0 OR length(b->>'name')>160 OR length(coalesce(b->>'notes',''))>4000 OR length(coalesce(b->>'reason',''))>500 OR jsonb_typeof(b->'tags') IS DISTINCT FROM 'array' OR jsonb_array_length(b->'tags')>20 OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(b->'tags') x WHERE length(x)>40 OR trim(x)='') OR coalesce(b->>'stage','new') NOT IN ('new','contacted','qualified','proposal','won','lost') OR coalesce(b->>'temperature','warm') NOT IN ('hot','warm','cold') THEN RAISE EXCEPTION 'Invalid profile' USING ERRCODE='22023';END IF;
+  IF coalesce(b->>'assignee','')<>'' AND NOT EXISTS(SELECT 1 FROM workspace_members WHERE workspace_id=w AND user_id=(b->>'assignee')::uuid) THEN RAISE EXCEPTION 'Invalid assignee' USING ERRCODE='42501';END IF;
+  IF b ? 'email' OR b ? 'phone' OR b ? 'notes' OR b ? 'reason' OR b ? 'preferences' THEN PERFORM briofold_customer_actor(w,a,'contact');END IF;
+  IF length(coalesce(b->>'email',''))>254 OR (coalesce(b->>'email','')<>'' AND b->>'email'!~'^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$') OR (coalesce(b->>'phone','')<>'' AND b->>'phone'!~'^\+?[0-9]{7,15}$') THEN RAISE EXCEPTION 'Invalid contact' USING ERRCODE='22023';END IF;
+  IF b ? 'preferences' AND (jsonb_typeof(b->'preferences') IS DISTINCT FROM 'object' OR b->'preferences'->>'marketing' NOT IN ('unknown','opted-in','opted-out') OR jsonb_typeof(b->'preferences'->'do_not_contact') IS DISTINCT FROM 'boolean') THEN RAISE EXCEPTION 'Invalid preferences' USING ERRCODE='22023';END IF;
+  UPDATE briofold_customers SET name=b->>'name',tags=ARRAY(SELECT jsonb_array_elements_text(b->'tags')),stage=coalesce(b->>'stage','new'),temperature=coalesce(b->>'temperature','warm'),assignee=nullif(b->>'assignee','')::uuid,email=CASE WHEN b ? 'email' THEN lower(trim(b->>'email')) ELSE email END,phone=coalesce(b->>'phone',phone),notes=coalesce(b->>'notes',notes),reason=coalesce(b->>'reason',reason),preferences=coalesce(b->'preferences',preferences) WHERE id=cid;
+  UPDATE briofold_customer_proofs p SET revoked_at=now() FROM briofold_customers x WHERE x.id=cid AND p.customer_id=cid AND p.revoked_at IS NULL AND ((p.kind='email' AND p.value<>x.email) OR (p.kind='phone' AND p.value<>x.phone));
+  UPDATE briofold_customer_challenges ch SET used_at=now(),value='' FROM briofold_customers x WHERE x.id=cid AND ch.customer_id=cid AND ch.value<>x.email;
+ ELSIF act='merge' THEN
+  PERFORM briofold_customer_actor(w,a,'contact');target:=(b->>'target')::uuid;SELECT * INTO other FROM briofold_customers WHERE id=target AND workspace_id=w AND environment=e AND deleted_at IS NULL AND merged_into IS NULL FOR UPDATE;
+  IF other.id IS NULL OR other.id=cid OR b->>'confirmed' IS DISTINCT FROM 'true' OR NOT EXISTS(SELECT 1 FROM briofold_customer_proofs x JOIN briofold_customer_proofs y ON y.workspace_id=x.workspace_id AND y.environment=x.environment AND y.kind=x.kind AND y.value=x.value WHERE x.customer_id=cid AND y.customer_id=target AND x.revoked_at IS NULL AND y.revoked_at IS NULL) THEN RAISE EXCEPTION 'Verified shared identity and confirmation required' USING ERRCODE='42501';END IF;
+  -- Canonical target is deterministic, independent of request order.
+  IF (c.created_at,c.id)<(other.created_at,other.id) THEN target:=cid;cid:=other.id;END IF;
+  UPDATE briofold_customer_sources SET customer_id=target WHERE customer_id=cid;UPDATE briofold_customer_proofs SET customer_id=target WHERE customer_id=cid;UPDATE briofold_customer_followups SET customer_id=target WHERE customer_id=cid;
+  UPDATE briofold_customers SET merged_into=target WHERE id=cid;UPDATE briofold_customers SET revision=revision+1,updated_at=now(),preferences=jsonb_build_object('marketing',CASE WHEN preferences->>'marketing'='opted-out' OR c.preferences->>'marketing'='opted-out' OR other.preferences->>'marketing'='opted-out' THEN 'opted-out' ELSE 'unknown' END,'do_not_contact',(preferences->>'do_not_contact')::boolean OR (c.preferences->>'do_not_contact')::boolean OR (other.preferences->>'do_not_contact')::boolean) WHERE id=target;
+ ELSIF act IN ('unlink','dispute') THEN
+  PERFORM briofold_customer_actor(w,a,'contact');IF b->>'confirmed' IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'Confirm identity correction' USING ERRCODE='22023';END IF;
+  fid:=(b->>'source')::uuid;IF NOT EXISTS(SELECT 1 FROM briofold_customer_sources WHERE id=fid AND customer_id=cid) THEN RAISE EXCEPTION 'Source unavailable' USING ERRCODE='42501';END IF;
+  INSERT INTO briofold_customers(workspace_id,environment,name,preferences) VALUES(w,e,'Separated customer','{"marketing":"opted-out","do_not_contact":true}') RETURNING id INTO target;UPDATE briofold_customer_sources SET customer_id=target WHERE id=fid;
+  UPDATE briofold_customer_proofs SET revoked_at=now() WHERE customer_id=cid AND revoked_at IS NULL;UPDATE briofold_customers SET preferences='{"marketing":"opted-out","do_not_contact":true}' WHERE id=cid;
+ ELSIF act='followup' THEN
+  IF length(trim(coalesce(b->>'body','')))=0 OR length(b->>'body')>2000 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=b->>'time_zone') OR (b->>'due_at')::timestamptz IS NULL OR (b->>'due_at')::timestamptz>now()+interval '2 years' THEN RAISE EXCEPTION 'Invalid follow-up' USING ERRCODE='22023';END IF;
+  IF (SELECT count(*) FROM briofold_customer_followups WHERE customer_id=cid)>=200 THEN RAISE EXCEPTION 'Follow-up limit' USING ERRCODE='54000';END IF;
+  INSERT INTO briofold_customer_followups(id,workspace_id,environment,customer_id,due_at,time_zone,body,created_by) VALUES((b->>'followup_id')::uuid,w,e,cid,(b->>'due_at')::timestamptz,b->>'time_zone',b->>'body',a);
+ ELSIF act='followup-status' THEN
+  IF b->>'status' IS NULL OR b->>'status' NOT IN ('done','cancelled') THEN RAISE EXCEPTION 'Invalid follow-up status' USING ERRCODE='22023';END IF;UPDATE briofold_customer_followups SET status=b->>'status' WHERE id=(b->>'followup_id')::uuid AND customer_id=cid AND status='scheduled';IF NOT FOUND THEN RAISE EXCEPTION 'Follow-up unavailable' USING ERRCODE='40001';END IF;
+ ELSIF act='delete' THEN
+  PERFORM briofold_customer_actor(w,a,'contact');IF b->>'confirmed' IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'Deletion confirmation required' USING ERRCODE='22023';END IF;
+  WITH RECURSIVE ids(id) AS(SELECT cid UNION ALL SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) DELETE FROM briofold_customer_challenges WHERE customer_id IN(SELECT id FROM ids);
+  WITH RECURSIVE ids(id) AS(SELECT cid UNION ALL SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) DELETE FROM briofold_customer_proofs WHERE customer_id IN(SELECT id FROM ids);
+  UPDATE briofold_customer_followups SET body='Deleted',status='cancelled' WHERE customer_id=cid;
+  WITH RECURSIVE ids(id) AS(SELECT cid UNION ALL SELECT x.id FROM briofold_customers x JOIN ids ON x.merged_into=ids.id) UPDATE briofold_customers SET name='Deleted customer',email='',phone='',notes='',reason='',tags='{}',assignee=NULL,deleted_at=now(),preferences='{"marketing":"opted-out","do_not_contact":true}' WHERE id IN(SELECT id FROM ids);
+ ELSIF act='link' THEN
+  PERFORM briofold_customer_actor(w,a,'contact');IF b->>'kind' NOT IN ('thread','finance-customer','invoice','payment','order','api') OR b->>'kind' IS NULL THEN RAISE EXCEPTION 'Invalid source' USING ERRCODE='22023';END IF;
+  -- Only trusted Go can validate references in the physically separate finance realm.
+  IF b->>'kind'='thread' AND NOT EXISTS(SELECT 1 FROM inbox_threads t JOIN inbox_connections x ON x.id=t.connection_id WHERE t.id=(b->>'source_id')::uuid AND t.workspace_id=w AND x.environment=e) THEN RAISE EXCEPTION 'Source unavailable' USING ERRCODE='42501';END IF;
+  IF b->>'kind'='order' AND NOT EXISTS(SELECT 1 FROM inbox_orders o JOIN inbox_threads t ON t.id=o.thread_id JOIN inbox_connections x ON x.id=t.connection_id WHERE o.id=(b->>'source_id')::uuid AND o.workspace_id=w AND x.environment=e) THEN RAISE EXCEPTION 'Source unavailable' USING ERRCODE='42501';END IF;
+  INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES(w,e,cid,b->>'kind',(b->>'source_id')::uuid);
+ END IF;
+ UPDATE briofold_customers SET revision=revision+1,updated_at=now() WHERE id=cid RETURNING revision INTO rev;
+ INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,actor_id,action,detail) VALUES(w,e,cid,a,act,jsonb_strip_nulls(jsonb_build_object('target',target,'source',b->>'source','followup_id',b->>'followup_id')));
+ SELECT revision INTO rev FROM briofold_customers WHERE id=coalesce(target,cid);res:=jsonb_build_object('id',coalesce(target,cid),'revision',rev);INSERT INTO briofold_customer_commands VALUES(w,a,k,fp,res);RETURN res;
+END $$;
+CREATE FUNCTION briofold_customer_challenge(w uuid,e text,a uuid,cid uuid,d text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE c briofold_customers;BEGIN
+ PERFORM briofold_customer_actor(w,a,'contact');PERFORM pg_advisory_xact_lock(hashtextextended('crm:'||w::text,0));SELECT * INTO c FROM briofold_customers WHERE id=cid AND workspace_id=w AND environment=e AND deleted_at IS NULL AND merged_into IS NULL FOR UPDATE;
+ IF c.id IS NULL OR c.email='' OR d IS NULL OR d!~'^[0-9a-f]{64}$' THEN RAISE EXCEPTION 'Email unavailable' USING ERRCODE='22023';END IF;
+ IF EXISTS(SELECT 1 FROM briofold_customer_challenges WHERE digest=d) THEN IF NOT EXISTS(SELECT 1 FROM briofold_customer_challenges WHERE digest=d AND customer_id=cid AND value=c.email AND expires_at>now()) THEN RAISE EXCEPTION 'Verification changed' USING ERRCODE='23505';END IF;RETURN jsonb_build_object('email',c.email,'created',false);END IF;
+ DELETE FROM briofold_customer_challenges WHERE workspace_id=w AND expires_at<now()-interval '24 hours';
+ IF (SELECT count(*) FROM briofold_customer_challenges WHERE workspace_id=w AND value=c.email AND created_at>now()-interval '1 hour')>=3 THEN RAISE EXCEPTION 'Verification rate limited' USING ERRCODE='54000';END IF;
+ INSERT INTO briofold_customer_challenges(digest,workspace_id,environment,customer_id,value) VALUES(d,w,e,cid,c.email);RETURN jsonb_build_object('email',c.email,'created',true);
+END $$;
+CREATE FUNCTION briofold_customer_export(w uuid,e text,a uuid,cid uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE result jsonb;BEGIN
+ PERFORM briofold_customer_actor(w,a,'export');result:=briofold_customers_read(w,e,a,cid,0,'','');
+ IF (SELECT count(*) FROM briofold_customer_events WHERE customer_id=cid)>10000 THEN RAISE EXCEPTION 'Use paginated audit export' USING ERRCODE='54000';END IF;
+ result:=result||jsonb_build_object('events',coalesce((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.sequence) FROM (SELECT sequence,action,detail,created_at FROM briofold_customer_events WHERE customer_id=cid) x),'[]'));
+ INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,actor_id,action) VALUES(w,e,cid,a,'export');RETURN result;
+END $$;
+-- Invoked only after the Meta signature and connected WABA have been checked.
+-- A typed phone claim, a name, or a Messenger identifier cannot mint this proof.
+CREATE FUNCTION briofold_customer_whatsapp_identity(conn uuid,sender_id text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE c briofold_customers;BEGIN
+ IF sender_id IS NULL OR sender_id!~'^[0-9]{7,15}$' THEN RETURN;END IF;
+ SELECT x.* INTO c FROM briofold_customers x JOIN briofold_customer_sources s ON s.customer_id=x.id AND s.kind='thread' JOIN inbox_threads t ON t.id=s.source_id JOIN inbox_connections z ON z.id=t.connection_id WHERE z.id=conn AND z.provider='wa' AND z.enabled AND t.external_id=sender_id AND x.deleted_at IS NULL AND x.merged_into IS NULL;
+ IF c.id IS NULL THEN RETURN;END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('crm:'||c.workspace_id::text,0));
+ IF NOT EXISTS(SELECT 1 FROM briofold_customer_proofs WHERE customer_id=c.id AND kind='phone' AND value='+'||sender_id AND revoked_at IS NULL) THEN INSERT INTO briofold_customer_proofs(workspace_id,environment,customer_id,kind,value) VALUES(c.workspace_id,c.environment,c.id,'phone','+'||sender_id);INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,action) VALUES(c.workspace_id,c.environment,c.id,'whatsapp-identity-verified');END IF;
+END $$;
+CREATE FUNCTION briofold_customer_finance_import(w uuid,e text,a uuid,rows jsonb) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE row jsonb;cid uuid;n integer:=0;BEGIN
+ PERFORM briofold_customer_actor(w,a,'contact');IF e IS NULL OR e NOT IN ('live','sandbox') OR jsonb_typeof(rows) IS DISTINCT FROM 'array' OR jsonb_array_length(rows)>50 THEN RAISE EXCEPTION 'Invalid import page' USING ERRCODE='22023';END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('crm:'||w::text,0));
+ FOR row IN SELECT value FROM jsonb_array_elements(rows) LOOP
+  IF NOT EXISTS(SELECT 1 FROM briofold_customer_sources WHERE workspace_id=w AND environment=e AND kind='finance-customer' AND source_id=(row->>'id')::uuid) THEN
+   INSERT INTO briofold_customers(workspace_id,environment,name,email,phone) VALUES(w,e,left(coalesce(nullif(row->'body'->>'name',''),'Financial customer'),160),left(coalesce(row->'body'->>'email',''),254),left(coalesce(row->'body'->>'phone',''),32)) RETURNING id INTO cid;
+   INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES(w,e,cid,'finance-customer',(row->>'id')::uuid);INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,actor_id,action) VALUES(w,e,cid,a,'finance-source-imported');n:=n+1;
+  END IF;
+ END LOOP;RETURN n;
+END $$;
+-- Runtime-only API bridge. Go verifies the existing customers:write bearer scope.
+CREATE FUNCTION briofold_customer_api_create(w uuid,e text,key_id uuid,k uuid,b jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE old briofold_customer_commands;fp text;sid uuid;cid uuid;res jsonb;BEGIN
+ IF e IS NULL OR e NOT IN ('live','sandbox') OR key_id IS NULL OR k IS NULL OR NOT EXISTS(SELECT 1 FROM workspace_product_access WHERE workspace_id=w AND product='payments' AND enabled) OR length(coalesce(b->>'name','')) NOT BETWEEN 1 AND 160 OR length(coalesce(b->>'reference','')) NOT BETWEEN 1 AND 128 OR length(coalesce(b->>'email',''))>254 OR length(coalesce(b->>'phone',''))>32 THEN RAISE EXCEPTION 'Invalid API identity' USING ERRCODE='22023';END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('crm:'||w::text,0));fp:=encode(sha256(convert_to(e||b::text,'UTF8')),'hex');SELECT * INTO old FROM briofold_customer_commands WHERE workspace_id=w AND actor_id=key_id AND operation_key=k;
+ IF old.operation_key IS NOT NULL THEN IF old.fingerprint<>fp THEN RAISE EXCEPTION 'Idempotency conflict' USING ERRCODE='23505';END IF;RETURN old.result;END IF;
+ sid:=substring(encode(sha256(convert_to('api:'||(b->>'reference'),'UTF8')),'hex'),1,32)::uuid;
+ SELECT customer_id INTO cid FROM briofold_customer_sources WHERE workspace_id=w AND environment=e AND kind='api' AND source_id=sid;
+ IF cid IS NOT NULL THEN RAISE EXCEPTION 'API reference already exists' USING ERRCODE='23505';END IF;
+ INSERT INTO briofold_customers(workspace_id,environment,name,email,phone) VALUES(w,e,b->>'name',lower(coalesce(b->>'email','')),coalesce(b->>'phone','')) RETURNING id INTO cid;
+ INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES(w,e,cid,'api',sid);INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,actor_id,action) VALUES(w,e,cid,key_id,'api-created');res:=jsonb_build_object('id',cid,'verified',false);INSERT INTO briofold_customer_commands VALUES(w,key_id,k,fp,res);RETURN res;
+END $$;
+CREATE FUNCTION briofold_customer_verify(d text) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$DECLARE ch briofold_customer_challenges;BEGIN
+ SELECT * INTO ch FROM briofold_customer_challenges WHERE digest=d;IF ch.digest IS NULL THEN RAISE EXCEPTION 'Verification unavailable' USING ERRCODE='42501';END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('crm:'||ch.workspace_id::text,0));
+ SELECT * INTO ch FROM briofold_customer_challenges WHERE digest=d FOR UPDATE;IF ch.digest IS NULL OR ch.used_at IS NOT NULL OR ch.expires_at<=now() THEN RAISE EXCEPTION 'Verification unavailable' USING ERRCODE='42501';END IF;
+ IF NOT EXISTS(SELECT 1 FROM briofold_customers WHERE id=ch.customer_id AND deleted_at IS NULL AND merged_into IS NULL AND email=ch.value) THEN RAISE EXCEPTION 'Contact changed' USING ERRCODE='42501';END IF;
+ UPDATE briofold_customer_challenges SET used_at=now() WHERE digest=d;INSERT INTO briofold_customer_proofs(workspace_id,environment,customer_id,kind,value) VALUES(ch.workspace_id,ch.environment,ch.customer_id,'email',ch.value);
+ INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,action) VALUES(ch.workspace_id,ch.environment,ch.customer_id,'email-verified');RETURN true;
+END $$;
+REVOKE ALL ON FUNCTION briofold_customer_actor(uuid,uuid,text),briofold_customer_event_immutable(),briofold_customer_attach_thread(),briofold_customers_read(uuid,text,uuid,uuid,integer,text,text),briofold_customers_write(uuid,text,uuid,uuid,text,jsonb),briofold_customer_challenge(uuid,text,uuid,uuid,text),briofold_customer_verify(text) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
+GRANT EXECUTE ON FUNCTION briofold_customers_read(uuid,text,uuid,uuid,integer,text,text),briofold_customers_write(uuid,text,uuid,uuid,text,jsonb),briofold_customer_challenge(uuid,text,uuid,uuid,text),briofold_customer_verify(text) TO ekmivo_financial_runtime;
+REVOKE ALL ON FUNCTION briofold_customer_export(uuid,text,uuid,uuid) FROM PUBLIC,ekmivo_financial_projection;GRANT EXECUTE ON FUNCTION briofold_customer_export(uuid,text,uuid,uuid) TO ekmivo_financial_runtime;
+REVOKE ALL ON FUNCTION briofold_customer_whatsapp_identity(uuid,text) FROM PUBLIC,ekmivo_financial_projection;GRANT EXECUTE ON FUNCTION briofold_customer_whatsapp_identity(uuid,text) TO ekmivo_financial_runtime;
+REVOKE ALL ON FUNCTION briofold_customer_finance_import(uuid,text,uuid,jsonb),briofold_customer_api_create(uuid,text,uuid,uuid,jsonb) FROM PUBLIC,ekmivo_financial_projection;GRANT EXECUTE ON FUNCTION briofold_customer_finance_import(uuid,text,uuid,jsonb),briofold_customer_api_create(uuid,text,uuid,uuid,jsonb) TO ekmivo_financial_runtime;
+COMMIT;

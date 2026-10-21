@@ -9,6 +9,7 @@ import {runBriofoldInboxWorkflow} from "./briofold-inbox-workflow-acceptance.mjs
 import {runBriofoldInboxDrafts} from "./briofold-inbox-drafts-acceptance.mjs";
 import {runBriofoldAiStudioAcceptance} from "./briofold-ai-studio-acceptance.mjs";
 import {runBriofoldChannelExtensions} from "./briofold-channel-extensions-acceptance.mjs";
+import {runBriofoldCustomers} from "./briofold-customers-acceptance.mjs";
 import {runBriofoldInboxAccess} from "./briofold-inbox-access.mjs";
 
 // Called after all control/financial extensions, not the earlier PG05 schema.
@@ -35,6 +36,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0137_briofold_website_chat.sql");
   await apply("0138_briofold_inbox_alerts.sql");
   await apply("0139_briofold_comments.sql");
+  await apply("0140_briofold_customers.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
@@ -64,6 +66,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldInboxDrafts({origin,browser,control,sessions});
   await runBriofoldInboxWorkflow({origin,browser,control,sessions});
   await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});
+  await runBriofoldCustomers({origin,browser,control,sessions,apiOrigin});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }

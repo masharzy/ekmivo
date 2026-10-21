@@ -17,6 +17,7 @@ import {onboardingState} from "../lib/server/briofold-onboarding";
 import {InboxLibrary} from "./inbox-library";
 import {AiStudioPage} from "./ai-studio-page";
 import {WebsiteChatSettings} from "./website-chat-settings";
+import {CustomerCRM} from "./customer-crm";
 import {CommentAutomation} from "./comment-automation";
 
 export const unifiedDynamic="force-dynamic";
@@ -50,6 +51,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread}:{
    ?<WebsiteChatSettings key={user.id+":"+workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :service==="ai"&&section==="comments"
    ?<CommentAutomation key={user.id+":"+workspace.id} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}/>
+  :root==="customers"&&["","leads","follow-ups"].includes(view[0]??"")
+   ?<CustomerCRM key={user.id+":"+workspace.id+":"+view.join("/")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} financeEnabled={workspace.mode!=="ai"}/>
   :kind==="business-profile"
    ?<StoreProfileEditor key={workspace.id} locale={locale} workspaceId={workspace.id} canManage={workspace.role==="owner"||workspace.role==="admin"}/>
   :service==="ai"&&(section==="saved-replies"||section==="tickets")
