@@ -777,7 +777,7 @@ export function MarketingExperience({locale,pricing}:{locale:Locale;pricing?:imp
 {t("Can I try the AI bot for free?")}
 </summary>
 <p>
-{t("Yes. You get ৳30 of free credit once, when you sign up. After that, recharge your credit and pay as you go.")}
+{t("AI usage is prepaid. If a signup credit offer is active, its exact amount will appear in your account.")}
 </p>
 </details>
 <details>
@@ -793,7 +793,7 @@ export function MarketingExperience({locale,pricing}:{locale:Locale;pricing?:imp
 {t("Is there a discount for using both?")}
 </summary>
 <p>
-{t("Yes. The AI bot stays pay as you go, and every payments plan gets a discount when you use both.")}
+{t("AI stays pay as you go. An AI + Payments discount is applied only when an eligible offer is currently available and shown at checkout.")}
 </p>
 </details>
 </div>

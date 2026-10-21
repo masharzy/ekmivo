@@ -1,6 +1,7 @@
 "use server";
 import {redirect} from "next/navigation";
 import {revalidatePath} from "next/cache";
+import {cookies} from "next/headers";
 import {requireUser,preferredWorkspaceFor} from "../lib/server/auth";
 import {database} from "../lib/server/db";
 import type {PaymentPlan} from "../lib/payment-plans";
@@ -99,6 +100,10 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
  if(outcome!=="ok")return fail(outcome==="forbidden"?"Owner access required.":"This setup changed. Refresh and try again.");
  revalidatePath("/dashboard");
  revalidatePath("/setup");
- if(step==="billing")redirect(paidGatewaySelection?"/settings/billing?tab=plans&plan="+encodeURIComponent(plan):"/dashboard");
+ if(step==="billing"){
+  if(paidGatewaySelection)redirect("/subscribe/"+encodeURIComponent(plan));
+  (await cookies()).delete("ekmivo-selected-plan");
+  redirect("/dashboard");
+ }
  redirect("/setup");
 }

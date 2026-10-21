@@ -898,12 +898,12 @@
       "bn": "দুটো একসাথে নিলে কি ছাড় আছে?"
     },
     {
-      "en": "Yes. The AI bot stays pay as you go, and every payments plan gets a discount when you use both.",
-      "bn": "হ্যাঁ। এআই বট পে-অ্যাজ-ইউ-গোই থাকে, আর দুটো একসাথে নিলে প্রতিটি পেমেন্ট প্ল্যানে ডিসকাউন্ট পাবেন।"
+      "en": "AI stays pay as you go. An AI + Payments discount is applied only when an eligible offer is currently available and shown at checkout.",
+      "bn": "AI ব্যবহারে আগে থেকে ক্রেডিট নিতে হয়। AI + Payments ছাড় থাকলে তা যোগ্য অফার অনুযায়ী চেকআউটে দেখানো হবে।"
     },
     {
-      "en": "Yes. You get ৳30 of free credit once, when you sign up. After that, recharge your credit and pay as you go.",
-      "bn": "হ্যাঁ। সাইন আপের সময় একবারই ৳30 ফ্রি ক্রেডিট পাবেন। এরপর ক্রেডিট রিচার্জ করে পে-অ্যাজ-ইউ-গো চালাতে পারবেন।"
+      "en": "AI usage is prepaid. If a signup credit offer is active, its exact amount will appear in your account.",
+      "bn": "AI ব্যবহারে আগে থেকে ক্রেডিট নিতে হয়। সাইনআপ বোনাস অফার চালু থাকলে আপনার অ্যাকাউন্টে সঠিক পরিমাণ দেখানো হবে।"
     },
     {
       "en": "If a payment can't be matched, or the customer says they paid but the time is unclear, the AI asks for the sender number and time and keeps it pending.",

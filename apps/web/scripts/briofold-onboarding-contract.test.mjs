@@ -3,14 +3,17 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 
 const read=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
-test("Briofold onboarded paid plan goes to live billing confirmation, not an inert hash",()=>{
+test("Onboarding preserves the chosen paid plan through the dedicated summary, not a billing hash",()=>{
  const action=read("actions/briofold-onboarding.ts");
  const billing=read("components/payment-billing.tsx");
- assert.match(action,/settings\/billing\?tab=plans&plan=/);
+ const subscribe=read("app/[locale]/subscribe/[plan]/route.ts");
+ assert.match(action,/redirect\("\/subscribe\/"\+encodeURIComponent\(plan\)\)/);
+ assert.match(subscribe,/\/checkout\/order\/\$\{encodeURIComponent\(plan\)\}/);
+ assert.match(subscribe,/onboardingState\(workspace,user\.id\)/);
  assert.match(billing,/searchParams\.get\("plan"\)/);
  assert.match(billing,/selected\.id!==data\.effective\?\.plan_id/);
  assert.match(billing,/setChoice\(\{plan:selected,renew:false\}\)/);
- assert.match(billing,/router\.replace\("\/settings\/billing\?tab=plans"/);
+ assert.match(billing,/router\.replace\(pathname\+"\?tab=plans"/);
  assert.doesNotMatch(action,/billing#plan-/);
 });
 test("AI-only and Both selection preserve the chosen value",()=>{

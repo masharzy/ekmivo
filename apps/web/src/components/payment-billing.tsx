@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from "react";
 import {billingPaymentMessage,billingPaymentError} from "../lib/billing-payment-status";
 import {billingQuoteValid,type BillingActivation} from "../lib/billing-activation";
-import {useRouter,useSearchParams} from "next/navigation";
+import {usePathname,useRouter,useSearchParams} from "next/navigation";
 import {useDashboardInitialData} from "./dashboard-initial-data";
 import {RefIcon} from "./reference-ui";
 import type {PlanTerms} from "../lib/payment-plans";
@@ -22,7 +22,7 @@ function UsageChart({usage,number,label}:{usage:Usage;number:(n:number)=>string;
  return <svg className="bl-ch" viewBox="0 0 640 200" role="img" aria-label={label} style={{width:'100%',height:'auto',stroke:'none'}}>{Array.from({length:5},(_,i)=>{const y=8+168*(1-i/4);return <g key={i}><line x1={40} x2={640} y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 4"/><text x={32} y={y+3} textAnchor="end">{number(top*i/4)}</text></g>})}{values.map((v,i)=>{const h=168*v.count/top,x=40+i*width+width*.18;return <g key={v.day}><rect x={x} y={176-h} width={width*.64} height={h} rx={3} fill="var(--acc)"><title>{v.day} · {number(v.count)}</title></rect>{i%Math.max(1,Math.ceil(values.length/6))===0&&<text x={x+width*.32} y={194} textAnchor="middle">{number(Number(v.day.slice(-2)))}</text>}</g>})}</svg>;
 }
 export function PaymentBilling({locale,workspaceId,canManage}:{locale:'en'|'bn';workspaceId:string;canManage:boolean}){
- const bn=locale==='bn',t=useCallback((en:string,be:string)=>bn?be:en,[bn]),router=useRouter(),searchParams=useSearchParams(),base=`/api/go/workspaces/${workspaceId}/billing`,seed=useDashboardInitialData<Data>('billing');
+ const bn=locale==='bn',t=useCallback((en:string,be:string)=>bn?be:en,[bn]),router=useRouter(),pathname=usePathname(),searchParams=useSearchParams(),base=`/api/go/workspaces/${workspaceId}/billing`,seed=useDashboardInitialData<Data>('billing');
  const [data,setData]=useState<Data|null>(seed?.data??null),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(seed?.error??''),[notice,setNotice]=useState(''),[tab,setTab]=useState(searchParams.get('tab')==='plans'?'plans':'overview'),[period,setPeriod]=useState('current'),[usage,setUsage]=useState<Usage|null>(null),[usageLoading,setUsageLoading]=useState(false),[usageError,setUsageError]=useState('');
  const [choice,setChoice]=useState<{plan:Plan;renew:boolean}|null>(null),[cycles,setCycles]=useState(1),[quote,setQuote]=useState<Quote|null>(null),[quoteLoading,setQuoteLoading]=useState(false),[quoteError,setQuoteError]=useState(''),[invoice,setInvoice]=useState<Invoice|null>(null),[clock,setClock]=useState(seed?.at??0);
  const [activation,setActivation]=useState<BillingActivation>("now");
@@ -43,7 +43,7 @@ export function PaymentBilling({locale,workspaceId,canManage}:{locale:'en'|'bn';
   const planId=searchParams.get("plan");
   if(!planId||!/^[-a-z0-9_]{2,40}$/.test(planId))return;
   onboardingSelectionHandled.current=true;
-  const selected=data.plans.find(p=>p.id===planId&&p.terms.kind==="paid");
+  const selected=data.plans.find(p=>p.id===planId&&(p.terms.kind==="paid"||p.terms.kind==="free"));
   setTab("plans");
   if(selected&&selected.id!==data.effective?.plan_id){
    setActivation("now");
@@ -51,8 +51,8 @@ export function PaymentBilling({locale,workspaceId,canManage}:{locale:'en'|'bn';
    setQuote(null);
    setChoice({plan:selected,renew:false});
   }
-  router.replace("/settings/billing?tab=plans",{scroll:false});
- },[canManage,data,searchParams,router]);
+  router.replace(pathname+"?tab=plans",{scroll:false});
+ },[canManage,data,searchParams,router,pathname]);
  const loadUsage=useCallback(async(signal?:AbortSignal)=>{setUsageLoading(true);setUsageError('');try{const r=await fetch(`${base}/usage?period=${period}`,{cache:'no-store',signal});if(!r.ok)throw Error();const d=await r.json();if(!Array.isArray(d.daily)||!Array.isArray(d.methods)||!Array.isArray(d.sources))throw Error();if(!signal?.aborted)setUsage(d)}catch{if(!signal?.aborted)setUsageError(t('Usage source unavailable. Retry.','ব্যবহারের তথ্য পাওয়া যাচ্ছে না। আবার চেষ্টা করুন।'))}finally{if(!signal?.aborted)setUsageLoading(false)}},[base,period,t]);
  useEffect(()=>{if(tab!=='usage')return;const abort=new AbortController(),timer=setTimeout(()=>void loadUsage(abort.signal),0);return()=>{abort.abort();clearTimeout(timer)}},[tab,loadUsage]);
  useEffect(()=>{if(!choice)return;const abort=new AbortController();const timer=setTimeout(()=>{if(choice.plan.terms.kind!=='paid')return;const active=data?.effective?.active,old=data?.effective?.terms;const lower=active&&old&&choice.plan.id!==data?.effective?.plan_id&&choice.plan.terms.amount_minor/choice.plan.terms.period_days<=old.amount_minor/old.period_days;if(lower)return;setQuoteLoading(true);setQuote(null);setQuoteError('');void fetch(base+'/quote',{method:'POST',signal:abort.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({plan_id:choice.plan.id,cycles,activation_timing:choice.renew?'now':activation})}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(q=>{if(!abort.signal.aborted)setQuote(q)}).catch(()=>{if(!abort.signal.aborted)setQuoteError(t('A current quote is unavailable. Close and retry.','বর্তমান দাম পাওয়া যাচ্ছে না। বন্ধ করে আবার চেষ্টা করুন।'))}).finally(()=>{if(!abort.signal.aborted)setQuoteLoading(false)})},0);return()=>{abort.abort();clearTimeout(timer)}},[choice,cycles,activation,base,data?.effective?.active,data?.effective?.terms,data?.effective?.plan_id,t]);

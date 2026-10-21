@@ -41,7 +41,8 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+html { scroll-behavior: smooth; scroll-padding-top: 100px; font-family: var(--font-ui); }
+html:lang(bn) { font-family: var(--font-bengali); }
 body { margin: 0; overflow-x: hidden; background: var(--color-canvas); color: var(--color-text); font-family: var(--font-ui); font-size: 16px; line-height: var(--line-body); }
 a { color: inherit; }
 button, input, select { font: inherit; }

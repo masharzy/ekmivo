@@ -163,6 +163,7 @@
 
 :root:lang(bn) {
   --font-ui: var(--font-bengali);
+  --font-display: var(--font-bengali);
   --line-body: 1.7;
   --line-heading: 1.4;
 }

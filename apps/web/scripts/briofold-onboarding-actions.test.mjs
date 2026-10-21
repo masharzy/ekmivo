@@ -51,6 +51,7 @@ function fixture(options={}){
  const redirect=path=>{throw Object.assign(Error("redirect"),{location:path});};
  const modules={
   "next/navigation":{redirect},"next/cache":{revalidatePath:()=>{}},
+  "next/headers":{cookies:async()=>({delete:()=>{}})},
   "../lib/server/auth":{requireUser:async()=>({id:"owner-a"}),preferredWorkspaceFor:async()=>workspace},
   "../lib/server/db":{database:()=>db},
  };
@@ -102,7 +103,7 @@ test("free plan claims the actual subscription; failure rolls back setup",async(
  const failed=fixture({step:"billing",products:{payments:true},claimError:true});assert.equal((await failed.submit({plan:"free"})).status,"error");assert.equal(failed.state().step,"billing");
 });
 test("paid plan navigates to explicit confirmation without granting a subscription",async()=>{
- const f=fixture({step:"billing",products:{payments:true}});assert.equal((await f.submit({plan:"paid"})).location,"/settings/billing?tab=plans&plan=paid");assert.deepEqual(f.state().claims,[]);
+ const f=fixture({step:"billing",products:{payments:true}});assert.equal((await f.submit({plan:"paid"})).location,"/subscribe/paid");assert.deepEqual(f.state().claims,[]);
 });
 test("replaying a completed billing step goes to dashboard without another purchase",async()=>{
  const f=fixture({step:"complete",products:{payments:true}});assert.equal((await f.submit({step:"billing",plan:"paid"})).location,"/dashboard");assert.deepEqual(f.state().claims,[]);

@@ -17,6 +17,9 @@
   backdrop-filter: blur(16px);
   font-family: "Taka", var(--font-figtree), sans-serif;
 }
+.ekm-nav:lang(bn), .ekm-footer:lang(bn) {
+  font-family: var(--font-hind-siliguri), "Hind Siliguri", sans-serif;
+}
 .ekm-nav a {text-decoration: none;}
 .ekm-nav-logo, .ekm-footer-logo {
   font: 700 26px/1 var(--font-outfit), sans-serif;

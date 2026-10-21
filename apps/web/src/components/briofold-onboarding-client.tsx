@@ -21,9 +21,9 @@ const setupErrorBn:Record<string,string>={
  "Could not save setup. Check the details and retry.":"সেটআপ সংরক্ষণ করা যায়নি। তথ্য পরীক্ষা করে আবার চেষ্টা করুন।",
 };
 const initial:SetupResult={status:"idle",message:""};
-export function BriofoldOnboardingClient({locale,step,businessId,businessName,mode,plans,gatewayPlansUnavailable=false}:{
+export function BriofoldOnboardingClient({locale,step,businessId,businessName,mode,plans,selectedPlan="",gatewayPlansUnavailable=false}:{
  businessId:string;locale:"bn"|"en";step:"business"|"services"|"billing";businessName:string;
- mode:"ai"|"commerce"|"both"|"off";plans:Plan[];gatewayPlansUnavailable?:boolean;
+ mode:"ai"|"commerce"|"both"|"off";plans:Plan[];selectedPlan?:string;gatewayPlansUnavailable?:boolean;
 }){
  const bn=locale==="bn",t=(en:string,b:string)=>bn?b:en;
  const [result,action,pending]=useActionState(submitBriofoldSetup,initial);
@@ -69,7 +69,7 @@ export function BriofoldOnboardingClient({locale,step,businessId,businessName,mo
      {mode==="ai"?<div className={styles.notice}>{t("AI-only setup starts with no purchased credits. Paid AI requests require a funded wallet.","AI-only সেটআপে কেনা ক্রেডিট থাকে না। পেইড AI চালাতে আগে ওয়ালেট ফান্ড করতে হবে।")}</div>
      :<fieldset className={styles.choices}><legend>{t("Payment Gateway plan","Payment Gateway প্ল্যান")}</legend>
       {plans.map((plan,i)=><label key={plan.id} className={styles.option}>
-       <input name="plan" value={plan.id} type="radio" required defaultChecked={i===0}/>
+       <input name="plan" value={plan.id} type="radio" required defaultChecked={selectedPlan?plan.id===selectedPlan:i===0}/>
        <span><strong>{plan.name} · {plan.price}</strong><small>{plan.description}</small></span>
       </label>)}
      </fieldset>}

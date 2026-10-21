@@ -16,13 +16,14 @@ import {VerificationSettings,RoleControls} from "./admin-controls";
 import {AdminShell,type AdminLocale} from "./platform-admin-shell";
 import {AdminModal,AdminCopy} from "./platform-admin-widgets";
 import {AdminPaymentPlansPage} from "./admin-payment-plans-page";
+import {AdminSubscriptionCouponsPage} from "./admin-subscription-coupons-page";
 import {AdminProvidersPage,AdminCreditsPage,AdminSubscriptionsPage} from "./admin-catalog-page";
 import {AdminWorkspaceCreationForm} from "./admin-catalog-management";
 import {AdminWorkspaceDetail,AdminUserDetail,AdminGlobalInventory,AdminHealthView,AdminSupportDetail} from "./platform-admin-inventory";
 
 type RecordRow={id:string;cells:string[];href?:string};
 type RecordPage={columns:string[];rows:RecordRow[];next?:string};
-type Props={locale:AdminLocale;segments?:string[];query?:string;after?:string};
+type Props={locale:AdminLocale;segments?:string[];query?:string;after?:string;couponStatus?:string};
 const names:Record<string,[string,string]>={
  "":["Overview","ওভারভিউ"],workspaces:["Workspaces","ওয়ার্কস্পেস"],users:["Users","ব্যবহারকারী"],
  payments:["Payments","পেমেন্ট"],subscriptions:["Subscriptions","সাবস্ক্রিপশন"],billing:["Billing & Revenue","বিলিং ও আয়"],credits:["AI Credits","এআই ক্রেডিট"],providers:["Payment Providers","পেমেন্ট প্রোভাইডার"],
@@ -33,7 +34,7 @@ const names:Record<string,[string,string]>={
 };
 const tabs:Record<string,string[]>={
  payments:["Payments","Exceptions","Disputes","Refunds","Reconciliation"],
- billing:["Subscriptions","Invoices","Revenue"],
+ billing:["Subscriptions","Invoices","Revenue","Coupons"],
  credits:["Balances","Ledger","Packs","Rules"],
  plans:["Payment gateway","AI Bot"],
  "gateway/webhooks":["Deliveries","Endpoints","Queues"],
@@ -200,7 +201,7 @@ async function Overview({locale,isSuper}:{locale:AdminLocale;isSuper:boolean}){
  </div>
  </>;
 }
-export async function PlatformAdminConsole({locale,segments=[],query="",after=""}:Props){
+export async function PlatformAdminConsole({locale,segments=[],query="",after="",couponStatus="all"}:Props){
  if(!await currentUser())redirect("/"+locale+"/admin/sign-in");
  const user=await requireUser(locale);
  const role=await platformRole(user.id);
@@ -231,6 +232,8 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  body=canRead?<AdminCreditsPage isSuper={isSuper} locale={locale}/>:<><PageHead title={t}/><Denied locale={locale}/></>;
  }else if(key==="plans"){
  body=isSuper?<AdminPaymentPlansPage locale={locale} actor={admin.user.id}/>:<Denied locale={locale}/>;
+ }else if(key==="billing"&&sub==="coupons"){
+  body=<><PageHead title={t}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{isSuper?<AdminSubscriptionCouponsPage locale={locale} actor={admin.user.id} query={q} status={couponStatus} after={after}/>:<Denied locale={locale}/>}</>;
  }else if(key==="staff"){
  const page=isSuper&&(!sub||sub==="staff")?await users(locale,q,after,true):null;
  let list:Array<{id:string;name:string;email:string;verified:boolean;role:string|null}>=[];
