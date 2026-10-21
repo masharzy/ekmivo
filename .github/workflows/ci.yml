@@ -125,6 +125,16 @@ jobs:
       - name: Install browser for real PG05 checkout journeys
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
+      - name: Phase 2 published subscription pricing responsive browser acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-public-responsive-browser.test.mjs
+      - name: Archive Phase 2 pricing screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-public-pricing-screenshots
+          path: apps/web/test-results/subscription-pricing/
+          if-no-files-found: ignore
       - name: Website widget retry, history, XSS and keyboard acceptance
         working-directory: apps/web
         run: node --test scripts/briofold-website-widget.test.mjs
