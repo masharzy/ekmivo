@@ -14,6 +14,7 @@ import { DashboardFeedback } from "./dashboard-feedback";
 import { PaymentNotifications } from "./payment-notifications";
 import { PaymentRecordSearch } from "./payment-record-search";
 import { activeDrafts,saveActiveDrafts,discardActiveDrafts } from "../lib/client/draft-navigation";
+import "./primary-store-badge.css";
 
 type Space = { id: string; name: string; mode: "ai" | "commerce" | "both" | "off"; role: "owner" | "admin" | "editor" | "viewer" };
 type PaymentContext = { environment: PaymentEnvironment; status: "active" | "suspended"; availableEnvironments: PaymentEnvironment[]; liveOperational: false };
@@ -301,7 +302,12 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    <Link href={unified?"/dashboard":"/"} className="ek-wordmark">ekmivo{!unified&&<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small>}</Link>
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
-  <div className="ds-business-block"><details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
+  <div className="ds-business-block">{spaces.length<=1?
+   <div className="ds-business-static" role="group" aria-label={bn?"আপনার স্টোর":"Your Store"}>
+    <span className="ds-business-avatar" aria-hidden="true">{workspace.name.slice(0,1).toUpperCase()}</span>
+    <strong className="ds-business-current-name">{workspace.name}</strong>
+   </div>:
+   <details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
    <summary aria-label={bn?"ওয়ার্কস্পেস পরিবর্তন":"Switch workspace"} title={workspace.name}><span className="ds-business-avatar">{workspace.name.slice(0,1).toUpperCase()}</span><strong className="ds-business-current-name">{workspace.name}</strong><Icon name="chevron"/></summary>
    <div className="ds-business-menu" role="group" aria-label={bn?"ওয়ার্কস্পেস":"Workspaces"}>
     <label className="ds-switch-search"><span className="sr-only">{bn?"ব্যবসা খুঁজুন":"Find business"}</span><input value={businessQuery} onChange={event=>setBusinessQuery(event.target.value)} placeholder={bn?"ব্যবসা খুঁজুন…":"Search businesses…"} /></label>
@@ -309,7 +315,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
     {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No businesses match"}</p>}
     <div className="ds-business-actions"><Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"ওয়ার্কস্পেস পরিচালনা":"Manage workspaces"}</Link><Link href="/workspaces?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন ওয়ার্কস্পেস":"New workspace"}</Link></div>
    </div>
-  </details>
+  </details>}
   </div>
   <nav ref={mobile?undefined:scrollableNav} className={"ds-navigation"+(navHasMore&&!mobile?" has-more":"")} aria-label={bn?`${serviceNames[service].bn} নেভিগেশন`:`${serviceNames[service].en} navigation`}>
    {unified?<section className="ds-nav-section"><h2>{bn?"ব্যবসা":"Business"}</h2>{unifiedItems.map(item=><Link key={item.key} href={item.href} className={pathname===item.href||pathname.startsWith(item.href+"/")?"is-current":undefined} aria-current={pathname===item.href?"page":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute(item.href);setDraftError("");return;}startTransition(()=>router.push(item.href));}}><Icon name={item.icon}/><span>{item[locale]}</span>{(pathname===item.href||pathname.startsWith(item.href+"/"))&&<span className="ds-active-mark"/>}</Link>)}</section>:groups.filter(group=>!(service==="payments"&&group.items.length===1&&group.items[0]==="billing")).map(group=><section className="ds-nav-section" key={group.label.en}>

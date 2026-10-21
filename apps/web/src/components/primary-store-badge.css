@@ -1,0 +1,10 @@
+/* Single-Store dashboard identity — no interactive switcher. Scope to DashboardFrame. */
+.ds-business-static {
+ display:flex;align-items:center;gap:12px;min-height:58px;
+ padding:10px 12px;min-width:0;
+ border:1px solid var(--color-border);border-radius:var(--radius-panel);
+ color:var(--color-text);
+}
+.ds-business-static .ds-business-current-name {
+ min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}

@@ -19,3 +19,12 @@ test("bound accounts cannot switch Stores or be redirected to legacy picker",()=
  assert.match(list,/if\(bound\|\|spaces\.length===1\)redirect/);
  assert.match(auth,/error\.code==="42P01"/);
 });
+
+test("bound dashboard hides switch controls and enforces direct-link Store isolation",()=>{
+ const shell=read("components/app-shell.tsx"),frame=read("components/dashboard-frame.tsx"),auth=read("lib/server/auth.ts");
+ assert.match(shell,/primaryStoreFor\(user\.id\)/);
+ assert.match(shell,/primaryStoreId\?memberships\.filter/);
+ assert.match(frame,/spaces\.length<=1\?/);
+ assert.match(frame,/ds-business-static/);
+ assert.match(auth,/if\(bound&&bound!==id\)redirect\("\/dashboard"\)/);
+});

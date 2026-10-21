@@ -2,7 +2,7 @@ import { sections, type SectionKey } from "./dashboard-sections";
 
 export type Service = "ai" | "payments";
 export type Locale = "bn" | "en";
-export const serviceNames = { ai: { en: "AI workspace", bn: "AI ওয়ার্কস্পেস" }, payments: { en: "Payment gateway", bn: "পেমেন্ট গেটওয়ে" } } as const;
+export const serviceNames = { ai: { en: "AI Store", bn: "এআই স্টোর" }, payments: { en: "Payment gateway", bn: "পেমেন্ট গেটওয়ে" } } as const;
 export type NavigationGroup = { label: { en: string; bn: string }; items: SectionKey[] };
 export const navigation: Record<Service, NavigationGroup[]> = {
   ai: [
@@ -11,10 +11,10 @@ export const navigation: Record<Service, NavigationGroup[]> = {
     { label: { en: "Sales & growth", bn: "বিক্রয় ও ফলো-আপ" }, items: ["leads", "follow-ups", "broadcasts", "bookings"] },
     { label: { en: "Your AI", bn: "আপনার AI" }, items: ["ai-agent", "knowledge", "products", "posts"] },
     { label: { en: "Connections", bn: "সংযোগ" }, items: ["channels", "website"] },
-    { label: { en: "Workspace", bn: "ওয়ার্কস্পেস" }, items: ["team", "billing", "settings", "help"] },
+    { label: { en: "Store", bn: "স্টোর" }, items: ["team", "billing", "settings", "help"] },
   ],
   payments: [
-    { label: { en: "Workspace", bn: "ওয়ার্কস্পেস" }, items: ["overview", "transactions", "customers", "invoices", "payment-links", "reports", "refunds"] },
+    { label: { en: "Store", bn: "স্টোর" }, items: ["overview", "transactions", "customers", "invoices", "payment-links", "reports", "refunds"] },
     { label: { en: "Devices & methods", bn: "ডিভাইস ও মাধ্যম" }, items: ["gateways", "devices", "incoming"] },
     { label: { en: "Store settings", bn: "স্টোর সেটিংস" }, items: ["checkout-themes", "store"] },
     { label: { en: "Developers", bn: "ডেভেলপার" }, items: ["developers", "api-docs"] },
