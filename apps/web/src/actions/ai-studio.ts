@@ -25,7 +25,7 @@ export async function saveAiStudio(workspace:string,operation:string,kind:AiStud
  if(kind==="draft"&&!validAiStudioConfig(input.config))return {status:"error",code:"invalid"};
  try{
   const encoded=JSON.stringify(payload);
-  if(Buffer.byteLength(encoded)>120000||encoded.includes("\\u0000"))return {status:"error",code:"invalid"};
+  if(Buffer.byteLength(encoded)>420000||encoded.includes("\\u0000"))return {status:"error",code:"invalid"};
   const db=database();
   const data=await db.begin(async tx=>{
    await tx`SELECT briofold_ai_studio_write(${workspace}::uuid,${ctx.actor.id}::uuid,${operation}::uuid,${kind},${db.json(payload as postgres.JSONValue)})`;

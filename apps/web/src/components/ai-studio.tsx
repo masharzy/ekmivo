@@ -61,7 +61,7 @@ export function AiStudio({workspaceId,locale,initial,view,runtimeEnabled}:{works
  }),[configDirty,data,dirty,docDirty,saveConfig,saveSource,savedDoc,view,workspaceId]);
  useEffect(()=>{const leave=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue="";}};window.addEventListener("beforeunload",leave);return()=>window.removeEventListener("beforeunload",leave);},[dirty]);
  function refresh(sourceOffset=0,versionOffset=0){
-  if(lock.current||dirty)return;
+  if(lock.current||(state.status==="ready"&&dirty))return;
   lock.current=true;setBusy(true);setError("");
   startTransition(async()=>{try{const next=await loadAiStudio(workspaceId,sourceOffset,versionOffset);if(next.status==="success")accept(next.data);else showError(next.code);}catch{showError("unavailable");}finally{lock.current=false;setBusy(false);}});
  }

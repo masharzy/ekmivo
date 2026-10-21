@@ -59,6 +59,26 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   await denied(read,'42501');
   await db`UPDATE workspace_product_access SET enabled=true WHERE workspace_id=${workspace} AND product='ai'`;
   await db`UPDATE workspace_members SET role='owner' WHERE workspace_id=${workspace} AND user_id=${actor}`;
+  // Privileged fixtures populate an independent pagination business. No API rate-limit bypass is shipped.
+  const pages=randomUUID();
+  await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${pages},'Fictional pagination business','ai',${actor})`;
+  await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${pages},${actor},'owner')`;
+  await db`INSERT INTO briofold_ai_knowledge_sources(id,workspace_id) SELECT gen_random_uuid(),${pages} FROM generate_series(1,51)`;
+  await db`INSERT INTO briofold_ai_knowledge_versions(workspace_id,source_id,title,kind,content,actor_id) SELECT ${pages},id,'Fictional page source','text','Fictional source content',${actor} FROM briofold_ai_knowledge_sources WHERE workspace_id=${pages}`;
+  await db`UPDATE briofold_ai_knowledge_sources s SET current_version=v.id FROM briofold_ai_knowledge_versions v WHERE s.workspace_id=${pages} AND v.source_id=s.id`;
+  await db`INSERT INTO briofold_ai_studio_versions(workspace_id,publication,config,actor_id,reason) SELECT ${pages},n,${db.json(config)},${actor},'Fictional history page' FROM generate_series(1,21) n`;
+  const paged=async(s,v)=>(await db`SELECT briofold_ai_studio_read(${pages},${actor},${s},${v}) AS data`)[0].data;
+  const p1=await paged(0,0),p2=await paged(50,20);
+  assert.equal(p1.sources.length,50);assert.equal(p1.more_sources,true);assert.equal(p2.sources.length,1);assert.equal(p2.more_sources,false);
+  assert.equal(new Set([...p1.sources,...p2.sources].map(x=>x.id)).size,51);
+  assert.equal(p1.versions.length,20);assert.equal(p1.more_versions,true);assert.equal(p2.versions.length,1);assert.equal(p2.more_versions,false);
+  await denied(()=>paged(-1,0),'22023');
+  for(const role of ['ekmivo_financial_runtime','ekmivo_financial_projection']){
+   const [privileges]=await db`SELECT has_table_privilege(${role},'briofold_ai_knowledge_versions','SELECT') AS readable,has_function_privilege(${role},'briofold_ai_studio_write(uuid,uuid,uuid,text,jsonb)','EXECUTE') AS writable`;
+   assert.equal(privileges.readable,false);assert.equal(privileges.writable,false);
+  }
+  assert.equal(Number((await db`SELECT count(*) AS n FROM pg_class WHERE relname IN ('briofold_ai_studio_versions','briofold_ai_studio_drafts','briofold_ai_knowledge_sources','briofold_ai_knowledge_versions','briofold_ai_studio_sources','briofold_ai_studio_operations') AND relrowsecurity AND relforcerowsecurity`)[0].n),6);
+  assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_ai_credit_journal WHERE workspace_id IN (${workspace},${pages},${foreign})`)[0].n),0,'configuration and retrieval never debit credits');
   // Real Server Actions through the running Next application, using the saved owner session.
   context=await browser.newContext();await context.addCookies([
    {name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},
