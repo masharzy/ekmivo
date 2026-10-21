@@ -27,3 +27,5 @@ test("read-only API re-reads published catalog and never enables checkout",()=>{
  assert.match(route,/\"Cache-Control\":\"no-store, max-age=0\"/);
  assert.doesNotMatch(route,/INSERT INTO|UPDATE |payment_plan_claim_free|CheckoutExperience|paymentIntent/i);
 });
+
+// Phase 2 catalog quote remains read-only until the later payment release gates.
