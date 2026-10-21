@@ -87,15 +87,13 @@ export async function workspacesFor(userId:string):Promise<Workspace[]>{
 const DEFAULT_WORKSPACE_COOKIE="ekmivo-default-workspace";
 const YEAR=365*24*60*60;
 export async function primaryStoreFor(userId:string):Promise<string|null>{
- // Old offline development databases may predate the additive 0133 migration.
- // Never suppress permissions/connection errors (only PostgreSQL undefined_table).
- try{
-  const rows=await database()`SELECT workspace_id FROM platform_primary_stores WHERE user_id=${userId}::uuid LIMIT 1`;
-  return rows.length?String(rows[0].workspace_id):null;
- }catch(error){
-  if(error && typeof error==="object" && "code" in error && error.code==="42P01")return null;
-  throw error;
- }
+ // Older CI/legacy databases may predate the additive 0133 migration. Do
+ // NOT query a missing table and catch 42P01 inside an existing transaction:
+ // PostgreSQL aborts the transaction even if JavaScript catches the error.
+ const [schema]=await database()`SELECT to_regclass('public.platform_primary_stores') AS ready`;
+ if(!schema?.ready)return null;
+ const rows=await database()`SELECT workspace_id FROM platform_primary_stores WHERE user_id=${userId}::uuid LIMIT 1`;
+ return rows.length?String(rows[0].workspace_id):null;
 }
 export async function selectDefaultWorkspace(userId:string,workspaceId:string){
  const bound=await primaryStoreFor(userId);

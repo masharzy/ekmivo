@@ -17,7 +17,8 @@ test("bound accounts cannot switch Stores or be redirected to legacy picker",()=
  assert.match(auth,/if\(bound && workspaceId!==bound\)return false/);
  assert.match(auth,/if\(bound\)return spaces\.find/);
  assert.match(list,/if\(bound\|\|spaces\.length===1\)redirect/);
- assert.match(auth,/error\.code==="42P01"/);
+ assert.match(auth,/to_regclass\(\x27public.platform_primary_stores\x27\)/);
+ assert.match(auth,/if\(!schema\?\.ready\)return null/);
 });
 
 test("bound dashboard hides switch controls and enforces direct-link Store isolation",()=>{
