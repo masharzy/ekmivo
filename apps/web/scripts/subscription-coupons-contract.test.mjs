@@ -38,7 +38,7 @@ test("admin writes require verified super admin, reason, server-side SQL revisio
 test("coupons belong in existing Admin Billing tab and never turn on unverified checkout",()=>{
  const console=web("components/platform-admin-console.tsx");
  const pay=web("components/subscription-order-summary.tsx");
- assert.match(console,/billing:\["Subscriptions","Invoices","Revenue","Coupons"\]/);
+ assert.match(console,/billing:\["Subscriptions","Invoices","Revenue","Coupons","Offers"\]/);
  assert.match(console,/key==="billing"&&sub==="coupons"/);
  assert.match(pay,/Coupon redemption is not enabled/);
  assert.doesNotMatch(pay,/name="(?:bkash|nagad|rocket)"/);
