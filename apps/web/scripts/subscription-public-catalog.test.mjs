@@ -55,3 +55,5 @@ test("home and pricing use the same catalog data; unpublished offers keep existi
  assert.doesNotMatch(read("components/subscription-offer-pricing.tsx"),/Go to Pay|name="bkash"|yearly.*free/i);
  assert.doesNotMatch(read("components/landing/landing-pricing.tsx"),/৳30 free once/);
 });
+
+// Public Home tabs are fed by the same published catalog as /pricing.
