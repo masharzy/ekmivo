@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {annualOfferSavings,parsePublishedSubscriptionOffer,priceInBdt} from "../src/lib/public-subscription-offers.ts";
+import {annualOfferSavings,parsePublishedSubscriptionOffer,priceInBdt,publishedPriceComparison} from "../src/lib/public-subscription-offers.ts";
 const read=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
 const row={
  key:"payments_starter_monthly",version_id:"b2f21b52-dff6-4abd-9152-b13475a2a62b",
@@ -27,6 +27,23 @@ test("catalog maps approved exact money and three distinct product/term rules",(
  assert.equal(annualOfferSavings("bad","110000"),null);
  assert.throws(()=>priceInBdt("1.5","en"));
 });
+test("annual and bundle comparisons use unique current published components without double discount",()=>{
+ const make=values=>{
+  const parsed=parsePublishedSubscriptionOffer({...row,...values});
+  assert.ok(parsed);return parsed;
+ };
+ const monthly=make({key:"pay_monthly",term:"monthly",amount_minor:"10000"});
+ const yearly=make({key:"pay_yearly",version_id:"a2f21b52-dff6-4abd-9152-b13475a2a62b",term:"yearly",amount_minor:"110000"});
+ const prepaid=make({key:"ai_pack",version_id:"a3f21b52-dff6-4abd-9152-b13475a2a62b",product:"ai_credit",term:"one_time",amount_minor:"35000",gateway_plan_version_id:null,included_ai_credits:"2500"});
+ const bundle=make({key:"bundle_monthly",version_id:"a4f21b52-dff6-4abd-9152-b13475a2a62b",product:"bundle",term:"monthly",amount_minor:"39000",included_ai_credits:"2500"});
+ const catalog=[monthly,yearly,prepaid,bundle];
+ assert.deepEqual(publishedPriceComparison(catalog,yearly),{annual_saving_minor:"10000",bundle_saving_minor:null});
+ assert.deepEqual(publishedPriceComparison(catalog,bundle),{annual_saving_minor:null,bundle_saving_minor:"6000"});
+ assert.deepEqual(publishedPriceComparison(catalog,prepaid),{annual_saving_minor:null,bundle_saving_minor:null});
+ assert.deepEqual(publishedPriceComparison([monthly,yearly,bundle],bundle),{annual_saving_minor:null,bundle_saving_minor:null});
+ assert.deepEqual(publishedPriceComparison([...catalog,make({key:"ai_pack_other",version_id:"a5f21b52-dff6-4abd-9152-b13475a2a62b",product:"ai_credit",term:"one_time",amount_minor:"30000",gateway_plan_version_id:null,included_ai_credits:"2500"})],bundle),{annual_saving_minor:null,bundle_saving_minor:null});
+ assert.deepEqual(publishedPriceComparison([monthly,yearly],bundle),{annual_saving_minor:null,bundle_saving_minor:null});
+});
 test("catalog projection is SECURITY DEFINER, current-version-only and never returns draft/private prices",()=>{
  const reader=read("lib/server/public-subscription-offers.ts");
  const migration=readFileSync(new URL("../../../infra/migrations/0144_platform_subscription_public_catalog.sql",import.meta.url),"utf8");
@@ -41,6 +58,8 @@ test("catalog projection is SECURITY DEFINER, current-version-only and never ret
  assert.match(migration,/REVOKE ALL ON FUNCTION public\.platform_subscription_offers_public\(\) FROM PUBLIC/);
  assert.match(migration,/GRANT EXECUTE ON FUNCTION public\.platform_subscription_offers_public\(\) TO ekmivo_runtime/);
  assert.doesNotMatch(reader,/platform_subscription_offer_admin|SELECT \*/);
+ const coordinator=readFileSync(new URL("../../../backend/cmd/financial-migrate/dashboard_reference.go",import.meta.url),"utf8");
+ assert.match(coordinator,/"0143_platform_subscription_offer_admin\.sql", "0144_platform_subscription_public_catalog\.sql"/);
 });
 test("home and pricing use the same catalog data; unpublished offers keep existing Gateway fallback",()=>{
  const pricing=read("components/public-pricing.tsx"),home=read("app/[locale]/page.tsx");

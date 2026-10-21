@@ -5,7 +5,7 @@ import {requireUser,preferredWorkspaceFor} from "../../../../../lib/server/auth"
 import {publicSubscriptionOffers} from "../../../../../lib/server/public-subscription-offers";
 import {publishedSubscriptionPolicies} from "../../../../../lib/server/subscription-policies";
 import {quotePublishedPrice} from "../../../../../lib/public-subscription-quote";
-import {priceInBdt,annualOfferSavings,type SubscriptionTerm} from "../../../../../lib/public-subscription-offers";
+import {priceInBdt,publishedPriceComparison,type SubscriptionTerm} from "../../../../../lib/public-subscription-offers";
 import "../../../../../components/subscription-order-summary.css";
 
 export const dynamic="force-dynamic";
@@ -33,10 +33,7 @@ export default async function PublishedOfferReview({params,searchParams}:{
  const validPrice=current?priceInBdt(current.amount_minor,locale):null;
  const name=current?(bn&&current.name_bn?current.name_bn:current.name):"";
  const description=current?(bn&&current.description_bn?current.description_bn:current.description):"";
- const matchingMonthly=current?.term==="yearly"?catalog.offers.find(item=>
-  item.product===current.product&&item.term==="monthly"&&item.gateway_plan_version_id===current.gateway_plan_version_id
-  &&item.included_ai_credits===current?.included_ai_credits):null;
- const savings=current&&matchingMonthly?annualOfferSavings(matchingMonthly.amount_minor,current.amount_minor):null;
+ const comparison=current?publishedPriceComparison(catalog.offers,current):null;
  const legal=[
   {key:"tos",label:t("Terms of Service","সেবার শর্তাবলি"),document:policies.terms},
   {key:"privacy",label:t("Privacy Policy","গোপনীয়তা নীতি"),document:policies.privacy},
@@ -85,7 +82,8 @@ export default async function PublishedOfferReview({params,searchParams}:{
      <div className="ek-order-line"><span>{t("Product","পণ্য")}</span><strong>{name}</strong></div>
      <div className="ek-order-line"><span>{t("Quantity","পরিমাণ")}</span><strong>1</strong></div>
      <div className="ek-order-line"><span>{t("Catalog subtotal","ক্যাটালগ সাবটোটাল")}</span><strong>{validPrice}</strong></div>
-     {savings&&<div className="ek-order-line ek-order-saving"><span>{t("Yearly saving vs 12 approved months (comparison only)","১২টি অনুমোদিত মাসিক চার্জের তুলনায় বার্ষিক সাশ্রয়")}</span><strong>{priceInBdt(savings,locale)}</strong></div>}
+     {comparison?.annual_saving_minor&&<div className="ek-order-line ek-order-saving"><span>{t("Yearly saving vs 12 approved months (comparison only)","১২টি অনুমোদিত মাসিক চার্জের তুলনায় বার্ষিক সাশ্রয়")}</span><strong>{priceInBdt(comparison.annual_saving_minor,locale)}</strong></div>}
+     {comparison?.bundle_saving_minor&&<div className="ek-order-line ek-order-saving"><span>{t("Bundle saving vs separately published packs (comparison only)","পৃথক প্রকাশিত প্যাকের তুলনায় বান্ডেল সাশ্রয় (শুধু তুলনা)")}</span><strong>{priceInBdt(comparison.bundle_saving_minor,locale)}</strong></div>}
      <div className="ek-order-line"><span>{t("Coupon and tax","কুপন ও কর")}</span><strong>{t("Not quoted yet","এখনো হিসাব হয়নি")}</strong></div>
      <div className="ek-order-separator"/>
      <div className="ek-order-line ek-order-grand"><span>{t("Published catalog price","প্রকাশিত ক্যাটালগ মূল্য")}</span><strong>{validPrice}</strong></div>

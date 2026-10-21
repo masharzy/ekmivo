@@ -7,7 +7,7 @@ import {createRequire} from "node:module";
 import {runInNewContext} from "node:vm";
 import {resolve} from "node:path";
 import {chromium} from "@playwright/test";
-import {parsePublishedSubscriptionOffer,priceInBdt,annualOfferSavings} from "../src/lib/public-subscription-offers.ts";
+import {parsePublishedSubscriptionOffer,priceInBdt,publishedPriceComparison} from "../src/lib/public-subscription-offers.ts";
 const require=createRequire(new URL("../package.json",import.meta.url));
 const ts=require("typescript"),React=require("react"),jsx=require("react/jsx-runtime"),htmlServer=require("react-dom/server");
 const tsx=readFileSync(new URL("../src/components/subscription-offer-pricing.tsx",import.meta.url),"utf8");
@@ -16,7 +16,7 @@ const isolatedModule={exports:{}};
 runInNewContext(compiled,{module:isolatedModule,exports:isolatedModule.exports,require:name=>{
  if(name==="react")return React;
  if(name==="react/jsx-runtime")return jsx;
- if(name==="../lib/public-subscription-offers")return {priceInBdt,annualOfferSavings};
+ if(name==="../lib/public-subscription-offers")return {priceInBdt,publishedPriceComparison};
  throw Error("Unexpected component dependency "+name);
 },Intl,BigInt});
 const css=readFileSync(new URL("../src/app/subscription-offer-pricing.css",import.meta.url),"utf8");
