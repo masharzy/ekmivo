@@ -41,7 +41,10 @@ const coupon={id:"2f4d2a17-021c-4413-a7cd-89323b38b60b",code_normalized:"FICTION
  revision:3,created_at:"2026-10-20T00:00:00Z",updated_at:"2026-10-21T00:00:00Z",redeemed:2,reserved:1};
 const rules=[{id:"5ddc871e-75c7-40ef-b731-56d60fe5a5c4",product:"payments",term:"monthly",rate_bps:0,
  revision:1,reason:"Fictional display only",updated_at:"2026-10-21T00:00:00Z"}];
-const styles=["admin-tokens.css","admin-theme.css","admin-components.css"].map(n=>readFileSync(new URL(`../src/styles/admin/${n}`,import.meta.url),"utf8")).join("\n");
+// Match the real globals.css import order: legacy Admin geometry is required
+// before the locked Admin palette/component overrides.
+const styles=readFileSync(new URL("../src/app/admin-console.css",import.meta.url),"utf8")+"\n"+
+ ["admin-tokens.css","admin-theme.css","admin-components.css"].map(n=>readFileSync(new URL(`../src/styles/admin/${n}`,import.meta.url),"utf8")).join("\n");
 const baseStyle="html,body{margin:0;width:100%;max-width:100%;}body{font:13px system-ui,sans-serif}button{cursor:pointer}";
 function html(locale,theme,mode){
  const view=mode==="editor"?React.createElement(TestCouponForm,{coupon,locale,onClose(){}}):

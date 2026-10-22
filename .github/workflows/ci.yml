@@ -260,12 +260,22 @@ jobs:
       - name: Phase 3 coupon Admin EN/BN and two-theme responsive/keyboard acceptance
         working-directory: apps/web
         run: node --test scripts/subscription-coupon-admin-browser.test.mjs
+      - name: Phase 3 React coupon Apply, Remove, uncertain retry and reload browser acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-coupon-control-browser.test.mjs
       - name: Save Phase 3 synthetic Admin browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: phase3-coupon-admin-screenshots
           path: apps/web/test-results/subscription-coupon-admin/
+          if-no-files-found: ignore
+      - name: Save Phase 3 coupon client browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-coupon-client-screenshots
+          path: apps/web/test-results/subscription-coupon-control/
           if-no-files-found: ignore
 
   backend:
