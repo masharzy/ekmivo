@@ -40,9 +40,20 @@ try{
  assert(scoped.data?.stats?.paid===1,"runtime sees only guarded operations function");
  assert(await denied(()=>db.unsafe("SELECT platform_subscription_admin_operations($1::uuid)",[unauthorized])),"runtime cannot bypass admin authority");
  await db.unsafe("RESET ROLE");
+ const grants=await readFile(new URL("../../../infra/migrations/0155_platform_subscription_safe_runtime_grants.sql",import.meta.url),"utf8");
+ await db.unsafe(grants);
+ await db.unsafe("SET ROLE ekmivo_financial_runtime");
+ assert(await denied(()=>db.unsafe("SELECT * FROM platform_subscription_payment_handoffs")),"safe API role cannot query raw buyer handoffs");
+ assert(await denied(()=>db.unsafe("SELECT platform_subscription_payment_pending()")),"safe API role cannot execute worker settlement/recovery entrypoints");
+ const [safeOps]=await db.unsafe("SELECT platform_subscription_admin_operations($1::uuid) AS data",[buyer.actor_id]);
+ assert(safeOps.data?.stats?.paid===1,"safe API role can call guarded monitoring with authorized Super Admin");
+ assert(await denied(()=>db.unsafe("SELECT platform_subscription_admin_operations($1::uuid)",[unauthorized])),"safe API role cannot bypass Super Admin authorization");
+ await db.unsafe("RESET ROLE");
+ const roleProof=await readFile(new URL("../../../tools/testing/subscription-runtime-grants.sql",import.meta.url),"utf8");
+ await db.unsafe(roleProof);
  const [integrity]=await db.unsafe("SELECT count(*)::int AS n FROM platform_subscription_payment_handoffs WHERE state='paid'");
  assert(integrity.n===1,"monitoring/export do not issue credits or settle invoices");
- console.log("PHASE7 POSTGRES PASS: 0154, MFA-backed Super Admin DB role scope, CSV data bounds, real paid/late recovery, coupon audit, SQL filter and raw runtime denial");
+ console.log("PHASE7 POSTGRES PASS: 0154-0155, MFA-backed Super Admin DB role scope, CSV bounds, recovery, coupon audit, safe API grants and raw table denial");
 }catch(error){
  console.error("PHASE7 POSTGRES ERROR:",String(error.message||error).replaceAll(/postgres(?:ql)?:\/\/\S+/g,"[redacted]"));
  process.exitCode=1;

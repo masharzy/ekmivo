@@ -33,7 +33,7 @@ function setConsent(policy,changes={}){
 }
 try{
  await admin.unsafe("CREATE DATABASE ekmivo");
- await setup.unsafe("CREATE ROLE ekmivo_runtime NOLOGIN; CREATE ROLE ekmivo_financial_runtime NOLOGIN;");
+ await setup.unsafe("CREATE ROLE ekmivo_runtime NOLOGIN; CREATE ROLE ekmivo_financial_runtime LOGIN;");
  await setup.unsafe("CREATE TABLE app_users(id uuid PRIMARY KEY,email text,disabled_at timestamptz,email_verified_at timestamptz);"+
   "CREATE TABLE workspaces(id uuid PRIMARY KEY,name text,created_by uuid REFERENCES app_users(id));"+
   "CREATE TABLE workspace_members(workspace_id uuid REFERENCES workspaces(id),user_id uuid REFERENCES app_users(id),role text);"+
