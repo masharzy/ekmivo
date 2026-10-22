@@ -119,7 +119,7 @@ BEGIN
  PERFORM pg13_actor(w,a,false);
  SELECT * INTO h FROM platform_subscription_payment_handoffs WHERE intent_id=purchase AND workspace_id=w;
  IF h.intent_id IS NULL THEN RETURN NULL;END IF;
- RETURN to_jsonb(h)-'checkout_token_digest';
+ RETURN to_jsonb(h);
 END $$;
 
 -- Worker-only bounded cursor; immutable locator survives key rotation,
