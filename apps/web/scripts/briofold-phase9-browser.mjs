@@ -23,6 +23,28 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const owner=await sessionUser(sessions.owner),viewer=await sessionUser(sessions.viewer);
   const member=await db.unsafe("SELECT role FROM workspace_members WHERE workspace_id=$1::uuid AND user_id=$2::uuid",[workspaceId,owner]);
   assert.equal(member[0]?.role,"owner","Phase9 workspace is not an owner-authorized test tenant");
+  // Live reports/invoice writes must pass the real server-side plan entitlement
+  // check. This CONTROL fixture exists only in the loopback CI database, is
+  // unpublished, and never grants a feature to a production Store. Do not
+  // disable the gate in Go or SQL to make integration tests pass.
+  const ciPlanId=`ci_phase9_${randomUUID().replaceAll("-","").slice(0,12)}`;
+  const ciTerms={name:"Unpublished disposable Phase9 financial test",kind:"free",amount_minor:0,
+   period_days:30,grace_days:3,free_days:30,payment_limit:null,quota_period:"billing",
+   active_checkout_limit:100,create_per_minute:120,
+   features:{invoices:true,payment_links:true,reports:true,exports:true},
+   limits:{api_keys:null,team_members:null,devices:null,payment_methods:null}};
+  const [validatedPlan]=await db.unsafe("SELECT payment_plan_validate($1::jsonb) AS terms",[db.json(ciTerms)]);
+  await db.unsafe("INSERT INTO pg13_plans(id,name,amount_minor,period_days,grace_days,enabled) VALUES($1,$2,0,30,3,false)",
+   [ciPlanId,ciTerms.name]);
+  const [planVersion]=await db.unsafe("INSERT INTO payment_plan_versions(plan_id,version,terms,created_by) VALUES($1,1,$2::jsonb,$3::uuid) RETURNING id",
+   [ciPlanId,db.json(validatedPlan.terms),owner]);
+  await db.unsafe("INSERT INTO pg13_subscriptions(workspace_id,plan_id,plan_version_id,paid_until,grace_until) "+
+   "VALUES($1::uuid,$2,$3::uuid,now()+interval '30 days',now()+interval '33 days') "+
+   "ON CONFLICT(workspace_id) DO UPDATE SET plan_id=EXCLUDED.plan_id,plan_version_id=EXCLUDED.plan_version_id,paid_until=EXCLUDED.paid_until,grace_until=EXCLUDED.grace_until",
+   [workspaceId,ciPlanId,planVersion.id]);
+  const [entitlement]=await db.unsafe("SELECT payment_plan_effective($1::uuid) AS snapshot",[workspaceId]);
+  assert.equal(entitlement.snapshot.active,true,"isolated Store test plan failed activation");
+  assert.equal(entitlement.snapshot.terms.features.reports,true,"isolated report entitlement not installed");
   // Finance projection versions are monotonic. An arbitrary high synthetic
   // version cannot later be rolled back to the CONTROL source version and
   // would make authenticated phone writes correctly fail as stale. Seed the
