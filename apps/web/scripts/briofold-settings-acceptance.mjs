@@ -13,6 +13,7 @@ import {runBriofoldCommerce} from "./briofold-commerce-acceptance.mjs";
 import {runBriofoldCustomers} from "./briofold-customers-acceptance.mjs";
 import {runBriofoldInboxAccess} from "./briofold-inbox-access.mjs";
 import {runBriofoldPhase9Browser} from "./briofold-phase9-browser.mjs";
+import {runBriofoldGrowthOperations} from "./briofold-growth-operations-acceptance.mjs";
 
 // Called after all control/financial extensions, not the earlier PG05 schema.
 export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,apiEnv,phase9Fixture}){
@@ -41,6 +42,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0140_briofold_customers.sql");
   await apply("0141_briofold_commerce.sql");
   await apply("0142_briofold_growth_reporting.sql");
+  await apply("0180_briofold_growth_operations.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
@@ -58,7 +60,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  try{
   await ready(apiOrigin+"/healthz",200,api);
   server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
-   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
   });
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
@@ -72,6 +74,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});
   await runBriofoldCustomers({origin,browser,control,sessions,apiOrigin});
   await runBriofoldCommerce({origin,browser,control,sessions,apiOrigin});
+  await runBriofoldGrowthOperations({origin,browser,control,sessions});
   if(phase9Fixture)await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}

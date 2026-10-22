@@ -75,6 +75,8 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("GET /v1/commerce/orders", pay.HandleCommerceAPI)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/crm", pay.HandleCustomers)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/crm", pay.HandleCustomers)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/growth", pay.HandleGrowth)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/growth", pay.HandleGrowth)
 	mux.HandleFunc("POST /v1/customer-verify", pay.HandleCustomerVerify)
 	mux.HandleFunc("POST /v1/crm/customers", pay.HandleCustomerAPI)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/comments", pay.HandleComments)

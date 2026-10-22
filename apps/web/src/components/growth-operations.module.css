@@ -1,0 +1,27 @@
+.root{display:grid;gap:20px;color:var(--color-text);min-width:0}
+.header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.header h1{font-size:clamp(22px,2vw,30px);line-height:1.2;margin:3px 0 8px}
+.header p{max-width:720px;line-height:1.6;margin:0;opacity:.8}
+.kicker{letter-spacing:.1em;text-transform:uppercase;font-size:11px;font-weight:700}
+.root button{border:1px solid var(--color-border);border-radius:9px;padding:10px 14px;background:var(--color-surface);color:inherit;cursor:pointer;font:inherit;font-size:13px;font-weight:600}
+.root button:hover:not(:disabled){filter:brightness(.95)}
+.root button:focus-visible,.root input:focus-visible,.root textarea:focus-visible,.root select:focus-visible{outline:2px solid #6385ce;outline-offset:2px}
+.root button:disabled{opacity:.5;cursor:not-allowed}
+.root form{display:grid;gap:14px;max-width:800px}
+.root label{display:grid;gap:6px;font-size:13px;font-weight:600}
+.root input,.root select,.root textarea{width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:10px 12px;border:1px solid var(--color-border);background:var(--color-surface);color:inherit;border-radius:9px;font:inherit;font-size:14px}
+.root textarea{resize:vertical}
+.panel,.notice{border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface);padding:20px;min-width:0}
+.panel h2{margin:0 0 16px;font-size:17px}
+.notice{background:var(--color-surface-secondary,var(--color-surface))}
+.notice p{margin:7px 0 0;line-height:1.55}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.item{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:16px 0;border-top:1px solid var(--color-border);overflow-wrap:anywhere}
+.item:first-of-type{border-top:0}
+.item p{white-space:pre-wrap;max-width:65ch;line-height:1.55}
+.item small{opacity:.7}
+.error{border-left:3px solid #b63131;padding:12px;background:#ffeded;color:#842323;border-radius:6px}
+.success{border-left:3px solid #2b8b58;padding:12px;background:#e6f6ee;color:#215d3e;border-radius:6px}
+@media(max-width:800px){.grid,.two{grid-template-columns:minmax(0,1fr)}.panel,.notice{padding:14px}}

@@ -21,6 +21,7 @@ import {CommercePage} from "./commerce-page";
 import {CustomerCRMPage} from "./customer-crm-page";
 import {CommentAutomation} from "./comment-automation";
 import {BriofoldGrowthReports} from "./briofold-growth-reports";
+import {GrowthOperationsPage} from "./growth-operations-page";
 
 export const unifiedDynamic="force-dynamic";
 
@@ -61,6 +62,9 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
    ?<CommercePage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} environment={paymentContext?.environment??"live"}/>
   :root==="customers"&&["","leads","follow-ups"].includes(view[0]??"")
    ?<CustomerCRMPage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} financeEnabled={workspace.mode!=="ai"} environment={paymentContext?.environment??"live"}/>
+  :root==="customers"&&["broadcasts","bookings","posts"].includes(view[0]??"")&&process.env.BRIOFOLD_GROWTH_OPERATIONS_ENABLED==="true"
+   ?<GrowthOperationsPage workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}
+     environment={paymentContext?.environment??"live"} kind={view[0]==="bookings"?"booking":view[0]==="posts"?"post":"broadcast"}/>
   :kind==="business-profile"
    ?<StoreProfileEditor key={workspace.id} locale={locale} workspaceId={workspace.id} canManage={workspace.role==="owner"||workspace.role==="admin"}/>
   :service==="ai"&&(section==="saved-replies"||section==="tickets")

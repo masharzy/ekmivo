@@ -12,6 +12,7 @@ const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|(?:payment-i
 const mobilePath=/^workspaces\/[0-9a-f-]{36}\/(?:mobile-devices(?:\/[0-9a-f-]{36}\/(?:revoke|reconnect|delete))?|comments|website-chat|inbox-connect|inbox|inbox-connections(?:\/[0-9a-f-]{36}\/disconnect)?)$/i;
 const commercePath=/^workspaces\/[0-9a-f-]{36}\/commerce$/i;
 const crmPath=/^workspaces\/[0-9a-f-]{36}\/crm$/i;
+const growthPath=/^workspaces\/[0-9a-f-]{36}\/growth$/i;
 const aiRuntimePath=/^workspaces\/[0-9a-f-]{36}\/ai\/(?:test|studio-test|knowledge-import)$/i;
 const aiCreditPath=/^workspaces\/[0-9a-f-]{36}\/ai-credits\/(?:purchase|[0-9a-f-]{36}\/reconcile)$/i;
 const phonePath=/^workspaces\/[0-9a-f-]{36}\/phones(?:\/[0-9a-f-]{36}\/(?:attach|detach|rename|revoke|reconnect|delete|edit-account))?$/i;
@@ -20,11 +21,11 @@ const extensionPath=/^(?:workspace-invites\/accept-invite|workspaces\/[0-9a-f-]{
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
  const path = (await context.params).path.join("/");
  const read = request.method === "GET";
- if (!(read && (["session", "platform/access"].includes(path)||adminPlanPath.test(path)||adminWorkspaceRead.test(path))) && !workspacePath.test(path) && !operationPath.test(path) && !documentPath.test(path) && !extensionPath.test(path) && !mobilePath.test(path)&&!phonePath.test(path)&&!aiCreditPath.test(path)&&!aiRuntimePath.test(path)&&!crmPath.test(path)&&!commercePath.test(path))
+ if (!(read && (["session", "platform/access"].includes(path)||adminPlanPath.test(path)||adminWorkspaceRead.test(path))) && !workspacePath.test(path) && !operationPath.test(path) && !documentPath.test(path) && !extensionPath.test(path) && !mobilePath.test(path)&&!phonePath.test(path)&&!aiCreditPath.test(path)&&!aiRuntimePath.test(path)&&!crmPath.test(path)&&!commercePath.test(path)&&!growthPath.test(path))
   return Response.json({ code: "NOT_FOUND" }, { status: 404 });
  if((aiCreditPath.test(path)||aiRuntimePath.test(path))&&request.method!=="POST")return Response.json({code:"METHOD_NOT_ALLOWED"},{status:405});
  const intentPath=/^workspaces\/[0-9a-f-]{36}\/(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources)$/i.test(path);
- if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || ((commercePath.test(path)||crmPath.test(path)||intentPath||operationPath.test(path)||extensionPath.test(path)||mobilePath.test(path)||phonePath.test(path)||aiCreditPath.test(path)||aiRuntimePath.test(path))&&request.method==="POST") || (documentPath.test(path)&&["POST","PATCH"].includes(request.method))))
+ if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || ((commercePath.test(path)||crmPath.test(path)||growthPath.test(path)||intentPath||operationPath.test(path)||extensionPath.test(path)||mobilePath.test(path)||phonePath.test(path)||aiCreditPath.test(path)||aiRuntimePath.test(path))&&request.method==="POST") || (documentPath.test(path)&&["POST","PATCH"].includes(request.method))))
   return Response.json({ code:"METHOD_NOT_ALLOWED" },{status:405});
  const requestUrl = new URL(request.url);
  // Next's local server may use localhost internally despite a 127.0.0.1 Host.
@@ -36,7 +37,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
  const token = (await cookies()).get("ekmivo-session")?.value;
  if (!token) return Response.json({ code: "UNAUTHENTICATED" }, { status: 401 });
  // Paid Studio work is tied to the server-selected business, including stale tabs.
- if(commercePath.test(path)||crmPath.test(path)||path.endsWith("/ai/studio-test")||path.endsWith("/ai/knowledge-import")){
+ if(commercePath.test(path)||crmPath.test(path)||growthPath.test(path)||path.endsWith("/ai/studio-test")||path.endsWith("/ai/knowledge-import")){
   try{
    const actor=await currentUser();if(!actor)return Response.json({code:"UNAUTHENTICATED"},{status:401});
    const selected=await preferredWorkspaceFor(actor.id);
@@ -49,12 +50,12 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   return Response.json({ code: sandboxTools?"SANDBOX_TOOLS_UNAVAILABLE":"PROXY_CONFIG_INVALID" }, { status: 503 });
  const target = new URL("/v1/" + path, base);
  const incoming = new URL(request.url);
- for (const key of ["resource", "item", "source", "customer", "format", "environment", "capability", "cursor", "status", "account", "method", "from", "to", "q", "period", "page", "page_size", "filter"]) {
+ for (const key of ["resource", "item", "source", "customer", "format", "environment", "capability", "cursor", "status", "account", "method", "from", "to", "q", "period", "page", "page_size", "filter", "kind"]) {
   if(incoming.searchParams.getAll(key).length>1)return Response.json({code:"INVALID_SCOPE"},{status:400});
   const value = incoming.searchParams.get(key);
   if (value) target.searchParams.set(key, value);
  }
- const body = read ? undefined : await boundedBody(request,path.endsWith("/ai/knowledge-import")?7340032:aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:commercePath.test(path)?7340032:path.endsWith("/crm")?20000:path.endsWith("/comments")?65536:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/settings$/i.test(path)?8192:4096);
+ const body = read ? undefined : await boundedBody(request,path.endsWith("/ai/knowledge-import")?7340032:aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:commercePath.test(path)?7340032:path.endsWith("/crm")?20000:growthPath.test(path)?16384:path.endsWith("/comments")?65536:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/settings$/i.test(path)?8192:4096);
  if (body === null)
   return Response.json({ code: "BODY_TOO_LARGE" }, { status: 413 });
  try {

@@ -32,6 +32,16 @@ test("authorized business context and realm resolution are server-side",()=>{
  assert.match(action,/selectDefaultWorkspace\(user\.id,workspaceId\)/);
  assert.doesNotMatch(action,/selectDefaultWorkspace\(.*request\.userId/);
 });
+test("single-Store account binding supersedes legacy selection without deleting historic memberships",()=>{
+ const auth=source("lib/server/auth.ts"),shell=source("components/app-shell.tsx");
+ const workspaces=source("app/[locale]/workspaces/page.tsx"),proxy=source("app/api/go/[...path]/route.ts");
+ assert.match(auth,/primaryStoreFor\(userId\)/);
+ assert.match(auth,/if\(bound\)return spaces\.find\(space=>space\.id===bound\)\?\?null/);
+ assert.match(auth,/if\(bound && workspaceId!==bound\)return false/);
+ assert.match(shell,/primaryStoreId\?memberships\.filter\(space=>space\.id===primaryStoreId\):memberships/);
+ assert.match(workspaces,/if\(bound\|\|spaces\.length===1\)redirect\("\/workspaces\/open"\)/);
+ assert.match(proxy,/STALE_BUSINESS/);
+});
 test("global marketing header and footer do not render on unified application routes",()=>{
  for(const cssless of ["components/site-header.tsx","components/site-footer.tsx","proxy.ts"]){
   const src=source(cssless);
