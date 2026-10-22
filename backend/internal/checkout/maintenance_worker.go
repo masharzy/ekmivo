@@ -99,7 +99,14 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 	for _, i := range invoices {
 		// A subscription handoff must be settled atomically with its own
 		// coupon/recovery state, never by the older generic PG13 renewal job.
-		if os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED") == "true" {
+		// Protect Stage-6 invoices even when its worker flag has been turned
+		// off after issuance. Legacy billing may run during a staged rollout.
+		var handoffCheckAvailable bool
+		if w.Control.QueryRow(ctx,
+			"SELECT to_regprocedure('platform_subscription_payment_is_handoff(uuid)') IS NOT NULL").Scan(&handoffCheckAvailable) != nil {
+			return errors.New("subscription billing isolation probe unavailable")
+		}
+		if handoffCheckAvailable {
 			var subscription bool
 			if w.Control.QueryRow(ctx,
 				"SELECT platform_subscription_payment_is_handoff($1::uuid)", i.ID).Scan(&subscription) != nil {
