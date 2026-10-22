@@ -27,6 +27,10 @@ test("subscription status cannot be marked paid by browser, can outlast closed t
  assert.match(status,/billing-invoices/);
  assert.match(client,/next.verified!==\(next.status==="completed"\)/);
  assert.match(status,/window.setInterval/);
+ assert.match(status,/window.setTimeout/);
+ assert.match(status,/window.clearTimeout\(initial\)/);
+ assert.match(status,/ac.abort\(\)/);
+ assert.doesNotMatch(status,/const ac=new AbortController\(\);\s*void refresh\(ac.signal\)/);
  assert.match(proxy,/subscriptionPaymentPath/);
  assert.match(proxy,/ORIGIN_DENIED/);
  assert.doesNotMatch(status,/setData\(\{[^}]*status:"completed"/);
