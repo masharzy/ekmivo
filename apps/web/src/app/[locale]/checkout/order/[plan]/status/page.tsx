@@ -1,7 +1,7 @@
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
-import {requireUser,preferredWorkspaceFor} from "../../../../../lib/server/auth";
-import {SubscriptionPaymentStatus} from "../../../../../components/subscription-payment-status";
+import {requireUser,preferredWorkspaceFor} from "../../../../../../lib/server/auth";
+import {SubscriptionPaymentStatus} from "../../../../../../components/subscription-payment-status";
 
 export const dynamic="force-dynamic";
 export const metadata:Metadata={title:"Subscription payment status · Ekmivo",robots:{index:false,follow:false},referrer:"no-referrer"};
