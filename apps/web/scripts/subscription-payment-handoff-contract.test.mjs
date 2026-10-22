@@ -1,9 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
+import {readFileSync,existsSync} from "node:fs";
 
 const root=new URL("../../..",import.meta.url);
 const read=path=>readFileSync(new URL(path,root),"utf8");
+
+
+test("nested SaaS order status route resolves both server and component imports",()=>{
+ const path="apps/web/src/app/[locale]/checkout/order/[plan]/status/page.tsx";
+ const source=read(path);
+ const routeURL=new URL(path,root);
+ const imports=[...source.matchAll(/from "(\\.\\.\\/[^"]+)"/g)].map(match=>match[1]);
+ assert.equal(imports.length,2,"expected auth and status component relative imports");
+ for(const target of imports){
+  assert.ok(
+   existsSync(new URL(target+".ts",routeURL))||existsSync(new URL(target+".tsx",routeURL)),
+   "Unresolved nested route import: "+target
+  );
+ }
+});
 
 test("subscription wallet requires exact current owner-bound capability; seller checkout stays separate",()=>{
  const wallet=read("apps/web/src/app/[locale]/pay/subscription/[token]/page.tsx");
