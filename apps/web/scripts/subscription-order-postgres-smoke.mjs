@@ -79,9 +79,9 @@ try{
  await run("INSERT INTO platform_subscription_purchase_intents(id,actor_id,workspace_id,offer_version_id,public_token_sha256) VALUES($1,$2,$3,$4,$5),($6,$2,$3,$4,$7)",
   [ids.intent,ids.a,ids.store,ids.offer,"a".repeat(64),ids.intent2,"b".repeat(64)]);
  await denied(()=>request(ids.a,ids.store,ids.intent,"quote"),"POLICY_UNAVAILABLE");
- for(const kind of ["terms","privacy","refund"])
+ for(const [index,kind] of ["terms","privacy","refund"].entries())
   await run("INSERT INTO platform_subscription_policy_versions(kind,version_label,url,content_sha256,status,created_by) VALUES($1,'v1',$2,$3,'published',$4)",
-   [kind,"https://example.invalid/ci-"+kind,kind[0].repeat(64),ids.a]);
+   [kind,"https://example.invalid/ci-"+kind,["a","b","c"][index].repeat(64),ids.a]);
  const policies=(await run("SELECT platform_subscription_policy_public() AS docs"))[0].docs;
  check(Object.keys(policies).length===3,"three published documents");
  await denied(()=>request(ids.b,ids.store,ids.intent,"read"),"FORBIDDEN");
@@ -102,7 +102,7 @@ try{
  await denied(()=>request(ids.a,ids.store,ids.intent,"confirm",
   {quote_id:q1.quote_id,idempotency_key:key,consents:setConsent(policies,{refund:{sha256:"f".repeat(64)}})}),
   "POLICY_CHANGED");
- await run("UPDATE platform_subscription_purchase_quotes SET expires_at=now()-interval '1 second' WHERE id=$1",[q1.quote_id]);
+ await run("UPDATE platform_subscription_purchase_quotes SET created_at=now()-interval '30 minutes',expires_at=now()-interval '1 second' WHERE id=$1",[q1.quote_id]);
  await denied(()=>request(ids.a,ids.store,ids.intent,"confirm",
   {quote_id:q1.quote_id,idempotency_key:key,consents:setConsent(policies)}),"QUOTE_STALE");
  const q2=await request(ids.a,ids.store,ids.intent,"quote");
