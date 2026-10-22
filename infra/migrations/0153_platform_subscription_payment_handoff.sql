@@ -7,13 +7,15 @@
 BEGIN;
 SET LOCAL lock_timeout='5s';
 SET LOCAL statement_timeout='30s';
-DO $BEGIN
+DO $phase6_preflight$
+BEGIN
  IF current_database()<>'ekmivo' OR to_regclass('public.financial_realm') IS NOT NULL
  OR to_regclass('public.platform_subscription_purchase_quotes') IS NULL
  OR to_regclass('public.platform_subscription_coupon_reservations') IS NULL
  OR to_regclass('public.platform_subscription_policy_acceptances') IS NULL
  THEN RAISE EXCEPTION '0153 requires isolated Ekmivo control database and complete predecessor schemas';END IF;
-END $;
+END
+$phase6_preflight$;
 
 CREATE TABLE platform_subscription_payment_handoffs (
  intent_id uuid PRIMARY KEY REFERENCES platform_subscription_purchase_intents(id) ON DELETE RESTRICT,
@@ -311,7 +313,7 @@ REVOKE ALL ON FUNCTION
  platform_subscription_payment_recover(uuid,uuid,text),
  platform_subscription_payment_terminal(uuid,text) FROM PUBLIC;
 DO $$BEGIN
- IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_financial_runtime') THEN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_runtime') THEN
   GRANT EXECUTE ON FUNCTION platform_subscription_payment_bind(uuid,uuid,uuid,uuid,uuid,uuid,text),
    platform_subscription_payment_read(uuid,uuid,uuid) TO ekmivo_runtime;
  END IF;

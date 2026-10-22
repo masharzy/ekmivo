@@ -71,6 +71,10 @@ jobs:
         run: |
           go test -race ./internal/subscriptionpayment ./internal/checkout
           go vet ./internal/checkout ./internal/subscriptionpayment ./cmd/api ./cmd/financial-migrate
+      - name: Parse Phase 6 SQL without applying it
+        run: |
+          python3 -m pip install --user pglast==8.7
+          python3 -c 'from pathlib import Path; from pglast import parse_sql; s=Path("infra/migrations/0153_platform_subscription_payment_handoff.sql").read_text(); assert len(parse_sql(s))>=15; assert not Path("infra/migrations/0150_platform_subscription_payment_handoff.sql").exists(); print("Phase 6 SQL syntax/order PASS")'
 
   postgres:
     name: Phase 6 actual PostgreSQL quote, legal, handoff and settlement
