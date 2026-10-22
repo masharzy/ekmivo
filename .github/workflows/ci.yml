@@ -64,6 +64,9 @@ jobs:
       - name: Briofold full AI wallet statement and low balance contract
         working-directory: apps/web
         run: node --test scripts/briofold-ai-statement.test.mjs scripts/briofold-ai-studio.test.mjs scripts/briofold-inbox-drafts.test.mjs scripts/briofold-inbox-attachments.test.mjs scripts/briofold-studio-requests.test.mjs
+      - name: Phase 6 SaaS payment, recovery and migration safety contract
+        working-directory: apps/web
+        run: node --test scripts/subscription-payment-handoff-contract.test.mjs
       - name: Store subscription order, legal policy and coupon safety contracts
         working-directory: apps/web
         run: node --test scripts/subscription-order-contract.test.mjs scripts/subscription-coupons-contract.test.mjs scripts/subscription-policies-contract.test.mjs scripts/subscription-offers-contract.test.mjs
