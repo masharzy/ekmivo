@@ -6,6 +6,7 @@ import {requireUser,preferredWorkspaceFor} from "../lib/server/auth";
 import {database} from "../lib/server/db";
 import type {PaymentPlan} from "../lib/payment-plans";
 import {dashboardHref} from "../lib/dashboard-navigation";
+import {activePurchase} from "../lib/server/purchase-intents";
 
 export type SetupResult={status:"idle"|"error";message:string};
 const fail=(message:string):SetupResult=>({status:"error",message});
@@ -97,11 +98,19 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
   console.error("[briofold setup]",error instanceof Error?error.name:"unknown");
   return fail("Could not save setup. Check the details and retry.");
  }
- if(outcome==="already")redirect("/dashboard");
+ if(outcome==="already"){
+  const active=await activePurchase();
+  if(active)redirect("/subscribe/resume/"+active);
+  redirect("/dashboard");
+ }
  if(outcome!=="ok")return fail(outcome==="forbidden"?"Owner access required.":"This setup changed. Refresh and try again.");
  revalidatePath("/dashboard");
  revalidatePath("/setup");
  if(step==="billing"){
+  // The exact product/term/coupon survives business naming and setup.
+  // This route only resumes the selected intent; it never issues a paid invoice.
+  const active=await activePurchase();
+  if(active)redirect("/subscribe/resume/"+active);
   if(paidGatewaySelection){
    // The setup action is already authenticated and has locked the selected
    // store. Preserve that context rather than performing a second auth check
