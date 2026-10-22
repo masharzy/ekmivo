@@ -66,9 +66,10 @@ async function command(operation:Operation,token:string,payload:Record<string,un
  const user=await currentUser();
  const digest=guest===undefined?await guestHash():guest;
  try{
-  const rows=await database().unsafe(
+  const db=database();
+  const rows=await db.unsafe(
    "SELECT platform_subscription_intent_command($1::text,$2::uuid,$3::text,$4::text,$5::jsonb) AS result",
-   [operation,user?.id||null,digest||null,hashToken(token),JSON.stringify(payload)]
+   [operation,user?.id||null,digest||null,hashToken(token),db.json(payload)]
   );
   if(!rows[0]?.result||typeof rows[0].result!=="object")throw new Error("INVALID_SERVER_RESULT");
   return rows[0].result as Record<string,unknown>;
