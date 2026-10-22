@@ -49,7 +49,12 @@ export function SubscriptionCouponControl({intentId,locale,onQuote}:{
    pending.current=null;setSnapshot(q);setDraft(q.coupon_code);onQuoteRef.current(q);
    setMessage(normalized?t("Coupon applied to the verified total.","যাচাইকৃত মোটে কুপন প্রয়োগ হয়েছে।"):t("Coupon removed; amount re-quoted.","কুপন সরিয়ে নতুন হিসাব হয়েছে।"));
   }catch(e){
-   const code=e instanceof Error?e.message:"UNKNOWN";
+   // A transport exception's free-form message (including TypeError from a
+   // lost response after commit) is NEVER an API code. Recover by GET, not
+   // by submitting a fresh mutation/idempotency key.
+   const raw=e instanceof Error?e.message:"UNKNOWN";
+   const code=["COUPON_INELIGIBLE","ZERO_DUE_POLICY_REQUIRED","TAX_REQUOTE_REQUIRED","TAX_POLICY_REQUIRED",
+    "QUOTE_CHANGED","QUOTE_REQUIRED","OFFER_CHANGED","FORBIDDEN"].includes(raw)?raw:"UNKNOWN";
    setMessage(couponErrorMessage(code,locale));
    // GET is authoritative after unknown writes and revision conflicts. Retain
    // the same idempotency key if retry remains necessary.

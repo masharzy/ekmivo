@@ -74,6 +74,8 @@ test("Phase 3 apply/remove/reload UI uses the authenticated server snapshot only
  assert.match(widget,/parseCouponQuote/);
  assert.match(widget,/coupon_code:normalized/);
  assert.match(widget,/onQuoteRef\.current/);
+ assert.match(widget,/const raw=e instanceof Error\?e\.message:"UNKNOWN"/);
+ assert.match(widget,/includes\(raw\)\?raw:"UNKNOWN"/);
  const api=web("app/api/go/[...path]/route.ts");
  assert.match(api,/couponQuotePath/);
  assert.match(api,/!read &&/);
