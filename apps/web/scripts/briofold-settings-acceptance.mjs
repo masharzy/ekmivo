@@ -40,6 +40,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0139_briofold_comments.sql");
   await apply("0140_briofold_customers.sql");
   await apply("0141_briofold_commerce.sql");
+  await apply("0142_briofold_growth_reporting.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});

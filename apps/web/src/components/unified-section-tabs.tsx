@@ -34,7 +34,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
   {en:"Posts",bn:"পোস্ট",href:"/customers/posts",service:"ai"},
  ],
  reports:[
-  {en:"Overview",bn:"সারসংক্ষেপ",href:"/reports",service:"common"},
+  {en:"Business activity",bn:"ব্যবসার কার্যক্রম",href:"/reports",service:"common"},
   {en:"Payment reports",bn:"পেমেন্ট রিপোর্ট",href:"/reports/payments",service:"payments"},
   {en:"AI reports",bn:"AI রিপোর্ট",href:"/reports/ai",service:"ai"},
  ]

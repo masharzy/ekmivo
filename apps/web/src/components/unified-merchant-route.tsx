@@ -20,6 +20,7 @@ import {WebsiteChatSettings} from "./website-chat-settings";
 import {CommercePage} from "./commerce-page";
 import {CustomerCRMPage} from "./customer-crm-page";
 import {CommentAutomation} from "./comment-automation";
+import {BriofoldGrowthReports} from "./briofold-growth-reports";
 
 export const unifiedDynamic="force-dynamic";
 
@@ -46,6 +47,10 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   :undefined;
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :root==="reports"&&view[0]!=="payments"
+   ?<><BriofoldGrowthReports workspaceId={workspace.id} actorId={user.id} locale={locale}
+      environment={paymentContext?.environment??"live"} mode={workspace.mode} focus={view[0]==="ai"?"ai":"all"}/>
+     {view[0]==="ai"&&<BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/>}</>
   :service==="ai"&&(section==="ai-agent"||section==="knowledge")
    ?<AiStudioPage workspaceId={workspace.id} actorId={user.id} locale={locale} view={section==="knowledge"?"knowledge":"assistant"}/>
   :service==="ai"&&section==="website"

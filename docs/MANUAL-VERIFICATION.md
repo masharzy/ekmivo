@@ -1,3 +1,18 @@
+## Briofold Phase 10 — consolidated owner acceptance (2026-10-22, NOT PASSED)
+
+The consolidated Briofold 0–10 implementation/evidence matrix and one owner checklist are in
+`docs/evidence/BRIOFOLD-PHASE10-RELEASE-READINESS-20261022.md`. The owner handles consented
+physical devices, live providers and subjective visual/accessibility checks. Do not turn these
+into code blockers once code is actually complete. However Phase 10 still has independent
+code blockers (campaigns/broadcasts/bookings/parity) and an unapplied Phase 8 migration;
+these must not be reclassified as owner manual work. No migration, money, provider send,
+production flag change or staged cutover was performed by the Phase 10 reports increment.
+
+- [ ] Owner-provided test accounts/providers/handset and isolated merchant business: run the
+  eleven groups in the Phase 10 evidence ledger and record actual pass/failure evidence.
+- [ ] Operator: current merged SHA + green integrated CI; ordered 0141/0142 CONTROL-only
+  migrations with backups, runtime grants and post-deploy health/rollback checks.
+
 ## Nagad compact payer entry & bKash BD number normalization — 2026-10-14 (manual / build pending)
 
 - [ ] Open actual checkout with Nagad selected, EN/BN, 320/375/390/desktop and small landscape viewport. Merchant, invoice, amount, 11 number boxes, consent and controls should fit the screen without duplicate white invoice header. Tiny viewport / keyboard may scroll inside the compact card.
