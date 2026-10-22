@@ -1,0 +1,20 @@
+# Briofold Phase 8 handoff
+
+This is Briofold central commerce Phase 8, NOT the separate Store-first subscription checkout phases. Repository masharzy/ekmivo, branch agents/phase8-commerce, PR https://github.com/masharzy/ekmivo/pull/136. Preserve concurrent main and subscription branches. Do not start Phase 9.
+
+## Completion gate
+Code is implemented; seal only after the latest published head's Foundation CI is green. See PR body for final tested SHA/run and seal status. Previous run 39659363115 passed Go, Android and Docker jobs; web passed lint/typecheck/build and earlier regression journeys, then Phase 8 responsive assertion counted a shared payment-notification unavailable alert. Latest fix gives commerce an accessible region and checks its own alerts (including text diagnostics). Actual product/order save/reload, lost-response idempotent retry and real XLSX import reached completion before that assertion. Do not claim the 72 responsive cases passed until the new run proves it.
+
+## Resume
+Read AGENTS.md, nested apps/web instructions, canonical plan/design files, docs/evidence/BRIOFOLD-PHASE8-20261021.md and docs/MANUAL-VERIFICATION.md. Fetch latest branch and inspect PR/checks; local commit metadata may differ from API-published commits but blob/tree SHAs must match. Fix actual CI failures only. Once all four jobs pass, inspect Phase8 responsive route cases PASS: 72 and Phase8 commerce PASS markers, review screenshots artifact, update PR with tested SHA/run and mark ready. Current main has concurrent changes and PR may conflict: do not overwrite or force-reset them. Integrate separately and rerun required checks before deployment.
+
+## Production state
+Phase 7 is deployed commit af3ea46c0c6ef0a6b80a394fb7abfe3c03446e9e, migration 0140 applied. Render service srv-db5j532d0e5s73fli4h0 in workspace tea-d3o4gm2li9vc73bqjecg, LIVE deployment dep-dbcfop0u01pc73bo17f0. Vercel project prj_LVQsrrOUH8f2xjp5MlqFCugqbP2j in team team_gq7mzXQoP1PTZiTGYeSbGT6F, READY dpl_9npa6p17KmDYpdCZHzX8PoMapGQU; briofold.tech. Post-release error/fatal and panic/financial-failure log scans were empty.
+
+Phase 8 migration 0141_briofold_commerce.sql is NOT applied to production; Phase 8 runtime is NOT deployed. It is additive CONTROL-only, requires 0140 and must precede runtime rollout. Neon production project sparkling-mountain-38618629, branch br-solitary-river-b3ztvg8j, database ekmivo. Do not migrate physical financial Live/Sandbox databases or change paid tariff configuration. Preserve existing customer data. Verify target/schema, apply atomically, inspect FORCE RLS/runtime grants and counts, then deploy tested integrated commit and check health/authorized routes. Keep additive tables if rolling application back.
+
+## Implementation map
+Migration 0141 owns scoped commerce tables/functions/RLS/idempotency/stock/coupon/order/return/history. backend/internal/checkout/commerce*.go owns session/API authorization, verified financial-reference boundary, private scanned media, encrypted integrations, safe public HTTPS requests, durable Steadfast booking and read-only BDT Woo imports. apps/web/src/components/commerce* owns six canonical views; commerce-import.ts parses bounded CSV/XLSX; briofold-commerce-acceptance.mjs owns actual PostgreSQL/HTTP/browser acceptance, invoked by existing settings acceptance. No local Docker without owner permission; existing GitHub ephemeral PostgreSQL CI is established. Neon branch quota was full: do not delete/reset other branches.
+
+## Remaining manual gates
+Real configured Steadfast booking/status and ambiguous booking reconciliation; read-only Woo BDT catalog; private upload/scanner configured acceptance; physical barcode printer/scanner; positive real financial-source allocations and manual role/offline/accessibility/theme checks. COD is operational, never payment. Unknown courier outcome never auto-resends. No customer outbound message or real courier booking was performed. See consolidated manual ledger; do not label provider or production acceptance passed from fixtures.
