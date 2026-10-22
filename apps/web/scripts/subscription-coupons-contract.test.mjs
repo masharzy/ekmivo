@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {parseBdtMinor,parsePercentageBps,formatBdtMinor,formatPercentBps} from "../src/lib/subscription-coupons.ts";
+import {parseCouponQuote,couponErrorMessage} from "../src/lib/subscription-coupon-quote.ts";
 
 const web=(path)=>readFileSync(new URL(`../src/${path}`,import.meta.url),"utf8");
 const migration=()=>readFileSync(new URL("../../../infra/migrations/0134_platform_subscription_coupon_admin.sql",import.meta.url),"utf8");
@@ -43,4 +44,30 @@ test("coupons belong in existing Admin Billing tab and never turn on unverified 
  assert.match(pay,/Coupon redemption is not enabled/);
  assert.doesNotMatch(pay,/name="(?:bkash|nagad|rocket)"/);
  assert.match(web("app/[locale]/checkout/order/[plan]/page.tsx"),/purchaseEnabled=\{false\}/);
+});
+
+test("Phase 3 apply/remove/reload UI uses the authenticated server snapshot only",()=>{
+ const quote={id:"7dbec4c0-8a24-4b80-96cb-0a4aba46bb8e",intent_revision:3,revision:3,
+  coupon_id:"b3eae61f-7dea-47ee-9375-51eb00528496",coupon_code:"PROMO10",
+  subtotal_minor:10000,annual_discount_minor:0,bundle_discount_minor:0,coupon_discount_minor:1000,
+  tax_minor:900,total_minor:9900,expires_at:new Date(Date.now()+60000).toISOString(),
+  lines:[{line_no:1,label:"Published item",quantity:1,unit_price_minor:10000,subtotal_minor:10000}]};
+ assert.deepEqual(parseCouponQuote(quote),quote);
+ assert.equal(parseCouponQuote({...quote,total_minor:10000}),null,"client cannot use a mismatched total");
+ assert.equal(parseCouponQuote({...quote,subtotal_minor:Number.MAX_SAFE_INTEGER}),null,"overflow rejected");
+ assert.equal(parseCouponQuote({...quote,coupon_code:"x".repeat(64)}),null);
+ assert.match(couponErrorMessage("TAX_REQUOTE_REQUIRED","bn"),/করনীতি/);
+ const widget=web("components/subscription-coupon-control.tsx");
+ assert.match(widget,/operation_key:operation\.key/);
+ assert.match(widget,/cache:"no-store"/);
+ assert.match(widget,/parseCouponQuote/);
+ assert.match(widget,/coupon_code:normalized/);
+ assert.match(widget,/onQuoteRef\.current/);
+ const api=web("app/api/go/[...path]/route.ts");
+ assert.match(api,/couponQuotePath/);
+ assert.match(api,/!read &&/);
+ assert.match(api,/request\.headers\.get\("origin"\)/);
+ const sql=readFileSync(new URL("../../../infra/migrations/0149_platform_subscription_coupon_quote_read.sql",import.meta.url),"utf8");
+ assert.match(sql,/platform_subscription_coupon_current_quote/);
+ assert.match(sql,/snapshot->>'code_normalized'/);
 });

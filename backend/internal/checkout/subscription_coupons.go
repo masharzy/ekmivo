@@ -11,7 +11,7 @@ func subscriptionCouponError(w http.ResponseWriter, err error) {
 	var pg *pgconn.PgError
 	if errors.As(err, &pg) {
 		switch pg.Message {
-		case "COUPON_INELIGIBLE", "ZERO_DUE_POLICY_REQUIRED", "TAX_REQUOTE_REQUIRED":
+		case "COUPON_INELIGIBLE", "ZERO_DUE_POLICY_REQUIRED", "TAX_REQUOTE_REQUIRED", "TAX_POLICY_REQUIRED":
 			fail(w, 422, pg.Message)
 			return
 		case "QUOTE_CHANGED", "QUOTE_REQUIRED", "OFFER_CHANGED":
@@ -36,11 +36,11 @@ func (s *Service) HandleSubscriptionCouponQuote(w http.ResponseWriter, r *http.R
 		fail(w, 503, "COUPON_UNAVAILABLE")
 		return
 	}
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
 		fail(w, 405, "METHOD_NOT_ALLOWED")
 		return
 	}
-	if !originAllowed(r) {
+	if r.Method == http.MethodPost && !originAllowed(r) {
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
@@ -57,6 +57,22 @@ func (s *Service) HandleSubscriptionCouponQuote(w http.ResponseWriter, r *http.R
 	iid := r.PathValue("intentID")
 	if !uuidPattern.MatchString(iid) {
 		fail(w, 404, "NOT_FOUND")
+		return
+	}
+	if r.Method == http.MethodGet {
+		var raw []byte
+		err = s.Auth.DB.QueryRowContext(r.Context(), "SELECT platform_subscription_coupon_current_quote($1::uuid,$2::uuid)", actor.UserID, iid).Scan(&raw)
+		if err != nil {
+			subscriptionCouponError(w, err)
+			return
+		}
+		var data any
+		if json.Unmarshal(raw, &data) != nil {
+			fail(w, 503, "COUPON_UNAVAILABLE")
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		write(w, 200, data)
 		return
 	}
 	var b struct {

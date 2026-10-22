@@ -133,6 +133,8 @@
 .pa-root.pa-admin-design .pa-admin-form-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .pa-root.pa-admin-design .pa-admin-form-pair label{display:grid;gap:5px}
 .pa-root.pa-admin-design .pa-admin-switches{border:1px solid var(--bd);border-radius:8px}
+.pa-root.pa-admin-design .pa-admin-coupon-restrictions{min-width:0;margin:0;padding:0;border:0}
+.pa-root.pa-admin-design .pa-admin-coupon-restrictions legend{margin-bottom:6px;color:var(--t2);font-size:13px;font-weight:500}
 .pa-root.pa-admin-design .pa-admin-switches label{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;gap:12px;border-top:1px solid var(--bd);font-weight:400}
 .pa-root.pa-admin-design .pa-admin-switches label:first-child{border-top:0}
 .pa-root.pa-admin-design .pa-admin-switches input[type=checkbox]{appearance:none;width:30px;height:18px;border:0;border-radius:99px;background:var(--s3);position:relative;flex:none;margin:0;cursor:pointer}

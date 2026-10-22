@@ -5,10 +5,11 @@ export type SubscriptionCoupon={
  discount_kind:"percent"|"fixed";percent_bps:number|null;fixed_minor:number|null;
  max_discount_minor:number|null;min_subtotal_minor:number;max_redemptions:number|null;max_per_store:number|null;
  first_purchase_only:boolean;stack_with_annual:boolean;stack_with_bundle:boolean;
- eligible_offer_keys:string[];starts_at:string|null;expires_at:string|null;
+ eligible_offer_keys:string[];eligible_products:string[];eligible_terms:string[];starts_at:string|null;expires_at:string|null;
  revision:number;created_at:string;updated_at:string;redeemed:number;reserved:number;
 };
 export type SubscriptionCouponList={coupons:SubscriptionCoupon[];next_offset:number|null};
+export type SubscriptionTaxPolicy={id:string;product:"payments"|"ai_credit"|"bundle";term:"monthly"|"yearly"|"one_time";rate_bps:number;revision:number;reason:string;updated_at:string};
 
 /** Decimal BDT input to exact integer poisha. UI never sends floats to SQL. */
 export function parseBdtMinor(input:string):number|null{

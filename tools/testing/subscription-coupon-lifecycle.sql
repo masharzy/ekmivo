@@ -1,7 +1,7 @@
--- Run after 0133/0134/0135/0145/0146 on an isolated control branch.
+-- Run after 0133/0134/0135/0145–0149 on an isolated control branch.
 -- Caller wraps this DO block in a rollback-only migration test.
 DO $tests$
-DECLARE a uuid; w uuid:=gen_random_uuid(); iid uuid:=gen_random_uuid(); v uuid:=gen_random_uuid();
+DECLARE a uuid; manager uuid; old_revision bigint; w uuid:=gen_random_uuid(); iid uuid:=gen_random_uuid(); v uuid:=gen_random_uuid();
  receiver uuid:=gen_random_uuid(); invoice_id_fixture uuid:=gen_random_uuid(); plan text; cid uuid:=gen_random_uuid(); qid uuid:=gen_random_uuid(); k uuid:=gen_random_uuid(); r jsonb; replay jsonb;
 BEGIN
  SELECT user_id INTO a FROM workspace_members m JOIN app_users u ON u.id=m.user_id WHERE m.role='owner' AND u.disabled_at IS NULL LIMIT 1;
@@ -12,14 +12,19 @@ BEGIN
  INSERT INTO platform_subscription_offer_versions(id,offer_key,revision,term,amount_minor,terms,created_by)
  VALUES(v,'phase3_fixture',1,'one_time',10000,'{"name":"Fictional fixture","included_ai_credits":1}',a);
  UPDATE platform_subscription_offers SET status='published',current_version_id=v WHERE offer_key='phase3_fixture';
+ INSERT INTO platform_subscription_tax_policies(product,term,rate_bps,approved_by,reason)
+ VALUES('ai_credit','one_time',0,a,'Fictional zero rate for isolated coupon tests');
  INSERT INTO platform_subscription_purchase_intents(id,actor_id,workspace_id,offer_version_id) VALUES(iid,a,w,v);
  INSERT INTO platform_subscription_purchase_quotes(id,intent_id,revision,offer_version_id,subtotal_minor,total_minor) VALUES(qid,iid,1,v,10000,10000);
  INSERT INTO platform_subscription_quote_lines(quote_id,line_no,label,offer_version_id,quantity,unit_price_minor,subtotal_minor) VALUES(qid,1,'Fictional',v,1,10000,10000);
  INSERT INTO platform_subscription_coupons(id,code_normalized,status,discount_kind,percent_bps,max_redemptions,max_per_store,created_by,updated_by)
  VALUES(cid,'PHASE3_FIXTURE','active','percent',1000,1,1,a,a);
  r:=platform_subscription_coupon_quote(a,iid,k,1,' phase3_fixture ');
- IF (r->>'total_minor')::bigint<>9000 OR (r->>'coupon_discount_minor')::bigint<>1000 OR jsonb_array_length(r->'lines')<>1
+ IF (r->>'total_minor')::bigint<>9000 OR (r->>'coupon_discount_minor')::bigint<>1000
+ OR r->>'coupon_code'<>'PHASE3_FIXTURE' OR jsonb_array_length(r->'lines')<>1
  THEN RAISE EXCEPTION 'percentage/normalization/lines failed'; END IF;
+ IF platform_subscription_coupon_current_quote(a,iid)->>'coupon_code'<>'PHASE3_FIXTURE'
+ THEN RAISE EXCEPTION 'GET failed to restore applied code'; END IF;
  replay:=platform_subscription_coupon_quote(a,iid,k,1,'PHASE3_FIXTURE');
  IF replay<>r THEN RAISE EXCEPTION 'idempotent replay changed'; END IF;
  BEGIN
@@ -32,34 +37,48 @@ BEGIN
  PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),1,'PHASE3_FIXTURE');
  RAISE EXCEPTION 'stale revision accepted'; EXCEPTION WHEN serialization_failure THEN NULL; END;
  r:=platform_subscription_coupon_quote(a,iid,gen_random_uuid(),2,'');
- IF (r->>'total_minor')::bigint<>10000 OR EXISTS(SELECT 1 FROM platform_subscription_coupon_reservations WHERE intent_id=iid AND status='reserved')
+ IF (r->>'total_minor')::bigint<>10000 OR r->>'coupon_code'<>''
+ OR EXISTS(SELECT 1 FROM platform_subscription_coupon_reservations WHERE intent_id=iid AND status='reserved')
  THEN RAISE EXCEPTION 'remove did not release/requote'; END IF;
+ IF platform_subscription_coupon_current_quote(a,iid)->>'coupon_code'<>''
+ THEN RAISE EXCEPTION 'GET showed removed coupon'; END IF;
  UPDATE platform_subscription_coupons SET discount_kind='fixed',percent_bps=NULL,fixed_minor=1500,max_discount_minor=500,revision=revision+1 WHERE id=cid;
  r:=platform_subscription_coupon_quote(a,iid,gen_random_uuid(),3,'PHASE3_FIXTURE');
  IF (r->>'total_minor')::bigint<>9500 THEN RAISE EXCEPTION 'fixed cap failed'; END IF;
  IF (SELECT count(*) FROM platform_subscription_coupon_versions WHERE coupon_id=cid)<>2 THEN RAISE EXCEPTION 'version snapshot missing'; END IF;
+ UPDATE platform_subscription_coupons SET eligible_products=ARRAY['payments'],revision=revision+1 WHERE id=cid;
+ BEGIN
+ PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),4,'PHASE3_FIXTURE');
+ RAISE EXCEPTION 'wrong product accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
+ UPDATE platform_subscription_coupons SET eligible_products=ARRAY['ai_credit'],eligible_terms=ARRAY['yearly'],revision=revision+1 WHERE id=cid;
+ BEGIN
+ PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),4,'PHASE3_FIXTURE');
+ RAISE EXCEPTION 'wrong term accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
+ UPDATE platform_subscription_coupons SET eligible_terms=ARRAY['one_time'],revision=revision+1 WHERE id=cid;
+ r:=platform_subscription_coupon_quote(a,iid,gen_random_uuid(),4,'PHASE3_FIXTURE');
+ IF (r->>'total_minor')::bigint<>9500 THEN RAISE EXCEPTION 'matching product/term rejected'; END IF;
  BEGIN
  UPDATE platform_subscription_coupon_versions SET snapshot='{}' WHERE coupon_id=cid;
  RAISE EXCEPTION 'immutable snapshot changed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  UPDATE platform_subscription_coupons SET min_subtotal_minor=10001,revision=revision+1 WHERE id=cid;
  BEGIN
- PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),4,'PHASE3_FIXTURE');
+ PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),5,'PHASE3_FIXTURE');
  RAISE EXCEPTION 'minimum spend ignored'; EXCEPTION WHEN check_violation THEN NULL; END;
  UPDATE platform_subscription_coupons SET min_subtotal_minor=0,starts_at=now()+interval '1 day',expires_at=now()+interval '2 days',status='scheduled',revision=revision+1 WHERE id=cid;
  BEGIN
- PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),4,'PHASE3_FIXTURE');
+ PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),5,'PHASE3_FIXTURE');
  RAISE EXCEPTION 'scheduled coupon applied early'; EXCEPTION WHEN check_violation THEN NULL; END;
  UPDATE platform_subscription_coupons SET starts_at=now()-interval '2 days',expires_at=now()-interval '1 day',status='active',revision=revision+1 WHERE id=cid;
  BEGIN
- PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),4,'PHASE3_FIXTURE');
+ PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),5,'PHASE3_FIXTURE');
  RAISE EXCEPTION 'expired coupon applied'; EXCEPTION WHEN check_violation THEN NULL; END;
  UPDATE platform_subscription_coupons SET expires_at=NULL,starts_at=NULL,max_discount_minor=NULL,fixed_minor=10000,revision=revision+1 WHERE id=cid;
  BEGIN
- PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),4,'PHASE3_FIXTURE');
+ PERFORM platform_subscription_coupon_quote(a,iid,gen_random_uuid(),5,'PHASE3_FIXTURE');
  RAISE EXCEPTION 'zero due accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
  IF EXISTS(SELECT 1 FROM platform_subscription_coupon_redemptions WHERE coupon_id=cid) THEN RAISE EXCEPTION 'unpaid coupon redeemed'; END IF;
  IF platform_subscription_coupon_reconcile(iid)->>'status'<>'reserved' THEN RAISE EXCEPTION 'unexpired reservation released'; END IF;
- IF (SELECT count(*) FROM platform_subscription_purchase_audit WHERE intent_id=iid)<>3 THEN RAISE EXCEPTION 'audit lost'; END IF;
+ IF (SELECT count(*) FROM platform_subscription_purchase_audit WHERE intent_id=iid)<>4 THEN RAISE EXCEPTION 'audit lost'; END IF;
  INSERT INTO workspaces(id,name,created_by,service_mode) VALUES(receiver,'FICTIONAL rollback receiver',a,'both');
  UPDATE platform_billing_settings SET workspace_id=receiver WHERE singleton;
  SELECT id INTO plan FROM pg13_plans LIMIT 1;
@@ -72,5 +91,25 @@ BEGIN
  IF (SELECT count(*) FROM platform_subscription_coupon_redemptions WHERE invoice_id=invoice_id_fixture)<>1 THEN RAISE EXCEPTION 'verified invoice hook did not redeem'; END IF;
  PERFORM platform_subscription_coupon_reconcile(iid);
  IF (SELECT count(*) FROM platform_subscription_coupon_redemptions WHERE invoice_id=invoice_id_fixture)<>1 THEN RAISE EXCEPTION 'redemption replay duplicated'; END IF;
+ SELECT p.user_id INTO manager FROM platform_administrators p JOIN app_users u ON u.id=p.user_id
+ WHERE p.role='super_admin' AND u.disabled_at IS NULL LIMIT 1;
+ IF manager IS NULL THEN RAISE EXCEPTION 'test requires isolated super admin fixture'; END IF;
+ BEGIN
+  PERFORM platform_subscription_coupon_admin(gen_random_uuid(),'save','{}'::jsonb);
+  RAISE EXCEPTION 'non admin was allowed'; EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ UPDATE platform_subscription_coupons SET status='paused',revision=revision+1 WHERE id=cid;
+ SELECT revision INTO old_revision FROM platform_subscription_coupons WHERE id=cid;
+ r:=platform_subscription_coupon_admin(manager,'save',jsonb_build_object(
+  'id',cid,'revision',old_revision,'code','PHASE3_FIXTURE','discount_kind','fixed',
+  'fixed_minor',900,'min_subtotal_minor',0,'max_redemptions',1,'max_per_store',1,
+  'eligible_offer_keys',jsonb_build_array(),'eligible_products',jsonb_build_array('ai_credit'),
+  'eligible_terms',jsonb_build_array('one_time'),'reason','Paused campaign change after verified use'));
+ IF (r->>'revision')::bigint<>old_revision+1 THEN RAISE EXCEPTION 'paused post-use edit failed'; END IF;
+ IF (SELECT count(*) FROM platform_subscription_coupon_versions WHERE coupon_id=cid)
+  <> (SELECT revision FROM platform_subscription_coupons WHERE id=cid)
+ THEN RAISE EXCEPTION 'post-use version missing'; END IF;
+ IF (SELECT coupon_discount_minor FROM platform_subscription_purchase_quotes WHERE id=(SELECT quote_id FROM platform_subscription_coupon_reservations WHERE status='redeemed' AND intent_id=iid))<>500
+ THEN RAISE EXCEPTION 'redeemed historic quote was altered'; END IF;
 
 END $tests$;

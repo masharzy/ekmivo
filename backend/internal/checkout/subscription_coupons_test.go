@@ -13,7 +13,7 @@ func TestSubscriptionCouponErrorsDoNotLeakDatabaseDetails(t *testing.T) {
 		status        int
 	}{
 		{"COUPON_INELIGIBLE", "23514", 422}, {"ZERO_DUE_POLICY_REQUIRED", "23514", 422},
-		{"TAX_REQUOTE_REQUIRED", "23514", 422}, {"QUOTE_CHANGED", "40001", 409},
+		{"TAX_REQUOTE_REQUIRED", "23514", 422}, {"TAX_POLICY_REQUIRED", "23514", 422}, {"QUOTE_CHANGED", "40001", 409},
 		{"IDEMPOTENCY_CONFLICT", "23505", 409}, {"private database detail", "42501", 403},
 	} {
 		t.Run(tc.message, func(t *testing.T) {
