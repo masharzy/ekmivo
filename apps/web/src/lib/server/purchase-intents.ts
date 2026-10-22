@@ -1,5 +1,5 @@
 import "server-only";
-import {randomBytes} from "node:crypto";
+import {randomBytes,createHmac} from "node:crypto";
 import {cookies} from "next/headers";
 import {database} from "./db";
 import {currentUser,hashToken,preferredWorkspaceFor,primaryStoreFor} from "./auth";
@@ -67,8 +67,11 @@ export async function createPurchase(input:{offerKey:string;term:string;quantity
   throw new IntentError("INVALID_QUANTITY",422);
  if(input.legacyPlanId&&!/^[a-z][a-z0-9_-]{1,39}$/.test(input.legacyPlanId))throw new IntentError("INVALID_PLAN",422);
  if(input.idempotencyKey&&!IDEMPOTENCY.test(input.idempotencyKey))throw new IntentError("INVALID_IDEMPOTENCY_KEY",422);
- const token=randomBytes(32).toString("base64url");
- const key=hashToken(guest+":"+(input.idempotencyKey||randomBytes(24).toString("base64url")));
+ // A stable 256-bit capability allows safe recovery after a lost POST response.
+ // Its secret is the original 256-bit HttpOnly guest session, never a user ID.
+ const nonce=input.idempotencyKey||randomBytes(24).toString("base64url");
+ const token=createHmac("sha256",guest).update("ekmivo:purchase:"+nonce).digest("base64url");
+ const key=hashToken(guest+":"+nonce);
  const rows=await database()`
   INSERT INTO platform_subscription_purchase_intents
   (public_token_sha256,guest_session_sha256,actor_id,offer_version_id,coupon_id,
@@ -86,6 +89,7 @@ export async function createPurchase(input:{offerKey:string;term:string;quantity
     p.coupon_id!==coupon||Number(p.requested_quantity)!==quantity||
     p.legacy_plan_id!==(input.legacyPlanId||null)||(p.actor_id&&String(p.actor_id)!==user?.id))
    throw new IntentError("IDEMPOTENCY_CONFLICT");
+  if(hashToken(token)===p.public_token_sha256){await rememberPurchase(token);return token;}
   if(active&&hashToken(active)===p.public_token_sha256)return active;
   throw new IntentError("RETRY_USING_ORIGINAL_INTENT");
  }
