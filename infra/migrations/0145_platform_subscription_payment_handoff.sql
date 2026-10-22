@@ -117,6 +117,8 @@ RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg
 DECLARE h platform_subscription_payment_handoffs;
 BEGIN
  PERFORM pg13_actor(w,a,false);
+ IF NOT EXISTS(SELECT 1 FROM platform_primary_stores WHERE user_id=a AND workspace_id=w)
+ THEN RAISE EXCEPTION 'buyer Store binding unavailable' USING ERRCODE='42501';END IF;
  SELECT * INTO h FROM platform_subscription_payment_handoffs WHERE intent_id=purchase AND workspace_id=w;
  IF h.intent_id IS NULL THEN RETURN NULL;END IF;
  RETURN to_jsonb(h);
