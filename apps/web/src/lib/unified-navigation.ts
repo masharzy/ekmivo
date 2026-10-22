@@ -120,7 +120,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   "sms-data":{"":{section:"incoming",service:"payments"}},
   invoices:{"":{section:"invoices",service:"payments"}},
   customers:{financial:{section:"customers",service:"payments"},"":{section:payments?"customers":"contacts",service:defaultService},leads:{section:"leads",service:defaultService},"follow-ups":{section:"follow-ups",service:defaultService},broadcasts:{section:"broadcasts",service:"ai"},bookings:{section:"bookings",service:"ai"},posts:{section:"posts",service:"ai"}},
-  reports:{"":{section:"reports",service:defaultService},payments:{section:"reports",service:"payments"},ai:{section:"reports",service:"ai"}},
+  reports:{"":{section:"reports",service:defaultService},orders:{section:"reports",service:defaultService},payments:{section:"reports",service:"payments"},ai:{section:"reports",service:"ai"}},
  };
  let destination:UnifiedDestination|undefined;
  if(root==="settings"){

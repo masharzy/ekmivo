@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {createHash,randomUUID} from "node:crypto";
+import {readFile} from "node:fs/promises";
 import postgres from "postgres";
 
 // Independent source-to-UI acceptance. Synthetic Store/order, disposable loopback PostgreSQL only.
@@ -34,11 +35,27 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   assert.deepEqual((await scan(barcode,owner,'sandbox')).items,[],'barcode search leaked across realms');
   await assert.rejects(()=>scan(barcode,viewer,'live',foreign),e=>e.code==='42501');
   await assert.rejects(()=>scan(''),e=>e.code==='22023');
+  const report=async(who=owner,realm='live',scope=store,status='',source='',agent=null)=>(await db`
+   SELECT commerce_order_report(${scope},${realm},${who},NULL::date,NULL::date,${status},${source},${agent}::uuid) data`)[0].data;
+  assert.equal((await report()).total,1,'Store report must include its order');
+  assert.equal((await report(owner,'sandbox')).total,0,'sandbox report included live order');
+  assert.equal((await report(owner,'live',store,'cancelled')).total,0,'report filter ignored status');
+  assert.equal((await report(owner,'live',store,'draft','manual')).total,1,'report source/status filters failed');
+  assert.equal((await report(owner,'live',store,'','api')).total,0,'report source filter failed');
+  assert.equal((await report(viewer)).can_export,false,'viewer must not export team names');
+  assert.equal((await report(viewer)).rows[0].assignee_name,null,'viewer team name was exposed');
+  await assert.rejects(()=>report(viewer,'live',store,'','',owner),e=>e.code==='22023');
+  await assert.rejects(()=>report(owner,'live',foreign),e=>e.code==='42501');
+  await assert.rejects(()=>db`SELECT commerce_order_report(${store},'live',${owner},current_date, current_date-1,'','',NULL::uuid)`,
+   e=>e.code==='22023','report accepted a reversed date window');
+  await assert.rejects(()=>db`SELECT commerce_order_report(${store},'live',${owner},current_date-500,current_date,'','',NULL::uuid)`,
+   e=>e.code==='22023','report accepted an unbounded date window');
   const read=async(who=owner,realm="live",scope=store,id=order)=>(await db`SELECT commerce_assignment_read(${scope},${realm},${who},${id}) data`)[0].data;
   const write=async(body,key=randomUUID(),who=owner,realm="live",scope=store)=>(await db`SELECT commerce_assignment_write(${scope},${realm},${who},${key},${db.json(body)}) data`)[0].data;
   assert.equal((await read()).revision,0);
   assert.equal((await read()).agents.some(a=>a.id===owner),true);
   assert.equal((await read(viewer)).can_assign,false);
+  assert.equal((await read(viewer)).assignee_id,null,'viewer assignment exposed a staff UUID');
   assert.deepEqual((await read(viewer)).agents,[],"viewer must not enumerate team identities");
   await assert.rejects(()=>read(viewer,"live",foreign,otherOrder),e=>e.code==="42501");
   await assert.rejects(()=>read(owner,"sandbox"),e=>e.code==="42501");
@@ -52,10 +69,15 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   await assert.rejects(()=>write({id:order,revision:0,assignee_id:null}),e=>e.code==="40001");
   assert.equal((await read()).assignee_id,owner);
   assert.equal((await read()).history.length,1);
+  assert.equal((await read(viewer)).assigned,true,'viewer did not receive a safe assigned indicator');
+  assert.equal((await read(viewer)).assignee_id,null,'viewer saw an assigned staff UUID');
+  assert.equal((await read(viewer)).history[0].assignee_id,null,'viewer assignment history leaked team identity');
+  assert.equal((await read(viewer)).history[0].assigned,true,'viewer audit state was masked incorrectly');
   for(const role of ["ekmivo_financial_projection","ekmivo_financial_runtime"]){
    assert.equal((await db`SELECT has_table_privilege(${role},'commerce_order_assignments','UPDATE') ok`)[0].ok,false);
    assert.equal((await db`SELECT has_function_privilege(${role},'commerce_assignment_write(uuid,text,uuid,uuid,jsonb)','EXECUTE') ok`)[0].ok,true);
    assert.equal((await db`SELECT has_function_privilege(${role},'commerce_order_scan(uuid,text,uuid,text,integer,text,text)','EXECUTE') ok`)[0].ok,true);
+   assert.equal((await db`SELECT has_function_privilege(${role},'commerce_order_report(uuid,text,uuid,date,date,text,text,uuid)','EXECUTE') ok`)[0].ok,true);
   }
   const makeContext=async(token)=>{const ctx=await browser.newContext();await ctx.addCookies([
    {name:"ekmivo-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
@@ -96,6 +118,12 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
      assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"order assignment horizontal overflow");
      responsive++;
+     const reportResponse=await page.goto(origin+'/reports/orders');
+     assert.equal(reportResponse.status(),200);
+     await page.getByRole('heading',{name:locale==='bn'?'অর্ডার রিপোর্ট':'Order reports'}).waitFor();
+     assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
+     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'order reporting horizontal overflow');
+     responsive++;
     }
    }
   }
@@ -111,6 +139,9 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   assert.equal((await read()).assignee_id,owner,"browser click did not persist assignment");
   assert.equal((await read()).revision,3);
   assert.equal((await read()).history.length,3);
+  assert.equal((await report()).rows[0].assignee_id,owner,'reports must reflect durable order assignment');
+  assert.equal((await report(owner,'live',store,'','',owner)).total,1,'agent report filter failed');
+  assert.equal((await report(owner,'live',store,'','',viewer)).total,0,'agent filter leaked rows');
   await page.goto(origin+"/orders/scan");
   await page.getByRole('heading',{name:'Scan & pack'}).waitFor();
   await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
@@ -123,10 +154,21 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   assert.equal(await importView.getAttribute('open'),'','catalog import deep link must open a real preview workflow');
   assert.equal((await page.goto(origin+'/orders/courier')).status(),200);
   await page.getByRole('heading',{name:'Delivery'}).waitFor();
+  assert.equal((await page.goto(origin+'/reports/orders')).status(),200);
+  await page.getByRole('heading',{name:'Order reports'}).waitFor();
+  await page.getByRole('button',{name:'Download CSV'}).waitFor();
+  const [download]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Download CSV'}).click()]);
+  const csv=await readFile(await download.path(),'utf8');
+  assert.match(csv,/"Date","Order status","Source","Assigned team member","Orders"/,'operational report CSV header missing');
+  assert.match(csv,/"manual"/,'operational report CSV did not export authorized source summary');
+  assert.doesNotMatch(csv,/01700000000|payment_amount|recipient|secret_cipher/,'operational report export leaked customer or finance source');
+  await page.getByRole('combobox',{name:'Status'}).selectOption('cancelled');
+  await page.getByRole('button',{name:'Apply filters'}).click();
+  await page.getByText('No orders match these filters.').waitFor();
   await db`UPDATE commerce_orders SET status='cancelled' WHERE id=${order}`;
   await assert.rejects(()=>write({id:order,revision:3,assignee_id:null}),e=>e.code==="42501","closed order changed assignment");
-  assert.equal(responsive,16);
-  console.log(`BRIOFOLD ORDER ASSIGNMENT + SCAN PASS: Store/realm/RBAC, serial optimistic revision, idempotent replay, immutable audit, exact barcode/SKU lookup and Go/Next/browser; ${responsive} EN/BN theme/viewport cases`);
+  assert.equal(responsive,32);
+  console.log(`BRIOFOLD ORDER ASSIGNMENT + SCAN + REPORT PASS: Store/realm/RBAC, serial optimistic revision, idempotent replay, immutable audit, exact barcode/SKU, operational aggregates/filters/export permissions and Go/Next/browser; ${responsive} EN/BN theme/viewport cases`);
  }finally{
   if(ownerContext)await ownerContext.close();
   if(viewerContext)await viewerContext.close();

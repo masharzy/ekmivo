@@ -22,11 +22,13 @@ import {CustomerCRMPage} from "./customer-crm-page";
 import {CommentAutomation} from "./comment-automation";
 import {BriofoldGrowthReports} from "./briofold-growth-reports";
 import {GrowthOperationsPage} from "./growth-operations-page";
+import {BriofoldOrderReport} from "./briofold-order-report";
 
 export const unifiedDynamic="force-dynamic";
 
-export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,paymentLinksMode}:{
+export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,paymentLinksMode,reportFilters}:{
  locale:string;root:UnifiedRoot;view?:string[];thread?:string;paymentLinksMode?:"requests";
+ reportFilters?:Record<string,string|string[]|undefined>;
 }){
  if(thread&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(thread))notFound();
  const locale=raw==="en"?"en":"bn";
@@ -42,12 +44,16 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  if(setup&&setup!=="complete")redirect("/setup");
  const destination=unifiedDestination(workspace.mode,root,view);
  if(!destination)notFound();
+ if(root==="reports"&&view[0]==="orders"&&process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED!=="true")notFound();
  const {section,service,kind,detailId}=destination;
  const paymentContext=service==="payments"
   ?await paymentContextFor(workspace,user.id,undefined)
   :undefined;
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :root==="reports"&&view[0]==="orders"
+   ?<BriofoldOrderReport workspaceId={workspace.id} actorId={user.id} locale={locale}
+     environment={paymentContext?.environment??"live"} filters={reportFilters}/>
   :root==="reports"&&view[0]!=="payments"&&process.env.BRIOFOLD_GROWTH_REPORTS_ENABLED==="true"
    ?<><BriofoldGrowthReports workspaceId={workspace.id} actorId={user.id} locale={locale}
       environment={paymentContext?.environment??"live"} mode={workspace.mode} focus={view[0]==="ai"?"ai":"all"}

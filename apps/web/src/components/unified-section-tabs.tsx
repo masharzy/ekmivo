@@ -36,6 +36,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  ],
  reports:[
   {en:"Business activity",bn:"ব্যবসার কার্যক্রম",href:"/reports",service:"common"},
+  {en:"Order reports",bn:"অর্ডার রিপোর্ট",href:"/reports/orders",service:"common"},
   {en:"Payment reports",bn:"পেমেন্ট রিপোর্ট",href:"/reports/payments",service:"payments"},
   {en:"AI reports",bn:"AI রিপোর্ট",href:"/reports/ai",service:"ai"},
  ]
@@ -45,7 +46,8 @@ export function UnifiedSectionTabs({root,mode,locale,view}:{
  root:UnifiedRoot;mode:BusinessMode;locale:"bn"|"en";view:readonly string[];
 }){
  const available=tabs[root]?.filter(tab=>enabledUnifiedService(mode,tab.service)&&
-   (tab.href!=="/orders/scan"||process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true"))??[];
+   (tab.href!=="/orders/scan"||process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true")&&
+   (tab.href!=="/reports/orders"||process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED==="true"))??[];
  if(!available.length)return null;
  const active="/"+root+(view.length?"/"+view.join("/"):"");
  return <nav className={styles.tabs} aria-label={locale==="bn"?"পৃষ্ঠার বিভাগ":"Page sections"}>

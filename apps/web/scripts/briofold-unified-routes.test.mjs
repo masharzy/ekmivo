@@ -125,6 +125,24 @@ test("canonical commerce deep links reuse real scoped scanner, courier and catal
  assert.match(entry,/props\.view==="products-sync"\?"products"/);
  assert.match(entry,/props\.view==="courier"\?"delivery"/);
 });
+test("order reports are explicit and fail closed behind a deployment flag",()=>{
+ for(const mode of ["ai","commerce","both"])
+  assert.equal(navigation.unifiedDestination(mode,"reports",["orders"]).section,"reports");
+ assert.equal(navigation.unifiedDestination("off","reports",["orders"]),null);
+ const route=source("components/unified-merchant-route.tsx");
+ assert.match(route,/BRIOFOLD_COMMERCE_REPORTS_ENABLED!=="true"/);
+ assert.match(route,/BriofoldOrderReport/);
+ const report=source("components/briofold-order-report.tsx");
+ assert.match(report,/commerce_order_report/);
+ assert.match(report,/No totals have been assumed/);
+});
+test("notifications open for the preferred single Store without a legacy workspace detour",()=>{
+ const entry=source("app/[locale]/notifications/page.tsx");
+ assert.match(entry,/preferredWorkspaceFor\(user\.id\)/);
+ assert.match(entry,/aiEnabled&&<InboxAlerts/);
+ assert.match(entry,/paymentContext&&<PaymentNotificationCenter/);
+ assert.doesNotMatch(entry,/workspacesFor|redirect\(`\/w\//);
+});
 test("canonical product gates cover all roots, settings and valid subroutes",()=>{
  for(const mode of ["ai","commerce","both","off"]){
   for(const item of navigation.unifiedNavigation){
