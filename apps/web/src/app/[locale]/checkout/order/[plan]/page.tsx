@@ -4,6 +4,7 @@ import {notFound,redirect} from "next/navigation";
 import {requireUser,preferredWorkspaceFor} from "../../../../../lib/server/auth";
 import {publicPaymentPlans} from "../../../../../lib/server/payment-plans";
 import {SubscriptionOrderSummary} from "../../../../../components/subscription-order-summary";
+import {FreePurchaseClaim} from "../../../../../components/free-purchase-claim";
 import {publishedSubscriptionPolicies} from "../../../../../lib/server/subscription-policies";
 import {resumePurchase,validPurchaseToken,IntentError} from "../../../../../lib/server/purchase-intents";
 import "../../../../../components/subscription-order-summary.css";
@@ -35,7 +36,9 @@ export default async function SubscriptionOrderPage({params}:{params:Promise<{lo
   }
   if(flow.stage!=="summary")redirect(flow.stage==="login"?"/login":flow.stage==="verify"?"/verify-email":flow.stage==="store"?"/workspaces":"/setup");
   const choice=flow.intent;
-  const store=await preferredWorkspaceFor(choice.actorId!);
+  const [store,freeCatalog]=await Promise.all([preferredWorkspaceFor(choice.actorId!),publicPaymentPlans()]);
+  const freeReady=choice.product==="payments"&&choice.quantity===1&&choice.amountMinor===0&&!choice.couponCode&&
+   !freeCatalog.unavailable&&freeCatalog.plans.some(item=>item.version_id===choice.offerVersionId&&item.terms.kind==="free");
   const money=new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(choice.amountMinor/100);
   const title=choice.product==="payments"?(bn?"পেমেন্টস":"Payments"):choice.product==="ai_credit"?(bn?"এআই প্রিপেইড ক্রেডিট":"AI prepaid credits"):(bn?"বান্ডল":"Bundle");
   const term=choice.term==="one_time"?(bn?"এককালীন":"One-time"):choice.term==="yearly"?(bn?"বার্ষিক":"Yearly"):(bn?"মাসিক":"Monthly");
@@ -58,7 +61,7 @@ export default async function SubscriptionOrderPage({params}:{params:Promise<{lo
     <div className="ek-order-field"><span>{bn?"প্রকাশিত ইউনিট মূল্য":"Published unit price"}</span><strong>{money}</strong></div>
     <div className="ek-order-field"><span>{bn?"নির্বাচিত কুপন":"Selected coupon"}</span><strong>{choice.couponCode||"—"}</strong></div>
     <p role="status">{bn?"পেমেন্টের মোট মূল্য এখনো সার্ভার থেকে যাচাই করা হয়নি। বার্ষিক/বান্ডল ছাড়, কুপন, ট্যাক্স ও প্রোরেশনসহ চূড়ান্ত মূল্য নিশ্চিত হওয়ার আগে পেমেন্ট শুরু করা যাবে না।":"The server has not issued a final payable quote. No payment can start until discounts, coupon, tax and proration have been verified by the authoritative billing engine."}</p>
-    <Link href="/pricing">{bn?"অফারগুলো দেখুন":"View offers"}</Link>
+    {freeReady?<FreePurchaseClaim token={plan} locale={locale}/>:<Link href="/pricing">{bn?"অফারগুলো দেখুন":"View offers"}</Link>}
    </section>
   </div></main>;
  }
