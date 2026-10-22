@@ -6,14 +6,16 @@ type Campaign={id:string;kind:"broadcast"|"post";title:string;body:string;audien
 type Resource={id:string;title:string;active:boolean;revision:number};
 type Booking={id:string;resource_id:string;customer_id:string|null;starts_at:string;ends_at:string;time_zone:string;summary:string;status:"requested"|"confirmed"|"cancelled"|"completed";revision:number};
 export type GrowthOperationsData={items:(Campaign|Booking)[];resources?:Resource[];can_manage:boolean;potential_audience?:number;send_ready?:boolean;provider_status:string;note?:string};
+type ConsentPreview={channel:string;audience:string;candidate_profiles:number;profile_permission_blocked:number;identity_unverified:number;channel_proof_missing:number;suppressed:number;potentially_eligible_with_proof:number;send_ready:false;provider_status:string};
 type Pending={action:string;body:Record<string,unknown>;key:string;time:number};
 type CampaignDraft=Pick<Campaign,"title"|"body"|"audience"|"time_zone"|"status">&{planned_at:string};
 const emptyCampaign:CampaignDraft={title:"",body:"",audience:"all",time_zone:"Asia/Dhaka",status:"draft",planned_at:""};
 function localInputDate(iso:string){const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60_000).toISOString().slice(0,16);}
-export function GrowthOperations({workspaceId,actorId,bn,environment,kind,initial}:{workspaceId:string;actorId:string;bn:boolean;environment:"live"|"sandbox";kind:"broadcast"|"post"|"booking";initial:GrowthOperationsData|null}){
+export function GrowthOperations({workspaceId,actorId,bn,environment,kind,initial,consentEnabled}:{workspaceId:string;actorId:string;bn:boolean;environment:"live"|"sandbox";kind:"broadcast"|"post"|"booking";initial:GrowthOperationsData|null;consentEnabled:boolean}){
  const t=(en:string,be:string)=>bn?be:en;
  const [data,setData]=useState(initial),[error,setError]=useState(initial?"":t("This feature is unavailable until the growth migration is deployed.","গ্রোথ মাইগ্রেশন চালু না হওয়া পর্যন্ত এই ফিচার পাওয়া যাবে না।")),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
  const [editing,setEditing]=useState<Campaign|null>(null),[campaign,setCampaign]=useState(emptyCampaign),[resourceName,setResourceName]=useState(""),[resource,setResource]=useState(""),[customer,setCustomer]=useState(""),[summary,setSummary]=useState(""),[starts,setStarts]=useState(""),[ends,setEnds]=useState("");
+ const [consentChannel,setConsentChannel]=useState("email"),[consentSegment,setConsentSegment]=useState("all"),[consentPreview,setConsentPreview]=useState<ConsentPreview|null>(null),[suppressCustomer,setSuppressCustomer]=useState(""),[reviewing,setReviewing]=useState(false);
  const [uncertain,setUncertain]=useState<Pending|null>(null),lock=useRef(false);
  const endpoint=`/api/go/workspaces/${workspaceId}/growth?environment=${environment}`;
  const pendingKey=`growth-pending:${actorId}:${workspaceId}:${environment}:${kind}`;
@@ -67,6 +69,18 @@ export function GrowthOperations({workspaceId,actorId,bn,environment,kind,initia
   const ok=await run("booking-create",{resource_id:resource,customer_id:customer||null,summary:summary.trim(),time_zone:"Asia/Dhaka",starts_at:new Date(starts).toISOString(),ends_at:new Date(ends).toISOString()});
   if(ok){setSummary("");setStarts("");setEnds("");setCustomer("");}
  }
+ async function reviewAudience(){
+  if(!consentEnabled||!data?.can_manage)return;
+  setReviewing(true);setConsentPreview(null);setError("");
+  try{
+   const response=await fetch(endpoint+"&kind=audience&channel="+encodeURIComponent(consentChannel)+"&audience="+encodeURIComponent(consentSegment),{cache:"no-store"});
+   if(!response.ok)throw Error("HTTP "+response.status);
+   const result=await response.json() as ConsentPreview;
+   if(result.send_ready!==false||result.channel!==consentChannel||result.audience!==consentSegment)throw Error("Invalid safety preview");
+   setConsentPreview(result);
+  }catch{setError(t("Consent preview unavailable. No audience is approved for sending.","সম্মতি যাচাই পাওয়া যাচ্ছে না। কাউকে মেসেজ পাঠানোর অনুমোদন নেই।"));}
+  finally{setReviewing(false);}
+ }
  const isBooking=kind==="booking";
  const campaigns=!isBooking?(data?.items??[]) as Campaign[]:[];
  const bookings=isBooking?(data?.items??[]) as Booking[]:[];
@@ -74,6 +88,25 @@ export function GrowthOperations({workspaceId,actorId,bn,environment,kind,initia
   <header className={styles.header}><div><p className={styles.kicker}>{t("Single Store · Growth","একক স্টোর · গ্রোথ")}</p><h1>{isBooking?t("Bookings & availability","বুকিং ও সময়সূচি"):kind==="post"?t("Campaign posts","ক্যাম্পেইন পোস্ট"):t("Broadcast drafts","ব্রডকাস্ট ড্রাফট")}</h1>
   <p>{isBooking?t("Manage internal appointments with conflict protection. No external calendar or notification is connected.","অভ্যন্তরীণ অ্যাপয়েন্টমেন্ট পরিচালনা করুন; একই সময়ের বুকিং প্রতিরোধ করা হবে। বাইরের ক্যালেন্ডার বা নোটিফিকেশন সংযুক্ত নয়।"):t("Draft and plan content only. Verified marketing opt-in and an approved delivery provider are required before any customer send.","শুধু কনটেন্টের খসড়া ও পরিকল্পনা করুন। গ্রাহককে পাঠানোর আগে যাচাইকৃত সম্মতি ও অনুমোদিত প্রোভাইডার লাগবে।")}</p></div><button type="button" onClick={()=>void refresh().catch(()=>setError(t("Unable to reload.","আবার লোড হচ্ছে না।")))} disabled={busy}>{t("Refresh","রিফ্রেশ")}</button></header>
   {!isBooking&&<div className={styles.notice} role="status"><strong>{t("Sending is disabled","পাঠানো বন্ধ আছে")}</strong><p>{t("Potential matching CRM profiles:","সম্ভাব্য CRM প্রোফাইল:")} {data?.potential_audience??"—"}. {t("A profile preference or verified identity does not prove provider marketing consent. No send queue is activated.","প্রোফাইলের পছন্দ বা পরিচয় যাচাই প্রোভাইডারের প্রচারণা-সম্মতির প্রমাণ নয়। কোনো সেন্ড কিউ চালু নেই।")}</p></div>}
+  {!isBooking&&consentEnabled&&data?.can_manage&&<div className={styles.panel}>
+   <h2>{t("Channel consent & suppression review","চ্যানেলের সম্মতি ও অপ্ট-আউট যাচাই")}</h2>
+   <p>{t("Review aggregate opt-in evidence before planning. Provider delivery remains disabled. These counts are not a send authorization.","পরিকল্পনার আগে সম্মতির প্রমাণের সারসংক্ষেপ দেখুন। প্রোভাইডারে পাঠানো বন্ধ আছে; সংখ্যাগুলো পাঠানোর অনুমোদন নয়।")}</p>
+   <div className={styles.two}>
+    <label>{t("Channel","চ্যানেল")}<select value={consentChannel} onChange={e=>{setConsentChannel(e.target.value);setConsentPreview(null);}}><option value="email">Email</option><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option><option value="messenger">Messenger</option><option value="instagram">Instagram</option></select></label>
+    <label>{t("Audience","গ্রাহক দল")}<select value={consentSegment} onChange={e=>{setConsentSegment(e.target.value);setConsentPreview(null);}}><option value="all">{t("All profiles","সব প্রোফাইল")}</option><option value="qualified">{t("Qualified leads","যোগ্য লিড")}</option><option value="won">{t("Won customers","সফল গ্রাহক")}</option></select></label>
+   </div>
+   <button type="button" disabled={busy||reviewing} onClick={()=>void reviewAudience()}>{reviewing?t("Checking…","যাচাই হচ্ছে…"):t("Review consent evidence","সম্মতি যাচাই করুন")}</button>
+   {consentPreview&&<div className={styles.notice} role="status"><strong>{t("Not send-ready · review only","পাঠানোর জন্য প্রস্তুত নয় · শুধু যাচাই")}</strong>
+    <p>{t("Profiles:","প্রোফাইল:")} {consentPreview.candidate_profiles} · {t("Profile opted-out/DNC:","অপ্ট-আউট/যোগাযোগ নিষেধ:")} {consentPreview.profile_permission_blocked} · {t("Identity unverified:","পরিচয় যাচাই হয়নি:")} {consentPreview.identity_unverified}</p>
+    <p>{t("Channel proof missing:","চ্যানেলের সম্মতির প্রমাণ নেই:")} {consentPreview.channel_proof_missing} · {t("Suppressed:","ব্লক করা হয়েছে:")} {consentPreview.suppressed} · {t("Potentially eligible on record:","রেকর্ড অনুযায়ী সম্ভাব্য যোগ্য:")} {consentPreview.potentially_eligible_with_proof}</p>
+    <small>{t("Checks overlap. At actual dispatch, quiet hours, expiration, provider template rules and fresh opt-out must be revalidated.","কারণগুলো একাধিক হতে পারে। পাঠানোর সময় quiet hours, মেয়াদ, প্রোভাইডার নিয়ম ও নতুন অপ্ট-আউট পুনরায় যাচাই জরুরি।")}</small>
+   </div>}
+   <form onSubmit={e=>{e.preventDefault();void run("suppress-contact",{customer_id:suppressCustomer,channel:consentChannel,reason:"customer-request"}).then(ok=>{if(ok){setSuppressCustomer("");setConsentPreview(null);}});}}>
+    <label>{t("Record customer opt-out (same Store customer ID)","গ্রাহকের অপ্ট-আউট লিখুন (একই স্টোরের গ্রাহক ID)")}<input required pattern="[0-9a-fA-F-]{36}" value={suppressCustomer} onChange={e=>setSuppressCustomer(e.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></label>
+    <button disabled={busy||reviewing||Boolean(uncertain)}>{t("Permanently suppress on channel","এই চ্যানেলে স্থায়ীভাবে বন্ধ করুন")}</button>
+   </form>
+   <p>{t("Opt-outs cannot be undone in this screen. Verified future re-consent requires a trusted provider flow.","এখানে অপ্ট-আউট বাতিল করা যায় না। নতুন সম্মতি যাচাই করতে অনুমোদিত প্রোভাইডার প্রক্রিয়া লাগবে।")}</p>
+  </div>}
   {error&&<p className={styles.error} role="alert">{error}</p>}{message&&<p className={styles.success} role="status">{message}</p>}
   {uncertain&&<div className={styles.notice} role="alert"><strong>{t("Previous operation unconfirmed","আগের কাজ নিশ্চিত নয়")}</strong><button type="button" disabled={busy} onClick={()=>void run("",{},true)}>{t("Retry identical operation","একই কাজ আবার চেষ্টা")}</button><button type="button" disabled={busy} onClick={()=>void refresh().then(()=>{setUncertain(null);try{sessionStorage.removeItem(pendingKey);}catch{/* Best effort. */}setError("");}).catch(()=>setError(t("Unable to inspect current records.","বর্তমান তথ্য দেখা যাচ্ছে না।")))}>{t("Inspect records and clear","তালিকা দেখে পরের কাজে যান")}</button></div>}
   {!data?<div className={styles.notice}><p>{t("Data source is unavailable; no empty result is implied.","ডেটার উৎস পাওয়া যাচ্ছে না; তালিকা ফাঁকা বলে ধরে নেওয়া হচ্ছে না।")}</p></div>:isBooking?<div className={styles.grid}>
