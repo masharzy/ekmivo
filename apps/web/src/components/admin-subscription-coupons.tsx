@@ -3,7 +3,7 @@ import Link from "next/link";
 import {useActionState,useEffect,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
 import {saveSubscriptionCoupon,saveSubscriptionTaxPolicy,transitionSubscriptionCoupon,subscriptionCouponHistory,type CouponAdminState} from "../actions/admin-subscription-coupons";
-import {formatBdtMinor,formatPercentBps,type SubscriptionCoupon,type SubscriptionCouponList,type SubscriptionTaxPolicy} from "../lib/subscription-coupons";
+import {adminCouponMessage,formatBdtMinor,formatPercentBps,type SubscriptionCoupon,type SubscriptionCouponList,type SubscriptionTaxPolicy} from "../lib/subscription-coupons";
 
 const idle:CouponAdminState={status:"idle",message:""};
 type Locale="bn"|"en";
@@ -46,7 +46,7 @@ function CouponForm({coupon,locale,onClose}:{coupon:SubscriptionCoupon|null;loca
      <div className="pa-admin-form-pair"><label>{t("Starts UTC (optional)","শুরু UTC (ঐচ্ছিক)")}<input name="starts_at" type="datetime-local" defaultValue={isoUtc(coupon?.starts_at||null)}/></label><label>{t("Expires UTC (optional)","শেষ UTC (ঐচ্ছিক)")}<input name="expires_at" type="datetime-local" defaultValue={isoUtc(coupon?.expires_at||null)}/></label></div>
      <div className="pa-admin-switches"><label><span>{t("First paid purchase only","শুধু প্রথম পেইড কেনাকাটা")}</span><input name="first_purchase_only" type="checkbox" defaultChecked={coupon?.first_purchase_only||false}/></label><label><span>{t("Stack with yearly saving","বার্ষিক ছাড়ের সাথে চলবে")}</span><input name="stack_with_annual" type="checkbox" defaultChecked={coupon?.stack_with_annual||false}/></label><label><span>{t("Stack with bundle saving","বান্ডেল ছাড়ের সাথে চলবে")}</span><input name="stack_with_bundle" type="checkbox" defaultChecked={coupon?.stack_with_bundle||false}/></label></div>
      <label>{t("Audit reason (required)","পরিবর্তনের কারণ (বাধ্যতামূলক)")}<textarea name="reason" minLength={10} maxLength={500} required placeholder="Campaign owner, goal and approval reference"/></label>
-     {state.status!=="idle"&&<p role="status" className={state.status==="error"?"pa-action-error":"pa-action-success"}>{state.message}</p>}
+     {state.status!=="idle"&&<p role="status" className={state.status==="error"?"pa-action-error":"pa-action-success"}>{adminCouponMessage(state.message,locale)}</p>}
      <p className="pa-subtle">{t("Pause an active campaign before editing. Each edit appends an immutable version; already reserved invoices keep their original quote. Activate separately when ready.","সক্রিয় কুপন বদলাতে আগে Pause করুন। প্রতিটি সম্পাদনায় অপরিবর্তনীয় সংস্করণ যোগ হয়; সংরক্ষিত ইনভয়েসের হিসাব অপরিবর্তিত থাকে।")}</p>
     </div>
     <div className="pa-dialog-foot"><button type="button" className="pa-button" onClick={onClose}>{t("Cancel","বাতিল")}</button><button className="pa-button pa-button-primary" type="submit" disabled={pending}>{pending?t("Saving…","সংরক্ষণ হচ্ছে…"):t("Save revision","সংস্করণ সংরক্ষণ")}</button></div>
@@ -64,7 +64,7 @@ function CouponTransition({coupon,locale}:{coupon:SubscriptionCoupon;locale:Loca
   <label className="pa-sr-only" htmlFor={`coupon-status-${coupon.id}`}>{t("New status","নতুন অবস্থা")}</label><select name="status" id={`coupon-status-${coupon.id}`} disabled={!allowed.length} required defaultValue=""><option value="" disabled>{t("Change status","অবস্থা বদলান")}</option>{allowed.map(v=><option key={v} value={v}>{v}</option>)}</select>
   <label className="pa-sr-only" htmlFor={`coupon-reason-${coupon.id}`}>{t("Audit reason","কারণ")}</label><input name="reason" id={`coupon-reason-${coupon.id}`} minLength={10} maxLength={500} required placeholder={t("Reason (10+ chars)","কারণ (১০+ অক্ষর)")} disabled={!allowed.length}/>
   <button type="submit" className="pa-button" disabled={pending||!allowed.length}>{pending?t("Saving…","সংরক্ষণ হচ্ছে…"):t("Update","আপডেট")}</button>
-  {state.status!=="idle"&&<span className={state.status==="error"?"pa-action-error":"pa-action-success"} role="status">{state.message}</span>}
+  {state.status!=="idle"&&<span className={state.status==="error"?"pa-action-error":"pa-action-success"} role="status">{adminCouponMessage(state.message,locale)}</span>}
  </form>;
 }
 
@@ -102,7 +102,7 @@ function TaxPolicyEditor({locale,rules}:{locale:Locale;rules:SubscriptionTaxPoli
      <input type="hidden" name="revision" value={active?.revision??0}/>
      <label>{t("Approved tax rate (%)","অনুমোদিত করহার (%)")}<input key={`${product}/${term}/${active?.revision??0}`} name="tax_percent" required inputMode="decimal" defaultValue={active?formatPercentBps(active.rate_bps):""} placeholder="0.00"/></label>
      <label>{t("Approval reference and reason","অনুমোদনের সূত্র ও কারণ")}<textarea name="reason" minLength={10} maxLength={500} required placeholder={t("Approved tax treatment and reviewer reference","অনুমোদিত করনীতি ও পর্যালোচকের সূত্র")}/></label>
-     {state.status!=="idle"&&<p role="status" className={state.status==="error"?"pa-action-error":"pa-action-success"}>{state.message}</p>}
+     {state.status!=="idle"&&<p role="status" className={state.status==="error"?"pa-action-error":"pa-action-success"}>{adminCouponMessage(state.message,locale)}</p>}
      <button className="pa-button pa-button-primary" type="submit" disabled={pending}>{pending?t("Saving…","সংরক্ষণ হচ্ছে…"):t("Save approved revision","অনুমোদিত সংস্করণ সংরক্ষণ")}</button>
     </form>
     <div className="pa-table-wrap"><table><thead><tr><th>{t("Product","পণ্য")}</th><th>{t("Term","মেয়াদ")}</th><th>{t("Tax rate","করহার")}</th><th>{t("Revision","সংস্করণ")}</th></tr></thead><tbody>{rules.map(r=><tr key={r.id}><td>{r.product}</td><td>{r.term}</td><td>{formatPercentBps(r.rate_bps)}%</td><td>{r.revision}</td></tr>)}{rules.length===0&&<tr><td colSpan={4}>{t("No approved policy. Coupon requotes are unavailable.","অনুমোদিত নীতি নেই। কুপন পুনর্হিসাব বন্ধ।")}</td></tr>}</tbody></table></div>

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {parseBdtMinor,parsePercentageBps,formatBdtMinor,formatPercentBps} from "../src/lib/subscription-coupons.ts";
+import {parseBdtMinor,parsePercentageBps,formatBdtMinor,formatPercentBps,adminCouponMessage} from "../src/lib/subscription-coupons.ts";
 import {parseCouponQuote,couponErrorCode,couponErrorMessage} from "../src/lib/subscription-coupon-quote.ts";
 
 const web=(path)=>readFileSync(new URL(`../src/${path}`,import.meta.url),"utf8");
@@ -18,6 +18,14 @@ test("percentage conversion is bounded to 0.01–100.00% in basis points",()=>{
  for(const [value,want] of [["0.01",1],["5.50",550],["100",10000]])assert.equal(parsePercentageBps(value),want);
  for(const value of ["0","100.01","101","10.001","-5","1e2",""])assert.equal(parsePercentageBps(value),null,value);
  assert.equal(formatPercentBps(1050),"10.50");
+});
+
+test("Admin coupon validation, optimistic-conflict and MFA feedback are localized",()=>{
+ for(const message of ["Super Admin and MFA verification are required.","Another admin changed this coupon. Refresh and retry.","This coupon code already exists."]){
+  assert.equal(adminCouponMessage(message,"en"),message);
+  assert.match(adminCouponMessage(message,"bn"),/[\u0980-\u09ff]/);
+ }
+ assert.doesNotMatch(adminCouponMessage("private DB detail","bn"),/private/);
 });
 
 test("admin writes require verified super admin, reason, server-side SQL revision and role check",()=>{

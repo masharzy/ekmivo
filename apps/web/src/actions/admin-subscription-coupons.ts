@@ -88,7 +88,7 @@ export async function saveSubscriptionTaxPolicy(_previous:CouponAdminState,form:
  const admin=await requireSuperAdmin();if(!admin)return invalid("Super Admin and MFA verification are required.");
  const product=field(form,"product"),term=field(form,"term"),reason=field(form,"reason");
  const revision=field(form,"revision"),percent=field(form,"tax_percent");
- const rate=percent==="0"||percent==="0.00"?0:parsePercentageBps(percent);
+ const rate=/^0(?:\.0{1,2})?$/.test(percent)?0:parsePercentageBps(percent);
  if(!["payments","ai_credit","bundle"].includes(product)||!["monthly","yearly","one_time"].includes(term)
   ||rate===null||!/^(?:0|[1-9]\d{0,15})$/.test(revision)||reason.length<10||reason.length>500)
   return invalid("Check the product, term, percentage, revision and documented tax approval (10–500 characters).");
