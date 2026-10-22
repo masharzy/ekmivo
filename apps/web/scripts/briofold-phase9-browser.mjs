@@ -149,6 +149,14 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   // The canonical single-Store settings route reads the authoritative *live*
   // financial phone projection. Exercise heartbeat -> Next -> rendered health
   // and deletion without claiming a physical Android/provider test.
+  // Phone writes require the exact CONTROL projection version. Earlier
+  // read-only financial test fixtures intentionally used a synthetic 10000
+  // registry version; reconcile this isolated realm before authoring a phone.
+  const [liveProjection]=await db.unsafe("SELECT source_version,active FROM resolve_financial_projection($1::uuid,'live')",[workspaceId]);
+  assert.equal(liveProjection.active,true,"disposable live Store projection is inactive");
+  const [liveVersion]=await finance.unsafe("SELECT entitlement_version FROM financial_workspace_registry WHERE workspace_id=$1::uuid AND environment='live'",[workspaceId]);
+  if(Number(liveVersion.entitlement_version)!==Number(liveProjection.source_version))
+   await finance.unsafe("SELECT financial_sync_workspace($1::uuid,'live',$2,true)",[workspaceId,Number(liveProjection.source_version)]);
   const heartbeatCreate=await context.request.post(`${base}/phones?environment=live`,{...mutate,data:{name:"CI live heartbeat handset"}});
   assert.equal(heartbeatCreate.status(),200,`disposable live phone create failed: ${await heartbeatCreate.text()}`);
   const heartbeatPhone=await heartbeatCreate.json();
