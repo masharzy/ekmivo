@@ -15,7 +15,7 @@ func (s *Service) HandleReports(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "REPORT_SOURCE_UNAVAILABLE")
 		return
 	}
-	_, _, e := s.documentActor(r, ws, realm, "payments", false)
+	_, role, e := s.documentActor(r, ws, realm, "payments", false)
 	if e != nil {
 		authError(w, e)
 		return
@@ -61,7 +61,19 @@ func (s *Service) HandleReports(w http.ResponseWriter, r *http.Request) {
 	data["open_requested_refund_minor"] = refunds.OpenRequestedMinor
 	// Returned is seller-reported, never independently verified.
 	data["seller_reported_returned_minor"] = refunds.SellerReportedReturnedMinor
+	// Aggregate reports are readable by authorized lower-privilege members, but
+	// invoice-linked customer names and receiving-account identifiers are not.
+	// Enforce this on the HTTP payload itself; hiding a UI tab is insufficient.
+	restrictFinancialReportDetail(data, role)
 	write(w, 200, data)
+}
+
+func restrictFinancialReportDetail(data map[string]any, role string) {
+	if role == "owner" || role == "admin" {
+		return
+	}
+	data["customers"] = []any{}
+	data["accounts"] = []any{}
 }
 func (s *Service) HandleNotifications(w http.ResponseWriter, r *http.Request) {
 	ws, realm := r.PathValue("workspaceID"), explicitRealm(r)

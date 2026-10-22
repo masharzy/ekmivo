@@ -165,6 +165,14 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
    "unverified provider settlement was invented from payment receipts");
   assert.ok(financeReport.refunds.some(row=>row.status==="reviewing"&&row.amount_minor>=1234),
    "seller refund state missing from separately labeled report totals");
+  const viewerReportResponse=await viewerContext.request.get(`${base}/reports?${new URLSearchParams({environment:"live",...reportRange})}`);
+  assert.equal(viewerReportResponse.status(),200,
+   `viewer report aggregate read failed: ${await viewerReportResponse.text()}`);
+  const viewerReport=await viewerReportResponse.json();
+  assert.equal(viewerReport.verified_gross_minor,financeReport.verified_gross_minor,
+   "viewer lost the aggregate authorized financial total");
+  assert.deepEqual(viewerReport.customers,[],"viewer report exposed invoice-linked customer identities");
+  assert.deepEqual(viewerReport.accounts,[],"viewer report exposed receiving-account identifiers");
   // An invoice is a versioned seller document, not a payment confirmation.
   // Exercise its Go writer and SQL totals before opening the canonical UI.
   const invoiceUrl=`${base}/documents/invoices?environment=live`;

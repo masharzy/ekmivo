@@ -95,9 +95,9 @@ export async function runPaymentExtensions({db,live,control,workspace,otherWorks
   "FROM financial_payments p JOIN payment_attempts a ON a.id=p.attempt_id "+
   "WHERE p.workspace_id=$1::uuid AND p.environment='sandbox' LIMIT 1",[workspace]))[0];
  assert.ok(verified?.payment_id,'PG07 fictional verified financial source is required for reconciliation');count++;
- const addStatement=(line,amount,digest)=>scoped(workspace,async tx=>(await tx.unsafe(
-  "SELECT pg11_statement($1::uuid,'sandbox',$2::uuid,$3,$4,$5,'BDT','incoming',now(),$6) id",
-  [workspace,verified.receiving_account_id,line,'CI-merchant-statement',amount,digest]))[0].id);
+ const addStatement=(line,amount,digest,sourceAccount=verified.receiving_account_id,direction='incoming')=>scoped(workspace,async tx=>(await tx.unsafe(
+  "SELECT pg11_statement($1::uuid,'sandbox',$2::uuid,$3,$4,$5,'BDT',$6,now(),$7) id",
+  [workspace,sourceAccount,line,'CI-merchant-statement',amount,direction,digest]))[0].id);
  const associate=(id)=>scoped(workspace,async tx=>(await tx.unsafe(
   "SELECT pg11_settlement($1::uuid,'sandbox',$2::uuid,$3::uuid,$4,NULL) result",
   [workspace,id,verified.payment_id,'CI reviewed imported bank statement']))[0].result);
@@ -105,6 +105,18 @@ export async function runPaymentExtensions({db,live,control,workspace,otherWorks
  const wrongStatement=await addStatement(mismatchedLine,Number(verified.verified_amount_minor)+1,hash(mismatchedLine));
  await assert.rejects(()=>associate(wrongStatement),error=>error.code==='23514',
   'Wrong-amount merchant statement was associated with a verified payment');count++;
+ const outgoingLine='OUTGOING-'+randomUUID();
+ const outgoing=await addStatement(outgoingLine,Number(verified.verified_amount_minor),hash(outgoingLine),verified.receiving_account_id,'outgoing');
+ await assert.rejects(()=>associate(outgoing),error=>error.code==='23514',
+  'Outgoing bank statement was associated with an incoming verified payment');count++;
+ const alternate=(await db.unsafe(
+  "SELECT id FROM financial_receiving_accounts WHERE workspace_id=$1::uuid AND environment='sandbox' AND id<>$2::uuid LIMIT 1",
+  [workspace,verified.receiving_account_id]))[0];
+ assert.ok(alternate?.id,'PG07 other fictional receiving account is required for reconciliation mismatch');count++;
+ const wrongAccountLine='WRONG-ACCOUNT-'+randomUUID();
+ const wrongAccount=await addStatement(wrongAccountLine,Number(verified.verified_amount_minor),hash(wrongAccountLine),alternate.id);
+ await assert.rejects(()=>associate(wrongAccount),error=>error.code==='23514',
+  'Other receiving account statement was attached to a verified payment');count++;
  const matchingLine='EXACT-AMOUNT-'+randomUUID();
  const matchingDigest=hash(matchingLine);
  const exactStatement=await addStatement(matchingLine,Number(verified.verified_amount_minor),matchingDigest);
