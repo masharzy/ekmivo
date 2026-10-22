@@ -76,7 +76,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   for(const [canonical,legacy,expected] of [
    ["/payments",`/w/${workspaceId}/payments/transactions`,reference],
    [`/payments/transactions/${payment.id}`,`/w/${workspaceId}/payments/transactions/${payment.id}`,reference],
-   ["/sms-data",`/w/${workspaceId}/payments/incoming`,"device_sms"],
+   ["/sms-data",`/w/${workspaceId}/payments/incoming`,"234.56"],
    [`/sms-data/${transport.id}`,`/w/${workspaceId}/payments/incoming/${transport.id}`,"234.56"]
   ]){
    let oldText="",newText="",oldRecord="",newRecord="";
