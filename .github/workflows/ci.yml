@@ -128,6 +128,9 @@ jobs:
       - name: Phase 2 published subscription pricing responsive browser acceptance
         working-directory: apps/web
         run: node --test scripts/subscription-public-responsive-browser.test.mjs
+      - name: Phase 5 subscription order summary responsive and interactive browser acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-order-browser.test.mjs
       - name: Archive Phase 2 pricing screenshots
         if: always()
         uses: actions/upload-artifact@v4

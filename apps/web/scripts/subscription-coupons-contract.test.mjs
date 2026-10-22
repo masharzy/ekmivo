@@ -40,7 +40,8 @@ test("coupons belong in existing Admin Billing tab and never turn on unverified 
  const pay=web("components/subscription-order-summary.tsx");
  assert.match(console,/billing:\["Subscriptions","Invoices","Revenue","Coupons","Offers"\]/);
  assert.match(console,/key==="billing"&&sub==="coupons"/);
- assert.match(pay,/Coupon redemption is not enabled/);
+ assert.match(pay,/changeCoupon/);
+ assert.match(pay,/couponError/);
  assert.doesNotMatch(pay,/name="(?:bkash|nagad|rocket)"/);
- assert.match(web("app/[locale]/checkout/order/[plan]/page.tsx"),/purchaseEnabled=\{false\}/);
+ assert.match(web("app/[locale]/checkout/order/[intent]/page.tsx"),/intentId=\{intent\}/);
 });

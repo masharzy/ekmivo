@@ -19,19 +19,17 @@ test("immutable legal versions require super admin, audit and published singleto
  assert.match(fixKind,/platform_subscription_policy_versions\.kind=policy.kind/);
 });
 
-test("checkout binds three versioned published links, and stays purchase-disabled",()=>{
- const page=read("app/[locale]/checkout/order/[plan]/page.tsx");
+test("checkout binds three versioned published links, with server gate for confirmation",()=>{
+ const page=read("app/[locale]/checkout/order/[intent]/page.tsx");
  const loader=read("lib/server/subscription-policies.ts");
  const ui=read("components/subscription-order-summary.tsx");
- assert.match(page,/publishedSubscriptionPolicies\(\)/);
- assert.match(page,/purchaseEnabled=\{false\}/);
- assert.match(page,/legalVersions=/);
+ assert.match(page,/intentId=\{intent\}/);
  assert.match(loader,/platform_subscription_policy_public\(\)/);
  assert.doesNotMatch(loader,/process\.env\.EKMIVO_TERMS_URL/);
- assert.match(ui,/legalVersions\[key\]/);
- assert.match(ui,/consent\("terms"/);
- assert.match(ui,/consent\("privacy"/);
- assert.match(ui,/consent\("refund"/);
+ assert.match(ui,/doc\?\.version/);
+ assert.match(ui,/policyConsent\("terms"/);
+ assert.match(ui,/policyConsent\("privacy"/);
+ assert.match(ui,/policyConsent\("refund"/);
 });
 
 test("Legal & contact Admin tab uses actual server-backed control data",()=>{

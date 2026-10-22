@@ -106,7 +106,6 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
    // The setup action is already authenticated and has locked the selected
    // store. Preserve that context rather than performing a second auth check
    // in a route handler during the server-action redirect handoff.
-   if(process.env.EKMIVO_SUBSCRIPTION_ORDER_PREVIEW==="1")redirect("/checkout/order/"+encodeURIComponent(plan));
    redirect(dashboardHref("bn",workspace.id,"payments","billing")+"?tab=plans&plan="+encodeURIComponent(plan));
   }
   (await cookies()).delete("ekmivo-selected-plan");

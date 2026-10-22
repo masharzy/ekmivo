@@ -25,6 +25,5 @@ export async function GET(request:Request,{params}:{params:Promise<{locale:strin
  jar.delete("ekmivo-selected-plan");
  // Keep the existing verified billing path active until coupon, legal-consent
  // enforcement and the new order confirmation contract have passed release gates.
- if(process.env.EKMIVO_SUBSCRIPTION_ORDER_PREVIEW==="1"&&(chosen.terms.kind==="paid"||chosen.terms.kind==="free"))return NextResponse.redirect(new URL(`/${locale}/checkout/order/${encodeURIComponent(plan)}`,request.url));
  return NextResponse.redirect(new URL(dashboardHref(locale as "en"|"bn",workspace.id,"payments","billing")+"?tab=plans&plan="+encodeURIComponent(plan),request.url));
 }

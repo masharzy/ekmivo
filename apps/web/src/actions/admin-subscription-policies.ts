@@ -15,7 +15,7 @@ function respondError(error:unknown):LegalActionState{
  if(["22023","22P02","23514","P0002"].includes(code))return fail("Invalid policy or version transition. Refresh and check the submitted values.");
  return fail("Legal policy service unavailable. No change was confirmed.");
 }
-function refresh(){for(const locale of ["bn","en"]){revalidatePath(`/${locale}/admin/settings/legal-contact`);revalidatePath(`/${locale}/checkout/order/[plan]`,"page");}}
+function refresh(){for(const locale of ["bn","en"]){revalidatePath(`/${locale}/admin/settings/legal-contact`);revalidatePath(`/${locale}/checkout/order/[intent]`,"page");}}
 
 export async function createSubscriptionPolicy(_prev:LegalActionState,form:FormData):Promise<LegalActionState>{
  const admin=await requireSuperAdmin();if(!admin)return fail("Super Admin and MFA verification required.");

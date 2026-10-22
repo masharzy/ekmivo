@@ -809,3 +809,15 @@ Code and automated acceptance evidence: `docs/evidence/BRIOFOLD-PHASE7-20261021.
 With an authorized operator SMTP account and HTTPS CRM_PUBLIC_ORIGIN, request a customer-consented email confirmation, receive the actual message, confirm the fragment is removed, and verify expiry/single use/contact-change rejection. With an approved WhatsApp test account, verify actual signed inbound sender proof and cross-business/account isolation; fictional signed webhook tests are not provider proof. No unsolicited customer message is authorized by this checklist.
 
 With owner/admin/editor/viewer test memberships, review Customers, Leads and Follow-ups at 320/768/1024/desktop in EN/BN and Light/Dark/System, keyboard and large text; verify contact masking, stale business tabs, dirty navigation, offline/retry recovery, merged history/export, dispute suppression and confirmed CRM erasure. Confirm retained financial/channel records are explained. Follow-ups are internal reminders; outbound campaigns belong to a later phase. These manual/provider checks remain pending and do not block the explicitly scoped code-and-automated-acceptance seal.
+
+## Store-first subscription checkout Phase 5 (2026-10-22, NOT SEALED)
+
+Prerequisites: verified Phase 2–4 integration, approved tax revision, published Terms/Privacy/Refund fingerprints, isolated Neon control migration 0145 and separately authorized Phase 6 payment adapter. Flags stay OFF until approved. Use test Stores, not real customer transfers.
+
+- Guest → login/register/Google → verified email → Store setup with Payments monthly/yearly, prepaid AI, eligible bundle and valid coupon. Exact version, Store, quantity and coupon must survive redirects/refresh. Expired or revoked selections must never issue an invoice.
+- Check 320/375/768/1024/1440px and 200% zoom, EN/BN/Hind Siliguri, Light/Dark/System, keyboard-only and screen reader: itemized prices/periods, Server tax/coupon/discount/total, independent checkbox labels, linked current policy versions, visible focus and no wallet/phone selection on summary.
+- Apply/remove coupon and verify recalculation, invalid/expired/exhausted, usage cap, first-purchase and annual/bundle stacking rules. Change approved price, coupon revision or legal policy mid-flow: server must refuse old quote/consents and demand fresh separate acceptance. Simulate network error/retry.
+- Deny editor/viewer/revoked member and wrong Store. Double-click/two tabs/refresh/lost response must resume one immutable invoice and one coupon reservation. Verify acceptance audit actor, Store, intent, document ID, version, SHA and server timestamp. Zero-due/unsupported fulfillment must not activate.
+- When Phase 6 is ready, verify only the dedicated `/pay/subscription/{token}` displays system wallets; existing seller `/pay/{documentToken}` and `/checkout/{merchantToken}` regressions remain unchanged. Real provider proof/production activation is separate and not attempted here.
+
+Evidence: `docs/evidence/STORE-SUBSCRIPTION-PHASE-5-SEALED.md` (filename is not a seal claim).

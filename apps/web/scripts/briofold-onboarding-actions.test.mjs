@@ -108,7 +108,7 @@ test("paid plan navigates to explicit confirmation without granting a subscripti
  assert.equal((await f.submit({plan:"paid"})).location,"/w/business-a/payments/billing?tab=plans&plan=paid");
  assert.deepEqual(f.state().claims,[]);
  const preview=fixture({step:"billing",products:{payments:true},preview:true});
- assert.equal((await preview.submit({plan:"paid"})).location,"/checkout/order/paid");
+ assert.equal((await preview.submit({plan:"paid"})).location,"/w/business-a/payments/billing?tab=plans&plan=paid");
  assert.deepEqual(preview.state().claims,[]);
 });
 test("replaying a completed billing step goes to dashboard without another purchase",async()=>{
