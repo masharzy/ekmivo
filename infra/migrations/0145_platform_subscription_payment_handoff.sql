@@ -129,7 +129,18 @@ CREATE FUNCTION platform_subscription_payment_capability(a uuid,token_sha text)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE h platform_subscription_payment_handoffs;
 BEGIN
- IF token_sha!~'^[a-f0-9]{64}
+ IF token_sha!~'^[a-f0-9]{64}$' THEN RETURN NULL;END IF;
+ SELECT * INTO h FROM platform_subscription_payment_handoffs
+ WHERE checkout_token_digest=token_sha;
+ IF h.intent_id IS NULL THEN RETURN NULL;END IF;
+ PERFORM pg13_actor(h.workspace_id,a,false);
+ IF NOT EXISTS(SELECT 1 FROM platform_primary_stores p
+  WHERE p.user_id=a AND p.workspace_id=h.workspace_id)
+ THEN RETURN NULL;END IF;
+ RETURN jsonb_build_object('intent_id',h.intent_id,'workspace_id',h.workspace_id);
+END $$;
+
+-- Worker-only bounded cursor; immutable locator survives key rotation,
 -- process crash, tab closure and delayed provider verification.
 CREATE FUNCTION platform_subscription_payment_pending() RETURNS jsonb
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
