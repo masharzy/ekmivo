@@ -76,7 +76,10 @@ test("Phase3 coupon list, tax panel and editing dialog fit desktop/mobile EN/BN 
       await page.setContent(html(locale,theme,mode));
       const size=await page.evaluate(()=>({width:innerWidth,document:document.documentElement.scrollWidth,
        dialog:document.querySelector('[role="dialog"]')?.getBoundingClientRect().width||0,
-       tableWrap:document.querySelector('.pa-table-wrap')?.clientWidth||0}));
+       tableWrap:document.querySelector('.pa-table-wrap')?.clientWidth||0,
+       offenders:[...document.querySelectorAll('main *')].map(el=>({node:el.tagName.toLowerCase()+'.'+String(el.className||'').slice(0,45),
+        right:Math.round(el.getBoundingClientRect().right),scroll:el.scrollWidth,client:el.clientWidth}))
+        .filter(el=>el.right>innerWidth+2&&el.client>0).sort((a,b)=>b.right-a.right).slice(0,8)}));
       assert.ok(size.document<=size.width+1,`horizontal page overflow ${JSON.stringify(size)}`);
       if(mode==="editor"){
        assert.equal(await page.locator('[role="dialog"][aria-modal="true"]').count(),1);

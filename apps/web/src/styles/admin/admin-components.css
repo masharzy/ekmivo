@@ -25,7 +25,7 @@
 .pa-root.pa-admin-design .pa-account-menu summary{width:28px;height:28px;border-color:var(--bd);border-radius:6px}
 .pa-root.pa-admin-design .pa-account-popover{background:var(--sf);border-color:var(--bd);border-radius:10px}
 .pa-root.pa-admin-design .pa-main{grid-column:2;grid-row:2;min-width:0;width:100%;background:var(--bg)}
-.pa-root.pa-admin-design .pa-content{display:grid;gap:20px;width:100%;max-width:1180px;margin:0 auto;padding:28px 28px 48px}
+.pa-root.pa-admin-design .pa-content{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;width:100%;max-width:1180px;margin:0 auto;padding:28px 28px 48px}
 .pa-root.pa-admin-design h1{font-size:18px;line-height:1.45;font-weight:600;letter-spacing:-.02em;margin:0}
 .pa-root.pa-admin-design h2{font-size:13px;line-height:1.45;font-weight:600}
 .pa-root.pa-admin-design .pa-page-head{display:flex;align-items:flex-end;gap:12px;min-height:0;margin:0}
