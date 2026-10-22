@@ -392,7 +392,10 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   await page.getByRole("heading",{name:"Reports",exact:true}).waitFor();
   const verifiedReportAmount="BDT "+new Intl.NumberFormat("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})
    .format(financeReport.verified_gross_minor/100);
-  await page.locator(".fin-volume-card").getByText(verifiedReportAmount,{exact:true}).waitFor();
+  // Gross and net cards may legitimately show the same value for a fixture
+  // with no fees. Assert the first authoritative amount without a strict-mode
+  // ambiguity; separate ledger assertions cover the report semantics.
+  await page.locator(".fin-volume-card").getByText(verifiedReportAmount,{exact:true}).first().waitFor();
   assert.equal(await page.locator('main [role="alert"]').count(),0,
    "canonical payment report displayed an unconfirmed source or validation error");
   await page.goto(origin+"/invoices");
@@ -435,9 +438,18 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   assert.ok(!viewerText.includes(payer)&&!viewerText.includes("01712345678"),"viewer UI leaked raw payer identity");
   await viewerPage.close();
 
+  await page.goto(origin+"/settings/api-keys");
+  await page.locator(".ref-api-key-page").waitFor();
+  const viewerKeys=await viewerContext.newPage();
+  await viewerKeys.goto(origin+"/settings/api-keys");
+  await viewerKeys.getByText("Key management restricted",{exact:true}).waitFor();
+  assert.equal(await viewerKeys.locator(".ref-api-key-page [data-secret]").count(),0,
+   "Viewer API credential screen exposed a credential secret");
+  await viewerKeys.close();
+
   const evidence=new URL("../test-results/pg09/phase9/",import.meta.url);await mkdir(evidence,{recursive:true});
   let cases=0;
-  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/payments/refunds","/reports/payments","/invoices"];
+  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/settings/api-keys","/payments/refunds","/reports/payments","/invoices"];
   for(const locale of ["en","bn"]){
    await context.addCookies([{name:"ekmivo-locale",value:locale,url:origin,sameSite:"Lax"}]);
    for(const theme of ["light","dark"]){
@@ -450,7 +462,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
       assert.equal(response.status(),200,`${route} HTTP failed at ${locale}/${theme}/${width}`);
       const ready=route.includes("/transactions/")||route.startsWith("/sms-data/")
        ?".pg-operation-detail":route==="/settings/payment-methods"?".pg-phone-panel"
-       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/payments/refunds"?".refund-table":route==="/reports/payments"?".fin-volume-card":"main h1";
+       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/settings/api-keys"?".ref-api-key-page":route==="/payments/refunds"?".refund-table":route==="/reports/payments"?".fin-volume-card":"main h1";
       try{await page.locator(ready).first().waitFor({timeout:10000});}
       catch(error){
        const snapshot=await page.evaluate(()=>({pathname:location.pathname,headings:[...document.querySelectorAll("main h1,main h2")].map(node=>node.textContent?.trim()).slice(0,5),sections:[...document.querySelectorAll("main section")].map(node=>node.className).slice(0,9),excerpt:document.querySelector("main")?.textContent?.trim().slice(0,300)}));
@@ -465,7 +477,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
     }
    }
   }
-  assert.equal(cases,160,"Phase9 complete responsive matrix missing");
+  assert.equal(cases,176,"Phase9 complete responsive matrix missing");
   await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto(origin+"/payments");
   assert.ok(await page.evaluate(()=>matchMedia("(prefers-reduced-motion: reduce)").matches),"reduced-motion preference was not honored");

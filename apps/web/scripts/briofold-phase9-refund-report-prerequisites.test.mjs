@@ -42,3 +42,16 @@ test("operator-gated 0056 migrator fails closed on a financial realm without 005
  assert.ok(source.indexOf("if err!=nil||actual!=realm||!prerequisites||!owner")<source.indexOf("if installed{return nil}"),
   "an installed but invalid 0056 was accepted before prerequisites were checked");
 });
+
+test("disposable finance acceptance installs the real paginated notification reader",()=>{
+ const smoke=read("apps/web/scripts/pg04-financial-smoke.mjs");
+ const migration=read("infra/migrations/0103_notification_center_pagination.sql");
+ const backend=read("backend/internal/checkout/reporting.go");
+ assert.match(smoke,/0103_notification_center_pagination\.sql/);
+ assert.match(smoke,/pg103_notification_page\(uuid,text,uuid,integer,integer,text,text,text\)/);
+ assert.match(smoke,/if\(!installed\)await migrationDB\.unsafe/);
+ assert.match(migration,/to_regclass\('public\.financial_realm'\)/);
+ assert.match(migration,/to_regclass\('public\.pg13_notifications'\)/);
+ assert.match(migration,/GRANT EXECUTE ON FUNCTION pg103_notification_page/);
+ assert.match(backend,/SELECT pg103_notification_page\(/);
+});

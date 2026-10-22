@@ -32,6 +32,18 @@ test("authorized business context and realm resolution are server-side",()=>{
  assert.match(action,/selectDefaultWorkspace\(user\.id,workspaceId\)/);
  assert.doesNotMatch(action,/selectDefaultWorkspace\(.*request\.userId/);
 });
+test("legacy API documentation settings paths resolve to the existing public developer portal",()=>{
+ const route=source("components/unified-merchant-route.tsx");
+ const settings=source("lib/unified-navigation.ts");
+ const index=source("components/unified-settings-index.tsx");
+ assert.match(settings,/slug:"api-docs"[\s\S]*?external:true/);
+ assert.match(index,/item\.external\?"\/developers"/);
+ assert.match(route,/view\[0\]==="api-docs"/);
+ assert.match(route,/view\[0\]==="developers"&&view\[1\]==="docs"/);
+ assert.ok(route.indexOf('redirect("/developers")')<route.indexOf("await requireUser(locale)"),
+  "Public documentation should not depend on a Store session/database read");
+ assert.ok(existsSync(at("app/(developer-portal)/[locale]/developers/[[...slug]]/page.tsx")));
+});
 test("single-Store account binding supersedes legacy selection without deleting historic memberships",()=>{
  const auth=source("lib/server/auth.ts"),shell=source("components/app-shell.tsx");
  const workspaces=source("app/[locale]/workspaces/page.tsx"),proxy=source("app/api/go/[...path]/route.ts");

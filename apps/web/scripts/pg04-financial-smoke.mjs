@@ -1663,7 +1663,11 @@ try{
    `Phase9 late-SMS refund source missing in disposable ${realm} reader`);
   for(const [file,signature] of [
    ["0056_phone_incoming_and_late_refund_reports.sql","pg56_incoming_read(uuid,text,uuid,uuid,text,uuid,text,timestamptz,timestamptz,text)"],
-   ["0058_integration_activity.sql","pg58_record_api(uuid,text,text,text,integer,bigint,text)"]
+   ["0058_integration_activity.sql","pg58_record_api(uuid,text,text,text,integer,bigint,text)"],
+   // The notification-center UI uses the paginated finance reader. Exercise
+   // the real reader in the disposable realm rather than silently accepting
+   // a background 503 during the unified merchant browser journeys.
+   ["0103_notification_center_pagination.sql","pg103_notification_page(uuid,text,uuid,integer,integer,text,text,text)"]
   ]){
    const installed=(await dbs[realm].unsafe("SELECT to_regprocedure($1) IS NOT NULL AS installed",[signature]))[0].installed;
    if(!installed)await migrationDB.unsafe(await readFile(new URL("../../../infra/migrations/"+file,import.meta.url),"utf8")).simple();

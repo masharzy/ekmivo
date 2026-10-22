@@ -82,6 +82,11 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   assert.ok(!viewerTickets.items.some(ticket=>ticket.subject.startsWith("Fixture ")),"Viewer saw owner's private feedback");
   const invalid=await context.request.post(feedback,{headers:{Origin:origin},data:{topic:"untrusted",subject:"Fixture invalid",message:"This should never create a ticket."}});
   assert.equal(invalid.status(),422,"Unrecognized feedback topic was accepted");
+  for(const oldDocsPath of ["/settings/api-docs","/settings/developers/docs"]){
+   const docs=await page.goto(origin+oldDocsPath);
+   assert.equal(docs.status(),200,`Public API docs deep link ${oldDocsPath} failed`);
+   assert.ok(new URL(page.url()).pathname.startsWith("/developers"),`API docs ${oldDocsPath} landed on a placeholder module`);
+  }
   assert.deepEqual(pageErrors,[],"Settings browser reported a client runtime/hydration error");
   console.log("Phase3 REAL SETTINGS BROWSER PASS: owner settings save/restore, viewer denial, typed feedback persistence/route/privacy");
  }finally{

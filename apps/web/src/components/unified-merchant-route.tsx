@@ -34,6 +34,10 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
 }){
  if(thread&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(thread))notFound();
  const locale=raw==="en"?"en":"bn";
+ // Documentation is publicly available and must never become a dead merchant
+ // settings module. Resolve both historical deep links before Store DB reads.
+ if(root==="settings"&&((view.length===1&&view[0]==="api-docs")||
+  (view.length===2&&view[0]==="developers"&&view[1]==="docs")))redirect("/developers");
  const user=await requireUser(locale);
  // Preferred business is rechecked against memberships on every server read.
  // No client-provided workspace ID, query, locale or cookie grants financial access.
