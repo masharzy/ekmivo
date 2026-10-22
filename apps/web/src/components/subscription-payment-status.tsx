@@ -19,9 +19,11 @@ export function SubscriptionPaymentStatus({workspace,intent,locale}:{workspace:s
  },[workspace,intent]);
  useEffect(()=>{
   const ac=new AbortController();
-  void refresh(ac.signal);
+  // Poll from an asynchronous timer callback, not directly inside the effect.
+  // Cleanup also cancels the first fetch after navigation or Store changes.
+  const initial=window.setTimeout(()=>{void refresh(ac.signal)},0);
   const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void refresh(ac.signal)},6000);
-  return()=>{ac.abort();window.clearInterval(timer)};
+  return()=>{ac.abort();window.clearTimeout(initial);window.clearInterval(timer)};
  },[refresh]);
  const label=loading?t("Checking payment…","পেমেন্ট যাচাই হচ্ছে…"):data?.status==="completed"&&data.verified?
   t("Subscription active — verified payment","সাবস্ক্রিপশন সক্রিয় — যাচাইকৃত পেমেন্ট"):
