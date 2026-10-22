@@ -15,7 +15,7 @@ import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 type Account={ID:string;Method:string;Number:string;Label:string;Disabled:boolean};
 type CatalogProvider={code:string;name:string;logo:string;checkout:boolean;live:boolean};
 const methodName:Record<string,string>=Object.fromEntries(paymentProviderKeys.map(key=>[key,paymentProviderAppearance[key].name]));
-export function PaymentMethodManagement({locale,workspaceId,environment,canManage}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean}){
+export function PaymentMethodManagement({locale,workspaceId,environment,canManage,detailId}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;detailId?:string}){
  const bn=locale==="bn",t=useCallback((en:string,bd:string)=>bn?bd:en,[bn]);
  const formattedAccount=(value:string)=>{const digits=value.replace(/\D/g,"");const local=digits.startsWith("880")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;return local.length===10?"+880 "+local.slice(0,4)+" "+local.slice(4):value};
  const base="/api/go/workspaces/"+workspaceId;
@@ -52,12 +52,13 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
 
  const visibleAccounts=accounts.filter(a=>(filter==="all"||(filter==="active"?!a.Disabled:a.Disabled))&&[a.Label,a.Number,formattedAccount(a.Number),providerName(a.Method)].join(" ").toLowerCase().includes(query.trim().toLowerCase()));
  const openAdd=()=>{if(methodLimit.blocked)return;setMethod("");setNumber("");setLabel("");setProviderQuery("");setError("");createDialog.current?.showModal();void loadProviderCatalog()};
- const [selected,setSelected]=useState<string|null>(null),[edited,setEdited]=useState<string|null>(null),[newLabel,setNewLabel]=useState(""),[newNumber,setNewNumber]=useState("");
+ const [selected,setSelected]=useState<string|null>(detailId??null),[edited,setEdited]=useState<string|null>(null),[newLabel,setNewLabel]=useState(""),[newNumber,setNewNumber]=useState("");
  const [confirmAccount,setConfirmAccount]=useState<Account|null>(null);
  const current=accounts.find(account=>account.ID===selected)||null;
+ // Deep links open only after the authorized list contains the requested ID.
  
  useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(""),2400);return()=>clearTimeout(timer)},[notice]);
- useEffect(()=>{const dialog=detailsDialog.current;if(!dialog)return;if(selected&&!dialog.open)dialog.showModal();else if(!selected&&dialog.open)dialog.close()},[selected]);
+ useEffect(()=>{const dialog=detailsDialog.current;if(!dialog)return;if(selected&&current&&!dialog.open)dialog.showModal();else if((!selected||!current)&&dialog.open)dialog.close()},[selected,current]);
  useEffect(()=>{const dialog=editDialog.current;if(!dialog)return;if(edited&&!dialog.open)dialog.showModal();else if(!edited&&dialog.open)dialog.close()},[edited]);
  const load=useCallback(async(signal?:AbortSignal)=>{
   setLoading(true);setError("");

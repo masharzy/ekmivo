@@ -49,7 +49,32 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help",en:"Help & feedback",bn:"সহায়তা ও মতামত",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"};
+export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"};
+const financialRecordId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const financialDetailPrefixes={
+ payments:"/payments/transactions",incoming:"/sms-data",gateways:"/settings/payment-methods",
+ devices:"/settings/devices",webhooks:"/settings/webhooks",events:"/settings/activity",
+ deliveries:"/settings/webhooks",customers:"/customers/financial",invoices:"/invoices",
+ "payment-links":"/payments/links",refunds:"/payments/refunds",
+} as const;
+export type UnifiedFinancialResource=keyof typeof financialDetailPrefixes;
+export function unifiedFinancialDetailPath(resource:UnifiedFinancialResource,id:string):string|null{
+ return financialRecordId.test(id)?`${financialDetailPrefixes[resource]}/${id}`:null;
+}
+function financialDetail(root:UnifiedRoot,view:readonly string[]):UnifiedDestination|null{
+ const id=view.at(-1);
+ if(!id||!financialRecordId.test(id))return null;
+ const group=view.length===2?view[0]:"";
+ const sections:Partial<Record<UnifiedRoot,Record<string,SectionKey>>>= {
+  payments:{"":"transactions",transactions:"transactions",links:"payment-links",refunds:"refunds"},
+  "sms-data":{"":"incoming"},invoices:{"":"invoices"},
+  customers:{financial:"customers"},
+  settings:{"payment-methods":"gateways",devices:"devices",webhooks:"webhooks",activity:"events"},
+ };
+ const byGroup=sections[root];
+ if(!byGroup||!Object.hasOwn(byGroup,group))return null;
+ return {section:byGroup[group],service:"payments",detailId:id};
+}
 export const unifiedSectionPaths:Partial<Record<SectionKey,string>>={
  overview:"/dashboard",inbox:"/inbox",comments:"/inbox/comments","saved-replies":"/inbox/saved-replies",tickets:"/inbox/tickets",
  orders:"/orders",products:"/orders/products",inventory:"/orders/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/orders/coupons",
@@ -74,7 +99,13 @@ export function enabledUnifiedService(mode:BusinessMode,service:"ai"|"payments"|
  return mode!=="off"&&(service==="common"||mode==="both"||(service==="ai"?mode==="ai":mode==="commerce"));
 }
 export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:readonly string[]):UnifiedDestination|null{
- if(mode==="off"||view.length>1)return null;
+ if(mode==="off")return null;
+ // Only explicitly mapped, UUID-shaped finance details may have two segments.
+ // The selected business and financial realm are still resolved by the server.
+ if(view.length>1||view.length===1&&financialRecordId.test(view[0])){
+  if(mode==="ai"||view.length>2)return null;
+  return financialDetail(root,view);
+ }
  const part=view[0]??"";
  const payments=mode!=="ai";
  const defaultService:Service=payments?"payments":"ai";

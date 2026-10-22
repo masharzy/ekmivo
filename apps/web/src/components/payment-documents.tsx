@@ -6,6 +6,7 @@ import {paymentLinkState} from "./payment-link-cards";
 import {RefModal,RefIcon,RefStatus,RefSwitch} from "./reference-ui";
 import {DashboardDateTimePicker,DashboardDatePicker} from "./dashboard-date-controls";
 import {DashboardCombobox,DashboardTagInput} from "./dashboard-form-controls";
+import {unifiedFinancialDetailPath} from "../lib/unified-navigation";
 
 import Link from "next/link";
 import {useCallback,useEffect,useRef,useState} from "react";
@@ -28,7 +29,7 @@ function DocumentActions({row,kind,canWrite,canManage,busy,t,onEdit:edit,onDupli
   {kind==="invoices"&&row.public_token&&<Link className="ib" href={publicPath(row)+"?print=1"} target="_blank" rel="noopener noreferrer">{t("Print","প্রিন্ট")}</Link>}
  </>}
 
-export function PaymentDocuments({kind,workspaceId,environment,locale,userId,canWrite,canManage,detailId,canExport,canInvoices=false}:{kind:Kind;workspaceId:string;environment:string;locale:"en"|"bn";userId:string;canWrite:boolean;canManage:boolean;detailId?:string;canExport?:boolean;canInvoices?:boolean}){
+export function PaymentDocuments({kind,workspaceId,environment,locale,userId,canWrite,canManage,detailId,canExport,canInvoices=false,canonicalRoutes=false}:{kind:Kind;workspaceId:string;environment:string;locale:"en"|"bn";userId:string;canWrite:boolean;canManage:boolean;detailId?:string;canExport?:boolean;canInvoices?:boolean;canonicalRoutes?:boolean}){
  const [expiryMode,setExpiryMode]=useState<"none"|"24"|"7"|"custom">("none");
  const [hideNumbers,setHideNumbers]=useState(true);
  const bn=locale==="bn",t=useCallback((en:string,bnText:string)=>bn?bnText:en,[bn]),base=`/api/go/workspaces/${workspaceId}/documents/${kind}`;
@@ -231,7 +232,7 @@ export function PaymentDocuments({kind,workspaceId,environment,locale,userId,can
  <RefModal closeLabel={locale==="bn"?"বন্ধ করুন":"Close"} open={Boolean(selectedDocument)} title={t('Details','বিস্তারিত')} drawer onClose={closeDocument} footer={<><button className="ib" onClick={closeDocument}>{t('Close','বন্ধ করুন')}</button>{selectedDocument&&<DocumentActions row={selectedDocument} {...actionProps}/>}</>}>
   {selectedDocument&&<><div className="detail-intro">{kind==='customers'?selectedDocument.body.name||t('Payer','প্রেরক'):amount(selectedDocument.amount_minor)}</div><div className="drawer-group">
    {[[t('Status','অবস্থা'),<RefStatus key="status" status={state(selectedDocument)} label={label(state(selectedDocument))}/>],[t('Reference','রেফারেন্স'),selectedDocument.reference],...(kind==='customers'?[[t('Phone number','ফোন নম্বর'),selectedDocument.body.phone?formatPhone(selectedDocument.body.phone):'—'],[t('Email','ইমেইল'),selectedDocument.body.email||'—'],[t('Payments','পেমেন্ট'),selectedDocument.body.payment_count??0],[t('Last payment','শেষ পেমেন্ট'),date(selectedDocument.body.last_payment_at)],[t('Tags','ট্যাগ'),selectedDocument.body.tags?.join(', ')||'—']]:[[t('Paid','পরিশোধিত'),amount(selectedDocument.paid_minor)],[t('Remaining','বাকি'),amount(Math.max(0,selectedDocument.amount_minor-selectedDocument.paid_minor))],[isLinks?t('Expires','মেয়াদ'):t('Due date','শেষ তারিখ'),date(isLinks?selectedDocument.body.expires_at:selectedDocument.body.due_at)],[t('Description','বিবরণ'),selectedDocument.body.description||'—']])].map(([key,value],i)=><div className="kv" key={i}><span>{key}</span><span>{value}</span></div>)}
-  </div><Link className="ib" href={`/w/${workspaceId}/payments/${kind}/${selectedDocument.id}`}>{t('View full record','পুরো রেকর্ড দেখুন')}</Link></>}
+  </div>{(!canonicalRoutes||unifiedFinancialDetailPath(kind,selectedDocument.id))&&<Link className="ib" href={canonicalRoutes?unifiedFinancialDetailPath(kind,selectedDocument.id)!:`/w/${workspaceId}/payments/${kind}/${selectedDocument.id}`}>{t('View full record','পুরো রেকর্ড দেখুন')}</Link>}</>}
  </RefModal>
  <RefModal closeLabel={locale==="bn"?"বন্ধ করুন":"Close"} open={Boolean(confirming)} title={confirming?.mode==='delete'?t('Delete this link?','লিংকটি মুছবেন?'):confirming?.mode==='send'?t('Send invoice','ইনভয়েস পাঠান'):confirming?.mode==='remind'?t('Send reminder','রিমাইন্ডার পাঠান'):t('Confirm change','পরিবর্তন নিশ্চিত করুন')} busy={busy} onClose={()=>setConfirming(null)} footer={<><button className="ib" disabled={busy} onClick={()=>setConfirming(null)}>{t('Cancel','বাতিল')}</button><button className={`ib ${['delete','cancel','archive','disable'].includes(confirming?.mode||'')?'dgb':'pri'}`} disabled={busy} onClick={async()=>{if(confirming&&await action(confirming.row,confirming.mode))setConfirming(null)}}>{t('Confirm','নিশ্চিত করুন')}</button></>}>
   <p>{confirming?.mode==='delete'?t('Its checkout page stops working. Past payments stay in your records.','এর চেকআউট পেজ আর কাজ করবে না। আগের পেমেন্ট আপনার রেকর্ডে থাকবে।'):['send','remind'].includes(confirming?.mode||'')?t('I have permission to contact this customer at their linked email address.','এই গ্রাহকের সংযুক্ত ইমেইলে যোগাযোগের অনুমতি আছে।'):t('This changes the record used by your customers. Continue?','গ্রাহকের ব্যবহৃত রেকর্ড পরিবর্তন হবে। এগিয়ে যাবেন?')}</p>{error&&<p className="ref-errors" role="alert">{error}</p>}

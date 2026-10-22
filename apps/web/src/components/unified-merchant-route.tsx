@@ -40,7 +40,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread}:{
  if(setup&&setup!=="complete")redirect("/setup");
  const destination=unifiedDestination(workspace.mode,root,view);
  if(!destination)notFound();
- const {section,service,kind}=destination;
+ const {section,service,kind,detailId}=destination;
  const paymentContext=service==="payments"
   ?await paymentContextFor(workspace,user.id,undefined)
   :undefined;
@@ -74,7 +74,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread}:{
     :root==="settings"&&view[0]==="billing"&&workspace.mode==="ai"
      ?<><h1>{locale==="bn"?"বিলিং ও ব্যবহার":"Billing & usage"}</h1><BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/></>
     :<DashboardContent locale={locale} user={user} workspace={workspace}
-      section={section} service={service} paymentContext={paymentContext} framed/>;
+      section={section} service={service} paymentContext={paymentContext} detailId={detailId} canonicalRoutes framed/>;
  return <AppShell unified locale={locale} user={user} workspace={workspace}
    service={service} section={section} paymentContext={paymentContext}>
     <UnifiedSectionTabs locale={locale} root={root} mode={workspace.mode} view={view}/>
