@@ -67,6 +67,9 @@ jobs:
       - name: Store subscription order, legal policy and coupon safety contracts
         working-directory: apps/web
         run: node --test scripts/subscription-order-contract.test.mjs scripts/subscription-coupons-contract.test.mjs scripts/subscription-policies-contract.test.mjs scripts/subscription-offers-contract.test.mjs
+      - name: Phase 4 purchase capability, retry and continuation contracts
+        working-directory: apps/web
+        run: node --test scripts/subscription-intents-contract.test.mjs
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json
