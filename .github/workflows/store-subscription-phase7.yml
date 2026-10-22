@@ -4,6 +4,13 @@ name: Store Subscription Phase 7 — Release Readiness
 on:
   push:
     branches: [agents/store-subscription-phase7-release, agents/store-subscription-runtime-grants, agents/store-subscription-web-runtime-hardening]
+  pull_request:
+    branches: [main]
+    paths:
+      - infra/migrations/0156_web_runtime_least_privilege.sql
+      - tools/testing/subscription-web-runtime-grants.sql
+      - backend/cmd/financial-migrate/dashboard_reference.go
+      - .github/workflows/store-subscription-phase7.yml
   workflow_dispatch:
     inputs:
       expected_sha:
