@@ -99,7 +99,8 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_operations_read(uuid,text,uuid,text)','EXECUTE') ok`)[0].ok,true);
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_audience_preview(uuid,text,uuid,text,text)','EXECUTE') ok`)[0].ok,true);
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_export(uuid,text,uuid)','EXECUTE') ok`)[0].ok,true);
-   assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_provider_opt_out(uuid,text)','EXECUTE') ok`)[0].ok,role==='ekmivo_financial_runtime');
+   assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_provider_opt_out(uuid,text)','EXECUTE') ok`)[0].ok,true,
+    'signed inbound processing uses the restricted CONTROL projection role');
   }
   ctx=await browser.newContext();await ctx.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await ctx.newPage();page.setDefaultNavigationTimeout(90000);

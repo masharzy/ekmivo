@@ -85,5 +85,5 @@ END $$;
 REVOKE ALL ON FUNCTION briofold_growth_provider_opt_out(uuid,text)
  FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
 GRANT EXECUTE ON FUNCTION briofold_growth_provider_opt_out(uuid,text)
- TO ekmivo_financial_runtime;
+ TO ekmivo_financial_runtime,ekmivo_financial_projection;
 COMMIT;
