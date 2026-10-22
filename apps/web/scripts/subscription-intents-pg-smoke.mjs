@@ -66,7 +66,66 @@ try{
   const rows=await test.unsafe("SELECT platform_subscription_intent_command($1::text,$2::uuid,$3::text,$4::text,$5::jsonb) AS result",[op,actor||null,sessionHash,cap,JSON.stringify(payload)]);
   return rows[0].result;
  };
- assert((await rpc("create",null,session,capability,selection)).ok===true,"Guest selection RPC failed");
+ const flags=await test.unsafe("SELECT ($1::text IN ('create','read','bind_identity','bind_store','cancel','claim_free','revalidate')) AS operation_ok,($2::text ~ '^[a-f0-9]{64}
+ assert((await rpc("create",null,session,capability,selection)).ok===true,"Idempotent create retry failed");
+ const initially=await rpc("read",null);
+ assert(initially.offer_key===product&&initially.term==="monthly"&&initially.actor_id===null,"Guest read cannot recover selection");
+ await rejects(()=>rpc("read",null,"0".repeat(64)), "cross-browser stolen token without guest session");
+ await rejects(()=>rpc("create",null,session,capability,{...selection,quantity:2}),"replayed key changed quantity");
+ assert((await rpc("bind_identity",user1)).ok===true,"Guest owner bind failed");
+ await rejects(()=>rpc("bind_identity",user2),"other user claimed bound purchase");
+ assert((await rpc("bind_store",user1,session,capability,{store_id:store1})).ok===true,"Owned Store bind denied");
+ const bound=await rpc("read",user1);
+ assert(bound.workspace_id===store1&&bound.actor_id===user1,"Store and actor not persisted");
+ await rejects(()=>rpc("read",user2),"Cross-account read exposed intent");
+ await rejects(()=>rpc("bind_store",user1,session,capability,{store_id:store2}),"Primary Store isolation bypassed");
+ assert((await rpc("revalidate",user1)).ok===true,"Published pinned offer not revalidated");
+ await rejects(()=>rpc("claim_free",user1),"Paid offer converted to free claim");
+ await rejects(()=>rpc("cancel",user1,session,capability,{revision:bound.revision+1}),"Stale revision cancelled");
+ assert((await rpc("cancel",user1,session,capability,{revision:bound.revision})).status==="cancelled","Authorized cancellation failed");
+ await rejects(()=>rpc("revalidate",user1),"Cancelled offer revalidated");
+ await rejects(()=>rpc("cancel",user1,session,capability,{revision:bound.revision}),"Cancelled intent reused");
+ const audits=await test.unsafe("SELECT action FROM platform_subscription_purchase_audit ORDER BY action");
+ assert(audits.some(x=>x.action==="selection_cancelled"),"Cancellation audit missing");
+ console.log("PHASE4 LIFECYCLE PASS: guest, idempotency, actor bind, primary Store, cross-identity denial, paid-free exclusion, stale revision and cancellation");
+ console.log("PHASE4 SQL PASS: migration 0151, no legacy rewrite, digest uniqueness, expiry, quantity, free state and negative constraints");
+}finally{
+ await test.end({timeout:3}).catch(()=>{});
+ await admin.end({timeout:3}).catch(()=>{});
+}
+) AS cap_ok,($3::text ~ '^[a-f0-9]{64}
+ assert((await rpc("create",null,session,capability,selection)).ok===true,"Idempotent create retry failed");
+ const initially=await rpc("read",null);
+ assert(initially.offer_key===product&&initially.term==="monthly"&&initially.actor_id===null,"Guest read cannot recover selection");
+ await rejects(()=>rpc("read",null,"0".repeat(64)), "cross-browser stolen token without guest session");
+ await rejects(()=>rpc("create",null,session,capability,{...selection,quantity:2}),"replayed key changed quantity");
+ assert((await rpc("bind_identity",user1)).ok===true,"Guest owner bind failed");
+ await rejects(()=>rpc("bind_identity",user2),"other user claimed bound purchase");
+ assert((await rpc("bind_store",user1,session,capability,{store_id:store1})).ok===true,"Owned Store bind denied");
+ const bound=await rpc("read",user1);
+ assert(bound.workspace_id===store1&&bound.actor_id===user1,"Store and actor not persisted");
+ await rejects(()=>rpc("read",user2),"Cross-account read exposed intent");
+ await rejects(()=>rpc("bind_store",user1,session,capability,{store_id:store2}),"Primary Store isolation bypassed");
+ assert((await rpc("revalidate",user1)).ok===true,"Published pinned offer not revalidated");
+ await rejects(()=>rpc("claim_free",user1),"Paid offer converted to free claim");
+ await rejects(()=>rpc("cancel",user1,session,capability,{revision:bound.revision+1}),"Stale revision cancelled");
+ assert((await rpc("cancel",user1,session,capability,{revision:bound.revision})).status==="cancelled","Authorized cancellation failed");
+ await rejects(()=>rpc("revalidate",user1),"Cancelled offer revalidated");
+ await rejects(()=>rpc("cancel",user1,session,capability,{revision:bound.revision}),"Cancelled intent reused");
+ const audits=await test.unsafe("SELECT action FROM platform_subscription_purchase_audit ORDER BY action");
+ assert(audits.some(x=>x.action==="selection_cancelled"),"Cancellation audit missing");
+ console.log("PHASE4 LIFECYCLE PASS: guest, idempotency, actor bind, primary Store, cross-identity denial, paid-free exclusion, stale revision and cancellation");
+ console.log("PHASE4 SQL PASS: migration 0151, no legacy rewrite, digest uniqueness, expiry, quantity, free state and negative constraints");
+}finally{
+ await test.end({timeout:3}).catch(()=>{});
+ await admin.end({timeout:3}).catch(()=>{});
+}
+) AS guest_ok,jsonb_typeof($4::jsonb) AS payload_type,pg_column_size($4::jsonb) AS payload_bytes",["create",capability,session,JSON.stringify(selection)]);
+ console.log("PHASE4 synthetic RPC argument checks:",JSON.stringify(flags[0]));
+ let first;
+ try{first=await rpc("create",null,session,capability,selection);}
+ catch(e){throw Error("phase4 create RPC: "+(e instanceof Error?e.message:"unknown"));}
+ assert(first.ok===true,"Guest selection RPC failed");
  assert((await rpc("create",null,session,capability,selection)).ok===true,"Idempotent create retry failed");
  const initially=await rpc("read",null);
  assert(initially.offer_key===product&&initially.term==="monthly"&&initially.actor_id===null,"Guest read cannot recover selection");
