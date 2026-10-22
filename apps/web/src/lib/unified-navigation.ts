@@ -47,6 +47,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  {slug:"billing",en:"Billing & help",bn:"বিলিং ও সহায়তা",items:[
   {slug:"billing",en:"Billing & usage",bn:"বিলিং ও ব্যবহার",section:"billing",service:"common"},
   {slug:"help",en:"Help & feedback",bn:"সহায়তা ও মতামত",section:"help",service:"common"},
+  {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
 export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"};
@@ -100,6 +101,10 @@ export function enabledUnifiedService(mode:BusinessMode,service:"ai"|"payments"|
 }
 export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:readonly string[]):UnifiedDestination|null{
  if(mode==="off")return null;
+ // The dedicated feedback deep link reuses the authenticated, durable help
+ // ticket source. It must not be mistaken for a financial record detail.
+ if(root==="settings"&&view.length===2&&view[0]==="help"&&view[1]==="feedback")
+  return {section:"help",service:mode==="ai"?"ai":"payments"};
  // Catalog sync is a real subview, not an arbitrary two-part financial record.
  if(root==="orders"&&view.length===2&&view[0]==="products"&&view[1]==="sync")
   return {section:"products",service:mode==="ai"?"ai":"payments"};

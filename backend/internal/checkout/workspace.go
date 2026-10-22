@@ -118,7 +118,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			b["token_digest"] = digest(cap)
 			b["_return_token"] = cap
 		case "help":
-			if topic, ok := b["topic"].(string); ok && !map[string]bool{"payments": true, "sms": true, "refunds": true, "account": true, "other": true}[topic] {
+			if topic, ok := b["topic"].(string); ok && !map[string]bool{"payments": true, "sms": true, "refunds": true, "account": true, "bug": true, "feature": true, "usability": true, "other": true}[topic] {
 				fail(w, 422, "INVALID_SUPPORT_TOPIC")
 				return
 			}

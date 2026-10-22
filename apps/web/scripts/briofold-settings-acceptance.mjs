@@ -32,6 +32,17 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   if(!(await schema`SELECT to_regclass('public.dashboard_store_profiles') AS rel`)[0].rel)await apply("0097_workspace_store_identity.sql");
   const [details]=await schema`SELECT position('receipt_note' in pg_get_functiondef(to_regprocedure('public.dashboard_store_write(uuid,uuid,jsonb,bigint,text,bytea)')))>0 AS ready`;
   if(!details.ready)await apply("0099_store_details.sql");
+  // 0097's legacy theme reader omits presentation fields. The browser reuses
+  // the server-returned theme in a PUT, so apply the 0100 reader/writer contract
+  // in this disposable CONTROL fixture before testing that round trip.
+  const [presentation]=await schema`SELECT position('beside-left' in pg_get_functiondef(to_regprocedure('public.dashboard_checkout_theme_read(uuid,uuid)')))>0 AS ready`;
+  if(!presentation.ready)await apply("0100_checkout_logo_presentation.sql");
+  const [feedback]=await schema`SELECT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.pg13_support'::regclass
+      AND conname='pg13_support_topic_check'
+      AND pg_get_constraintdef(oid) LIKE '%usability%') AS ready`;
+  if(!feedback.ready)await apply("0190_briofold_feedback_topics.sql");
   await apply("0132_briofold_inbox_permissions.sql");
   await apply("0133_briofold_ai_studio.sql");
   await apply("0134_briofold_inbox_operations.sql");

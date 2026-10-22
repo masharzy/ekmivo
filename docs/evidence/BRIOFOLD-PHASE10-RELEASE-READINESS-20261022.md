@@ -4,6 +4,13 @@
 
 **Assessment: Phase 10 FULL CODE SEAL = OPEN. Production cutover = NOT AUTHORIZED.** Physical/real-provider testing belongs to the owner, outside the code-level gate. But missing *code* and unintegrated migrations/branches cannot be waived as “manual testing.” Do not relabel the phase complete because its existing baseline CI is green.
 
+## 2026-10-23 engineering continuation — CI fixture and feedback parity (pending exact-head CI)
+
+- Foundation CI [39833871052](https://github.com/masharzy/ekmivo/actions/runs/39833871052) on `ee9d821` passed Go, Kotlin and isolated PG04 jobs; the web job advanced beyond its former financial-migration ownership failure and reached the Phase 9 checkout browser. It failed on `INVALID_THEME`: the disposable CONTROL settings fixture had applied the 0097 Store identity and 0099 details functions but omitted the 0100 checkout-logo-presentation upgrade required by the persisted theme round-trip.
+- The fixture now conditionally installs 0100 after 0099, checking the **read-function contract**, not just the table's presence. No production database is changed by the test. Source regression asserts the dependency order.
+- `/settings/help/feedback` maps to the existing authenticated Store help source in AI-only, Payments-only and Both modes. Existing durable support tickets now accept explicit `bug`, `feature` and `usability` topic values through the web form, Go validation and additive CONTROL-only `0190_briofold_feedback_topics.sql`. The isolated fixture installs 0190 only if its known support topic constraint has not been upgraded. The migration does not alter authorizations, support history, or ticket ownership.
+- The feedback parity tracker entry is only **PARTIAL_IMPLEMENTATION**: screenshot support and full database/browser ticket acceptance remain unverified. The patch and its next exact-head CI must be checked before attributing a test pass. These changes do **not** seal Phase 10 or authorize a merge, production migration, deploy, or external provider action.
+
 ## Verified scope and phase history
 
 | Phase | Existing delivered source/evidence | Verified status / limitations |
