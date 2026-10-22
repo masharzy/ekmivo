@@ -23,7 +23,15 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const owner=await sessionUser(sessions.owner),viewer=await sessionUser(sessions.viewer);
   const member=await db.unsafe("SELECT role FROM workspace_members WHERE workspace_id=$1::uuid AND user_id=$2::uuid",[workspaceId,owner]);
   assert.equal(member[0]?.role,"owner","Phase9 workspace is not an owner-authorized test tenant");
-  await finance.unsafe("SELECT financial_sync_workspace($1::uuid,'live',10000,true)",[workspaceId]);
+  // Finance projection versions are monotonic. An arbitrary high synthetic
+  // version cannot later be rolled back to the CONTROL source version and
+  // would make authenticated phone writes correctly fail as stale. Seed the
+  // disposable live realm with the actual active source version from day one.
+  const [initialLiveProjection]=await db.unsafe("SELECT source_version,active FROM resolve_financial_projection($1::uuid,'live')",[workspaceId]);
+  assert.equal(initialLiveProjection.active,true,"disposable live Store projection is inactive");
+  const seededLive=await finance.unsafe("SELECT financial_sync_workspace($1::uuid,'live',$2,true) AS applied",
+   [workspaceId,Number(initialLiveProjection.source_version)]);
+  assert.equal(seededLive[0].applied,true,"disposable live Store projection was not seeded");
   const fingerprint=()=>createHash("sha256").update(randomUUID()).digest("hex");
   const reference="P9-FICTIONAL-"+randomUUID().slice(0,8).toUpperCase(),amount=23456,payer=fingerprint();
   const [account]=await finance.unsafe("INSERT INTO financial_receiving_accounts(workspace_id,environment,method,identity_hmac,display_suffix) VALUES($1,'live','bkash',$2,'7890') RETURNING id",[workspaceId,fingerprint()]);
@@ -149,14 +157,18 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   // The canonical single-Store settings route reads the authoritative *live*
   // financial phone projection. Exercise heartbeat -> Next -> rendered health
   // and deletion without claiming a physical Android/provider test.
-  // Phone writes require the exact CONTROL projection version. Earlier
-  // read-only financial test fixtures intentionally used a synthetic 10000
-  // registry version; reconcile this isolated realm before authoring a phone.
+  // Phone writes require the exact CONTROL projection version. Recheck here
+  // after other fixture calls; provisioning may only advance, never roll back.
   const [liveProjection]=await db.unsafe("SELECT source_version,active FROM resolve_financial_projection($1::uuid,'live')",[workspaceId]);
   assert.equal(liveProjection.active,true,"disposable live Store projection is inactive");
   const [liveVersion]=await finance.unsafe("SELECT entitlement_version FROM financial_workspace_registry WHERE workspace_id=$1::uuid AND environment='live'",[workspaceId]);
-  if(Number(liveVersion.entitlement_version)!==Number(liveProjection.source_version))
-   await finance.unsafe("SELECT financial_sync_workspace($1::uuid,'live',$2,true)",[workspaceId,Number(liveProjection.source_version)]);
+  assert.ok(Number(liveVersion.entitlement_version)<=Number(liveProjection.source_version),
+   "disposable financial projection advanced beyond CONTROL and cannot be reconciled safely");
+  if(Number(liveVersion.entitlement_version)<Number(liveProjection.source_version)){
+   const [synced]=await finance.unsafe("SELECT financial_sync_workspace($1::uuid,'live',$2,true) AS applied",
+    [workspaceId,Number(liveProjection.source_version)]);
+   assert.equal(synced.applied,true,"disposable live Store entitlement could not advance to CONTROL version");
+  }
   const heartbeatCreate=await context.request.post(`${base}/phones?environment=live`,{...mutate,data:{name:"CI live heartbeat handset"}});
   assert.equal(heartbeatCreate.status(),200,`disposable live phone create failed: ${await heartbeatCreate.text()}`);
   const heartbeatPhone=await heartbeatCreate.json();
