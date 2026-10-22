@@ -78,6 +78,10 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 		return nil
 	}
 	topupErr := reconcileAITopups(ctx, w.Control, w.Pool, w.TokenKey, w.Realm, os.Getenv("BRIOFOLD_AI_TOPUPS_ENABLED") == "true")
+	// Separate from the AI prepaid top-up reconciler and the merchant checkout.
+	// Default-off until Phase 2-5 predecessors, restricted roles and migration are verified.
+	subscriptionErr := reconcileSubscriptionPayments(ctx, w.Control, w.Pool, w.Realm, os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED") == "true")
+	if subscriptionErr != nil { return subscriptionErr }
 	var raw []byte
 	if w.Control.QueryRow(ctx, "SELECT pg13_pending_billing()").Scan(&raw) != nil {
 		return errors.New("billing reconciliation unavailable")
@@ -93,6 +97,23 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 	}
 	s := &Service{TokenKey: w.TokenKey}
 	for _, i := range invoices {
+		// A subscription handoff must be settled atomically with its own
+		// coupon/recovery state, never by the older generic PG13 renewal job.
+		// Protect Stage-6 invoices even when its worker flag has been turned
+		// off after issuance. Legacy billing may run during a staged rollout.
+		var handoffCheckAvailable bool
+		if w.Control.QueryRow(ctx,
+			"SELECT to_regprocedure('platform_subscription_payment_is_handoff(uuid)') IS NOT NULL").Scan(&handoffCheckAvailable) != nil {
+			return errors.New("subscription billing isolation probe unavailable")
+		}
+		if handoffCheckAvailable {
+			var subscription bool
+			if w.Control.QueryRow(ctx,
+				"SELECT platform_subscription_payment_is_handoff($1::uuid)", i.ID).Scan(&subscription) != nil {
+				return errors.New("subscription invoice isolation unavailable")
+			}
+			if subscription { continue }
+		}
 		platform := i.Receiver
 		if !uuidPattern.MatchString(platform) {
 			return errors.New("billing receiving workspace missing")

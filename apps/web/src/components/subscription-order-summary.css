@@ -20,3 +20,14 @@
 :root[data-theme="dark"] .ek-order-warning{color:#ff9c8e}
 @media(max-width:780px){.ek-order{padding:0 16px 54px}.ek-order-grid{grid-template-columns:1fr}.ek-order-head{padding:32px 0 24px}.ek-order-card{padding:22px}.ek-order-nav{min-height:69px}.ek-order-totals{order:-1}}
 @media(max-width:420px){.ek-order-product{flex-wrap:wrap}.ek-order-product strong{margin-left:60px}.ek-order-period button{flex:1}}
+/* Phase 5 isolated summary refinements. Keep merchant, dashboard and Admin CSS untouched. */
+.ek-order-coupon button{min-height:44px;background:var(--order-select);color:var(--order-ink);cursor:pointer;padding:0 15px}
+.ek-order-coupon button:disabled{opacity:.5;cursor:not-allowed}
+.ek-order a:focus-visible,.ek-order button:focus-visible,.ek-order input:focus-visible{outline:3px solid #63af83;outline-offset:3px}
+.ek-order-unit{display:block;color:var(--order-muted);font-size:11px;margin-top:3px}
+.ek-order-version{font-size:11px;max-width:58%;overflow-wrap:anywhere}
+.ek-order-success{color:#157347;font-size:13px;line-height:1.5}
+.ek-order-warning{font-size:13px;line-height:1.5}
+.ek-order-coupon>div{flex-wrap:wrap}
+@media(max-width:780px){.ek-order-totals{order:initial}}
+@media(max-width:420px){.ek-order{padding-inline:10px}.ek-order-card{padding:16px}.ek-order-coupon input{min-width:100%}.ek-order-coupon button{flex:1}.ek-order-head{padding:26px 4px 20px}}

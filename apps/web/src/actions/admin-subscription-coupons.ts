@@ -34,11 +34,15 @@ export async function saveSubscriptionCoupon(_previous:CouponAdminState,form:For
  const perStore=optionalInteger(field(form,"max_per_store"),1000000);
  const starts=field(form,"starts_at"),expires=field(form,"expires_at");
  const eligible=field(form,"eligible_offers").split(",").map(x=>x.trim()).filter(Boolean);
+ const products=form.getAll("eligible_products").map(String);
+ const terms=form.getAll("eligible_terms").map(String);
  if((id&&!uuid.test(id))||(id&&!/^[1-9]\d*$/.test(revision))
   ||!/^[A-Z0-9][A-Z0-9_-]{2,31}$/.test(code)||!(kind==="fixed"||kind==="percent")
   ||(kind==="percent"&&percent===null)||(kind==="fixed"&&(fixed===null||fixed<=0))
   ||minimum===null||cap!==null&&cap<=0||maximum===undefined||perStore===undefined
   ||reason.length<10||reason.length>500||eligible.length>100
+  ||products.length>3||new Set(products).size!==products.length||products.some(x=>!["payments","ai_credit","bundle"].includes(x))
+  ||terms.length>3||new Set(terms).size!==terms.length||terms.some(x=>!["monthly","yearly","one_time"].includes(x))
   ||eligible.some(x=>!/^[a-z][a-z0-9_-]{2,63}$/.test(x))
   ||(starts&&!Number.isFinite(Date.parse(starts)))||(expires&&!Number.isFinite(Date.parse(expires)))
   ||(expires&&(!starts||Date.parse(expires)<=Date.parse(starts))))
@@ -49,12 +53,13 @@ export async function saveSubscriptionCoupon(_previous:CouponAdminState,form:For
   first_purchase_only:form.get("first_purchase_only")==="on",
   stack_with_annual:form.get("stack_with_annual")==="on",
   stack_with_bundle:form.get("stack_with_bundle")==="on",
-  eligible_offer_keys:eligible,starts_at:starts?starts+"Z":null,expires_at:expires?expires+"Z":null,reason};
+  eligible_offer_keys:eligible,eligible_products:products,eligible_terms:terms,
+  starts_at:starts?starts+"Z":null,expires_at:expires?expires+"Z":null,reason};
  try{
   const sql=database();
   await sql`SELECT platform_subscription_coupon_admin(${admin.user.id}::uuid,'save',${sql.json(payload as never)}::jsonb)`;
   for(const loc of ["bn","en"])revalidatePath(`/${loc}/admin/billing/coupons`);
-  return {status:"success",message:"Coupon saved as a draft. Publish it separately when ready."};
+  return {status:"success",message:"Coupon revision saved. Activate or reschedule the coupon separately when ready."};
  }catch(e){return invalid(errorMessage(e));}
 }
 
@@ -68,5 +73,29 @@ export async function transitionSubscriptionCoupon(_previous:CouponAdminState,fo
   await sql`SELECT platform_subscription_coupon_admin(${admin.user.id}::uuid,'transition',${sql.json({id,revision:Number(revision),status,reason} as never)}::jsonb)`;
   for(const loc of ["bn","en"])revalidatePath(`/${loc}/admin/billing/coupons`);
   return {status:"success",message:"Coupon status updated. Refresh to see the current revision."};
+ }catch(e){return invalid(errorMessage(e));}
+}
+
+export async function subscriptionCouponHistory(id:string,offset:number){
+ const admin=await requireSuperAdmin();
+ if(!admin||!uuid.test(id)||!Number.isSafeInteger(offset)||offset<0||offset>100000)return {error:"ACCESS_DENIED",data:null};
+ try{const rows=await database()`SELECT platform_subscription_coupon_history(${admin.user.id}::uuid,${id}::uuid,${offset}) AS data`;
+ return {error:null,data:rows[0]?.data as {versions:{revision:number;snapshot:Record<string,unknown>;recorded_at:string}[];redemptions:{id:string;invoice_id:string;workspace_id:string;discount_minor:number;redeemed_at:string}[];offset:number}};
+ }catch{return {error:"HISTORY_UNAVAILABLE",data:null};}
+}
+
+export async function saveSubscriptionTaxPolicy(_previous:CouponAdminState,form:FormData):Promise<CouponAdminState>{
+ const admin=await requireSuperAdmin();if(!admin)return invalid("Super Admin and MFA verification are required.");
+ const product=field(form,"product"),term=field(form,"term"),reason=field(form,"reason");
+ const revision=field(form,"revision"),percent=field(form,"tax_percent");
+ const rate=/^0(?:\.0{1,2})?$/.test(percent)?0:parsePercentageBps(percent);
+ if(!["payments","ai_credit","bundle"].includes(product)||!["monthly","yearly","one_time"].includes(term)
+  ||rate===null||!/^(?:0|[1-9]\d{0,15})$/.test(revision)||reason.length<10||reason.length>500)
+  return invalid("Check the product, term, percentage, revision and documented tax approval (10–500 characters).");
+ try{
+  const sql=database();
+  await sql`SELECT platform_subscription_tax_admin(${admin.user.id}::uuid,'save',${sql.json({product,term,rate_bps:rate,revision:Number(revision),reason} as never)}::jsonb)`;
+  for(const loc of ["bn","en"])revalidatePath(`/${loc}/admin/billing/coupons`);
+  return {status:"success",message:"Approved tax rule saved and versioned. Requote any orders pinned to an older revision."};
  }catch(e){return invalid(errorMessage(e));}
 }

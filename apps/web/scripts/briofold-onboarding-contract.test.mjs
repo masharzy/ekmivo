@@ -3,13 +3,15 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 
 const read=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
-test("Onboarding preserves the chosen paid plan through the dedicated summary, not a billing hash",()=>{
+test("Onboarding preserves the selected plan through the durable intent resume, not a billing hash",()=>{
  const action=read("actions/briofold-onboarding.ts");
  const billing=read("components/payment-billing.tsx");
  const subscribe=read("app/[locale]/subscribe/[plan]/route.ts");
- assert.match(action,/redirect\("\/checkout\/order\/"\+encodeURIComponent\(plan\)\)/);
+ assert.match(action,/activePurchase\(\)/);
+ assert.match(action,/redirect\("\/subscribe\/resume\/"\+active\)/);
  assert.match(action,/dashboardHref\("bn",workspace\.id,"payments","billing"\)/);
- assert.match(subscribe,/\/checkout\/order\/\$\{encodeURIComponent\(plan\)\}/);
+ assert.match(subscribe,/createPurchase\(/);
+ assert.match(subscribe,/\/subscribe\/resume\/\$\{token\}/);
  assert.match(subscribe,/onboardingState\(workspace,user\.id\)/);
  assert.match(billing,/searchParams\.get\("plan"\)/);
  assert.match(billing,/selected\.id!==data\.effective\?\.plan_id/);

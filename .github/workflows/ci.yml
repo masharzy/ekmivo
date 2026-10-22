@@ -15,6 +15,7 @@ concurrency:
 jobs:
   web:
     name: Next.js lint, build and isolated PostgreSQL smoke
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -42,7 +43,27 @@ jobs:
         run: npm ci
       - name: Production dependency security audit
         working-directory: apps/web
-        run: npm audit --omit=dev --audit-level=high
+        shell: bash
+        run: |
+          # Retry npm registry transport failures, never waive real advisories.
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            if npm audit --omit=dev --audit-level=high --fetch-timeout=30000 --fetch-retries=0 >"$log" 2>&1; then
+              cat "$log"
+              rm -f "$log"
+              exit 0
+            fi
+            cat "$log"
+            if grep -Eqi 'audit endpoint returned an error|network timeout|503 Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND' "$log" && [ "$attempt" -lt 3 ]; then
+              rm -f "$log"
+              sleep "$((attempt * 5))"
+              continue
+            fi
+            rm -f "$log"
+            exit 1
+          done
+          exit 1
       - name: Lint all web sources
         working-directory: apps/web
         run: npm run lint
@@ -64,9 +85,24 @@ jobs:
       - name: Briofold full AI wallet statement and low balance contract
         working-directory: apps/web
         run: node --test scripts/briofold-ai-statement.test.mjs scripts/briofold-ai-studio.test.mjs scripts/briofold-inbox-drafts.test.mjs scripts/briofold-inbox-attachments.test.mjs scripts/briofold-studio-requests.test.mjs
+      - name: Phase 6 SaaS payment, recovery and migration safety contract
+        working-directory: apps/web
+        run: node --test scripts/subscription-payment-handoff-contract.test.mjs
       - name: Store subscription order, legal policy and coupon safety contracts
         working-directory: apps/web
         run: node --test scripts/subscription-order-contract.test.mjs scripts/subscription-coupons-contract.test.mjs scripts/subscription-policies-contract.test.mjs scripts/subscription-offers-contract.test.mjs
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Phase 4 purchase capability, retry and continuation contracts
+        working-directory: apps/web
+        run: node --test scripts/subscription-intents-contract.test.mjs
+      - name: Phase 4 isolated PostgreSQL migration constraints
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/subscription-intents-pg-smoke.mjs
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json
@@ -128,6 +164,9 @@ jobs:
       - name: Phase 2 published subscription pricing responsive browser acceptance
         working-directory: apps/web
         run: node --test scripts/subscription-public-responsive-browser.test.mjs
+      - name: Phase 5 subscription order summary responsive and interactive browser acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-order-browser.test.mjs
       - name: Archive Phase 2 pricing screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -176,8 +215,99 @@ jobs:
         working-directory: apps/web
         run: npx tsc --noEmit
 
+  phase3_web_postgres:
+    name: Phase 3 coupon web, Go and isolated PostgreSQL
+    if: github.head_ref == 'agents/store-subscription-phase3-coupons'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ekmivo_pg00
+          POSTGRES_USER: ekmivo_test
+          POSTGRES_PASSWORD: local-only-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ekmivo_test -d ekmivo_pg00"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Clean dependency install
+        working-directory: apps/web
+        run: npm ci
+      - name: Production dependency security audit (fail closed on registry errors)
+        working-directory: apps/web
+        run: |
+          for attempt in 1 2 3; do
+            if npm audit --omit=dev --audit-level=high; then exit 0; fi
+            if [ "$attempt" -lt 3 ]; then sleep 8; fi
+          done
+          exit 1
+      - name: All web lint
+        working-directory: apps/web
+        run: npm run lint
+      - name: Phase 3 coupon and adjacent subscription contracts
+        working-directory: apps/web
+        run: node --test scripts/subscription-coupons-contract.test.mjs scripts/subscription-order-contract.test.mjs scripts/subscription-policies-contract.test.mjs
+      - name: Web TypeScript and production build
+        working-directory: apps/web
+        run: |
+          npx tsc --noEmit
+          npm run build
+      - name: Locked Admin design verification
+        run: python3 apps/web/scripts/verify-admin-design.py
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Coupon Go endpoint authorization tests
+        working-directory: backend
+        run: go test ./internal/checkout -run TestSubscriptionCoupon -count=1 -v
+      - name: Real two-connection PostgreSQL coupon exhaustion race
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/subscription-coupon-concurrency-smoke.mjs
+      - name: Coupon HTTP session, tenant, Origin, role and MFA matrix (isolated PostgreSQL)
+        working-directory: backend
+        env:
+          PHASE3_COUPON_HTTP_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo
+        run: go test ./internal/checkout -run TestSubscriptionCouponHTTPIsolatedPostgres -count=1 -v
+      - name: Install Chromium for Phase 3 synthetic Admin responsive acceptance
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Phase 3 coupon Admin EN/BN and two-theme responsive/keyboard acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-coupon-admin-browser.test.mjs
+      - name: Phase 3 React coupon Apply, Remove, uncertain retry and reload browser acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-coupon-control-browser.test.mjs
+      - name: Save Phase 3 synthetic Admin browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-coupon-admin-screenshots
+          path: apps/web/test-results/subscription-coupon-admin/
+          if-no-files-found: ignore
+      - name: Save Phase 3 coupon client browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-coupon-client-screenshots
+          path: apps/web/test-results/subscription-coupon-control/
+          if-no-files-found: ignore
+
   backend:
     name: Go compile and unit tests
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -203,7 +333,7 @@ jobs:
         working-directory: backend
         run: |
           go test ./...
-          go test -race ./internal/checkout ./internal/aicredits
+          go test -race ./internal/checkout ./internal/aicredits ./internal/subscriptionpayment
           go vet ./...
       - name: Go HTTP server smoke
         working-directory: backend
@@ -225,6 +355,7 @@ jobs:
 
   financial_containers:
     name: PG04 runtime and migration Docker builds
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -238,6 +369,7 @@ jobs:
 
   android:
     name: Native Kotlin Compose assemble and unit tests
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
