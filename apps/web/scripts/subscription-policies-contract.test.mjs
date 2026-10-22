@@ -20,10 +20,10 @@ test("immutable legal versions require super admin, audit and published singleto
 });
 
 test("checkout binds three versioned published links, with server gate for confirmation",()=>{
- const page=read("app/[locale]/checkout/order/[intent]/page.tsx");
+ const page=read("app/[locale]/checkout/order/[plan]/page.tsx");
  const loader=read("lib/server/subscription-policies.ts");
  const ui=read("components/subscription-order-summary.tsx");
- assert.match(page,/intentId=\{intent\}/);
+ assert.match(page,/intentId=\{intent\.id\}/);
  assert.match(loader,/platform_subscription_policy_public\(\)/);
  assert.doesNotMatch(loader,/process\.env\.EKMIVO_TERMS_URL/);
  assert.match(ui,/doc\?\.version/);
