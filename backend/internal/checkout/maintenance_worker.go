@@ -97,6 +97,16 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 	}
 	s := &Service{TokenKey: w.TokenKey}
 	for _, i := range invoices {
+		// A subscription handoff must be settled atomically with its own
+		// coupon/recovery state, never by the older generic PG13 renewal job.
+		if os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED") == "true" {
+			var subscription bool
+			if w.Control.QueryRow(ctx,
+				"SELECT platform_subscription_payment_is_handoff($1::uuid)", i.ID).Scan(&subscription) != nil {
+				return errors.New("subscription invoice isolation unavailable")
+			}
+			if subscription { continue }
+		}
 		platform := i.Receiver
 		if !uuidPattern.MatchString(platform) {
 			return errors.New("billing receiving workspace missing")
