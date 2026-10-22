@@ -30,6 +30,9 @@ BEGIN
     count(*) FILTER (WHERE state='cancelled')::int AS cancelled,
     count(*) FILTER (WHERE state='recovery_required')::int AS recovery,
     (SELECT count(*)::int FROM platform_subscription_payment_recovery_cases WHERE status<>'resolved') AS open_cases,
+    (SELECT count(*)::int FROM platform_subscription_purchase_intents
+      WHERE status IN ('selected','quoted') AND confirmed_invoice_id IS NULL
+      AND created_at<now()-interval '24 hours') AS stale_selections,
     round(extract(epoch FROM (now()-min(bound_at) FILTER (WHERE state='awaiting_payment')))/60)::int AS oldest_minutes
    FROM platform_subscription_payment_handoffs) s),
   'cases',COALESCE((SELECT jsonb_agg(to_jsonb(c)) FROM (

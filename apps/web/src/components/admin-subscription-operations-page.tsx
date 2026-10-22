@@ -2,7 +2,7 @@ import Link from "next/link";
 import {database} from "../lib/server/db";
 import type {AdminLocale} from "./platform-admin-shell";
 
-type NumberRow={awaiting:number;paid:number;expired:number;cancelled:number;recovery:number;open_cases:number;oldest_minutes:number|null};
+type NumberRow={awaiting:number;paid:number;expired:number;cancelled:number;recovery:number;open_cases:number;stale_selections:number;oldest_minutes:number|null};
 type CaseRow={id:string;intent_id:string;invoice_id:string;workspace_id:string;reason:string;status:string;created_at:string};
 const title=(locale:AdminLocale,en:string,bn:string)=>locale==="bn"?bn:en;
 const date=(value:string,locale:AdminLocale)=>new Intl.DateTimeFormat(locale==="bn"?"bn-BD":"en-GB",{
@@ -36,6 +36,7 @@ export async function AdminSubscriptionOperationsPage({locale,actor}:{locale:Adm
    {metric(title(locale,"Cancelled","বাতিল"),stats.cancelled)}
    {metric(title(locale,"Recovery required","রিকভারি প্রয়োজন"),stats.recovery)}
    {metric(title(locale,"Unresolved cases","অসম্পন্ন কেস"),stats.open_cases)}
+   {metric(title(locale,"Stale selections (24h+)","পুরোনো নির্বাচন (২৪ ঘণ্টা+)"),stats.stale_selections)}
   </section>
   <section className="pa-surface pa-table-card"><div className="pa-split-head"><div><h2>{title(locale,"Payment recovery queue","পেমেন্ট রিকভারি সারি")}</h2>
    <p className="pa-subtle">{title(locale,"Oldest waiting invoice (minutes)","সবচেয়ে পুরোনো অপেক্ষমাণ ইনভয়েস (মিনিট)")}: {stats.oldest_minutes??"—"}. {title(locale,"Financial/provider reconciliation is independent; never mark paid from this screen.","আর্থিক যাচাই পৃথক; এখান থেকে paid চিহ্নিত করবেন না।")}</p></div>

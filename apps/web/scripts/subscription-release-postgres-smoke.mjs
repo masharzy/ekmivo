@@ -25,6 +25,7 @@ try{
  const [read]=await db.unsafe("SELECT platform_subscription_admin_operations($1::uuid) AS data",[buyer.actor_id]);
  assert(read.data?.stats?.paid===1,"actual verified payment appears once");
  assert(read.data?.stats?.open_cases===1,"actual late-money recovery appears in queue");
+ assert(Number.isInteger(read.data?.stats?.stale_selections),"abandoned intent monitor is a numeric control-plane count");
  assert(read.data?.cases?.length===1,"bounded unresolved cases include late-money evidence");
  const [recovery]=await db.unsafe("SELECT platform_subscription_admin_export($1::uuid,'subscription-recovery','') AS data",[buyer.actor_id]);
  assert(recovery.data?.length===1,"export includes one exception with invoice reference");
