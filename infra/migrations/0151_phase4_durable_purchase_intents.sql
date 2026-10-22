@@ -61,10 +61,8 @@ DECLARE
  coupon_uuid uuid; plan_id text; old_status text; is_admin boolean;
 BEGIN
  IF operation NOT IN ('create','read','bind_identity','bind_store','cancel','claim_free','revalidate')
- OR capability_digest IS NULL OR capability_digest !~ '^[a-f0-9]{64}
-COMMIT;
- OR (guest_digest IS NOT NULL AND guest_digest !~ '^[a-f0-9]{64}
-COMMIT;)
+ OR capability_digest IS NULL OR capability_digest !~ '^[a-f0-9]{64}$'
+ OR (guest_digest IS NOT NULL AND guest_digest !~ '^[a-f0-9]{64}$')
  OR data IS NULL OR jsonb_typeof(data)<>'object' OR pg_column_size(data)>4096
  THEN RAISE EXCEPTION 'INVALID_INTENT_REQUEST' USING ERRCODE='22023'; END IF;
 
@@ -72,15 +70,11 @@ COMMIT;)
   creation_digest:=data->>'creation_key';
   requested_offer:=data->>'offer_key'; selected_term:=data->>'term';
   selection_version:=data->>'version_id';
-  IF guest_digest IS NULL OR creation_digest IS NULL OR creation_digest !~ '^[a-f0-9]{64}
-COMMIT;
-    OR requested_offer IS NULL OR requested_offer !~ '^[a-z][a-z0-9_-]{2,63}
-COMMIT;
+  IF guest_digest IS NULL OR creation_digest IS NULL OR creation_digest !~ '^[a-f0-9]{64}$'
+    OR requested_offer IS NULL OR requested_offer !~ '^[a-z][a-z0-9_-]{2,63}$'
     OR selected_term NOT IN ('monthly','yearly','one_time')
-    OR selection_version IS NULL OR selection_version !~ '^[a-f0-9-]{36}
-COMMIT;
-    OR (data->>'quantity') IS NULL OR (data->>'quantity') !~ '^[1-9][0-9]{0,5}
-COMMIT;
+    OR selection_version IS NULL OR selection_version !~ '^[a-f0-9-]{36}$'
+    OR (data->>'quantity') IS NULL OR (data->>'quantity') !~ '^[1-9][0-9]{0,5}$'
   THEN RAISE EXCEPTION 'INVALID_SELECTION' USING ERRCODE='22023'; END IF;
   requested:=(data->>'quantity')::bigint;
   IF requested NOT BETWEEN 1 AND 100000
@@ -102,8 +96,7 @@ COMMIT;
   code:=upper(trim(coalesce(data->>'coupon_code','')));
   coupon_uuid:=NULL;
   IF code<>'' THEN
-   IF code !~ '^[A-Z0-9][A-Z0-9_-]{2,31}
-COMMIT;
+   IF code !~ '^[A-Z0-9][A-Z0-9_-]{2,31}$'
    THEN RAISE EXCEPTION 'COUPON_INVALID' USING ERRCODE='22023'; END IF;
    SELECT c.id INTO coupon_uuid FROM platform_subscription_coupons c
    WHERE c.code_normalized=code AND c.status='active'
@@ -115,8 +108,7 @@ COMMIT;
    IF coupon_uuid IS NULL THEN RAISE EXCEPTION 'COUPON_UNAVAILABLE' USING ERRCODE='23514'; END IF;
   END IF;
   IF data->>'legacy_plan_id' IS NOT NULL
-     AND data->>'legacy_plan_id' !~ '^[a-z][a-z0-9_-]{1,39}
-COMMIT;
+     AND data->>'legacy_plan_id' !~ '^[a-z][a-z0-9_-]{1,39}$'
   THEN RAISE EXCEPTION 'INVALID_PLAN' USING ERRCODE='22023'; END IF;
   INSERT INTO platform_subscription_purchase_intents(
    public_token_sha256,guest_session_sha256,actor_id,offer_version_id,coupon_id,
@@ -184,8 +176,7 @@ COMMIT;
  END IF;
 
  IF operation='cancel' THEN
-  IF data->>'revision' IS NULL OR data->>'revision' !~ '^[1-9][0-9]{0,15}
-COMMIT;
+  IF data->>'revision' IS NULL OR data->>'revision' !~ '^[1-9][0-9]{0,15}$'
   THEN RAISE EXCEPTION 'INVALID_REVISION' USING ERRCODE='22023'; END IF;
   expected:=(data->>'revision')::bigint;
   UPDATE platform_subscription_purchase_intents SET status='cancelled',revision=revision+1,updated_at=now()
@@ -214,8 +205,7 @@ COMMIT;
  IF operation='bind_store' THEN
   store:=NULL;
   IF data->>'store_id' IS NULL OR data->>'store_id' !~
-   '^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}
-COMMIT;
+   '^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$'
   THEN RAISE EXCEPTION 'STORE_NOT_AUTHORIZED' USING ERRCODE='42501'; END IF;
   store:=(data->>'store_id')::uuid;
   IF intent_row.actor_id IS DISTINCT FROM actor
