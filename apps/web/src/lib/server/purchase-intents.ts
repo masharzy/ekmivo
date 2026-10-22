@@ -151,7 +151,8 @@ export async function bindStore(token:string,storeId:string){
    AND i.status='selected' AND i.expires_at>now()
    AND EXISTS (SELECT 1 FROM workspace_members m JOIN app_users u ON u.id=m.user_id
       WHERE m.workspace_id=${storeId}::uuid AND m.user_id=${u.id}::uuid
-        AND m.role IN ('owner','admin') AND u.disabled_at IS NULL)
+        AND m.role IN ('owner','admin') AND u.disabled_at IS NULL
+        AND COALESCE(pg13_capability_override(m.workspace_id,m.user_id,'workspace:settings'),true))
   RETURNING id`;
  if(!rows.length)throw new IntentError("STORE_NOT_AUTHORIZED",403);
  return readPurchase(token);
@@ -220,7 +221,8 @@ export async function claimFreePurchase(token:string){
   const permission=await tx`
    SELECT 1 FROM workspace_members m JOIN app_users u ON u.id=m.user_id
    WHERE m.user_id=${user.id}::uuid AND m.workspace_id=${intent.storeId}::uuid
-    AND m.role IN ('owner','admin') AND u.disabled_at IS NULL`;
+    AND m.role IN ('owner','admin') AND u.disabled_at IS NULL
+    AND COALESCE(pg13_capability_override(m.workspace_id,m.user_id,'workspace:settings'),true)`;
   if(!permission.length)throw new IntentError("BILLING_ACCESS_DENIED",403);
   // Existing verified billing SQL owns entitlement and subscription conflicts.
   await tx`SELECT payment_plan_claim_free(${intent.storeId}::uuid,${user.id}::uuid,${plan.id})`;
