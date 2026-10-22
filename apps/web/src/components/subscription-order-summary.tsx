@@ -9,7 +9,7 @@ import {allPoliciesAccepted,consentPayload,moneyBDT,orderErrorMessage,
 import "./subscription-order-summary.css";
 
 type ResponseError={code?:string;error?:{code?:string}};
-type ConfirmResult={checkout_token?:string;invoice_id?:string;code?:string};
+type ConfirmResult={quote_id?:string;invoice_id?:string;checkout_token?:string;code?:string};
 const blankConsents=()=>({terms:false,privacy:false,refund:false});
 
 export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
@@ -29,13 +29,17 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
  const [tick,setTick]=useState(0);
  const requestSerial=useRef(0);
  const idempotency=useRef<{quote:string;key:string}|null>(null);
+ const couponCommand=useRef<{code:string;revision:number;key:string}|null>(null);
  const base=`/api/go/workspaces/${storeId}/subscription-orders/${intentId}`;
+ const couponBase=`/api/go/platform/purchase-intents/${intentId}/quote`;
+ const paymentBase=`/api/go/workspaces/${storeId}/subscription-purchases/${intentId}/payment`;
  const money=(minor:string)=>moneyBDT(minor,locale);
  const quote:OrderQuote|null=order?.quote??null;
  const quoteReady=verifiedSubscriptionQuote(quote);
  const legalReady=verifiedLegalDocuments(order?.policies);
  const agreed=allPoliciesAccepted(order?.policies??null,consents);
  const confirmed=order?.status==="confirmed";
+ const checkoutEnabled=order?.checkout_enabled===true;
  const currencyOkay=confirmed?Boolean(order?.quote_id&&order?.invoice_id):quoteReady&&quote?.currency==="BDT";
 
  const read=useCallback(async(signal?:AbortSignal):Promise<OrderRead>=>{
@@ -54,6 +58,14 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
   return data;
  },[base]);
 
+ const postCoupon=useCallback(async(code:string,revision:number,key:string)=>{
+  const response=await fetch(couponBase,{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({operation_key:key,revision,coupon_code:code}),
+   signal:AbortSignal.timeout(15000),cache:"no-store"});
+  const data=await response.json().catch(()=>({})) as ResponseError;
+  if(!response.ok)throw Error(data.code||data.error?.code||`COUPON_${response.status}`);
+ },[couponBase]);
+
  const load=useCallback(async()=>{
   const serial=++requestSerial.current;
   setLoading(true);setError("");
@@ -63,13 +75,25 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
     await post("quote",{});
     data=await read();
    }
+   if(data.status!=="confirmed"&&data.selected_coupon_code&&
+    data.quote?.coupon_code!==data.selected_coupon_code&&data.intent_revision&&verifiedSubscriptionQuote(data.quote)){
+    // Phase 4's retained selection is applied through Phase 3 exactly once.
+    try{
+     const code=data.selected_coupon_code;
+     const command=couponCommand.current?.code===code&&couponCommand.current.revision===data.intent_revision
+      ?couponCommand.current:{code,revision:data.intent_revision,key:crypto.randomUUID()};
+     couponCommand.current=command;
+     await postCoupon(command.code,command.revision,command.key);
+     data=await read();couponCommand.current=null;
+    }catch(caught){setCouponError(orderErrorMessage(caught instanceof Error?caught.message:"",bn));}
+   }
    if(serial===requestSerial.current){
-    setOrder(data);setCouponInput(data.quote?.coupon_code||"");
+    setOrder(data);setCouponInput(data.quote?.coupon_code||data.selected_coupon_code||"");
     if(!verifiedLegalDocuments(data.policies))setError(orderErrorMessage("POLICY_UNAVAILABLE",bn));
    }
   }catch(caught){if(serial===requestSerial.current){setOrder(null);setError(orderErrorMessage(caught instanceof Error?caught.message:"",bn));}}
   finally{if(serial===requestSerial.current)setLoading(false);}
- },[read,post,bn]);
+ },[read,post,postCoupon,bn]);
  useEffect(()=>{
   const initial=requestSerial.current;
   queueMicrotask(()=>{if(requestSerial.current===initial)void load();});
@@ -80,17 +104,27 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
   if(busy||loading||confirmed)return;
   setBusy(true);setCouponError("");setCouponSuccess("");setError("");
   try{
-   await post("quote",{coupon_code:code});
+   if(!order?.intent_revision||!verifiedSubscriptionQuote(order.quote))throw Error("QUOTE_REQUIRED");
+   const command=couponCommand.current?.code===code&&couponCommand.current.revision===order.intent_revision
+    ?couponCommand.current:{code,revision:order.intent_revision,key:crypto.randomUUID()};
+   couponCommand.current=command;
+   await postCoupon(command.code,command.revision,command.key);
    const data=await read();
-   setOrder(data);setCouponInput(data.quote?.coupon_code||"");
+   if(data.quote?.coupon_code!==(code||null))throw Error("QUOTE_CHANGED");
+   setOrder(data);setCouponInput(data.quote?.coupon_code||"");couponCommand.current=null;
    setConsents(blankConsents());idempotency.current=null;
    setCouponSuccess(code?t("Coupon applied. The server recalculated your total.","কুপন প্রয়োগ হয়েছে। সার্ভার নতুন মোট হিসাব করেছে।"):t("Coupon removed. Total recalculated.","কুপন সরানো হয়েছে। নতুন মোট হিসাব হয়েছে।"));
-  }catch(caught){setCouponError(orderErrorMessage(caught instanceof Error?caught.message:"",bn));}
+  }catch(caught){
+   // A lost POST response is ambiguous; read the authoritative quote before
+   // another attempt. Keep the original operation key for safe replay.
+   try{const data=await read();setOrder(data);setCouponInput(data.quote?.coupon_code||data.selected_coupon_code||"");}catch{/* keep retry key */}
+   setCouponError(orderErrorMessage(caught instanceof Error?caught.message:"",bn));
+  }
   finally{setBusy(false);}
  }
 
  async function goToPay(){
-  if(busy||loading||!order||!currencyOkay||(!agreed&&!confirmed))return;
+  if(busy||loading||!order||!checkoutEnabled||!currencyOkay||(!agreed&&!confirmed))return;
   setBusy(true);setError("");
   try{
    const current=confirmed?order.quote_id??"":quote!.id;
@@ -98,16 +132,38 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
    if(!confirmed&&!verifiedLegalDocuments(order.policies))throw Error("POLICY_UNAVAILABLE");
    const response=await post("confirm",{quote_id:current,
     consents:verifiedLegalDocuments(order.policies)?consentPayload(order.policies,consents):{}},idempotency.current.key);
-   if(!response.checkout_token||!/^[A-Za-z0-9_-]{43}$/.test(response.checkout_token))throw Error("PAYMENT_HANDOFF_RETRY");
-   router.push(`/pay/subscription/${response.checkout_token}`);
+   if(!response.invoice_id||!response.quote_id||response.quote_id!==current)throw Error("ORDER_SERVICE_UNAVAILABLE");
+   // Phase 6 alone creates the financial capability. Its bind is idempotent
+   // for the confirmed invoice, including a lost response and two open tabs.
+   const handoff=await fetch(paymentBase,{method:"POST",headers:{"Content-Type":"application/json",
+    "Idempotency-Key":idempotency.current.key},body:JSON.stringify({quote_id:response.quote_id,
+    invoice_id:response.invoice_id}),signal:AbortSignal.timeout(15000),cache:"no-store"});
+   const payment=await handoff.json().catch(()=>({})) as ConfirmResult&ResponseError;
+   if(!handoff.ok)throw Error(payment.code||payment.error?.code||"PAYMENT_HANDOFF_RETRY");
+   if(!payment.checkout_token||!/^[A-Za-z0-9_-]{43}$/.test(payment.checkout_token))throw Error("PAYMENT_HANDOFF_RETRY");
+   router.push(`/pay/subscription/${payment.checkout_token}`);
   }catch(caught){
    const code=caught instanceof Error?caught.message:"";
    if(["POLICY_CHANGED","POLICY_ACCEPTANCE_REQUIRED","QUOTE_STALE"].includes(code)){
     setConsents(blankConsents());idempotency.current=null;
-    try{setOrder(await read());}catch{/* keep original error visible */}
+    try{
+     if(code==="QUOTE_STALE"){
+      await post("quote",{});couponCommand.current=null;
+      setTick(value=>value+1);
+     }else setOrder(await read());
+    }catch{/* keep original error visible */}
    }
    setError(orderErrorMessage(code,bn));
   }finally{setBusy(false);}
+ }
+
+ async function refreshQuote(){
+  if(busy||loading)return;
+  setBusy(true);setError("");setCouponError("");setConsents(blankConsents());
+  idempotency.current=null;couponCommand.current=null;
+  try{if(!confirmed)await post("quote",{});}catch(caught){
+   setError(orderErrorMessage(caught instanceof Error?caught.message:"",bn));
+  }finally{setBusy(false);setTick(value=>value+1);}
  }
 
  function policyConsent(kind:CheckoutPolicy,label:string){
@@ -140,8 +196,8 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
       <label htmlFor="ek-order-coupon-code">{t("Coupon code","কুপন কোড")}</label>
       <div><input id="ek-order-coupon-code" value={couponInput} maxLength={32} autoComplete="off" disabled={busy||loading||confirmed}
        placeholder={t("Enter coupon","কুপন লিখুন")} onChange={event=>setCouponInput(event.target.value.toUpperCase())}/>
-       <button type="submit" disabled={busy||loading||confirmed||couponInput.trim().length<3}>{busy?t("Working…","অপেক্ষা করুন…"):t("Apply","প্রয়োগ")}</button>
-       {quote?.coupon_code&&<button type="button" onClick={()=>void changeCoupon("")} disabled={busy||loading||confirmed}>{t("Remove","সরান")}</button>}
+       <button type="submit" disabled={busy||loading||confirmed||!quoteReady||couponInput.trim().length<3}>{busy?t("Working…","অপেক্ষা করুন…"):t("Apply","প্রয়োগ")}</button>
+       {(quote?.coupon_code||order?.selected_coupon_code)&&<button type="button" onClick={()=>void changeCoupon("")} disabled={busy||loading||confirmed||!quoteReady}>{t("Remove","সরান")}</button>}
       </div>
       {couponError&&<p role="alert" className="ek-order-warning">{couponError}</p>}
       {couponSuccess&&<p role="status" className="ek-order-success">{couponSuccess}</p>}
@@ -171,8 +227,9 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
       {quote.total_minor==="0"&&<p role="alert" className="ek-order-warning">{orderErrorMessage("ZERO_DUE_UNAPPROVED",bn)}</p>}
      </>:!confirmed&&<p className="ek-order-message" role="status">{loading?t("Calculating the authoritative total…","সার্ভার মোট মূল্য হিসাব করছে…"):t("No current verified quote.","এই মুহূর্তে যাচাই করা মূল্য নেই।")}</p>}
      {error&&<p className="ek-order-warning" role="alert">{error}</p>}
-     <button className="ek-order-submit" onClick={()=>void goToPay()} disabled={busy||loading||!currencyOkay||quote?.total_minor==="0"||(!agreed&&!confirmed)}>{busy?t("Confirming…","নিশ্চিত হচ্ছে…"):"Go to Pay"}</button>
-     <button className="ek-order-retry" onClick={()=>{setConsents(blankConsents());setTick(current=>current+1);}} disabled={busy||loading}>{t("Refresh quote / retry safely","নতুন মূল্য যাচাই / আবার চেষ্টা")}</button>
+     <button className="ek-order-submit" onClick={()=>void goToPay()} disabled={busy||loading||!checkoutEnabled||!currencyOkay||quote?.total_minor==="0"||(!agreed&&!confirmed)}>{busy?t("Confirming…","নিশ্চিত হচ্ছে…"):"Go to Pay"}</button>
+     {!checkoutEnabled&&!loading&&<p className="ek-order-message" role="status">{t("Payment handoff is not yet available.","পেমেন্ট হ্যান্ডঅফ এখনো চালু হয়নি।")}</p>}
+     <button className="ek-order-retry" onClick={()=>void refreshQuote()} disabled={busy||loading}>{t("Refresh quote / retry safely","নতুন মূল্য যাচাই / আবার চেষ্টা")}</button>
      <p className="ek-order-note">{t("You are not charged by reviewing this page. Confirmation does not activate your subscription before verified payment.","এই পেজ দেখলে টাকা কাটা হবে না। যাচাই করা পেমেন্টের আগে সাবস্ক্রিপশন চালু হবে না।")}</p>
     </aside>
    </div>

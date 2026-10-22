@@ -32,32 +32,42 @@ test("quote requires server provided minor-unit strings and live expiry",()=>{
 
 test("summary uses opaque intent, no seller wallet and no client amount calculation",()=>{
  const summary=read("components/subscription-order-summary.tsx");
- const route=read("app/[locale]/checkout/order/[intent]/page.tsx");
+ const route=read("app/[locale]/checkout/order/[plan]/page.tsx");
  const proxy=read("app/api/go/[...path]/route.ts");
  const pay=read("app/[locale]/pay/subscription/[token]/page.tsx");
  assert.match(summary,/Go to Pay/);assert.match(summary,/Pay with Ekmivo/);
  for(const kind of ["terms","privacy","refund"])assert.match(summary,new RegExp(`policyConsent\\("${kind}"`));
- assert.match(summary,/post\("quote",\{coupon_code:code\}\)/);
+ assert.match(summary,/postCoupon\(command\.code,command\.revision,command\.key\)/);
  assert.match(summary,/post\("confirm"/);
- assert.match(summary,/router\.push\(`\/pay\/subscription\/\$\{response\.checkout_token\}`\)/);
+ assert.match(summary,/router\.push\(`\/pay\/subscription\/\$\{payment\.checkout_token\}`\)/);
  assert.match(summary,/verifiedSubscriptionQuote/);
  assert.doesNotMatch(summary,/name="(?:bkash|nagad|rocket)"|amount_minor\s*\*|amount_minor\s*\//);
- assert.match(route,/intentId=\{intent\}/);assert.doesNotMatch(route,/purchaseEnabled=\{false\}/);
- assert.match(proxy,/subscriptionOrderPath/);assert.match(pay,/CheckoutExperience/);
+ assert.match(route,/public_token_sha256/);assert.match(route,/hashToken\(plan\)/);
+ assert.doesNotMatch(route,/purchaseEnabled=\{false\}/);
+ assert.match(proxy,/subscriptionOrderPath/);assert.match(proxy,/couponQuotePath/);
+ assert.match(proxy,/subscriptionPaymentPath/);assert.match(pay,/CheckoutExperience/);
 });
 
 test("Go transaction revalidates Store, policy, offer, tax and invoice uniqueness",()=>{
- const sql=readFileSync(new URL("../../../infra/migrations/0145_platform_subscription_order_summary.sql",import.meta.url),"utf8");
+ const sql=readFileSync(new URL("../../../infra/migrations/0151_platform_subscription_order_summary.sql",import.meta.url),"utf8");
  for(const term of ["platform_primary_stores","pg13_actor","FOR UPDATE","platform_subscription_policy_acceptances",
-   "platform_subscription_order_confirmations","UNIQUE(workspace_id,idempotency_key)","TAX_NOT_CONFIGURED","QUOTE_STALE",
+   "platform_subscription_order_confirmations","UNIQUE(workspace_id,idempotency_key)","TAX_POLICY_REQUIRED","QUOTE_STALE",
    "POLICY_CHANGED","ZERO_DUE_UNAPPROVED","FULFILLMENT_NOT_READY","pg13_platform_invoices","coupon_revision"])
   assert.ok(sql.includes(term),term);
  assert.match(sql,/REVOKE ALL ON FUNCTION platform_subscription_order_request/);
+ assert.match(sql,/platform_subscription_coupon_current_quote\(uuid,uuid\)/);
+ assert.match(sql,/tax_policy_id/);
+ assert.match(sql,/tax_policy_revision/);
+ assert.doesNotMatch(sql,/CREATE FUNCTION platform_subscription_tax_admin|CREATE TABLE platform_subscription_tax_settings/);
+ assert.match(sql,/platform_subscription_coupon_commands/);
+ assert.match(sql,/Phase 3 Apply command reserves this exact quote/);
+ assert.doesNotMatch(sql,/ADD COLUMN coupon_revision bigint/);
  assert.doesNotMatch(sql,/UPDATE pg13_subscriptions|status='paid'\s*WHERE/);
  const go=readFileSync(new URL("../../../backend/internal/checkout/subscription_order.go",import.meta.url),"utf8");
  assert.match(go,/EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED/);
  assert.match(go,/r\.Header\.Get\("Origin"\)\s*==\s*""/);
  assert.match(go,/platform_subscription_order_request/);
+ assert.doesNotMatch(go,/SELECT pg10_intent|s\.token\(/);
 });
 
 test("seller pay route remains owned by existing merchant checkout",()=>{

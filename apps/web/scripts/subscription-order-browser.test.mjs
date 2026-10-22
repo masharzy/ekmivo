@@ -36,15 +36,32 @@ function quote(coupon=""){
 }
 function order(coupon="",status="quoted",version="v1"){
  return {status,intent_id:key,store_id:"a152fb05-39e2-489e-8ed5-3f55cd24d074",
+  intent_revision:1,selected_coupon_code:coupon||null,checkout_enabled:true,
   expires_at:"2035-10-22T10:00:00Z",offer:{key:"pay_monthly",product:"payments",term:"monthly",version_id:key,
    quantity:1,name:"Payments Starter",name_bn:"পেমেন্টস স্টার্টার",included_ai_credits:null},
   policies:legal(version),quote:quote(coupon)};
 }
-const sandbox=function(){return {current:order(),lastCode:null,requests:[],confirmed:0,failRead:null,policyVersion:"v1",networkLost:false};};
+const sandbox=function(){return {current:order(),revision:1,requests:[],confirmed:0,handoffs:0,failRead:null,policyVersion:"v1",networkLost:false};};
 async function setup(page,locale,theme,state){
  await page.route("http://localhost:45678/",route=>route.fulfill({status:200,contentType:"text/html",body:"<!doctype html><title>Order test</title>"}));
  await page.goto("http://localhost:45678/",{waitUntil:"domcontentloaded"});
  page.setDefaultTimeout(8000);
+ await page.route("**/api/go/platform/purchase-intents/*/quote",async route=>{
+  const req=route.request(),data=JSON.parse(req.postData()||"{}");
+  state.requests.push({method:req.method(),path:new URL(req.url()).pathname,body:req.postData()});
+  if(data.coupon_code?.startsWith("BAD"))return route.fulfill({status:422,contentType:"application/json",body:JSON.stringify({code:"COUPON_INVALID"})});
+  if(data.coupon_code==="EXPIRED")return route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({code:"COUPON_EXPIRED"})});
+  if(data.coupon_code==="EXHAUSTED")return route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({code:"COUPON_EXHAUSTED"})});
+  assert.equal(typeof data.operation_key,"string");assert.equal(data.revision,state.revision);
+  state.revision++;state.current={...order(data.coupon_code||""),intent_revision:state.revision};
+  return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({intent_revision:state.revision})});
+ });
+ await page.route("**/api/go/workspaces/*/subscription-purchases/*/payment",async route=>{
+  state.handoffs++;
+  const data=JSON.parse(route.request().postData()||"{}");
+  assert.equal(data.invoice_id,key);assert.equal(data.quote_id,key);
+  return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({checkout_token:"A".repeat(43)})});
+ });
  await page.route("**/api/go/workspaces/*/subscription-orders/**",async route=>{
   const req=route.request(),url=new URL(req.url()),method=req.method();state.requests.push({method,path:url.pathname,body:req.postData()});
   if(method==="GET"){
@@ -53,10 +70,8 @@ async function setup(page,locale,theme,state){
   }
   const data=JSON.parse(req.postData()||"{}");
   if(url.pathname.endsWith("/quote")){
-   if(data.coupon_code&&data.coupon_code.startsWith("BAD"))return route.fulfill({status:422,contentType:"application/json",body:JSON.stringify({code:"COUPON_INVALID"})});
-   if(data.coupon_code==="EXPIRED")return route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({code:"COUPON_EXPIRED"})});
-   if(data.coupon_code==="EXHAUSTED")return route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({code:"COUPON_EXHAUSTED"})});
-   state.current=order(data.coupon_code||"");
+   assert.equal(data.coupon_code,undefined);
+   state.revision++;state.current={...order(),intent_revision:state.revision};
    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({status:"quoted",quote_id:key})});
   }
   if(url.pathname.endsWith("/confirm")){
@@ -64,7 +79,7 @@ async function setup(page,locale,theme,state){
    if(state.policyVersion!=="v1")return route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({code:"POLICY_CHANGED"})});
    state.confirmed++;
    if(state.current.status!=="confirmed")for(const kind of ["terms","privacy","refund"])assert.equal(data.consents[kind].accepted,true);
-   return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({invoice_id:key,checkout_token:"A".repeat(43)})});
+   return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({invoice_id:key,quote_id:key})});
   }
   return route.fulfill({status:404,body:"{}"});
  });
@@ -152,7 +167,7 @@ test("Phase 5: refresh a confirmed order resumes original invoice, never issues 
  try{
   const page=await browser.newPage({viewport:{width:1024,height:800}});
   const state=sandbox();state.current={status:"confirmed",invoice_id:key,quote_id:key,total_minor:"129900",
-   currency:"BDT",snapshot:{total_minor:"129900"}};
+   currency:"BDT",checkout_enabled:true,snapshot:{total_minor:"129900"}};
   await setup(page,"en","system",state);
   assert.ok(await page.getByText("Your confirmed invoice will be resumed, not recreated.").isVisible());
   assert.equal(await consents(page).count(),3);

@@ -812,7 +812,7 @@ With owner/admin/editor/viewer test memberships, review Customers, Leads and Fol
 
 ## Store-first subscription checkout Phase 5 (2026-10-22, NOT SEALED)
 
-Prerequisites: verified Phase 2–4 integration, approved tax revision, published Terms/Privacy/Refund fingerprints, isolated Neon control migration 0145 and separately authorized Phase 6 payment adapter. Flags stay OFF until approved. Use test Stores, not real customer transfers.
+Prerequisites: verified Phase 2–4 integration, approved Phase 3 tax policy revision, published Terms/Privacy/Refund fingerprints, isolated Neon control migration **0151** (after Phase 3 `0145–0149` and Phase 4's renumbered durable-intents migration) and separately authorized Phase 6 payment adapter. Phase 3 `0148` currently collides with Phase 4 `0148`; resolve on their branches before applying either. Flags stay OFF until approved. Use test Stores, not real customer transfers.
 
 - Guest → login/register/Google → verified email → Store setup with Payments monthly/yearly, prepaid AI, eligible bundle and valid coupon. Exact version, Store, quantity and coupon must survive redirects/refresh. Expired or revoked selections must never issue an invoice.
 - Check 320/375/768/1024/1440px and 200% zoom, EN/BN/Hind Siliguri, Light/Dark/System, keyboard-only and screen reader: itemized prices/periods, Server tax/coupon/discount/total, independent checkbox labels, linked current policy versions, visible focus and no wallet/phone selection on summary.

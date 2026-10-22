@@ -5,29 +5,18 @@ SET LOCAL statement_timeout='30s';
 DO $$ BEGIN
  IF current_database()<>'ekmivo' OR to_regclass('public.platform_subscription_purchase_intents') IS NULL
   OR to_regclass('public.platform_subscription_policy_versions') IS NULL
+  OR to_regclass('public.platform_subscription_coupon_commands') IS NULL
+  OR to_regclass('public.platform_subscription_tax_policy_versions') IS NULL
+  OR to_regprocedure('public.platform_subscription_coupon_current_quote(uuid,uuid)') IS NULL
+  OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public'
+   AND table_name='platform_subscription_purchase_intents' AND column_name='public_token_sha256')
   OR to_regclass('public.financial_realm') IS NOT NULL
- THEN RAISE EXCEPTION '0145 requires Ekmivo control database after 0144'; END IF;
+ THEN RAISE EXCEPTION '0151 requires control after Phase 3 0149 and Phase 4 0148'; END IF;
 END $$;
 
-ALTER TABLE platform_subscription_purchase_intents ADD COLUMN quantity integer NOT NULL DEFAULT 1 CHECK(quantity BETWEEN 1 AND 1000);
-ALTER TABLE platform_subscription_purchase_quotes ADD COLUMN tax_revision bigint;
-ALTER TABLE platform_subscription_purchase_quotes ADD COLUMN coupon_revision bigint;
 ALTER TABLE platform_subscription_policy_acceptances ADD COLUMN policy_kind text CHECK(policy_kind IN ('terms','privacy','refund'));
 ALTER TABLE platform_subscription_policy_acceptances ADD COLUMN policy_version_label text;
 ALTER TABLE platform_subscription_policy_acceptances ADD COLUMN policy_content_sha256 text CHECK(policy_content_sha256~'^[a-f0-9]{64}$');
-
--- Absence means checkout cannot quote: there is intentionally no invented zero tax.
-CREATE TABLE platform_subscription_tax_settings (
- singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),
- rate_bps integer NOT NULL CHECK(rate_bps BETWEEN 0 AND 10000),
- revision bigint NOT NULL DEFAULT 1,
- updated_by uuid NOT NULL REFERENCES app_users(id),
- updated_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE platform_subscription_tax_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE platform_subscription_tax_settings FORCE ROW LEVEL SECURITY;
-CREATE POLICY platform_subscription_tax_settings_owner ON platform_subscription_tax_settings TO CURRENT_USER USING(true) WITH CHECK(true);
-REVOKE ALL ON platform_subscription_tax_settings FROM PUBLIC;
 
 CREATE TABLE platform_subscription_order_confirmations (
  intent_id uuid PRIMARY KEY REFERENCES platform_subscription_purchase_intents(id) ON DELETE RESTRICT,
@@ -45,26 +34,6 @@ ALTER TABLE platform_subscription_order_confirmations FORCE ROW LEVEL SECURITY;
 CREATE POLICY platform_subscription_order_confirmations_owner ON platform_subscription_order_confirmations TO CURRENT_USER USING(true) WITH CHECK(true);
 REVOKE ALL ON platform_subscription_order_confirmations FROM PUBLIC;
 
-CREATE FUNCTION platform_subscription_tax_admin(actor uuid, expected_revision bigint, rate integer, reason text)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE prior bigint; BEGIN
- IF NOT EXISTS(SELECT 1 FROM platform_administrators p JOIN app_users u ON u.id=p.user_id
-  WHERE p.user_id=actor AND p.role='super_admin' AND u.disabled_at IS NULL)
- THEN RAISE EXCEPTION 'ACCESS_DENIED' USING ERRCODE='42501'; END IF;
- IF rate NOT BETWEEN 0 AND 10000 OR length(trim(reason)) NOT BETWEEN 10 AND 500
- THEN RAISE EXCEPTION 'INVALID_ORDER_REQUEST'; END IF;
- PERFORM pg_advisory_xact_lock(hashtextextended('platform-subscription-tax',0));
- SELECT revision INTO prior FROM platform_subscription_tax_settings WHERE singleton FOR UPDATE;
- IF coalesce(prior,0)<>expected_revision THEN RAISE EXCEPTION 'TAX_CHANGED'; END IF;
- INSERT INTO platform_subscription_tax_settings(singleton,rate_bps,revision,updated_by)
- VALUES(true,rate,coalesce(prior,0)+1,actor)
- ON CONFLICT(singleton) DO UPDATE SET rate_bps=excluded.rate_bps,revision=excluded.revision,
- updated_by=excluded.updated_by,updated_at=now();
- INSERT INTO platform_admin_audit(actor_id,action,description)
- VALUES(actor,'subscription_tax.configure',left('Revision '||(coalesce(prior,0)+1)||' | '||trim(reason),1800));
- RETURN jsonb_build_object('revision',coalesce(prior,0)+1,'rate_bps',rate);
-END $$;
-
 CREATE FUNCTION platform_subscription_order_request(w uuid,a uuid,purchase uuid,operation text,payload jsonb DEFAULT '{}'::jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE
@@ -73,7 +42,7 @@ DECLARE
  variant platform_subscription_offer_versions%ROWTYPE;
  promo platform_subscription_coupons%ROWTYPE;
  quote platform_subscription_purchase_quotes%ROWTYPE;
- tax platform_subscription_tax_settings%ROWTYPE;
+ tax platform_subscription_tax_policies%ROWTYPE;
  confirmed platform_subscription_order_confirmations%ROWTYPE;
  version payment_plan_versions%ROWTYPE;
  plan payment_plan_catalog%ROWTYPE;
@@ -119,9 +88,10 @@ BEGIN
  END IF;
  policies:=platform_subscription_policy_public();
  IF NOT (policies ?& kinds) THEN RAISE EXCEPTION 'POLICY_UNAVAILABLE'; END IF;
- SELECT * INTO tax FROM platform_subscription_tax_settings WHERE singleton;
- IF tax.singleton IS NULL THEN RAISE EXCEPTION 'TAX_NOT_CONFIGURED'; END IF;
- units:=intent.quantity;
+ SELECT * INTO tax FROM platform_subscription_tax_policies
+ WHERE product=offer.product AND term=variant.term;
+ IF tax.id IS NULL THEN RAISE EXCEPTION 'TAX_POLICY_REQUIRED'; END IF;
+ units:=intent.requested_quantity;
  IF units NOT BETWEEN 1 AND 1000 THEN RAISE EXCEPTION 'INVALID_ORDER_REQUEST'; END IF;
  base:=variant.amount_minor::numeric*units;
  IF base>100000000000 THEN RAISE EXCEPTION 'AMOUNT_OUT_OF_RANGE'; END IF;
@@ -130,6 +100,8 @@ BEGIN
   SELECT * INTO quote FROM platform_subscription_purchase_quotes q WHERE q.intent_id=purchase
   ORDER BY q.revision DESC LIMIT 1;
   RETURN jsonb_build_object('status',intent.status,'intent_id',intent.id,'store_id',w,
+   'intent_revision',intent.revision,
+   'selected_coupon_code',(SELECT c.code_normalized FROM platform_subscription_coupons c WHERE c.id=intent.coupon_id),
    'expires_at',intent.expires_at,'offer',jsonb_build_object('key',offer.offer_key,'product',offer.product,
     'term',variant.term,'version_id',variant.id,'quantity',units,'name',variant.terms->>'name',
     'name_bn',variant.terms->>'name_bn','included_ai_credits',variant.terms->>'included_ai_credits'),
@@ -144,34 +116,36 @@ BEGIN
  END IF;
 
  IF operation='quote' THEN
-  IF intent.status='confirmed' THEN RAISE EXCEPTION 'ORDER_CONFIRMED'; END IF;
-  IF payload ? 'coupon_code' THEN
-   code:=upper(trim(coalesce(payload->>'coupon_code','')));
-   IF code<>'' AND code!~'^[A-Z0-9][A-Z0-9_-]{2,31}$' THEN RAISE EXCEPTION 'COUPON_INVALID'; END IF;
-   chosen_coupon:=NULL;
-   IF code<>'' THEN
-    SELECT id INTO chosen_coupon FROM platform_subscription_coupons WHERE code_normalized=code;
-    IF chosen_coupon IS NULL THEN RAISE EXCEPTION 'COUPON_INVALID'; END IF;
-   END IF;
-  ELSE chosen_coupon:=intent.coupon_id; END IF;
+  -- Phase 3 owns Apply/Remove, revision commands and coupon reservations.
+  -- This operation creates the non-coupon starting quote only. A selected
+  -- Phase 4 coupon stays pending until the Phase 3 contract applies it.
+  IF payload ? 'coupon_code' THEN RAISE EXCEPTION 'INVALID_ORDER_REQUEST'; END IF;
+  chosen_coupon:=NULL;
  ELSE
   IF coalesce(payload->>'quote_id','')!~'^[0-9a-fA-F-]{36}$'
   THEN RAISE EXCEPTION 'QUOTE_STALE'; END IF;
   SELECT * INTO quote FROM platform_subscription_purchase_quotes
    WHERE id=(payload->>'quote_id')::uuid AND intent_id=purchase FOR UPDATE;
   IF quote.id IS NULL OR quote.expires_at<=now() OR quote.offer_version_id<>variant.id
-   OR quote.tax_revision IS DISTINCT FROM tax.revision
+   OR quote.tax_policy_id IS DISTINCT FROM tax.id
+   OR quote.tax_policy_revision IS DISTINCT FROM tax.revision
    OR quote.revision<>intent.revision
   THEN RAISE EXCEPTION 'QUOTE_STALE'; END IF;
   chosen_coupon:=quote.coupon_id;
+  IF chosen_coupon IS DISTINCT FROM intent.coupon_id THEN RAISE EXCEPTION 'QUOTE_STALE'; END IF;
  END IF;
 
+ IF operation='confirm' THEN
+  PERFORM pg_advisory_xact_lock(hashtextextended('platform-subscription-coupon-capacity',0));
+ END IF;
  IF chosen_coupon IS NOT NULL THEN
   SELECT * INTO promo FROM platform_subscription_coupons WHERE id=chosen_coupon FOR UPDATE;
   IF promo.id IS NULL OR promo.status NOT IN ('active','scheduled') THEN RAISE EXCEPTION 'COUPON_INVALID'; END IF;
   IF promo.starts_at IS NOT NULL AND promo.starts_at>now() THEN RAISE EXCEPTION 'COUPON_INVALID'; END IF;
   IF promo.expires_at IS NOT NULL AND promo.expires_at<=now() THEN RAISE EXCEPTION 'COUPON_EXPIRED'; END IF;
-  IF array_length(promo.eligible_offer_keys,1) IS NOT NULL AND NOT offer.offer_key=ANY(promo.eligible_offer_keys)
+  IF cardinality(promo.eligible_offer_keys)>0 AND NOT offer.offer_key=ANY(promo.eligible_offer_keys)
+   OR cardinality(promo.eligible_products)>0 AND NOT offer.product=ANY(promo.eligible_products)
+   OR cardinality(promo.eligible_terms)>0 AND NOT variant.term=ANY(promo.eligible_terms)
    THEN RAISE EXCEPTION 'COUPON_INELIGIBLE'; END IF;
   IF base<promo.min_subtotal_minor OR (variant.term='yearly' AND NOT promo.stack_with_annual)
     OR (offer.product='bundle' AND NOT promo.stack_with_bundle)
@@ -201,7 +175,8 @@ BEGIN
  END IF;
  -- Published annual and bundle amounts are already their final prices. Do not
  -- manufacture a comparison or savings claim without a separately published baseline.
- tax_amount:=floor((base-promo_discount)*tax.rate_bps/10000);
+ -- Same half-up minor-unit arithmetic as Phase 3 0148 tax requote.
+ tax_amount:=floor(((base-promo_discount)*tax.rate_bps+5000)/10000);
  final_amount:=base-promo_discount+tax_amount;
  IF final_amount>100000000000 THEN RAISE EXCEPTION 'AMOUNT_OUT_OF_RANGE'; END IF;
  IF operation='confirm' AND (quote.subtotal_minor<>base OR quote.coupon_discount_minor<>promo_discount
@@ -209,17 +184,20 @@ BEGIN
  THEN RAISE EXCEPTION 'QUOTE_STALE'; END IF;
 
  IF operation='quote' THEN
+  PERFORM pg_advisory_xact_lock(hashtextextended('platform-subscription-coupon-capacity',0));
+  UPDATE platform_subscription_coupon_reservations SET status='released'
+   WHERE intent_id=purchase AND status='reserved';
   previous_revision:=intent.revision+1;
-  UPDATE platform_subscription_purchase_intents SET coupon_id=chosen_coupon,revision=previous_revision,
+  UPDATE platform_subscription_purchase_intents SET revision=previous_revision,
     status='quoted',updated_at=now() WHERE id=purchase;
   INSERT INTO platform_subscription_purchase_quotes(intent_id,revision,offer_version_id,coupon_id,
-    subtotal_minor,coupon_discount_minor,tax_minor,total_minor,tax_revision,coupon_revision)
+    subtotal_minor,coupon_discount_minor,tax_minor,total_minor,tax_policy_id,tax_policy_revision,coupon_revision)
   VALUES(purchase,previous_revision,variant.id,chosen_coupon,base::bigint,promo_discount::bigint,
-    tax_amount::bigint,final_amount::bigint,tax.revision,promo.revision) RETURNING * INTO quote;
+    tax_amount::bigint,final_amount::bigint,tax.id,tax.revision,promo.revision) RETURNING * INTO quote;
   INSERT INTO platform_subscription_quote_lines(quote_id,line_no,label,offer_version_id,quantity,unit_price_minor,subtotal_minor)
    VALUES(quote.id,1,variant.terms->>'name',variant.id,units,variant.amount_minor,base::bigint);
   INSERT INTO platform_subscription_purchase_audit(intent_id,actor_id,action,detail)
-   VALUES(purchase,a,'order.quoted',jsonb_build_object('quote_id',quote.id,'coupon_id',chosen_coupon,'tax_revision',tax.revision));
+   VALUES(purchase,a,'order.quoted',jsonb_build_object('quote_id',quote.id,'coupon_id',chosen_coupon,'tax_policy_id',tax.id,'tax_policy_revision',tax.revision));
   RETURN jsonb_build_object('quote_id',quote.id,'status','quoted','revision',quote.revision);
  END IF;
 
@@ -256,14 +234,18 @@ BEGIN
   VALUES(purchase,a,w,policy.id,kind,policy.version_label,policy.content_sha256);
  END LOOP;
  IF chosen_coupon IS NOT NULL THEN
-  INSERT INTO platform_subscription_coupon_reservations(coupon_id,intent_id,quote_id,actor_id,workspace_id,expires_at)
-  VALUES(chosen_coupon,purchase,quote.id,a,w,now()+interval '60 minutes');
+  -- The Phase 3 Apply command reserves this exact quote. Recreating a slot
+  -- here would violate its one-reservation-per-intent invariant.
+  IF NOT EXISTS(SELECT 1 FROM platform_subscription_coupon_reservations r
+    WHERE r.intent_id=purchase AND r.quote_id=quote.id AND r.coupon_id=chosen_coupon
+      AND r.workspace_id=w AND r.actor_id=a AND r.status='reserved'
+      AND r.expires_at>now()) THEN RAISE EXCEPTION 'QUOTE_STALE'; END IF;
  END IF;
  summary:=jsonb_build_object('intent_id',purchase,'quote_id',quote.id,'offer_version_id',variant.id,
    'product',offer.product,'term',variant.term,'quantity',units,'subtotal_minor',base::bigint::text,
    'coupon_discount_minor',promo_discount::bigint::text,'tax_minor',tax_amount::bigint::text,
    'total_minor',final_amount::bigint::text,'currency','BDT','coupon_id',chosen_coupon,
-   'tax_revision',tax.revision,'coupon_revision',promo.revision,'legal',legal,
+   'tax_policy_id',tax.id,'tax_policy_revision',tax.revision,'coupon_revision',promo.revision,'legal',legal,
    'lines',(SELECT coalesce(jsonb_agg(jsonb_build_object('label',l.label,
        'quantity',l.quantity,'unit_price_minor',l.unit_price_minor::text,
        'subtotal_minor',l.subtotal_minor::text) ORDER BY l.line_no),'[]'::jsonb)
@@ -278,12 +260,12 @@ BEGIN
     'total_minor',final_amount::bigint::text,'currency','BDT','snapshot',summary);
 END $$;
 
-REVOKE ALL ON FUNCTION platform_subscription_order_request(uuid,uuid,uuid,text,jsonb),
- platform_subscription_tax_admin(uuid,bigint,integer,text) FROM PUBLIC;
+-- Phase 3 0148/0149 owns approved tax policies and all coupon Apply/Remove
+-- arithmetic. No Phase 5 function overrides or shadow tax settings.
+REVOKE ALL ON FUNCTION platform_subscription_order_request(uuid,uuid,uuid,text,jsonb) FROM PUBLIC;
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_runtime') THEN
-  GRANT EXECUTE ON FUNCTION platform_subscription_order_request(uuid,uuid,uuid,text,jsonb),
-   platform_subscription_tax_admin(uuid,bigint,integer,text) TO ekmivo_runtime;
+  GRANT EXECUTE ON FUNCTION platform_subscription_order_request(uuid,uuid,uuid,text,jsonb) TO ekmivo_runtime;
  END IF;
 END $$;
 COMMIT;

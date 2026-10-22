@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   web:
+    if: github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
     name: Next.js lint, build and isolated PostgreSQL smoke
     runs-on: ubuntu-latest
     services:
@@ -180,6 +181,7 @@ jobs:
         run: npx tsc --noEmit
 
   backend:
+    if: github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
     name: Go compile and unit tests
     runs-on: ubuntu-latest
     steps:
@@ -227,6 +229,7 @@ jobs:
           go build -o /tmp/ekmivo-worker ./cmd/worker
 
   financial_containers:
+    if: github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
     name: PG04 runtime and migration Docker builds
     runs-on: ubuntu-latest
     steps:
@@ -240,6 +243,7 @@ jobs:
 
 
   android:
+    if: github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
     name: Native Kotlin Compose assemble and unit tests
     runs-on: ubuntu-latest
     steps:

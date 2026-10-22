@@ -1,13 +1,11 @@
 package checkout
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -74,7 +72,8 @@ func (s *Service) HandleSubscriptionOrder(w http.ResponseWriter, r *http.Request
 			fail(w, 403, "ORIGIN_DENIED")
 			return
 		}
-		if !subscriptionMutationEnabled(operation) {
+		if !subscriptionMutationEnabled(operation) ||
+			(operation == "confirm" && os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED") != "true") {
 			fail(w, 503, "ORDER_CHECKOUT_NOT_RELEASED")
 			return
 		}
@@ -111,10 +110,6 @@ func (s *Service) HandleSubscriptionOrder(w http.ResponseWriter, r *http.Request
 			return
 		}
 		request["idempotency_key"] = key
-		if !s.subscriptionReceivingReady(r, workspace) {
-			fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
-			return
-		}
 	}
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -129,62 +124,20 @@ func (s *Service) HandleSubscriptionOrder(w http.ResponseWriter, r *http.Request
 		subscriptionOrderError(w, err)
 		return
 	}
-	if operation != "confirm" {
-		write(w, 200, json.RawMessage(raw))
+	if operation == "read" {
+		var data map[string]any
+		if json.Unmarshal(raw, &data) != nil || data == nil {
+			fail(w, 503, "ORDER_SERVICE_UNAVAILABLE")
+			return
+		}
+		data["checkout_enabled"] = subscriptionMutationEnabled("confirm") &&
+			os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED") == "true"
+		write(w, 200, data)
 		return
 	}
-	var result struct {
-		Invoice string `json:"invoice_id"`
-		Amount  string `json:"total_minor"`
-	}
-	if json.Unmarshal(raw, &result) != nil || !uuidPattern.MatchString(result.Invoice) {
-		fail(w, 503, "ORDER_SERVICE_UNAVAILABLE")
-		return
-	}
-	var receiver sql.NullString
-	if s.Auth.DB.QueryRowContext(r.Context(), "SELECT platform_billing_invoice_receiver($1::uuid,$2::uuid)", workspace, result.Invoice).Scan(&receiver) != nil ||
-		!uuidPattern.MatchString(receiver.String) || receiver.String == workspace {
-		fail(w, 503, "PLATFORM_RECEIVING_UNAVAILABLE")
-		return
-	}
-	capability := s.token(receiver.String, "live", "billing:"+result.Invoice)
-	var amount int64
-	if json.Unmarshal([]byte(result.Amount), &amount) != nil || amount <= 0 {
-		fail(w, 503, "ORDER_SERVICE_UNAVAILABLE")
-		return
-	}
-	err = s.creationScoped(r.Context(), receiver.String, "live", func(tx pgx.Tx) error {
-		var financial []byte
-		return tx.QueryRow(r.Context(), "SELECT pg10_intent($1::uuid,'live',$2,$3,60,$4,$5,$6)",
-			receiver.String, "SAAS-"+result.Invoice, amount, "billing:"+result.Invoice,
-			digest(capability), digest(result.Invoice)).Scan(&financial)
-	})
-	if err != nil {
-		fail(w, 503, "PAYMENT_HANDOFF_RETRY")
-		return
-	}
-	write(w, 200, map[string]any{"invoice_id": result.Invoice, "checkout_token": capability, "total_minor": result.Amount, "currency": "BDT"})
-}
-
-func (s *Service) subscriptionReceivingReady(r *http.Request, workspace string) bool {
-	if !s.pipelineReady() || s.Pipeline.Live == nil {
-		return false
-	}
-	var receiving sql.NullString
-	if s.Auth.DB.QueryRowContext(r.Context(), "SELECT platform_billing_workspace()").Scan(&receiving) != nil ||
-		!uuidPattern.MatchString(receiving.String) || receiving.String == workspace {
-		return false
-	}
-	var raw []byte
-	err := s.pipelineScoped(r.Context(), receiving.String, "live", func(tx pgx.Tx) error {
-		return tx.QueryRow(r.Context(), "SELECT pg10_public_payment_sources($1::uuid,'live')", receiving.String).Scan(&raw)
-	})
-	if err != nil {
-		return false
-	}
-	var sources struct {
-		Methods []string          `json:"configured_methods"`
-		Sources []json.RawMessage `json:"sources"`
-	}
-	return json.Unmarshal(raw, &sources) == nil && len(sources.Methods) > 0 && len(sources.Sources) > 0
+	// Phase 5 issues/resumes the immutable control invoice only. Phase 6
+	// independently binds that invoice to the system receiving workspace,
+	// verifies approved sources and creates/resumes the financial capability.
+	// Never issue a second pg10_intent here: two services must not own payment.
+	write(w, 200, json.RawMessage(raw))
 }

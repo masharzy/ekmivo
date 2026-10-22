@@ -342,7 +342,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
         const enabled=serviceEnabled(item,workspace.mode);
         return <button type="button" key={item} disabled={!enabled} aria-current={service===item?"true":undefined} onClick={()=>switchProduct(item)}>
          <span className="ds-service-icon"><Icon name={item==="ai"?"ai-agent":"payments"}/></span>
-         <span><strong>{serviceNames[item][locale]}</strong><small>{item==="ai"?(bn?"চ্যাট, AI ও লিড · তৈরির কাজ চলছে":"Inbox, AI and leads · In development"):(bn?"পেমেন্ট ও ডিভাইস · সেটআপ প্রয়োজন":"Payments and devices · Setup required")}</small></span>
+         <span><strong>{serviceNames[item][locale]}</strong><small>{item==="ai"?(bn?"চ্যাট, AI ও লিড":"Inbox, AI and leads"):(bn?"পেমেন্ট ও ডিভাইস · সেটআপ প্রয়োজন":"Payments and devices · Setup required")}</small></span>
          {service===item?<Icon name="check"/>:<small>{enabled?"↗":(bn?"অ্যাক্সেস নেই":"Not available")}</small>}
         </button>;
        })}

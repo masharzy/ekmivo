@@ -1,5 +1,15 @@
-/* Ekmivo reference: floating public homepage navigation and minimal footer.
- * The generic public header/footer remain unchanged for every other route. */
+/* The homepage floating navigation and footer now serve public product pages too. */
+.ekm-nav, .ekm-footer {
+  --bg: var(--color-canvas);
+  --soft: var(--color-surface-subtle);
+  --ink: var(--color-text);
+  --mute: var(--color-text-secondary);
+  --line: var(--color-border);
+  --ac: var(--color-accent);
+  --acx: var(--color-accent-readable);
+  --card: var(--color-card);
+  --forest: var(--color-forest);
+}
 .ekm-nav {
   position: fixed;
   inset: 16px auto auto 50%;
@@ -39,6 +49,7 @@
   transition: background .2s, color .2s;
 }
 .ekm-nav-links a:hover {color: var(--ink);background: var(--soft);}
+.ekm-nav-links a[aria-current="page"] {color:var(--ink);background:var(--soft);}
 .ekm-control-wrap {position: relative;}
 .ekm-control-trigger {
   border: 0;

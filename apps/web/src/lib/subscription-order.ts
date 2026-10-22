@@ -7,6 +7,7 @@ export type OrderQuote={id:string;subtotal_minor:string;annual_discount_minor:st
  coupon_discount_minor:string;tax_minor:string;total_minor:string;currency:"BDT";expires_at:string;
  coupon_code:string|null;lines:OrderLine[]};
 export type OrderRead={status:"selected"|"quoted"|"confirmed";intent_id:string;store_id:string;expires_at:string;
+ intent_revision?:number;selected_coupon_code?:string|null;checkout_enabled?:boolean;
  offer:{key:string;product:"payments"|"ai_credit"|"bundle";term:"monthly"|"yearly"|"one_time";version_id:string;
  quantity:number;name:string;name_bn:string;included_ai_credits:string|null};
  policies:Partial<LegalDocuments>;quote:OrderQuote|null;invoice_id?:string;quote_id?:string;total_minor?:string;
@@ -50,6 +51,10 @@ export function orderErrorMessage(code:string,bn:boolean):string{
   COUPON_EXPIRED:["This coupon has expired.","এই কুপনের মেয়াদ শেষ।"],
   COUPON_EXHAUSTED:["This coupon has reached its usage limit.","এই কুপনের ব্যবহারসীমা শেষ।"],
   COUPON_INELIGIBLE:["This coupon does not apply to this purchase.","এই কেনাকাটায় কুপনটি প্রযোজ্য নয়।"],
+  QUOTE_CHANGED:["The quote changed. Refresh it before applying the coupon.","মূল্য বদলেছে। কুপন প্রয়োগের আগে আবার যাচাই করুন।"],
+  QUOTE_REQUIRED:["Refresh the order quote before applying a coupon.","কুপন দেওয়ার আগে অর্ডারের মূল্য যাচাই করুন।"],
+  TAX_REQUOTE_REQUIRED:["The tax calculation changed. Refresh the quote.","ট্যাক্স হিসাব বদলেছে। আবার মূল্য যাচাই করুন।"],
+  ZERO_DUE_POLICY_REQUIRED:["This coupon would make the payment zero; that requires an approved policy.","এই কুপনে মোট টাকা শূন্য হবে; এ জন্য অনুমোদিত নীতি প্রয়োজন।"],
   ORDER_EXPIRED:["Your order expired. Choose an offer again.","অর্ডারের মেয়াদ শেষ। আবার অফার বাছুন।"],
   QUOTE_STALE:["Your quote changed or expired. Recheck the total.","মূল্য পরিবর্তিত হয়েছে বা মেয়াদ শেষ। আবার যাচাই করুন।"],
   PRICE_CHANGED:["The published price changed. Choose an offer again.","প্রকাশিত মূল্য বদলেছে। আবার অফার বাছুন।"],
@@ -59,7 +64,7 @@ export function orderErrorMessage(code:string,bn:boolean):string{
   POLICY_ACCEPTANCE_REQUIRED:["Accept all three policies separately.","তিনটি নীতিমালায় আলাদাভাবে সম্মতি দিন।"],
   STORE_CHANGED:["Your selected Store changed. Please sign in with the Store owner.","নির্বাচিত স্টোর বদলেছে। স্টোরের মালিক হিসেবে ঢুকুন।"],
   ACCESS_DENIED:["Only an authorized Store owner or billing administrator can continue.","শুধু অনুমোদিত স্টোর মালিক বা বিলিং অ্যাডমিন এগোতে পারবেন।"],
-  TAX_NOT_CONFIGURED:["Tax rules have not been approved. Checkout is unavailable.","ট্যাক্সের নিয়ম অনুমোদিত হয়নি। চেকআউট বন্ধ আছে।"],
+  TAX_POLICY_REQUIRED:["Tax rules have not been approved. Checkout is unavailable.","ট্যাক্সের নিয়ম অনুমোদিত হয়নি। চেকআউট বন্ধ আছে।"],
   FULFILLMENT_NOT_READY:["This offer is awaiting the secure payment integration.","এই অফারের নিরাপদ পেমেন্ট সংযোগ এখনো প্রস্তুত নয়।"],
   ZERO_DUE_UNAPPROVED:["This zero-due order requires an approved activation process.","শূন্য টাকার এই অর্ডারে অনুমোদিত অ্যাক্টিভেশন প্রয়োজন।"],
   ORDER_CHECKOUT_NOT_RELEASED:["Checkout confirmation is not released yet.","চেকআউট কনফার্মেশন এখনো চালু হয়নি।"],
