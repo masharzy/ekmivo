@@ -16,7 +16,7 @@ export class IntentError extends Error{
  constructor(public code:string,public status=409){super(code);}
 }
 export type Intent={token:string;id:string;revision:number;status:string;expiresAt:string;actorId:string|null;storeId:string|null;
- offerKey:string;offerVersionId:string;product:"payments"|"ai_credit"|"bundle";term:"monthly"|"yearly"|"one_time";
+ offerKey:string;offerVersionId:string;gatewayPlanVersionId:string|null;product:"payments"|"ai_credit"|"bundle";term:"monthly"|"yearly"|"one_time";
  amountMinor:number;quantity:number;couponCode:string|null;legacyPlanId:string|null};
 export function validPurchaseToken(value:string){return TOKEN.test(value)}
 export async function ensureGuestSession(){
@@ -107,7 +107,7 @@ export async function readPurchase(token:string):Promise<Intent>{
  const rows=await database()`
   SELECT i.id,i.actor_id,i.workspace_id,i.revision,i.status,i.expires_at,
    i.guest_session_sha256,i.requested_quantity,i.legacy_plan_id,
-   v.id AS version_id,v.offer_key,v.term,v.amount_minor,o.product,c.code_normalized
+   v.id AS version_id,v.offer_key,v.term,v.amount_minor,v.payment_plan_version_id AS gateway_version_id,o.product,c.code_normalized
   FROM platform_subscription_purchase_intents i
   JOIN platform_subscription_offer_versions v ON v.id=i.offer_version_id
   JOIN platform_subscription_offers o ON o.offer_key=v.offer_key
@@ -120,6 +120,7 @@ export async function readPurchase(token:string):Promise<Intent>{
  return {token,id:String(p.id),actorId:p.actor_id?String(p.actor_id):null,storeId:p.workspace_id?String(p.workspace_id):null,
   revision:Number(p.revision),status:expiry.getTime()<=Date.now()&&["selected","quoted"].includes(String(p.status))?"expired":String(p.status),
   expiresAt:expiry.toISOString(),offerKey:String(p.offer_key),offerVersionId:String(p.version_id),
+  gatewayPlanVersionId:p.gateway_version_id?String(p.gateway_version_id):null,
   product:p.product as Intent["product"],term:p.term as Intent["term"],amountMinor:Number(p.amount_minor),
   quantity:Number(p.requested_quantity),couponCode:p.code_normalized?String(p.code_normalized):null,
   legacyPlanId:p.legacy_plan_id?String(p.legacy_plan_id):null};
@@ -206,7 +207,7 @@ export async function claimFreePurchase(token:string){
  if(String(live.version_id)!==intent.offerVersionId)throw new IntentError("OFFER_CHANGED");
  const {publicPaymentPlans}=await import("./payment-plans");
  const catalog=await publicPaymentPlans();
- const plan=catalog.plans.find(p=>p.version_id===intent.offerVersionId&&p.terms.kind==="free");
+ const plan=catalog.plans.find(p=>p.version_id===intent.gatewayPlanVersionId&&p.terms.kind==="free");
  if(catalog.unavailable||!plan)throw new IntentError("FREE_PLAN_UNAVAILABLE");
  return database().begin(async tx=>{
   const rows=await tx`
