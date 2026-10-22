@@ -1,3 +1,13 @@
+## Store-first subscription checkout Phase 6 — 2026-10-22 (NOT SEALED)
+
+- [ ] Integrate and verify Phase 2–5 versioned quotes, three legal documents, coupon reservations, Store-bound purchase intent and confirmed invoice before enabling any paid subscription.
+- [ ] Obtain owner-authorized **isolated Neon control + Live/Sandbox financial test branches** (branch creation previously failed HTTP 422 branch limit). Run 0145 migration transaction, restricted role/RLS tests, quote/invoice/coupon races, replay/crash/worker rotation, expiry/late proof and rollback rehearsal. **Do not migrate production.**
+- [ ] With authorized bKash/Nagad/Rocket signed receiving device(s) and real approved parsers, test payer, wrong amount, wrong original transaction time, ambiguous/missing receipts, offline/disabled receiver, cancellation after money, refund case operator handling and no automatic transfer.
+- [ ] Authenticated mobile/desktop EN+BN/light+dark checkout: only actually available platform methods, 60-minute countdown, safe close/refresh; verified-only subscription/receipt/PDF and Store Billing. Verify merchant `/pay/{documentToken}`, `/checkout/{merchantToken}` regressions unchanged.
+- [ ] Resolve deployed runtime BYPASSRLS role, wallet picker parser-filtering gap and strict finance/control credential separation; run full Go race, API/SDK contract, Next build/lint/type checks, browser E2E and PR CI on integrated predecessor head.
+- [ ] Record real CI/head/source URLs in `docs/evidence/STORE-SUBSCRIPTION-PHASE-6-SEALED.md`. Never mark as code-level sealed without all automatable gates passing.
+
+---
 ## Nagad compact payer entry & bKash BD number normalization — 2026-10-14 (manual / build pending)
 
 - [ ] Open actual checkout with Nagad selected, EN/BN, 320/375/390/desktop and small landscape viewport. Merchant, invoice, amount, 11 number boxes, consent and controls should fit the screen without duplicate white invoice header. Tiny viewport / keyboard may scroll inside the compact card.
