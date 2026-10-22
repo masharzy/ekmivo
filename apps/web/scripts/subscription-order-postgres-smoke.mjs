@@ -134,6 +134,22 @@ try{
   [ids.a,ids.intent2,randomUUID(),afterApply.intent_revision,""]);
  const afterRemove=await request(ids.a,ids.store,ids.intent2,"read");
  check(afterRemove.quote.total_minor==="10500"&&afterRemove.selected_coupon_code===null,"coupon Remove");
+ const discountedIntent=randomUUID();
+ await run("INSERT INTO platform_subscription_purchase_intents(id,actor_id,workspace_id,offer_version_id,public_token_sha256) VALUES($1,$2,$3,$4,$5)",
+  [discountedIntent,ids.a,ids.store,ids.offer,"c".repeat(64)]);
+ await request(ids.a,ids.store,discountedIntent,"quote");
+ const discountBase=await request(ids.a,ids.store,discountedIntent,"read");
+ await run("SELECT platform_subscription_coupon_quote($1::uuid,$2::uuid,$3::uuid,$4::bigint,$5)",
+  [ids.a,discountedIntent,randomUUID(),discountBase.intent_revision,"PHASE5_CI_10"]);
+ const discountQuote=await request(ids.a,ids.store,discountedIntent,"read");
+ const discountConfirmed=await request(ids.a,ids.store,discountedIntent,"confirm",{
+  quote_id:discountQuote.quote.id,idempotency_key:"phase5_discount_confirm0001",consents:setConsent(policies)
+ });
+ check(discountConfirmed.total_minor==="9450","confirmed invoice keeps exact coupon and approved-tax snapshot");
+ const held=await run("SELECT count(*)::int AS n FROM platform_subscription_coupon_reservations WHERE intent_id=$1 AND quote_id=$2 AND status='reserved'",
+  [discountedIntent,discountQuote.quote.id]);
+ const redeemed=await run("SELECT count(*)::int AS n FROM platform_subscription_coupon_redemptions WHERE coupon_id=$1",[ids.coupon]);
+ check(held[0].n===1&&redeemed[0].n===0,"pending invoice preserves exactly one reservation and no early redemption");
  await run("UPDATE workspace_members SET role='editor' WHERE workspace_id=$1 AND user_id=$2",[ids.store,ids.a]);
  await denied(()=>request(ids.a,ids.store,ids.intent2,"read"),"FORBIDDEN");
  await run("UPDATE workspace_members SET role='owner' WHERE workspace_id=$1 AND user_id=$2",[ids.store,ids.a]);
@@ -157,7 +173,7 @@ try{
   ["d".repeat(64),ids.a]);
  await denied(()=>request(ids.a,ids.store,ids.intent2,"confirm",
   {...confirmation,quote_id:policyRequote.quote_id,idempotency_key:"phase5_changed_legal0001"}),"POLICY_CHANGED");
- console.log("PHASE5 POSTGRES PASS: actor/Store/role, 3 consents, expiry, price/tax/legal changes, invoice race/recovery, coupon Apply/Remove");
+ console.log("PHASE5 POSTGRES PASS: actor/Store/role, 3 consents, expiry, price/tax/legal changes, invoice race/recovery, coupon Apply/Remove/confirm hold");
 }catch(e){
  console.error("PHASE5 POSTGRES FAILED:",String(e.message||e).replaceAll(/postgres(?:ql)?:\/\/\S+/g,"[redacted]"));
  process.exitCode=1;
