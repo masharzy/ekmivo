@@ -206,7 +206,7 @@ jobs:
         working-directory: backend
         run: |
           go test ./...
-          go test -race ./internal/checkout ./internal/aicredits
+          go test -race ./internal/checkout ./internal/aicredits ./internal/subscriptionpayment
           go vet ./...
       - name: Go HTTP server smoke
         working-directory: backend
