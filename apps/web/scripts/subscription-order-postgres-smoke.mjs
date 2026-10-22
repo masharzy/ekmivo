@@ -24,7 +24,7 @@ async function denied(fn,label){
 }
 async function request(actor,store,intent,operation,payload={}){
  const rows=await run("SELECT platform_subscription_order_request($1::uuid,$2::uuid,$3::uuid,$4,$5::jsonb) AS result",
-  [store,actor,intent,operation,JSON.stringify(payload)]);
+  [store,actor,intent,operation,payload]);
  return rows[0].result;
 }
 function setConsent(policy,changes={}){
@@ -69,11 +69,11 @@ try{
  await run("INSERT INTO platform_primary_stores(user_id,workspace_id,bound_by) VALUES($1,$2,$1),($3,$4,$3)",
   [ids.a,ids.store,ids.b,ids.other]);
  await run("INSERT INTO payment_plan_versions(id,plan_id,terms) VALUES($1,'ci-pro',$2::jsonb)",
-  [ids.plan,JSON.stringify({kind:"paid",period_days:30,grace_days:3})]);
+  [ids.plan,{kind:"paid",period_days:30,grace_days:3}]);
  await run("INSERT INTO payment_plan_catalog(plan_id,status,visibility,current_version) VALUES('ci-pro','published','public',$1)",[ids.plan]);
  await run("INSERT INTO platform_subscription_offers(offer_key,product,status,created_by) VALUES('phase5_ci_plan','payments','draft',$1)",[ids.a]);
  await run("INSERT INTO platform_subscription_offer_versions(id,offer_key,revision,term,amount_minor,payment_plan_version_id,terms,created_by) VALUES($1,'phase5_ci_plan',1,'monthly',10000,$2,$3::jsonb,$4)",
-  [ids.offer,ids.plan,JSON.stringify({name:"CI Payments"}),ids.a]);
+  [ids.offer,ids.plan,{name:"CI Payments"},ids.a]);
  await run("UPDATE platform_subscription_offers SET status='published',current_version_id=$1 WHERE offer_key='phase5_ci_plan'",[ids.offer]);
  await run("INSERT INTO platform_subscription_tax_policies(product,term,rate_bps,approved_by,reason) VALUES('payments','monthly',500,$1,'Fictional CI approved tax rule')",[ids.a]);
  await run("INSERT INTO platform_subscription_purchase_intents(id,actor_id,workspace_id,offer_version_id,public_token_sha256) VALUES($1,$2,$3,$4,$5),($6,$2,$3,$4,$7)",

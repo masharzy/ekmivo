@@ -55,7 +55,7 @@ CREATE FUNCTION platform_subscription_intent_command(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
  SET search_path=pg_catalog,public,pg_temp AS $phase4$
 DECLARE
- intent_row record; v record;
+ intent_row record; selected_offer record;
  requested_offer text; selected_term text; code text; creation_digest text;
  store uuid; selection_version text; requested bigint; expected bigint;
  coupon_uuid uuid; plan_id text; old_status text; is_admin boolean;
@@ -82,7 +82,7 @@ BEGIN
   IF actor IS NOT NULL AND NOT EXISTS(SELECT 1 FROM app_users WHERE id=actor AND disabled_at IS NULL)
   THEN RAISE EXCEPTION 'LOGIN_REQUIRED' USING ERRCODE='42501'; END IF;
   SELECT v.id,v.offer_key,v.term,v.amount_minor,v.payment_plan_version_id,o.product
-   INTO v FROM platform_subscription_offers o
+   INTO selected_offer FROM platform_subscription_offers o
    JOIN platform_subscription_offer_versions v ON v.id=o.current_version_id
    LEFT JOIN payment_plan_catalog pc ON pc.current_version=v.payment_plan_version_id
   WHERE o.offer_key=requested_offer AND o.status='published' AND v.id::text=selection_version
@@ -90,8 +90,8 @@ BEGIN
    AND (o.product='ai_credit' OR
      (pc.status='published' AND pc.visibility='public'))
   LIMIT 1;
-  IF v.id IS NULL THEN RAISE EXCEPTION 'OFFER_CHANGED' USING ERRCODE='40001'; END IF;
-  IF v.product='payments' AND requested<>1
+  IF selected_offer.id IS NULL THEN RAISE EXCEPTION 'OFFER_CHANGED' USING ERRCODE='40001'; END IF;
+  IF selected_offer.product='payments' AND requested<>1
   THEN RAISE EXCEPTION 'INVALID_QUANTITY' USING ERRCODE='22023'; END IF;
   code:=upper(trim(coalesce(data->>'coupon_code','')));
   coupon_uuid:=NULL;
@@ -102,9 +102,9 @@ BEGIN
    WHERE c.code_normalized=code AND c.status='active'
     AND (c.starts_at IS NULL OR c.starts_at<=statement_timestamp())
     AND (c.expires_at IS NULL OR c.expires_at>statement_timestamp())
-    AND (cardinality(c.eligible_offer_keys)=0 OR v.offer_key=ANY(c.eligible_offer_keys))
-    AND (cardinality(c.eligible_products)=0 OR v.product=ANY(c.eligible_products))
-    AND (cardinality(c.eligible_terms)=0 OR v.term=ANY(c.eligible_terms));
+    AND (cardinality(c.eligible_offer_keys)=0 OR selected_offer.offer_key=ANY(c.eligible_offer_keys))
+    AND (cardinality(c.eligible_products)=0 OR selected_offer.product=ANY(c.eligible_products))
+    AND (cardinality(c.eligible_terms)=0 OR selected_offer.term=ANY(c.eligible_terms));
    IF coupon_uuid IS NULL THEN RAISE EXCEPTION 'COUPON_UNAVAILABLE' USING ERRCODE='23514'; END IF;
   END IF;
   IF data->>'legacy_plan_id' IS NOT NULL
@@ -113,14 +113,14 @@ BEGIN
   INSERT INTO platform_subscription_purchase_intents(
    public_token_sha256,guest_session_sha256,actor_id,offer_version_id,coupon_id,
    creation_key,requested_quantity,legacy_plan_id,expires_at)
-  VALUES(capability_digest,guest_digest,actor,v.id,coupon_uuid,
+  VALUES(capability_digest,guest_digest,actor,selected_offer.id,coupon_uuid,
    creation_digest,requested::integer,data->>'legacy_plan_id',now()+interval '7 days')
   ON CONFLICT (creation_key) DO NOTHING RETURNING * INTO intent_row;
   IF NOT FOUND THEN
    SELECT * INTO intent_row FROM platform_subscription_purchase_intents WHERE creation_key=creation_digest;
    IF intent_row.id IS NULL OR intent_row.public_token_sha256 IS DISTINCT FROM capability_digest
     OR intent_row.guest_session_sha256 IS DISTINCT FROM guest_digest
-    OR intent_row.offer_version_id IS DISTINCT FROM v.id
+    OR intent_row.offer_version_id IS DISTINCT FROM selected_offer.id
     OR intent_row.coupon_id IS DISTINCT FROM coupon_uuid
     OR intent_row.requested_quantity IS DISTINCT FROM requested
     OR intent_row.legacy_plan_id IS DISTINCT FROM (data->>'legacy_plan_id')
@@ -138,16 +138,16 @@ BEGIN
 
  IF operation='read' THEN
   SELECT v.id,v.offer_key,v.term,v.amount_minor,v.payment_plan_version_id,o.product
-   INTO v FROM platform_subscription_offer_versions v
+   INTO selected_offer FROM platform_subscription_offer_versions v
    JOIN platform_subscription_offers o ON o.offer_key=v.offer_key
    WHERE v.id=intent_row.offer_version_id;
   SELECT c.code_normalized INTO code FROM platform_subscription_coupons c WHERE c.id=intent_row.coupon_id;
   RETURN jsonb_build_object(
     'id',intent_row.id::text,'revision',intent_row.revision,'status',intent_row.status,'expires_at',intent_row.expires_at,
     'actor_id',intent_row.actor_id::text,'workspace_id',intent_row.workspace_id::text,
-    'offer_key',v.offer_key,'offer_version_id',v.id::text,
-    'gateway_plan_version_id',v.payment_plan_version_id::text,
-    'product',v.product,'term',v.term,'amount_minor',v.amount_minor::text,
+    'offer_key',selected_offer.offer_key,'offer_version_id',selected_offer.id::text,
+    'gateway_plan_version_id',selected_offer.payment_plan_version_id::text,
+    'product',selected_offer.product,'term',selected_offer.term,'amount_minor',selected_offer.amount_minor::text,
     'requested_quantity',intent_row.requested_quantity,'coupon_code',code,
     'legacy_plan_id',intent_row.legacy_plan_id);
  END IF;
@@ -155,21 +155,21 @@ BEGIN
  IF operation='revalidate' THEN
   IF intent_row.status NOT IN ('selected','quoted') OR intent_row.expires_at<=statement_timestamp()
   THEN RAISE EXCEPTION 'INTENT_EXPIRED' USING ERRCODE='40001'; END IF;
-  SELECT v.id,v.offer_key,v.term,o.product INTO v
+  SELECT v.id,v.offer_key,v.term,o.product INTO selected_offer
    FROM platform_subscription_offers o
    JOIN platform_subscription_offer_versions v ON v.id=o.current_version_id
    LEFT JOIN payment_plan_catalog pc ON pc.current_version=v.payment_plan_version_id
    WHERE o.status='published' AND v.id=intent_row.offer_version_id
      AND (o.product='ai_credit' OR (pc.status='published' AND pc.visibility='public'));
-  IF v.id IS NULL THEN RAISE EXCEPTION 'OFFER_CHANGED' USING ERRCODE='40001'; END IF;
+  IF selected_offer.id IS NULL THEN RAISE EXCEPTION 'OFFER_CHANGED' USING ERRCODE='40001'; END IF;
   IF intent_row.coupon_id IS NOT NULL THEN
    SELECT c.id INTO coupon_uuid FROM platform_subscription_coupons c
    WHERE c.id=intent_row.coupon_id AND c.status='active'
     AND (c.starts_at IS NULL OR c.starts_at<=statement_timestamp())
     AND (c.expires_at IS NULL OR c.expires_at>statement_timestamp())
-    AND (cardinality(c.eligible_offer_keys)=0 OR v.offer_key=ANY(c.eligible_offer_keys))
-    AND (cardinality(c.eligible_products)=0 OR v.product=ANY(c.eligible_products))
-    AND (cardinality(c.eligible_terms)=0 OR v.term=ANY(c.eligible_terms));
+    AND (cardinality(c.eligible_offer_keys)=0 OR selected_offer.offer_key=ANY(c.eligible_offer_keys))
+    AND (cardinality(c.eligible_products)=0 OR selected_offer.product=ANY(c.eligible_products))
+    AND (cardinality(c.eligible_terms)=0 OR selected_offer.term=ANY(c.eligible_terms));
    IF coupon_uuid IS NULL THEN RAISE EXCEPTION 'COUPON_UNAVAILABLE' USING ERRCODE='40001'; END IF;
   END IF;
   RETURN jsonb_build_object('ok',true);
@@ -232,10 +232,10 @@ BEGIN
    OR intent_row.workspace_id IS NULL OR intent_row.coupon_id IS NOT NULL OR intent_row.requested_quantity<>1
    OR intent_row.confirmed_invoice_id IS NOT NULL
   THEN RAISE EXCEPTION 'FREE_CLAIM_DENIED' USING ERRCODE='40001'; END IF;
-  SELECT v.amount_minor,v.payment_plan_version_id,o.product INTO v
+  SELECT v.amount_minor,v.payment_plan_version_id,o.product INTO selected_offer
    FROM platform_subscription_offers o JOIN platform_subscription_offer_versions v
     ON v.id=o.current_version_id WHERE o.status='published' AND v.id=intent_row.offer_version_id;
-  IF v.product<>'payments' OR v.amount_minor<>0 OR v.payment_plan_version_id IS NULL
+  IF selected_offer.product<>'payments' OR selected_offer.amount_minor<>0 OR selected_offer.payment_plan_version_id IS NULL
   THEN RAISE EXCEPTION 'FREE_CLAIM_DENIED' USING ERRCODE='23514'; END IF;
   IF NOT EXISTS (SELECT 1 FROM workspace_members m JOIN app_users u ON u.id=m.user_id
    WHERE m.workspace_id=intent_row.workspace_id AND m.user_id=actor AND u.disabled_at IS NULL
@@ -244,7 +244,7 @@ BEGIN
   THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501'; END IF;
   SELECT pc.plan_id INTO plan_id FROM payment_plan_catalog pc
    JOIN payment_plan_versions pv ON pc.current_version=pv.id
-  WHERE pc.current_version=v.payment_plan_version_id
+  WHERE pc.current_version=selected_offer.payment_plan_version_id
    AND pc.status='published' AND pc.visibility='public'
    AND pv.terms->>'kind'='free';
   IF plan_id IS NULL THEN RAISE EXCEPTION 'FREE_PLAN_CHANGED' USING ERRCODE='40001'; END IF;

@@ -61,14 +61,16 @@ function mappedError(e:unknown):IntentError{
   code==="PURCHASE_INTENT_UNAVAILABLE"?503:409);
 }
 type Operation="create"|"read"|"bind_identity"|"bind_store"|"cancel"|"claim_free"|"revalidate";
-async function command(operation:Operation,token:string,payload:Record<string,unknown>={},guest?:string|null){
+type IntentPayload=Record<string,string|number|boolean|null>;
+async function command(operation:Operation,token:string,payload:IntentPayload={},guest?:string|null){
  if(!TOKEN.test(token))throw new IntentError("INTENT_NOT_FOUND",404);
  const user=await currentUser();
  const digest=guest===undefined?await guestHash():guest;
  try{
-  const rows=await database().unsafe(
+  const db=database();
+  const rows=await db.unsafe(
    "SELECT platform_subscription_intent_command($1::text,$2::uuid,$3::text,$4::text,$5::jsonb) AS result",
-   [operation,user?.id||null,digest||null,hashToken(token),JSON.stringify(payload)]
+   [operation,user?.id||null,digest||null,hashToken(token),db.json(payload)]
   );
   if(!rows[0]?.result||typeof rows[0].result!=="object")throw new Error("INVALID_SERVER_RESULT");
   return rows[0].result as Record<string,unknown>;
@@ -156,7 +158,7 @@ export async function cancelPurchase(token:string,revision:number){
 }
 export async function claimFreePurchase(token:string){
  const user=await currentUser();
- if(!user||!user.verified)throw new IntentError("LOGIN_REQUIRED",401);
+ if(!user||(!user.verified&&await verificationEnabled()))throw new IntentError("LOGIN_REQUIRED",401);
  const result=await command("claim_free",token);
  if(result.status!=="claimed_free")throw new IntentError("FREE_CLAIM_DENIED");
  return {status:"claimed_free" as const};
