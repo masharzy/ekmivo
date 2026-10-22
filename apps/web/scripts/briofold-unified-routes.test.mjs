@@ -125,6 +125,19 @@ test("canonical commerce deep links reuse real scoped scanner, courier and catal
  assert.match(entry,/props\.view==="products-sync"\?"products"/);
  assert.match(entry,/props\.view==="courier"\?"delivery"/);
 });
+test("unconverted-order follow-up route reads only draft or hold source, never a fictional commerce resource",()=>{
+ for(const mode of ["ai","commerce","both"])
+  assert.equal(navigation.unifiedDestination(mode,"orders",["to-chase"]).section,"orders");
+ assert.equal(navigation.unifiedDestination("off","orders",["to-chase"]),null);
+ const page=source("components/commerce-page.tsx");
+ assert.match(page,/\["scan","to-chase"\]\.includes\(props\.view\)/);
+ assert.match(page,/NULL::uuid,0,'','draft',''/);
+ const view=source("components/commerce-workspace.tsx");
+ assert.match(view,/chaseMode\?"draft":""/);
+ assert.match(view,/chaseMode\?\["draft","hold"\]:states/);
+ assert.match(view,/Open customer follow-ups/);
+ assert.match(view,/no customer message is sent automatically/i);
+});
 test("order reports are explicit and fail closed behind a deployment flag",()=>{
  for(const mode of ["ai","commerce","both"])
   assert.equal(navigation.unifiedDestination(mode,"reports",["orders"]).section,"reports");

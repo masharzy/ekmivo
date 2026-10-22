@@ -1622,6 +1622,17 @@ try{
  // Install only inside disposable CI realms, after their PG06 phone-forwarder
  // and PG11/PG10 document prerequisites; never provision a shared DB here.
  for(const realm of ["sandbox","live"]){
+  // The 0056 refund summary uses source_intent_id for late receipts. The
+  // earlier smoke intentionally omitted the optional 0051 late-SMS migration,
+  // leaving 0056 installed but guaranteed to fail at runtime. Match the real
+  // forward-only operator dependency before exercising the financial report.
+  const lateRefundColumn=(await dbs[realm].unsafe(
+   "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='pg11_refunds' AND column_name='source_intent_id') AS installed"))[0].installed;
+  if(!lateRefundColumn)await dbs[realm].unsafe(await readFile(new URL(
+   "../../../infra/migrations/0051_pg06_late_sms_refund.sql",import.meta.url),"utf8")).simple();
+  ok((await dbs[realm].unsafe(
+   "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='pg11_refunds' AND column_name='source_intent_id') AS installed"))[0].installed,
+   `Phase9 late-SMS refund source missing in disposable ${realm} reader`);
   for(const [file,signature] of [
    ["0056_phone_incoming_and_late_refund_reports.sql","pg56_incoming_read(uuid,text,uuid,uuid,text,uuid,text,timestamptz,timestamptz,text)"],
    ["0058_integration_activity.sql","pg58_record_api(uuid,text,text,text,integer,bigint,text)"]

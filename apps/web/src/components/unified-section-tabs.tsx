@@ -13,6 +13,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  ],
  orders:[
   {en:"Orders",bn:"অর্ডার",href:"/orders",service:"common"},
+  {en:"To follow up",bn:"ফলোআপের অর্ডার",href:"/orders/to-chase",service:"common"},
   {en:"Scan & pack",bn:"স্ক্যান ও প্যাক",href:"/orders/scan",service:"common"},
   {en:"Products",bn:"পণ্য",href:"/orders/products",service:"common"},
   {en:"Inventory",bn:"স্টক",href:"/orders/inventory",service:"common"},
