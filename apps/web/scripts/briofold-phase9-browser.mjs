@@ -100,7 +100,10 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const ownerRefundList=await context.request.get(refundUrl);
   assert.equal(ownerRefundList.status(),200);
   const ownerRefund=(await ownerRefundList.json()).items.find(x=>x.id===refund.id);
-  assert.equal(ownerRefund.customer?.phone,refundRequest.phone,"owner refund contact failed authorized decrypt");
+  // The Go financial writer normalizes Bangladesh local numbers to E.164
+  // before encrypting; the authorized owner sees that canonical form.
+  assert.equal(ownerRefund.customer?.phone,"+88"+refundRequest.phone,
+   "owner refund contact failed authorized decrypt/normalization");
   assert.ok(!("customer_cipher" in ownerRefund),"encrypted refund contact escaped into the HTTP payload");
   const viewerRefundList=await viewerContext.request.get(refundUrl);
   assert.equal(viewerRefundList.status(),200);
@@ -118,6 +121,67 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   assert.equal((await reviewedRefund.json()).status,"reviewing","refund seller state transition was not persisted");
   assert.equal(Number((await finance.unsafe("SELECT count(*) AS n FROM financial_payments WHERE id=$1::uuid",[payment.id]))[0].n),1,
    "seller refund review changed authoritative payment facts");
+  // The Payments report must read the actual settled financial ledger, not
+  // derive revenue from merchant orders/COD or seller refund-review status.
+  // The fixture may coexist with earlier PG04 cases, so verify inclusion and
+  // reconciliation invariants rather than assuming it is the sole payment.
+  const reportRange={
+   from:new Date(Date.now()-2*86400000).toISOString(),
+   to:new Date(Date.now()+2*86400000).toISOString()
+  };
+  const financeReportResponse=await context.request.get(`${base}/reports?${new URLSearchParams({environment:"live",...reportRange})}`);
+  assert.equal(financeReportResponse.status(),200,`authoritative payment report failed: ${await financeReportResponse.text()}`);
+  const financeReport=await financeReportResponse.json();
+  assert.equal(financeReport.currency,"BDT","report dropped authoritative BDT currency");
+  assert.ok(financeReport.verified_gross_minor>=amount,"report omitted the verified fictional payment");
+  assert.ok(financeReport.payment_count>=1,"report omitted payment count");
+  assert.ok(financeReport.methods.some(row=>row.method==="bkash"&&row.amount_minor>=amount),
+   "report method totals disagree with financial source");
+  assert.equal(financeReport.refund_independently_verified,false,
+   "seller refund request was mistaken for a provider-confirmed money return");
+  assert.equal(financeReport.net_settled_minor,null,
+   "unverified provider settlement was invented from payment receipts");
+  assert.ok(financeReport.refunds.some(row=>row.status==="reviewing"&&row.amount_minor>=1234),
+   "seller refund state missing from separately labeled report totals");
+  // An invoice is a versioned seller document, not a payment confirmation.
+  // Exercise its Go writer and SQL totals before opening the canonical UI.
+  const invoiceUrl=`${base}/documents/invoices?environment=live`;
+  const invoiceKey=`briofold-ci-invoice-${randomUUID()}`;
+  const invoiceBody={reference:"",items:[{title:"Fictional test service",quantity:2,unit_amount_minor:5000}],
+   tax_minor:500,shipping_minor:200,discount_minor:100,private_notes:"CI PRIVATE NOT FOR PUBLIC CHECKOUT"};
+  const invoiceCreate=()=>context.request.post(invoiceUrl,{
+   headers:{Origin:origin,"Idempotency-Key":invoiceKey},data:invoiceBody
+  });
+  const invoiceCreated=await invoiceCreate();
+  assert.equal(invoiceCreated.status(),200,`authoritative invoice create failed: ${await invoiceCreated.text()}`);
+  const invoice=await invoiceCreated.json();
+  assert.equal(invoice.status,"draft","invoice creation incorrectly issued a payment or invoice");
+  assert.equal(invoice.amount_minor,10600,"invoice amount was not calculated from server-side line items");
+  assert.match(invoice.reference,/^INV-\d+$/,"invoice did not receive a durable server-issued reference");
+  const invoiceReplay=await invoiceCreate();
+  assert.equal(invoiceReplay.status(),200,"invoice retry lost idempotent source semantics");
+  assert.equal((await invoiceReplay.json()).id,invoice.id,"invoice retry generated a duplicate document");
+  const deniedInvoice=await viewerContext.request.post(invoiceUrl,{
+   headers:{Origin:origin,"Idempotency-Key":`briofold-ci-denied-${randomUUID()}`},data:invoiceBody
+  });
+  assert.equal(deniedInvoice.status(),403,"viewer created a finance invoice");
+  const invoiceIssued=await context.request.post(`${base}/documents/invoices/${invoice.id}/issue?environment=live`,{
+   headers:{Origin:origin,"Idempotency-Key":`briofold-ci-issue-${randomUUID()}`},data:{expected_version:invoice.version}
+  });
+  assert.equal(invoiceIssued.status(),200,`authoritative invoice issuance failed: ${await invoiceIssued.text()}`);
+  assert.equal((await invoiceIssued.json()).status,"issued","invoice issue did not persist the document state");
+  const invoiceList=await context.request.get(invoiceUrl);
+  assert.equal(invoiceList.status(),200,"owner invoice source read failed");
+  assert.ok((await invoiceList.json()).items.some(row=>row.id===invoice.id&&row.amount_minor===10600&&row.status==="issued"),
+   "canonical invoice source lost the issued document or its itemized total");
+  const ownerInvoiceDetail=await context.request.get(`${base}/documents/invoices/${invoice.id}?environment=live`);
+  const viewerInvoiceDetail=await viewerContext.request.get(`${base}/documents/invoices/${invoice.id}?environment=live`);
+  assert.equal(ownerInvoiceDetail.status(),200,"owner lost the confidential invoice source detail");
+  assert.equal(viewerInvoiceDetail.status(),200,"viewer could not read its masked authorized invoice");
+  assert.equal((await ownerInvoiceDetail.json()).items?.[0]?.body?.private_notes,invoiceBody.private_notes,
+   "owner invoice detail did not preserve seller-only notes");
+  assert.equal(Object.hasOwn((await viewerInvoiceDetail.json()).items?.[0]?.body??{},"private_notes"),false,
+   "viewer invoice source leaked private seller notes");
   // Real owner -> Next proxy -> Go -> FINANCE lifecycle, using only a fictional
   // disposable Store and deliberately NOT dispatching any SMS to a provider.
   const phoneRoute=`${base}/phones?environment=sandbox`,mutate={headers:{Origin:origin}};
@@ -294,6 +358,18 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   await refundTableRow.click();
   await page.getByRole("heading",{name:"Refund details",exact:true}).waitFor();
   assert.ok((await page.locator("aside.dr").innerText()).includes(refund.id),"refund details lost the finance record ID");
+  await page.goto(origin+"/reports/payments");
+  await page.getByRole("heading",{name:"Reports",exact:true}).waitFor();
+  const verifiedReportAmount="BDT "+new Intl.NumberFormat("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})
+   .format(financeReport.verified_gross_minor/100);
+  await page.locator(".fin-volume-card").getByText(verifiedReportAmount,{exact:true}).waitFor();
+  assert.equal(await page.locator('main [role="alert"]').count(),0,
+   "canonical payment report displayed an unconfirmed source or validation error");
+  await page.goto(origin+"/invoices");
+  await page.getByRole("heading",{name:"Invoices",exact:true}).waitFor();
+  await page.getByText(invoice.reference,{exact:true}).first().waitFor();
+  assert.ok((await page.locator("main").innerText()).includes("106.00"),
+   "canonical invoices lost the real database-computed document amount");
   for(const [canonical,legacy,expected] of [
    ["/payments",`/w/${workspaceId}/payments/transactions`,reference],
    [`/payments/transactions/${payment.id}`,`/w/${workspaceId}/payments/transactions/${payment.id}`,reference],
@@ -331,7 +407,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
 
   const evidence=new URL("../test-results/pg09/phase9/",import.meta.url);await mkdir(evidence,{recursive:true});
   let cases=0;
-  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/payments/refunds"];
+  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/payments/refunds","/reports/payments","/invoices"];
   for(const locale of ["en","bn"]){
    await context.addCookies([{name:"ekmivo-locale",value:locale,url:origin,sameSite:"Lax"}]);
    for(const theme of ["light","dark"]){
@@ -344,7 +420,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
       assert.equal(response.status(),200,`${route} HTTP failed at ${locale}/${theme}/${width}`);
       const ready=route.includes("/transactions/")||route.startsWith("/sms-data/")
        ?".pg-operation-detail":route==="/settings/payment-methods"?".pg-phone-panel"
-       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/payments/refunds"?".refund-table":"main h1";
+       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/payments/refunds"?".refund-table":route==="/reports/payments"?".fin-volume-card":"main h1";
       try{await page.locator(ready).first().waitFor({timeout:10000});}
       catch(error){
        const snapshot=await page.evaluate(()=>({pathname:location.pathname,headings:[...document.querySelectorAll("main h1,main h2")].map(node=>node.textContent?.trim()).slice(0,5),sections:[...document.querySelectorAll("main section")].map(node=>node.className).slice(0,9),excerpt:document.querySelector("main")?.textContent?.trim().slice(0,300)}));
@@ -359,14 +435,14 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
     }
    }
   }
-  assert.equal(cases,128,"Phase9 complete responsive matrix missing");
+  assert.equal(cases,160,"Phase9 complete responsive matrix missing");
   await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto(origin+"/payments");
   assert.ok(await page.evaluate(()=>matchMedia("(prefers-reduced-motion: reduce)").matches),"reduced-motion preference was not honored");
   assert.deepEqual(errors,[],"Phase9 UI hydration/runtime errors");
   const after=await fetchRows(context,"payments");
   assert.equal(after.filter(r=>r.id===payment.id).length,1,"UI read caused a duplicate financial confirmation");
-  console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, seller-managed refund idempotency, viewer/cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, 8 routes; synthetic CI financial evidence only`);
+  console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, seller-managed refund idempotency, financial-source reporting, invoice create/issue/replay and viewer denial, cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, 10 routes; synthetic CI financial evidence only`);
  }finally{
   if(context)await context.close();if(viewerContext)await viewerContext.close();
   await sandbox.end({timeout:3});await finance.end({timeout:3});await db.end({timeout:3});
