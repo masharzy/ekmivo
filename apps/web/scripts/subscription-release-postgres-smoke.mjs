@@ -20,6 +20,8 @@ try{
  assert(await denied(()=>db.unsafe("SELECT platform_subscription_admin_operations($1::uuid)",[unauthorized])),"no Super Admin denies monitoring");
  assert(await denied(()=>db.unsafe("SELECT platform_subscription_admin_export($1::uuid,'subscription-recovery','')",[unauthorized])),"no Super Admin denies exports");
  await db.unsafe("INSERT INTO platform_administrators(user_id,role) VALUES($1,'super_admin')",[buyer.actor_id]);
+ assert(await denied(()=>db.unsafe("SELECT platform_subscription_admin_operations($1::uuid)",[buyer.actor_id])),"unenrolled MFA admin cannot read monitoring");
+ await db.unsafe("INSERT INTO platform_admin_mfa(user_id,confirmed_at) VALUES($1,now())",[buyer.actor_id]);
  const [read]=await db.unsafe("SELECT platform_subscription_admin_operations($1::uuid) AS data",[buyer.actor_id]);
  assert(read.data?.stats?.paid===1,"actual verified payment appears once");
  assert(read.data?.stats?.open_cases===1,"actual late-money recovery appears in queue");

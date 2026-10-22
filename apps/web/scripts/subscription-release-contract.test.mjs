@@ -37,6 +37,7 @@ test("Super Admin MFA and restricted DB procedures gate monitoring/CSV; no finan
  assert.match(exportRoute,/const safe=\/\^/);
  assert.match(migration,/SECURITY DEFINER SET search_path=public,pg_temp/g);
  assert.match(migration,/a\.role='super_admin'/);
+ assert.match(migration,/m\.confirmed_at IS NOT NULL/);
  assert.match(migration,/REVOKE ALL ON FUNCTION/);
  assert.match(migration,/GRANT EXECUTE ON FUNCTION/);
  assert.doesNotMatch(migration,/(?:UPDATE|DELETE|TRUNCATE)\s+(?:platform_subscription_payment_handoffs|pg13_platform_invoices)/i);

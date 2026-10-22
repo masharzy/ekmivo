@@ -19,6 +19,7 @@ RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg
 DECLARE result jsonb;
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM platform_administrators a
+  JOIN platform_admin_mfa m ON m.user_id=a.user_id AND m.confirmed_at IS NOT NULL
   WHERE a.user_id=admin_actor AND a.role='super_admin')
  THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501';END IF;
  SELECT jsonb_build_object(
@@ -44,6 +45,7 @@ RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg
 DECLARE result jsonb; term text;
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM platform_administrators a
+   JOIN platform_admin_mfa m ON m.user_id=a.user_id AND m.confirmed_at IS NOT NULL
    WHERE a.user_id=admin_actor AND a.role='super_admin')
  THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501';END IF;
  term:='%'||left(coalesce(filter_text,''),80)||'%';
