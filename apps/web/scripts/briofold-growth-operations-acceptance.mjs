@@ -42,9 +42,25 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   await cmd('booking-create',{resource_id:resource,summary:'Rebook cancelled slot',starts_at:starts.toISOString(),ends_at:ends.toISOString(),time_zone:'Asia/Dhaka'});
   await assert.rejects(()=>cmd('booking-create',{resource_id:resource,summary:'Cross realm customer',customer_id:randomUUID(),starts_at:new Date(starts.getTime()+86400000).toISOString(),ends_at:new Date(ends.getTime()+86400000).toISOString(),time_zone:'Asia/Dhaka'}),e=>e.code==='22023');
   await assert.rejects(()=>cmd('resource-create',{title:'Outside Store'},randomUUID(),viewer),e=>e.code==='42501');
+  const ops=(await db`SELECT briofold_growth_operational_snapshot(${store},'live',${owner}) data`)[0].data;
+  assert.equal(Number(ops.campaigns.broadcast_planned),1);
+  assert.equal(Number(ops.campaigns.post_drafts),1);
+  assert.equal(Number(ops.bookings.booking_cancelled),1);
+  assert.equal(Number(ops.bookings.booking_requested),1);
+  assert.equal(Number(ops.team.open),0);
+  assert.equal(Number(ops.messages.ai_outbound_7d),0);
+  const sandbox=(await db`SELECT briofold_growth_operational_snapshot(${store},'sandbox',${owner}) data`)[0].data;
+  assert.equal(Number(sandbox.campaigns.broadcast_planned),0);
+  await assert.rejects(()=>db`SELECT briofold_growth_operational_snapshot(${foreign},'live',${viewer})`,e=>e.code==='42501');
+  await assert.rejects(()=>db`SELECT briofold_growth_export(${store},'live',${viewer})`,e=>e.code==='42501');
+  const exported=(await db`SELECT briofold_growth_export(${store},'live',${owner}) data`)[0].data;
+  assert.equal(exported.version,1);
+  assert.equal(Number(exported.operations.bookings.booking_requested),1);
+  assert.equal(typeof exported.core.customers.total,'number');
   for(const role of ['ekmivo_financial_runtime','ekmivo_financial_projection']){
    assert.equal((await db`SELECT has_table_privilege(${role},'briofold_campaign_drafts','SELECT') ok`)[0].ok,false);
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_operations_read(uuid,text,uuid,text)','EXECUTE') ok`)[0].ok,true);
+   assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_export(uuid,text,uuid)','EXECUTE') ok`)[0].ok,true);
   }
   ctx=await browser.newContext();await ctx.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await ctx.newPage();page.setDefaultNavigationTimeout(90000);
@@ -54,11 +70,23 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   assert.equal((await ctx.request.get(origin+`/api/go/workspaces/${store}/growth?environment=live&kind=broadcast`)).status(),200);
   const result=await ctx.request.post(origin+`/api/go/workspaces/${store}/growth?environment=live`,{headers:{Origin:origin},data:{action:'draft-create',operation_key:randomUUID(),body:{...content,title:'Through actual API'}}});
   assert.equal(result.status(),200);
+  const pageReport=await page.goto(origin+'/reports');
+  assert.equal(pageReport.status(),200);
+  await page.getByText('Broadcasts planned (not sent)').first().waitFor();
+  await page.getByText('Bookings confirmed internally').first().waitFor();
+  const csvResponse=await ctx.request.get(origin+'/api/reports/growth-export');
+  assert.equal(csvResponse.status(),200);
+  assert.match(csvResponse.headers()['content-disposition'],/attachment; filename=ekmivo-growth-metrics\.csv/);
+  const csv=await csvResponse.text();
+  assert.match(csv,/campaigns,broadcast_planned,1/);
+  assert.match(csv,/bookings,booking_requested,1/);
+  assert.ok(!csv.includes('Fictional consultation room'),'aggregate-only CSV contains no resource identifiers or PII');
   viewerCtx=await browser.newContext();await viewerCtx.addCookies([{name:'ekmivo-session',value:sessions.viewer,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:viewer+':'+store,url:origin,httpOnly:true,sameSite:'Lax'}]);
   const denied=await viewerCtx.request.post(origin+`/api/go/workspaces/${store}/growth?environment=live`,{headers:{Origin:origin},data:{action:'resource-create',operation_key:randomUUID(),body:{title:'Denied'}}});
   assert.equal(denied.status(),403);
+  assert.equal((await viewerCtx.request.get(origin+'/api/reports/growth-export')).status(),403);
   let count=0;for(const lang of ['en','bn']){await ctx.addCookies([{name:'ekmivo-locale',value:lang,url:origin,sameSite:'Lax'}]);for(const theme of ['light','dark']){await ctx.addCookies([{name:'ekmivo-theme',value:theme,url:origin,sameSite:'Lax'}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});for(const [path,heading] of [['broadcasts',lang==='bn'?'ব্রডকাস্ট ড্রাফট':'Broadcast drafts'],['posts',lang==='bn'?'ক্যাম্পেইন পোস্ট':'Campaign posts'],['bookings',lang==='bn'?'বুকিং ও সময়সূচি':'Bookings & availability']]){await page.goto(origin+'/customers/'+path);await page.getByRole('heading',{name:heading,exact:true}).waitFor();assert.equal(await page.locator('html').getAttribute('data-theme'),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`growth overflow ${lang}/${theme}/${width}/${path}`);count++;}}}}
   console.log('Phase10 growth operations responsive cases PASS:',count);
-  console.log('Phase10 growth operations PASS: CONTROL tenant/realm/RBAC, idempotency, consent-safe no-send drafts, editorial plan, booking slot conflicts and review, real Go/Next/browser and viewer denial. No provider delivery claimed.');
+  console.log('Phase10 growth operations PASS: CONTROL tenant/realm/RBAC, idempotency, consent-safe no-send drafts, editorial plan, booking slot conflicts and review, operational aggregates, role-safe CSV export, real Go/Next/browser and viewer denial. No provider delivery claimed.');
  }finally{if(ctx)await ctx.close();if(viewerCtx)await viewerCtx.close();await db.end({timeout:3});}
 }

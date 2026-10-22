@@ -71,6 +71,9 @@ DO $$DECLARE t text;BEGIN
  FOREACH t IN ARRAY ARRAY['briofold_campaign_drafts','briofold_booking_resources','briofold_bookings','briofold_growth_commands'] LOOP
   EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY',t);
   EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY',t);
+  -- SECURITY DEFINER runs as this deployment operator, while API/runtime
+  -- roles get no direct table access. FORCE RLS still needs an owner policy.
+  EXECUTE format('CREATE POLICY %I ON %I TO %I USING (true) WITH CHECK (true)',t||'_operator',t,current_user);
   EXECUTE format('REVOKE ALL ON %I FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection',t);
  END LOOP;
 END $$;

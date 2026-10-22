@@ -10,7 +10,7 @@ production flag change or staged cutover was performed by the Phase 10 reports i
 
 - [ ] Owner-provided test accounts/providers/handset and isolated merchant business: run the
   eleven groups in the Phase 10 evidence ledger and record actual pass/failure evidence.
-- [ ] Operator: current merged SHA + green integrated CI; ordered 0141/0142 CONTROL-only
+- [ ] Operator: current merged SHA + green integrated CI; ordered 0141/0142/0180/0181 CONTROL-only
   migrations with backups, runtime grants and post-deploy health/rollback checks.
 
 ## Nagad compact payer entry & bKash BD number normalization — 2026-10-14 (manual / build pending)
@@ -841,3 +841,4 @@ Review populated Orders/Products/Inventory/Coupons/Delivery/Returns in EN/BN, Li
 - Accounts have **one user-facing Store**. Verify Store setup/resume and that new/primary-bound users see no workspace switch/create control. Old financial `workspace_id` and rare legacy multi-membership handling are compatibility infrastructure, not an invitation to create several user-facing Stores.
 - Phase 3 code-level shell/Settings verification is recorded separately; your real visual, keyboard, phone and provider tests are deliberately outside that seal.
 - Phase 10 editorial drafts and internal bookings (migration `0180`, flag `BRIOFOLD_GROWTH_OPERATIONS_ENABLED` initially OFF): inspect created broadcast and post drafts, future editorial plan, update conflict, disabled customer sending, booked resource and overlapping-slot refusal, cancel/rebook and role boundaries. Test at 320/768/1440 in both languages and themes. A planned draft **must never be represented as an actual scheduled provider send**. Existing CRM marketing preferences or verified email identity are NOT provider-specific consent; real opt-in, suppression, provider policies, dispatch and uncertain-delivery review remain separate implementation/provider gates.
+- Phase 10 aggregate operations (migration `0181`, flag `BRIOFOLD_GROWTH_ANALYTICS_ENABLED` initially OFF): check draft/planned campaign totals, internal booking statuses, Inbox assigned/pending/overdue and seven-day customer/human/AI reply counts. Owner/admin download metrics CSV; editor/viewer denied; no names/contact information or verified finance amounts may occur in CSV. A missing function must show unavailable rather than a fictitious zero.
