@@ -1,5 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
-import {readPurchase,bindStore,cancelPurchase,IntentError} from "../../../../../lib/server/purchase-intents";
+import {readPurchase,bindStore,cancelPurchase,claimFreePurchase,IntentError} from "../../../../../lib/server/purchase-intents";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 type Context={params:Promise<{token:string}>};
@@ -24,6 +24,9 @@ export async function POST(request:NextRequest,{params}:Context){
   if(data.action==="bind"&&typeof data.storeId==="string"){
    const intent=await bindStore(token,data.storeId);
    return NextResponse.json({intent},{headers:{"Cache-Control":"no-store"}});
+  }
+  if(data.action==="free"){
+   return NextResponse.json(await claimFreePurchase(token),{headers:{"Cache-Control":"no-store"}});
   }
   if(data.action==="cancel"&&typeof data.revision==="number"){
    return NextResponse.json(await cancelPurchase(token,data.revision),{headers:{"Cache-Control":"no-store"}});
