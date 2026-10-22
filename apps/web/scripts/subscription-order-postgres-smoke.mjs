@@ -51,6 +51,8 @@ try{
  const migrations=[
   "0133_platform_subscription_checkout_foundation.sql","0134_platform_subscription_coupon_admin.sql",
   "0135_subscription_coupon_admin_audit_subject_fix.sql","0140_platform_subscription_policy_catalog.sql",
+  "0141_platform_subscription_policy_lock_concat_fix.sql","0142_platform_subscription_policy_kind_qualification.sql",
+  "0143_platform_subscription_offer_admin.sql","0144_platform_subscription_public_catalog.sql",
   "0145_platform_subscription_coupon_versions.sql","0146_platform_subscription_coupon_lifecycle.sql",
   "0147_platform_subscription_coupon_restrictions.sql","0148_platform_subscription_coupon_tax_requote.sql",
   "0149_platform_subscription_coupon_quote_read.sql","0151_phase4_durable_purchase_intents.sql",
