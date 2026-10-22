@@ -19,6 +19,21 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
    VALUES(${id},${workspace},'live',${"ASSIGN-CI-"+id.slice(0,8)},'manual',${db.json({name:"Fictional recipient",phone:"01700000000",address:"Fictional route, test only"})},0,0,${owner})`;
   await insertOrder(order,store);
   await insertOrder(otherOrder,foreign);
+  const [product]=await db`INSERT INTO commerce_products(workspace_id,environment,name)
+   VALUES(${store},'live','Fictional packing item') RETURNING id`;
+  const barcode="BRIOFOLD-CI-"+randomUUID().slice(0,8);
+  const [variant]=await db`INSERT INTO commerce_variants(workspace_id,environment,product_id,sku,barcode,price_minor)
+   VALUES(${store},'live',${product.id},${'CI-SKU-'+barcode},${barcode},0) RETURNING id`;
+  await db`INSERT INTO commerce_lines(workspace_id,environment,order_id,variant_id,name,sku,options,unit_minor,quantity)
+   VALUES(${store},'live',${order},${variant.id},'Fictional packing item',${'CI-SKU-'+barcode},${db.json({})},0,1)`;
+  const scan=async(code,who=owner,realm="live",scope=store)=>(await db`SELECT commerce_order_scan(${scope},${realm},${who},${code},0,'','') data`)[0].data;
+  assert.equal((await scan(barcode)).items[0].id,order,'exact barcode did not locate customer order');
+  assert.equal((await scan('CI-SKU-'+barcode)).items[0].id,order,'exact SKU did not locate order');
+  assert.equal((await scan(barcode,viewer)).items[0].id,order,'viewer cannot read authorized non-PII order summary');
+  assert.deepEqual((await scan('UNKNOWN-BARCODE')).items,[],'unknown code must not enumerate orders');
+  assert.deepEqual((await scan(barcode,owner,'sandbox')).items,[],'barcode search leaked across realms');
+  await assert.rejects(()=>scan(barcode,viewer,'live',foreign),e=>e.code==='42501');
+  await assert.rejects(()=>scan(''),e=>e.code==='22023');
   const read=async(who=owner,realm="live",scope=store,id=order)=>(await db`SELECT commerce_assignment_read(${scope},${realm},${who},${id}) data`)[0].data;
   const write=async(body,key=randomUUID(),who=owner,realm="live",scope=store)=>(await db`SELECT commerce_assignment_write(${scope},${realm},${who},${key},${db.json(body)}) data`)[0].data;
   assert.equal((await read()).revision,0);
@@ -40,6 +55,7 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   for(const role of ["ekmivo_financial_projection","ekmivo_financial_runtime"]){
    assert.equal((await db`SELECT has_table_privilege(${role},'commerce_order_assignments','UPDATE') ok`)[0].ok,false);
    assert.equal((await db`SELECT has_function_privilege(${role},'commerce_assignment_write(uuid,text,uuid,uuid,jsonb)','EXECUTE') ok`)[0].ok,true);
+   assert.equal((await db`SELECT has_function_privilege(${role},'commerce_order_scan(uuid,text,uuid,text,integer,text,text)','EXECUTE') ok`)[0].ok,true);
   }
   const makeContext=async(token)=>{const ctx=await browser.newContext();await ctx.addCookies([
    {name:"ekmivo-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
@@ -52,6 +68,9 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   const serverRead=await ownerContext.request.get(endpoint+`&resource=assignments&item=${order}`);
   assert.equal(serverRead.status(),200,`Go assignment read failed: ${await serverRead.text()}`);
   assert.equal((await serverRead.json()).assignee_id,owner);
+  const scanned=await ownerContext.request.get(endpoint+`&resource=scan&q=${encodeURIComponent(barcode)}`);
+  assert.equal(scanned.status(),200,`Go barcode search failed: ${await scanned.text()}`);
+  assert.equal((await scanned.json()).items[0].reference,"ASSIGN-CI-"+order.slice(0,8));
   const viewerWrite=await viewerContext.request.post(endpoint,{headers:{Origin:origin},data:{action:"assign-order",operation_key:randomUUID(),body:{id:order,revision:1,assignee_id:null}}});
   assert.equal(viewerWrite.status(),403,"viewer assignment must fail at source");
   const clear=await ownerContext.request.post(endpoint,{headers:{Origin:origin},data:{action:"assign-order",operation_key:randomUUID(),body:{id:order,revision:1,assignee_id:null}}});
@@ -92,10 +111,22 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   assert.equal((await read()).assignee_id,owner,"browser click did not persist assignment");
   assert.equal((await read()).revision,3);
   assert.equal((await read()).history.length,3);
+  await page.goto(origin+"/orders/scan");
+  await page.getByRole('heading',{name:'Scan & pack'}).waitFor();
+  await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
+  await page.getByRole('button',{name:'Search',exact:true}).click();
+  await page.getByText(reference,{exact:true}).first().waitFor();
+  assert.equal(await page.getByRole('button',{name:'Scan with camera'}).count(),1,'camera action missing');
+  assert.equal((await page.goto(origin+'/orders/products/sync')).status(),200);
+  const importView=page.locator('details').filter({has:page.getByText('Import / sync catalog',{exact:true})});
+  await importView.waitFor();
+  assert.equal(await importView.getAttribute('open'),'','catalog import deep link must open a real preview workflow');
+  assert.equal((await page.goto(origin+'/orders/courier')).status(),200);
+  await page.getByRole('heading',{name:'Delivery'}).waitFor();
   await db`UPDATE commerce_orders SET status='cancelled' WHERE id=${order}`;
   await assert.rejects(()=>write({id:order,revision:3,assignee_id:null}),e=>e.code==="42501","closed order changed assignment");
   assert.equal(responsive,16);
-  console.log(`BRIOFOLD ORDER ASSIGNMENT PASS: Store/realm/RBAC, serial optimistic revision, idempotent replay, audit and Go/Next/browser; ${responsive} EN/BN theme/viewport cases`);
+  console.log(`BRIOFOLD ORDER ASSIGNMENT + SCAN PASS: Store/realm/RBAC, serial optimistic revision, idempotent replay, immutable audit, exact barcode/SKU lookup and Go/Next/browser; ${responsive} EN/BN theme/viewport cases`);
  }finally{
   if(ownerContext)await ownerContext.close();
   if(viewerContext)await viewerContext.close();

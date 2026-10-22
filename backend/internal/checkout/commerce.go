@@ -65,6 +65,13 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_assignment_read($1::uuid,$2,$3::uuid,$4::uuid)", ws, realm, actor.UserID, id).Scan(&raw)
+		} else if r.URL.Query().Get("resource") == "scan" {
+			if os.Getenv("BRIOFOLD_COMMERCE_SCAN_ENABLED") != "true" {
+				fail(w, 503, "SCANNER_UNAVAILABLE")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_order_scan($1::uuid,$2,$3::uuid,$4,$5,$6,$7)", ws, realm, actor.UserID,
+				r.URL.Query().Get("q"), off, r.URL.Query().Get("status"), r.URL.Query().Get("source")).Scan(&raw)
 		} else {
 			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_read($1::uuid,$2,$3::uuid,$4,$5::uuid,$6,$7,$8,$9)", ws, realm, actor.UserID, r.URL.Query().Get("resource"), nullableID(id), off, r.URL.Query().Get("q"), r.URL.Query().Get("status"), r.URL.Query().Get("source")).Scan(&raw)
 		}

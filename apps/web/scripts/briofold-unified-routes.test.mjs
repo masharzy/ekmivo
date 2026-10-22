@@ -111,6 +111,20 @@ test("canonical resolver rejects inherited names and unknown routes for every bu
   for(const root of invalid)assert.equal(navigation.unifiedDestination(mode,root,[]),null);
  }
 });
+test("canonical commerce deep links reuse real scoped scanner, courier and catalog import resources",()=>{
+ for(const mode of ["ai","commerce","both"]){
+  assert.equal(navigation.unifiedDestination(mode,"orders",["scan"]).section,"orders");
+  assert.equal(navigation.unifiedDestination(mode,"orders",["courier"]).section,"shipping");
+  assert.equal(navigation.unifiedDestination(mode,"orders",["products","sync"]).section,"products");
+  assert.equal(navigation.unifiedDestination(mode,"orders",["products","invalid"]),null);
+ }
+ assert.equal(navigation.unifiedDestination("off","orders",["products","sync"]),null);
+ const page=source("components/unified-merchant-route.tsx");
+ assert.match(page,/view\.length===2&&view\[0\]==="products"\?"products-sync"/);
+ const entry=source("components/commerce-page.tsx");
+ assert.match(entry,/props\.view==="products-sync"\?"products"/);
+ assert.match(entry,/props\.view==="courier"\?"delivery"/);
+});
 test("canonical product gates cover all roots, settings and valid subroutes",()=>{
  for(const mode of ["ai","commerce","both","off"]){
   for(const item of navigation.unifiedNavigation){

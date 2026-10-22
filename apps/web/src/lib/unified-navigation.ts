@@ -100,6 +100,9 @@ export function enabledUnifiedService(mode:BusinessMode,service:"ai"|"payments"|
 }
 export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:readonly string[]):UnifiedDestination|null{
  if(mode==="off")return null;
+ // Catalog sync is a real subview, not an arbitrary two-part financial record.
+ if(root==="orders"&&view.length===2&&view[0]==="products"&&view[1]==="sync")
+  return {section:"products",service:mode==="ai"?"ai":"payments"};
  // Only explicitly mapped, UUID-shaped finance details may have two segments.
  // The selected business and financial realm are still resolved by the server.
  if(view.length>1||view.length===1&&financialRecordId.test(view[0])){
@@ -112,7 +115,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  const main:Record<Exclude<UnifiedRoot,"settings">,Record<string,UnifiedDestination>>={
   dashboard:{"":{section:"overview",service:defaultService}},
   inbox:{"":{section:"inbox",service:"ai",kind:"inbox"},comments:{section:"comments",service:"ai"},"saved-replies":{section:"saved-replies",service:"ai"},tickets:{section:"tickets",service:"ai"},"agent-desk":{section:"ai-agent",service:"ai"}},
-  orders:{"":{section:"orders",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:defaultService},delivery:{section:"shipping",service:defaultService},returns:{section:"returns",service:defaultService},coupons:{section:"coupons",service:defaultService}},
+  orders:{"":{section:"orders",service:payments?"payments":"ai"},scan:{section:"orders",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:defaultService},delivery:{section:"shipping",service:defaultService},courier:{section:"shipping",service:defaultService},returns:{section:"returns",service:defaultService},coupons:{section:"coupons",service:defaultService}},
   payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},refunds:{section:"refunds",service:"payments"}},
   "sms-data":{"":{section:"incoming",service:"payments"}},
   invoices:{"":{section:"invoices",service:"payments"}},
