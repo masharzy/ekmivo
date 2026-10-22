@@ -10,7 +10,7 @@ test("nested SaaS order status route resolves both server and component imports"
  const path="apps/web/src/app/[locale]/checkout/order/[plan]/status/page.tsx";
  const source=read(path);
  const routeURL=new URL(path,root);
- const imports=[...source.matchAll(/from "(\\.\\.\\/[^"]+)"/g)].map(match=>match[1]);
+ const imports=[...source.matchAll(/from "([^"]+)"/g)].map(match=>match[1]).filter(target=>target.startsWith("../"));
  assert.equal(imports.length,2,"expected auth and status component relative imports");
  for(const target of imports){
   assert.ok(
