@@ -31,7 +31,7 @@ test("short, malformed and forged guest secrets cannot generate purchase capabil
 test("checkout preview cannot issue an unverified paid invoice",()=>{
  const summary=source("app/[locale]/checkout/order/[plan]/page.tsx");
  const module=source("lib/server/purchase-intents.ts");
- const migration=readFileSync(new URL("../../infra/migrations/0148_phase4_durable_purchase_intents.sql",import.meta.url),"utf8");
+ const migration=readFileSync(new URL("../../../infra/migrations/0148_phase4_durable_purchase_intents.sql",import.meta.url),"utf8");
  assert.match(summary,/purchaseEnabled=\{false\}/);
  assert.match(module,/status='selected'/);
  assert.match(module,/payment_plan_claim_free/);
