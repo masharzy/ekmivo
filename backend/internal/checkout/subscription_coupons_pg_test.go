@@ -204,6 +204,18 @@ func TestSubscriptionCouponHTTPIsolatedPostgres(t *testing.T) {
 	}
 	assertStatus("stale revision", call("POST", quotePath, adminToken,
 		`{"revision":1,"operation_key":"22222222-2222-4222-a222-222222222222","coupon_code":"RACE_ONE_SLOT"}`, true), 409)
+	// Store settings authorization is evaluated from current database roles,
+	// not a once-valid session or an old price quote.
+	_, err = db.ExecContext(ctx, "UPDATE workspace_members SET role='editor' WHERE user_id=$1::uuid", a.user)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(context.Background(), "UPDATE workspace_members SET role='owner' WHERE user_id=$1::uuid", a.user) })
+	assertStatus("downgraded owner", call("GET", quotePath, adminToken, "", false), 403)
+	_, err = db.ExecContext(ctx, "UPDATE workspace_members SET role='owner' WHERE user_id=$1::uuid", a.user)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = db.ExecContext(ctx, "UPDATE auth_sessions SET revoked_at=now() WHERE token_hash=(SELECT token_hash FROM auth_sessions WHERE user_id=$1::uuid AND mfa_verified_at IS NOT NULL LIMIT 1)", a.user)
 	if err != nil {
