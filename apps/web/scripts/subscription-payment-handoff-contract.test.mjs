@@ -25,7 +25,7 @@ test("subscription status cannot be marked paid by browser, can outlast closed t
  const client=read("apps/web/src/lib/subscription-payment-client.ts");
  assert.match(client,/subscription-purchases/);
  assert.match(status,/billing-invoices/);
- assert.match(status,/next.verified!==\(next.status==="completed"\)/);
+ assert.match(client,/next.verified!==\(next.status==="completed"\)/);
  assert.match(status,/window.setInterval/);
  assert.match(proxy,/subscriptionPaymentPath/);
  assert.match(proxy,/ORIGIN_DENIED/);
