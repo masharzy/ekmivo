@@ -732,6 +732,13 @@ try{
     "Missing physical-device schema in "+realm);
   const forwardSQL=await readFile(new URL("../../../infra/migrations/0047_pg06_phone_forwarder.sql",import.meta.url),"utf8");
   await dbs[realm].unsafe(forwardSQL).simple();
+  // The live phone endpoints depend on reconnect/delete (0086), not just the
+  // original 0045 pairing functions. Install this FINANCE-only migration in
+  // both disposable realms before exercising the real Next -> Go lifecycle.
+  const lifecycleSQL=await readFile(new URL("../../../infra/migrations/0086_phone_reconnect_delete.sql",import.meta.url),"utf8");
+  await dbs[realm].unsafe(lifecycleSQL).simple();
+  const lifecycleInstalled=(await dbs[realm].unsafe("SELECT to_regprocedure('public.pg06_phone_reconnect(uuid,text,uuid,text)') IS NOT NULL AS reconnect, to_regprocedure('public.pg06_phone_delete(uuid,text,uuid)') IS NOT NULL AS delete_phone"))[0];
+  ok(lifecycleInstalled.reconnect&&lifecycleInstalled.delete_phone,"Missing phone lifecycle migration in "+realm);
   // Replay the same additive 0088 repair against both disposable finance realms.
   const forwardRepair=await readFile(new URL("../../../infra/migrations/0088_financial_phone_forward_column.sql",import.meta.url),"utf8");
   await dbs[realm].unsafe(forwardRepair).simple();

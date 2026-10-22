@@ -8,7 +8,8 @@ const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAY
 const base=process.env.PUBLIC_SMOKE_URL||"http://localhost:3027";
 const route=new URL("../src/app/[locale]/ui-sms-test/",import.meta.url);
 const evidence=new URL("../../../docs/evidence/SMS-DEVICES-QR-20261014/",import.meta.url).pathname.replace(/^\/(\w:)/,"$1");
-const token="QR_TEST_"+"x".repeat(35),phoneId="22222222-2222-4222-8222-222222222222",workspace="11111111-1111-4111-8111-111111111111";
+// Match the eight-character Crockford-style alphabet emitted by the Go pairing endpoint.
+const token="ABCD2345",phoneId="22222222-2222-4222-8222-222222222222",workspace="11111111-1111-4111-8111-111111111111";
 assert.throws(()=>pairingPayload("<script>"));assert.match(pairingSvg(token),/fill="white"/);assert.match(pairingSvg(token),/width="[0-9]+px"/);
 await mkdir(route,{recursive:true});await mkdir(evidence,{recursive:true});
 await writeFile(new URL("page.tsx",route),`import {notFound} from "next/navigation";import Link from "next/link";import {PaymentPhoneManagement} from "../../../components/payment-phone-management";export default async function Page({params}:{params:Promise<{locale:string}>}){if(process.env.NODE_ENV!=="development")notFound();const {locale}=await params;return <main style={{maxWidth:1100,margin:"24px auto 40px",padding:16}}><p>Simulated SMS device UI — no real account</p><PaymentPhoneManagement locale={locale==="bn"?"bn":"en"} workspaceId="${workspace}" environment="live" canManage={true}/><Link href="/pay/ppppppppppppppppppppppppppppppppppppppppppp">Open simulated checkout</Link></main>}`);

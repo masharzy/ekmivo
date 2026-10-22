@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {test} from "node:test";
+import {pairingPayload,pairingSvg} from "../../apps/web/src/lib/pairing-qr.mjs";
 const ui=readFileSync(new URL("../../apps/web/src/components/sms-devices.tsx",import.meta.url),"utf8");
 const api=readFileSync(new URL("../../backend/internal/checkout/physical_devices.go",import.meta.url),"utf8");
 const proxy=readFileSync(new URL("../../apps/web/src/app/api/go/[...path]/route.ts",import.meta.url),"utf8");
@@ -50,4 +51,14 @@ test("Go must validate requested phone ID matches the targeted route before muta
  assert.match(api,/PhoneID\s+string\s+`json:"phone_id"`/);
  assert.match(api,/\(action\s*==\s*"reconnect"\s*\|\|\s*action\s*==\s*"delete"\)\s*&&\s*body.PhoneID\s*!=\s*id/);
  assert.match(api,/fail\(w,\s*422,\s*"PHONE_ID_MISMATCH"\)/);
+});
+test("real 8-character pairing format renders a square QR and refuses unsupported characters",()=>{
+ const token="ABCD2345";
+ assert.equal(pairingPayload(token),"ekmivo://pair?token=ABCD2345");
+ const svg=pairingSvg(token);
+ assert.match(svg,/<svg\b/);
+ assert.match(svg,/fill="white"/);
+ assert.match(svg,/width="\d+px"/);
+ assert.throws(()=>pairingSvg("QR_TEST_"+"x".repeat(35)),/INVALID_PAIRING_CODE/);
+ assert.throws(()=>pairingPayload("ABCD1234"),/INVALID_PAIRING_CODE/);
 });
