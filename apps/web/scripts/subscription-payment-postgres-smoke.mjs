@@ -10,6 +10,10 @@ if(!["localhost","127.0.0.1","[::1]"].includes(url.hostname)||url.pathname!=="/e
  throw Error("Phase 6 fixture only accepts the disposable CI Postgres database");
 url.pathname="/ekmivo";
 const db=postgres(url.toString(),{ssl:false,prepare:false,max:6,connect_timeout:8});
+// Multi-statement migration files need one reserved connection, while the
+// separate application pool below must remain concurrent for bind/race checks.
+const migrationDb=postgres(url.toString(),{ssl:false,prepare:false,max:1,connect_timeout:8});
+const runtimeDb=postgres(url.toString(),{ssl:false,prepare:false,max:1,connect_timeout:8});
 const sql=(query,args=[])=>db.unsafe(query,args);
 const assert=(condition,label)=>{if(!condition)throw Error("PHASE6 FAILED: "+label)};
 const deny=async(callback,label)=>{
@@ -38,7 +42,7 @@ try{
  // This tiny substitute exercises control-plane atomicity, not provider proof.
  await sql("CREATE FUNCTION pg13_billing_verified(w uuid,invoice uuid,payment uuid,amount bigint,verified_time timestamptz) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN UPDATE pg13_platform_invoices SET status='paid',source_payment_id=payment,paid_at=verified_time WHERE id=invoice AND workspace_id=w AND amount_minor=amount AND status='issued'; IF NOT FOUND THEN RAISE EXCEPTION 'not verified'; END IF; RETURN true; END $$");
  const migration=await readFile(new URL("../../../infra/migrations/0153_platform_subscription_payment_handoff.sql",import.meta.url),"utf8");
- await sql(migration);
+ await migrationDb.unsafe(migration);
  console.log("PHASE6 POSTGRES migration 0153 after Phase 3/4/5 PASS");
  const bind=(item,digest)=>sql(
   "SELECT platform_subscription_payment_bind($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6::uuid,$7) AS result",
@@ -52,10 +56,10 @@ try{
  await deny(()=>bind({...withCoupon,workspace_id:systemReceiver},couponDigest),"cross-store bind");
  assert((await sql("SELECT count(*)::int AS n FROM platform_subscription_payment_handoffs WHERE intent_id=$1",[withCoupon.intent_id]))[0].n===1,"one binding");
  await bind(withoutCoupon,firstDigest);
- await sql("SET ROLE ekmivo_runtime");
- await deny(()=>sql("SELECT * FROM platform_subscription_payment_handoffs"),"runtime direct RLS table access");
- await deny(()=>sql("SELECT platform_subscription_payment_settle($1::uuid,$2::uuid,$3,now(),$4::uuid)",[withCoupon.intent_id,randomUUID(),withCoupon.snapshot.total_minor,systemReceiver]),"runtime forged settlement");
- await sql("RESET ROLE");
+ await runtimeDb.unsafe("SET ROLE ekmivo_runtime");
+ await deny(()=>runtimeDb.unsafe("SELECT * FROM platform_subscription_payment_handoffs"),"runtime direct RLS table access");
+ await deny(()=>runtimeDb.unsafe("SELECT platform_subscription_payment_settle($1::uuid,$2::uuid,$3,now(),$4::uuid)",[withCoupon.intent_id,randomUUID(),withCoupon.snapshot.total_minor,systemReceiver]),"runtime forged settlement");
+ await runtimeDb.unsafe("RESET ROLE");
  await deny(()=>sql("SELECT platform_subscription_payment_settle($1::uuid,$2::uuid,$3,now(),$4::uuid)",[withCoupon.intent_id,randomUUID(),Number(withCoupon.snapshot.total_minor)+1,systemReceiver]),"wrong amount");
  await deny(()=>sql("SELECT platform_subscription_payment_settle($1::uuid,$2::uuid,$3,now(),$4::uuid)",[withCoupon.intent_id,randomUUID(),withCoupon.snapshot.total_minor,withCoupon.workspace_id]),"wrong receiver");
  const payment=randomUUID();
@@ -83,4 +87,6 @@ try{
  process.exitCode=1;
 }finally{
  await db.end({timeout:4}).catch(()=>{});
+ await migrationDb.end({timeout:4}).catch(()=>{});
+ await runtimeDb.end({timeout:4}).catch(()=>{});
 }
