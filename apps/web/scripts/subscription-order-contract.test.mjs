@@ -65,6 +65,7 @@ test("Go transaction revalidates Store, policy, offer, tax and invoice uniquenes
  assert.doesNotMatch(sql,/ADD COLUMN coupon_revision bigint/);
  assert.doesNotMatch(sql,/UPDATE pg13_subscriptions|status='paid'\s*WHERE/);
  assert.doesNotMatch(sql,/chosen_coupon uuid;\s*status text;/);
+ assert.doesNotMatch(sql,/;\s*kind text;/);
  const go=readFileSync(new URL("../../../backend/internal/checkout/subscription_order.go",import.meta.url),"utf8");
  assert.match(go,/EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED/);
  assert.match(go,/r\.Header\.Get\("Origin"\)\s*==\s*""/);

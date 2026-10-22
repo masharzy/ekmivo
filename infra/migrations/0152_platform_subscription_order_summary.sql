@@ -48,7 +48,7 @@ DECLARE
  plan payment_plan_catalog%ROWTYPE;
  policies jsonb; base numeric; promo_discount numeric:=0; tax_amount numeric; final_amount numeric;
  code text; key text; chosen_coupon uuid; previous_revision bigint;
- used_count bigint; store_count bigint; units integer; kinds text[]:=ARRAY['terms','privacy','refund']; kind text;
+ used_count bigint; store_count bigint; units integer; kinds text[]:=ARRAY['terms','privacy','refund']; consent_kind text;
  policy platform_subscription_policy_versions%ROWTYPE; legal jsonb:='{}'::jsonb;
  invoice pg13_platform_invoices%ROWTYPE; result jsonb; summary jsonb; compare_amount numeric;
 BEGIN
@@ -212,26 +212,26 @@ BEGIN
  THEN RAISE EXCEPTION 'INVALID_IDEMPOTENCY_KEY'; END IF;
  IF EXISTS(SELECT 1 FROM platform_subscription_order_confirmations c WHERE c.workspace_id=w AND c.idempotency_key=key)
  THEN RAISE EXCEPTION 'IDEMPOTENCY_CONFLICT'; END IF;
- FOREACH kind IN ARRAY kinds LOOP
-  PERFORM pg_advisory_xact_lock(hashtextextended('ekmivo-policy-'||kind,0));
-  SELECT * INTO policy FROM platform_subscription_policy_versions WHERE status='published' AND platform_subscription_policy_versions.kind=kind;
-  IF policy.id IS NULL OR payload->'consents'->kind->'accepted' IS DISTINCT FROM 'true'::jsonb
+ FOREACH consent_kind IN ARRAY kinds LOOP
+  PERFORM pg_advisory_xact_lock(hashtextextended('ekmivo-policy-'||consent_kind,0));
+  SELECT * INTO policy FROM platform_subscription_policy_versions WHERE status='published' AND platform_subscription_policy_versions.kind=consent_kind;
+  IF policy.id IS NULL OR payload->'consents'->consent_kind->'accepted' IS DISTINCT FROM 'true'::jsonb
    THEN RAISE EXCEPTION 'POLICY_ACCEPTANCE_REQUIRED'; END IF;
-  IF payload->'consents'->kind->>'id' IS DISTINCT FROM policy.id::text
-    OR payload->'consents'->kind->>'sha256' IS DISTINCT FROM policy.content_sha256
+  IF payload->'consents'->consent_kind->>'id' IS DISTINCT FROM policy.id::text
+    OR payload->'consents'->consent_kind->>'sha256' IS DISTINCT FROM policy.content_sha256
    THEN RAISE EXCEPTION 'POLICY_CHANGED'; END IF;
-  legal:=legal||jsonb_build_object(kind,jsonb_build_object('id',policy.id,'version',policy.version_label,'sha256',policy.content_sha256));
+  legal:=legal||jsonb_build_object(consent_kind,jsonb_build_object('id',policy.id,'version',policy.version_label,'sha256',policy.content_sha256));
  END LOOP;
  INSERT INTO pg13_platform_invoices(workspace_id,plan_id,plan_version_id,amount_minor,period_days,
   grace_days,creation_key,cycle_count,billing_operation,tax_minor)
  VALUES(w,version.plan_id,version.id,final_amount::bigint,(version.terms->>'period_days')::integer*units,
   (version.terms->>'grace_days')::integer,'saas-order:'||purchase::text,1,'purchase',tax_amount::bigint)
  RETURNING * INTO invoice;
- FOREACH kind IN ARRAY kinds LOOP
-  SELECT * INTO policy FROM platform_subscription_policy_versions WHERE id=(legal->kind->>'id')::uuid;
+ FOREACH consent_kind IN ARRAY kinds LOOP
+  SELECT * INTO policy FROM platform_subscription_policy_versions WHERE id=(legal->consent_kind->>'id')::uuid;
   INSERT INTO platform_subscription_policy_acceptances(intent_id,actor_id,workspace_id,policy_version_id,
     policy_kind,policy_version_label,policy_content_sha256)
-  VALUES(purchase,a,w,policy.id,kind,policy.version_label,policy.content_sha256);
+  VALUES(purchase,a,w,policy.id,consent_kind,policy.version_label,policy.content_sha256);
  END LOOP;
  IF chosen_coupon IS NOT NULL THEN
   -- The Phase 3 Apply command reserves this exact quote. Recreating a slot
