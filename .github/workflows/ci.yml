@@ -55,6 +55,9 @@ jobs:
       - name: Briofold Phase 9 canonical finance-source detail contract
         working-directory: apps/web
         run: node --test scripts/briofold-phase9-payment-links.test.mjs
+      - name: Briofold CRM authorized page CSV and spreadsheet injection guard
+        working-directory: apps/web
+        run: node --test scripts/briofold-crm-csv.test.mjs
       - name: Single Store signup, switching and typography regression contracts
         working-directory: apps/web
         run: node --test scripts/primary-store-binding-contract.test.mjs

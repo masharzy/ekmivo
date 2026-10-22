@@ -200,8 +200,23 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   assert.doesNotMatch(eventCsv,/01700000000|secret_cipher|recipient/,'activity export disclosed sensitive event fields');
   await db`UPDATE commerce_orders SET status='cancelled' WHERE id=${order}`;
   await assert.rejects(()=>write({id:order,revision:3,assignee_id:null}),e=>e.code==="42501","closed order changed assignment");
+  // Scan & pack is also a real bulk state workflow, not merely a barcode
+  // search. Exercise the UI's selected-order action through Next/Go/CONTROL
+  // using a second disposable draft so earlier report assertions are intact.
+  const bulkOrder=randomUUID(),bulkReference="ASSIGN-CI-"+bulkOrder.slice(0,8);
+  await insertOrder(bulkOrder,store);
+  await db`INSERT INTO commerce_lines(workspace_id,environment,order_id,variant_id,name,sku,options,unit_minor,quantity)
+   VALUES(${store},'live',${bulkOrder},${variant.id},'Fictional packing item',${'CI-SKU-'+barcode},${db.json({})},0,1)`;
+  await page.goto(origin+"/orders/scan");
+  await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
+  await page.getByRole('button',{name:'Search',exact:true}).click();
+  await page.getByRole('checkbox',{name:'Select '+bulkReference}).check();
+  await page.getByRole('button',{name:'cancelled',exact:true}).click();
+  await page.getByText(bulkReference+': saved',{exact:true}).waitFor();
+  assert.equal((await db`SELECT status FROM commerce_orders WHERE id=${bulkOrder}`)[0].status,'cancelled',
+   'browser barcode bulk action did not persist an authorized order state');
   assert.equal(responsive,48);
-  console.log(`BRIOFOLD ORDER ASSIGNMENT + SCAN + REPORT + ACTIVITY PASS: Store/realm/RBAC, serial optimistic revision, idempotent replay, immutable audit, exact barcode/SKU, order aggregates and redacted activity/export permissions; ${responsive} EN/BN theme/viewport cases`);
+  console.log(`BRIOFOLD ORDER ASSIGNMENT + SCAN + REPORT + ACTIVITY PASS: Store/realm/RBAC, serial optimistic revision, idempotent replay, immutable audit, exact barcode/SKU, selected-row bulk transition, order aggregates and redacted activity/export permissions; ${responsive} EN/BN theme/viewport cases`);
  }finally{
   if(ownerContext)await ownerContext.close();
   if(viewerContext)await viewerContext.close();
