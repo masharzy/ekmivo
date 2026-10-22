@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import {createHash,randomUUID} from 'node:crypto';
+import {createHash,createHmac,randomUUID} from 'node:crypto';
 import postgres from 'postgres';
 
-export async function runBriofoldGrowthOperations({origin,browser,control,sessions}){
+export async function runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin}){
  const url=new URL(control);
  if(!['localhost','127.0.0.1','[::1]'].includes(url.hostname)||/prod/i.test(url.pathname))throw Error('Growth acceptance refuses shared database');
  const db=postgres(control,{max:4,prepare:false});let ctx,viewerCtx;
@@ -99,6 +99,7 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_operations_read(uuid,text,uuid,text)','EXECUTE') ok`)[0].ok,true);
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_audience_preview(uuid,text,uuid,text,text)','EXECUTE') ok`)[0].ok,true);
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_export(uuid,text,uuid)','EXECUTE') ok`)[0].ok,true);
+   assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_provider_opt_out(uuid,text)','EXECUTE') ok`)[0].ok,role==='ekmivo_financial_runtime');
   }
   ctx=await browser.newContext();await ctx.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await ctx.newPage();page.setDefaultNavigationTimeout(90000);
@@ -148,6 +149,38 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
    'verified CRM merge must preserve opt-out on the surviving profile');
   assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_suppression_events
     WHERE workspace_id=${store}`)[0].n),2,'merge propagation must be audited exactly once');
+  // A connected Meta customer can opt out using a signed inbound message.
+  // A merchant-entered CRM flag, forged signature or unrelated text cannot
+  // create this audit record; the event can only reduce marketing eligibility.
+  const sourceProfile=(await db`SELECT s.customer_id FROM briofold_customer_sources s
+    WHERE s.workspace_id=${store} AND s.environment='live' AND s.kind='thread' AND s.source_id=${thread}`)[0].customer_id;
+  const metaEvent=(text,id)=>JSON.stringify({object:'page',entry:[{
+    id:'growth-fixture-'+connection,messaging:[{sender:{id:'growth-thread-'+thread},timestamp:Date.now(),
+      message:{mid:id,text}}]}]});
+  const signedMeta=async(raw,signature)=>fetch(apiOrigin+'/v1/channels/meta/webhook',{
+    method:'POST',headers:{'Content-Type':'application/json','X-Hub-Signature-256':signature},body:raw});
+  const stopId='growth-stop-'+randomUUID(),stopBody=metaEvent(' STOP ',stopId);
+  assert.equal((await signedMeta(stopBody,'sha256='+''.padStart(64,'0'))).status,403,'unsigned STOP is rejected');
+  const signature=raw=>'sha256='+createHmac('sha256','phase6-comment-test-secret').update(raw).digest('hex');
+  assert.equal((await signedMeta(stopBody,signature(stopBody))).status,200,'signed STOP is durably accepted');
+  assert.equal((await signedMeta(stopBody,signature(stopBody))).status,200,'duplicate provider callback is idempotent');
+  assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_suppressions
+    WHERE customer_id=${sourceProfile} AND channel='messenger' AND actor_id IS NULL AND provider_message_id IS NOT NULL`)[0].n),1);
+  assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_suppression_events
+    WHERE customer_id=${sourceProfile} AND channel='messenger' AND actor_id IS NULL AND provider_message_id IS NOT NULL`)[0].n),1,
+   'provider opt-out has one immutable signed-message audit reference');
+  const ambiguous=metaEvent('please stop order 123','growth-other-'+randomUUID());
+  assert.equal((await signedMeta(ambiguous,signature(ambiguous))).status,200);
+  assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_suppression_events
+    WHERE customer_id=${sourceProfile}`)[0].n),1,'ordinary support chat cannot create an opt-out');
+  const global=metaEvent('STOP ALL','growth-global-'+randomUUID());
+  assert.equal((await signedMeta(global,signature(global))).status,200);
+  assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_suppressions
+    WHERE customer_id=${sourceProfile} AND channel='all'`)[0].n),1,'signed STOP ALL blocks future channels');
+  assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_channel_consents
+    WHERE customer_id=${sourceProfile}`)[0].n),0,'opt-out cannot self-grant consent');
+  await assert.rejects(()=>db`UPDATE briofold_growth_suppression_events SET reason='legal'
+    WHERE customer_id=${sourceProfile}`,e=>e.code==='42501','signed suppression audit is immutable');
   await page.goto(origin+'/customers/broadcasts');
   await page.getByRole('button',{name:'Review consent evidence'}).click();
   await page.getByText('Channel proof missing:').first().waitFor();

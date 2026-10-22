@@ -122,6 +122,18 @@ func inboxWebhookSignature(secret, header string, raw []byte) bool {
 	supplied, err := hex.DecodeString(strings.TrimPrefix(header, "sha256="))
 	return secret != "" && strings.HasPrefix(header, "sha256=") && err == nil && hmac.Equal(expected.Sum(nil), supplied)
 }
+
+// A small, exact opt-out vocabulary prevents substring false positives such
+// as "please stop order 123". This only removes marketing eligibility; it
+// never changes ordinary support conversations or establishes opt-in.
+func signedChannelMarketingOptOut(message string) bool {
+	switch strings.ToLower(strings.TrimSpace(message)) {
+	case "stop", "stop all", "unsubscribe":
+		return true
+	default:
+		return false
+	}
+}
 func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 	if s == nil || s.Pipeline == nil || s.Pipeline.Control == nil {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
@@ -226,6 +238,18 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		var accepted bool
 		if err := tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,$6,$7)", connection, id, from, name, text, kind, at).Scan(&accepted); err != nil {
 			return err
+		}
+		if accepted && kind == "text" && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" && signedChannelMarketingOptOut(text) {
+			// Signed Meta webhook and existing durable inbox message are both
+			// necessary. The CONTROL routine rechecks sender, message type,
+			// connected Store/realm and exact STOP body independently.
+			var suppressed bool
+			if err := tx.QueryRow(r.Context(), "SELECT briofold_growth_provider_opt_out($1::uuid,$2)", connection, id).Scan(&suppressed); err != nil {
+				return err
+			}
+			if !suppressed {
+				return errors.New("signed marketing opt-out could not be recorded")
+			}
 		}
 		if provider == "wa" && accepted {
 			_, err := tx.Exec(r.Context(), "SELECT briofold_customer_whatsapp_identity($1::uuid,$2)", connection, from)
