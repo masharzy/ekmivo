@@ -77,7 +77,14 @@ test("real coupon React control performs Apply, GET reload, Remove and safe unkn
      assert.equal(await page.getByText(locale==="bn"?/যাচাইকৃত মোট/:/Verified total/).count()>0,true);
      await input.fill("BOGUS");
      await page.getByRole("button",{name:locale==="bn"?"প্রয়োগ":"Apply"}).click();
-     await page.waitForFunction(()=>document.querySelector("[role=\"status\"]")?.textContent?.length>0);
+     try{
+      await page.waitForFunction(()=>/unavailable|পাওয়া যাচ্ছে না/.test(document.body.textContent||""),null,{timeout:6000});
+     }catch{
+      const detail=await page.evaluate(()=>({postCount:window.__couponPostCount(),quote:window.__lastCouponQuote,
+       live:[...document.querySelectorAll('[role="status"],[role="alert"]')].map(el=>el.textContent),
+       input:document.querySelector('#ek-order-verified-coupon')?.value}));
+      throw Error("Coupon invalid-response UI did not settle: "+JSON.stringify(detail));
+     }
      assert.equal(await page.evaluate(()=>window.__lastCouponQuote?.coupon_id),null,"invalid coupon changed persisted state");
      await input.fill("PROMO10");
      await page.evaluate(()=>window.__dropNextCouponResponse());
