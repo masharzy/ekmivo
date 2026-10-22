@@ -147,6 +147,10 @@ export async function bindStore(token:string,storeId:string){
  return readPurchase(token);
 }
 export async function resumePurchase(token:string){
+ const signedIn=await currentUser();
+ // Do not expose an owned purchase to an anonymous visitor; send them to login first.
+ // Ownership is enforced after authentication on the subsequent GET.
+ if(!signedIn)return {stage:"login" as const,intent:null};
  const current=await readPurchase(token);
  if(current.status!=="selected")throw new IntentError("INTENT_"+current.status.toUpperCase());
  const user=await currentUser();
@@ -156,7 +160,8 @@ export async function resumePurchase(token:string){
  const store=await preferredWorkspaceFor(user.id);
  if(!store)return {stage:"store" as const,intent:current};
  const {onboardingState}=await import("./briofold-onboarding");
- if(await onboardingState(store,user.id)!=="complete")return {stage:"setup" as const,intent:current};
+ const onboarding=await onboardingState(store,user.id);
+ if(onboarding&&onboarding!=="complete")return {stage:"setup" as const,intent:current};
  if(store.role!=="owner"&&store.role!=="admin")throw new IntentError("BILLING_ACCESS_DENIED",403);
  const bound=await bindStore(token,store.id);
  const live=await offerLookup(bound.offerKey,bound.term);
@@ -177,4 +182,42 @@ export async function cancelPurchase(token:string,revision:number){
  if(!rows.length)throw new IntentError("INTENT_STATE_CHANGED");
  if(await activePurchase()===token)(await cookies()).delete(ACTIVE);
  return {status:"cancelled" as const};
+}
+
+/** Claim exactly one current free Payments entitlement with no paid invoice. */
+export async function claimFreePurchase(token:string){
+ const intent=await readPurchase(token);
+ if(intent.status==="claimed_free")return {status:"claimed_free" as const};
+ if(intent.status!=="selected"||!intent.actorId||!intent.storeId||
+  intent.product!=="payments"||intent.amountMinor!==0||intent.quantity!==1||
+  intent.couponCode)throw new IntentError("FREE_CLAIM_NOT_ALLOWED");
+ const user=await currentUser();
+ if(!user||user.id!==intent.actorId||!user.verified)throw new IntentError("INTENT_NOT_FOUND",404);
+ const live=await offerLookup(intent.offerKey,intent.term);
+ if(String(live.version_id)!==intent.offerVersionId)throw new IntentError("OFFER_CHANGED");
+ const {publicPaymentPlans}=await import("./payment-plans");
+ const catalog=await publicPaymentPlans();
+ const plan=catalog.plans.find(p=>p.version_id===intent.offerVersionId&&p.terms.kind==="free");
+ if(catalog.unavailable||!plan)throw new IntentError("FREE_PLAN_UNAVAILABLE");
+ return database().begin(async tx=>{
+  const rows=await tx`
+   SELECT revision,status FROM platform_subscription_purchase_intents
+    WHERE id=${intent.id}::uuid AND actor_id=${user.id}::uuid
+      AND workspace_id=${intent.storeId}::uuid AND expires_at>now() FOR UPDATE`;
+  if(rows[0]?.status==="claimed_free")return {status:"claimed_free" as const};
+  if(rows[0]?.status!=="selected"||Number(rows[0]?.revision)!==intent.revision)
+   throw new IntentError("INTENT_STATE_CHANGED");
+  const permission=await tx`
+   SELECT 1 FROM workspace_members m JOIN app_users u ON u.id=m.user_id
+   WHERE m.user_id=${user.id}::uuid AND m.workspace_id=${intent.storeId}::uuid
+    AND m.role IN ('owner','admin') AND u.disabled_at IS NULL`;
+  if(!permission.length)throw new IntentError("BILLING_ACCESS_DENIED",403);
+  // Existing verified billing SQL owns entitlement and subscription conflicts.
+  await tx`SELECT payment_plan_claim_free(${intent.storeId}::uuid,${user.id}::uuid,${plan.id})`;
+  await tx`UPDATE platform_subscription_purchase_intents
+   SET status='claimed_free',revision=revision+1,updated_at=now() WHERE id=${intent.id}::uuid`;
+  await tx`INSERT INTO platform_subscription_purchase_audit(intent_id,actor_id,action)
+    VALUES(${intent.id}::uuid,${user.id}::uuid,'free_claimed')`;
+  return {status:"claimed_free" as const};
+ });
 }
