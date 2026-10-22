@@ -30,10 +30,13 @@ try{
  await setup.unsafe(`
   CREATE ROLE ekmivo_runtime NOLOGIN;
   CREATE ROLE ekmivo_financial_runtime NOLOGIN;
-  CREATE TABLE app_users(id uuid PRIMARY KEY,disabled_at timestamptz);
+  CREATE TABLE app_users(id uuid PRIMARY KEY,email text,disabled_at timestamptz,email_verified_at timestamptz);
   CREATE TABLE workspaces(id uuid PRIMARY KEY,name text,created_by uuid REFERENCES app_users(id));
   CREATE TABLE workspace_members(workspace_id uuid REFERENCES workspaces(id),user_id uuid REFERENCES app_users(id),role text);
-  CREATE TABLE auth_sessions(id uuid PRIMARY KEY);
+  CREATE TABLE auth_sessions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES app_users(id),
+   token_hash text UNIQUE,expires_at timestamptz,revoked_at timestamptz,mfa_verified_at timestamptz);
+  CREATE TABLE platform_auth_settings(singleton boolean PRIMARY KEY,email_verification_enabled boolean);
+  CREATE TABLE platform_admin_mfa(user_id uuid REFERENCES app_users(id),confirmed_at timestamptz);
   CREATE TABLE platform_administrators(user_id uuid REFERENCES app_users(id),role text);
   CREATE TABLE platform_admin_audit(actor_id uuid REFERENCES app_users(id),action text,description text);
   CREATE TABLE payment_plan_versions(id uuid PRIMARY KEY);
@@ -51,7 +54,9 @@ try{
   const body=await readFile(new URL(`../../../infra/migrations/${name}`,import.meta.url),"utf8");
   await setup.unsafe(body);
  }
- await sql`INSERT INTO app_users(id) VALUES(${ids.a}::uuid),(${ids.b}::uuid)`;
+ await sql`INSERT INTO app_users(id,email,email_verified_at) VALUES
+  (${ids.a}::uuid,'phase3-a@example.invalid',now()),
+  (${ids.b}::uuid,'phase3-b@example.invalid',now())`;
  await sql`INSERT INTO workspaces(id,name,created_by) VALUES
   (${ids.one}::uuid,'Fictional CI store A',${ids.a}::uuid),
   (${ids.two}::uuid,'Fictional CI store B',${ids.b}::uuid)`;

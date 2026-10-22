@@ -249,6 +249,11 @@ jobs:
         env:
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
         run: node scripts/subscription-coupon-concurrency-smoke.mjs
+      - name: Coupon HTTP session, tenant, Origin, role and MFA matrix (isolated PostgreSQL)
+        working-directory: backend
+        env:
+          PHASE3_COUPON_HTTP_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo
+        run: go test ./internal/checkout -run TestSubscriptionCouponHTTPIsolatedPostgres -count=1 -v
 
   backend:
     name: Go compile and unit tests

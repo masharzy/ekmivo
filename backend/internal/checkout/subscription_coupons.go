@@ -40,7 +40,7 @@ func (s *Service) HandleSubscriptionCouponQuote(w http.ResponseWriter, r *http.R
 		fail(w, 405, "METHOD_NOT_ALLOWED")
 		return
 	}
-	if r.Method == http.MethodPost && !originAllowed(r) {
+ if r.Method == http.MethodPost && (r.Header.Get("Origin") == "" || !originAllowed(r)) {
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
@@ -131,7 +131,7 @@ func (s *Service) HandleSubscriptionCouponsAdmin(w http.ResponseWriter, r *http.
 		}
 		payload, _ = json.Marshal(p)
 	} else if r.Method == http.MethodPost {
-		if !originAllowed(r) {
+		if r.Header.Get("Origin") == "" || !originAllowed(r) {
 			fail(w, 403, "ORIGIN_DENIED")
 			return
 		}
