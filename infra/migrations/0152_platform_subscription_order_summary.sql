@@ -47,7 +47,7 @@ DECLARE
  version payment_plan_versions%ROWTYPE;
  plan payment_plan_catalog%ROWTYPE;
  policies jsonb; base numeric; promo_discount numeric:=0; tax_amount numeric; final_amount numeric;
- code text; key text; chosen_coupon uuid; status text; previous_revision bigint;
+ code text; key text; chosen_coupon uuid; previous_revision bigint;
  used_count bigint; store_count bigint; units integer; kinds text[]:=ARRAY['terms','privacy','refund']; kind text;
  policy platform_subscription_policy_versions%ROWTYPE; legal jsonb:='{}'::jsonb;
  invoice pg13_platform_invoices%ROWTYPE; result jsonb; summary jsonb; compare_amount numeric;
