@@ -80,6 +80,44 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const phones=await context.request.get(`${base}/phones?environment=live`);
   assert.equal(phones.status(),200,`encrypted receiving-account UI reader failed: ${await phones.text()}`);
   assert.ok((await phones.json()).accounts?.some(a=>a.ID===account.id&&a.Number===receivingNumber),"payment settings reader disagrees with encrypted finance account");
+  // Refunds must remain a seller-managed, authoritative finance process.
+  // Use a fictional contact and a real scoped Go write, not a fake React row.
+  const refundUrl=`${base}/refunds?environment=live`,refundKey=`briofold-ci-refund-${randomUUID()}`;
+  const refundRequest={payment_id:payment.id,amount_minor:1234,name:"Fictional CI Customer",
+   email:"fictional-refund@example.invalid",phone:"01700001234",
+   reason:"Disposable integration refund; no money is transferred to any provider."};
+  const refundCreate=()=>context.request.post(refundUrl,{
+   headers:{Origin:origin,"Idempotency-Key":refundKey},data:refundRequest
+  });
+  const refundCreated=await refundCreate();
+  assert.equal(refundCreated.status(),201,`finance refund request failed: ${await refundCreated.text()}`);
+  const refund=await refundCreated.json();
+  assert.equal(refund.payment_id,payment.id,"refund detached from its verified financial payment");
+  assert.equal(refund.status,"requested");
+  const refundReplay=await refundCreate();
+  assert.equal(refundReplay.status(),201,"repeated refund idempotency did not preserve original response");
+  assert.equal((await refundReplay.json()).id,refund.id,"same refund operation duplicated a request");
+  const ownerRefundList=await context.request.get(refundUrl);
+  assert.equal(ownerRefundList.status(),200);
+  const ownerRefund=(await ownerRefundList.json()).items.find(x=>x.id===refund.id);
+  assert.equal(ownerRefund.customer?.phone,refundRequest.phone,"owner refund contact failed authorized decrypt");
+  assert.ok(!("customer_cipher" in ownerRefund),"encrypted refund contact escaped into the HTTP payload");
+  const viewerRefundList=await viewerContext.request.get(refundUrl);
+  assert.equal(viewerRefundList.status(),200);
+  const viewerRefund=(await viewerRefundList.json()).items.find(x=>x.id===refund.id);
+  assert.ok(viewerRefund&&!viewerRefund.customer&&!viewerRefund.customer_cipher,
+   "viewer refund source exposed private customer contact or ciphertext");
+  const deniedRefundReview=await viewerContext.request.post(`${base}/refunds/${refund.id}/review?environment=live`,{
+   headers:{Origin:origin},data:{note:"Viewer cannot approve a financial refund",expected_version:refund.version,confirm_seller_action:true}
+  });
+  assert.equal(deniedRefundReview.status(),403,"viewer executed a seller-only refund transition");
+  const reviewedRefund=await context.request.post(`${base}/refunds/${refund.id}/review?environment=live`,{
+   headers:{Origin:origin},data:{note:"Seller reviewed this fictional request; no money sent",expected_version:refund.version,confirm_seller_action:true}
+  });
+  assert.equal(reviewedRefund.status(),200,`authorized seller review failed: ${await reviewedRefund.text()}`);
+  assert.equal((await reviewedRefund.json()).status,"reviewing","refund seller state transition was not persisted");
+  assert.equal(Number((await finance.unsafe("SELECT count(*) AS n FROM financial_payments WHERE id=$1::uuid",[payment.id]))[0].n),1,
+   "seller refund review changed authoritative payment facts");
   // Real owner -> Next proxy -> Go -> FINANCE lifecycle, using only a fictional
   // disposable Store and deliberately NOT dispatching any SMS to a provider.
   const phoneRoute=`${base}/phones?environment=sandbox`,mutate={headers:{Origin:origin}};
@@ -195,6 +233,67 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   await page.getByRole("row").filter({hasText:"CI live heartbeat handset"}).waitFor({state:"detached"});
   assert.equal(await page.getByRole("row").filter({hasText:"CI live heartbeat handset"}).count(),0,
    "deleted live phone stayed visible after the canonical settings refresh");
+  // A previously reported dashboard regression returned the stored checkout
+  // design only after navigating away and back. Prove that a fresh canonical
+  // visit server-renders the actual persisted version and survives reload.
+  const themeEndpoint=`${origin}/api/workspaces/${workspaceId}/checkout-theme`;
+  const initialThemeResponse=await context.request.get(themeEndpoint);
+  assert.equal(initialThemeResponse.status(),200,"authorized checkout design source unavailable");
+  const initialTheme=await initialThemeResponse.json();
+  assert.ok(initialTheme.body?.theme&&Number.isInteger(initialTheme.version),
+   "checkout design source returned no stable persisted version");
+  const firstChoice=initialTheme.body.theme==="studio"?"receipt":"studio";
+  const themePut=async(c,body,version)=>c.request.put(themeEndpoint,{
+   headers:{Origin:origin},data:{body,version}
+  });
+  const seededThemeResponse=await themePut(context,{...initialTheme.body,theme:firstChoice},initialTheme.version);
+  assert.equal(seededThemeResponse.status(),200,`checkout design seed failed: ${await seededThemeResponse.text()}`);
+  const seededTheme=await seededThemeResponse.json();
+  let clientThemeGets=0;
+  const onThemeRequest=request=>{
+   if(request.method()==="GET"&&request.url().startsWith(themeEndpoint))clientThemeGets++;
+  };
+  page.on("request",onThemeRequest);
+  const selectedTheme=()=>page.locator(".ref-checkout-editor .themes button.th[aria-pressed='true']");
+  await page.goto(origin+"/settings/checkout");
+  await page.getByRole("heading",{name:"Checkout themes",exact:true}).waitFor();
+  await selectedTheme().waitFor();
+  assert.ok((await selectedTheme().innerText()).includes(firstChoice==="studio"?"Studio":"Receipt"),
+   "fresh checkout page ignored the persisted server-side design");
+  assert.equal(clientThemeGets,0,"initial checkout theme was deferred to a fragile client refetch");
+  const nextChoice=firstChoice==="studio"?"receipt":"studio";
+  await page.locator(".ref-checkout-editor .themes button.th").filter({hasText:nextChoice==="studio"?"Studio":"Receipt"}).click();
+  await page.getByRole("button",{name:"Save changes",exact:true}).click();
+  await page.locator("#toast.on").getByText("Saved",{exact:true}).waitFor();
+  const persistedTheme=await (await context.request.get(themeEndpoint)).json();
+  assert.equal(persistedTheme.body.theme,nextChoice,"checkout edit did not persist to CONTROL database");
+  assert.equal(persistedTheme.version,seededTheme.version+1,"checkout save missed revision control");
+  await page.reload();
+  await selectedTheme().waitFor();
+  assert.ok((await selectedTheme().innerText()).includes(nextChoice==="studio"?"Studio":"Receipt"),
+   "checkout theme disappeared after a hard reload");
+  const viewerThemePage=await viewerContext.newPage();
+  await viewerThemePage.goto(origin+"/settings/checkout");
+  await viewerThemePage.getByRole("heading",{name:"Checkout themes",exact:true}).waitFor();
+  assert.equal(await viewerThemePage.getByRole("button",{name:"Save changes",exact:true}).isDisabled(),true,
+   "viewer checkout editor unexpectedly permitted a write");
+  const viewerThemeMutation=await themePut(viewerContext,{...persistedTheme.body,theme:firstChoice},persistedTheme.version);
+  assert.equal(viewerThemeMutation.status(),403,"viewer bypassed checkout design authorization");
+  assert.equal((await (await context.request.get(themeEndpoint)).json()).version,persistedTheme.version,
+   "denied viewer theme write changed persisted version");
+  await viewerThemePage.close();
+  const restoredTheme=await themePut(context,initialTheme.body,persistedTheme.version);
+  assert.equal(restoredTheme.status(),200,"disposable checkout design restore failed");
+  page.off("request",onThemeRequest);
+  console.log("Phase9 checkout design SSR/browser PASS: first-load persisted version, owner save/reload, viewer read-only/denial and restore");
+  await page.goto(origin+"/payments/refunds");
+  await page.getByRole("heading",{name:"Refunds",exact:true}).waitFor();
+  const refundTableRow=page.locator(".refund-table tbody tr").filter({hasText:refund.id.slice(0,12)});
+  await refundTableRow.waitFor();
+  assert.ok((await refundTableRow.innerText()).includes("12.34"),"canonical refunds UI lost its financial minor-unit amount");
+  await refundTableRow.click();
+  await page.getByRole("heading",{name:"Refund details",exact:true}).waitFor();
+  assert.ok((await page.locator("aside.dr").innerText()).includes(refund.id),"refund details lost the finance record ID");
   for(const [canonical,legacy,expected] of [
    ["/payments",`/w/${workspaceId}/payments/transactions`,reference],
    [`/payments/transactions/${payment.id}`,`/w/${workspaceId}/payments/transactions/${payment.id}`,reference],
@@ -232,7 +331,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
 
   const evidence=new URL("../test-results/pg09/phase9/",import.meta.url);await mkdir(evidence,{recursive:true});
   let cases=0;
-  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks"];
+  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/payments/refunds"];
   for(const locale of ["en","bn"]){
    await context.addCookies([{name:"ekmivo-locale",value:locale,url:origin,sameSite:"Lax"}]);
    for(const theme of ["light","dark"]){
@@ -245,7 +344,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
       assert.equal(response.status(),200,`${route} HTTP failed at ${locale}/${theme}/${width}`);
       const ready=route.includes("/transactions/")||route.startsWith("/sms-data/")
        ?".pg-operation-detail":route==="/settings/payment-methods"?".pg-phone-panel"
-       :route==="/settings/webhooks"?".int-workspace":"main h1";
+       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/payments/refunds"?".refund-table":"main h1";
       try{await page.locator(ready).first().waitFor({timeout:10000});}
       catch(error){
        const snapshot=await page.evaluate(()=>({pathname:location.pathname,headings:[...document.querySelectorAll("main h1,main h2")].map(node=>node.textContent?.trim()).slice(0,5),sections:[...document.querySelectorAll("main section")].map(node=>node.className).slice(0,9),excerpt:document.querySelector("main")?.textContent?.trim().slice(0,300)}));
@@ -260,14 +359,14 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
     }
    }
   }
-  assert.equal(cases,96,"Phase9 complete responsive matrix missing");
+  assert.equal(cases,128,"Phase9 complete responsive matrix missing");
   await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto(origin+"/payments");
   assert.ok(await page.evaluate(()=>matchMedia("(prefers-reduced-motion: reduce)").matches),"reduced-motion preference was not honored");
   assert.deepEqual(errors,[],"Phase9 UI hydration/runtime errors");
   const after=await fetchRows(context,"payments");
   assert.equal(after.filter(r=>r.id===payment.id).length,1,"UI read caused a duplicate financial confirmation");
-  console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, viewer/cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, 6 routes; synthetic CI financial evidence only`);
+  console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, seller-managed refund idempotency, viewer/cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, 8 routes; synthetic CI financial evidence only`);
  }finally{
   if(context)await context.close();if(viewerContext)await viewerContext.close();
   await sandbox.end({timeout:3});await finance.end({timeout:3});await db.end({timeout:3});
