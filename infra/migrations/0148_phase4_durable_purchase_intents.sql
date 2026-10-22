@@ -39,5 +39,12 @@ COMMENT ON COLUMN platform_subscription_purchase_intents.public_token_sha256 IS
  'SHA-256 of a random 256-bit capability embedded in /checkout/order/{token}; never store the raw token';
 COMMENT ON COLUMN platform_subscription_purchase_intents.guest_session_sha256 IS
  'SHA-256 of the separate random HttpOnly SameSite=Lax guest session secret; not a bearer in URLs';
+-- Claiming a free entitlement is distinct from a financially verified paid state.
+ALTER TABLE platform_subscription_purchase_intents
+ DROP CONSTRAINT IF EXISTS platform_subscription_purchase_intents_status_check;
+ALTER TABLE platform_subscription_purchase_intents
+ ADD CONSTRAINT platform_subscription_purchase_intents_status_check
+ CHECK(status IN ('selected','quoted','confirmed','paid','cancelled','expired','claimed_free'));
+
 -- Existing intents are preserved; newly issued Phase 4 intents require a public digest.
 COMMIT;
