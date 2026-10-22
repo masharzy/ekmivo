@@ -56,7 +56,7 @@ CREATE FUNCTION platform_subscription_intent_command(
  SET search_path=pg_catalog,public,pg_temp AS $phase4$
 DECLARE
  i record; v record; c record; u record;
- offer_key text; selected_term text; code text; creation_digest text;
+ requested_offer text; selected_term text; code text; creation_digest text;
  store uuid; selection_version text; requested bigint; expected bigint;
  coupon_uuid uuid; plan_id text; old_status text; is_admin boolean;
 BEGIN
@@ -70,11 +70,11 @@ COMMIT;)
 
  IF operation='create' THEN
   creation_digest:=data->>'creation_key';
-  offer_key:=data->>'offer_key'; selected_term:=data->>'term';
+  requested_offer:=data->>'offer_key'; selected_term:=data->>'term';
   selection_version:=data->>'version_id';
   IF guest_digest IS NULL OR creation_digest IS NULL OR creation_digest !~ '^[a-f0-9]{64}
 COMMIT;
-    OR offer_key IS NULL OR offer_key !~ '^[a-z][a-z0-9_-]{2,63}
+    OR requested_offer IS NULL OR requested_offer !~ '^[a-z][a-z0-9_-]{2,63}
 COMMIT;
     OR selected_term NOT IN ('monthly','yearly','one_time')
     OR selection_version IS NULL OR selection_version !~ '^[a-f0-9-]{36}
@@ -91,7 +91,7 @@ COMMIT;
    INTO v FROM platform_subscription_offers o
    JOIN platform_subscription_offer_versions v ON v.id=o.current_version_id
    LEFT JOIN payment_plan_catalog pc ON pc.current_version=v.payment_plan_version_id
-  WHERE o.offer_key=offer_key AND o.status='published' AND v.id::text=selection_version
+  WHERE o.offer_key=requested_offer AND o.status='published' AND v.id::text=selection_version
    AND v.term=selected_term AND v.amount_minor>0 AND v.currency='BDT'
    AND (o.product='ai_credit' OR
      (pc.status='published' AND pc.visibility='public'))
