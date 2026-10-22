@@ -16,6 +16,7 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  const q=request.nextUrl.searchParams;
  const term=q.get("term")||"monthly";
  const coupon=q.get("coupon")||undefined;
+ const versionId=q.get("version")||undefined;
  const quantity=q.has("quantity")?Number(q.get("quantity")):1;
  if(!["monthly","yearly","one_time"].includes(term)||!Number.isSafeInteger(quantity)||quantity<1||quantity>100000)
   return NextResponse.redirect(new URL("/pricing?purchase=INVALID_SELECTION",request.url),303);
@@ -24,7 +25,7 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  // Phase 4 authoritative published offers. Never activate an offer by guessing
  // its amount, version or billing term from a marketing card.
  try{
-  const token=await createPurchase({offerKey:plan,term,quantity,coupon,legacyPlanId:legacy?.id});
+  const token=await createPurchase({offerKey:plan,term,quantity,coupon,versionId,legacyPlanId:legacy?.id});
   return NextResponse.redirect(new URL(`/subscribe/resume/${token}`,request.url),303);
  }catch(error){
   if(!(error instanceof IntentError)||error.code!=="OFFER_UNAVAILABLE"||!legacy){
