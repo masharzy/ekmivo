@@ -103,4 +103,18 @@ test("Canonical payment links expose existing one-time intents without requiring
  assert.match(unified,/initialQuery=\{root==="payments"&&view\[0\]==="links"&&paymentLinksMode==="requests"\?\{view:"requests"\}:\{\}\}/);
  assert.match(requests,/hideTabs=false/);
  assert.match(requests,/!hideTabs&&<div className="tabs">/);
+ const documents=src("components/payment-documents.tsx");
+ assert.match(documents,/canonicalRoutes\?`\/payments\/links\?view=requests&request=\$\{p\.intent_id\}`/);
+ assert.match(documents,/`\/w\/\$\{workspaceId\}\/payments\/requests\?request=\$\{p\.intent_id\}`/);
+ assert.match(documents,/canonicalRoutes\?unifiedFinancialDetailPath\("invoices",inv\.id\)/);
+});
+
+test("Production payment shell ships its original fonts without an external build-time fetch",()=>{
+ const layout=src("app/layout.tsx");
+ const packageJson=JSON.parse(readFileSync(new URL("../package.json",import.meta.url),"utf8"));
+ assert.doesNotMatch(layout,/^import\s+.*from\s+"next\/font\/google"/m);
+ assert.match(layout,/localFont\(\{[\s\S]*?outfit-latin-wght-normal\.woff2/);
+ assert.match(layout,/localFont\(\{[\s\S]*?figtree-latin-wght-normal\.woff2/);
+ assert.equal(packageJson.dependencies["@fontsource-variable/outfit"],"^5.3.0");
+ assert.equal(packageJson.dependencies["@fontsource-variable/figtree"],"^5.3.0");
 });

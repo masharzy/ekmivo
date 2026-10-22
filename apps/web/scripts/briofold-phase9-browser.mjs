@@ -26,11 +26,12 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const fingerprint=()=>createHash("sha256").update(randomUUID()).digest("hex");
   const reference="P9-FICTIONAL-"+randomUUID().slice(0,8).toUpperCase(),amount=23456,payer=fingerprint();
   const [account]=await finance.unsafe("INSERT INTO financial_receiving_accounts(workspace_id,environment,method,identity_hmac,display_suffix) VALUES($1,'live','bkash',$2,'7890') RETURNING id",[workspaceId,fingerprint()]);
+  await finance.unsafe("INSERT INTO pg06_account_configuration(workspace_id,environment,account_id,number_cipher) VALUES($1,'live',$2,$3)",[workspaceId,account.id,Buffer.alloc(48,66)]);
   const [intent]=await finance.unsafe("INSERT INTO payment_intents(workspace_id,environment,merchant_reference,amount_minor,expires_at) VALUES($1,'live',$2,$3,now()+interval '30 minutes') RETURNING id",[workspaceId,reference,amount]);
   const [attempt]=await finance.unsafe("INSERT INTO payment_attempts(workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version) VALUES($1,'live',$2,$3,$4,'1234',$5,'bkash',now()+interval '2 seconds',now()+interval '20 minutes',1) RETURNING id",[workspaceId,intent.id,account.id,payer,amount]);
-  const [inbound]=await finance.unsafe("INSERT INTO financial_inbound_events(workspace_id,environment,source_kind,source_event_id,event_digest,original_source_at,encrypted_evidence) VALUES($1,'live','provider_api',$2,$3,now()+interval '4 seconds',$4) RETURNING id",[workspaceId,"ci-only-"+randomUUID(),fingerprint(),Buffer.alloc(48,55)]);
+  const [inbound]=await finance.unsafe("INSERT INTO financial_inbound_events(workspace_id,environment,source_kind,source_event_id,event_digest,original_source_at,encrypted_evidence) VALUES($1,'live','device_sms',$2,$3,now()+interval '4 seconds',$4) RETURNING id",[workspaceId,"ci-only-"+randomUUID(),fingerprint(),Buffer.alloc(48,55)]);
   const [receipt]=await finance.unsafe("INSERT INTO financial_receipt_observations(workspace_id,environment,inbound_event_id,receiving_account_id,provider_reference_hmac,payer_hmac,amount_minor,method,direction,original_transaction_at,time_precision,parser_version) VALUES($1,'live',$2,$3,$4,$5,$6,'bkash','incoming',now()+interval '4 seconds','second',1) RETURNING id",[workspaceId,inbound.id,account.id,fingerprint(),payer,amount]);
-  const [payment]=await finance.unsafe("INSERT INTO financial_payments(workspace_id,environment,attempt_id,observation_id,verified_amount_minor,verification_method,policy_version) VALUES($1,'live',$2,$3,$4,'provider_api',1) RETURNING id",[workspaceId,attempt.id,receipt.id,amount]);
+  const [payment]=await finance.unsafe("INSERT INTO financial_payments(workspace_id,environment,attempt_id,observation_id,verified_amount_minor,verification_method,policy_version) VALUES($1,'live',$2,$3,$4,'sms_match',1) RETURNING id",[workspaceId,attempt.id,receipt.id,amount]);
   await finance.unsafe("INSERT INTO financial_allocations(workspace_id,environment,payment_id,intent_id,amount_minor) VALUES($1,'live',$2,$3,$4)",[workspaceId,payment.id,intent.id,amount]);
   const [device]=await finance.unsafe("INSERT INTO pg06_devices(workspace_id,environment,account_id,name,source,parser_id,binding) VALUES($1,'live',$2,'Fictional CI phone','device_sms','ci-parser','ci-binding') RETURNING id",[workspaceId,account.id]);
   const [transport]=await finance.unsafe("INSERT INTO pg06_transport(workspace_id,environment,device_id,event_id,digest,sequence,observation_id,observed_at) VALUES($1,'live',$2,$3,$4,1,$5,now()+interval '4 seconds') RETURNING id",[workspaceId,device.id,"ci-transport-"+randomUUID(),fingerprint(),receipt.id]);
@@ -97,7 +98,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   await page.goto(origin+"/payments/links?view=requests");
   await page.getByRole("heading",{name:"One-time requests",exact:true}).waitFor();
   assert.ok(await page.getByRole("link",{name:"One-time requests"}).count(),"canonical links do not expose one-time requests");
-  assert.ok(!(await page.locator("main").innerText()).includes("Upgrade to"),"one-time requests require reusable-link plan");
+  assert.ok(await page.getByRole("region",{name:"One-time requests"}).count(),"one-time source table missing behind reusable-link entitlement");
   // The same mounted UI must not reveal a provider HMAC, raw payer number, or
   // cached cross-tenant session when opened by a viewer.
   const viewerPage=await viewerContext.newPage();

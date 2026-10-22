@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
-import { Figtree, Outfit } from "next/font/google";
 import "@fontsource-variable/geist";
 import "./globals.css";
 import {InterfaceLocaleProvider} from "../components/interface-locale-provider";
@@ -17,8 +16,17 @@ const hindSiliguri = localFont({
   display: "swap",
 });
 
-const outfit = Outfit({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-outfit", display: "swap" });
-const figtree = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-figtree", display: "swap" });
+// Bundle the same Latin families used by the storefront and dashboard.
+// next/font/google performs network requests *during the production build*;
+// a temporary Google Fonts response error must not prevent a verified release.
+const outfit = localFont({
+  src: "../../node_modules/@fontsource-variable/outfit/files/outfit-latin-wght-normal.woff2",
+  weight: "100 900", variable: "--font-outfit", display: "swap",
+});
+const figtree = localFont({
+  src: "../../node_modules/@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2",
+  weight: "300 900", variable: "--font-figtree", display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Ekmivo — Conversations and commerce, together",
