@@ -78,6 +78,10 @@ func (w *MaintenanceWorker) Work(ctx context.Context, job *river.Job[Maintenance
 		return nil
 	}
 	topupErr := reconcileAITopups(ctx, w.Control, w.Pool, w.TokenKey, w.Realm, os.Getenv("BRIOFOLD_AI_TOPUPS_ENABLED") == "true")
+	// Separate from the AI prepaid top-up reconciler and the merchant checkout.
+	// Default-off until Phase 2-5 predecessors, restricted roles and migration are verified.
+	subscriptionErr := reconcileSubscriptionPayments(ctx, w.Control, w.Pool, w.Realm, os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED") == "true")
+	if subscriptionErr != nil { return subscriptionErr }
 	var raw []byte
 	if w.Control.QueryRow(ctx, "SELECT pg13_pending_billing()").Scan(&raw) != nil {
 		return errors.New("billing reconciliation unavailable")
