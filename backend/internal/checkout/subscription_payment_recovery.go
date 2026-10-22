@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/masharzy/ekmivo/backend/internal/subscriptionpayment"
 )
 
 // Only the dedicated Live financial worker may apply verified subscription
