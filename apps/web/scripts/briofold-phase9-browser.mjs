@@ -122,7 +122,8 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
       const response=await page.goto(origin+route);
       assert.equal(response.status(),200,`${route} HTTP failed at ${locale}/${theme}/${width}`);
       const ready=route.includes("/transactions/")||route.startsWith("/sms-data/")
-       ?".pg-operation-detail":route.startsWith("/settings/")?".pg-operations":"main h1";
+       ?".pg-operation-detail":route==="/settings/payment-methods"?".pg-phone-panel"
+       :route==="/settings/webhooks"?".int-workspace":"main h1";
       try{await page.locator(ready).first().waitFor({timeout:10000});}
       catch(error){
        const snapshot=await page.evaluate(()=>({pathname:location.pathname,headings:[...document.querySelectorAll("main h1,main h2")].map(node=>node.textContent?.trim()).slice(0,5),sections:[...document.querySelectorAll("main section")].map(node=>node.className).slice(0,9),excerpt:document.querySelector("main")?.textContent?.trim().slice(0,300)}));
