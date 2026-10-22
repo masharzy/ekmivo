@@ -54,7 +54,7 @@ jobs:
         run: node --test scripts/briofold-unified-routes.test.mjs scripts/briofold-locale-routing.test.mjs scripts/briofold-account-settings-routing.test.mjs scripts/briofold-unified-devices.test.mjs scripts/briofold-ai-overview.test.mjs scripts/briofold-ai-business-profile.test.mjs scripts/briofold-ai-team-quota.test.mjs scripts/briofold-settings-interactions.test.mjs
       - name: Briofold Phase 9 canonical finance-source detail contract
         working-directory: apps/web
-        run: node --test scripts/briofold-phase9-payment-links.test.mjs
+        run: node --test scripts/briofold-phase9-payment-links.test.mjs scripts/briofold-phase9-refund-report-prerequisites.test.mjs
       - name: Briofold CRM authorized page CSV and spreadsheet injection guard
         working-directory: apps/web
         run: node --test scripts/briofold-crm-csv.test.mjs

@@ -31,12 +31,16 @@ func migratePhoneIncomingReports(ctx context.Context, realm, dsn, filename strin
  AND to_regclass('public.pg06_transport') IS NOT NULL
  AND to_regclass('public.pg07_receipt_results') IS NOT NULL
  AND to_regclass('public.pg11_refunds') IS NOT NULL
+ AND (SELECT count(*)=2 FROM pg_attribute
+   WHERE attrelid=to_regclass('public.pg11_refunds')
+   AND attname IN ('source_intent_id','source_observation_id')
+   AND NOT attisdropped)
  AND to_regprocedure('public.pg13_reports(uuid,text,timestamptz,timestamptz,uuid)') IS NOT NULL,
  (SELECT relowner=(SELECT oid FROM pg_roles WHERE rolname=current_user)
   FROM pg_class WHERE oid='public.financial_realm'::regclass)
  FROM financial_realm WHERE singleton`).Scan(&actual,&installed,&prerequisites,&owner)
  if err!=nil||actual!=realm||!prerequisites||!owner {
-  return errors.New("0056 requires isolated owner financial realm with PG06/PG07/PG11/PG13 prerequisites")
+  return errors.New("0056 requires isolated owner financial realm with PG06/PG07/PG11/PG13 and the 0051 late-refund columns")
  }
  if installed{return nil}
  body,err:=os.ReadFile(filepath.Clean(filename))

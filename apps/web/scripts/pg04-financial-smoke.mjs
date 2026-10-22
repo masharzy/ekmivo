@@ -1622,6 +1622,16 @@ try{
  // Install only inside disposable CI realms, after their PG06 phone-forwarder
  // and PG11/PG10 document prerequisites; never provision a shared DB here.
  for(const realm of ["sandbox","live"]){
+  // 0051 also depends on 0050's public-method discovery function. Production
+  // runs these through separate operator gates; this isolated fixture must
+  // install the same forward-only dependency chain explicitly.
+  const publicMethod=(await dbs[realm].unsafe(
+   "SELECT to_regprocedure('public.pg10_public_payment_sources(uuid,text)') IS NOT NULL AS installed"))[0].installed;
+  if(!publicMethod)await dbs[realm].unsafe(await readFile(new URL(
+   "../../../infra/migrations/0050_pg10_public_methods.sql",import.meta.url),"utf8")).simple();
+  ok((await dbs[realm].unsafe(
+   "SELECT to_regprocedure('public.pg10_public_payment_sources(uuid,text)') IS NOT NULL AS installed"))[0].installed,
+   `Phase9 0050 public method source missing in disposable ${realm} reader`);
   // The 0056 refund summary uses source_intent_id for late receipts. The
   // earlier smoke intentionally omitted the optional 0051 late-SMS migration,
   // leaving 0056 installed but guaranteed to fail at runtime. Match the real
