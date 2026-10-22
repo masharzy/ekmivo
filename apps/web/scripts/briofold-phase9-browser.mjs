@@ -78,16 +78,21 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
    ["/sms-data",`/w/${workspaceId}/payments/incoming`,"device_sms"],
    [`/sms-data/${transport.id}`,`/w/${workspaceId}/payments/incoming/${transport.id}`,"234.56"]
   ]){
-   let oldText="",newText="";
+   let oldText="",newText="",oldRecord="",newRecord="";
    for(const [path,record] of [[legacy,false],[canonical,true]]){
     const response=await page.goto(origin+path);assert.equal(response.status(),200,`route ${path} did not render`);
     if(path.includes("transactions/")||path.includes("/sms-data/")||path.includes("incoming/"))await page.locator(".pg-operation-detail").waitFor();
     else await page.locator("table tbody tr").first().waitFor();
     const content=await page.locator("main").innerText();
     assert.ok(content.includes(expected),`${path} missing same financial record ${expected}`);
-    if(record)newText=content;else oldText=content;
+    const data=path.includes("transactions/")||path.includes("/sms-data/")||path.includes("incoming/")
+     ?await page.locator(".pg-operation-detail").innerText()
+     :await page.locator("table tbody tr").first().innerText();
+    if(record){newText=content;newRecord=data;}else{oldText=content;oldRecord=data;}
    }
    assert.ok(oldText.includes(expected)&&newText.includes(expected),"legacy/canonical readers changed financial record semantics");
+   assert.equal(newRecord,oldRecord,`${canonical} changed authorized record facts vs ${legacy}`);
+   if(canonical==="/payments")assert.ok(newRecord.includes("234.56"),"UI verified amount disagrees with finance ledger");
   }
   await page.goto(origin+"/payments/links?view=requests");
   await page.getByRole("heading",{name:"One-time requests",exact:true}).waitFor();
@@ -110,7 +115,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
    for(const theme of ["light","dark"]){
     await context.addCookies([{name:"ekmivo-theme",value:theme,url:origin,sameSite:"Lax"}]);
     await page.emulateMedia({colorScheme:theme});
-    for(const width of [320,768,1440]){
+    for(const width of [320,360,768,1440]){
      await page.setViewportSize({width,height:900});
      for(const route of routes){
       const response=await page.goto(origin+route);
@@ -125,11 +130,14 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
     }
    }
   }
-  assert.equal(cases,72,"Phase9 complete responsive matrix missing");
+  assert.equal(cases,96,"Phase9 complete responsive matrix missing");
+  await page.emulateMedia({reducedMotion:"reduce"});
+  await page.goto(origin+"/payments");
+  assert.ok(await page.evaluate(()=>matchMedia("(prefers-reduced-motion: reduce)").matches),"reduced-motion preference was not honored");
   assert.deepEqual(errors,[],"Phase9 UI hydration/runtime errors");
   const after=await fetchRows(context,"payments");
   assert.equal(after.filter(r=>r.id===payment.id).length,1,"UI read caused a duplicate financial confirmation");
-  console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, viewer/cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/768/1440, 6 routes; synthetic CI financial evidence only`);
+  console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, viewer/cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, 6 routes; synthetic CI financial evidence only`);
  }finally{
   if(context)await context.close();if(viewerContext)await viewerContext.close();
   await finance.end({timeout:3});await db.end({timeout:3});

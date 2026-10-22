@@ -23,8 +23,8 @@ import {CommentAutomation} from "./comment-automation";
 
 export const unifiedDynamic="force-dynamic";
 
-export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread}:{
- locale:string;root:UnifiedRoot;view?:string[];thread?:string;
+export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,paymentLinksMode}:{
+ locale:string;root:UnifiedRoot;view?:string[];thread?:string;paymentLinksMode?:"requests";
 }){
  if(thread&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(thread))notFound();
  const locale=raw==="en"?"en":"bn";
@@ -74,7 +74,9 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread}:{
     :root==="settings"&&view[0]==="billing"&&workspace.mode==="ai"
      ?<><h1>{locale==="bn"?"বিলিং ও ব্যবহার":"Billing & usage"}</h1><BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/></>
     :<DashboardContent locale={locale} user={user} workspace={workspace}
-      section={section} service={service} paymentContext={paymentContext} detailId={detailId} canonicalRoutes framed/>;
+      section={section} service={service} paymentContext={paymentContext} detailId={detailId}
+      initialQuery={root==="payments"&&view[0]==="links"&&paymentLinksMode==="requests"?{view:"requests"}:{}}
+      canonicalRoutes framed/>;
  return <AppShell unified locale={locale} user={user} workspace={workspace}
    service={service} section={section} paymentContext={paymentContext}>
     <UnifiedSectionTabs locale={locale} root={root} mode={workspace.mode} view={view}/>

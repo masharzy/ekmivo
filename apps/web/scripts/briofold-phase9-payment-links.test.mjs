@@ -88,6 +88,8 @@ test("Order finance links navigate to source detail but never assert paid or COD
 
 test("Canonical payment links expose existing one-time intents without requiring reusable-link entitlement",()=>{
  const content=src("components/dashboard-content.tsx");
+ const route=readFileSync(new URL("../src/app/[locale]/payments/[[...view]]/page.tsx",import.meta.url),"utf8");
+ const unified=src("components/unified-merchant-route.tsx");
  const requests=src("components/payment-requests.tsx");
  assert.equal(unifiedDestination("both","payments",["links"])?.section,"payment-links");
  assert.equal(unifiedDestination("both","payments",["links","requests"]) ,null,"UI mode must not become a second financial detail route");
@@ -97,6 +99,8 @@ test("Canonical payment links expose existing one-time intents without requiring
  assert.match(content,/dashboardInitialData\(workspace\.id,paymentContext\.environment,"requests"/);
  assert.match(content,/<PaymentRequests hideTabs/);
  assert.match(content,/href="\/payments\/links\?view=requests"/);
+ assert.match(route,/paymentLinksMode=\{query\.view==="requests"\?"requests":undefined\}/);
+ assert.match(unified,/initialQuery=\{root==="payments"&&view\[0\]==="links"&&paymentLinksMode==="requests"\?\{view:"requests"\}:\{\}\}/);
  assert.match(requests,/hideTabs=false/);
  assert.match(requests,/!hideTabs&&<div className="tabs">/);
 });
