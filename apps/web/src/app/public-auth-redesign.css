@@ -1,0 +1,247 @@
+/* Sign in and registration share the homepage's white / sage / forest / lime system.
+   Keep existing auth actions, errors, steps and keyboard behavior unchanged. */
+.ekm-auth {
+  --ek-pub-paper: var(--color-canvas);
+  --ek-pub-surface: var(--color-card);
+  --ek-pub-ink: var(--color-text);
+  --ek-pub-muted: var(--color-text-secondary);
+  --ek-pub-border: var(--color-border);
+  --ek-pub-blue: var(--color-surface-subtle);
+  --ek-pub-cream: var(--color-surface-subtle);
+  --ek-pub-yellow: var(--color-accent);
+  font-family: var(--font-figtree), var(--font-hind-siliguri), sans-serif;
+  color: var(--color-text);
+}
+.ekm-auth:lang(bn) {font-family:var(--font-hind-siliguri),sans-serif}
+.ekm-auth.ek-auth-polished.ek-auth-main {
+  padding: 142px 24px 68px;
+  min-height: 100svh;
+  background: var(--color-canvas);
+}
+.ekm-auth .ek-auth-login-shell {
+  width: min(100%,1140px);
+  max-width: 1140px;
+  min-height: 660px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,.94fr);
+  gap: 18px;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.ekm-auth .ek-auth-login-rail {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(30px,4vw,52px);
+  color: #eaf6e4;
+  background: var(--color-forest);
+  border-radius: 36px;
+}
+.ekm-auth .ek-auth-login-rail::before {
+  content:"";
+  position:absolute;
+  top:-160px;
+  right:-150px;
+  width:360px;
+  height:360px;
+  border:1px solid rgb(163 245 106 / 24%);
+  border-radius:50%;
+  background:radial-gradient(circle,rgb(163 245 106 / 9%),transparent 67%);
+  opacity:1;
+  -webkit-mask-image:none;
+  mask-image:none;
+  pointer-events:none;
+}
+.ekm-auth .ek-auth-login-rail::after {
+  content:"";
+  position:absolute;
+  top:-92px;
+  right:-82px;
+  width:230px;
+  height:230px;
+  border:1px solid rgb(163 245 106 / 22%);
+  border-radius:50%;
+  pointer-events:none;
+}
+.ekm-auth .ekm-auth-rail-kicker,
+.ekm-auth .ekm-auth-form-eyebrow {
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  width:fit-content;
+  font-size:11px;
+  font-weight:750;
+  letter-spacing:.11em;
+}
+.ekm-auth .ekm-auth-rail-kicker {position:relative;z-index:1;color:#d7e9d1}
+.ekm-auth :is(.ekm-auth-rail-kicker,.ekm-auth-form-eyebrow) i,
+.ekm-auth .ek-auth-workflow>span i {
+  display:inline-block;
+  width:8px;
+  height:8px;
+  flex:none;
+  border-radius:50%;
+  background:var(--color-accent);
+  box-shadow:0 0 0 4px rgb(163 245 106 / 15%);
+}
+.ekm-auth .ek-auth-login-rail-copy {margin:70px 0 34px;position:relative;z-index:1}
+.ekm-auth .ek-auth-login-rail-copy>span {color:var(--color-accent);font-size:11px;letter-spacing:.08em;font-weight:750;opacity:1}
+.ekm-auth .ek-auth-login-rail-copy h2 {
+  max-width:440px;
+  margin:17px 0 17px;
+  font: 550 clamp(39px,4.5vw,61px)/1.08 var(--font-outfit),var(--font-hind-siliguri),sans-serif;
+  letter-spacing:-.055em;
+  color:#eaf6e4;
+}
+.ekm-auth .ek-auth-login-rail-copy p {max-width:360px;color:#c6d8c7;font-size:15px;line-height:1.7;opacity:1}
+.ekm-auth:lang(bn) .ek-auth-login-rail-copy h2 {font:600 clamp(33px,3.9vw,48px)/1.43 var(--font-hind-siliguri),sans-serif;letter-spacing:0}
+.ekm-auth .ek-auth-workflow {
+  position:relative;
+  z-index:1;
+  display:grid;
+  gap:0;
+  margin:auto 0 23px;
+  padding:19px 22px 10px;
+  transform:none;
+  color:#0a1f12;
+  background:#f3f8ed;
+  border:1px solid #d8e8d5;
+  border-radius:23px;
+  box-shadow:0 20px 45px -30px rgb(0 0 0 / 50%);
+}
+.ekm-auth .ek-auth-workflow>span {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.1em;
+  opacity:1;
+  padding:0 0 11px;
+}
+.ekm-auth .ek-auth-workflow>span i {width:7px;height:7px;box-shadow:none;background:#1f8a3b}
+.ekm-auth .ek-auth-workflow>div {display:flex;gap:12px;align-items:center;padding:11px 0;border-top:1px solid #dce9d7}
+.ekm-auth .ek-auth-workflow-icon {width:40px;height:40px;color:#104c23;background:#e5f4dd;border:0;border-radius:13px}
+.ekm-auth .ek-auth-workflow strong {display:block;color:#0a1f12;font-size:13px;line-height:1.4}
+.ekm-auth .ek-auth-workflow p {color:#54705a;font-size:11px;line-height:1.55;margin:3px 0 0;opacity:1}
+.ekm-auth .ekm-auth-workflow-arrow {margin-left:auto;color:#47884b;font-size:18px;line-height:1}
+.ekm-auth .ekm-auth-rail-bottom {position:relative;z-index:1;font-size:10px;letter-spacing:.07em;color:#a9c9ad}
+.ekm-auth .ekm-auth-rail-bottom span {display:inline-block;margin:0 7px;color:var(--color-accent);font-size:15px}
+.ekm-auth .ek-auth-login-area {
+  min-width:0;
+  padding:42px clamp(25px,4.2vw,61px);
+  border:1px solid var(--color-border);
+  border-radius:36px;
+  background:var(--color-card);
+}
+.ekm-auth .ek-auth-v2-form {width:100%;max-width:410px}
+.ekm-auth .ekm-auth-form-eyebrow {
+  margin-bottom:17px;
+  padding:8px 12px;
+  background:var(--color-surface-subtle);
+  color:var(--color-text-secondary);
+  border-radius:99px;
+}
+.ekm-auth .ekm-auth-form-eyebrow i {background:var(--color-accent-readable);box-shadow:none}
+.ekm-auth .ek-auth-v2-form h1 {
+  font:600 clamp(31px,3.2vw,42px)/1.15 var(--font-outfit),var(--font-hind-siliguri),sans-serif;
+  letter-spacing:-.045em;
+  color:var(--color-text);
+  margin:0 0 13px;
+}
+.ekm-auth:lang(bn) .ek-auth-v2-form h1 {font:650 clamp(29px,3vw,37px)/1.48 var(--font-hind-siliguri),sans-serif;letter-spacing:0}
+.ekm-auth .ek-auth-v2-form>.ek-auth-subtitle {color:var(--color-text-secondary);font-size:14px;line-height:1.7;margin:0 0 26px}
+.ekm-auth .ek-auth-fields label {color:var(--color-text);font-size:13px;font-weight:650}
+.ekm-auth .ek-auth-fields input {
+  height:53px;
+  padding:12px 16px;
+  border:1px solid var(--color-control-border);
+  border-radius:15px;
+  background:var(--color-canvas);
+  color:var(--color-text);
+  font-size:14px;
+}
+.ekm-auth .ek-auth-fields input:focus {border-color:var(--color-focus);box-shadow:0 0 0 3px color-mix(in srgb,var(--color-focus) 17%,transparent)}
+.ekm-auth .ek-auth-password button {top:7px;right:7px;min-height:39px;border-radius:10px;color:var(--color-text-secondary)}
+.ekm-auth .ek-auth-forgot,.ekm-auth .ek-auth-switch a {color:var(--color-accent-readable)}
+.ekm-auth .ek-auth-primary {
+  min-height:53px;
+  padding:13px 21px;
+  border-color:var(--color-accent);
+  border-radius:99px;
+  background:var(--color-accent);
+  color:var(--color-on-accent);
+  font-size:14px;
+  font-weight:750;
+  box-shadow:none;
+}
+.ekm-auth .ek-auth-primary:hover:not(:disabled) {background:color-mix(in srgb,var(--color-accent) 80%,#fff);filter:none;transform:translateY(-1px)}
+.ekm-auth.ek-auth-polished .ek-auth-google {
+  min-height:51px;
+  padding:12px 18px;
+  border:1px solid var(--color-border);
+  border-radius:99px;
+  background:var(--color-surface-subtle);
+  color:var(--color-text);
+  font-size:13px;
+  font-weight:700;
+}
+.ekm-auth.ek-auth-polished .ek-auth-google:hover {background:var(--color-hover)}
+.ekm-auth .ek-auth-switch {border-color:var(--color-border);color:var(--color-text-secondary)}
+.ekm-auth .ek-auth-return {color:var(--color-text-secondary)}
+.ekm-auth .ek-auth-progress li {font-size:12px;color:var(--color-text-secondary)}
+.ekm-auth .ek-auth-progress li[aria-current="step"] {color:var(--color-text)}
+.ekm-auth .ek-auth-progress li>span {background:var(--color-surface-subtle);border-color:var(--color-border);color:var(--color-text)}
+.ekm-auth .ek-auth-progress li[aria-current="step"]>span {background:var(--color-forest);color:#eaf6e4;border-color:var(--color-forest)}
+.ekm-auth .ek-auth-account-summary {background:var(--color-surface-subtle);border-radius:14px;color:var(--color-text)}
+.ekm-auth .ek-auth-account-summary button {color:var(--color-accent-readable)}
+.ekm-auth .ek-auth-register-tip,.ekm-auth .ek-password-checks {color:var(--color-text-secondary)}
+.ekm-auth :is(a,button,input):focus-visible {outline:2px solid var(--color-focus);outline-offset:3px}
+.ekm-auth:lang(bn) :is(.ekm-auth-rail-kicker,.ekm-auth-form-eyebrow,.ek-auth-login-rail-copy>span,.ek-auth-workflow>span){letter-spacing:0}
+@media(max-width:1000px){
+  .ekm-auth .ek-auth-login-shell {grid-template-columns:minmax(0,.9fr) minmax(0,1fr);gap:12px}
+  .ekm-auth .ek-auth-login-rail {padding:30px}
+  .ekm-auth .ek-auth-login-rail-copy {margin:48px 0 28px}
+  .ekm-auth .ek-auth-login-rail-copy h2 {font-size:43px}
+  .ekm-auth .ek-auth-login-area {padding:36px 28px}
+}
+@media(max-width:800px){
+  .ekm-auth.ek-auth-polished.ek-auth-main {padding:119px 18px 45px}
+  .ekm-auth .ek-auth-login-shell {grid-template-columns:minmax(0,1fr);max-width:600px;min-height:0;gap:12px}
+  .ekm-auth .ek-auth-login-rail {padding:28px 31px;min-height:0}
+  .ekm-auth .ek-auth-login-rail-copy {margin:22px 0 0}
+  .ekm-auth .ek-auth-login-rail-copy h2 {font-size:34px;max-width:none;margin:10px 0}
+  .ekm-auth .ek-auth-login-rail-copy p {max-width:470px;font-size:13px}
+  .ekm-auth .ek-auth-workflow,.ekm-auth .ekm-auth-rail-bottom {display:none}
+  .ekm-auth .ek-auth-login-area {padding:38px 37px;border-radius:30px}
+  .ekm-auth .ek-auth-login-rail {border-radius:30px}
+}
+@media(max-width:530px){
+  .ekm-auth.ek-auth-polished.ek-auth-main {padding:103px 12px 34px}
+  .ekm-auth .ek-auth-login-rail {padding:22px 23px;border-radius:25px}
+  .ekm-auth .ekm-auth-rail-kicker {font-size:10px}
+  .ekm-auth .ek-auth-login-rail-copy {margin:13px 0 0}
+  .ekm-auth .ek-auth-login-rail-copy>span {font-size:10px}
+  .ekm-auth .ek-auth-login-rail-copy h2 {font-size:28px;margin:8px 0 0}
+  .ekm-auth:lang(bn) .ek-auth-login-rail-copy h2 {font-size:27px}
+  .ekm-auth .ek-auth-login-rail-copy p {display:none}
+  .ekm-auth .ek-auth-login-area {padding:30px 23px;border-radius:25px}
+  .ekm-auth .ekm-auth-form-eyebrow {margin-bottom:16px}
+  .ekm-auth .ek-auth-v2-form h1 {font-size:31px}
+  .ekm-auth .ek-auth-v2-form>.ek-auth-subtitle {font-size:13px;margin-bottom:21px}
+  .ekm-auth .ek-auth-progress {gap:10px;flex-wrap:wrap}
+}
+@media(max-width:360px){
+  .ekm-auth .ek-auth-login-area {padding:26px 17px}
+  .ekm-auth .ek-auth-login-rail {padding:19px}
+  .ekm-auth .ek-auth-switch {flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){.ekm-auth :is(button,a){transition:none}}
