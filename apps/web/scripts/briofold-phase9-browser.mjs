@@ -8,14 +8,15 @@ import postgres from "postgres";
 // claims to simulate a provider callback, connected phone, or real money.
 // This verifies that the real Next -> authenticated Go -> restricted finance
 // reader -> Next UI chain is unchanged between legacy and canonical routes.
-export async function runBriofoldPhase9Browser({origin,browser,control,sessions,liveDatabase,workspaceId}){
- const controlURL=new URL(control),financeURL=new URL(liveDatabase);
- for(const url of [controlURL,financeURL]){
+export async function runBriofoldPhase9Browser({origin,browser,control,sessions,liveDatabase,sandboxDatabase,workspaceId}){
+ const controlURL=new URL(control),financeURL=new URL(liveDatabase),sandboxURL=new URL(sandboxDatabase);
+ for(const url of [controlURL,financeURL,sandboxURL]){
   assert.ok(["localhost","127.0.0.1","[::1]"].includes(url.hostname),"Phase9 browser forbids remote databases");
   assert.ok(!/prod/i.test(url.pathname),"Phase9 browser forbids production databases");
  }
  assert.equal(financeURL.pathname,"/ekmivo_pg04_live","Phase9 requires the disposable PG04 live-test realm");
- const db=postgres(control,{max:1,prepare:false}),finance=postgres(liveDatabase,{max:1,prepare:false});
+ assert.equal(sandboxURL.pathname,"/ekmivo_pg04_sandbox","Phase9 phone lifecycle requires disposable PG04 sandbox realm");
+ const db=postgres(control,{max:1,prepare:false}),finance=postgres(liveDatabase,{max:1,prepare:false}),sandbox=postgres(sandboxDatabase,{max:1,prepare:false});
  let context,viewerContext;
  const sessionUser=async token=>String((await db.unsafe("SELECT user_id FROM auth_sessions WHERE token_hash=$1",[createHash("sha256").update(token).digest("hex")]))[0].user_id);
  try{
@@ -71,6 +72,68 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const phones=await context.request.get(`${base}/phones?environment=live`);
   assert.equal(phones.status(),200,`encrypted receiving-account UI reader failed: ${await phones.text()}`);
   assert.ok((await phones.json()).accounts?.some(a=>a.ID===account.id&&a.Number===receivingNumber),"payment settings reader disagrees with encrypted finance account");
+  // Real owner -> Next proxy -> Go -> FINANCE lifecycle, using only a fictional
+  // disposable Store and deliberately NOT dispatching any SMS to a provider.
+  const phoneRoute=`${base}/phones?environment=sandbox`,mutate={headers:{Origin:origin}};
+  // Existing PG07 synthetic sandbox receiving-account envelope is deliberately
+  // opaque, so make its read-only UI representation decryptable with this
+  // disposable test Go instance's fixture key. No production data is changed.
+  const sandboxNonce=randomBytes(12),sandboxCipher=createCipheriv("aes-256-gcm",Buffer.alloc(32,88),sandboxNonce);
+  sandboxCipher.setAAD(Buffer.from(`${workspaceId}|sandbox`));
+  const sandboxEnvelope=Buffer.concat([sandboxNonce,sandboxCipher.update("01700007890","utf8"),sandboxCipher.final(),sandboxCipher.getAuthTag()]);
+  await sandbox.unsafe("UPDATE pg06_account_configuration SET number_cipher=$1 WHERE workspace_id=$2::uuid AND environment='sandbox'",[sandboxEnvelope,workspaceId]);
+  const [sandboxProjection]=await db.unsafe("SELECT source_version,active FROM resolve_financial_projection($1::uuid,'sandbox')",[workspaceId]);
+  assert.equal(sandboxProjection.active,true,"disposable sandbox Store projection is inactive");
+  const [sandboxVersion]=await sandbox.unsafe("SELECT entitlement_version FROM financial_workspace_registry WHERE workspace_id=$1::uuid AND environment='sandbox'",[workspaceId]);
+  if(Number(sandboxVersion.entitlement_version)!==Number(sandboxProjection.source_version))
+   await sandbox.unsafe("SELECT financial_sync_workspace($1::uuid,'sandbox',$2,true)",[workspaceId,Number(sandboxProjection.source_version)]);
+  const [sandboxEvidenceBefore]=await sandbox.unsafe("SELECT count(*) AS n FROM financial_receipt_observations WHERE workspace_id=$1::uuid AND environment='sandbox'",[workspaceId]);
+  const createdResponse=await context.request.post(phoneRoute,{...mutate,data:{name:"Fictional CI handset"}});
+  assert.equal(createdResponse.status(),200,`phone create failed: ${await createdResponse.text()}`);
+  const createdPhone=await createdResponse.json(),physicalId=createdPhone.id;
+  assert.match(physicalId,/^[0-9a-f-]{36}$/i);
+  assert.match(createdPhone.pairing_token,/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/);
+  const firstPairDigest=createHash("sha256").update(createdPhone.pairing_token).digest("hex");
+  const phoneDetail=()=>context.request.get(phoneRoute).then(r=>r.json());
+  assert.equal((await phoneDetail()).items.filter(item=>item.id===physicalId).length,1,"physical phone create duplicated a device");
+  const badPath=`${base}/phones/${physicalId}/delete?environment=sandbox`;
+  const mismatched=await context.request.post(badPath,{...mutate,data:{phone_id:randomUUID()}});
+  assert.equal(mismatched.status(),422,"phone deletion accepted a mismatched route and request body ID");
+  assert.equal((await phoneDetail()).items.filter(item=>item.id===physicalId).length,1,"rejected delete removed the phone");
+  const viewerCreate=await viewerContext.request.post(phoneRoute,{...mutate,data:{name:"Forbidden viewer phone"}});
+  assert.equal(viewerCreate.status(),403,"viewer created an owner-managed physical phone");
+  const revoked=await context.request.post(`${base}/phones/${physicalId}/revoke?environment=sandbox`,{...mutate,data:{}});
+  assert.equal(revoked.status(),200,`phone disconnect failed: ${await revoked.text()}`);
+  assert.ok((await phoneDetail()).items.find(item=>item.id===physicalId)?.revoked_at,"disconnect did not revoke original physical phone");
+  const reissued=await context.request.post(`${base}/phones/${physicalId}/reconnect?environment=sandbox`,{...mutate,data:{phone_id:physicalId}});
+  assert.equal(reissued.status(),200,`phone reconnect failed: ${await reissued.text()}`);
+  const reconnected=await reissued.json();
+  assert.equal(reconnected.id,physicalId,"reconnect created a second physical phone ID");
+  assert.notEqual(reconnected.pairing_token,createdPhone.pairing_token,"reconnect reused an obsolete pairing capability");
+  const afterReconnect=(await phoneDetail()).items.filter(item=>item.id===physicalId);
+  assert.equal(afterReconnect.length,1,"reconnect introduced duplicate dashboard phone rows");
+  assert.equal(afterReconnect[0].revoked_at,null,"reconnected phone remained disconnected");
+  assert.ok(Date.parse(afterReconnect[0].pair_expires_at)>Date.now(),"reissued pairing capability expired");
+  const prematureReconnect=await context.request.post(`${base}/phones/${physicalId}/reconnect?environment=sandbox`,{...mutate,data:{phone_id:physicalId}});
+  assert.notEqual(prematureReconnect.status(),200,"active pairing accepted a second reconnect");
+  await assert.rejects(()=>sandbox.unsafe("SELECT pg06_phone_claim($1,$2)",[firstPairDigest,Buffer.alloc(64,29)]),
+   error=>error.code==="42501","old pairing code remained valid after reconnect");
+  const freshDigest=createHash("sha256").update(reconnected.pairing_token).digest("hex");
+  const paired=(await sandbox.unsafe("SELECT pg06_phone_claim($1,$2) AS data",[freshDigest,Buffer.alloc(64,29)]))[0].data;
+  assert.equal(paired.id,physicalId,"reconnected physical phone lost identity on pairing");
+  assert.equal((await viewerContext.request.post(badPath,{...mutate,data:{phone_id:physicalId}})).status(),403,
+   "viewer deleted an owner-managed paired handset");
+  const deleted=await context.request.post(badPath,{...mutate,data:{phone_id:physicalId}});
+  assert.equal(deleted.status(),200,`physical phone delete failed: ${await deleted.text()}`);
+  assert.equal((await phoneDetail()).items.some(item=>item.id===physicalId),false,"deleted phone remained in the Store list");
+  const retained=(await sandbox.unsafe("SELECT deleted_at,revoked_at FROM pg06_phones WHERE id=$1::uuid",[physicalId]))[0];
+  assert.ok(retained?.deleted_at&&retained?.revoked_at,"phone delete discarded durable tombstone or revocation");
+  assert.equal(Number((await sandbox.unsafe("SELECT count(*) AS n FROM financial_receipt_observations WHERE workspace_id=$1::uuid AND environment='sandbox'",[workspaceId]))[0].n),
+   Number(sandboxEvidenceBefore.n),"phone deletion removed sandbox historical receipt evidence");
+  assert.equal(Number((await finance.unsafe("SELECT count(*) AS n FROM financial_receipt_observations WHERE id=$1::uuid",[receipt.id]))[0].n),1,
+   "phone lifecycle unexpectedly modified separate authoritative live receipt evidence");
+  assert.notEqual((await context.request.post(`${base}/phones/${physicalId}/reconnect?environment=sandbox`,{...mutate,data:{phone_id:physicalId}})).status(),200,
+   "deleted phone accepted reconnect");
   assert.ok((await fetchRows(viewerContext,"payments")).some(r=>r.id===payment.id),"viewer cannot read authorized masked financial facts");
   const missing=await context.request.get(`${base}/operations/payments/${randomUUID()}?environment=live`);
   assert.equal(missing.status(),200,"opaque absent record did not use constrained empty result");
@@ -158,6 +221,6 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, viewer/cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, 6 routes; synthetic CI financial evidence only`);
  }finally{
   if(context)await context.close();if(viewerContext)await viewerContext.close();
-  await finance.end({timeout:3});await db.end({timeout:3});
+  await sandbox.end({timeout:3});await finance.end({timeout:3});await db.end({timeout:3});
  }
 }

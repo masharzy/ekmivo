@@ -1629,7 +1629,7 @@ try{
  if(process.env.PG05_BROWSER_TESTS==="true"){
   const {runBriofoldSettingsAcceptance}=await import("./briofold-settings-acceptance.mjs");
   await runBriofoldSettingsAcceptance({control,sessions:pg09Auth.sessions,apiBin:apiTestBin,phase9Fixture:{
-   workspaceId:pg07WS,liveDatabase:ds("ekmivo_pg04_live")
+   workspaceId:pg07WS,liveDatabase:ds("ekmivo_pg04_live"),sandboxDatabase:ds("ekmivo_pg04_sandbox")
   },apiEnv:{
    ...process.env,
    AUTHZ_DATABASE_URL:ds(source.pathname.slice(1),"ekmivo_financial_runtime","pg01-ci-only-password"),
