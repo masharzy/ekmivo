@@ -38,7 +38,7 @@ export default async function SubscriptionOrderPage({params}:{params:Promise<{lo
   const choice=flow.intent;
   const [store,freeCatalog]=await Promise.all([preferredWorkspaceFor(choice.actorId!),publicPaymentPlans()]);
   const freeReady=choice.product==="payments"&&choice.quantity===1&&choice.amountMinor===0&&!choice.couponCode&&
-   !freeCatalog.unavailable&&freeCatalog.plans.some(item=>item.version_id===choice.offerVersionId&&item.terms.kind==="free");
+   !freeCatalog.unavailable&&freeCatalog.plans.some(item=>item.version_id===choice.gatewayPlanVersionId&&item.terms.kind==="free");
   const money=new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(choice.amountMinor/100);
   const title=choice.product==="payments"?(bn?"পেমেন্টস":"Payments"):choice.product==="ai_credit"?(bn?"এআই প্রিপেইড ক্রেডিট":"AI prepaid credits"):(bn?"বান্ডল":"Bundle");
   const term=choice.term==="one_time"?(bn?"এককালীন":"One-time"):choice.term==="yearly"?(bn?"বার্ষিক":"Yearly"):(bn?"মাসিক":"Monthly");
