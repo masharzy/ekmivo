@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {createHash,randomUUID} from "node:crypto";
+import {createCipheriv,createHash,randomBytes,randomUUID} from "node:crypto";
 import {mkdir} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import postgres from "postgres";
@@ -26,7 +26,14 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const fingerprint=()=>createHash("sha256").update(randomUUID()).digest("hex");
   const reference="P9-FICTIONAL-"+randomUUID().slice(0,8).toUpperCase(),amount=23456,payer=fingerprint();
   const [account]=await finance.unsafe("INSERT INTO financial_receiving_accounts(workspace_id,environment,method,identity_hmac,display_suffix) VALUES($1,'live','bkash',$2,'7890') RETURNING id",[workspaceId,fingerprint()]);
-  await finance.unsafe("INSERT INTO pg06_account_configuration(workspace_id,environment,account_id,number_cipher) VALUES($1,'live',$2,$3)",[workspaceId,account.id,Buffer.alloc(48,66)]);
+  // This is a made-up Bangladeshi test number. The real Go phone reader must
+  // decrypt the same AES-256-GCM/AAD envelope as the production writer; dummy
+  // bytes here would incorrectly cause a visible 503 in the settings UI.
+  const receivingNumber="01700007890",nonce=randomBytes(12);
+  const cipher=createCipheriv("aes-256-gcm",Buffer.alloc(32,88),nonce);
+  cipher.setAAD(Buffer.from(`${workspaceId}|live`));
+  const numberCipher=Buffer.concat([nonce,cipher.update(receivingNumber,"utf8"),cipher.final(),cipher.getAuthTag()]);
+  await finance.unsafe("INSERT INTO pg06_account_configuration(workspace_id,environment,account_id,number_cipher) VALUES($1,'live',$2,$3)",[workspaceId,account.id,numberCipher]);
   const [intent]=await finance.unsafe("INSERT INTO payment_intents(workspace_id,environment,merchant_reference,amount_minor,expires_at) VALUES($1,'live',$2,$3,now()+interval '30 minutes') RETURNING id",[workspaceId,reference,amount]);
   const [attempt]=await finance.unsafe("INSERT INTO payment_attempts(workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version) VALUES($1,'live',$2,$3,$4,'1234',$5,'bkash',now()+interval '2 seconds',now()+interval '20 minutes',1) RETURNING id",[workspaceId,intent.id,account.id,payer,amount]);
   const [inbound]=await finance.unsafe("INSERT INTO financial_inbound_events(workspace_id,environment,source_kind,source_event_id,event_digest,original_source_at,encrypted_evidence) VALUES($1,'live','device_sms',$2,$3,now()+interval '4 seconds',$4) RETURNING id",[workspaceId,"ci-only-"+randomUUID(),fingerprint(),Buffer.alloc(48,55)]);
@@ -61,6 +68,9 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   assert.ok((await fetchRows(context,"incoming")).some(r=>r.id===transport.id&&r.payment_id===payment.id));
   assert.ok((await fetchRows(context,"gateways")).some(r=>r.id===account.id));
   assert.ok((await fetchRows(context,"webhooks")).some(r=>r.id===webhook.id));
+  const phones=await context.request.get(`${base}/phones?environment=live`);
+  assert.equal(phones.status(),200,`encrypted receiving-account UI reader failed: ${await phones.text()}`);
+  assert.ok((await phones.json()).accounts?.some(a=>a.ID===account.id&&a.Number===receivingNumber),"payment settings reader disagrees with encrypted finance account");
   assert.ok((await fetchRows(viewerContext,"payments")).some(r=>r.id===payment.id),"viewer cannot read authorized masked financial facts");
   const missing=await context.request.get(`${base}/operations/payments/${randomUUID()}?environment=live`);
   assert.equal(missing.status(),200,"opaque absent record did not use constrained empty result");
