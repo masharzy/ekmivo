@@ -129,6 +129,9 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/exports", pay.HandleExports)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/exports/{exportID}", pay.HandleExports)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/exports/{exportID}/{exportAction}", pay.HandleExports)
+	// Store-first SaaS payment handoff, intentionally distinct from seller checkout.
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/subscription-purchases/{intentID}/payment", pay.HandleSubscriptionPayment)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/subscription-purchases/{intentID}/payment", pay.HandleSubscriptionPayment)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/billing", pay.HandleBilling)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/billing/free", func(w http.ResponseWriter, r *http.Request) {
 		r.SetPathValue("billingAction", "free")
