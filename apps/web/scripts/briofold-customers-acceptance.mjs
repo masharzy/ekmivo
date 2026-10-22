@@ -28,7 +28,7 @@ export async function runBriofoldCustomers({control,sessions,apiOrigin,origin,br
   assert.equal((await read(null,viewer)).items.find(item=>item.id===first.id)?.assignee,null,'viewer list leaked CRM assignee');
   assert.equal((await read(null,viewer)).items.find(item=>item.id===first.id)?.assigned,true,'viewer lost safe assigned state');
   await assert.rejects(()=>write('save',{...profile,id:first.id,revision:first.revision}),e=>e.code==='40001');
-  const raceBody={...profile,id:first.id,revision:updated.revision};const races=await Promise.allSettled([write('save',raceBody),write('save',raceBody)]);assert.equal(races.filter(r=>r.status==='fulfilled').length,1,'concurrent revision race accepted both');
+  const raceBody={...profile,id:first.id,revision:updated.revision,assignee:owner};const races=await Promise.allSettled([write('save',raceBody),write('save',raceBody)]);assert.equal(races.filter(r=>r.status==='fulfilled').length,1,'concurrent revision race accepted both');
   for(const id of [first.id,second.id]){
    const token='fixture-'+randomUUID(),digest=createHash('sha256').update(token).digest('hex');
    const challenge=(await db`SELECT briofold_customer_challenge(${ws},'live',${owner},${id},${digest}) AS data`)[0].data;assert.equal(challenge.created,true);assert.equal((await db`SELECT briofold_customer_challenge(${ws},'live',${owner},${id},${digest}) AS data`)[0].data.created,false);
@@ -55,7 +55,7 @@ export async function runBriofoldCustomers({control,sessions,apiOrigin,origin,br
   const separated=await write('dispute',{id:cid,revision:(await read(cid)).customer.revision,source:source.id,confirmed:true});assert.notEqual(separated.id,cid);assert.equal((await read(separated.id)).customer.preferences.do_not_contact,true);assert.ok((await read(cid)).proofs.every(p=>p.revoked_at));
   await db`UPDATE workspace_members SET role='editor' WHERE workspace_id=${ws} AND user_id=${viewer}`;
   assert.equal((await read(cid,viewer)).can_manage,true);await assert.rejects(()=>write('save',{...profile,id:cid,revision:(updated.revision)},randomUUID(),viewer));
-  const editorCustomer=(await read(cid,viewer)).customer;assert.ok(await write('save',{id:cid,revision:editorCustomer.revision,name:'Editor updated',tags:[],stage:'contacted',temperature:'warm'},randomUUID(),viewer));
+  const editorCustomer=(await read(cid,viewer)).customer;assert.ok(await write('save',{id:cid,revision:editorCustomer.revision,name:'Editor updated',tags:[],stage:'contacted',temperature:'warm',assignee:owner},randomUUID(),viewer));
   await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${ws} AND user_id=${viewer}`;
   const waAccount='crm-wa-'+randomUUID(),wa=(await db`SELECT inbox_connection(${ws},'live','wa',${waAccount},decode('abcd','hex')) AS id`)[0].id;
   const payload=JSON.stringify({object:'whatsapp_business_account',entry:[{id:'waba-fixture',changes:[{field:'messages',value:{metadata:{phone_number_id:waAccount},contacts:[{wa_id:'8801777777777',profile:{name:'WA fictional customer'}}],messages:[{from:'8801777777777',id:'wamid.crm-fixture',timestamp:String(Math.floor(Date.now()/1000)),type:'text',text:{body:'Hello CRM'}}]}}]}]});
