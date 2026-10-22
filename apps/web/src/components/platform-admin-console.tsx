@@ -19,6 +19,7 @@ import {AdminPaymentPlansPage} from "./admin-payment-plans-page";
 import {AdminSubscriptionCouponsPage} from "./admin-subscription-coupons-page";
 import {AdminSubscriptionPoliciesPage} from "./admin-subscription-policies-page";
 import {AdminSubscriptionOffersPage} from "./admin-subscription-offers-page";
+import {AdminSubscriptionOperationsPage} from "./admin-subscription-operations-page";
 import {AdminProvidersPage,AdminCreditsPage,AdminSubscriptionsPage} from "./admin-catalog-page";
 import {AdminWorkspaceCreationForm} from "./admin-catalog-management";
 import {AdminWorkspaceDetail,AdminUserDetail,AdminGlobalInventory,AdminHealthView,AdminSupportDetail} from "./platform-admin-inventory";
@@ -36,7 +37,7 @@ const names:Record<string,[string,string]>={
 };
 const tabs:Record<string,string[]>={
  payments:["Payments","Exceptions","Disputes","Refunds","Reconciliation"],
- billing:["Subscriptions","Invoices","Revenue","Coupons","Offers"],
+ billing:["Subscriptions","Invoices","Revenue","Coupons","Offers","Recovery"],
  credits:["Balances","Ledger","Packs","Rules"],
  plans:["Payment gateway","AI Bot"],
  "gateway/webhooks":["Deliveries","Endpoints","Queues"],
@@ -238,6 +239,8 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
   body=<><PageHead title={t}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{isSuper?<AdminSubscriptionCouponsPage locale={locale} actor={admin.user.id} query={q} status={couponStatus} after={after}/>:<Denied locale={locale}/>}</>;
  }else if(key==="billing"&&sub==="offers"){
   body=<><PageHead title={t}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{isSuper?<AdminSubscriptionOffersPage locale={locale} actor={admin.user.id}/>:<Denied locale={locale}/>}</>;
+ }else if(key==="billing"&&sub==="recovery"){
+  body=<><PageHead title={t} description={label(locale,"Verified subscription payment handoffs and exception monitoring","যাচাইকৃত সাবস্ক্রিপশন পেমেন্ট ও ব্যতিক্রম পর্যবেক্ষণ")}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{isSuper?<AdminSubscriptionOperationsPage locale={locale} actor={admin.user.id}/>:<Denied locale={locale}/>}</>;
  }else if(key==="settings"&&sub==="legal-contact"){
   body=<><PageHead title={t}/><PageTabs locale={locale} base={base} items={tabs[key]} active={sub}/>{isSuper?<AdminSubscriptionPoliciesPage locale={locale} actor={admin.user.id}/>:<Denied locale={locale}/>}</>;
  }else if(key==="staff"){

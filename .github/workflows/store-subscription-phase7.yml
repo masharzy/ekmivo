@@ -1,0 +1,128 @@
+name: Store Subscription Phase 7 — Release Readiness
+
+# Isolated code/SQL release gate, NEVER a deployment or real checkout.
+on:
+  push:
+    branches: [agents/store-subscription-phase7-release]
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact Phase 7 commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+concurrency:
+  group: subscription-phase7-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  web:
+    name: Phase 7 release contract, admin theme, TS, lint and Next build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact source guard
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Locked dependency install
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Phase 2–7 security, offers, policies, coupons, auth and checkout contracts
+        working-directory: apps/web
+        run: |
+          node scripts/subscription-release-contract.test.mjs
+          node --test scripts/subscription-offers-contract.test.mjs scripts/subscription-policies-contract.test.mjs scripts/briofold-onboarding-contract.test.mjs scripts/subscription-payment-handoff-contract.test.mjs scripts/subscription-order-contract.test.mjs scripts/subscription-intents-contract.test.mjs scripts/subscription-coupons-contract.test.mjs scripts/subscription-public-catalog.test.mjs
+      - name: Admin design system and OpenAPI consistency
+        run: |
+          python3 apps/web/scripts/verify-admin-design.py
+          node apps/web/scripts/openapi-check.mjs
+      - name: TypeScript, ESLint and production build
+        working-directory: apps/web
+        run: |
+          npx tsc --noEmit -p tsconfig.json
+          npm run lint
+          npm run build
+
+  go:
+    name: Phase 7 payment worker races, auth policy and migration registry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Exact source guard
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Go race, vet and Phase 7 SQL parser
+        run: |
+          cd backend
+          go test -race ./internal/subscriptionpayment ./internal/checkout
+          go vet ./internal/subscriptionpayment ./internal/checkout ./cmd/financial-migrate ./cmd/api
+          cd ..
+          python3 -m pip install --user pglast==8.7
+          python3 -c 'from pathlib import Path; from pglast import parse_sql; p=Path("infra/migrations/0154_platform_subscription_release_operations.sql"); assert len(parse_sql(p.read_text()))>=5; print("Phase 7 SQL syntax PASS")'
+
+  postgres:
+    name: Phase 7 disposable PostgreSQL user, Super Admin, coupon and recovery
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ekmivo_pg00
+          POSTGRES_USER: ekmivo_test
+          POSTGRES_PASSWORD: local-only-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ekmivo_test -d ekmivo_pg00"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Exact source guard
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Locked PostgreSQL test driver
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Install isolated browser engine for real-DB quote and consent checks
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Test all predecessor SQL in migration order
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: |
+          node scripts/subscription-order-postgres-smoke.mjs
+          node scripts/subscription-payment-postgres-smoke.mjs
+          node scripts/subscription-release-postgres-smoke.mjs
+      - name: Real SQL-backed Chromium Apply Remove, consent and resume
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: |
+          node scripts/subscription-order-database-browser.mjs
+          node --test scripts/subscription-order-browser.test.mjs

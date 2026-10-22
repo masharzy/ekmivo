@@ -854,3 +854,15 @@ Keep distinct from merchant order coupons and from Briofold. Automated control-s
 - [ ] With an owner-approved system receiving method and actual provider verification, prove pending/expired/cancelled never redeems; one independent verified paid invoice redeems once, duplicate proof/replay cannot consume an extra slot, and historical merchant payment links remain unchanged. Physical handset/provider/wallet evidence belongs to the owner, not the Phase 3 code-level seal.
 
 **Status:** NONE performed. Required capture: exact production source/deploy SHA, app/API versions, safe redacted SQL assertion or screenshot, role, environment, date and observed PASS/FAIL. Do not capture real payment contacts, OTP, SMS bodies or credentials.
+
+## Store-first subscription Phase 7 — release owner acceptance (NOT PERFORMED)
+
+Code-level release checks run on a disposable PostgreSQL CI database via `store-subscription-phase7.yml`; they do not replace user-owned provider/physical and live rollout decisions. See `docs/runbooks/STORE-SUBSCRIPTION-PHASE7-RELEASE.md` and `docs/evidence/STORE-SUBSCRIPTION-PHASE-7-SEALED.md`.
+
+- [ ] In an independently authorized isolated control + financial environment, compare post-migration permissions with a real runtime role. `0154` Super Admin read functions must allow MFA-verifiable operator views and deny unrelated users/direct ledger SELECT; no producer-side privilege regression.
+- [ ] On actual API-backed sessions follow eligible Payments, AI prepaid and bundle selection through login/register/verify, primary Store setup, coupon Apply/Remove, quote change, three independently unchecked Terms/Privacy/Refund consent and confirmed invoice; no cross-Store or legacy merchant capability sharing.
+- [ ] On real providers verify selected allowlisted bKash/Nagad/Rocket accounts only, **receiving** direction, no arbitrary merchant wallet; distinguish completed, cancelled, failed, pending, lost provider response and late-verified money. No automatic refund; operator investigates one recovery case with audit.
+- [ ] EN/BN × Light/Dark/System × 320/375/768/1024/1440 width, high contrast, keyboard-only, screen reader and 200% zoom; Admin Billing > Recovery in Super Admin MFA and denied roles; check both CSV exports, formula neutralization, redaction and absent-migration 503.
+- [ ] Approve backup/restore/PITR, service/worker alarms, invoice receipt and Support/refund links, security headers, staged cohorts, and emergency purchase-off with in-flight reconciliation preserved. Record exact deployment SHA and rollback owner.
+
+**Phase 7 physical/provider/production acceptance: PENDING.** Do not claim production readiness, execute fixtures in production, apply migrations or turn on purchase flags from a code-level seal alone.
