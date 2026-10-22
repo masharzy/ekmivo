@@ -209,6 +209,8 @@ BEGIN
  PERFORM pg_advisory_xact_lock(hashtextextended('subscription-handoff:'||purchase::text,0));
  SELECT * INTO h FROM platform_subscription_payment_handoffs WHERE intent_id=purchase FOR UPDATE;
  IF h.intent_id IS NULL OR h.state='paid' THEN RAISE EXCEPTION 'recovery scope invalid' USING ERRCODE='23514';END IF;
+ IF EXISTS(SELECT 1 FROM platform_subscription_payment_recovery_cases
+    WHERE intent_id=purchase AND payment_id=payment) THEN RETURN true;END IF;
  INSERT INTO platform_subscription_payment_recovery_cases(intent_id,payment_id,reason)
  VALUES(purchase,payment,reason_text) ON CONFLICT(intent_id,payment_id) DO NOTHING;
  UPDATE platform_subscription_payment_handoffs SET state='recovery_required' WHERE intent_id=purchase;
