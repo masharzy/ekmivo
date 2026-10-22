@@ -254,6 +254,19 @@ jobs:
         env:
           PHASE3_COUPON_HTTP_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo
         run: go test ./internal/checkout -run TestSubscriptionCouponHTTPIsolatedPostgres -count=1 -v
+      - name: Install Chromium for Phase 3 synthetic Admin responsive acceptance
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Phase 3 coupon Admin EN/BN and two-theme responsive/keyboard acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-coupon-admin-browser.test.mjs
+      - name: Save Phase 3 synthetic Admin browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-coupon-admin-screenshots
+          path: apps/web/test-results/subscription-coupon-admin/
+          if-no-files-found: ignore
 
   backend:
     name: Go compile and unit tests

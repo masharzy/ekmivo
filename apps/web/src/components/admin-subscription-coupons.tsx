@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import {useActionState,useEffect,useState} from "react";
+import {useActionState,useEffect,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
 import {saveSubscriptionCoupon,saveSubscriptionTaxPolicy,transitionSubscriptionCoupon,subscriptionCouponHistory,type CouponAdminState} from "../actions/admin-subscription-coupons";
 import {formatBdtMinor,formatPercentBps,type SubscriptionCoupon,type SubscriptionCouponList,type SubscriptionTaxPolicy} from "../lib/subscription-coupons";
@@ -14,9 +14,23 @@ function CouponForm({coupon,locale,onClose}:{coupon:SubscriptionCoupon|null;loca
  const t=(en:string,bn:string)=>locale==="bn"?bn:en;
  const router=useRouter();const [state,action,pending]=useActionState(saveSubscriptionCoupon,idle);
  const [kind,setKind]=useState(coupon?.discount_kind||"percent");
+ const dialog=useRef<HTMLDivElement>(null);const opener=useRef<HTMLElement|null>(null);
+ useEffect(()=>{
+  opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;
+  dialog.current?.querySelector<HTMLElement>("input:not([type=hidden])")?.focus();
+  return ()=>{if(opener.current?.isConnected)opener.current.focus();};
+ },[]);
+ const dialogKeys=(event:React.KeyboardEvent<HTMLDivElement>)=>{
+  if(event.key==="Escape"){event.preventDefault();onClose();return;}
+  if(event.key!=="Tab")return;
+  const controls=Array.from(dialog.current?.querySelectorAll<HTMLElement>("button:not([disabled]),input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled])")||[]).filter(el=>el.getClientRects().length>0);
+  if(!controls.length)return;
+  if(event.shiftKey&&document.activeElement===controls[0]){event.preventDefault();controls[controls.length-1].focus();}
+  else if(!event.shiftKey&&document.activeElement===controls[controls.length-1]){event.preventDefault();controls[0].focus();}
+ };
  useEffect(()=>{if(state.status==="success")router.refresh()},[router,state.status]);
  return <div className="pa-admin-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
-  <div role="dialog" aria-modal="true" aria-labelledby="pa-coupon-dialog-title" className="pa-dialog pa-admin-modal">
+  <div role="dialog" aria-modal="true" aria-labelledby="pa-coupon-dialog-title" className="pa-dialog pa-admin-modal" ref={dialog} onKeyDown={dialogKeys}>
    <div className="pa-dialog-head"><h2 id="pa-coupon-dialog-title">{coupon?t("Edit coupon · new revision","কুপন সম্পাদনা · নতুন সংস্করণ"):t("Create coupon","কুপন তৈরি")}</h2><button aria-label={t("Close","বন্ধ")} type="button" className="pa-icon-button" onClick={onClose}>×</button></div>
    <form action={action}>
     <input type="hidden" name="id" value={coupon?.id||""}/><input type="hidden" name="revision" value={coupon?.revision||""}/>
