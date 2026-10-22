@@ -1,6 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {noticeHref} from "../../apps/web/src/lib/payment-notice.ts";
 const load=(name)=>readFileSync(new URL("../../"+name,import.meta.url),"utf8");
 test("payment notifications are scoped to workspace and current financial realm",()=>{
  const go=load("backend/internal/checkout/reporting.go");
@@ -37,4 +38,12 @@ test("dropdown uses Hind Siliguri and links to actual notifications route",()=>{
  assert.match(entry,/preferredWorkspaceFor\(user\.id\)/);
  assert.match(entry,/paymentContext&&<PaymentNotificationCenter/);
  assert.doesNotMatch(entry,/redirect\(`\/w\//);
+});
+test("payment notification deep links keep the primary Store URL and reject unsafe reference segments",()=>{
+ const id="31d06427-5384-4a72-bacd-e39dfb7c895a";
+ assert.equal(noticeHref("legacy-workspace",{type:"payment.verified",resource_id:id}),`/payments/transactions/${id}`);
+ assert.equal(noticeHref("legacy-workspace",{type:"refund.requested",resource_id:id}),`/payments/refunds/${id}`);
+ assert.equal(noticeHref("legacy-workspace",{type:"device.warning",resource_id:id}),`/sms-data/${id}`);
+ assert.equal(noticeHref("legacy-workspace",{type:"payment.verified",resource_id:"../../admin"}),"/payments/transactions");
+ assert.equal(noticeHref("legacy-workspace",{type:"device.warning",resource_id:null}),"/sms-data");
 });

@@ -144,7 +144,7 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
      responsive++;
      const activityResponse=await page.goto(origin+'/settings/activity');
      assert.equal(activityResponse.status(),200);
-     await page.getByRole('heading',{name:locale==='bn'?'কার্যক্রমের ইতিহাস':'Activity log'}).waitFor();
+     await page.getByRole('heading',{name:locale==='bn'?'কার্যক্রমের ইতিহাস':'Activity log',exact:true}).waitFor();
      assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'unified activity horizontal overflow');
      responsive++;
@@ -190,7 +190,7 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   await page.getByRole('button',{name:'Apply filters'}).click();
   await page.getByText('No orders match these filters.').waitFor();
   assert.equal((await page.goto(origin+'/settings/activity')).status(),200);
-  await page.getByRole('heading',{name:'Activity log'}).waitFor();
+  await page.getByRole('heading',{name:'Activity log',exact:true}).waitFor();
   await page.getByText('assign-order',{exact:true}).first().waitFor();
   const [eventDownload]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Download this page CSV'}).click()]);
   const eventCsv=await readFile(await eventDownload.path(),'utf8');

@@ -17,11 +17,16 @@ export async function runBriofoldCustomers({control,sessions,apiOrigin,origin,br
   const second=await write('save',profile);assert.notEqual(second.id,first.id,'unverified matching email/name/phone merged');
   assert.equal((await read()).items.length,2);assert.equal((await read(null,owner,ws,'sandbox')).items.length,0);
   await assert.rejects(()=>read(first.id,viewer,foreign),e=>e.code==='42501');
-  const masked=await read(first.id,viewer);assert.equal(masked.customer.email,undefined);assert.equal(masked.customer.phone,undefined);assert.equal(masked.customer.notes,undefined);assert.equal(masked.proofs.length,0);
+  const masked=await read(first.id,viewer);assert.equal(masked.customer.email,undefined);assert.equal(masked.customer.phone,undefined);assert.equal(masked.customer.notes,undefined);assert.equal(masked.proofs.length,0);assert.equal(masked.customer.assignee,null);assert.ok(masked.events.every(event=>!('detail' in event)),'viewer received raw CRM event metadata');
+  assert.deepEqual((await read(null,viewer)).members,[],'viewer enumerated the internal Store staff roster');
   assert.equal((await read(null,viewer,ws,'live',0,'customer@example.invalid')).items.length,0,'contact search leaked masked PII');
   await assert.rejects(()=>write('save',profile,randomUUID(),viewer),e=>e.code==='42501');
   await assert.rejects(()=>write('merge',{id:first.id,revision:first.revision,target:second.id,confirmed:true}),e=>e.code==='42501');
-  const updated=await write('save',{...profile,id:first.id,revision:first.revision,name:'Updated fictional customer'});
+  const updated=await write('save',{...profile,id:first.id,revision:first.revision,name:'Updated fictional customer',assignee:owner});
+  assert.equal((await read(first.id,owner)).customer.assignee,owner,'CRM assignee lost for owner');
+  assert.equal((await read(first.id,viewer)).customer.assignee,null,'viewer received CRM assignee ID');
+  assert.equal((await read(null,viewer)).items.find(item=>item.id===first.id)?.assignee,null,'viewer list leaked CRM assignee');
+  assert.equal((await read(null,viewer)).items.find(item=>item.id===first.id)?.assigned,true,'viewer lost safe assigned state');
   await assert.rejects(()=>write('save',{...profile,id:first.id,revision:first.revision}),e=>e.code==='40001');
   const raceBody={...profile,id:first.id,revision:updated.revision};const races=await Promise.allSettled([write('save',raceBody),write('save',raceBody)]);assert.equal(races.filter(r=>r.status==='fulfilled').length,1,'concurrent revision race accepted both');
   for(const id of [first.id,second.id]){
@@ -31,6 +36,9 @@ export async function runBriofoldCustomers({control,sessions,apiOrigin,origin,br
   }
   const cid=first.id,revision=(await read(cid)).customer.revision,followup=randomUUID();
   await write('followup',{id:cid,revision,followup_id:followup,due_at:new Date(Date.now()-60000).toISOString(),time_zone:'Asia/Dhaka',body:'Consented team reminder'});
+  assert.equal((await read(cid,viewer)).followups[0].created_by,undefined,'viewer received follow-up creator ID');
+  assert.equal((await read(cid,viewer)).followups[0].body,'','viewer received private follow-up text');
+  assert.equal((await read(cid,owner)).followups[0].body,'Consented team reminder','owner follow-up content lost');
   assert.equal((await read(null,owner,ws,'live',0,'','due')).items.length,1);
   await assert.rejects(()=>write('followup',{id:cid,revision:(first.revision),followup_id:randomUUID(),due_at:new Date().toISOString(),time_zone:'Not/AZone',body:'Invalid'}));
   const exported=(await db`SELECT briofold_customer_export(${ws},'live',${owner},${cid}) AS data`)[0].data;assert.equal(exported.customer.notes,profile.notes);assert.ok(exported.events.some(e=>e.action==='email-verified'));
@@ -68,7 +76,7 @@ export async function runBriofoldCustomers({control,sessions,apiOrigin,origin,br
   const invalidLink=await context.request.post(api,{headers:{Origin:origin},data:{action:'link',operation_key:randomUUID(),body:{id:cid,revision:before.revision,kind:'finance-customer',source_id:randomUUID()}}});assert.equal(invalidLink.status(),403);
   const consent=await context.request.post(api,{headers:{Origin:origin},data:{action:'verify-email',operation_key:randomUUID(),body:{id:cid,consented:false}}});assert.equal(consent.status(),422);
   viewerContext=await browser.newContext();await viewerContext.addCookies([{name:'ekmivo-session',value:sessions.viewer,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:viewer+':'+ws,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
-  const maskedHTTP=await viewerContext.request.get(api+'&customer='+cid);assert.equal(maskedHTTP.status(),200);assert.equal((await maskedHTTP.json()).customer.email,undefined);const viewPage=await viewerContext.newPage();await viewPage.goto(origin+'/customers');await viewPage.getByRole('button',{name:'Editor updated',exact:true}).click();assert.equal(await viewPage.getByLabel('Email',{exact:true}).count(),0);assert.equal((await viewPage.content()).includes('Private CRM note'),false);assert.equal(await viewPage.getByRole('button',{name:'New customer',exact:true}).count(),0);
+const maskedHTTP=await viewerContext.request.get(api+'&customer='+cid);assert.equal(maskedHTTP.status(),200);const maskedBody=await maskedHTTP.json();assert.equal(maskedBody.customer.email,undefined);assert.equal(maskedBody.customer.assignee,null);assert.equal(maskedBody.followups[0]?.created_by,undefined);assert.ok(maskedBody.events.every(event=>!('detail' in event)));const viewPage=await viewerContext.newPage();await viewPage.goto(origin+'/customers');await viewPage.getByRole('button',{name:'Editor updated',exact:true}).click();assert.equal(await viewPage.getByLabel('Email',{exact:true}).count(),0);assert.equal((await viewPage.content()).includes('Private CRM note'),false);assert.equal(await viewPage.getByRole('button',{name:'New customer',exact:true}).count(),0);assert.equal(await viewPage.getByText('Assigned to a team member',{exact:true}).count(),1,'viewer incorrectly shown unassigned CRM customer');
   await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${foreign},${owner},'owner')`;await context.addCookies([{name:'ekmivo-default-workspace',value:owner+':'+foreign,url:origin,httpOnly:true,sameSite:'Lax'}]);assert.equal((await context.request.get(api)).status(),409,'stale selected business read accepted');await context.addCookies([{name:'ekmivo-default-workspace',value:owner+':'+ws,url:origin,httpOnly:true,sameSite:'Lax'}]);
   await write('delete',{id:cid,revision:(await read(cid)).customer.revision,confirmed:true});const deleted=await read(cid);assert.equal(deleted.customer.email,'');assert.equal(deleted.customer.notes,'');assert.equal((await read(second.id)).customer.email,'','merged source PII survived deletion');assert.equal(deleted.proofs.length,0);assert.ok(deleted.followups.every(f=>f.body==='Deleted'));
   await db`SELECT inbox_ingest(${conn},'crm-inbound-2','same-name-source','Same fictional customer','Again','text',now())`;assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_customer_sources WHERE source_id=${thread}`)[0].n),1,'source identity duplication');

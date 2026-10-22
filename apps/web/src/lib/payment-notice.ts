@@ -7,9 +7,13 @@ export function noticeCategory(type:string):"payments"|"refunds"|"alerts"{
  if(type.toLowerCase().includes("refund"))return "refunds";
  return "alerts";
 }
-export function noticeHref(workspaceId:string,notice:Pick<PaymentNotice,"type"|"resource_id">){
- const segment=noticeCategory(notice.type)==="payments"?"transactions":noticeCategory(notice.type)==="refunds"?"refunds":"incoming";
- return `/w/${workspaceId}/payments/${segment}`+(notice.resource_id?`?q=${encodeURIComponent(notice.resource_id)}`:"");
+export function noticeHref(_workspaceId:string,notice:Pick<PaymentNotice,"type"|"resource_id">){
+ const category=noticeCategory(notice.type);
+ const root=category==="payments"?"/payments/transactions":category==="refunds"?"/payments/refunds":"/sms-data";
+ // The destination resolves the authenticated primary Store on the server.
+ // Untrusted/non-UUID provider references stay on a scoped listing page.
+ const id=notice.resource_id;
+ return id&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)?`${root}/${id}`:root;
 }
 export function noticeHeading(type:string,bn:boolean){
  if(type==="payment.verified")return bn?"যাচাইকৃত পেমেন্ট":"Verified payment";
