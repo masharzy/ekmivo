@@ -23,6 +23,7 @@
 ## Phase 10 verified reporting contract
 
 - `/reports`: business/customer and order workflow counts; 0 only after successful authorized read. An absent function/database returns explicit unavailable, not fake zero.
+- `BRIOFOLD_GROWTH_REPORTS_ENABLED=true` enables the new read model **only after migration 0142 is verified**. Default OFF leaves existing Reports behavior intact during earlier-phase rollout.
 - `/reports/payments`: remains the existing *authoritative finance* report; COD, order status and merchant courier claims never become verified payment totals.
 - `/reports/ai`: authorized conversation counts and **separately metered AI credit statement**. No synthetic AI usage metric.
 - `briofold_growth_snapshot(workspace,realm,actor)`: membership and active actor rechecked in PostgreSQL; every aggregate scoped to business+live/sandbox. Owner and viewer may read anonymized counts only; no raw contacts, phone numbers, customer names, provider tokens or financial ledger grants.

@@ -47,7 +47,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   :undefined;
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
-  :root==="reports"&&view[0]!=="payments"
+  :root==="reports"&&view[0]!=="payments"&&process.env.BRIOFOLD_GROWTH_REPORTS_ENABLED==="true"
    ?<><BriofoldGrowthReports workspaceId={workspace.id} actorId={user.id} locale={locale}
       environment={paymentContext?.environment??"live"} mode={workspace.mode} focus={view[0]==="ai"?"ai":"all"}/>
      {view[0]==="ai"&&<BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/>}</>
