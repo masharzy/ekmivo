@@ -231,7 +231,15 @@ DO $$DECLARE t text;BEGIN
  END LOOP;
 END $$;
 
+-- Prevent the legacy PG13 worker from independently activating a Phase 6
+-- invoice while its coupon and recovery state are still undecided.
+CREATE FUNCTION platform_subscription_payment_is_handoff(invoice uuid) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $
+ SELECT EXISTS(SELECT 1 FROM platform_subscription_payment_handoffs WHERE invoice_id=invoice)
+$;
+
 REVOKE ALL ON FUNCTION
+ platform_subscription_payment_is_handoff(uuid),
  platform_subscription_payment_bind(uuid,uuid,uuid,uuid,uuid,uuid,text),
  platform_subscription_payment_read(uuid,uuid,uuid),
  platform_subscription_payment_pending(),
@@ -244,7 +252,8 @@ DO $$BEGIN
    platform_subscription_payment_read(uuid,uuid,uuid) TO ekmivo_financial_runtime;
  END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_financial_projection') THEN
-  GRANT EXECUTE ON FUNCTION platform_subscription_payment_pending(),
+  GRANT EXECUTE ON FUNCTION platform_subscription_payment_is_handoff(uuid),
+   platform_subscription_payment_pending(),
    platform_subscription_payment_settle(uuid,uuid,bigint,timestamptz,uuid),
    platform_subscription_payment_recover(uuid,uuid,text),
    platform_subscription_payment_terminal(uuid,text) TO ekmivo_financial_projection;
