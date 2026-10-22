@@ -1,6 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {cookies} from "next/headers";
-import {currentUser,preferredWorkspaceFor,workspacesFor} from "../../../../lib/server/auth";
+import {currentUser,preferredWorkspaceFor,workspacesFor,primaryStoreFor} from "../../../../lib/server/auth";
 import {verificationEnabled} from "../../../../lib/server/email";
 import {publicPaymentPlans} from "../../../../lib/server/payment-plans";
 import {dashboardHref} from "../../../../lib/dashboard-navigation";
@@ -28,7 +28,8 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
   const token=await createPurchase({offerKey:plan,term,quantity,coupon,versionId,legacyPlanId:legacy?.id});
   return NextResponse.redirect(new URL(`/subscribe/resume/${token}`,request.url),303);
  }catch(error){
-  if(!(error instanceof IntentError)||error.code!=="OFFER_UNAVAILABLE"||!legacy){
+  const safeLegacy=Boolean(legacy&&term==="monthly"&&quantity===1&&!versionId&&!coupon);
+  if(!safeLegacy){
    const code=error instanceof IntentError?error.code:"PURCHASE_INTENT_UNAVAILABLE";
    return NextResponse.redirect(new URL("/pricing?purchase="+encodeURIComponent(code),request.url),303);
   }
@@ -46,6 +47,8 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
   return NextResponse.redirect(new URL("/verify-email",request.url),303);
  }
  const requested=q.get("workspace");
+ const primary=await primaryStoreFor(user.id);
+ if(requested&&primary&&requested!==primary)return NextResponse.redirect(new URL("/pricing?purchase=STORE_NOT_AUTHORIZED",request.url),303);
  const workspace=requested?(await workspacesFor(user.id)).find(w=>w.id===requested):await preferredWorkspaceFor(user.id);
  if(!workspace){
   jar.set("ekmivo-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
