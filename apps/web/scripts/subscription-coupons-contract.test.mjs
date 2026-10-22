@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {parseBdtMinor,parsePercentageBps,formatBdtMinor,formatPercentBps} from "../src/lib/subscription-coupons.ts";
-import {parseCouponQuote,couponErrorMessage} from "../src/lib/subscription-coupon-quote.ts";
+import {parseCouponQuote,couponErrorCode,couponErrorMessage} from "../src/lib/subscription-coupon-quote.ts";
 
 const web=(path)=>readFileSync(new URL(`../src/${path}`,import.meta.url),"utf8");
 const migration=()=>readFileSync(new URL("../../../infra/migrations/0134_platform_subscription_coupon_admin.sql",import.meta.url),"utf8");
@@ -57,6 +57,9 @@ test("Phase 3 apply/remove/reload UI uses the authenticated server snapshot only
  assert.equal(parseCouponQuote({...quote,subtotal_minor:Number.MAX_SAFE_INTEGER}),null,"overflow rejected");
  assert.equal(parseCouponQuote({...quote,coupon_code:"x".repeat(64)}),null);
  assert.match(couponErrorMessage("TAX_REQUOTE_REQUIRED","bn"),/করনীতি/);
+ assert.equal(couponErrorCode({error:{code:"TAX_REQUOTE_REQUIRED",message:"Do not expose raw server details"}}),"TAX_REQUOTE_REQUIRED");
+ assert.equal(couponErrorCode({code:"QUOTE_CHANGED"}),"QUOTE_CHANGED");
+ assert.equal(couponErrorCode({error:{code:"<unsafe>"}}),"UNKNOWN");
  const widget=web("components/subscription-coupon-control.tsx");
  assert.match(widget,/operation_key:operation\.key/);
  assert.match(widget,/cache:"no-store"/);
@@ -70,4 +73,6 @@ test("Phase 3 apply/remove/reload UI uses the authenticated server snapshot only
  const sql=readFileSync(new URL("../../../infra/migrations/0149_platform_subscription_coupon_quote_read.sql",import.meta.url),"utf8");
  assert.match(sql,/platform_subscription_coupon_current_quote/);
  assert.match(sql,/snapshot->>'code_normalized'/);
+ const goRouter=readFileSync(new URL("../../../backend/cmd/api/main.go",import.meta.url),"utf8");
+ assert.match(goRouter,/GET \/v1\/platform\/purchase-intents\/\{intentID\}\/quote/);
 });

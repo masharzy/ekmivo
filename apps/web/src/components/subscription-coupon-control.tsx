@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
-import {couponErrorMessage,parseCouponQuote,type CouponQuoteSnapshot} from "../lib/subscription-coupon-quote";
+import {couponErrorCode,couponErrorMessage,parseCouponQuote,type CouponQuoteSnapshot} from "../lib/subscription-coupon-quote";
 
 /** Mount only with a server-issued, authenticated Phase 4 purchase intent.
  * The older Billing preview quote is not interchangeable with this contract. */
@@ -20,7 +20,7 @@ export function SubscriptionCouponControl({intentId,locale,onQuote}:{
   try{
    const response=await fetch(endpoint,{cache:"no-store",signal});
    const body:unknown=await response.json().catch(()=>null);
-   if(!response.ok)throw Error(typeof body==="object"&&body&&"code" in body?String(body.code):"QUOTE_REQUIRED");
+   if(!response.ok)throw Error(couponErrorCode(body));
    const q=parseCouponQuote(body);if(!q)throw Error("QUOTE_REQUIRED");
    if(seq!==sequence.current||signal?.aborted)return;
    setSnapshot(q);setDraft(q.coupon_code);onQuoteRef.current(q);setMessage("");
@@ -44,7 +44,7 @@ export function SubscriptionCouponControl({intentId,locale,onQuote}:{
   try{
    const response=await fetch(endpoint,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({revision:operation.revision,operation_key:operation.key,coupon_code:normalized})});
    const body:unknown=await response.json().catch(()=>null);
-   if(!response.ok)throw Error(typeof body==="object"&&body&&"code" in body?String(body.code):"UNKNOWN");
+   if(!response.ok)throw Error(couponErrorCode(body));
    const q=parseCouponQuote(body);if(!q)throw Error("UNKNOWN");
    pending.current=null;setSnapshot(q);setDraft(q.coupon_code);onQuoteRef.current(q);
    setMessage(normalized?t("Coupon applied to the verified total.","যাচাইকৃত মোটে কুপন প্রয়োগ হয়েছে।"):t("Coupon removed; amount re-quoted.","কুপন সরিয়ে নতুন হিসাব হয়েছে।"));

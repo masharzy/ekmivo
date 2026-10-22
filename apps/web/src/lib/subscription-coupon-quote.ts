@@ -8,6 +8,16 @@ export type CouponQuoteSnapshot={
 const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const money=(n:unknown)=>typeof n==="number"&&Number.isSafeInteger(n)&&n>=0&&n<=100000000000;
 
+/** Go's error envelope is {error:{code,message,correlation_id}}; local proxy
+ * failures use {code}. Only the stable code is ever shown in the browser. */
+export function couponErrorCode(source:unknown):string{
+ if(!source||typeof source!=="object")return "UNKNOWN";
+ const body=source as Record<string,unknown>;
+ const nested=body.error&&typeof body.error==="object"?(body.error as Record<string,unknown>).code:null;
+ const code=nested??body.code;
+ return typeof code==="string"&&/^[A-Z][A-Z0-9_]{1,63}$/.test(code)?code:"UNKNOWN";
+}
+
 export function parseCouponQuote(source:unknown):CouponQuoteSnapshot|null{
  if(!source||typeof source!=="object")return null;
  const q=source as Record<string,unknown>;

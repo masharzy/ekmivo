@@ -12,6 +12,9 @@ if(!["127.0.0.1","localhost","[::1]"].includes(url.hostname)||url.pathname!=="/e
 
 const admin=postgres(source,{max:1,prepare:false,connect_timeout:8,ssl:false});
 const target=new URL(source);target.pathname="/ekmivo";
+// The migration bootstrap is deliberately single-connection: the postgres.js
+// driver refuses unsafe multi-statement SQL on a pooled connection.
+const setup=postgres(target.toString(),{max:1,prepare:false,connect_timeout:8,ssl:false});
 const sql=postgres(target.toString(),{max:4,prepare:false,connect_timeout:8,ssl:false});
 const quote="SELECT platform_subscription_coupon_quote($1::uuid,$2::uuid,$3::uuid,$4,$5) AS result";
 const ids={a:randomUUID(),b:randomUUID(),one:randomUUID(),two:randomUUID(),version:randomUUID(),
@@ -24,7 +27,7 @@ const migrations=["0133_platform_subscription_checkout_foundation.sql","0134_pla
 try{
  // The PostgreSQL service is private to this one CI job and disposed afterward.
  await admin.unsafe("CREATE DATABASE ekmivo");
- await sql.unsafe(`
+ await setup.unsafe(`
   CREATE ROLE ekmivo_runtime NOLOGIN;
   CREATE ROLE ekmivo_financial_runtime NOLOGIN;
   CREATE TABLE app_users(id uuid PRIMARY KEY,disabled_at timestamptz);
@@ -46,7 +49,7 @@ try{
  `);
  for(const name of migrations){
   const body=await readFile(new URL(`../../../infra/migrations/${name}`,import.meta.url),"utf8");
-  await sql.unsafe(body);
+  await setup.unsafe(body);
  }
  await sql`INSERT INTO app_users(id) VALUES(${ids.a}::uuid),(${ids.b}::uuid)`;
  await sql`INSERT INTO workspaces(id,name,created_by) VALUES
@@ -91,5 +94,5 @@ try{
  console.error("Phase3 PostgreSQL race FAILED:",error instanceof Error?error.message.replaceAll(/postgres(?:ql)?:\/\/\S+/g,"[redacted]"):"unknown");
  process.exitCode=1;
 }finally{
- await sql.end({timeout:5});await admin.end({timeout:5});
+ await sql.end({timeout:5});await setup.end({timeout:5});await admin.end({timeout:5});
 }

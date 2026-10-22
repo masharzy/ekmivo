@@ -118,6 +118,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		pay.HandleBilling(w, r)
 	})
 	mux.HandleFunc("POST /v1/platform/purchase-intents/{intentID}/quote", pay.HandleSubscriptionCouponQuote)
+	mux.HandleFunc("GET /v1/platform/purchase-intents/{intentID}/quote", pay.HandleSubscriptionCouponQuote)
 	mux.HandleFunc("GET /v1/admin/billing/coupons", pay.HandleSubscriptionCouponsAdmin)
 	mux.HandleFunc("POST /v1/admin/billing/coupons", pay.HandleSubscriptionCouponsAdmin)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/billing", pay.HandleBilling)
