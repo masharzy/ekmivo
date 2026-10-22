@@ -36,6 +36,12 @@ test("real coupon React control performs Apply, GET reload, Remove and safe unkn
     try{
      await page.setContent(html(theme,locale));
      await page.evaluate((sources)=>{
+      // about:blank's opaque origin may not expose secure-context randomUUID;
+      // deployed checkout always uses HTTPS. This fixture needs UUIDs only.
+      if(typeof crypto.randomUUID!=="function"){
+       let next=0;
+       Object.defineProperty(crypto,"randomUUID",{configurable:true,value:()=>`00000000-0000-4000-a000-${String(++next).padStart(12,"0")}`});
+      }
       const cache={};
       function load(name){
        if(cache[name])return cache[name].exports;
