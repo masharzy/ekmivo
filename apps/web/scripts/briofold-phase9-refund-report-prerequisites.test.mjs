@@ -18,6 +18,15 @@ test("refund report's late receipt source must exist before 0056 is installed in
  assert.ok(publicMethod>=0&&earlier>publicMethod&&later>earlier,
   "disposable financial fixture must install 0050 → 0051 → 0056 in order");
  assert.match(smoke,/const migrationDB=postgres\(ds\(`ekmivo_pg04_\$\{realm\}`,`ekmivo_pg04_migrate_\$\{realm\}`/);
+ const phoneSetup=smoke.slice(smoke.indexOf("// PG06 additive physical identity migration"),smoke.indexOf("// Reference phases 2–4"));
+ for(const [file,variable] of [["0045_pg06_physical_phone_multi_account.sql","sql"],
+  ["0047_pg06_phone_forwarder.sql","forwardSQL"],
+  ["0086_phone_reconnect_delete.sql","lifecycleSQL"],
+  ["0088_financial_phone_forward_column.sql","forwardRepair"]]){
+  assert.match(phoneSetup,new RegExp(`await migrationDB\\.unsafe\\(${variable}\\)\\.simple\\(\\)`));
+  assert.ok(phoneSetup.includes(file),`${file} missing from migration-owner setup`);
+ }
+ assert.match(phoneSetup,/phoneOwnership\.installed&&phoneOwnership\.migration_owned/);
  assert.match(smoke,/if\(!lateRefundColumn\)await migrationDB\.unsafe/);
  assert.match(smoke,/if\(!installed\)await migrationDB\.unsafe/);
  assert.match(smoke,/finally\{await migrationDB\.end/);

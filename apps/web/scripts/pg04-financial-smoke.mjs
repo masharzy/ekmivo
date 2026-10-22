@@ -726,24 +726,36 @@ try{
 
  // PG06 additive physical identity migration: disposable financial realms only.
  for(const realm of names){
-  const sql=await readFile(new URL("../../../infra/migrations/0045_pg06_physical_phone_multi_account.sql",import.meta.url),"utf8");
-  await dbs[realm].unsafe(sql).simple();
+  // Keep the ownership boundary of real operator migrations in the disposable
+  // fixture. 0051 later ALTERs pg06_phone_forwarded and must not need a test-
+  // only superuser or an owner-check bypass to succeed.
+  const migrationDB=postgres(ds(`ekmivo_pg04_${realm}`,`ekmivo_pg04_migrate_${realm}`,
+   `pg04-${realm}-migration-only`),{max:1,prepare:false});
+  try{
+   const sql=await readFile(new URL("../../../infra/migrations/0045_pg06_physical_phone_multi_account.sql",import.meta.url),"utf8");
+   await migrationDB.unsafe(sql).simple();
+   const forwardSQL=await readFile(new URL("../../../infra/migrations/0047_pg06_phone_forwarder.sql",import.meta.url),"utf8");
+   await migrationDB.unsafe(forwardSQL).simple();
+   // The live phone endpoints depend on reconnect/delete (0086), not just the
+   // original 0045 pairing functions. Install this FINANCE-only migration in
+   // both disposable realms before exercising the real Next -> Go lifecycle.
+   const lifecycleSQL=await readFile(new URL("../../../infra/migrations/0086_phone_reconnect_delete.sql",import.meta.url),"utf8");
+   await migrationDB.unsafe(lifecycleSQL).simple();
+   // Replay the same additive 0088 repair under the function's actual owner.
+   const forwardRepair=await readFile(new URL("../../../infra/migrations/0088_financial_phone_forward_column.sql",import.meta.url),"utf8");
+   await migrationDB.unsafe(forwardRepair).simple();
+  }finally{await migrationDB.end({timeout:3})}
   ok((await dbs[realm].unsafe("SELECT to_regclass('public.pg06_phones') IS NOT NULL AS installed"))[0].installed,
     "Missing physical-device schema in "+realm);
-  const forwardSQL=await readFile(new URL("../../../infra/migrations/0047_pg06_phone_forwarder.sql",import.meta.url),"utf8");
-  await dbs[realm].unsafe(forwardSQL).simple();
-  // The live phone endpoints depend on reconnect/delete (0086), not just the
-  // original 0045 pairing functions. Install this FINANCE-only migration in
-  // both disposable realms before exercising the real Next -> Go lifecycle.
-  const lifecycleSQL=await readFile(new URL("../../../infra/migrations/0086_phone_reconnect_delete.sql",import.meta.url),"utf8");
-  await dbs[realm].unsafe(lifecycleSQL).simple();
   const lifecycleInstalled=(await dbs[realm].unsafe("SELECT to_regprocedure('public.pg06_phone_reconnect(uuid,text,uuid,text)') IS NOT NULL AS reconnect, to_regprocedure('public.pg06_phone_delete(uuid,text,uuid)') IS NOT NULL AS delete_phone"))[0];
   ok(lifecycleInstalled.reconnect&&lifecycleInstalled.delete_phone,"Missing phone lifecycle migration in "+realm);
-  // Replay the same additive 0088 repair against both disposable finance realms.
-  const forwardRepair=await readFile(new URL("../../../infra/migrations/0088_financial_phone_forward_column.sql",import.meta.url),"utf8");
-  await dbs[realm].unsafe(forwardRepair).simple();
-  ok((await dbs[realm].unsafe("SELECT to_regclass('public.pg06_phone_forwarded') IS NOT NULL AS installed"))[0].installed,
-    "Missing phone forwarder schema in "+realm);
+  const phoneOwnership=(await dbs[realm].unsafe(`SELECT
+   to_regclass('public.pg06_phone_forwarded') IS NOT NULL AS installed,
+   pg_get_userbyid(c.relowner)=$1 AS migration_owned
+   FROM pg_class c WHERE c.oid='public.pg06_phone_forwarded'::regclass`,
+   [`ekmivo_pg04_migrate_${realm}`]))[0];
+  ok(phoneOwnership.installed&&phoneOwnership.migration_owned,
+   "Phone forwarder table must belong to the disposable financial migration owner in "+realm);
  }
  // Reference phases 2–4: actual additive control schema and functional assertions,
  // isolated CI databases only. Entire transaction intentionally rolls back.
