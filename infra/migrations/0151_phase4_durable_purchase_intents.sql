@@ -269,11 +269,11 @@ COMMIT;
  RAISE EXCEPTION 'INVALID_INTENT_OPERATION' USING ERRCODE='22023';
 END $phase4$;
 REVOKE ALL ON FUNCTION platform_subscription_intent_command(text,uuid,text,text,jsonb) FROM PUBLIC;
-DO $ BEGIN
+DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_runtime')
  THEN GRANT EXECUTE ON FUNCTION platform_subscription_intent_command(text,uuid,text,text,jsonb) TO ekmivo_runtime;
  END IF;
-END $;
+END $$;
 
 -- Existing intents are preserved; newly issued Phase 4 intents require a public digest.
 COMMIT;
