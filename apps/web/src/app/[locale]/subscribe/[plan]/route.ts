@@ -5,7 +5,7 @@ import {verificationEnabled} from "../../../../lib/server/email";
 import {publicPaymentPlans} from "../../../../lib/server/payment-plans";
 import {dashboardHref} from "../../../../lib/dashboard-navigation";
 import {onboardingState} from "../../../../lib/server/briofold-onboarding";
-import {createPurchase,IntentError} from "../../../../lib/server/purchase-intents";
+import {createPurchase,activePurchase,readPurchase,IntentError} from "../../../../lib/server/purchase-intents";
 
 // Legacy plans remain on the verified billing route while Phase 5 and Phase 6 are disabled.
 const SELECTION_TTL=7*24*60*60;
@@ -22,6 +22,18 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
   return NextResponse.redirect(new URL("/pricing?purchase=INVALID_SELECTION",request.url),303);
  const {plans,unavailable}=await publicPaymentPlans();
  const legacy=plans.find(p=>p.id===plan);
+ // Back/forward and refresh may safely reuse the exact still-selected intent.
+ // A different selection always gets a fresh intent and cannot mutate invoices.
+ const existing=await activePurchase();
+ if(existing){
+  try{
+   const state=await readPurchase(existing);
+   if(state.status==="selected"&&state.offerKey===plan&&state.term===term&&
+    state.quantity===quantity&&(!versionId||state.offerVersionId===versionId)&&
+    (state.couponCode||"")===(coupon?.trim().toUpperCase()||""))
+    return NextResponse.redirect(new URL(`/subscribe/resume/${existing}`,request.url),303);
+  }catch{/* Other account, expired, revoked or invalid session: create a new selection. */}
+ }
  // Phase 4 authoritative published offers. Never activate an offer by guessing
  // its amount, version or billing term from a marketing card.
  try{
