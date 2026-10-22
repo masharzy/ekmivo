@@ -123,7 +123,11 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
       assert.equal(response.status(),200,`${route} HTTP failed at ${locale}/${theme}/${width}`);
       const ready=route.includes("/transactions/")||route.startsWith("/sms-data/")
        ?".pg-operation-detail":route.startsWith("/settings/")?".pg-operations":"main h1";
-      await page.locator(ready).first().waitFor();
+      try{await page.locator(ready).first().waitFor({timeout:10000});}
+      catch(error){
+       const snapshot=await page.evaluate(()=>({pathname:location.pathname,headings:[...document.querySelectorAll("main h1,main h2")].map(node=>node.textContent?.trim()).slice(0,5),sections:[...document.querySelectorAll("main section")].map(node=>node.className).slice(0,9),excerpt:document.querySelector("main")?.textContent?.trim().slice(0,300)}));
+       throw Error(`Phase9 responsive route ${route} ${locale}/${theme}/${width} did not mount ${ready}: ${JSON.stringify(snapshot)}; ${String(error)}`);
+      }
       assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${route} overflows ${locale}/${theme}/${width}`);
       assert.equal(await page.locator('main [role="alert"]').count(),0,`${route} shows data/UI error`);
