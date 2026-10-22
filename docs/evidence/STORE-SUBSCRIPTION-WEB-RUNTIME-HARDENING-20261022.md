@@ -39,6 +39,13 @@ cloned from production, database `ekmivo`:
 - Restricted-role synthetic registration created user, Store, owner membership,
   primary Store binding, business onboarding and auth session successfully,
   then `ROLLBACK TO SAVEPOINT`. **No production fixtures were created.**
+- Exact reconstructed SQL passed pinned `pglast==8.7` syntax parsing locally.
+- Vercel branch-specific Preview `DATABASE_URL` now uses the isolated SQL
+  login, not the production owner. Fresh deployment
+  `dpl_24v7nfEWhrMG7cJQg3aBp6YoJjCm` (SHA `49b421b`) is READY;
+  protected GET smoke of EN/BN pricing, login, register and unauthenticated
+  checkout route returned HTTP 200 without displayed server exceptions.
+  This does **not** prove authenticated writes, sessions or wallet handoff.
 
 ## Remaining production release gates
 
@@ -56,7 +63,10 @@ cloned from production, database `ekmivo`:
    enable backend flags in this order on the confirmed Render API service:
    `EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED`,
    `EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED`,
-   `EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED`.
+   `EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED`,
+   `EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED`.
+   The last flag must also be enabled on Vercel production web because the
+   separate subscription payment and status pages enforce it server-side.
    Verify API health and actual responses. Provider/real-money acceptance
    remains the user's manual responsibility.
 
