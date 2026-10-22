@@ -59,9 +59,10 @@ async function couponLookup(code:string|undefined,offerKey:string){
  if(!rows.length)throw new IntentError("COUPON_UNAVAILABLE");
  return String(rows[0].id);
 }
-export async function createPurchase(input:{offerKey:string;term:string;quantity?:number;coupon?:string;idempotencyKey?:string;legacyPlanId?:string}){
+export async function createPurchase(input:{offerKey:string;term:string;versionId?:string;quantity?:number;coupon?:string;idempotencyKey?:string;legacyPlanId?:string}){
  const guest=await ensureGuestSession(),user=await currentUser();
  const [offer,coupon]=await Promise.all([offerLookup(input.offerKey,input.term),couponLookup(input.coupon,input.offerKey)]);
+ if(input.versionId&&input.versionId!==String(offer.version_id))throw new IntentError("OFFER_CHANGED");
  const quantity=input.quantity??1;
  if(!Number.isSafeInteger(quantity)||quantity<1||quantity>100000||(offer.product==="payments"&&quantity!==1))
   throw new IntentError("INVALID_QUANTITY",422);
