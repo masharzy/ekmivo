@@ -122,7 +122,7 @@ COMMIT;
    public_token_sha256,guest_session_sha256,actor_id,offer_version_id,coupon_id,
    creation_key,requested_quantity,legacy_plan_id,expires_at)
   VALUES(capability_digest,guest_digest,actor,v.id,coupon_uuid,
-   creation_digest,requested::integer,data->>'legacy_plan_id',statement_timestamp()+interval '7 days')
+   creation_digest,requested::integer,data->>'legacy_plan_id',now()+interval '7 days')
   ON CONFLICT (creation_key) DO NOTHING RETURNING * INTO i;
   IF NOT FOUND THEN
    SELECT * INTO i FROM platform_subscription_purchase_intents WHERE creation_key=creation_digest;
@@ -166,7 +166,9 @@ COMMIT;
   SELECT v.id,v.offer_key,v.term,o.product INTO v
    FROM platform_subscription_offers o
    JOIN platform_subscription_offer_versions v ON v.id=o.current_version_id
-   WHERE o.status='published' AND v.id=i.offer_version_id;
+   LEFT JOIN payment_plan_catalog pc ON pc.current_version=v.payment_plan_version_id
+   WHERE o.status='published' AND v.id=i.offer_version_id
+     AND (o.product='ai_credit' OR (pc.status='published' AND pc.visibility='public'));
   IF v.id IS NULL THEN RAISE EXCEPTION 'OFFER_CHANGED' USING ERRCODE='40001'; END IF;
   IF i.coupon_id IS NOT NULL THEN
    SELECT c.id INTO coupon_uuid FROM platform_subscription_coupons c
