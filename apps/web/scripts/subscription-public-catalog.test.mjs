@@ -74,7 +74,7 @@ test("home and pricing use the same catalog data; unpublished offers keep existi
  assert.match(read("components/landing/landing-pricing.tsx"),/\{bundlePricing\}/);
  assert.match(read("app/[locale]/pricing/page.tsx"),/<PublicPricing locale=\{locale\}\/>/);
  assert.match(read("components/subscription-offer-pricing.tsx"),/aria-pressed/);
- assert.match(read("components/subscription-offer-pricing.tsx"),/Purchase handoff opens after verified checkout release/);
+ assert.match(read("components/subscription-offer-pricing.tsx"),/Final eligibility and payable total are confirmed in checkout/);
  assert.doesNotMatch(read("components/subscription-offer-pricing.tsx"),/Go to Pay|name="bkash"|yearly.*free/i);
  assert.doesNotMatch(read("components/landing/landing-pricing.tsx"),/৳30 free once/);
 });
