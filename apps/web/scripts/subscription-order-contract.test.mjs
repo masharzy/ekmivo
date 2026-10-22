@@ -42,14 +42,15 @@ test("summary uses opaque intent, no seller wallet and no client amount calculat
  assert.match(summary,/router\.push\(`\/pay\/subscription\/\$\{payment\.checkout_token\}`\)/);
  assert.match(summary,/verifiedSubscriptionQuote/);
  assert.doesNotMatch(summary,/name="(?:bkash|nagad|rocket)"|amount_minor\s*\*|amount_minor\s*\//);
- assert.match(route,/public_token_sha256/);assert.match(route,/hashToken\(plan\)/);
+ assert.match(route,/resumePurchase\(plan\)/);assert.match(route,/readPurchase\(plan\)/);
+ assert.doesNotMatch(route,/database\(\)|public_token_sha256/);
  assert.doesNotMatch(route,/purchaseEnabled=\{false\}/);
  assert.match(proxy,/subscriptionOrderPath/);assert.match(proxy,/couponQuotePath/);
  assert.match(proxy,/subscriptionPaymentPath/);assert.match(pay,/CheckoutExperience/);
 });
 
 test("Go transaction revalidates Store, policy, offer, tax and invoice uniqueness",()=>{
- const sql=readFileSync(new URL("../../../infra/migrations/0151_platform_subscription_order_summary.sql",import.meta.url),"utf8");
+ const sql=readFileSync(new URL("../../../infra/migrations/0152_platform_subscription_order_summary.sql",import.meta.url),"utf8");
  for(const term of ["platform_primary_stores","pg13_actor","FOR UPDATE","platform_subscription_policy_acceptances",
    "platform_subscription_order_confirmations","UNIQUE(workspace_id,idempotency_key)","TAX_POLICY_REQUIRED","QUOTE_STALE",
    "POLICY_CHANGED","ZERO_DUE_UNAPPROVED","FULFILLMENT_NOT_READY","pg13_platform_invoices","coupon_revision"])

@@ -41,7 +41,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Phase 5 source contract
         working-directory: apps/web
-        run: node --test scripts/subscription-order-contract.test.mjs
+        run: node --test scripts/subscription-order-contract.test.mjs scripts/subscription-intents-contract.test.mjs scripts/subscription-coupons-contract.test.mjs
       - name: Focused ESLint and TypeScript
         working-directory: apps/web
         run: |
@@ -80,4 +80,41 @@ jobs:
       - name: Parse Phase 5 migration without executing it
         run: |
           python3 -m pip install --user pglast==8.7
-          python3 -c 'from pathlib import Path; from pglast import parse_sql; p=Path("infra/migrations/0151_platform_subscription_order_summary.sql"); assert len(parse_sql(p.read_text())) >= 12; assert not Path("infra/migrations/0145_platform_subscription_order_summary.sql").exists(); print("Phase 5 SQL parsed; no migration applied")'
+          python3 -c 'from pathlib import Path; from pglast import parse_sql; p=Path("infra/migrations/0152_platform_subscription_order_summary.sql"); assert len(parse_sql(p.read_text())) >= 12; assert not Path("infra/migrations/0145_platform_subscription_order_summary.sql").exists(); print("Phase 5 SQL parsed; no migration applied")'
+
+  isolated-postgres:
+    name: Phase 5 real isolated PostgreSQL security, quote and invoice race
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ekmivo_pg00
+          POSTGRES_USER: ekmivo_test
+          POSTGRES_PASSWORD: local-only-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ekmivo_test -d ekmivo_pg00"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check exact source revision
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install locked PostgreSQL driver
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Phase 3/4/5 migration + role, legal, quote, coupon and invoice race
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/subscription-order-postgres-smoke.mjs

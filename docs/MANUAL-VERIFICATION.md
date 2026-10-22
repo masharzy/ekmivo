@@ -1,3 +1,15 @@
+## Store-first subscription Phase 4 — durable purchase continuation (NOT SEALED, 2026-10-22)
+
+Source: `docs/evidence/STORE-SUBSCRIPTION-PHASE-4-SEALED.md`. Branch `agents/store-subscription-phase4-intents`. This is separate from Briofold/Android Phase 4.
+
+- [ ] On a dedicated Neon branch after 0151, with two authenticated users and at least two real Store memberships, exercise original published version/term/quantity/coupon through guest registration, OTP verification, new Store setup, password login and Google OAuth. Confirm only the claimed identity and authorized Store may view/bind, and old memberships and financial data remain untouched.
+- [ ] Use two browsers/tabs, refresh, private mode, browser back, return after email-verification delay, expired cookie, revoked session, lost POST response, identical idempotency key, concurrent requests and different-account resume. Confirm revision conflicts and expiry responses with no duplicate invoice or cross-account exposure.
+- [ ] Confirm a current free Payments entitlement is claimed exactly once using the original verified billing function; no paid invoice or system wallet token is created. Run paid monthly/yearly/AI prepaid/bundle with legitimate published versions and latest Phase 3 coupon validity checks; unavailable/changed offers must offer safe recovery.
+- [ ] Compare desktop, 320px mobile, EN/BN, Light/Dark/System, keyboard/screen reader and three-policy summary boundaries; ensure no `/bn` or `/en` visible canonical public URL and no merchant `/pay/{token}` regression.
+- [ ] Do not activate Phase 4 on production until Phase 2/3 source contracts, runtime DB least-privilege, isolated migration/SQL integration, browser E2E and CI on the same head pass. No wallet/provider or production payment claim is implied by these checks.
+
+---
+
 ## Nagad compact payer entry & bKash BD number normalization — 2026-10-14 (manual / build pending)
 
 - [ ] Open actual checkout with Nagad selected, EN/BN, 320/375/390/desktop and small landscape viewport. Merchant, invoice, amount, 11 number boxes, consent and controls should fit the screen without duplicate white invoice header. Tiny viewport / keyboard may scroll inside the compact card.
@@ -812,7 +824,7 @@ With owner/admin/editor/viewer test memberships, review Customers, Leads and Fol
 
 ## Store-first subscription checkout Phase 5 (2026-10-22, NOT SEALED)
 
-Prerequisites: verified Phase 2–4 integration, approved Phase 3 tax policy revision, published Terms/Privacy/Refund fingerprints, isolated Neon control migration **0151** (after Phase 3 `0145–0149` and Phase 4's renumbered durable-intents migration) and separately authorized Phase 6 payment adapter. Phase 3 `0148` currently collides with Phase 4 `0148`; resolve on their branches before applying either. Flags stay OFF until approved. Use test Stores, not real customer transfers.
+Prerequisites: verified Phase 2–4 integration, approved Phase 3 tax policy revision, published Terms/Privacy/Refund fingerprints, isolated control migration **0152** (after Phase 3 `0145–0149` and Phase 4's `0151` durable-intents migration) and separately authorized Phase 6 payment adapter. Flags stay OFF until approved. Use test Stores, not real customer transfers.
 
 - Guest → login/register/Google → verified email → Store setup with Payments monthly/yearly, prepaid AI, eligible bundle and valid coupon. Exact version, Store, quantity and coupon must survive redirects/refresh. Expired or revoked selections must never issue an invoice.
 - Check 320/375/768/1024/1440px and 200% zoom, EN/BN/Hind Siliguri, Light/Dark/System, keyboard-only and screen reader: itemized prices/periods, Server tax/coupon/discount/total, independent checkbox labels, linked current policy versions, visible focus and no wallet/phone selection on summary.
@@ -821,3 +833,14 @@ Prerequisites: verified Phase 2–4 integration, approved Phase 3 tax policy rev
 - When Phase 6 is ready, verify only the dedicated `/pay/subscription/{token}` displays system wallets; existing seller `/pay/{documentToken}` and `/checkout/{merchantToken}` regressions remain unchanged. Real provider proof/production activation is separate and not attempted here.
 
 Evidence: `docs/evidence/STORE-SUBSCRIPTION-PHASE-5-SEALED.md` (filename is not a seal claim).
+
+## Store-first Phase 3 — Platform Subscription Coupons (2026-10-22) — manual/provider PENDING
+
+Keep distinct from merchant order coupons and from Briofold. Automated control-schema, fictional invoice and Go/API checks are recorded in `docs/evidence/STORE-SUBSCRIPTION-PHASE-3-SEALED.md`; none is real payment evidence. Do not run or mark the following done until 0146–0149 are deployed through a separately authorized rollout with an approved tax/legal policy and working Phase 4/5 intent.
+
+- [ ] Real Super Admin with MFA: create a Payments-only monthly coupon, schedule/activate/pause, inspect immutable revisions, and edit a historically redeemed paused campaign. Confirm an ordinary Admin or a revoked/unauthenticated session cannot view, edit or export historical Store redemptions; verify wrong-Store paths cannot reveal a code or purchase detail.
+- [ ] Owner-approved legally correct tax treatment per product/term, including invoice tax base, rounding and zero-tax exemption if applicable. Publishing a fictional fixture rate is prohibited. Verify policy version changes force a new authoritative quote and no old paid invoice changes.
+- [ ] Authenticated Store checkout after dependency rollout: apply valid/invalid/yearly/bundle/expired/limit-one coupons, remove, reload, browser back, expired quote, session timeout and lost POST response. Amount/discount/tax must agree with the Go and control DB snapshot. At 320/375/768/1024/1440 widths, 200% zoom, EN/BN and Light/Dark/System check keyboard focus, error announcements, Admin tables and dialogs.
+- [ ] With an owner-approved system receiving method and actual provider verification, prove pending/expired/cancelled never redeems; one independent verified paid invoice redeems once, duplicate proof/replay cannot consume an extra slot, and historical merchant payment links remain unchanged. Physical handset/provider/wallet evidence belongs to the owner, not the Phase 3 code-level seal.
+
+**Status:** NONE performed. Required capture: exact production source/deploy SHA, app/API versions, safe redacted SQL assertion or screenshot, role, environment, date and observed PASS/FAIL. Do not capture real payment contacts, OTP, SMS bodies or credentials.

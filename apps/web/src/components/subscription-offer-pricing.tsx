@@ -41,6 +41,10 @@ export function SubscriptionOfferPricing({offers,locale,compact=false,initialPro
    {(o.description||o.description_bn)&&<p className="sop-description">{locale==="bn"&&o.description_bn?o.description_bn:o.description}</p>}
    {o.included_ai_credits&&<p className="sop-credits">{t("Included AI credits","অন্তর্ভুক্ত AI ক্রেডিট")}: <strong>{new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD").format(BigInt(o.included_ai_credits))}</strong></p>}
    <div className="sop-availability">{t("Published offer · Final eligibility and payable total are confirmed in checkout","প্রকাশিত অফার · চেকআউটে যোগ্যতা ও পরিশোধযোগ্য মোট টাকা নিশ্চিত হবে")}</div>
+   <a href={`/subscribe/${encodeURIComponent(o.key)}?term=${o.term}&version=${encodeURIComponent(o.version_id)}`}
+    aria-label={t("Keep my selection: ","আমার নির্বাচন সংরক্ষণ করুন: ")+(locale==="bn"&&o.name_bn?o.name_bn:o.name)}>
+    {t("Save offer and review selection","অফার সংরক্ষণ ও নির্বাচন যাচাই করুন")} →
+   </a>
   </article>})}</div>
   <p className="sop-disclaimer">{t("Offers display the current published price version. Discounts, tax and final payable amount must be rechecked at checkout. No unapproved annual savings or free credits are assumed.","বর্তমান প্রকাশিত মূল্য সংস্করণ দেখানো হচ্ছে। ছাড়, কর ও মোট মূল্য চেকআউটে পুনরায় যাচাই হবে। অনুমোদন ছাড়া বার্ষিক ছাড় বা ফ্রি ক্রেডিট ধরে নেওয়া হয়নি।")}</p>
  </section>;

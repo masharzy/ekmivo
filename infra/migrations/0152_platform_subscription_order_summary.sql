@@ -11,7 +11,7 @@ DO $$ BEGIN
   OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public'
    AND table_name='platform_subscription_purchase_intents' AND column_name='public_token_sha256')
   OR to_regclass('public.financial_realm') IS NOT NULL
- THEN RAISE EXCEPTION '0151 requires control after Phase 3 0149 and Phase 4 0148'; END IF;
+ THEN RAISE EXCEPTION '0152 requires control after Phase 3 0149 and Phase 4 0151'; END IF;
 END $$;
 
 ALTER TABLE platform_subscription_policy_acceptances ADD COLUMN policy_kind text CHECK(policy_kind IN ('terms','privacy','refund'));

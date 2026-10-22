@@ -5,7 +5,7 @@ import { goOrigin } from "../../../../lib/server/go-origin";
 
 export const dynamic = "force-dynamic";
 export const maxDuration=60;
-const couponQuotePath=/^platform\/(?:purchase-intents)\/[0-9a-f-]{36}\/quote$/i;
+const couponQuotePath=/^platform\/purchase-intents\/[0-9a-f-]{36}\/quote$/i;
 const adminPlanPath=/^platform\/workspaces\/[0-9a-f-]{36}\/payment-usage$/i;
 const adminWorkspaceRead=/^platform\/workspaces\/[0-9a-f-]{36}\/operations\/(payments|devices|overview)$/i;
 const operationPath=/^workspaces\/[0-9a-f-]{36}\/operations\/(payments|incoming|gateways|devices|webhooks|deliveries|events|parsers|overview|notices)(?:\/[0-9a-f-]{36}(?:\/(revoke|rename|reprocess|enable|disable|rotate|activate_rotation|revoke_previous|replay|retry))?)?$/i;
@@ -26,7 +26,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   return Response.json({ code: "NOT_FOUND" }, { status: 404 });
  if((aiCreditPath.test(path)||aiRuntimePath.test(path))&&request.method!=="POST")return Response.json({code:"METHOD_NOT_ALLOWED"},{status:405});
  if(subscriptionOrderPath.test(path)&&request.method!==(path.endsWith("/quote")||path.endsWith("/confirm")?"POST":"GET"))return Response.json({code:"METHOD_NOT_ALLOWED"},{status:405});
- if(couponQuotePath.test(path)&&request.method!=="POST")return Response.json({code:"METHOD_NOT_ALLOWED"},{status:405});
+ if(couponQuotePath.test(path)&&!(["GET","POST"].includes(request.method)))return Response.json({code:"METHOD_NOT_ALLOWED"},{status:405});
  const intentPath=/^workspaces\/[0-9a-f-]{36}\/(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources)$/i.test(path);
  if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || ((couponQuotePath.test(path)||crmPath.test(path)||intentPath||operationPath.test(path)||extensionPath.test(path)||mobilePath.test(path)||phonePath.test(path)||aiCreditPath.test(path)||subscriptionOrderPath.test(path)||subscriptionPaymentPath.test(path)||aiRuntimePath.test(path))&&request.method==="POST") || (documentPath.test(path)&&["POST","PATCH"].includes(request.method))))
   return Response.json({ code:"METHOD_NOT_ALLOWED" },{status:405});
