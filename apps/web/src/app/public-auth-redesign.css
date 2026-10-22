@@ -206,6 +206,45 @@
 .ekm-auth .ek-auth-register-tip,.ekm-auth .ek-password-checks {color:var(--color-text-secondary)}
 .ekm-auth :is(a,button,input):focus-visible {outline:2px solid var(--color-focus);outline-offset:3px}
 .ekm-auth:lang(bn) :is(.ekm-auth-rail-kicker,.ekm-auth-form-eyebrow,.ek-auth-login-rail-copy>span,.ek-auth-workflow>span){letter-spacing:0}
+/* Email verification shares the sign-in shell and retains the original OTP actions. */
+.ekm-auth-verify .ek-auth-login-rail-copy {margin-top:76px}
+.ekm-auth-verify .ekm-verify-journey {
+  position:relative;z-index:1;margin:auto 0 25px;padding:23px 23px 16px;
+  background:#f3f8ed;border:1px solid #d8e8d5;border-radius:23px;
+  box-shadow:0 20px 45px -30px rgb(0 0 0 / 50%);color:#0a1f12;
+}
+.ekm-auth-verify .ekm-verify-journey-head {display:flex;align-items:center;gap:12px;padding-bottom:18px}
+.ekm-auth-verify .ekm-verify-journey-icon {display:grid;place-items:center;flex:none;width:45px;height:45px;border-radius:15px;background:#e2f4d6;color:#14522d}
+.ekm-auth-verify .ekm-verify-journey-icon svg {width:23px;height:23px}
+.ekm-auth-verify .ekm-verify-journey-head strong {display:block;font-size:14px;line-height:1.35;font-weight:750}
+.ekm-auth-verify .ekm-verify-journey-head p {color:#54705a;font-size:11px;line-height:1.5;margin:5px 0 0}
+.ekm-auth-verify .ekm-verify-journey-check {margin-left:auto;font-size:26px;line-height:1;color:#3d8e46}
+.ekm-auth-verify .ekm-verify-journey ol {list-style:none;padding:0;margin:0;counter-reset:none}
+.ekm-auth-verify .ekm-verify-journey li {display:flex;align-items:center;gap:13px;min-height:45px;border-top:1px solid #dbe8d5;color:#31543a;font-size:12px;font-weight:650}
+.ekm-auth-verify .ekm-verify-journey li span {display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:9px;background:#e3efdc;color:#2c713c;font:750 10px/1 var(--font-figtree),sans-serif}
+.ekm-auth-verify .ekm-verify-form {max-width:420px}
+.ekm-auth-verify .ekm-verify-form-symbol {width:50px;height:50px;display:grid;place-items:center;border-radius:17px;background:var(--color-surface-subtle);border:1px solid var(--color-border);color:var(--color-forest);margin:10px 0 21px}
+.ekm-auth-verify .ekm-verify-form-symbol svg {width:25px;height:25px}
+.ekm-auth-verify .ek-auth-v2-form>.ek-auth-subtitle {margin-bottom:22px}
+.ekm-auth-verify .ekm-verify-recipient {display:flex;flex-direction:column;gap:6px;padding:15px 17px;background:var(--color-surface-subtle);border:1px solid var(--color-border);border-radius:15px;margin-bottom:29px}
+.ekm-auth-verify .ekm-verify-recipient span {font-size:10px;letter-spacing:.08em;font-weight:750;color:var(--color-text-secondary)}
+.ekm-auth-verify .ekm-verify-recipient strong {font-size:14px;line-height:1.5;overflow-wrap:anywhere;font-weight:700;color:var(--color-text)}
+.ekm-auth-verify .ekm-verify-code-label {display:block;margin:0 0 11px;color:var(--color-text);font-size:13px;font-weight:700}
+.ekm-auth-verify .ek-otp-inputs {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:0 0 13px}
+.ekm-auth-verify .ek-otp-inputs input {min-width:0;width:100%;height:60px;padding:0;border:1px solid var(--color-control-border);border-radius:13px;background:var(--color-canvas);color:var(--color-text);font:750 25px/1 var(--font-outfit),sans-serif;text-align:center;box-shadow:none}
+.ekm-auth-verify .ek-otp-inputs input:focus {border-color:var(--color-focus);background:var(--color-card);outline:2px solid var(--color-focus);outline-offset:2px}
+.ekm-auth-verify .ek-otp-inputs input[aria-invalid=true] {border-color:var(--color-danger)}
+.ekm-auth-verify .ek-verify-state {margin:0 0 16px;color:var(--color-text-secondary);font-size:12px;line-height:1.6;min-height:20px}
+.ekm-auth-verify .ekm-verify-submit {display:flex;align-items:center;justify-content:center;gap:15px;width:100%;margin:18px 0 0}
+.ekm-auth-verify .ekm-verify-submit:disabled {opacity:.5;cursor:not-allowed;transform:none}
+.ekm-auth-verify .ek-verify-resend {margin:19px 0 11px;display:flex;justify-content:center;flex-wrap:wrap;gap:5px;color:var(--color-text-secondary);font-size:13px}
+.ekm-auth-verify .ek-verify-resend button {border:0;background:transparent;color:var(--color-accent-readable);font-size:13px;font-weight:750;text-decoration:underline;text-underline-offset:3px;padding:4px;cursor:pointer}
+.ekm-auth-verify .ek-verify-resend button:disabled {opacity:.55;cursor:wait}
+.ekm-auth-verify .ek-verify-help {margin:7px 0;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-subtle);color:var(--color-text-secondary);font-size:12px;line-height:1.65;padding:12px 14px}
+.ekm-auth-verify .ekm-verify-divider {height:1px;background:var(--color-border);margin:28px 0 16px}
+.ekm-auth-verify .ek-verify-back {display:inline-flex;align-items:center;min-height:35px;padding:5px 0;margin:0;border:0;background:transparent;color:var(--color-text-secondary);font-size:13px;font-weight:650;text-decoration:none;cursor:pointer}
+.ekm-auth-verify .ek-verify-back:hover {color:var(--color-accent-readable)}
+.ekm-auth-verify:lang(bn) .ekm-verify-recipient span {letter-spacing:0}
 @media(max-width:1000px){
   .ekm-auth .ek-auth-login-shell {grid-template-columns:minmax(0,.9fr) minmax(0,1fr);gap:12px}
   .ekm-auth .ek-auth-login-rail {padding:30px}
@@ -223,6 +262,8 @@
   .ekm-auth .ek-auth-workflow,.ekm-auth .ekm-auth-rail-bottom {display:none}
   .ekm-auth .ek-auth-login-area {padding:38px 37px;border-radius:30px}
   .ekm-auth .ek-auth-login-rail {border-radius:30px}
+  .ekm-auth-verify .ek-auth-login-rail-copy {margin-top:22px}
+  .ekm-auth-verify .ekm-verify-journey {display:none}
 }
 @media(max-width:530px){
   .ekm-auth.ek-auth-polished.ek-auth-main {padding:103px 12px 34px}
@@ -238,10 +279,17 @@
   .ekm-auth .ek-auth-v2-form h1 {font-size:31px}
   .ekm-auth .ek-auth-v2-form>.ek-auth-subtitle {font-size:13px;margin-bottom:21px}
   .ekm-auth .ek-auth-progress {gap:10px;flex-wrap:wrap}
+  .ekm-auth-verify .ekm-verify-form-symbol {width:43px;height:43px;margin:4px 0 18px}
+  .ekm-auth-verify .ekm-verify-form-symbol svg {width:22px;height:22px}
+  .ekm-auth-verify .ekm-verify-recipient {padding:12px 14px;margin-bottom:24px}
+  .ekm-auth-verify .ek-otp-inputs {gap:6px}
+  .ekm-auth-verify .ek-otp-inputs input {height:55px;border-radius:11px;font-size:23px}
 }
 @media(max-width:360px){
   .ekm-auth .ek-auth-login-area {padding:26px 17px}
   .ekm-auth .ek-auth-login-rail {padding:19px}
   .ekm-auth .ek-auth-switch {flex-wrap:wrap}
+  .ekm-auth-verify .ek-otp-inputs {gap:4px}
+  .ekm-auth-verify .ek-otp-inputs input {height:48px;border-radius:9px;font-size:21px}
 }
 @media(prefers-reduced-motion:reduce){.ekm-auth :is(button,a){transition:none}}
