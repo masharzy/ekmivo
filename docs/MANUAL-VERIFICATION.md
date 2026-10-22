@@ -1,3 +1,15 @@
+## Store-first subscription Phase 4 — durable purchase continuation (NOT SEALED, 2026-10-22)
+
+Source: `docs/evidence/STORE-SUBSCRIPTION-PHASE-4-SEALED.md`. Branch `agents/store-subscription-phase4-intents`. This is separate from Briofold/Android Phase 4.
+
+- [ ] On a dedicated Neon branch after 0148, with two authenticated users and at least two real Store memberships, exercise original published version/term/quantity/coupon through guest registration, OTP verification, new Store setup, password login and Google OAuth. Confirm only the claimed identity and authorized Store may view/bind, and old memberships and financial data remain untouched.
+- [ ] Use two browsers/tabs, refresh, private mode, browser back, return after email-verification delay, expired cookie, revoked session, lost POST response, identical idempotency key, concurrent requests and different-account resume. Confirm revision conflicts and expiry responses with no duplicate invoice or cross-account exposure.
+- [ ] Confirm a current free Payments entitlement is claimed exactly once using the original verified billing function; no paid invoice or system wallet token is created. Run paid monthly/yearly/AI prepaid/bundle with legitimate published versions and latest Phase 3 coupon validity checks; unavailable/changed offers must offer safe recovery.
+- [ ] Compare desktop, 320px mobile, EN/BN, Light/Dark/System, keyboard/screen reader and three-policy summary boundaries; ensure no `/bn` or `/en` visible canonical public URL and no merchant `/pay/{token}` regression.
+- [ ] Do not activate Phase 4 on production until Phase 2/3 source contracts, runtime DB least-privilege, isolated migration/SQL integration, browser E2E and CI on the same head pass. No wallet/provider or production payment claim is implied by these checks.
+
+---
+
 ## Nagad compact payer entry & bKash BD number normalization — 2026-10-14 (manual / build pending)
 
 - [ ] Open actual checkout with Nagad selected, EN/BN, 320/375/390/desktop and small landscape viewport. Merchant, invoice, amount, 11 number boxes, consent and controls should fit the screen without duplicate white invoice header. Tiny viewport / keyboard may scroll inside the compact card.
