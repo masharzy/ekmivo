@@ -1,10 +1,10 @@
 import {notFound} from "next/navigation";
 import type {Metadata} from "next";
-import {ComingSoonPage} from "../../../components/public-product-pages";
+import {MarketingAiBotPage} from "../../../components/public-marketing-pages";
 
-export const metadata:Metadata={title:"AI Bot — Coming Soon | Ekmivo"};
+export const metadata:Metadata={title:"AI Bot | Ekmivo",description:"AI customer conversations with Store knowledge, a shared inbox and human handoff."};
 export default async function Page({params}:{params:Promise<{locale:string}>}){
  const {locale}=await params;
  if(locale!=="en"&&locale!=="bn")notFound();
- return <ComingSoonPage locale={locale} kind="ai-bot"/>;
+ return <MarketingAiBotPage locale={locale}/>;
 }
