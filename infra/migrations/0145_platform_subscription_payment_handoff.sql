@@ -120,7 +120,7 @@ BEGIN
  SELECT * INTO h FROM platform_subscription_payment_handoffs WHERE intent_id=purchase AND workspace_id=w;
  IF h.intent_id IS NULL THEN RETURN NULL;END IF;
  RETURN to_jsonb(h);
-END $;
+END $$;
 
 -- The opaque URL is a payment capability, not a billing-account credential.
 -- Guard the SaaS wallet page using the same session actor and primary Store.
@@ -254,7 +254,7 @@ END $$;
 CREATE FUNCTION platform_subscription_payment_is_handoff(invoice uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT EXISTS(SELECT 1 FROM platform_subscription_payment_handoffs WHERE invoice_id=invoice)
-$;
+$$;
 
 REVOKE ALL ON FUNCTION
  platform_subscription_payment_is_handoff(uuid),
