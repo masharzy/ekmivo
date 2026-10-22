@@ -140,6 +140,14 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   assert.equal((await viewerCtx.request.get(audienceUrl)).status(),403,'viewer cannot enumerate consent eligibility');
   assert.equal((await viewerCtx.request.post(origin+`/api/go/workspaces/${store}/growth?environment=live`,
    {headers:{Origin:origin},data:{action:'suppress-contact',operation_key:randomUUID(),body:suppressBody}})).status(),403,'viewer cannot suppress a customer');
+  const canonical=(await db`INSERT INTO briofold_customers(workspace_id,environment,name)
+   VALUES(${store},'live','Fictional merged canonical contact') RETURNING id`)[0].id;
+  await db`UPDATE briofold_customers SET merged_into=${canonical} WHERE id=${profile}`;
+  assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_suppressions
+    WHERE workspace_id=${store} AND customer_id=${canonical} AND channel='email'`)[0].n),1,
+   'verified CRM merge must preserve opt-out on the surviving profile');
+  assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_suppression_events
+    WHERE workspace_id=${store}`)[0].n),2,'merge propagation must be audited exactly once');
   await page.goto(origin+'/customers/broadcasts');
   await page.getByRole('button',{name:'Review consent evidence'}).click();
   await page.getByText('Channel proof missing:').first().waitFor();

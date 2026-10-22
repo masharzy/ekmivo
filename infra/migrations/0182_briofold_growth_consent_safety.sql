@@ -83,6 +83,29 @@ CREATE TRIGGER briofold_growth_suppression_audit_immutable
  BEFORE UPDATE OR DELETE ON briofold_growth_suppression_events
  FOR EACH ROW EXECUTE FUNCTION briofold_growth_suppression_immutable();
 
+-- A deterministic, verified CRM merge must carry the stricter opt-out to the
+-- canonical profile. Otherwise a new provider proof on the surviving profile
+-- could revive a recipient who had explicitly declined marketing.
+CREATE FUNCTION briofold_growth_suppression_on_merge() RETURNS trigger
+ LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$BEGIN
+ IF NEW.merged_into IS NOT NULL AND NEW.merged_into IS DISTINCT FROM OLD.merged_into THEN
+  WITH copied AS (
+   INSERT INTO briofold_growth_suppressions(workspace_id,environment,customer_id,channel,reason,actor_id)
+    SELECT s.workspace_id,s.environment,NEW.merged_into,s.channel,s.reason,s.actor_id
+    FROM briofold_growth_suppressions s
+    WHERE s.workspace_id=NEW.workspace_id AND s.environment=NEW.environment AND s.customer_id=NEW.id
+    ON CONFLICT DO NOTHING
+    RETURNING workspace_id,environment,customer_id,channel,reason,actor_id
+  )
+  INSERT INTO briofold_growth_suppression_events(workspace_id,environment,customer_id,channel,reason,actor_id)
+   SELECT workspace_id,environment,customer_id,channel,reason,actor_id FROM copied;
+ END IF;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER briofold_growth_suppression_on_merge
+ AFTER UPDATE OF merged_into ON briofold_customers
+ FOR EACH ROW EXECUTE FUNCTION briofold_growth_suppression_on_merge();
+
 CREATE FUNCTION briofold_growth_audience_preview(w uuid,e text,a uuid,ch text,segment text)
  RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE eligible bigint;total bigint;opted_out bigint;unverified bigint;without_channel bigint;suppressed bigint;
@@ -188,6 +211,7 @@ END $$;
 REVOKE ALL ON FUNCTION briofold_growth_audience_preview(uuid,text,uuid,text,text),
  briofold_growth_suppress_contact(uuid,text,uuid,uuid,jsonb),
  briofold_growth_consent_append_only(),
+ briofold_growth_suppression_on_merge(),
  briofold_growth_suppression_immutable()
  FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
 GRANT EXECUTE ON FUNCTION briofold_growth_audience_preview(uuid,text,uuid,text,text),

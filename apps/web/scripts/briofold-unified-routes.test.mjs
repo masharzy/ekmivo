@@ -60,6 +60,13 @@ test("settings uses opt-in CSS module and preserves legacy payment screens",()=>
  assert.match(frame,/!unified&&service==="payments"/);
 });
 
+test("unsupported website voice cannot be advertised as live or billed",()=>{
+ const website=source("components/website-chat-settings.tsx");
+ assert.match(website,/Voice calling is currently unavailable\./);
+ assert.match(website,/The public chat address is unavailable/);
+ assert.doesNotMatch(website,/voice(?:_enabled|Enabled)\s*[:=]\s*true/i);
+});
+
 test("simplified Payments has no request or reconciliation user-facing tab",()=>{
  const nav=source("lib/unified-navigation.ts");
  const tabs=source("components/unified-section-tabs.tsx");
