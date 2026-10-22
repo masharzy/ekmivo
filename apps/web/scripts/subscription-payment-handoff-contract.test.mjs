@@ -67,11 +67,13 @@ test("Go payment issue/reconciliation is default-off and never trusts client pai
 });
 
 test("control payment schema has exactly-once coupon, three consent snapshots, recovery and restricted roles",()=>{
- const sql=read("infra/migrations/0150_platform_subscription_payment_handoff.sql");
- assert.match(sql,/count\(DISTINCT policy.kind\).*?<>3/s);
+ const sql=read("infra/migrations/0153_platform_subscription_payment_handoff.sql");
+ assert.match(sql,/count\(DISTINCT acceptance.policy_kind\).*?<>3/s);
+ assert.match(sql,/platform_subscription_order_confirmations/);
+ assert.doesNotMatch(sql,/policy.status='published'/);
  assert.match(sql,/last_reconciled_at=clock_timestamp\(\)/);
  assert.match(sql,/FOR UPDATE SKIP LOCKED/);
- assert.match(sql,/0150 requires isolated Ekmivo control database/);
+ assert.match(sql,/0153 requires isolated Ekmivo control database/);
  assert.match(sql,/UNIQUE\(intent_id,payment_id\)/);
  assert.match(sql,/reservation_id.*?invoice_id/s);
  assert.match(sql,/GRANT EXECUTE ON FUNCTION platform_subscription_payment_capability/);

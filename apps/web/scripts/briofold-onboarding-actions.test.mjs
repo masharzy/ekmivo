@@ -54,6 +54,7 @@ function fixture(options={}){
   "next/headers":{cookies:async()=>({delete:()=>{}})},
   "../lib/server/auth":{requireUser:async()=>({id:"owner-a"}),preferredWorkspaceFor:async()=>workspace},
   "../lib/server/db":{database:()=>db},
+  "../lib/server/purchase-intents":{activePurchase:async()=>options.purchaseToken||null},
   "../lib/dashboard-navigation":{dashboardHref:(_locale,id,service,section)=>`/w/${id}/${service}/${section}`},
  };
  runInNewContext(compiled,{exports,require:name=>modules[name]??realRequire(name),console:{error:()=>{}},process:{env:{EKMIVO_SUBSCRIPTION_ORDER_PREVIEW:options.preview?"1":"0"}}});
@@ -90,6 +91,14 @@ test("AI-only billing uses locked current access, without a Gateway plan",async(
  const f=fixture({step:"billing",products:{ai:true,payments:false},workspace:{mode:"both"}});
  assert.equal((await f.submit({})).location,"/dashboard");assert.equal(f.state().selected,null);assert.deepEqual(f.state().claims,[]);
 });
+test("completed Store setup resumes the original opaque selection after verified onboarding",async()=>{
+ const token="Z".repeat(43);
+ const f=fixture({step:"billing",products:{payments:true},purchaseToken:token});
+ assert.equal((await f.submit({plan:"paid"})).location,"/subscribe/resume/"+token);
+ assert.deepEqual(f.state().claims,[]);
+ const already=fixture({step:"complete",products:{payments:true},purchaseToken:token});
+ assert.equal((await already.submit({step:"billing",plan:"paid"})).location,"/subscribe/resume/"+token);
+});
 test("newly enabled Payments cannot bypass billing with stale AI-only mode",async()=>{
  const f=fixture({step:"billing",products:{ai:true,payments:true},workspace:{mode:"ai"}});
  assert.equal((await f.submit({})).status,"error");assert.equal(f.state().step,"billing");
@@ -108,7 +117,7 @@ test("paid plan navigates to explicit confirmation without granting a subscripti
  assert.equal((await f.submit({plan:"paid"})).location,"/w/business-a/payments/billing?tab=plans&plan=paid");
  assert.deepEqual(f.state().claims,[]);
  const preview=fixture({step:"billing",products:{payments:true},preview:true});
- assert.equal((await preview.submit({plan:"paid"})).location,"/checkout/order/paid");
+ assert.equal((await preview.submit({plan:"paid"})).location,"/w/business-a/payments/billing?tab=plans&plan=paid");
  assert.deepEqual(preview.state().claims,[]);
 });
 test("replaying a completed billing step goes to dashboard without another purchase",async()=>{

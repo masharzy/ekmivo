@@ -25,7 +25,7 @@
 .pa-root.pa-admin-design .pa-account-menu summary{width:28px;height:28px;border-color:var(--bd);border-radius:6px}
 .pa-root.pa-admin-design .pa-account-popover{background:var(--sf);border-color:var(--bd);border-radius:10px}
 .pa-root.pa-admin-design .pa-main{grid-column:2;grid-row:2;min-width:0;width:100%;background:var(--bg)}
-.pa-root.pa-admin-design .pa-content{display:grid;gap:20px;width:100%;max-width:1180px;margin:0 auto;padding:28px 28px 48px}
+.pa-root.pa-admin-design .pa-content{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;width:100%;max-width:1180px;margin:0 auto;padding:28px 28px 48px}
 .pa-root.pa-admin-design h1{font-size:18px;line-height:1.45;font-weight:600;letter-spacing:-.02em;margin:0}
 .pa-root.pa-admin-design h2{font-size:13px;line-height:1.45;font-weight:600}
 .pa-root.pa-admin-design .pa-page-head{display:flex;align-items:flex-end;gap:12px;min-height:0;margin:0}
@@ -133,6 +133,8 @@
 .pa-root.pa-admin-design .pa-admin-form-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .pa-root.pa-admin-design .pa-admin-form-pair label{display:grid;gap:5px}
 .pa-root.pa-admin-design .pa-admin-switches{border:1px solid var(--bd);border-radius:8px}
+.pa-root.pa-admin-design .pa-admin-coupon-restrictions{min-width:0;margin:0;padding:0;border:0}
+.pa-root.pa-admin-design .pa-admin-coupon-restrictions legend{margin-bottom:6px;color:var(--t2);font-size:13px;font-weight:500}
 .pa-root.pa-admin-design .pa-admin-switches label{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;gap:12px;border-top:1px solid var(--bd);font-weight:400}
 .pa-root.pa-admin-design .pa-admin-switches label:first-child{border-top:0}
 .pa-root.pa-admin-design .pa-admin-switches input[type=checkbox]{appearance:none;width:30px;height:18px;border:0;border-radius:99px;background:var(--s3);position:relative;flex:none;margin:0;cursor:pointer}

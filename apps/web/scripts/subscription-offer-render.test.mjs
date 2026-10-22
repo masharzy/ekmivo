@@ -36,7 +36,7 @@ test("monthly and yearly are separate published prices, and the default never gu
  assert.doesNotMatch(result,/৳1,000/);
  assert.match(result,/aria-pressed="true"/);
  assert.match(result,/Yearly/);
- assert.match(result,/(?:Purchase handoff opens after verified checkout release|Final eligibility and payable total are confirmed in checkout)/);
+ assert.match(result,/Final eligibility and payable total are confirmed in checkout/);
  assert.doesNotMatch(result,/name="(?:bkash|nagad|rocket)"|15%|2 months free/);
 });
 test("AI prepaid and bundles display only admin-published credits without imposing recurring AI billing",()=>{

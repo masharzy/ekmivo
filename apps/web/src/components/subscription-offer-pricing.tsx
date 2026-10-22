@@ -8,8 +8,8 @@ const groups:{id:SubscriptionProduct;en:string;bn:string}[]=[
  {id:"ai_credit",en:"AI prepaid",bn:"এআই প্রিপেইড"},
  {id:"bundle",en:"AI + Payments",bn:"এআই ও পেমেন্ট"}
 ];
-export function SubscriptionOfferPricing({offers,locale,compact=false}:{offers:PublishedSubscriptionOffer[];locale:Locale;compact?:boolean}){
- const [product,setProduct]=useState<SubscriptionProduct>("payments");
+export function SubscriptionOfferPricing({offers,locale,compact=false,initialProduct="payments"}:{offers:PublishedSubscriptionOffer[];locale:Locale;compact?:boolean;initialProduct?:SubscriptionProduct}){
+ const [product,setProduct]=useState<SubscriptionProduct>(initialProduct);
  const [preferredTerm,setPreferredTerm]=useState<"monthly"|"yearly">("monthly");
  if(!offers.length)return null;
  const available=groups.filter(g=>offers.some(o=>o.product===g.id));
@@ -40,7 +40,11 @@ export function SubscriptionOfferPricing({offers,locale,compact=false}:{offers:P
    {comparison.bundle_saving_minor&&<p className="sop-savings">{t("Compared with separately published Payments and AI pack prices: save ","পৃথকভাবে প্রকাশিত পেমেন্ট ও এআই প্যাকের মূল্যের তুলনায় সাশ্রয়: ")}<strong>{priceInBdt(comparison.bundle_saving_minor,locale)}</strong></p>}
    {(o.description||o.description_bn)&&<p className="sop-description">{locale==="bn"&&o.description_bn?o.description_bn:o.description}</p>}
    {o.included_ai_credits&&<p className="sop-credits">{t("Included AI credits","অন্তর্ভুক্ত AI ক্রেডিট")}: <strong>{new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD").format(BigInt(o.included_ai_credits))}</strong></p>}
-   <div className="sop-availability">{t("Published price · Purchase handoff opens after verified checkout release","প্রকাশিত মূল্য · যাচাইকৃত চেকআউট চালু হলে অর্ডার করা যাবে")}</div>
+   <div className="sop-availability">{t("Published offer · Final eligibility and payable total are confirmed in checkout","প্রকাশিত অফার · চেকআউটে যোগ্যতা ও পরিশোধযোগ্য মোট টাকা নিশ্চিত হবে")}</div>
+   <a href={`/subscribe/${encodeURIComponent(o.key)}?term=${o.term}&version=${encodeURIComponent(o.version_id)}`}
+    aria-label={t("Keep my selection: ","আমার নির্বাচন সংরক্ষণ করুন: ")+(locale==="bn"&&o.name_bn?o.name_bn:o.name)}>
+    {t("Save offer and review selection","অফার সংরক্ষণ ও নির্বাচন যাচাই করুন")} →
+   </a>
   </article>})}</div>
   <p className="sop-disclaimer">{t("Offers display the current published price version. Discounts, tax and final payable amount must be rechecked at checkout. No unapproved annual savings or free credits are assumed.","বর্তমান প্রকাশিত মূল্য সংস্করণ দেখানো হচ্ছে। ছাড়, কর ও মোট মূল্য চেকআউটে পুনরায় যাচাই হবে। অনুমোদন ছাড়া বার্ষিক ছাড় বা ফ্রি ক্রেডিট ধরে নেওয়া হয়নি।")}</p>
  </section>;

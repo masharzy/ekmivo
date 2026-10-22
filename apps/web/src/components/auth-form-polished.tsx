@@ -30,13 +30,19 @@ export function AuthForm({locale,mode,googleReady=false,googleNotice=""}:{locale
  const input=(field:Field,label:string,complete:string)=><label htmlFor={"auth-"+field}>{label}<input id={"auth-"+field} name={field} value={values[field]} onChange={e=>change(field,e.target.value)} autoComplete={complete} maxLength={field==="email"?254:100} type={field==="email"?"email":"text"} aria-invalid={!!error(field)} aria-describedby={error(field)?"error-"+field:undefined}/>{error(field)&&<small id={"error-"+field} className="ek-field-error">{error(field)}</small>}</label>;
  const c=passwordChecks(values.password);
  const heading=login?t("Pick up where you left off.","আপনার কাজে ফিরে যান।"):currentStep===1?t("Start with your account.","আপনার অ্যাকাউন্ট দিয়ে শুরু করুন।"):t("What should we call you?","আপনাকে কী বলে ডাকব?");
- return <main className={`ek-auth-main ek-auth-designed ek-auth-v2 ${login?"ek-auth-login":"ek-auth-register"} ek-auth-polished`} lang={locale}><div className="ek-auth-login-shell">
-  <section className="ek-auth-login-rail"><Link className="ek-auth-brand-logo" href="/">ekmivo<span>.</span></Link><div className="ek-auth-workflow"><span>{t("YOUR BUSINESS, ORGANIZED","ব্যবসার কাজ এক জায়গায়")}</span>{[
+ return <main className={`ek-auth-main ek-auth-designed ek-auth-v2 ekm-auth ${login?"ek-auth-login":"ek-auth-register"} ek-auth-polished`} lang={locale}><div className="ek-auth-login-shell">
+  <section className="ek-auth-login-rail" aria-label={t("One connected workspace","একটি সংযুক্ত ওয়ার্কস্পেস")}>
+   <span className="ekm-auth-rail-kicker"><i aria-hidden="true"/>{t("YOUR WORKSPACE, REIMAGINED","আপনার কাজের নতুন ঠিকানা")}</span>
+   <div className="ek-auth-login-rail-copy"><span>{t("PAYMENTS · AI BOT · ONE PLACE","পেমেন্টস · এআই বট · এক জায়গায়")}</span><h2>{t("Less switching. More doing.","কম ঝামেলা। কাজে বেশি মন।")}</h2><p>{t("Keep payments, conversations and everyday business work together in one clear space.","পেমেন্ট, কথোপকথন আর ব্যবসার প্রতিদিনের কাজ—সব থাকুক একই গুছানো জায়গায়।")}</p></div>
+   <div className="ek-auth-workflow"><span><i aria-hidden="true"/>{t("YOUR BUSINESS, ORGANIZED","ব্যবসার কাজ এক জায়গায়")}</span>{[
    {icon:"wallet" as const,title:t("Payment requests","পেমেন্ট অনুরোধ"),body:t("Links, invoices and checkout.","লিংক, ইনভয়েস ও checkout।")},
    {icon:"shield" as const,title:t("Receipt verification","পেমেন্ট যাচাই"),body:t("Follow the result of each payment.","প্রতিটি পেমেন্টের অবস্থা দেখুন।")},
    {icon:"business" as const,title:t("Your workspace","আপনার ওয়ার্কস্পেস"),body:t("Your team and business tools.","আপনার টিম ও ব্যবসার সেবা।")}
-  ].map(item=><div key={item.title}><span className="ek-auth-workflow-icon"><PublicIcon name={item.icon}/></span><div><strong>{item.title}</strong><p>{item.body}</p></div></div>)}</div><div className="ek-auth-login-rail-copy"><h2>{t("One place to keep work moving.","কাজ এগিয়ে নেওয়ার নিজের জায়গা।")}</h2><p>{t("Create, share and follow your payment requests.","পেমেন্টের অনুরোধ তৈরি করুন, পাঠান ও তার অবস্থা দেখুন।")}</p></div></section>
+  ].map(item=><div key={item.title}><span className="ek-auth-workflow-icon"><PublicIcon name={item.icon}/></span><div><strong>{item.title}</strong><p>{item.body}</p></div><span className="ekm-auth-workflow-arrow" aria-hidden="true">↗</span></div>)}</div>
+   <span className="ekm-auth-rail-bottom">EKMIVO <span aria-hidden="true">✳</span> {t("A calmer way to work","গুছিয়ে কাজ করার সহজ উপায়")}</span>
+  </section>
   <section className="ek-auth-login-area" aria-labelledby="auth-heading"><div className="ek-auth-v2-form">
+   <span className="ekm-auth-form-eyebrow"><i aria-hidden="true"/>{login?t("WELCOME BACK","আবার স্বাগতম"):t("GET STARTED","চলুন শুরু করি")}</span>
    {!login&&<ol className="ek-auth-progress" aria-label={t("Registration steps","অ্যাকাউন্ট তৈরির ধাপ")}><li aria-current={currentStep===1?"step":undefined}><span>{currentStep===2?<PublicIcon name="check"/>:"1"}</span>{t("Account","অ্যাকাউন্ট")}</li><li aria-current={currentStep===2?"step":undefined}><span>2</span>{t("Your name","আপনার নাম")}</li></ol>}
    <h1 id="auth-heading">{heading}</h1><p className="ek-auth-subtitle">{login?t("Sign in to open your default workspace.","লগইন করে আপনার ডিফল্ট ওয়ার্কস্পেস খুলুন।"):currentStep===1?t("Your email and a secure password. That's the first step.","ইমেইল ও নিরাপদ পাসওয়ার্ড দিয়ে প্রথম ধাপ শুরু করুন।"):t("Enter your name. Store setup comes after verification.","আপনার নাম দিন। ভেরিফিকেশনের পরে স্টোর সেটআপ হবে।")}</p>
    {googleNotice&&<p className="ek-form-error" role="status">{googleNotice}</p>}

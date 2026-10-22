@@ -1,4 +1,5 @@
 -- Phase 6 Store-first handoff ledger. CONTROL DATABASE ONLY.
+-- 0153 follows Phase 3 0145-0149, Phase 4 0151 and Phase 5 0152.
 -- Additive, unseeded, not a permission to enable Live payments.
 -- Requires Phase 2-5 authoritative quote/confirm and invoice creation to
 -- populate confirmed_invoice_id. This migration does NOT issue invoices,
@@ -11,7 +12,7 @@ DO $BEGIN
  OR to_regclass('public.platform_subscription_purchase_quotes') IS NULL
  OR to_regclass('public.platform_subscription_coupon_reservations') IS NULL
  OR to_regclass('public.platform_subscription_policy_acceptances') IS NULL
- THEN RAISE EXCEPTION '0150 requires isolated Ekmivo control database and complete predecessor schemas';END IF;
+ THEN RAISE EXCEPTION '0153 requires isolated Ekmivo control database and complete predecessor schemas';END IF;
 END $;
 
 CREATE TABLE platform_subscription_payment_handoffs (
@@ -86,7 +87,10 @@ BEGIN
  WHERE id=qid AND intent_id=purchase AND offer_version_id=p.offer_version_id;
  SELECT * INTO v FROM platform_subscription_offer_versions WHERE id=p.offer_version_id;
  SELECT * INTO i FROM pg13_platform_invoices WHERE id=invoice AND workspace_id=w FOR UPDATE;
- IF q.id IS NULL OR q.expires_at<=now() OR q.currency<>'BDT'
+ -- Phase 5 already atomically accepted the quote and issued the immutable
+ -- invoice. A 15-minute quote expiry must not strand a confirmed 60-minute
+ -- payment attempt or consume a second coupon reservation.
+ IF q.id IS NULL OR q.currency<>'BDT'
     OR q.total_minor<=0 OR q.coupon_id IS DISTINCT FROM p.coupon_id
     OR v.id IS NULL OR v.term<>'monthly' OR v.payment_plan_version_id IS NULL
     OR (SELECT product FROM platform_subscription_offers WHERE offer_key=v.offer_key)<>'payments'
@@ -95,20 +99,31 @@ BEGIN
     OR i.period_days IS DISTINCT FROM (SELECT (pv.terms->>'period_days')::integer
        FROM payment_plan_versions pv WHERE pv.id=v.payment_plan_version_id)
     OR platform_billing_invoice_receiver(w,invoice)::text IS DISTINCT FROM receiver::text
+    OR NOT EXISTS(SELECT 1 FROM platform_subscription_order_confirmations c
+      WHERE c.intent_id=purchase AND c.quote_id=qid AND c.invoice_id=invoice
+        AND c.workspace_id=w AND c.actor_id=a AND c.snapshot->>'currency'='BDT'
+        AND c.snapshot->>'total_minor'=q.total_minor::text)
  THEN RAISE EXCEPTION 'immutable quote/invoice mismatch' USING ERRCODE='23514';END IF;
- -- Three distinct published legal documents, accepted for this exact
- -- purchase, Store and buyer. This is checked server-side, never a UI flag.
- IF (SELECT count(DISTINCT policy.kind)
+ -- Validate the three immutable Phase 5 acceptance snapshots, not today's
+ -- published policy state. An archived/replaced Terms version cannot undo
+ -- consent already captured when the authoritative invoice was confirmed.
+ IF (SELECT count(DISTINCT acceptance.policy_kind)
      FROM platform_subscription_policy_acceptances acceptance
      JOIN platform_subscription_policy_versions policy ON policy.id=acceptance.policy_version_id
+     JOIN platform_subscription_order_confirmations confirmation ON confirmation.intent_id=acceptance.intent_id
      WHERE acceptance.intent_id=purchase AND acceptance.actor_id=a
-       AND acceptance.workspace_id=w AND policy.status='published'
-       AND policy.kind IN ('terms','privacy','refund'))<>3
+       AND acceptance.workspace_id=w
+       AND acceptance.policy_kind=policy.kind
+       AND acceptance.policy_version_label=policy.version_label
+       AND acceptance.policy_content_sha256=policy.content_sha256
+       AND confirmation.snapshot->'legal'->acceptance.policy_kind->>'id'=policy.id::text
+       AND confirmation.snapshot->'legal'->acceptance.policy_kind->>'sha256'=policy.content_sha256
+       AND acceptance.policy_kind IN ('terms','privacy','refund'))<>3
  THEN RAISE EXCEPTION 'three legal snapshots required' USING ERRCODE='23514';END IF;
  IF q.coupon_id IS NOT NULL AND NOT EXISTS(
    SELECT 1 FROM platform_subscription_coupon_reservations r
    WHERE r.intent_id=purchase AND r.quote_id=qid AND r.coupon_id=q.coupon_id
-     AND r.workspace_id=w AND r.actor_id=a AND r.status='reserved' AND r.expires_at>now())
+     AND r.workspace_id=w AND r.actor_id=a AND r.status='reserved')
  THEN RAISE EXCEPTION 'coupon reservation unavailable' USING ERRCODE='23514';END IF;
  INSERT INTO platform_subscription_payment_handoffs
  (intent_id,quote_id,invoice_id,actor_id,workspace_id,receiving_workspace_id,
@@ -298,7 +313,7 @@ REVOKE ALL ON FUNCTION
 DO $$BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_financial_runtime') THEN
   GRANT EXECUTE ON FUNCTION platform_subscription_payment_bind(uuid,uuid,uuid,uuid,uuid,uuid,text),
-   platform_subscription_payment_read(uuid,uuid,uuid) TO ekmivo_financial_runtime;
+   platform_subscription_payment_read(uuid,uuid,uuid) TO ekmivo_runtime;
  END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ekmivo_runtime') THEN
   GRANT EXECUTE ON FUNCTION platform_subscription_payment_capability(uuid,text) TO ekmivo_runtime;

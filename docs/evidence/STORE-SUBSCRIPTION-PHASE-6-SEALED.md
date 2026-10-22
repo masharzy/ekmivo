@@ -78,3 +78,14 @@ Control RLS/FORCE and restricted function grants are included, but **the deploye
 This branch is additive and flag OFF, no production finance writes. Roll back the application branch and keep the flag OFF; do not drop tables containing any eventual financial/audit history. Migration rollback, if it ever becomes necessary, requires a separate owner-approved retention review and isolated branch rehearsal. Do not apply 0150 to production, rotate/reuse Live credentials, enable payment methods, deploy or begin Phase 7 without release authorization.
 
 **External acceptance:** operator-authorized platform receiving config, approved policy/price/discount economics, real signed device/provider traces, finance/control role isolation and receipt-to-entitlement E2E remain outstanding. This file name is per delivery contract, NOT a claim that Phase 6 is sealed.
+
+## Phase 3–6 integration checkpoint — 2026-10-22 (still NOT SEALED)
+
+- Integrated Phase 5 sealed source b2c624476188a9a9b214c837a397a93a38818a53, carrying Phase 3 #137 and Phase 4 #140. Preserved the later main public/auth redesign; resolved five overlapping CI, pricing-test, proxy and manual-ledger conflicts.
+- Renamed **unapplied** Phase 6 control migration from 0150 to **0153_platform_subscription_payment_handoff.sql** because Phase 5 requires 0152. The existing release coordinator now registers 0153 *after* 0145–0149, 0151 and 0152. No applied checksum was changed.
+- Fixed confirmed-invoice resumption: the binder trusts the immutable Phase 5 confirmation and three versioned legal acceptance snapshots even if a published legal document changes or the original 15-minute quote expires. The pending-invoice coupon reservation survives its original checkout TTL.
+- Changed Phase 6 bind/read grants to the existing authenticated control ekmivo_runtime, preserving worker-only settlement/recovery for ekmivo_financial_projection.
+- Added a focused disposable PostgreSQL 17 test of 0153, actor/Store, role denial, idempotent bind, coupon redemption, conflicting proof and late-payment recovery after the Phase 5 SQL fixture. This control-plane test **substitutes** the PG13 financial verification callback, and does not prove independent live financial receipt matching.
+- Integrated local checks: Phase 2–6 contract tests **6/6 PASS**, TypeScript **PASS**, ESLint **0 errors** (61 existing warnings), Next production build **PASS** under approved process access. These are not exact-remote CI results.
+- Added branch-only focused Phase 6 workflow for Go race/vet, Next build and sequential real PostgreSQL control schema.
+- **Still NOT SEALED:** exact-head CI, real finance-realm allocation proof, account-specific parser-approved wallet filtering, and full authenticated browser → API → control/finance E2E remain open. Flags remain disabled. No production migration/deployment/provider activity.

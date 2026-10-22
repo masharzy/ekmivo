@@ -117,7 +117,14 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		r.SetPathValue("billingAction", "limits")
 		pay.HandleBilling(w, r)
 	})
+	mux.HandleFunc("POST /v1/platform/purchase-intents/{intentID}/quote", pay.HandleSubscriptionCouponQuote)
+	mux.HandleFunc("GET /v1/platform/purchase-intents/{intentID}/quote", pay.HandleSubscriptionCouponQuote)
+	mux.HandleFunc("GET /v1/admin/billing/coupons", pay.HandleSubscriptionCouponsAdmin)
+	mux.HandleFunc("POST /v1/admin/billing/coupons", pay.HandleSubscriptionCouponsAdmin)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/billing", pay.HandleBilling)
+	// Store-first platform Order Summary; seller checkout routes remain separate.
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/subscription-orders/{intentID}", pay.HandleSubscriptionOrder)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/subscription-orders/{intentID}/{orderAction}", pay.HandleSubscriptionOrder)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/billing/usage", func(w http.ResponseWriter, r *http.Request) {
 		r.SetPathValue("billingAction", "usage")
 		pay.HandleBilling(w, r)

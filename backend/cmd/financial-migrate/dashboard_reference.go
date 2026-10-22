@@ -24,7 +24,20 @@ func migrateDashboardReference(ctx context.Context) error {
 		realm, dsn string
 		files      []string
 	}{
-		{"control", os.Getenv("PG04_CONTROL_MIGRATION_DATABASE_URL"), []string{"0069_dashboard_preferences.sql", "0073_dashboard_support_topic.sql", "0074_checkout_themes.sql", "0076_dashboard_billing.sql", "0089_admin_trusted_devices.sql", "0090_admin_support_roles.sql", "0094_admin_control_resource_usage.sql", "0096_platform_receiving_workspace.sql", "0101_dashboard_control_plan_limits.sql", "0103_system_workspace_unlimited.sql", "0104_system_workspace_subscription_cleanup.sql", "0105_buyer_upgrade_timing.sql", "0106_google_login.sql", "0133_platform_subscription_checkout_foundation.sql", "0134_platform_subscription_coupon_admin.sql", "0135_subscription_coupon_admin_audit_subject_fix.sql", "0140_platform_subscription_policy_catalog.sql", "0141_platform_subscription_policy_lock_concat_fix.sql", "0142_platform_subscription_policy_kind_qualification.sql", "0143_platform_subscription_offer_admin.sql", "0144_platform_subscription_public_catalog.sql"}},
+		{"control", os.Getenv("PG04_CONTROL_MIGRATION_DATABASE_URL"), []string{
+			"0069_dashboard_preferences.sql", "0073_dashboard_support_topic.sql", "0074_checkout_themes.sql", "0076_dashboard_billing.sql",
+			"0089_admin_trusted_devices.sql", "0090_admin_support_roles.sql", "0094_admin_control_resource_usage.sql",
+			"0096_platform_receiving_workspace.sql", "0101_dashboard_control_plan_limits.sql", "0103_system_workspace_unlimited.sql",
+			"0104_system_workspace_subscription_cleanup.sql", "0105_buyer_upgrade_timing.sql", "0106_google_login.sql",
+			"0133_platform_subscription_checkout_foundation.sql", "0134_platform_subscription_coupon_admin.sql",
+			"0135_subscription_coupon_admin_audit_subject_fix.sql", "0140_platform_subscription_policy_catalog.sql",
+			"0141_platform_subscription_policy_lock_concat_fix.sql", "0142_platform_subscription_policy_kind_qualification.sql",
+			"0143_platform_subscription_offer_admin.sql", "0144_platform_subscription_public_catalog.sql",
+			"0145_platform_subscription_coupon_versions.sql", "0146_platform_subscription_coupon_lifecycle.sql",
+			"0147_platform_subscription_coupon_restrictions.sql", "0148_platform_subscription_coupon_tax_requote.sql",
+			"0149_platform_subscription_coupon_quote_read.sql", "0151_phase4_durable_purchase_intents.sql",
+			"0152_platform_subscription_order_summary.sql", "0153_platform_subscription_payment_handoff.sql",
+		}},
 		{"sandbox", os.Getenv("PG04_SANDBOX_MIGRATION_DATABASE_URL"), []string{"0070_dashboard_link_actions.sql", "0071_dashboard_phone_counts.sql", "0072_dashboard_notification_read_all.sql", "0075_checkout_customer_details.sql", "0077_dashboard_billing_usage.sql", "0078_invoice_numbers.sql", "0079_public_invoice_details.sql", "0080_invoice_public_draft.sql", "0081_public_invoice_receipts.sql", "0086_phone_reconnect_delete.sql", "0091_plan_feature_enforcement.sql", "0092_plan_document_feature_guards.sql", "0093_payment_plan_resource_usage.sql", "0095_receiving_account_consent_delete.sql", "0102_dashboard_financial_plan_limits.sql", "0107_workspace_projection_readiness.sql", "0108_pending_phone_receipt_recovery.sql", "0109_checkout_return_origin.sql"}},
 		{"live", os.Getenv("PG04_LIVE_MIGRATION_DATABASE_URL"), []string{"0070_dashboard_link_actions.sql", "0071_dashboard_phone_counts.sql", "0072_dashboard_notification_read_all.sql", "0075_checkout_customer_details.sql", "0077_dashboard_billing_usage.sql", "0078_invoice_numbers.sql", "0079_public_invoice_details.sql", "0080_invoice_public_draft.sql", "0081_public_invoice_receipts.sql", "0086_phone_reconnect_delete.sql", "0091_plan_feature_enforcement.sql", "0092_plan_document_feature_guards.sql", "0093_payment_plan_resource_usage.sql", "0095_receiving_account_consent_delete.sql", "0102_dashboard_financial_plan_limits.sql", "0107_workspace_projection_readiness.sql", "0108_pending_phone_receipt_recovery.sql", "0109_checkout_return_origin.sql"}},
 	}
