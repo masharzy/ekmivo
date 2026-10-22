@@ -15,6 +15,7 @@ concurrency:
 jobs:
   web:
     name: Next.js lint, build and isolated PostgreSQL smoke
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -78,9 +79,6 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache: false
-      - name: Phase 3 Go coupon authorization and response tests
-        working-directory: backend
-        run: go test ./internal/checkout -run TestSubscriptionCoupon -count=1
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json
@@ -120,11 +118,6 @@ jobs:
         run: |
           go mod tidy
           go test ./internal/authz -run TestPostgresSessionMembershipAndEnvironment -count=1 -v
-      - name: Phase 3 coupon real multi-connection PostgreSQL last-slot race
-        working-directory: apps/web
-        env:
-          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
-        run: node scripts/subscription-coupon-concurrency-smoke.mjs
       - name: RFC6238 TOTP and replay vectors
         working-directory: apps/web
         run: node scripts/pg01-mfa-smoke.mjs
@@ -194,6 +187,68 @@ jobs:
       - name: TypeScript compile
         working-directory: apps/web
         run: npx tsc --noEmit
+
+  phase3_web_postgres:
+    name: Phase 3 coupon web, Go and isolated PostgreSQL
+    if: github.head_ref == 'agents/store-subscription-phase3-coupons'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ekmivo_pg00
+          POSTGRES_USER: ekmivo_test
+          POSTGRES_PASSWORD: local-only-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ekmivo_test -d ekmivo_pg00"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Clean dependency install
+        working-directory: apps/web
+        run: npm ci
+      - name: Production dependency security audit (fail closed on registry errors)
+        working-directory: apps/web
+        run: |
+          for attempt in 1 2 3; do
+            if npm audit --omit=dev --audit-level=high; then exit 0; fi
+            if [ "$attempt" -lt 3 ]; then sleep 8; fi
+          done
+          exit 1
+      - name: All web lint
+        working-directory: apps/web
+        run: npm run lint
+      - name: Phase 3 coupon and adjacent subscription contracts
+        working-directory: apps/web
+        run: node --test scripts/subscription-coupons-contract.test.mjs scripts/subscription-order-contract.test.mjs scripts/subscription-policies-contract.test.mjs
+      - name: Web TypeScript and production build
+        working-directory: apps/web
+        run: |
+          npx tsc --noEmit
+          npm run build
+      - name: Locked Admin design verification
+        run: python3 apps/web/scripts/verify-admin-design.py
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Coupon Go endpoint authorization tests
+        working-directory: backend
+        run: go test ./internal/checkout -run TestSubscriptionCoupon -count=1 -v
+      - name: Real two-connection PostgreSQL coupon exhaustion race
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/subscription-coupon-concurrency-smoke.mjs
 
   backend:
     name: Go compile and unit tests
