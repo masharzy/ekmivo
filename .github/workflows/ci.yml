@@ -42,7 +42,27 @@ jobs:
         run: npm ci
       - name: Production dependency security audit
         working-directory: apps/web
-        run: npm audit --omit=dev --audit-level=high
+        shell: bash
+        run: |
+          # Retry npm registry transport failures, never waive real advisories.
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            if npm audit --omit=dev --audit-level=high --fetch-timeout=30000 --fetch-retries=0 >"$log" 2>&1; then
+              cat "$log"
+              rm -f "$log"
+              exit 0
+            fi
+            cat "$log"
+            if grep -Eqi 'audit endpoint returned an error|network timeout|503 Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND' "$log" && [ "$attempt" -lt 3 ]; then
+              rm -f "$log"
+              sleep "$((attempt * 5))"
+              continue
+            fi
+            rm -f "$log"
+            exit 1
+          done
+          exit 1
       - name: Lint all web sources
         working-directory: apps/web
         run: npm run lint
