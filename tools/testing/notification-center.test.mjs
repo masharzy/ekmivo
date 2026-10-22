@@ -30,8 +30,11 @@ test("dropdown uses Hind Siliguri and links to actual notifications route",()=>{
  const css=load("apps/web/src/components/notifications-reference.css");
  const nav=load("apps/web/src/lib/dashboard-navigation.ts");
  assert.match(css,/ref-notifications\[lang="bn"\].*font-hind-siliguri/);
- assert.match(dropdown,/payments\/notifications/);
+ assert.match(dropdown,/href="\/notifications"/);
  assert.match(dropdown,/setTotalUnread/);
  assert.match(nav,/"events","notifications"/);
- assert.match(load("apps/web/src/app/[locale]/notifications/page.tsx"),/payments\/notifications/);
+ const entry=load("apps/web/src/app/[locale]/notifications/page.tsx");
+ assert.match(entry,/preferredWorkspaceFor\(user\.id\)/);
+ assert.match(entry,/paymentContext&&<PaymentNotificationCenter/);
+ assert.doesNotMatch(entry,/redirect\(`\/w\//);
 });

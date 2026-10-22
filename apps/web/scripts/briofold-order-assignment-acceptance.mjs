@@ -20,6 +20,8 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
    VALUES(${id},${workspace},'live',${"ASSIGN-CI-"+id.slice(0,8)},'manual',${db.json({name:"Fictional recipient",phone:"01700000000",address:"Fictional route, test only"})},0,0,${owner})`;
   await insertOrder(order,store);
   await insertOrder(otherOrder,foreign);
+  await db`INSERT INTO pg13_control_audit(workspace_id,actor_id,action)
+   VALUES(${store},${owner},'ci-settings-updated'),(${foreign},${owner},'foreign-settings-updated')`;
   const [product]=await db`INSERT INTO commerce_products(workspace_id,environment,name)
    VALUES(${store},'live','Fictional packing item') RETURNING id`;
   const barcode="BRIOFOLD-CI-"+randomUUID().slice(0,8);
@@ -73,11 +75,27 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   assert.equal((await read(viewer)).assignee_id,null,'viewer saw an assigned staff UUID');
   assert.equal((await read(viewer)).history[0].assignee_id,null,'viewer assignment history leaked team identity');
   assert.equal((await read(viewer)).history[0].assigned,true,'viewer audit state was masked incorrectly');
+  const activity=async(who=owner,realm='live',scope=store,category='',query='')=>(await db`
+   SELECT briofold_unified_activity(${scope},${realm},${who},${category},${query},0) data`)[0].data;
+  const orderEvents=await activity(owner,'live',store,'orders');
+  assert.equal(orderEvents.items[0].action,'assign-order','unified activity ignored durable commerce audit');
+  assert.equal((await activity(owner,'sandbox',store,'orders')).items.length,0,'activity ignored realm');
+  assert.ok((await activity(owner,'live',store,'settings')).items.some(x=>x.action==='ci-settings-updated'),
+   'Store-wide settings audit missing');
+  assert.ok(!(await activity(owner,'live',store,'settings')).items.some(x=>x.action==='foreign-settings-updated'),
+   'Store activity leaked foreign settings');
+  const viewEvents=await activity(viewer,'live',store,'orders');
+  assert.equal(viewEvents.can_export,false,'viewer could export operational event history');
+  assert.equal(viewEvents.items[0].actor_name,'Team member','viewer saw actor identity');
+  assert.equal((await activity(viewer,'live',store,'settings')).items.length,0,'viewer saw restricted settings audit');
+  await assert.rejects(()=>activity(owner,'live',foreign),e=>e.code==='42501');
+  await assert.rejects(()=>activity(owner,'live',store,'unsupported'),e=>e.code==='22023');
   for(const role of ["ekmivo_financial_projection","ekmivo_financial_runtime"]){
    assert.equal((await db`SELECT has_table_privilege(${role},'commerce_order_assignments','UPDATE') ok`)[0].ok,false);
    assert.equal((await db`SELECT has_function_privilege(${role},'commerce_assignment_write(uuid,text,uuid,uuid,jsonb)','EXECUTE') ok`)[0].ok,true);
    assert.equal((await db`SELECT has_function_privilege(${role},'commerce_order_scan(uuid,text,uuid,text,integer,text,text)','EXECUTE') ok`)[0].ok,true);
    assert.equal((await db`SELECT has_function_privilege(${role},'commerce_order_report(uuid,text,uuid,date,date,text,text,uuid)','EXECUTE') ok`)[0].ok,true);
+   assert.equal((await db`SELECT has_function_privilege(${role},'briofold_unified_activity(uuid,text,uuid,text,text,integer)','EXECUTE') ok`)[0].ok,true);
   }
   const makeContext=async(token)=>{const ctx=await browser.newContext();await ctx.addCookies([
    {name:"ekmivo-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
@@ -124,6 +142,12 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
      assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'order reporting horizontal overflow');
      responsive++;
+     const activityResponse=await page.goto(origin+'/settings/activity');
+     assert.equal(activityResponse.status(),200);
+     await page.getByRole('heading',{name:locale==='bn'?'কার্যক্রমের ইতিহাস':'Activity log'}).waitFor();
+     assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
+     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'unified activity horizontal overflow');
+     responsive++;
     }
    }
   }
@@ -165,10 +189,17 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   await page.getByRole('combobox',{name:'Status'}).selectOption('cancelled');
   await page.getByRole('button',{name:'Apply filters'}).click();
   await page.getByText('No orders match these filters.').waitFor();
+  assert.equal((await page.goto(origin+'/settings/activity')).status(),200);
+  await page.getByRole('heading',{name:'Activity log'}).waitFor();
+  await page.getByText('assign-order',{exact:true}).first().waitFor();
+  const [eventDownload]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Download this page CSV'}).click()]);
+  const eventCsv=await readFile(await eventDownload.path(),'utf8');
+  assert.match(eventCsv,/"orders","assign-order"/,'redacted activity CSV did not include persisted event action');
+  assert.doesNotMatch(eventCsv,/01700000000|secret_cipher|recipient/,'activity export disclosed sensitive event fields');
   await db`UPDATE commerce_orders SET status='cancelled' WHERE id=${order}`;
   await assert.rejects(()=>write({id:order,revision:3,assignee_id:null}),e=>e.code==="42501","closed order changed assignment");
-  assert.equal(responsive,32);
-  console.log(`BRIOFOLD ORDER ASSIGNMENT + SCAN + REPORT PASS: Store/realm/RBAC, serial optimistic revision, idempotent replay, immutable audit, exact barcode/SKU, operational aggregates/filters/export permissions and Go/Next/browser; ${responsive} EN/BN theme/viewport cases`);
+  assert.equal(responsive,48);
+  console.log(`BRIOFOLD ORDER ASSIGNMENT + SCAN + REPORT + ACTIVITY PASS: Store/realm/RBAC, serial optimistic revision, idempotent replay, immutable audit, exact barcode/SKU, order aggregates and redacted activity/export permissions; ${responsive} EN/BN theme/viewport cases`);
  }finally{
   if(ownerContext)await ownerContext.close();
   if(viewerContext)await viewerContext.close();

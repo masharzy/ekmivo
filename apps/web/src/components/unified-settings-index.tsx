@@ -10,7 +10,8 @@ export function UnifiedSettingsIndex({locale,mode}:{locale:"en"|"bn";mode:Busine
    <p>{bn?"ব্যবসার প্রয়োজনীয় সংযোগ ও পছন্দ পরিচালনা করুন।":"Manage your business connections and preferences."}</p>
   </header>
   <div className={styles.groups}>{unifiedSettings.map(group=>{
-   const items=group.items.filter(item=>enabledUnifiedService(mode,item.service));
+   const items=group.items.filter(item=>enabledUnifiedService(mode,item.service)&&
+    (item.slug!=="activity"||mode!=="ai"||process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"));
    if(!items.length)return null;
    return <details className={styles.group} key={group.slug} open={group.slug==="payment"&&mode!=="ai"}>
     <summary>{group.slug==="payment"&&mode==="ai"?(bn?"ডিভাইস":"Devices"):group[locale]}<span className={styles.count}>{items.length}</span></summary>

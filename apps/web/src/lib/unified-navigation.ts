@@ -39,7 +39,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"webhooks",en:"Webhooks & alerts",bn:"ওয়েবহুক ও অ্যালার্ট",section:"webhooks",service:"payments"},
   {slug:"integrations",en:"Integrations",bn:"ইন্টিগ্রেশন",section:"integrations",service:"payments"},
   {slug:"api-docs",en:"API documentation",bn:"API নির্দেশনা",section:"api-docs",service:"payments",external:true},
-  {slug:"activity",en:"Activity logs",bn:"কার্যক্রমের ইতিহাস",section:"events",service:"payments"},
+  {slug:"activity",en:"Activity logs",bn:"কার্যক্রমের ইতিহাস",section:"events",service:"common"},
  ]},
  {slug:"team",en:"Team & permissions",bn:"টিম ও অনুমতি",items:[
   {slug:"team",en:"Team management",bn:"টিম পরিচালনা",section:"team",service:"common"},

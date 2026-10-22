@@ -143,6 +143,17 @@ test("notifications open for the preferred single Store without a legacy workspa
  assert.match(entry,/paymentContext&&<PaymentNotificationCenter/);
  assert.doesNotMatch(entry,/workspacesFor|redirect\(`\/w\//);
 });
+test("unified operational activity preserves the financial event source",()=>{
+ for(const mode of ["ai","commerce","both"])
+  assert.equal(navigation.unifiedDestination(mode,"settings",["activity"]).section,"events");
+ const route=source("components/unified-merchant-route.tsx");
+ assert.match(route,/BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"/);
+ assert.match(route,/BriofoldUnifiedActivity/);
+ assert.match(route,/section="events" service="payments"/);
+ const sql=source("components/briofold-unified-activity.tsx");
+ assert.match(sql,/briofold_unified_activity/);
+ assert.match(sql,/no empty history has been assumed/);
+});
 test("canonical product gates cover all roots, settings and valid subroutes",()=>{
  for(const mode of ["ai","commerce","both","off"]){
   for(const item of navigation.unifiedNavigation){

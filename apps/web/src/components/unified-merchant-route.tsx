@@ -23,12 +23,14 @@ import {CommentAutomation} from "./comment-automation";
 import {BriofoldGrowthReports} from "./briofold-growth-reports";
 import {GrowthOperationsPage} from "./growth-operations-page";
 import {BriofoldOrderReport} from "./briofold-order-report";
+import {BriofoldUnifiedActivity} from "./briofold-unified-activity";
 
 export const unifiedDynamic="force-dynamic";
 
-export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,paymentLinksMode,reportFilters}:{
+export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,paymentLinksMode,reportFilters,activityFilters}:{
  locale:string;root:UnifiedRoot;view?:string[];thread?:string;paymentLinksMode?:"requests";
  reportFilters?:Record<string,string|string[]|undefined>;
+ activityFilters?:Record<string,string|string[]|undefined>;
 }){
  if(thread&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(thread))notFound();
  const locale=raw==="en"?"en":"bn";
@@ -45,12 +47,18 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  const destination=unifiedDestination(workspace.mode,root,view);
  if(!destination)notFound();
  if(root==="reports"&&view[0]==="orders"&&process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED!=="true")notFound();
+ if(root==="settings"&&view[0]==="activity"&&workspace.mode==="ai"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED!=="true")notFound();
  const {section,service,kind,detailId}=destination;
  const paymentContext=service==="payments"
   ?await paymentContextFor(workspace,user.id,undefined)
   :undefined;
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :root==="settings"&&view[0]==="activity"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"
+   ?<><BriofoldUnifiedActivity workspaceId={workspace.id} actorId={user.id} locale={locale}
+       environment={paymentContext?.environment??"live"} filters={activityFilters}/>
+     {paymentContext&&<DashboardContent locale={locale} user={user} workspace={workspace}
+       section="events" service="payments" paymentContext={paymentContext} canonicalRoutes framed/>}</>
   :root==="reports"&&view[0]==="orders"
    ?<BriofoldOrderReport workspaceId={workspace.id} actorId={user.id} locale={locale}
      environment={paymentContext?.environment??"live"} filters={reportFilters}/>
