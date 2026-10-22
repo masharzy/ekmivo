@@ -18,11 +18,11 @@ ALTER TABLE briofold_growth_suppression_events
  ALTER COLUMN actor_id DROP NOT NULL,
  ADD COLUMN provider_message_id uuid REFERENCES inbox_messages(id);
 
-CREATE FUNCTION briofold_growth_provider_opt_out(connection_id uuid, provider_message text)
+CREATE FUNCTION briofold_growth_provider_opt_out(p_connection_id uuid, provider_message text)
  RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE c record;channel_name text;scope text;inserted_count bigint;
 BEGIN
- IF connection_id IS NULL OR provider_message IS NULL OR length(provider_message)>250 THEN
+ IF p_connection_id IS NULL OR provider_message IS NULL OR length(provider_message)>250 THEN
   RETURN false;
  END IF;
  -- The message must be a durable, actually ingested inbound customer event.
@@ -37,7 +37,7 @@ BEGIN
   AND s.environment=cn.environment AND s.kind='thread' AND s.source_id=t.id
  JOIN briofold_customers profile ON profile.id=s.customer_id
   AND profile.workspace_id=cn.workspace_id AND profile.environment=cn.environment
- WHERE cn.id=connection_id AND cn.enabled AND cn.provider IN ('ms','ig','wa')
+ WHERE cn.id=p_connection_id AND cn.enabled AND cn.provider IN ('ms','ig','wa')
   AND m.provider_id=provider_message AND m.sender='customer' AND m.type='text'
   AND m.state='received' AND profile.deleted_at IS NULL AND profile.merged_into IS NULL
  LIMIT 1;
