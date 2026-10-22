@@ -1,6 +1,6 @@
 # Platform subscription coupons — Phase 3
 
-Status: **NOT SEALED — implementation in progress**. This filename is the requested final evidence location, not a seal claim.
+Status: **PHASE 3 — CODE-LEVEL SEALED (2026-10-22)**. This seals the independently implementable Platform Subscription Coupon code and automated fixture acceptance only. **NOT MERGED, NOT DEPLOYED, NOT PRODUCTION-RELEASED**. Owner/provider physical tests, Phase 4 intent/Phase 5 checkout integration and the production runtime privilege release gate remain separate. The dated sections below record historical checkpoints; the final seal matrix at the bottom supersedes earlier `NOT SEALED` notes.
 
 Branch: agents/store-subscription-phase3-coupons. Base: 1cefe6393a702974052d422e549018de6388c74f (Phase 2 PR #135 merged). No production migration or deployment authorized/performed by this checkpoint. This is Store-first Phase 3, independent of Briofold merchant commerce.
 
@@ -12,13 +12,13 @@ Branch: agents/store-subscription-phase3-coupons. Base: 1cefe6393a702974052d422e
 
 0145 (control only) fixes NULL percentage acceptance in the existing authoring function and adds immutable version snapshots for future saved/status revisions with FORCE RLS and no raw runtime grants. Snapshots begin at each existing row's current revision; historical revisions before this migration are not fabricated. Existing post-use editing restrictions remain until a complete safe versioned-edit lifecycle is implemented. Existing coordinator registers 0145 after 0144. No duplicate coupon subsystem.
 
-## Remaining automatable scope — all OPEN
+## Historical gap ledger (opened before final automation)
 
 Go Admin/session API authorization including MFA; server authoritative Apply/Remove/requote with offer/product/term/tax/stacking restrictions, bounded exact math and stable EN/BN errors; transaction-safe reservation limits/expiry/unknown-outcome reconciliation and verified-payment-only idempotent redemption; per-Store first-purchase limits, history/counters/details UI, post-use version authoring, browser parity/draft/retry behavior. Actual isolated PostgreSQL concurrency/RLS/auth tests, Go/TS/lint/build/browser suite and final-head CI must all pass before seal. No Phase4–6 orchestration is claimed.
 
 ## Migration and rollback
 
-0145 is unapplied. Review numbering against current main and other PRs before integration. Use the existing migration coordinator against an authorized isolated control branch first; no local Docker. Do not apply to physical financial realms. Invalid existing NULL-percent rows deliberately block migration rather than silently changing business terms. Roll back runtime to previous tested source while retaining additive version history; never delete coupon/redemption/invoice data. Final exact source SHA, tests, CI and external manual gates will be recorded here/PR once available.
+0145 was subsequently applied to **production control only** with explicit owner authorization and verified SHA256 below. 0146–0149 remain unapplied. Review migration order against current main and other PRs before any controlled integration; do not apply to financial Live/Sandbox realms. Invalid pre-existing NULL-percent rows deliberately block migration instead of silently changing business terms. Roll back runtime to prior tested source while retaining additive version history; never delete coupon/redemption/invoice data.
 
 ## 2026-10-22 continuation (NOT SEALED)
 
@@ -56,3 +56,27 @@ This section supersedes the earlier open implementation items only where concret
 2. Authenticated HTTP tests for session/MFA, authorized Store owner, wrong tenant, unauthorized member/admin and Apply/Remove/refresh/reload parity. Browser responsive light/dark/EN/BN and keyboard/focus/accessibility checks on the Admin history/tax screens and actual intent-backed coupon control. Do not rely only on static source contracts.
 3. Resolve or explicitly release-gate the pre-existing production `ekmivo_runtime` `BYPASSRLS`/`neon_superuser` privilege path after a controlled dependency review. Do not blindly revoke role membership or disturb other services.
 4. Only after verified source and CI update exact SHA, links, outcome matrix and independent manual/provider ledger. **No merge, deployment, 0146–0149 production migration, Phase 4 implementation or seal is asserted here.**
+
+## Final 2026-10-22 Phase 3 code-level seal — replaces historical open checklist
+
+**Tested code SHA:** `9647c24a07f615b343664eac2c44480cfc6e0922` on `agents/store-subscription-phase3-coupons` / [PR #137](https://github.com/masharzy/ekmivo/pull/137). **Focused CI:** [Foundation run 39725822482](https://github.com/masharzy/ekmivo/actions/runs/39725822482), Phase 3 coupon web, Go and isolated PostgreSQL **SUCCESS** on that exact SHA, including live role-downgrade authorization assertions. Other web/general Go/financial Docker/Android jobs skipped by branch-specific conditions; ordinary branches/main retain their original workflow. A later evidence-only commit requires the same focused CI to establish final-head status.
+
+| Code-level acceptance | Evidence and result |
+| --- | --- |
+| Coupon authoring, eligibility and historical edits | 0145–0147 validation, product/term/offer restrictions, pause-before-edit optimistic versioning, immutable snapshots, capacity floors, searchable/paginated Admin revisions/redemptions — **PASS** in rollback-only Neon SQL and Node contracts |
+| Quote arithmetic and owner-approved tax | 0148 approved product/term policy + revision; integer percent/fixed/cap and after-discount half-up tax; missing/stale policy fails closed — **PASS** with fictional rollback-only 10% test, not an approved tax rate |
+| GET/POST Apply/Remove, reload, unknown response | 0149 authenticated GET route registered in Go and Next; browser detects Go nested error envelopes, preserves keys, normalizes arbitrary fetch exceptions, recovers server state via GET — **PASS** in real Go/PG HTTP and Chromium client simulations |
+| Limits, concurrency, invoice outcome | Real ephemeral PostgreSQL **two independent connections** racing for a single reservation: **1 success / 1 rejected / 0 paid redemption**; pending invoices retain slots; synthetic independently marked paid invoice settles once and replay does not duplicate — **PASS** |
+| Session, authorization, CSRF, tenancy | Go handlers backed by actual ephemeral PostgreSQL sessions: anonymous/revoked denied, other Store denied, downgraded owner/editor denied, Super Admin + session MFA required, non-super denied, POST missing Origin denied, stale quote rejected, idempotency replay stable — **PASS** |
+| Web/API quality gates | `npm ci`, retrying but fail-closed production `npm audit --omit=dev --audit-level=high`, full web lint (0 errors), coupon/order/policy contracts, TypeScript compile, production Next.js build, Admin design validator, targeted Go checkout suite — **all PASS** on run 39725822482 |
+| Admin browser responsive/accessibility | Actual coupon Admin TSX + production Admin styles in isolated Chromium: **40/40** EN/BN × light/dark × 320/375/768/1024/1440 × list/editor cases; independently scrollable wide tables, semantic dialog, keyboard focus; screenshots archived in CI artifact `phase3-coupon-admin-screenshots` — **PASS** |
+| Coupon control browser parity | Actual React coupon control hydrated in Chromium across EN/BN, light/dark, 320/375/1440: invalid code, Apply with lost POST response, GET recovery, reload, Remove/requote, verified total and no page overflow; artifact `phase3-coupon-client-screenshots` — **PASS** with fictional API replies |
+
+### Boundaries after code seal (not waived by green CI)
+
+1. **Production security release gate — OPEN.** Existing production control user `ekmivo_runtime` has `BYPASSRLS` plus `neon_superuser` membership. No blind `REVOKE` or service-breaking credential change was made. Privileged-role usage and dependencies require an owner-approved least-privilege remediation and revalidation before deploying coupon runtime/functions. Synthetic CI roles do not certify the existing production role.
+2. **Production migrations/deployment — NOT DONE.** Only control `0145` was earlier applied by explicit authorization (SHA256 `78123a374cbc771e7138fdc813f3650b9877ee96cefa545aac64f5535d79ce1f`; observed 2 invoices, 8 workspaces, 6 users unchanged). Control `0146`–`0149` are **not applied**. No application rollout, no financial Live/Sandbox changes and no invented tax rate/offer policy. Controlled migration, backout, source pairing and owner-approved tax rules are separate release operations.
+3. **Phase dependencies — OPEN.** The coupon control requires a genuine Phase 4 authenticated, version-pinned opaque purchase intent and Phase 5 Order Summary to mount. The existing legacy preview remains purchase-disabled. Phase 6 verified provider/payment handoff and independent reconciliation are not simulated by a browser success flag and are outside this code seal.
+4. **Owner manual/provider ledger — PENDING, not failed or passed.** See `docs/MANUAL-VERIFICATION.md`: real MFA/Admin interaction, legal tax approval, actual device/provider reconciliation, billing/receipt and production release acceptance remain for the owner. The synthetic invoice and fictional Playwright fixtures are **not** physical or monetary evidence.
+
+**Seal determination:** Phase 3's independent code, migrations, Admin functionality, quote contract, defensive browser integration surface, concurrency and automated security gates meet the **CODE-LEVEL SEALED** bar. The PR stays unmerged/draft until separately authorized integration and production security gates; **do not begin Phase 4 here**.
