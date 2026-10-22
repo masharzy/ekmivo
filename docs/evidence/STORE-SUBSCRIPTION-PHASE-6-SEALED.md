@@ -1,11 +1,23 @@
-# Ekmivo Store-first subscription Phase 6 — NOT SEALED (review candidate)
+# Ekmivo Store-first subscription Phase 6 — CODE-LEVEL SEALED
 
-**Status:** IN PROGRESS / DEPENDENCY-BLOCKED, **not** PHASE 6 — CODE-LEVEL SEALED.  
+**Current status (supersedes the historical checkpoints below): PHASE 6 — CODE-LEVEL SEALED.** Not merged, not migrated, not deployed; all purchase and payment flags OFF. Real provider/device and controlled production cutover remain operator-owned Phase 7 gates.  
 **Branch:** `agents/store-subscription-phase6-payment-activation`  
+**Automated seal source SHA:** `5bccfa40a8c4b696533b90d4d361ce827a42bb70`.  
+**Final exact-head CI:** [Focused Store Subscription Phase 6 — 39747536415](https://github.com/masharzy/ekmivo/actions/runs/39747536415) **SUCCESS**, [Foundation CI — 39747541439](https://github.com/masharzy/ekmivo/actions/runs/39747541439) **SUCCESS**.  
 **Source base:** `main` at `1cefe6393a702974052d422e549018de6388c74f`.  
 **Change set:** See branch tip / draft PR commits (the evidence document itself is committed after the implementation).  
 **Implementation date:** 2026-10-22.  
-**Migration:** `0150_platform_subscription_payment_handoff.sql` (control database ONLY; **not applied**, not production-authorized).
+**Final migration:** `0153_platform_subscription_payment_handoff.sql` (control database ONLY; **not applied**, not production-authorized). The early `0150` references below document superseded, unapplied review history.
+
+## 2026-10-22 — Final automated Phase 6 seal decision
+
+- Phase 3 #137, Phase 4 #140 and Phase 5 #141 code-level predecessor sources are integrated on this branch, with dependencies ordered 0145–0149 → 0151 → 0152 → Phase 6 0153. Every migration remains unapplied in production. The original migration-0150 collision is resolved.
+- **Real disposable PostgreSQL 17**: quote/confirm after actor/primary Store/role checks, three immutable accepted legal versions, expiring quotes, price/coupon revision, idempotent parallel binds, one redemption only after verified invoice, denied forged runtime settlement, late verified money retained for manual recovery, receiver mismatch rejection. The finance verification callback used by Phase 6-specific control fixture is stubbed, and the broader Foundation `pg04-financial-smoke` independently verifies financial/control realm migration and durability; no real provider proof is claimed.
+- **Wallet enforcement**: SaaS `SAAS-{invoice}` payer GET and POST lock are now restricted to one unambiguous online, approved live parser-backed account per method; multiple same-method accounts fail closed until verified. Merchant checkout continues independently. Unit tests cover parser revocation, offline, multiple-account, forged method/account and merchant isolation.
+- Exact published Go race/vet, Next TypeScript/ESLint/build, pricing/legal/coupon/auth compatibility, Foundation financial/Android CI and real PostgreSQL/Go contracts all passed at the source SHA above. No production wallet tokens, SMS, transfers or migrations were used.
+- **Rollout boundary**: `EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED`, `EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED`, `EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED` and `EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED` remain OFF. Phase 7 operator manual/provider acceptance and deployment approvals are separate. If purchase initiation is disabled after launch, do not automatically disable verified in-flight reconciliation.
+
+All later occurrences of **NOT SEALED**, `0150`, or old Phase 5 commit references in this file are historical progress notes from before the final above evidence. They do not describe the sealed code-level state.
 
 ## Scope and dependency order
 
