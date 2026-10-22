@@ -121,7 +121,9 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
      for(const route of routes){
       const response=await page.goto(origin+route);
       assert.equal(response.status(),200,`${route} HTTP failed at ${locale}/${theme}/${width}`);
-      await page.locator("main h1, main h2").first().waitFor();
+      const ready=route.includes("/transactions/")||route.startsWith("/sms-data/")
+       ?".pg-operation-detail":route.startsWith("/settings/")?".pg-operations":"main h1";
+      await page.locator(ready).first().waitFor();
       assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${route} overflows ${locale}/${theme}/${width}`);
       assert.equal(await page.locator('main [role="alert"]').count(),0,`${route} shows data/UI error`);
