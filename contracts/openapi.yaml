@@ -110,6 +110,83 @@ paths:
     $ref: './payment-extensions.yaml#/paths/~1v1~1workspaces~1{workspaceID}~1privacy'
   /v1/workspaces/{workspaceID}/billing:
     $ref: './payment-extensions.yaml#/paths/~1v1~1workspaces~1{workspaceID}~1billing'
+  /v1/workspaces/{workspaceID}/subscription-purchases/{intentID}/payment:
+    parameters:
+      - name: workspaceID
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: intentID
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      summary: Authenticated Store subscription invoice and independently checked Live payment status
+      description: Requires verified Store membership and the exact handoff record. No browser state is trusted as proof. Default-off until Phase 2-5 integration.
+      operationId: getSubscriptionPurchasePayment
+      responses:
+        '200':
+          description: Server-projected SaaS subscription payment status
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [intent_id,invoice_id,amount_minor,currency,status,expires_at,verified]
+                properties:
+                  intent_id: {type: string, format: uuid}
+                  invoice_id: {type: string, format: uuid}
+                  amount_minor: {type: integer, format: int64, minimum: 1}
+                  currency: {type: string, enum: [BDT]}
+                  status: {type: string, enum: [pending,verifying,completed,expired,cancelled,recovery_required]}
+                  expires_at: {type: string, format: date-time}
+                  verified: {type: boolean}
+        '401': {description: Missing or invalid session}
+        '403': {description: Store membership denied}
+        '404': {description: No scoped handoff}
+        '503': {description: Financial source or predecessor unavailable}
+    post:
+      summary: Issue/resume exactly one platform-receiving Live payment capability for an existing confirmed SaaS invoice
+      description: Requires owner/admin billing authorization, exact signed quote and legal acceptance snapshots. Never creates a buyer Store receiving account.
+      operationId: createOrResumeSubscriptionPayment
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 16, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [quote_id, invoice_id]
+              properties:
+                quote_id: {type: string, format: uuid}
+                invoice_id: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Reused or created immutable Live checkout capability
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [intent_id,invoice_id,amount_minor,currency,checkout_token,payment_path,status]
+                properties:
+                  intent_id: {type: string, format: uuid}
+                  invoice_id: {type: string, format: uuid}
+                  amount_minor: {type: integer, format: int64, minimum: 1}
+                  currency: {type: string, enum: [BDT]}
+                  checkout_token: {type: string, pattern: '^[A-Za-z0-9_-]{43}$'}
+                  payment_path: {type: string}
+                  status: {type: string}
+        '401': {description: Missing or invalid session}
+        '403': {description: Store authorization or origin denied}
+        '409': {description: Immutable quote, invoice, or capability conflict}
+        '422': {description: Invalid handoff request}
+        '503': {description: Platform receiver or approved source unavailable}
   /v1/workspaces/{workspaceID}/billing/{invoiceID}/reconcile:
     $ref: './payment-extensions.yaml#/paths/~1v1~1workspaces~1{workspaceID}~1billing~1{invoiceID}~1reconcile'
   /v1/workspaces/{workspaceID}/billing/free:
