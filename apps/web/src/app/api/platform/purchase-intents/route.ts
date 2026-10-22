@@ -16,14 +16,16 @@ export async function POST(request:NextRequest){
  const length=Number(request.headers.get("content-length")||0);
  if(!Number.isSafeInteger(length)||length>2048)return NextResponse.json({error:{code:"INVALID_SELECTION"}},{status:422});
  try{
-  const data=await request.json() as {offerKey?:unknown;term?:unknown;quantity?:unknown;coupon?:unknown;legacyPlanId?:unknown};
+  const data=await request.json() as {offerKey?:unknown;term?:unknown;quantity?:unknown;coupon?:unknown;legacyPlanId?:unknown;versionId?:unknown};
   if(!data||typeof data.offerKey!=="string"||typeof data.term!=="string"||
     (data.quantity!==undefined&&typeof data.quantity!=="number")||
     (data.coupon!==undefined&&typeof data.coupon!=="string")||
-    (data.legacyPlanId!==undefined&&typeof data.legacyPlanId!=="string"))
+    (data.legacyPlanId!==undefined&&typeof data.legacyPlanId!=="string")||
+    (data.versionId!==undefined&&typeof data.versionId!=="string"))
    throw new IntentError("INVALID_SELECTION",422);
   const token=await createPurchase({offerKey:data.offerKey,term:data.term,
    quantity:data.quantity as number|undefined,coupon:data.coupon as string|undefined,
+   versionId:data.versionId as string|undefined,
    legacyPlanId:data.legacyPlanId as string|undefined,
    idempotencyKey:request.headers.get("Idempotency-Key")||undefined});
   return NextResponse.json({intent:token,resume_url:`/subscribe/resume/${token}`},
