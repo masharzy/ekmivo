@@ -56,10 +56,15 @@ async function couponLookup(code:string|undefined,offerKey:string){
  if(!/^[A-Z0-9][A-Z0-9_-]{2,31}$/.test(value))throw new IntentError("COUPON_INVALID",422);
  // Preliminary eligibility only; Phase 3 must revalidate on every quote/confirm.
  const rows=await database()`
-  SELECT id FROM platform_subscription_coupons WHERE code_normalized=${value}
-    AND status='active' AND (starts_at IS NULL OR starts_at<=now())
-    AND (expires_at IS NULL OR expires_at>now())
-    AND (cardinality(eligible_offer_keys)=0 OR ${offerKey}=ANY(eligible_offer_keys))`;
+  SELECT c.id FROM platform_subscription_coupons c
+    JOIN platform_subscription_offers o ON o.offer_key=${offerKey}
+    JOIN platform_subscription_offer_versions v ON v.id=o.current_version_id
+  WHERE c.code_normalized=${value} AND c.status='active'
+    AND (c.starts_at IS NULL OR c.starts_at<=now())
+    AND (c.expires_at IS NULL OR c.expires_at>now())
+    AND (cardinality(c.eligible_offer_keys)=0 OR ${offerKey}=ANY(c.eligible_offer_keys))
+    AND (cardinality(c.eligible_products)=0 OR o.product=ANY(c.eligible_products))
+    AND (cardinality(c.eligible_terms)=0 OR v.term=ANY(c.eligible_terms))`;
  if(!rows.length)throw new IntentError("COUPON_UNAVAILABLE");
  return String(rows[0].id);
 }
@@ -133,7 +138,7 @@ export async function bindIdentity(token:string){
  const rows=await database()`
   UPDATE platform_subscription_purchase_intents
   SET actor_id=${u.id}::uuid,revision=revision+CASE WHEN actor_id IS NULL THEN 1 ELSE 0 END,updated_at=now()
-  WHERE public_token_sha256=${hashToken(token)} AND status='selected' AND expires_at>now()
+  WHERE public_token_sha256=${hashToken(token)} AND status IN ('selected','quoted') AND expires_at>now()
    AND (actor_id=${u.id}::uuid OR (actor_id IS NULL AND guest_session_sha256=${g}))
   RETURNING id`;
  if(!rows.length)throw new IntentError("INTENT_NOT_FOUND",404);
@@ -148,7 +153,7 @@ export async function bindStore(token:string,storeId:string){
   SET workspace_id=${storeId}::uuid,revision=revision+CASE WHEN workspace_id IS NULL THEN 1 ELSE 0 END,updated_at=now()
   WHERE i.public_token_sha256=${hashToken(token)} AND i.actor_id=${u.id}::uuid
    AND (i.workspace_id IS NULL OR i.workspace_id=${storeId}::uuid)
-   AND i.status='selected' AND i.expires_at>now()
+   AND i.status IN ('selected','quoted') AND i.expires_at>now()
    AND EXISTS (SELECT 1 FROM workspace_members m JOIN app_users u ON u.id=m.user_id
       WHERE m.workspace_id=${storeId}::uuid AND m.user_id=${u.id}::uuid
         AND m.role IN ('owner','admin') AND u.disabled_at IS NULL
@@ -163,7 +168,7 @@ export async function resumePurchase(token:string){
  // Ownership is enforced after authentication on the subsequent GET.
  if(!signedIn)return {stage:"login" as const,intent:null};
  const current=await readPurchase(token);
- if(current.status!=="selected")throw new IntentError("INTENT_"+current.status.toUpperCase());
+ if(!["selected","quoted"].includes(current.status))throw new IntentError("INTENT_"+current.status.toUpperCase());
  const user=await currentUser();
  if(!user)return {stage:"login" as const,intent:current};
  if(!user.verified&&await verificationEnabled())return {stage:"verify" as const,intent:current};
@@ -187,7 +192,7 @@ export async function cancelPurchase(token:string,revision:number){
   UPDATE platform_subscription_purchase_intents
   SET status='cancelled',revision=revision+1,updated_at=now()
   WHERE public_token_sha256=${hashToken(token)} AND revision=${revision}
-   AND status='selected' AND expires_at>now()
+   AND status IN ('selected','quoted') AND expires_at>now()
    AND (actor_id=${u?.id||null}::uuid OR (actor_id IS NULL AND guest_session_sha256=${g}))
   RETURNING id`;
  if(!rows.length)throw new IntentError("INTENT_STATE_CHANGED");
