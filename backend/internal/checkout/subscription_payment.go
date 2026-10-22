@@ -3,7 +3,6 @@ package checkout
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"os"
 
@@ -174,6 +173,3 @@ func(s *Service)approvedSubscriptionSources(raw []byte)bool{
 	}
 	return false
 }
-
-// Keep imports stable when checkout's error classification grows.
-var _ = errors.Is
