@@ -33,6 +33,9 @@ export async function activePurchase(){
  const a=(await cookies()).get(ACTIVE)?.value;
  return a&&TOKEN.test(a)?a:null;
 }
+export async function clearPurchaseIfActive(token:string){
+ if(await activePurchase()===token)(await cookies()).delete(ACTIVE);
+}
 export async function rememberPurchase(token:string){
  if(!TOKEN.test(token))throw new IntentError("INVALID_INTENT",422);
  (await cookies()).set(ACTIVE,token,COOKIE);
@@ -186,7 +189,7 @@ export async function cancelPurchase(token:string,revision:number){
    AND (actor_id=${u?.id||null}::uuid OR (actor_id IS NULL AND guest_session_sha256=${g}))
   RETURNING id`;
  if(!rows.length)throw new IntentError("INTENT_STATE_CHANGED");
- if(await activePurchase()===token)(await cookies()).delete(ACTIVE);
+ await clearPurchaseIfActive(token);
  return {status:"cancelled" as const};
 }
 
