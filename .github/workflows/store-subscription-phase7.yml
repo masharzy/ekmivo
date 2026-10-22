@@ -3,7 +3,7 @@ name: Store Subscription Phase 7 — Release Readiness
 # Isolated code/SQL release gate, NEVER a deployment or real checkout.
 on:
   push:
-    branches: [agents/store-subscription-phase7-release, agents/store-subscription-runtime-grants]
+    branches: [agents/store-subscription-phase7-release, agents/store-subscription-runtime-grants, agents/store-subscription-web-runtime-hardening]
   workflow_dispatch:
     inputs:
       expected_sha:
@@ -75,7 +75,7 @@ jobs:
           go vet ./internal/subscriptionpayment ./internal/checkout ./cmd/financial-migrate ./cmd/api
           cd ..
           python3 -m pip install --user pglast==8.7
-          python3 -c 'from pathlib import Path; from pglast import parse_sql; files=[Path("infra/migrations/0154_platform_subscription_release_operations.sql"),Path("infra/migrations/0155_platform_subscription_safe_runtime_grants.sql"),Path("tools/testing/subscription-runtime-grants.sql")]; assert all(parse_sql(p.read_text()) for p in files); print("Phase 7 runtime SQL syntax PASS")'
+          python3 -c 'from pathlib import Path; from pglast import parse_sql; files=[Path("infra/migrations/0154_platform_subscription_release_operations.sql"),Path("infra/migrations/0155_platform_subscription_safe_runtime_grants.sql"),Path("infra/migrations/0156_web_runtime_least_privilege.sql"),Path("tools/testing/subscription-runtime-grants.sql"),Path("tools/testing/subscription-web-runtime-grants.sql")]; assert all(parse_sql(p.read_text()) for p in files); print("Phase 7 runtime SQL syntax PASS")'
 
   postgres:
     name: Phase 7 disposable PostgreSQL user, Super Admin, coupon and recovery
