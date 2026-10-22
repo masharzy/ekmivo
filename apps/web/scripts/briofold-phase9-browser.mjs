@@ -146,6 +146,35 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
 
   const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   const errors=[];page.on("pageerror",err=>errors.push(err.message));
+  // The canonical single-Store settings route reads the authoritative *live*
+  // financial phone projection. Exercise heartbeat -> Next -> rendered health
+  // and deletion without claiming a physical Android/provider test.
+  const heartbeatCreate=await context.request.post(`${base}/phones?environment=live`,{...mutate,data:{name:"CI live heartbeat handset"}});
+  assert.equal(heartbeatCreate.status(),200,`disposable live phone create failed: ${await heartbeatCreate.text()}`);
+  const heartbeatPhone=await heartbeatCreate.json();
+  const heartbeatDigest=createHash("sha256").update(heartbeatPhone.pairing_token).digest("hex");
+  const liveClaim=(await finance.unsafe("SELECT pg06_phone_claim($1,$2) AS data",[heartbeatDigest,Buffer.alloc(64,31)]))[0].data;
+  assert.equal(liveClaim.id,heartbeatPhone.id,"live health fixture did not claim its exact phone");
+  const [heartbeatAck]=await finance.unsafe("SELECT pg06_phone_heartbeat($1::uuid,$2::boolean,$3::integer,$4::text,$5::text,$6::bigint,$7::text) AS ok",
+   [heartbeatPhone.id,true,3,"CI Android device","ci-1.0",0,""]);
+  assert.equal(heartbeatAck.ok,true,"authenticated phone heartbeat was not persisted in disposable finance");
+  const livePhoneRead=await context.request.get(`${base}/phones?environment=live`);
+  assert.equal(livePhoneRead.status(),200);
+  const liveHealth=(await livePhoneRead.json()).items.find(item=>item.id===heartbeatPhone.id);
+  assert.ok(liveHealth?.heartbeat_at&&liveHealth.permission_ok===true&&liveHealth.backlog===3,
+   "live phone heartbeat/projection did not carry its permission and backlog");
+  await page.goto(origin+"/settings/devices");
+  await page.getByRole("heading",{name:"SMS devices",exact:true}).waitFor();
+  const healthRow=page.getByRole("row").filter({hasText:"CI live heartbeat handset"});
+  await healthRow.getByText("Online",{exact:true}).waitFor();
+  assert.ok((await healthRow.innerText()).includes("CI live heartbeat handset"),"heartbeat status detached from the correct physical phone");
+  const liveDelete=await context.request.post(`${base}/phones/${heartbeatPhone.id}/delete?environment=live`,{
+   ...mutate,data:{phone_id:heartbeatPhone.id}});
+  assert.equal(liveDelete.status(),200,`disposable live phone delete failed: ${await liveDelete.text()}`);
+  await page.reload();await page.getByRole("heading",{name:"SMS devices",exact:true}).waitFor();
+  await page.getByRole("row").filter({hasText:"CI live heartbeat handset"}).waitFor({state:"detached"});
+  assert.equal(await page.getByRole("row").filter({hasText:"CI live heartbeat handset"}).count(),0,
+   "deleted live phone stayed visible after the canonical settings refresh");
   for(const [canonical,legacy,expected] of [
    ["/payments",`/w/${workspaceId}/payments/transactions`,reference],
    [`/payments/transactions/${payment.id}`,`/w/${workspaceId}/payments/transactions/${payment.id}`,reference],
