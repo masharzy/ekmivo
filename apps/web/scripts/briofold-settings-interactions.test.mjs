@@ -105,7 +105,9 @@ test("disposable settings acceptance installs checkout logo presentation before 
  const browser=fixture.indexOf("await runBriofoldPhase9Browser(");
  assert.ok(store>=0&&presentation>store&&browser>presentation);
  assert.ok(fixture.includes("dashboard_checkout_theme_read(uuid,uuid)"));
- assert.ok(fixture.includes('apply("0190_briofold_feedback_topics.sql")'));
+ const support=fixture.indexOf('apply("0073_dashboard_support_topic.sql")');
+ const feedback=fixture.indexOf('apply("0190_briofold_feedback_topics.sql")');
+ assert.ok(support>presentation&&feedback>support&&browser>feedback);
 });
 
 test("business preferences stay separate from personal account security in all enabled product modes",()=>{

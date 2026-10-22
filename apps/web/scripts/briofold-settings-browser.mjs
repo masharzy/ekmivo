@@ -57,8 +57,33 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   const denied=await readOnly.request.post(base,{headers:{Origin:origin},data:{expected_version:current.version,body:{...current.body,timezone:changed}}});
   assert.equal(denied.status(),403,"Viewer preference mutation was not forbidden by backend");
   assert.equal((await (await context.request.get(base)).json()).body.timezone,original,"Forbidden write modified settings");
+  // Reuse the real support history with typed feedback, rather than claiming
+  // that a decorative feedback route persists user reports.
+  const feedback=origin+"/api/go/workspaces/"+workspace+"/workspace-tools/help?environment=live";
+  assert.equal((await page.goto(origin+"/settings/help/feedback")).status(),200);
+  await page.getByRole("button",{name:"Bug report",exact:true}).click();
+  await page.locator("#support-subject").fill("Fixture browser bug report");
+  await page.locator("#support-description").fill("This fictional browser report checks authorized durable feedback.");
+  const [submitted]=await Promise.all([
+   page.waitForResponse(r=>r.url().includes("/workspace-tools/help")&&r.request().method()==="POST"),
+   page.getByRole("button",{name:"Submit request",exact:true}).click()
+  ]);
+  assert.equal(submitted.status(),200,"Bug report was not persisted by Go");
+  await page.locator('[data-feedback="success"]').waitFor();
+  for(const topic of ["feature","usability"]){
+   const response=await context.request.post(feedback,{headers:{Origin:origin},data:{topic,subject:`Fixture ${topic} feedback`,message:"Fictional feature feedback is safely persisted here."}});
+   assert.equal(response.status(),200,`Feedback topic ${topic} rejected`);
+  }
+  const entries=await db`SELECT topic FROM pg13_support WHERE workspace_id=${workspace}::uuid AND subject LIKE 'Fixture %' ORDER BY topic`;
+  assert.deepEqual(entries.map(entry=>entry.topic),["bug","feature","usability"]);
+  const privateView=await readOnly.request.get(feedback);
+  assert.equal(privateView.status(),200);
+  const viewerTickets=await privateView.json();
+  assert.ok(!viewerTickets.items.some(ticket=>ticket.subject.startsWith("Fixture ")),"Viewer saw owner's private feedback");
+  const invalid=await context.request.post(feedback,{headers:{Origin:origin},data:{topic:"untrusted",subject:"Fixture invalid",message:"This should never create a ticket."}});
+  assert.equal(invalid.status(),422,"Unrecognized feedback topic was accepted");
   assert.deepEqual(pageErrors,[],"Settings browser reported a client runtime/hydration error");
-  console.log("Phase3 REAL SETTINGS BROWSER PASS: owner initial state/save/reload/restore, viewer disabled editor, real backend mutation denial");
+  console.log("Phase3 REAL SETTINGS BROWSER PASS: owner settings save/restore, viewer denial, typed feedback persistence/route/privacy");
  }finally{
   if(context)await context.close();if(readOnly)await readOnly.close();
   // Settings writes create append-only control audit references. Never delete

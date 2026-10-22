@@ -37,6 +37,13 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   // in this disposable CONTROL fixture before testing that round trip.
   const [presentation]=await schema`SELECT position('beside-left' in pg_get_functiondef(to_regprocedure('public.dashboard_checkout_theme_read(uuid,uuid)')))>0 AS ready`;
   if(!presentation.ready)await apply("0100_checkout_logo_presentation.sql");
+  // The independent financial smoke does not require the dashboard-reference
+  // operator's 0073 topic migration. This fixture must install that known
+  // predecessor itself before the additive feedback-category constraint.
+  const [supportTopics]=await schema`SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='pg13_support' AND column_name='topic') AS ready`;
+  if(!supportTopics.ready)await apply("0073_dashboard_support_topic.sql");
   const [feedback]=await schema`SELECT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conrelid='public.pg13_support'::regclass
