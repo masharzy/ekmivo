@@ -14,6 +14,7 @@ type Warehouse={id:string;name:string};
 type Order={warehouse_id:string|null;customer_id:string|null;coupon_code:string|null;review_required:boolean;legacy_summary:string;id:string;reference:string;source:string;status:string;revision:number;recipient:{name:string;phone:string;address:string};notes:string;total_minor:number;subtotal_minor:number;discount_minor:number;shipping_minor:number;coupon_discount_minor:number};
 type Line={id:string;variant_id:string;name:string;sku:string;quantity:number;returned:number;unit_minor:number};
 type Detail={order:Order;lines:Line[];delivery:Row|null;returns:Row[];finance_links:{kind:string;source_id:string;amount_minor:number}[];events:{sequence:number;action:string;created_at:string;detail?:{status?:string;previous_status?:string}}[];can_manage:boolean};
+type Assignment={assignee_id:string|null;revision:number;can_assign:boolean;agents:{id:string;name:string;role:string}[];history:{sequence:number;created_at:string;assignee_id:string|null}[]};
 export type CommercePageData={items:Row[];can_manage:boolean;can_admin:boolean;warehouses:Warehouse[]};
 type Pending={key:string;action:string;body:Row;time:number};
 const states=["draft","hold","confirmed","packed","shipped","delivered","cancelled","returned"];
@@ -44,11 +45,12 @@ function MoneyInput({value,onChange,required=true,percent=false}:{value:unknown;
  const [text,setText]=useState(value===null||value===undefined||value===""?"":(Number(value)/100).toFixed(2));
  return <input type="number" min={0} max={percent?100:1000000000} step="0.01" required={required} value={text} onChange={e=>{const raw=e.target.value;setText(raw);if(raw===""){e.target.setCustomValidity("");onChange(null);return;}if(!/^[0-9]{1,10}(\.[0-9]{0,2})?$/.test(raw)){e.target.setCustomValidity("Use at most two decimal places.");onChange(null);return;}e.target.setCustomValidity("");const [whole,fraction=""]=raw.split(".");onChange(Number(whole)*100+Number((fraction+"00").slice(0,2)));}}/>;
 }
-export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initial}:{workspaceId:string;actorId:string;bn:boolean;view:string;environment:"live"|"sandbox";initial:CommercePageData|null}){
+export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initial,assignmentEnabled=false}:{workspaceId:string;actorId:string;bn:boolean;view:string;environment:"live"|"sandbox";initial:CommercePageData|null;assignmentEnabled?:boolean}){
  const t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const resource=view||"orders",api=`/api/go/workspaces/${workspaceId}/commerce?environment=${environment}`;
  const [data,setData]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState(initial?"":t("Commerce source unavailable. Retry refresh.","অর্ডারের তথ্য পাওয়া যাচ্ছে না। রিফ্রেশ করুন।")),[message,setMessage]=useState("");
  const [q,setQ]=useState(""),[appliedQuery,setAppliedQuery]=useState(""),[status,setStatus]=useState(""),[source,setSource]=useState(""),[offset,setOffset]=useState(0),[board,setBoard]=useState(false),[detail,setDetail]=useState<Detail|null>(null),[auditPage,setAuditPage]=useState(0);
+ const [assignment,setAssignment]=useState<Assignment|null>(null),[assignmentChoice,setAssignmentChoice]=useState(""),[assignmentError,setAssignmentError]=useState("");
  const [form,setForm]=useState<string|null>(null),[draft,setDraft]=useState<Row>({}),[baseline,setBaseline]=useState("{}"),[product,setProduct]=useState<Product|null>(null),[productBase,setProductBase]=useState("");
  const [products,setProducts]=useState<Product[]>([]),[customers,setCustomers]=useState<{id:string;name:string}[]>([]),[catalogOffset,setCatalogOffset]=useState(0),[catalogQuery,setCatalogQuery]=useState(""),[catalogMore,setCatalogMore]=useState(false),[customerOffset,setCustomerOffset]=useState(0),[customerMore,setCustomerMore]=useState(false),[customerQuery,setCustomerQuery]=useState("");
  const [cart,setCart]=useState<{variant_id:string;quantity:number}[]>([]),[preview,setPreview]=useState<{id:string;rows:Row[];next_page?:number|null}|null>(null),[wooPage,setWooPage]=useState(1),[selected,setSelected]=useState<string[]>([]),[unconfirmed,setUnconfirmed]=useState(false),[media,setMedia]=useState<{id:string;name:string;mime:string}[]>([]),[mediaImages,setMediaImages]=useState<Record<string,string>>({}),[notifications,setNotifications]=useState<Row[]|null>(null),[notificationError,setNotificationError]=useState(false),[legacy,setLegacy]=useState<Row[]|null>(null),[uploading,setUploading]=useState(false);
@@ -62,7 +64,14 @@ export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initi
  const stateLabel=(s:string)=>{const labels:Record<string,string>={draft:"খসড়া",hold:"অপেক্ষায়",confirmed:"নিশ্চিত",packed:"প্যাক করা",shipped:"পাঠানো",delivered:"পৌঁছেছে",cancelled:"বাতিল",returned:"ফেরত",ready:"প্রস্তুত",booking:"বুকিং চলছে",unknown:"ফল অজানা",booked:"বুকিং হয়েছে","handed-over":"কুরিয়ারকে দেওয়া",requested:"অনুরোধ",approved:"অনুমোদিত",rejected:"প্রত্যাখ্যাত",inspected:"পরীক্ষা সম্পন্ন"};return bn?labels[s]??s:s.replaceAll("-"," ");};
  const read=useCallback(async(kind:string,extra="")=>{const r=await fetch(api+`&resource=${encodeURIComponent(kind)}`+extra,{cache:"no-store"});const body=await r.json();if(!r.ok)throw Error(body.code??body.error?.code??"SOURCE_UNAVAILABLE");return body;},[api]);
  const refresh=useCallback(async()=>{const seq=++readSequence.current;try{const body=await read(resource,`&q=${encodeURIComponent(appliedQuery)}&status=${status}&source=${source}&cursor=${offset}`);if(seq===readSequence.current){setData(body);if(!body.can_manage){setDetail(null);setForm(null);setProduct(null);}setError("");}}catch(e){if(seq===readSequence.current){const code=e instanceof Error?e.message:"SOURCE_UNAVAILABLE";if(/FORBIDDEN|UNAUTHENTICATED|STALE_BUSINESS/.test(code)){setData(null);setDetail(null);setProduct(null);setForm(null);}setError(code);}}},[read,resource,appliedQuery,status,source,offset]);
- const open=useCallback(async(id:string,page=0)=>{const value=await read("orders",`&item=${id}&cursor=${page}`);setDetail(value);setAuditPage(page);},[read]);
+ const open=useCallback(async(id:string,page=0)=>{
+  const value=await read("orders",`&item=${id}&cursor=${page}`);setDetail(value);setAuditPage(page);
+  setAssignment(null);setAssignmentError("");setAssignmentChoice("");
+  if(assignmentEnabled){try{
+   const record=await read("assignments",`&item=${id}`) as Assignment;
+   setAssignment(record);setAssignmentChoice(record.assignee_id??"");
+  }catch{setAssignmentError("ASSIGNMENT_SOURCE_UNAVAILABLE");}}
+ },[read,assignmentEnabled]);
  const closeForms=useCallback(()=>{setForm(null);setDraft({});setBaseline("{}");setProduct(null);setProductBase("");setCart([]);},[]);
  const command=useCallback(async(action:string,body:Row,retry=false):Promise<Row|null>=>{
   if(lock.current)return null;lastFailure.current="";lock.current=true;setBusy(true);setError("");setMessage("");let committed=false;
@@ -143,6 +152,28 @@ export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initi
  <p>{detail.order.recipient.name} · {detail.order.recipient.phone}</p><p>{detail.order.recipient.address}</p><p>{detail.order.notes}</p>{detail.order.review_required&&<div className={styles.noPrint}><p>{t("Existing conversation order: review recipient, catalog items and prices before fulfillment. Original source text:","কথোপকথনের অর্ডার: পাঠানোর আগে প্রাপক, পণ্য ও দাম যাচাই করুন। মূল বিবরণ:")}</p><p>{detail.order.legacy_summary}</p>{detail.can_manage&&<button disabled={dirty||busy} onClick={()=>begin("review-order",{id:detail.order.id,revision:detail.order.revision,reference:detail.order.reference,warehouse_id:"",recipient:{name:"",phone:"",address:""},shipping_minor:0,discount_minor:0,notes:""})}>{t("Review order items","অর্ডারের পণ্য যাচাই করুন")}</button>}</div>}
  <div className={styles.table}><table><thead><tr><th>{t("Product","পণ্য")}</th><th>{t("Quantity","পরিমাণ")}</th><th>{t("Snapshot unit price","অর্ডারের সময়ের একক মূল্য")}</th></tr></thead><tbody>{detail.lines.map(l=><tr key={l.id}><td>{l.name}<small>{l.sku}</small></td><td>{l.quantity}</td><td>{money(l.unit_minor)}</td></tr>)}</tbody></table></div>
  <div className={styles.summary}><span>{t("Subtotal","পণ্যের মোট")}: {money(detail.order.subtotal_minor)}</span><span>{t("Discount + coupon","ছাড় + কুপন")}: {money(detail.order.discount_minor+detail.order.coupon_discount_minor)}</span><span>{t("Shipping","ডেলিভারি")}: {money(detail.order.shipping_minor)}</span><strong>{t("Order total","অর্ডারের মোট")}: {money(detail.order.total_minor)}</strong></div><p>{t("Linked verified gateway payments","যুক্ত যাচাইকৃত গেটওয়ে পেমেন্ট")}: {money(detail.finance_links.filter(f=>f.kind==="payment").reduce((sum,f)=>sum+f.amount_minor,0))}</p><p>{t("This packing slip is not a financial invoice or payment receipt.","এই প্যাকিং স্লিপ আর্থিক ইনভয়েস বা পেমেন্ট রসিদ নয়।")}</p>
+ {assignmentEnabled&&<section className={styles.noPrint} aria-label={t("Order team assignment","অর্ডারের টিম অ্যাসাইনমেন্ট")}>
+  <h3>{t("Team assignment","টিম অ্যাসাইনমেন্ট")}</h3>
+  {assignmentError&&<p role="alert">{t("Assignment information is currently unavailable. Other order actions are unaffected.","অ্যাসাইনমেন্টের তথ্য এখন পাওয়া যাচ্ছে না। অর্ডারের অন্যান্য কাজ চালু আছে।")}</p>}
+  {assignment&&<>{assignment.can_assign?<div className={styles.toolbar}>
+   <label>{t("Responsible team member","দায়িত্বপ্রাপ্ত সদস্য")}
+    <select aria-label={t("Responsible team member","দায়িত্বপ্রাপ্ত সদস্য")} value={assignmentChoice}
+      disabled={busy||dirty||unconfirmed||["cancelled","returned"].includes(detail.order.status)}
+      onChange={e=>setAssignmentChoice(e.target.value)}>
+     <option value="">{t("Unassigned","কাউকে দেওয়া হয়নি")}</option>
+     {assignment.agents.map(agent=><option key={agent.id} value={agent.id}>{agent.name} · {agent.role}</option>)}
+     {assignment.assignee_id&&!assignment.agents.some(agent=>agent.id===assignment.assignee_id)&&<option value={assignment.assignee_id}>{t("Former team member — reassign","আগের সদস্য — নতুন করে দিন")}</option>}
+    </select>
+   </label>
+   <button disabled={busy||dirty||unconfirmed||assignmentChoice===(assignment.assignee_id??"")||["cancelled","returned"].includes(detail.order.status)}
+    onClick={()=>void command("assign-order",{id:detail.order.id,revision:assignment.revision,assignee_id:assignmentChoice||null})}>
+    {t("Save assignment","অ্যাসাইনমেন্ট সংরক্ষণ")}
+   </button>
+  </div>:<p>{assignment.assignee_id?t("Assigned to a team member","টিমের একজন সদস্যকে দেওয়া হয়েছে"):t("Unassigned","কাউকে দেওয়া হয়নি")}</p>}
+   {assignment.history.length>0&&<details><summary>{t("Assignment history","অ্যাসাইনমেন্টের ইতিহাস")}</summary>
+    {assignment.history.map(h=><p key={h.sequence}>{new Date(h.created_at).toLocaleString(bn?"bn-BD":"en-GB")} · {h.assignee_id?t("Assigned","দায়িত্ব দেওয়া হয়েছে"):t("Unassigned","দায়িত্ব সরানো হয়েছে")}</p>)}
+   </details>}</>}
+ </section>}
  {detail.can_manage&&<div className={`${styles.toolbar} ${styles.noPrint}`}>{["draft","hold"].includes(detail.order.status)&&!detail.order.review_required&&detail.finance_links.length===0&&!detail.delivery&&<button disabled={busy||dirty} onClick={()=>{const order=detail.order;const lines=detail.lines;begin("edit-order",{id:order.id,revision:order.revision,reference:order.reference,warehouse_id:order.warehouse_id,customer_id:order.customer_id,recipient:order.recipient,shipping_minor:order.shipping_minor,discount_minor:order.discount_minor,coupon:order.coupon_code??"",notes:order.notes});setCart(lines.map(l=>({variant_id:l.variant_id,quantity:l.quantity})));}}>{t("Edit draft order","খসড়া অর্ডার সম্পাদনা")}</button>}{transitions(detail.order.status).map(s=><button key={s} disabled={busy||dirty||unconfirmed} onClick={()=>void command("order-state",{id:detail.order.id,revision:detail.order.revision,status:s})}>{stateLabel(s)}</button>)}{["confirmed","packed"].includes(detail.order.status)&&!detail.delivery&&<button disabled={dirty||busy} onClick={()=>begin("delivery",{order_id:detail.order.id,provider:"steadfast",cod_minor:Math.max(0,detail.order.total_minor-detail.finance_links.filter(f=>f.kind==="payment").reduce((s,f)=>s+f.amount_minor,0))})}>{t("Prepare shipment","শিপমেন্ট তৈরি করুন")}</button>}<button disabled={busy||dirty} onClick={()=>begin("finance-link",{id:detail.order.id,kind:"payment",source_id:""})}>{t("Link payment / invoice / refund","পেমেন্ট / ইনভয়েস / রিফান্ড যুক্ত করুন")}</button>{["shipped","delivered","returned"].includes(detail.order.status)&&detail.lines.filter(l=>l.returned<l.quantity).map(l=><button key={l.id} disabled={dirty||busy} onClick={()=>begin("return-request",{line_id:l.id,quantity:1,reason:""})}>{t("Return ","ফেরত ")}{l.name}</button>)}</div>}
  {detail.delivery&&<p>{t("Courier","কুরিয়ার")}: {string(detail.delivery,"provider")} · {stateLabel(string(detail.delivery,"status"))} · {string(detail.delivery,"consignment")}<small>{t("Handover receipt","হস্তান্তরের রসিদ")}: {string(detail.delivery,"handover_receipt")}</small></p>}
  {detail.finance_links.length>0&&<nav className={styles.noPrint} aria-label={t("Linked financial source records","সংযুক্ত আর্থিক উৎসের রেকর্ড")}>

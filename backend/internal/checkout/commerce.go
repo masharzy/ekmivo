@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -54,7 +55,19 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			fail(w, 422, "INVALID_FILTER")
 			return
 		}
-		err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_read($1::uuid,$2,$3::uuid,$4,$5::uuid,$6,$7,$8,$9)", ws, realm, actor.UserID, r.URL.Query().Get("resource"), nullableID(id), off, r.URL.Query().Get("q"), r.URL.Query().Get("status"), r.URL.Query().Get("source")).Scan(&raw)
+		if r.URL.Query().Get("resource") == "assignments" {
+			if os.Getenv("BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED") != "true" {
+				fail(w, 503, "ASSIGNMENTS_UNAVAILABLE")
+				return
+			}
+			if id == "" {
+				fail(w, 422, "ORDER_REQUIRED")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_assignment_read($1::uuid,$2,$3::uuid,$4::uuid)", ws, realm, actor.UserID, id).Scan(&raw)
+		} else {
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_read($1::uuid,$2,$3::uuid,$4,$5::uuid,$6,$7,$8,$9)", ws, realm, actor.UserID, r.URL.Query().Get("resource"), nullableID(id), off, r.URL.Query().Get("q"), r.URL.Query().Get("status"), r.URL.Query().Get("source")).Scan(&raw)
+		}
 	} else if r.Method == http.MethodPost {
 		var cmd struct {
 			Action string         `json:"action"`
@@ -87,7 +100,7 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch cmd.Action {
-		case "warehouse", "product", "adjust-stock", "transfer-stock", "coupon", "create-order", "review-order", "edit-order", "order-state", "delivery", "delivery-state", "cod-receipt", "return-request", "return-state", "exchange-link", "post-map", "import-preview", "import-apply":
+		case "warehouse", "product", "adjust-stock", "transfer-stock", "coupon", "create-order", "review-order", "edit-order", "order-state", "delivery", "delivery-state", "cod-receipt", "return-request", "return-state", "exchange-link", "post-map", "import-preview", "import-apply", "assign-order":
 		case "finance-link":
 			if _, err = s.Auth.AuthorizeWorkspace(r.Context(), actor, ws, authz.Environment(realm), authz.PaymentsRead); err != nil {
 				authError(w, err)
@@ -122,7 +135,15 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			fail(w, 413, "BODY_TOO_LARGE")
 			return
 		}
-		err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_write($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", ws, realm, actor.UserID, cmd.Key, cmd.Action, body).Scan(&raw)
+		if cmd.Action == "assign-order" {
+			if os.Getenv("BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED") != "true" {
+				fail(w, 503, "ASSIGNMENTS_UNAVAILABLE")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_assignment_write($1::uuid,$2,$3::uuid,$4::uuid,$5::jsonb)", ws, realm, actor.UserID, cmd.Key, body).Scan(&raw)
+		} else {
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_write($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", ws, realm, actor.UserID, cmd.Key, cmd.Action, body).Scan(&raw)
+		}
 	} else {
 		fail(w, 405, "METHOD_NOT_ALLOWED")
 		return
