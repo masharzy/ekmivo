@@ -5,7 +5,7 @@ Scope: durable purchase selection, login/verification/OAuth continuation and Sto
 **Status: SOURCE IN PROGRESS / INTEGRATION BLOCKED. NOT PHASE 4 — CODE-LEVEL SEALED.**
 
 ## Source on branch
-- `infra/migrations/0148_phase4_durable_purchase_intents.sql`: additive 256-bit public capability digest, distinct guest-session digest, quantity, legacy reference, seven-day expiry ceiling, dedicated `claimed_free` status; no existing Store, membership, subscription or financial row is reassigned.
+- `infra/migrations/0151_phase4_durable_purchase_intents.sql`: additive 256-bit public capability digest, distinct guest-session digest, quantity, legacy reference, seven-day expiry ceiling, dedicated `claimed_free` status; no existing Store, membership, subscription or financial row is reassigned.
 - `backend/cmd/financial-migrate/dashboard_reference.go`: control-only checksum migration registration; **not applied** to production, sandbox or test.
 - `apps/web/src/lib/purchase-capability.ts`: independent random 256-bit guest cookie and deterministic HMAC-SHA256 purchase capability, enabling same-key lost-response recovery.
 - `apps/web/src/lib/server/purchase-intents.ts`: pinned published offer version/term; optional prevalidated coupon; idempotent create, owner-only get/bind, expiring guest-to-identity claim, authorized primary Store binding, revision-checked cancellation and transaction-bound free entitlement using existing `payment_plan_claim_free`. No browser-provided user or Store ownership accepted.
