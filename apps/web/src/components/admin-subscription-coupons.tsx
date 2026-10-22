@@ -2,7 +2,7 @@
 import Link from "next/link";
 import {useActionState,useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
-import {saveSubscriptionCoupon,transitionSubscriptionCoupon,type CouponAdminState} from "../actions/admin-subscription-coupons";
+import {saveSubscriptionCoupon,transitionSubscriptionCoupon,subscriptionCouponHistory,type CouponAdminState} from "../actions/admin-subscription-coupons";
 import {formatBdtMinor,formatPercentBps,type SubscriptionCoupon,type SubscriptionCouponList} from "../lib/subscription-coupons";
 
 const idle:CouponAdminState={status:"idle",message:""};
@@ -52,6 +52,24 @@ function CouponTransition({coupon,locale}:{coupon:SubscriptionCoupon;locale:Loca
  </form>;
 }
 
+
+function CouponHistory({id,locale}:{id:string;locale:Locale}){
+ const [result,setResult]=useState<Awaited<ReturnType<typeof subscriptionCouponHistory>>|null>(null);
+ const [busy,setBusy]=useState(false);const [offset,setOffset]=useState(0);
+ const t=(en:string,bn:string)=>locale==="bn"?bn:en;
+ async function load(page:number){setBusy(true);try{setResult(await subscriptionCouponHistory(id,page));setOffset(page);}finally{setBusy(false);}}
+ return <div><button type="button" className="pa-button" disabled={busy} onClick={()=>void load(offset)}>{busy?t("Loading…","লোড হচ্ছে…"):t("History / refresh","ইতিহাস / রিফ্রেশ")}</button>
+ {result?.error&&<p role="alert">{t("History unavailable. Retry.","ইতিহাস পাওয়া যাচ্ছে না। আবার চেষ্টা করুন।")}</p>}
+ {result?.data&&<div className="pa-description"><h3>{t("Saved revisions","সংরক্ষিত সংস্করণ")}</h3>
+ {!result.data.versions.length&&<p>{t("No revisions on this page.","এই পৃষ্ঠায় কোনো সংস্করণ নেই।")}</p>}
+ {result.data.versions.slice(0,25).map(v=><details key={v.revision}><summary>v{v.revision} · {new Date(v.recorded_at).toLocaleString(locale)}</summary><div className="pa-table-wrap"><pre>{JSON.stringify(v.snapshot,null,2)}</pre></div></details>)}
+ <h3>{t("Verified redemptions","যাচাইকৃত ব্যবহার")}</h3>
+ {!result.data.redemptions.length&&<p>{t("No verified redemptions on this page.","এই পৃষ্ঠায় কোনো যাচাইকৃত ব্যবহার নেই।")}</p>}
+ {result.data.redemptions.slice(0,25).map(r=><p key={r.id}>{r.invoice_id} · {formatBdtMinor(Number(r.discount_minor))} BDT · {new Date(r.redeemed_at).toLocaleString(locale)}</p>)}
+ {offset>0&&<button type="button" className="pa-button" disabled={busy} onClick={()=>void load(Math.max(0,offset-25))}>{t("Previous","আগের")}</button>}
+ {(result.data.versions.length>25||result.data.redemptions.length>25)&&<button type="button" className="pa-button" disabled={busy} onClick={()=>void load(offset+25)}>{t("Next","পরের")}</button>}</div>}</div>;
+}
+
 export function AdminSubscriptionCoupons({locale,data,query,status,offset}:{locale:Locale;data:SubscriptionCouponList;query:string;status:string;offset:number}){
  const t=(en:string,bn:string)=>locale==="bn"?bn:en;
  const [editing,setEditing]=useState<SubscriptionCoupon|null|undefined>(undefined);
@@ -68,7 +86,7 @@ export function AdminSubscriptionCoupons({locale,data,query,status,offset}:{loca
      <td>{c.eligible_offer_keys.length?c.eligible_offer_keys.join(", "):t("All offers","সব অফার")}{c.first_purchase_only&&<small className="pa-subtle">{t("First purchase only","শুধু প্রথম কেনাকাটা")}</small>}</td>
      <td>{c.redeemed} / {c.max_redemptions??"∞"}<small className="pa-subtle">{c.reserved} {t("reserved","সংরক্ষিত")}</small></td><td><span className="pa-status-text">{c.status}</span></td>
      <td>{c.starts_at?new Date(c.starts_at).toLocaleDateString(locale):"—"}<small className="pa-subtle">{c.expires_at?new Date(c.expires_at).toLocaleDateString(locale):"—"}</small></td>
-     <td><div className="pa-admin-coupon-actions">{["draft","paused"].includes(c.status)&&c.redeemed===0&&c.reserved===0&&<button type="button" className="pa-button" onClick={()=>setEditing(c)}>{t("Edit","সম্পাদনা")}</button>}<CouponTransition coupon={c} locale={locale}/></div></td></tr>)}
+     <td><div className="pa-admin-coupon-actions">{["draft","paused"].includes(c.status)&&c.redeemed===0&&c.reserved===0&&<button type="button" className="pa-button" onClick={()=>setEditing(c)}>{t("Edit","সম্পাদনা")}</button>}<CouponTransition coupon={c} locale={locale}/><CouponHistory id={c.id} locale={locale}/></div></td></tr>)}
     {!data.coupons.length&&<tr><td colSpan={7} className="pa-empty-row">{t("No coupons match these filters.","এই ফিল্টারে কোনো কুপন নেই।")}</td></tr>}
    </tbody></table></div>
    <div className="pa-table-footer pa-admin-coupon-pagination"><span>{t("Page","পৃষ্ঠা")} {Math.floor(offset/25)+1} · {Math.min(25,data.coupons.length)} {t("coupons","কুপন")}</span><div>{offset>0&&<Link className="pa-button" href={link(Math.max(0,offset-25))}>← {t("Previous","আগের")}</Link>}{data.next_offset!==null&&<Link className="pa-button" href={link(data.next_offset)}>{t("Next","পরের")} →</Link>}</div></div>

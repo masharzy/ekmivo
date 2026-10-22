@@ -70,3 +70,11 @@ export async function transitionSubscriptionCoupon(_previous:CouponAdminState,fo
   return {status:"success",message:"Coupon status updated. Refresh to see the current revision."};
  }catch(e){return invalid(errorMessage(e));}
 }
+
+export async function subscriptionCouponHistory(id:string,offset:number){
+ const admin=await requireSuperAdmin();
+ if(!admin||!uuid.test(id)||!Number.isSafeInteger(offset)||offset<0||offset>100000)return {error:"ACCESS_DENIED",data:null};
+ try{const rows=await database()`SELECT platform_subscription_coupon_history(${admin.user.id}::uuid,${id}::uuid,${offset}) AS data`;
+ return {error:null,data:rows[0]?.data as {versions:{revision:number;snapshot:Record<string,unknown>;recorded_at:string}[];redemptions:{id:string;invoice_id:string;workspace_id:string;discount_minor:number;redeemed_at:string}[];offset:number}};
+ }catch{return {error:"HISTORY_UNAVAILABLE",data:null};}
+}
