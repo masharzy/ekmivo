@@ -17,6 +17,10 @@ test("refund report's late receipt source must exist before 0056 is installed in
  const later=smoke.indexOf('"0056_phone_incoming_and_late_refund_reports.sql"');
  assert.ok(publicMethod>=0&&earlier>publicMethod&&later>earlier,
   "disposable financial fixture must install 0050 → 0051 → 0056 in order");
+ assert.match(smoke,/const migrationDB=postgres\(ds\(`ekmivo_pg04_\$\{realm\}`,`ekmivo_pg04_migrate_\$\{realm\}`/);
+ assert.match(smoke,/if\(!lateRefundColumn\)await migrationDB\.unsafe/);
+ assert.match(smoke,/if\(!installed\)await migrationDB\.unsafe/);
+ assert.match(smoke,/finally\{await migrationDB\.end/);
  assert.match(smoke,/Phase9 late-SMS refund source missing in disposable/);
 });
 

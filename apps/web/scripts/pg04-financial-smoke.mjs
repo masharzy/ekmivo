@@ -1622,12 +1622,18 @@ try{
  // Install only inside disposable CI realms, after their PG06 phone-forwarder
  // and PG11/PG10 document prerequisites; never provision a shared DB here.
  for(const realm of ["sandbox","live"]){
+  // The disposable realm has its own migration owner. Never run security
+  // migrations through the CONTROL admin connection, even in a test: 0051
+  // requires ownership of financial_realm to preserve its release contract.
+  const migrationDB=postgres(ds(`ekmivo_pg04_${realm}`,`ekmivo_pg04_migrate_${realm}`,
+   `pg04-${realm}-migration-only`),{max:1,prepare:false});
+  try{
   // 0051 also depends on 0050's public-method discovery function. Production
   // runs these through separate operator gates; this isolated fixture must
   // install the same forward-only dependency chain explicitly.
   const publicMethod=(await dbs[realm].unsafe(
    "SELECT to_regprocedure('public.pg10_public_payment_sources(uuid,text)') IS NOT NULL AS installed"))[0].installed;
-  if(!publicMethod)await dbs[realm].unsafe(await readFile(new URL(
+  if(!publicMethod)await migrationDB.unsafe(await readFile(new URL(
    "../../../infra/migrations/0050_pg10_public_methods.sql",import.meta.url),"utf8")).simple();
   ok((await dbs[realm].unsafe(
    "SELECT to_regprocedure('public.pg10_public_payment_sources(uuid,text)') IS NOT NULL AS installed"))[0].installed,
@@ -1638,7 +1644,7 @@ try{
   // forward-only operator dependency before exercising the financial report.
   const lateRefundColumn=(await dbs[realm].unsafe(
    "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='pg11_refunds' AND column_name='source_intent_id') AS installed"))[0].installed;
-  if(!lateRefundColumn)await dbs[realm].unsafe(await readFile(new URL(
+  if(!lateRefundColumn)await migrationDB.unsafe(await readFile(new URL(
    "../../../infra/migrations/0051_pg06_late_sms_refund.sql",import.meta.url),"utf8")).simple();
   ok((await dbs[realm].unsafe(
    "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='pg11_refunds' AND column_name='source_intent_id') AS installed"))[0].installed,
@@ -1648,10 +1654,11 @@ try{
    ["0058_integration_activity.sql","pg58_record_api(uuid,text,text,text,integer,bigint,text)"]
   ]){
    const installed=(await dbs[realm].unsafe("SELECT to_regprocedure($1) IS NOT NULL AS installed",[signature]))[0].installed;
-   if(!installed)await dbs[realm].unsafe(await readFile(new URL("../../../infra/migrations/"+file,import.meta.url),"utf8")).simple();
+   if(!installed)await migrationDB.unsafe(await readFile(new URL("../../../infra/migrations/"+file,import.meta.url),"utf8")).simple();
    ok((await dbs[realm].unsafe("SELECT to_regprocedure($1) IS NOT NULL AS installed",[signature]))[0].installed,
     `Phase9 ${file} missing in disposable ${realm} reader`);
   }
+  }finally{await migrationDB.end({timeout:3})}
  }
  count+=await runBriofoldWalletChecks(control);
  if(process.env.PG05_BROWSER_TESTS==="true"){
