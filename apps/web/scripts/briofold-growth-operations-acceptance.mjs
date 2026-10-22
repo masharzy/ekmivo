@@ -49,8 +49,17 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   assert.equal(Number(ops.bookings.booking_requested),1);
   assert.equal(Number(ops.team.open),0);
   assert.equal(Number(ops.messages.ai_outbound_7d),0);
+  const connection=randomUUID(),thread=randomUUID();
+  await db`INSERT INTO inbox_connections(id,workspace_id,environment,provider,external_id,credential_cipher)
+   VALUES(${connection},${store},'live','ms',${'growth-fixture-'+connection},decode('12ab','hex'))`;
+  await db`INSERT INTO inbox_threads(id,workspace_id,connection_id,external_id,customer_name)
+   VALUES(${thread},${store},${connection},${'growth-thread-'+thread},'Isolated test-only conversation')`;
+  const withUnassigned=(await db`SELECT briofold_growth_operational_snapshot(${store},'live',${owner}) data`)[0].data;
+  assert.equal(Number(withUnassigned.team.unassigned),1,'unassigned includes threads before a workflow row is created');
+  assert.equal(Number(withUnassigned.team.open),1,'open includes threads with implicit default status');
   const sandbox=(await db`SELECT briofold_growth_operational_snapshot(${store},'sandbox',${owner}) data`)[0].data;
   assert.equal(Number(sandbox.campaigns.broadcast_planned),0);
+  assert.equal(Number(sandbox.team.open),0);
   await assert.rejects(()=>db`SELECT briofold_growth_operational_snapshot(${foreign},'live',${viewer})`,e=>e.code==='42501');
   await assert.rejects(()=>db`SELECT briofold_growth_export(${store},'live',${viewer})`,e=>e.code==='42501');
   const exported=(await db`SELECT briofold_growth_export(${store},'live',${owner}) data`)[0].data;

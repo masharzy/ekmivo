@@ -30,18 +30,18 @@ BEGIN
  SELECT jsonb_build_object(
   'assigned',count(*) FILTER(WHERE t.owner_id IS NOT NULL),
   'unassigned',count(*) FILTER(WHERE t.owner_id IS NULL),
-  'open',count(*) FILTER(WHERE t.status='open'),
+  'open',count(*) FILTER(WHERE coalesce(t.status,'open')='open'),
   'pending',count(*) FILTER(WHERE t.status='pending'),
   'resolved',count(*) FILTER(WHERE t.status='resolved'),
   'overdue',count(*) FILTER(WHERE t.due_at<now() AND t.status NOT IN ('resolved')))
- INTO team FROM briofold_inbox_work t
- JOIN inbox_threads th ON th.id=t.thread_id AND th.workspace_id=w
+ INTO team FROM inbox_threads th
  JOIN inbox_connections c ON c.id=th.connection_id AND c.workspace_id=w AND c.environment=e
- WHERE t.workspace_id=w;
+ LEFT JOIN briofold_inbox_work t ON t.thread_id=th.id AND t.workspace_id=w
+ WHERE th.workspace_id=w;
  SELECT jsonb_build_object(
   'inbound_7d',count(*) FILTER(WHERE m.sender='customer'),
-  'human_outbound_7d',count(*) FILTER(WHERE m.sender='seller'),
-  'ai_outbound_7d',count(*) FILTER(WHERE m.sender='ai'))
+  'human_outbound_7d',count(*) FILTER(WHERE m.sender='seller' AND m.state IN ('sent','delivered','seen')),
+  'ai_outbound_7d',count(*) FILTER(WHERE m.sender='ai' AND m.state IN ('sent','delivered','seen')))
  INTO replies FROM inbox_messages m
  JOIN inbox_threads th ON th.id=m.thread_id AND th.workspace_id=w
  JOIN inbox_connections c ON c.id=th.connection_id AND c.workspace_id=w AND c.environment=e
