@@ -85,3 +85,18 @@ test("Order finance links navigate to source detail but never assert paid or COD
  assert.match(detail,/section==="transactions"\?"payments":section/);
  assert.doesNotMatch(detail,/markPaid|setPaid|manualVerify/);
 });
+
+test("Canonical payment links expose existing one-time intents without requiring reusable-link entitlement",()=>{
+ const content=src("components/dashboard-content.tsx");
+ const requests=src("components/payment-requests.tsx");
+ assert.equal(unifiedDestination("both","payments",["links"])?.section,"payment-links");
+ assert.equal(unifiedDestination("both","payments",["links","requests"]) ,null,"UI mode must not become a second financial detail route");
+ assert.match(content,/oneTimeRequests=canonicalRoutes&&service==="payments"&&section==="payment-links"/);
+ assert.match(content,/initialQuery\.view==="requests"\|\|planFeatures\?\.payment_links!==true/);
+ assert.match(content,/!oneTimeRequests&&!planFeatures\?\.\[feature\]/);
+ assert.match(content,/dashboardInitialData\(workspace\.id,paymentContext\.environment,"requests"/);
+ assert.match(content,/<PaymentRequests hideTabs/);
+ assert.match(content,/href="\/payments\/links\?view=requests"/);
+ assert.match(requests,/hideTabs=false/);
+ assert.match(requests,/!hideTabs&&<div className="tabs">/);
+});

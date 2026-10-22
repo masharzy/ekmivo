@@ -1612,10 +1612,13 @@ try{
  count+=await runBriofoldWalletChecks(control);
  if(process.env.PG05_BROWSER_TESTS==="true"){
   const {runBriofoldSettingsAcceptance}=await import("./briofold-settings-acceptance.mjs");
-  await runBriofoldSettingsAcceptance({control,sessions:pg09Auth.sessions,apiBin:apiTestBin,apiEnv:{
+  await runBriofoldSettingsAcceptance({control,sessions:pg09Auth.sessions,apiBin:apiTestBin,phase9Fixture:{
+   workspaceId:pg07WS,liveDatabase:ds("ekmivo_pg04_live")
+  },apiEnv:{
    ...process.env,
    AUTHZ_DATABASE_URL:ds(source.pathname.slice(1),"ekmivo_financial_runtime","pg01-ci-only-password"),
    PG05_SANDBOX_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_finance_reader_sandbox","pg04-sandbox-reader-only"),
+   PG06_LIVE_DATABASE_URL:ds("ekmivo_pg04_live","ekmivo_finance_reader_live","pg04-live-reader-only"),
    PG05_TOKEN_SECRET:pg09Auth.tokenSecret,PG05_PAYER_SECRET:pg09Auth.payerSecret,
    PG06_PIPELINE_ENABLED:"true",PG06_PARSER_RULES_JSON:await readFile(new URL("../../../examples/receipt-parser/sandbox-fixture.json",import.meta.url),"utf8"),
    PG06_ENCRYPTION_KEY_HEX:Buffer.alloc(32,88).toString("hex"),

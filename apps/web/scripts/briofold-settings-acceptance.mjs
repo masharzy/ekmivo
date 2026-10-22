@@ -12,9 +12,10 @@ import {runBriofoldChannelExtensions} from "./briofold-channel-extensions-accept
 import {runBriofoldCommerce} from "./briofold-commerce-acceptance.mjs";
 import {runBriofoldCustomers} from "./briofold-customers-acceptance.mjs";
 import {runBriofoldInboxAccess} from "./briofold-inbox-access.mjs";
+import {runBriofoldPhase9Browser} from "./briofold-phase9-browser.mjs";
 
 // Called after all control/financial extensions, not the earlier PG05 schema.
-export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,apiEnv}){
+export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,apiEnv,phase9Fixture}){
  const target=new URL(control);
  if(!["localhost","127.0.0.1","[::1]"].includes(target.hostname)||/prod/i.test(target.pathname))throw Error("Acceptance refuses shared database");
  const schema=postgres(control,{max:1,prepare:false});
@@ -70,6 +71,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});
   await runBriofoldCustomers({origin,browser,control,sessions,apiOrigin});
   await runBriofoldCommerce({origin,browser,control,sessions,apiOrigin});
+  if(phase9Fixture)await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }

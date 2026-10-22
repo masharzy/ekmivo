@@ -53,8 +53,12 @@ export async function DashboardContent({locale,user,workspace,section,service=de
     }catch(error){console.error("CHECKOUT_THEME_INITIAL_READ_FAILED",error instanceof Error?error.message:"UNKNOWN");return null}
    })():Promise.resolve(null)
  ]);
+ // A one-time request is a distinct, existing financial intent capability, not
+ // a paid reusable-link entitlement. Keep both reachable within /payments/links.
+ const oneTimeRequests=canonicalRoutes&&service==="payments"&&section==="payment-links"&&
+  (initialQuery.view==="requests"||planFeatures?.payment_links!==true);
  const feature=sectionPlanFeature[section];
- if(service==="payments"&&feature&&!planFeatures?.[feature]){
+ if(service==="payments"&&feature&&!oneTimeRequests&&!planFeatures?.[feature]){
   const denied=<PlanFeatureUpgrade feature={feature} locale={locale} workspaceId={workspace.id} unavailable={planFeatures===null}/>;
   return framed?denied:<AppShell locale={locale} user={user} workspace={workspace} section={section} service={service} paymentContext={paymentContext}>{denied}</AppShell>;
  }
@@ -78,8 +82,26 @@ export async function DashboardContent({locale,user,workspace,section,service=de
   :null;
  if(detailContent)return framed?detailContent:<AppShell locale={locale} user={user} workspace={workspace}
   section={section} service={service} paymentContext={paymentContext}>{detailContent}</AppShell>;
+ if(oneTimeRequests&&paymentContext){
+  const requestReads=await dashboardInitialData(workspace.id,paymentContext.environment,"requests",initialQuery,planFeatures);
+  const requestContent=<DashboardInitialData reads={requestReads}>
+   <nav className="tabs" aria-label={bn?"পেমেন্ট লিংকের ধরন":"Payment link type"}>
+    {planFeatures?.payment_links===true&&<Link href="/payments/links">{bn?"পেমেন্ট লিংক":"Payment links"}</Link>}
+    <Link href="/payments/links?view=requests" aria-current="page" className="on">{bn?"একবারের রিকোয়েস্ট":"One-time requests"}</Link>
+   </nav>
+   <PaymentRequests hideTabs canPaymentLinks={planFeatures?.payment_links===true} canInvoices={planFeatures?.invoices===true}
+    key={user.id+workspace.id+paymentContext.environment} canWrite={workspace.role!=="viewer"}
+    locale={locale} userId={user.id} workspaceId={workspace.id} environment={paymentContext.environment}/>
+  </DashboardInitialData>;
+  return framed?requestContent:<AppShell locale={locale} user={user} workspace={workspace}
+   section={section} service={service} paymentContext={paymentContext}>{requestContent}</AppShell>;
+ }
  const initialReads=service==="payments"&&paymentContext?await dashboardInitialData(workspace.id,paymentContext.environment,section,initialQuery,planFeatures):{};
  const content=<DashboardInitialData reads={initialReads}><>
+  {canonicalRoutes&&service==="payments"&&section==="payment-links"&&<nav className="tabs" aria-label={bn?"পেমেন্ট লিংকের ধরন":"Payment link type"}>
+   {planFeatures?.payment_links===true&&<Link href="/payments/links" aria-current={oneTimeRequests?undefined:"page"} className={oneTimeRequests?undefined:"on"}>{bn?"পেমেন্ট লিংক":"Payment links"}</Link>}
+   <Link href="/payments/links?view=requests">{bn?"একবারের রিকোয়েস্ট":"One-time requests"}</Link>
+  </nav>}
   
   {service==="payments"&&section==="requests"&&<div className="ekv3-links-heading"><header className="ekv3-page-header"><div><h1>{planFeatures?.payment_links?(bn?"পেমেন্ট লিংক":"Payment links"):(bn?"একবারের রিকোয়েস্ট":"One-time requests")}</h1><p>{planFeatures?.payment_links?(bn?"পেমেন্ট লিংক ও একবারের অনুরোধ পরিচালনা করুন।":"Manage links and one-time payments."):(bn?"একবারের পেমেন্ট অনুরোধ পরিচালনা করুন।":"Manage one-time payments.")}</p></div>{workspace.role!=="viewer"&&<Link className="ekv3-primary" href={dashboardHref(locale,workspace.id,service,section)+"?create=1"}>{section==="requests"?(bn?"নতুন রিকোয়েস্ট":"New request"):(bn?"নতুন লিংক":"New link")}</Link>}</header></div>}
   {!(service==="ai"&&section==="overview")&&!((service==="payments"&&paymentContext&&["overview","reports","transactions","incoming","requests","refunds","invoices","customers","payment-links","gateways","devices","developers","checkout-themes","store","notifications"].includes(section))||commonWorkspaceSection||workspaceBilling)&&<div className="ds-page-heading"><div><p className="ds-eyebrow">{serviceNames[service][locale]}</p><h1>{section==="overview"?(bn?"আপনার কাজের সারসংক্ষেপ":"Your working overview"):detail[locale]}</h1><p>{section==="overview"?(service==="ai"?(bn?"গ্রাহকের মেসেজ, AI ও বিক্রয়ের অগ্রগতি এক জায়গায়।":"Conversations, your AI and sales progress in one place."):(bn?"পেমেন্ট যাচাই, টাকা গ্রহণের মাধ্যম ও ডিভাইসের অবস্থা।":"Payment verification, receiving accounts and device health.")):detail.detail[locale]}</p></div></div>}
