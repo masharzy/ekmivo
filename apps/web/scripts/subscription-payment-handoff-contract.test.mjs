@@ -22,7 +22,8 @@ test("subscription wallet requires exact current owner-bound capability; seller 
 test("subscription status cannot be marked paid by browser, can outlast closed tab and exposes real invoice",()=>{
  const status=read("apps/web/src/components/subscription-payment-status.tsx");
  const proxy=read("apps/web/src/app/api/go/[...path]/route.ts");
- assert.match(status,/subscription-purchases/);
+ const client=read("apps/web/src/lib/subscription-payment-client.ts");
+ assert.match(client,/subscription-purchases/);
  assert.match(status,/billing-invoices/);
  assert.match(status,/next.verified!==\(next.status==="completed"\)/);
  assert.match(status,/window.setInterval/);
