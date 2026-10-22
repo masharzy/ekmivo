@@ -13,17 +13,27 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner'),(${store},${viewer},'viewer')`;
   const profile=(await db`INSERT INTO briofold_customers(workspace_id,environment,name,email,stage,preferences)
    VALUES(${store},'live','Fictional opted-in person','test-only@example.invalid','qualified',${db.json({marketing:'opted-in',do_not_contact:false})}) RETURNING id`)[0].id;
-  await db`INSERT INTO briofold_customer_proofs(workspace_id,environment,customer_id,kind,value)
-   VALUES(${store},'live',${profile},'email','test-only@example.invalid')`;
+  const identityProof=(await db`INSERT INTO briofold_customer_proofs(workspace_id,environment,customer_id,kind,value)
+   VALUES(${store},'live',${profile},'email','test-only@example.invalid') RETURNING id`)[0].id;
   const preview=async(ch='email',segment='all',who=owner,realm='live',scope=store)=>(await db`SELECT briofold_growth_audience_preview(${scope},${realm},${who},${ch},${segment}) data`)[0].data;
   assert.equal((await preview()).candidate_profiles,1);
   assert.equal((await preview()).potentially_eligible_with_proof,0,'CRM opt-in must not authorize broadcast');
   assert.equal((await preview()).channel_proof_missing,1);
   await assert.rejects(()=>preview('email','all',viewer),e=>e.code==='42501');
   await assert.rejects(()=>preview('email','all',owner,'live',foreign),e=>e.code==='42501');
-  await db`INSERT INTO briofold_growth_channel_consents(workspace_id,environment,customer_id,channel,source_kind,evidence_digest,verified_at)
-   VALUES(${store},'live',${profile},'email','confirmed-double-opt-in',${createHash('sha256').update(randomUUID()).digest('hex')},now())`;
+  await db`INSERT INTO briofold_growth_channel_consents(workspace_id,environment,customer_id,channel,identity_proof_id,source_kind,evidence_digest,verified_at)
+   VALUES(${store},'live',${profile},'email',${identityProof},'confirmed-double-opt-in',${createHash('sha256').update(randomUUID()).digest('hex')},now())`;
+  await assert.rejects(()=>db`UPDATE briofold_growth_channel_consents SET evidence_digest=${createHash('sha256').update(randomUUID()).digest('hex')} WHERE customer_id=${profile}`,
+   e=>e.code==='42501','provider proof evidence cannot be silently rewritten');
   assert.equal((await preview()).potentially_eligible_with_proof,1,'active evidence + identity + profile only');
+  await db`UPDATE briofold_customer_proofs SET revoked_at=now() WHERE id=${identityProof}`;
+  await db`INSERT INTO briofold_customer_proofs(workspace_id,environment,customer_id,kind,value)
+   VALUES(${store},'live',${profile},'email','test-only@example.invalid')`;
+  assert.equal((await preview()).potentially_eligible_with_proof,0,'renewed identity proof must not inherit former marketing opt-in');
+  await db`INSERT INTO briofold_growth_channel_consents(workspace_id,environment,customer_id,channel,identity_proof_id,source_kind,evidence_digest,verified_at)
+   SELECT ${store},'live',${profile},'email',id,'confirmed-double-opt-in',${createHash('sha256').update(randomUUID()).digest('hex')},now()
+    FROM briofold_customer_proofs WHERE customer_id=${profile} AND revoked_at IS NULL`;
+  assert.equal((await preview()).potentially_eligible_with_proof,1,'new proof needs its own explicit consent evidence');
   assert.equal((await preview('email','won')).candidate_profiles,0,'audience stage is authoritative');
   assert.equal((await preview('email','all',owner,'sandbox')).candidate_profiles,0,'realm isolated');
   assert.equal((await preview()).send_ready,false,'no provider delivery capability');

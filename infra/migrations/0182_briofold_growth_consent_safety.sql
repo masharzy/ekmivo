@@ -16,17 +16,37 @@ CREATE TABLE briofold_growth_channel_consents(
  workspace_id uuid NOT NULL,environment text NOT NULL CHECK(environment IN ('live','sandbox')),
  customer_id uuid NOT NULL,
  channel text NOT NULL CHECK(channel IN ('email','sms','whatsapp','messenger','instagram')),
+ -- Consent binds to an exact verified identity, never merely to an editable
+ -- profile UUID. A new email/phone proof cannot inherit an earlier opt-in.
+ identity_proof_id uuid REFERENCES briofold_customer_proofs(id),
+ identity_source_id uuid REFERENCES briofold_customer_sources(id),
  source_kind text NOT NULL CHECK(source_kind IN ('provider-opt-in','confirmed-double-opt-in')),
  evidence_digest text NOT NULL CHECK(evidence_digest ~ '^[0-9a-f]{64}$'),
  verified_at timestamptz NOT NULL,expires_at timestamptz,revoked_at timestamptz,
  created_at timestamptz NOT NULL DEFAULT now(),
  FOREIGN KEY(workspace_id,environment,customer_id)
   REFERENCES briofold_customers(workspace_id,environment,id),
- CHECK(expires_at IS NULL OR expires_at>verified_at)
+ CHECK(expires_at IS NULL OR expires_at>verified_at),
+ CHECK((channel IN ('email','sms','whatsapp') AND identity_proof_id IS NOT NULL AND identity_source_id IS NULL)
+  OR (channel IN ('messenger','instagram') AND identity_proof_id IS NULL AND identity_source_id IS NOT NULL))
 );
 CREATE INDEX briofold_growth_consents_active ON briofold_growth_channel_consents
  (workspace_id,environment,channel,customer_id)
  WHERE revoked_at IS NULL;
+CREATE FUNCTION briofold_growth_consent_append_only() RETURNS trigger
+ LANGUAGE plpgsql AS $$BEGIN
+ IF TG_OP='DELETE' THEN
+  RAISE EXCEPTION 'Consent evidence cannot be deleted' USING ERRCODE='42501';
+ END IF;
+ IF (to_jsonb(NEW)-'revoked_at') IS DISTINCT FROM (to_jsonb(OLD)-'revoked_at')
+  OR OLD.revoked_at IS NOT NULL OR NEW.revoked_at IS NULL OR NEW.revoked_at<OLD.verified_at THEN
+  RAISE EXCEPTION 'Consent evidence may only be revoked' USING ERRCODE='42501';
+ END IF;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER briofold_growth_consent_append_only
+ BEFORE UPDATE OR DELETE ON briofold_growth_channel_consents
+ FOR EACH ROW EXECUTE FUNCTION briofold_growth_consent_append_only();
 
 CREATE TABLE briofold_growth_suppressions(
  workspace_id uuid NOT NULL,environment text NOT NULL CHECK(environment IN ('live','sandbox')),
@@ -92,7 +112,19 @@ BEGIN
    EXISTS(SELECT 1 FROM briofold_growth_channel_consents proof
      WHERE proof.workspace_id=w AND proof.environment=e AND proof.customer_id=c.id
       AND proof.channel=ch AND proof.revoked_at IS NULL AND proof.verified_at<=now()
-      AND (proof.expires_at IS NULL OR proof.expires_at>now())) AS channel_opt_in,
+      AND (proof.expires_at IS NULL OR proof.expires_at>now())
+      AND ((ch IN ('email','sms','whatsapp') AND EXISTS(
+       SELECT 1 FROM briofold_customer_proofs p WHERE p.id=proof.identity_proof_id
+        AND p.workspace_id=w AND p.environment=e AND p.customer_id=c.id AND p.revoked_at IS NULL
+        AND p.kind=CASE WHEN ch='email' THEN 'email' ELSE 'phone' END
+        AND p.value=CASE WHEN ch='email' THEN c.email ELSE c.phone END))
+       OR (ch IN ('messenger','instagram') AND EXISTS(
+        SELECT 1 FROM briofold_customer_sources s
+         JOIN inbox_threads t ON t.id=s.source_id
+         JOIN inbox_connections conn ON conn.id=t.connection_id
+         WHERE s.id=proof.identity_source_id AND s.workspace_id=w AND s.environment=e
+          AND s.customer_id=c.id AND s.kind='thread' AND conn.workspace_id=w AND conn.environment=e
+          AND conn.provider=CASE WHEN ch='messenger' THEN 'ms' ELSE 'ig' END)))) AS channel_opt_in,
    EXISTS(SELECT 1 FROM briofold_growth_suppressions suppression
      WHERE suppression.workspace_id=w AND suppression.environment=e
       AND suppression.customer_id=c.id AND suppression.channel IN ('all',ch)) AS is_suppressed
@@ -155,6 +187,7 @@ END $$;
 
 REVOKE ALL ON FUNCTION briofold_growth_audience_preview(uuid,text,uuid,text,text),
  briofold_growth_suppress_contact(uuid,text,uuid,uuid,jsonb),
+ briofold_growth_consent_append_only(),
  briofold_growth_suppression_immutable()
  FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
 GRANT EXECUTE ON FUNCTION briofold_growth_audience_preview(uuid,text,uuid,text,text),
