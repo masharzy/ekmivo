@@ -33,8 +33,11 @@ test("checkout preview cannot issue an unverified paid invoice",()=>{
  const intentModule=source("lib/server/purchase-intents.ts");
  const migration=readFileSync(new URL("../../../infra/migrations/0151_phase4_durable_purchase_intents.sql",import.meta.url),"utf8");
  assert.match(summary,/purchaseEnabled=\{false\}/);
- assert.match(intentModule,/status='selected'/);
- assert.match(intentModule,/payment_plan_claim_free/);
+ assert.match(intentModule,/platform_subscription_intent_command/);
+ assert.match(migration,/payment_plan_claim_free/);
+ assert.match(migration,/SECURITY DEFINER/);
+ assert.match(migration,/REVOKE ALL ON FUNCTION platform_subscription_intent_command/);
+ assert.doesNotMatch(intentModule,/INSERT INTO platform_subscription|UPDATE platform_subscription|FROM platform_subscription_purchase_intents/i);
  assert.doesNotMatch(intentModule,/dashboard_billing_issue|checkout_token|pg10_intent\(/);
  assert.match(migration,/public_token_sha256/);
  assert.match(migration,/guest_session_sha256/);
@@ -47,4 +50,16 @@ test("OAuth/login and Store setup have one continuation point",()=>{
  const route=source("app/[locale]/subscribe/resume/[token]/route.ts");
  assert.match(route,/resumePurchase/);
  assert.doesNotMatch(route,/returnUrl|callbackUrl|redirect_uri/);
+});
+
+test("Phase 3 quoted selections and restricted product/term coupons survive resume",()=>{
+ const code=source("lib/server/purchase-intents.ts");
+ const migration=readFileSync(new URL("../../../infra/migrations/0151_phase4_durable_purchase_intents.sql",import.meta.url),"utf8");
+ assert.match(code,/\["selected","quoted"\]/);
+ assert.match(migration,/status IN \('selected','quoted'\)/);
+ assert.match(migration,/eligible_products/);
+ assert.match(migration,/eligible_terms/);
+ assert.match(migration,/OFFER_CHANGED/);
+ assert.match(migration,/FOR UPDATE/);
+ assert.match(migration,/confirmed_invoice_id IS NULL/);
 });
