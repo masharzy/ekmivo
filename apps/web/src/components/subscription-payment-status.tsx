@@ -1,28 +1,17 @@
 "use client";
 
 import {useCallback,useEffect,useState} from "react";
+import {readSubscriptionPayment,type SubscriptionPaymentResult} from "../lib/subscription-payment-client";
 
-type Status={
- intent_id:string;invoice_id:string;amount_minor:number;currency:string;
- status:"pending"|"verifying"|"completed"|"expired"|"cancelled"|"recovery_required";
- expires_at:string;verified:boolean;
-};
-const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 export function SubscriptionPaymentStatus({workspace,intent,locale}:{workspace:string;intent:string;locale:"bn"|"en"}){
  const bn=locale==="bn";
- const [data,setData]=useState<Status|null>(null);
+ const [data,setData]=useState<SubscriptionPaymentResult|null>(null);
  const [error,setError]=useState("");
  const [loading,setLoading]=useState(true);
  const t=(en:string,be:string)=>bn?be:en;
  const refresh=useCallback(async(signal?:AbortSignal)=>{
   try{
-   const response=await fetch(`/api/go/workspaces/${workspace}/subscription-purchases/${intent}/payment`,{cache:"no-store",signal});
-   if(!response.ok)throw new Error(response.status===403||response.status===404?"NOT_FOUND":"SOURCE_UNAVAILABLE");
-   const next=await response.json() as Status;
-   if(!uuid.test(next.invoice_id)||next.intent_id!==intent||next.currency!=="BDT"||
-       !Number.isSafeInteger(next.amount_minor)||next.amount_minor<=0||
-       !["pending","verifying","completed","expired","cancelled","recovery_required"].includes(next.status)||
-       next.verified!==(next.status==="completed"))throw new Error("SOURCE_UNAVAILABLE");
+   const next=await readSubscriptionPayment(workspace,intent,signal);
    if(!signal?.aborted){setData(next);setError("")}
   }catch(e){
    if(!signal?.aborted)setError(e instanceof Error&&e.message==="NOT_FOUND"?"NOT_FOUND":"SOURCE_UNAVAILABLE");
