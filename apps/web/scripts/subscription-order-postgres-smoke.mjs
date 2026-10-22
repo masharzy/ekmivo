@@ -134,7 +134,30 @@ try{
   [ids.a,ids.intent2,randomUUID(),afterApply.intent_revision,""]);
  const afterRemove=await request(ids.a,ids.store,ids.intent2,"read");
  check(afterRemove.quote.total_minor==="10500"&&afterRemove.selected_coupon_code===null,"coupon Remove");
- console.log("PHASE5 POSTGRES PASS: roles, tenants, 3 consents, quote expiry, invoice race, recovery, coupon/tax");
+ await run("UPDATE workspace_members SET role='editor' WHERE workspace_id=$1 AND user_id=$2",[ids.store,ids.a]);
+ await denied(()=>request(ids.a,ids.store,ids.intent2,"read"),"FORBIDDEN");
+ await run("UPDATE workspace_members SET role='owner' WHERE workspace_id=$1 AND user_id=$2",[ids.store,ids.a]);
+ await run("DELETE FROM platform_primary_stores WHERE user_id=$1",[ids.a]);
+ await denied(()=>request(ids.a,ids.store,ids.intent2,"read"),"STORE_CHANGED");
+ await run("INSERT INTO platform_primary_stores(user_id,workspace_id,bound_by) VALUES($1,$2,$1)",[ids.a,ids.store]);
+ const changedOffer=randomUUID();
+ await run("INSERT INTO platform_subscription_offer_versions(id,offer_key,revision,term,amount_minor,payment_plan_version_id,terms,created_by) VALUES($1,'phase5_ci_plan',2,'monthly',11000,$2,$3::jsonb,$4)",
+  [changedOffer,ids.plan,{name:"CI changed Payments"},ids.a]);
+ await run("UPDATE platform_subscription_offers SET current_version_id=$1 WHERE offer_key='phase5_ci_plan'",[changedOffer]);
+ await denied(()=>request(ids.a,ids.store,ids.intent2,"confirm",
+  {...confirmation,quote_id:afterRemove.quote.id,idempotency_key:"phase5_changed_price0001"}),"PRICE_CHANGED");
+ await run("UPDATE platform_subscription_offers SET current_version_id=$1 WHERE offer_key='phase5_ci_plan'",[ids.offer]);
+ await run("UPDATE platform_subscription_tax_policies SET rate_bps=600,revision=revision+1 WHERE product='payments' AND term='monthly'");
+ await denied(()=>request(ids.a,ids.store,ids.intent2,"confirm",
+  {...confirmation,quote_id:afterRemove.quote.id,idempotency_key:"phase5_changed_tax00001"}),"QUOTE_STALE");
+ await run("UPDATE platform_subscription_tax_policies SET rate_bps=500,revision=revision+1 WHERE product='payments' AND term='monthly'");
+ const policyRequote=await request(ids.a,ids.store,ids.intent2,"quote");
+ await run("UPDATE platform_subscription_policy_versions SET status='archived' WHERE kind='terms' AND status='published'");
+ await run("INSERT INTO platform_subscription_policy_versions(kind,version_label,url,content_sha256,status,created_by) VALUES('terms','v2','https://example.invalid/ci-terms-v2',$1,'published',$2)",
+  ["d".repeat(64),ids.a]);
+ await denied(()=>request(ids.a,ids.store,ids.intent2,"confirm",
+  {...confirmation,quote_id:policyRequote.quote_id,idempotency_key:"phase5_changed_legal0001"}),"POLICY_CHANGED");
+ console.log("PHASE5 POSTGRES PASS: actor/Store/role, 3 consents, expiry, price/tax/legal changes, invoice race/recovery, coupon Apply/Remove");
 }catch(e){
  console.error("PHASE5 POSTGRES FAILED:",String(e.message||e).replaceAll(/postgres(?:ql)?:\/\/\S+/g,"[redacted]"));
  process.exitCode=1;
