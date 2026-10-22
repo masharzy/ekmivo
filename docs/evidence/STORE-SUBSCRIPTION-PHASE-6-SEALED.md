@@ -21,7 +21,7 @@ The introduced `EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED` flag defaults to OFF in Go 
 - `infra/migrations/0145_platform_subscription_payment_handoff.sql`: control ledger, lock-backed idempotent bind, Store/published legal/quote/coupon snapshots, worker-only verified settlement and exactly-once coupon redemption, terminal release and unique manual recovery cases. No financial realm table/direct grants; no fake account/price/provider data.
 - `/pay/subscription/{token}`: authenticated Store-bound capability lookup instead of accidental merchant wallet. Reuses existing payer, destination and wait/countdown UX but returns to SaaS status.
 - `/checkout/order/{intent}/status`: buyer-only status polling, pending/verifying/paid/expired/cancelled/recovery, invoice PDF and Store Billing.
-- `contracts/openapi.yaml`: new explicit Store subscription payment issue/status operations, distinct from `/pay/{documentToken}` and merchant `/checkout/{merchantToken}`.
+- `contracts/store-subscription-payment.yaml`: staged standalone OpenAPI Store subscription issue/status contract; master OpenAPI and generated merchant SDK integration are pending predecessor merge, distinct from `/pay/{documentToken}` and merchant `/checkout/{merchantToken}`.
 
 Nominal states: `confirmed → awaiting_payment → paid` **only** with independent Live allocation; `awaiting_payment → expired|cancelled` releases reservation, and independently discovered money after either terminal outcome → `recovery_required` with unique operator case, **never automatic refund**. Uncertain external outcomes are looked up by persisted digest; never intentionally blindly issue a different payment intent. The exact provider/payer/amount/original-time matching stays with the existing signed receipt engine.
 
@@ -35,7 +35,7 @@ Control RLS/FORCE and restricted function grants are included, but **the deploye
 
 ## Verification matrix — truthful outcomes
 
-- Go policy tests: added **source tests**, not yet independently executed on a full working checkout here.
+- Go policy tests: added source tests; execution evidence pending current CI.
 - Go reconciler fake-row tests: added covering strict proof/amount/receiver, expired/cancelled late proof, missing intent, offline finance, default-off Live. Not equivalent to isolated Postgres.
 - Next route/contract test: added under `apps/web/scripts/subscription-payment-handoff-contract.test.mjs`; run result pending CI.
 - Go unit/integration/race, Next build/lint/typecheck, OpenAPI/SDK sync, real browser, isolated PostgreSQL financial/control transaction tests: **PENDING** until CI/full integrated checkout or authorized runtime is available.
