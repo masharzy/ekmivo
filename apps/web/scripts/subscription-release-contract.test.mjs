@@ -55,3 +55,15 @@ test("Release migration ordered after Phase 3-6, without production enablement",
  assert.match(smoke,/ekmivo_pg00/);
  assert.match(smoke,/platform_subscription_admin_operations/);
 });
+
+test("SaaS account tiles and lock use strict online approved single-source allowlisting",()=>{
+ const checkout=read("backend/internal/checkout/service.go");
+ const guard=read("backend/internal/checkout/subscription_wallet_allowlist.go");
+ assert.match(checkout,/subscriptionCheckout\(initial\)/);
+ assert.match(checkout,/subscriptionAccountEligible\(s\.eligibleSubscriptionAccounts/);
+ assert.match(checkout,/accounts = s\.eligibleSubscriptionAccounts/);
+ assert.match(guard,/count\[method\] == 1/);
+ assert.match(guard,/source_online/);
+ assert.match(guard,/s\.liveMethods\(checkout\)/);
+ assert.match(guard,/SAAS-/);
+});
