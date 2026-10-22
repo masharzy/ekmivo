@@ -469,7 +469,13 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
        throw Error(`Phase9 responsive route ${route} ${locale}/${theme}/${width} did not mount ${ready}: ${JSON.stringify(snapshot)}; ${String(error)}`);
       }
       assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
-      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${route} overflows ${locale}/${theme}/${width}`);
+      const horizontal=await page.evaluate(()=>{
+       const documentWidth=document.documentElement.scrollWidth,fit=documentWidth<=innerWidth+1;
+       return {fit,documentWidth,offenders:fit?[]:[...document.querySelectorAll("body *")]
+        .filter(element=>element.getBoundingClientRect().right>innerWidth+1)
+        .slice(0,12).map(element=>({tag:element.tagName,className:String(element.className).slice(0,90),right:Math.round(element.getBoundingClientRect().right)}))};
+      });
+      assert.ok(horizontal.fit,`${route} overflows ${locale}/${theme}/${width}: ${JSON.stringify(horizontal)}`);
       assert.equal(await page.locator('main [role="alert"]').count(),0,`${route} shows data/UI error`);
       if(width===320&&route==="/payments")await page.screenshot({path:fileURLToPath(new URL(`${locale}-${theme}-${width}.png`,evidence)),fullPage:true});
       cases++;

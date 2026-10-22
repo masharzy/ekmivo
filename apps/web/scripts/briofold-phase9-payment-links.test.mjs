@@ -118,3 +118,14 @@ test("Production payment shell ships its original fonts without an external buil
  assert.equal(packageJson.dependencies["@fontsource-variable/outfit"],"^5.3.0");
  assert.equal(packageJson.dependencies["@fontsource-variable/figtree"],"^5.3.0");
 });
+
+test("checkout editor's 320px preview and wallet toolbar remain contained and reachable",()=>{
+ const css=readFileSync(new URL("../src/components/checkout-editor-reference.css",import.meta.url),"utf8");
+ assert.match(css,/\.ref-checkout-editor \.dock\{[^}]*width:max-content;max-width:calc\(100% - 12px\);overflow-x:auto/);
+ assert.match(css,/\.ref-checkout-editor \.dg\{[^}]*flex:none/);
+ assert.match(css,/\.ref-checkout-editor \.pvw iframe\{[^}]*min-width:0;max-width:100%/);
+ assert.match(css,/\.ref-checkout-editor \.cols\{grid-template-columns:minmax\(0,1fr\)\}/);
+ const browser=readFileSync(new URL("./briofold-phase9-browser.mjs",import.meta.url),"utf8");
+ assert.match(browser,/documentWidth=document\.documentElement\.scrollWidth,fit=documentWidth<=innerWidth\+1/);
+ assert.match(browser,/offenders:fit\?\[\]/);
+});
