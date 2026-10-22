@@ -63,10 +63,10 @@ try{
  const capability="d".repeat(64),session="e".repeat(64),creation="f".repeat(64);
  const selection={offer_key:product,term:"monthly",version_id:version,quantity:1,creation_key:creation,coupon_code:""};
  const rpc=async(op,actor,sessionHash= session,cap=capability,payload={})=>{
-  const rows=await test.unsafe("SELECT platform_subscription_intent_command($1::text,$2::uuid,$3::text,$4::text,$5::jsonb) AS result",[op,actor||null,sessionHash,cap,JSON.stringify(payload)]);
+  const rows=await test.unsafe("SELECT platform_subscription_intent_command($1::text,$2::uuid,$3::text,$4::text,$5::jsonb) AS result",[op,actor||null,sessionHash,cap,test.json(payload)]);
   return rows[0].result;
  };
- const flags=await test.unsafe("SELECT ($1::text IN ('create','read','bind_identity','bind_store','cancel','claim_free','revalidate')) AS operation_ok,length($2::text) AS cap_length,length($3::text) AS guest_length,jsonb_typeof($4::jsonb) AS payload_type,pg_column_size($4::jsonb) AS payload_bytes",["create",capability,session,JSON.stringify(selection)]);
+ const flags=await test.unsafe("SELECT ($1::text IN ('create','read','bind_identity','bind_store','cancel','claim_free','revalidate')) AS operation_ok,length($2::text) AS cap_length,length($3::text) AS guest_length,jsonb_typeof($4::jsonb) AS payload_type,pg_column_size($4::jsonb) AS payload_bytes",["create",capability,session,test.json(selection)]);
  console.log("PHASE4 synthetic RPC argument checks:",JSON.stringify(flags[0]));
  let created;
  try{created=await rpc("create",null,session,capability,selection);}catch(e){throw Error("Phase4 initial create: "+(e instanceof Error?e.message:"unknown"));}
