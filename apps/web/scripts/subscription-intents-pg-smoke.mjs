@@ -14,7 +14,7 @@ const assert=(v,m)=>{if(!v)throw Error(m)};
 async function rejects(query,label){let denied=false;try{await query()}catch{denied=true}assert(denied,"Invalid accepted: "+label)}
 try{
  await admin.unsafe("CREATE DATABASE ekmivo");
- await test.unsafe("CREATE TABLE platform_subscription_purchase_intents(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), status text NOT NULL DEFAULT 'selected' CHECK(status IN ('selected','quoted','confirmed','paid','cancelled','expired')),created_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL DEFAULT (now()+interval '1 hour'))");
+ await test.unsafe("CREATE TABLE platform_subscription_purchase_intents(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), actor_id uuid, status text NOT NULL DEFAULT 'selected' CHECK(status IN ('selected','quoted','confirmed','paid','cancelled','expired')),created_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL DEFAULT (now()+interval '1 hour'))");
  const before=await test.unsafe("INSERT INTO platform_subscription_purchase_intents DEFAULT VALUES RETURNING id");
  await test.unsafe(file);
  const old=await test.unsafe("SELECT public_token_sha256,guest_session_sha256,requested_quantity FROM platform_subscription_purchase_intents WHERE id=$1",[before[0].id]);
