@@ -1609,6 +1609,22 @@ try{
   }
  }
  count+=await runPaymentExtensions({db:dbs.sandbox,live:dbs.live,control:admin,workspace:pg07WS,otherWorkspace:randomUUID()});
+ // Phase 9 browser parity exercises the production-facing unified incoming
+ // reader and API activity, which are additive operator migrations outside
+ // the original PG04/PG10 isolation smoke's earlier migration checkpoint.
+ // Install only inside disposable CI realms, after their PG06 phone-forwarder
+ // and PG11/PG10 document prerequisites; never provision a shared DB here.
+ for(const realm of ["sandbox","live"]){
+  for(const [file,signature] of [
+   ["0056_phone_incoming_and_late_refund_reports.sql","pg56_incoming_read(uuid,text,uuid,uuid,text,uuid,text,timestamptz,timestamptz,text)"],
+   ["0058_integration_activity.sql","pg58_record_api(uuid,text,text,text,integer,bigint,text)"]
+  ]){
+   const installed=(await dbs[realm].unsafe("SELECT to_regprocedure($1) IS NOT NULL AS installed",[signature]))[0].installed;
+   if(!installed)await dbs[realm].unsafe(await readFile(new URL("../../../infra/migrations/"+file,import.meta.url),"utf8")).simple();
+   ok((await dbs[realm].unsafe("SELECT to_regprocedure($1) IS NOT NULL AS installed",[signature]))[0].installed,
+    `Phase9 ${file} missing in disposable ${realm} reader`);
+  }
+ }
  count+=await runBriofoldWalletChecks(control);
  if(process.env.PG05_BROWSER_TESTS==="true"){
   const {runBriofoldSettingsAcceptance}=await import("./briofold-settings-acceptance.mjs");
