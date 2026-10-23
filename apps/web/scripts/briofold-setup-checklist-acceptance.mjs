@@ -10,7 +10,7 @@ export async function runSetupChecklist({origin,browser,control,sessions}){
   let cases=0;
   for(const mode of ['ai','commerce','both']){
    const store=randomUUID(),foreign=randomUUID();
-   await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},'Fictional checklist '+${mode},${mode},${owner}),(${foreign},'Foreign checklist store',${mode},${owner})`;
+   await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},${'Fictional checklist '+mode},${mode},${owner}),(${foreign},'Foreign checklist store',${mode},${owner})`;
    await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner')`;
    const c=await browser.newContext();contexts.push(c);await c.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);
    const p=await c.newPage();p.setDefaultNavigationTimeout(90000);

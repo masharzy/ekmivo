@@ -91,11 +91,11 @@ export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initi
    committed=true;pending.current=null;sessionStorage.removeItem(storageKey);setUnconfirmed(false);setMessage(t("Saved.","সংরক্ষিত হয়েছে।"));closeForms();
    if(action==="import-preview"||action==="woocommerce-preview")setPreview(result);
    if(action==="import-apply")setPreview(null);
-   await refresh();if(detail)await open(detail.order.id,auditPage);
+   await refresh();if(action==="post-map"){const mappings=await read("post-mapping");setLegacy(mappings.items);}if(detail)await open(detail.order.id,auditPage);
    return result;
   }catch(e){lastFailure.current=e instanceof Error?e.message:"SAVE_UNAVAILABLE";setUnconfirmed(!committed&&pending.current!==null);setError((committed?t("Saved, but refresh failed: ","সংরক্ষিত হয়েছে; রিফ্রেশ ব্যর্থ: "):"")+(e instanceof Error?e.message:"SAVE_UNAVAILABLE"));return null;}
   finally{lock.current=false;setBusy(false);}
- },[api,storageKey,t,refresh,detail,open,auditPage,closeForms]);
+ },[api,storageKey,t,refresh,read,detail,open,auditPage,closeForms]);
  const productCommand=useCallback(()=>{const element=document.getElementById(`commerce-product-form-${workspaceId}`) as HTMLFormElement|null;if(element&&!element.reportValidity())return Promise.resolve(null);return product?command("product",product as unknown as Row):Promise.resolve(null);},[command,product,workspaceId]);
  const submitDraft=useCallback(()=>{const element=document.getElementById(`commerce-command-form-${workspaceId}`) as HTMLFormElement|null;if(element&&!element.reportValidity())return Promise.resolve(null);if(!form)return Promise.resolve(null);let body:Row={...draft};if(form==="create-order"||form==="review-order"||form==="edit-order")body={...draft,lines:cart};if(form==="coupon"){if(!draft.expires_at||!Number.isFinite(new Date(String(draft.expires_at)).getTime())){setError("EXPIRY_REQUIRED");return Promise.resolve(null);}body.expires_at=new Date(String(draft.expires_at)).toISOString();if(body.max_discount_minor==="")body.max_discount_minor=null;}return command(form,body);},[command,form,draft,cart,workspaceId]);
  useEffect(()=>{try{const raw=sessionStorage.getItem(storageKey);if(!raw)return;const p=JSON.parse(raw) as Pending;if(!data)return;if(Date.now()-p.time>1800000||!p.key||!p.body||!data?.can_manage){sessionStorage.removeItem(storageKey);return;}pending.current=p;setUnconfirmed(true);setMessage(t("An earlier operation has an unconfirmed response. Retry it before another change.","আগের কাজের উত্তর নিশ্চিত নয়। নতুন পরিবর্তনের আগে আবার চেষ্টা করুন।"));}catch{setError("OPERATION_RECOVERY_UNAVAILABLE");}},[storageKey,data,t]);

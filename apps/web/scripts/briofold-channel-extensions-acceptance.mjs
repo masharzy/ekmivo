@@ -112,7 +112,7 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('handover');
   await p.waitForFunction(()=>{const rows=[...document.querySelectorAll('article strong')];return rows.length===1&&rows[0].textContent==='Human handover';});
   await p.getByText('Alert customer',{exact:true}).waitFor();
-  assert.equal(await p.getByText('Response overdue',{exact:true}).count(),0,'handover filter included SLA notices');
+  assert.equal(await p.locator('article strong').filter({hasText:'Response overdue'}).count(),0,'handover filter included SLA notices');
   await p.getByRole('checkbox',{name:'Unread only',exact:true}).check();
   await p.getByRole('button',{name:'Mark read',exact:true}).click();
   await p.getByText('No notifications match.',{exact:true}).waitFor();

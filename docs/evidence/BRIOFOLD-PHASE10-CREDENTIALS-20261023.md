@@ -111,3 +111,8 @@ Canonical courier settings now optionally accept Pathao client ID/secret and mer
 Local Go checkout/authz/API tests, TypeScript, targeted lint and SQL/PLpgSQL parsing passed. Two courier rows stay partial until integrated verification. The setup/notification head is still independently running, so its verification is not replaced by a build-only claim.
 
 Primary contract checked from Pathao's public merchant Developer API bundle: https://merchant.pathao.com/assets/developer-api-CjYZeYEe.js (SHA-256 f69b26f414ff26d47b218b498192f5151ef2c7ceae7de6b80fb97dd4d610f8b9). Current documented base is https://api-hermes.pathao.com/aladdin/api/v1; cities use /city-list. The implementation exposes standard delivery (48), parcel/document types and 0.5–10 kg. It does not infer API details from third-party SDKs or claim a live booking.
+
+
+### Setup/notification exact-head fixture correction
+
+Foundation 40002971179 on e3ae3b7e passed Go/Kotlin/images and all independent feature suites except three browser fixture issues: setup used SQL `+` to concatenate a name; the existing Inbox attachment-error selector matched both an alert and a mirrored toast; notification filtering counted the SLA option label rather than only displayed notices. Use a JS-composed bound name, the semantic alert region, and notice article headings respectively. Preserve all role/scope/filter assertions. Added immediate post/photo mapping refresh after actual corrections plus a canonical campaign→mapping remove/reassign/reload browser journey. No extra row is closed from these corrections; 45/56 remains the verified checkpoint.

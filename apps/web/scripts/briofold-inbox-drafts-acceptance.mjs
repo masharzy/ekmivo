@@ -57,7 +57,7 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   await page.getByText('Fictional attachment.png · 1 KB',{exact:true}).waitFor();
   const attachmentFailed=page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send-media';}catch{return false;}}});
   await page.getByRole('button',{name:'Send attachment',exact:true}).click();await attachmentFailed;
-  await page.getByText('Could not confirm the attachment.',{exact:false}).waitFor();
+  await page.getByRole('alert').filter({hasText:'Could not confirm the attachment.'}).waitFor();
   await page.reload();await choose(0);await page.getByRole('button',{name:'Send attachment',exact:true}).click();
   await page.getByRole('button',{name:'Discard attachment',exact:true}).waitFor({state:'detached'});
   assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller' AND content->>'media_id'=${mediaId}`)[0].n),1,'lost attachment response queued twice');
