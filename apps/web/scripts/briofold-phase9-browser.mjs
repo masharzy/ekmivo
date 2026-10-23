@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {createCipheriv,createHash,randomBytes,randomUUID} from "node:crypto";
-import {mkdir} from "node:fs/promises";
+import {mkdir,readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import postgres from "postgres";
 
@@ -398,6 +398,94 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   await page.locator(".fin-volume-card").getByText(verifiedReportAmount,{exact:true}).first().waitFor();
   assert.equal(await page.locator('main [role="alert"]').count(),0,
    "canonical payment report displayed an unconfirmed source or validation error");
+  // CSV must reflect the same exact authorized finance snapshot as the
+  // visible canonical report; a successful download alone is insufficient.
+  const exportButton=page.getByRole("button",{name:"Export",exact:true});
+  await exportButton.waitFor();
+  assert.equal(await exportButton.isEnabled(),true,"owner report export stayed disabled");
+  const [ownerDownload]=await Promise.all([page.waitForEvent("download"),exportButton.click()]);
+  assert.match(ownerDownload.suggestedFilename(),/^ekmivo-report-\d{4}-\d\d-\d\d-\d{4}-\d\d-\d\d\.csv$/);
+  const ownerCsv=await readFile(await ownerDownload.path(),"utf8");
+  assert.ok(ownerCsv.startsWith("\uFEFF\"section\",\"reference\",\"label\""),"financial export must be UTF-8 BOM CSV with a stable header");
+  const ownerVerifiedRow=ownerCsv.split("\r\n").find(row=>row.startsWith('"summary","","verified",'));
+  assert.ok(ownerVerifiedRow,"verified financial summary missing from CSV");
+  const ownerVerifiedColumns=ownerVerifiedRow.split(',').map(value=>value.replace(/^"|"$/g,""));
+  const exportedMinor=Number(ownerVerifiedColumns[4]);
+  assert.ok(Number.isSafeInteger(exportedMinor)&&exportedMinor>=amount,"CSV omitted the verified fictional financial payment");
+  assert.equal(ownerVerifiedColumns[8],"BDT","CSV currency must match the financial source");
+  assert.ok(ownerCsv.includes(`"account","${account.id}"`),"owner export lost the authorized source receiving account");
+  const exportedFormatted="BDT "+new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(exportedMinor/100);
+  await page.locator(".fin-volume-card").getByText(exportedFormatted,{exact:true}).first().waitFor();
+  // The same export surface must honor the Go viewer projection; react-only
+  // masking is insufficient if private account/customer references leak.
+  const viewerReportPage=await viewerContext.newPage();
+  await viewerReportPage.goto(origin+"/reports/payments");
+  await viewerReportPage.getByRole("heading",{name:"Reports",exact:true}).waitFor();
+  const viewerExport=viewerReportPage.getByRole("button",{name:"Export",exact:true});
+  await viewerExport.waitFor();
+  const [viewerDownload]=await Promise.all([viewerReportPage.waitForEvent("download"),viewerExport.click()]);
+  const viewerCsv=await readFile(await viewerDownload.path(),"utf8");
+  assert.ok(viewerCsv.includes('"summary","","verified"'),"viewer lost permitted aggregate CSV export");
+  assert.ok(!viewerCsv.includes(account.id),"viewer CSV leaked receiving-account identity");
+  assert.ok(!viewerCsv.includes('"account",'),"viewer CSV leaked private receiving-account rows");
+  assert.ok(!viewerCsv.includes('"customer",'),"viewer CSV leaked invoice-linked customer identity rows");
+  await viewerReportPage.close();
+  console.log("Phase9 payment report CSV/browser PASS: owner source amount and receiving account, viewer aggregates without private identifiers");
+  // Reconciliation imports merchant evidence only. Exercise the complete
+  // canonical Next -> Go -> live finance flow and refuse to conflate a linked
+  // statement with independently verified provider settlement.
+  const reconciliationUrl=`${base}/reconciliation?environment=live`;
+  const statementLine=`P9-LINE-${randomUUID()}`;
+  const statementCsv="line_id,reference,amount_minor,currency,direction,transaction_at\n"+
+   `${statementLine},P9-FICTIONAL-STATEMENT,${amount},BDT,incoming,${new Date().toISOString()}\n`;
+  const previewRequest=()=>context.request.post(`${base}/reconciliation/statement-preview?environment=live`,{
+   headers:{Origin:origin},data:{account_id:account.id,csv:statementCsv}
+  });
+  const preview=await previewRequest();
+  assert.equal(preview.status(),200,`merchant statement preview failed: ${await preview.text()}`);
+  assert.deepEqual((await preview.json()).errors,[],"matching merchant statement unexpectedly failed validation");
+  const deniedImport=await viewerContext.request.post(`${base}/reconciliation/statement-import?environment=live`,{
+   headers:{Origin:origin},data:{account_id:account.id,csv:statementCsv}
+  });
+  assert.equal(deniedImport.status(),403,"viewer imported a private financial statement");
+  const imported=await context.request.post(`${base}/reconciliation/statement-import?environment=live`,{
+   headers:{Origin:origin},data:{account_id:account.id,csv:statementCsv}
+  });
+  assert.equal(imported.status(),200,`merchant statement import failed: ${await imported.text()}`);
+  assert.equal((await imported.json()).provider_verified,false,"merchant import was mislabeled as provider settlement");
+  const statementList=await context.request.get(reconciliationUrl);
+  assert.equal(statementList.status(),200,`merchant statement read failed: ${await statementList.text()}`);
+  const statement=(await statementList.json()).items.statements.find(row=>row.line_id===statementLine);
+  assert.ok(statement?.id&&statement.payment_id===null,"durable merchant statement was missing or prematurely linked");
+  const deniedAssociation=await viewerContext.request.post(`${base}/reconciliation/settlement-link?environment=live`,{
+   headers:{Origin:origin},data:{line_id:statement.id,payment_id:payment.id,reason:"Viewer attempted private settlement association"}
+  });
+  assert.equal(deniedAssociation.status(),403,"viewer associated a financial statement with a verified payment");
+  const association=await context.request.post(`${base}/reconciliation/settlement-link?environment=live`,{
+   headers:{Origin:origin},data:{line_id:statement.id,payment_id:payment.id,reason:"Disposable exact-account and amount test match"}
+  });
+  assert.equal(association.status(),200,`owner statement association failed: ${await association.text()}`);
+  const associationBody=await association.json();
+  assert.equal(associationBody.payment_id,payment.id,"statement association selected a different verified payment");
+  assert.equal(associationBody.provider_verified,false,"merchant association invented a provider settlement");
+  const associatedList=await context.request.get(reconciliationUrl);
+  assert.equal(associatedList.status(),200);
+  assert.equal((await associatedList.json()).items.statements.find(row=>row.id===statement.id)?.payment_id,payment.id,
+   "linked merchant statement was not durably readable through the Go source");
+  assert.equal((await finance.unsafe("SELECT verification_method FROM financial_payments WHERE id=$1::uuid",[payment.id]))[0].verification_method,
+   "sms_match","merchant statement rewrote immutable payment verification provenance");
+  await page.goto(origin+"/payments/reconciliation");
+  await page.locator(".pg10-workspace").waitFor();
+  await page.getByText(statementLine,{exact:false}).first().waitFor();
+  assert.ok((await page.locator(".pg10-workspace").innerText()).includes("Linked to verified payment"),
+   "canonical reconciliation UI lost merchant-import association status");
+  const viewerReconciliation=await viewerContext.newPage();
+  await viewerReconciliation.goto(origin+"/payments/reconciliation");
+  await viewerReconciliation.locator(".pg10-workspace").waitFor();
+  assert.equal(await viewerReconciliation.getByRole("button",{name:"Import batch"}).count(),0,
+   "viewer was shown reconciliation import mutation controls");
+  await viewerReconciliation.close();
+  console.log("Phase9 reconciliation/browser PASS: durable merchant statement preview/import/association, viewer mutation denial, no provider-verified claim");
   await page.goto(origin+"/invoices");
   await page.getByRole("heading",{name:"Invoices",exact:true}).waitFor();
   await page.getByText(invoice.reference,{exact:true}).first().waitFor();
@@ -449,7 +537,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
 
   const evidence=new URL("../test-results/pg09/phase9/",import.meta.url);await mkdir(evidence,{recursive:true});
   let cases=0;
-  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/settings/api-keys","/payments/refunds","/reports/payments","/invoices"];
+  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/settings/api-keys","/payments/refunds","/reports/payments","/payments/reconciliation","/invoices"];
   for(const locale of ["en","bn"]){
    await context.addCookies([{name:"ekmivo-locale",value:locale,url:origin,sameSite:"Lax"}]);
    for(const theme of ["light","dark"]){
@@ -462,7 +550,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
       assert.equal(response.status(),200,`${route} HTTP failed at ${locale}/${theme}/${width}`);
       const ready=route.includes("/transactions/")||route.startsWith("/sms-data/")
        ?".pg-operation-detail":route==="/settings/payment-methods"?".pg-phone-panel"
-       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/settings/api-keys"?".ref-api-key-page":route==="/payments/refunds"?".refund-table":route==="/reports/payments"?".fin-volume-card":"main h1";
+       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/settings/api-keys"?".ref-api-key-page":route==="/payments/refunds"?".refund-table":route==="/reports/payments"?".fin-volume-card":route==="/payments/reconciliation"?".pg10-workspace":"main h1";
       try{await page.locator(ready).first().waitFor({timeout:10000});}
       catch(error){
        const snapshot=await page.evaluate(()=>({pathname:location.pathname,headings:[...document.querySelectorAll("main h1,main h2")].map(node=>node.textContent?.trim()).slice(0,5),sections:[...document.querySelectorAll("main section")].map(node=>node.className).slice(0,9),excerpt:document.querySelector("main")?.textContent?.trim().slice(0,300)}));
