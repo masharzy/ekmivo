@@ -84,7 +84,9 @@ test("simplified Payments has no request or reconciliation user-facing tab",()=>
  const tabs=source("components/unified-section-tabs.tsx");
  const links=source("components/payment-documents.tsx");
  assert.doesNotMatch(nav,/requests:\{section:"requests"/);
- assert.doesNotMatch(nav,/reconciliation:\{section:"reconciliation"/);
+ // Reconciliation remains a permission-scoped canonical deep link, not a
+ // second top-level Payments tab or a workspace selector.
+ assert.match(nav,/reconciliation:\{section:"reconciliation",service:"payments"\}/);
  const paymentTabs=tabs.split(" payments:[")[1]?.split(" customers:[")[0]??"";
  assert.ok(paymentTabs.includes("/payments/links"));
  assert.doesNotMatch(paymentTabs,/\/payments\/(?:requests|incoming|invoices|reconciliation)/);
