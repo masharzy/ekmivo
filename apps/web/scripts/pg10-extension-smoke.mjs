@@ -100,7 +100,12 @@ export async function runPaymentExtensions({db,live,control,workspace,otherWorks
  await rejectedReturn(registeredOrigin+'.attacker.invalid/thank-you','lookalike host bypassed registered return origin');
  await rejectedReturn(registeredOrigin+'/thank-you?secret=1','unapproved query-bearing redirect accepted');
  const otherRealmOrigin=`https://live-only-${randomUUID()}.example.invalid`;
- await db.unsafe("INSERT INTO pg12_integrations(workspace_id,environment,kind,name,origin,status) VALUES($1::uuid,'live','website','Other realm redirect source',$2,'configured')",[workspace,otherRealmOrigin]);
+ // Live registration belongs in the independently isolated live realm.
+ // Never manufacture a cross-realm registry row in the sandbox database.
+ await live.begin(async tx=>{
+  await tx.unsafe("INSERT INTO financial_workspace_registry(workspace_id,environment,status,entitlement_version) VALUES($1::uuid,'live','active',1) ON CONFLICT(workspace_id,environment) DO NOTHING",[workspace]);
+  await tx.unsafe("INSERT INTO pg12_integrations(workspace_id,environment,kind,name,origin,status) VALUES($1::uuid,'live','website','Other realm redirect source',$2,'configured')",[workspace,otherRealmOrigin]);
+ });
  await rejectedReturn(otherRealmOrigin+'/thank-you','live-only registered origin escaped into sandbox');
  const allowedKey=randomUUID(),allowed=await create('payment-links',{
   reference:'REGISTERED-RETURN-'+randomUUID(),amount_minor:4500,max_quantity:1,
