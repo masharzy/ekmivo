@@ -60,6 +60,11 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
      AND s.revoked_at IS NULL AND s.expires_at>now() AND u.disabled_at IS NULL
     LIMIT 1`;
    if(session.length!==1)return {code:"reauth" as const};
+   const [bindingSchema]=await tx`SELECT to_regclass('public.platform_primary_stores') AS ready`;
+   if(bindingSchema?.ready){
+    const binding=await tx`SELECT workspace_id FROM platform_primary_stores WHERE user_id=${actor.id}::uuid`;
+    if(binding.length&&String(binding[0].workspace_id)!==workspace)return {code:"denied" as const};
+   }
    const member=await tx`SELECT role FROM workspace_members
     WHERE workspace_id=${workspace}::uuid AND user_id=${actor.id}::uuid FOR UPDATE`;
    if(member.length!==1||!["owner","admin"].includes(String(member[0].role)))return {code:"denied" as const};
@@ -70,7 +75,12 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
     WHERE workspace_id=${workspace}::uuid AND product='payments' FOR SHARE`;
    if(realm.length!==1||product.length!==1||!product[0].enabled)return {code:"denied" as const};
    if(operation==="create" && environment==="live"){
-    const entitlement=await tx`SELECT (platform_billing_system_workspace(${workspace}::uuid) OR pg13_billing_allowed(${workspace}::uuid)) AS allowed`;
+    // Legacy control databases may predate the optional platform receiver.
+    // Absence must deny that exemption while retaining the purchased plan.
+    const [receiver]=await tx`SELECT to_regprocedure('public.platform_billing_system_workspace(uuid)') IS NOT NULL AS ready`;
+    const entitlement=receiver?.ready
+     ?await tx`SELECT (platform_billing_system_workspace(${workspace}::uuid) OR pg13_billing_allowed(${workspace}::uuid)) AS allowed`
+     :await tx`SELECT pg13_billing_allowed(${workspace}::uuid) AS allowed`;
     if(entitlement.length!==1 || entitlement[0].allowed!==true)return {code:"plan" as const};
    }
    if(!await passwordMatches(password,String(session[0].password_hash)))return {code:"reauth" as const};
@@ -115,6 +125,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
   });
   if(result.code==="denied"||result.code==="reauth"||result.code==="limit"||result.code==="missing"||result.code==="plan")return error(bn,result.code);
   revalidatePath(`/${locale}/w/${workspace}/payments/developers`);
+  revalidatePath(`/${locale}/settings/api-keys`);
   if(result.code==="revoked")return {status:"success",message:bn?"কীটি বাতিল করা হয়েছে।":"API key revoked."};
   return {status:"success",message:bn?"গোপন কীটি এখনই কপি করুন। এটি আর দেখানো হবে না।":"Copy this secret now. It will never be shown again.",rawSecret:result.raw,keyId:result.keyId};
  }catch(e){

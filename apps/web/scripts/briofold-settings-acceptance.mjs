@@ -15,6 +15,7 @@ import {runBriofoldInboxAccess} from "./briofold-inbox-access.mjs";
 import {runBriofoldPhase9Browser} from "./briofold-phase9-browser.mjs";
 import {runBriofoldGrowthOperations} from "./briofold-growth-operations-acceptance.mjs";
 import {runBriofoldOrderAssignment} from "./briofold-order-assignment-acceptance.mjs";
+import {runBriofoldKeyLifecycle} from "./briofold-key-lifecycle-acceptance.mjs";
 
 // Called after all control/financial extensions, not the earlier PG05 schema.
 export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,apiEnv,phase9Fixture}){
@@ -105,6 +106,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldOrderAssignment({origin,browser,control,sessions});
   await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});
   if(phase9Fixture)await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});
+  if(phase9Fixture)await runBriofoldKeyLifecycle({origin,browser,control,sessions,workspaceId:phase9Fixture.workspaceId});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }
