@@ -11,7 +11,7 @@ export async function startBriofoldPrivateStorage(control){
  try{
   execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=127.0.0.1','-addext','subjectAltName=IP:127.0.0.1','-addext','basicConstraints=critical,CA:TRUE'],{stdio:'ignore'});
   const bucket='phase10-fixtures',access='phase10-fictional-access',secret='phase10-fictional-signing-key',region='phase10';
-  const objects=new Map(),requests=[],pattern=/^commerce\/(?:live|sandbox)\/[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f]{64}$/;
+  const objects=new Map(),requests=[],pattern=/^(?:commerce|inbox)\/(?:live|sandbox)\/[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f]{64}$/;
   const sha=value=>createHash('sha256').update(value).digest('hex'),hmac=(key,value)=>createHmac('sha256',key).update(value).digest();
   server=createServer({key:await readFile(keyPath),cert:await readFile(certPath)},async(req,res)=>{
    const reject=status=>{res.writeHead(status);res.end('fixture request rejected');};

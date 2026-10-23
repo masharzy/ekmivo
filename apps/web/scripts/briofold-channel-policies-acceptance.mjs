@@ -55,7 +55,7 @@ export async function runChannelPolicies({origin,browser,control,sessions}){
   await page.reload();await page.getByLabel('Response mode',{exact:true}).waitFor();assert.equal(await page.getByLabel('Response mode',{exact:true}).inputValue(),'ai');
   assert.equal(await page.getByLabel('Reply SLA (minutes)',{exact:true}).inputValue(),'10');
   assert.equal(await page.getByLabel('Review request guidance',{exact:true}).inputValue(),policy.review_guidance);
-  await page.goto(origin+'/inbox?thread='+thread);await page.getByText('Conversation tools',{exact:false}).click();
+  await page.goto(origin+'/inbox?thread='+thread);const conversationTools=page.getByText('Conversation tools',{exact:false});await conversationTools.waitFor();if(!await conversationTools.evaluate(element=>element.parentElement.open))await conversationTools.click();
   await page.getByLabel('Handover reason',{exact:true}).fill('Fictional policy default takeover');
   const taken=page.waitForResponse(r=>{try{return r.request().postDataJSON()?.action==='takeover';}catch{return false;}});await page.getByRole('button',{name:'Take over',exact:true}).click();assert.equal((await taken).status(),200);
   const returned=(await db`SELECT return_at FROM briofold_inbox_work WHERE thread_id=${thread}`)[0].return_at;

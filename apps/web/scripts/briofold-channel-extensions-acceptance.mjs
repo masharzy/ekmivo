@@ -107,6 +107,26 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   for(const table of ['briofold_website_visitors','briofold_comments','briofold_comment_rules','briofold_comment_audit','briofold_inbox_alerts','briofold_inbox_alert_reads'])for(const role of ['ekmivo_financial_runtime','ekmivo_financial_projection'])assert.equal((await db`SELECT has_table_privilege(${role},${table},'SELECT') AS ok`)[0].ok,false);
   await p.goto(origin+'/inbox/comments');await p.getByRole('heading',{name:'Comment automation',exact:true}).waitFor();await p.getByText('price?',{exact:true}).waitFor();await p.getByText('Rules and post selection',{exact:true}).click();await p.getByRole('button',{name:'Edit',exact:true}).click();assert.equal(await p.getByLabel('Name',{exact:true}).inputValue(),rule.name);
   await p.getByLabel('Preview post ID',{exact:true}).fill('post_1');await p.getByLabel('Sample comment',{exact:true}).fill('price?');await p.getByRole('button',{name:'Dry-run without sending',exact:true}).click();await p.getByRole('status').filter({hasText:'RULE_MATCH'}).waitFor();await p.getByRole('button',{name:'Discard edits',exact:true}).click();await p.goto(origin+'/notifications');await p.getByRole('heading',{name:'Inbox notifications',exact:true}).waitFor();await p.getByText('Alert customer',{exact:true}).first().waitFor();
+  assert.equal(await p.getByRole('heading',{level:1}).count(),1,'unified notification page has duplicate primary headings');
+  await p.getByRole('button',{name:'Inbox & AI',exact:true}).click();
+  await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('handover');
+  await p.getByText('Alert customer',{exact:true}).waitFor();
+  assert.equal(await p.getByText('Response overdue',{exact:true}).count(),0,'handover filter included SLA notices');
+  await p.getByRole('checkbox',{name:'Unread only',exact:true}).check();
+  await p.getByRole('button',{name:'Mark read',exact:true}).click();
+  await p.getByText('No notifications match.',{exact:true}).waitFor();
+  const handed=(await db`SELECT briofold_inbox_alert_read(${workspace},${viewer},0,'','handover',true) data`)[0].data.items;
+  assert.equal(handed.length,1,'owner marking a shared handover changed colleague read state');
+  await p.getByRole('checkbox',{name:'Unread only',exact:true}).uncheck();await p.getByText('Alert customer',{exact:true}).waitFor();
+  await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('sla');await p.getByText('Alert customer',{exact:true}).waitFor();
+  await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('ai-review');await p.getByText('No notifications match.',{exact:true}).waitFor();
+  // Private fictional notices exercise the real canonical server action's
+  // pagination without triggering a provider or customer message.
+  await db`INSERT INTO briofold_inbox_alerts(workspace_id,thread_id,kind,event_key,recipient_id) SELECT ${workspace},${thread},'ai-review',${'phase10-pagination-'+workspace}||':'||n,${actor} FROM generate_series(1,51) n`;
+  await p.getByRole('button',{name:'Refresh',exact:true}).click();await p.getByText('Alert customer',{exact:true}).first().waitFor();
+  assert.equal(await p.getByText('Alert customer',{exact:true}).count(),50);
+  await p.getByRole('button',{name:'Next',exact:true}).click();await p.waitForFunction(()=>document.querySelectorAll('article').length===1);assert.equal(await p.getByText('Alert customer',{exact:true}).count(),1);
+  assert.equal((await db`SELECT briofold_inbox_alert_read(${workspace},${viewer},0,'','ai-review',false) data`)[0].data.items.length,0,'private AI alert leaked to colleague');
   console.log('Briofold website/comment signed HTTP, SQL and browser acceptance PASS; visitor rate/capacity denial and durable alerts PASS');
  }finally{if(worker)worker.kill('SIGTERM');if(context)await context.close();await db.end({timeout:3});}
 }

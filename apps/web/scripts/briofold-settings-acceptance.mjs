@@ -135,7 +135,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runBriofoldAiStudioAcceptance",async()=>{await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});});
   await check("runBriofoldInboxDrafts",async()=>{await runBriofoldInboxDrafts({origin,browser,control,sessions});});
   await check("runBriofoldInboxWorkflow",async()=>{await runBriofoldInboxWorkflow({origin,browser,control,sessions});});
-  await check("runSavedReplySequences",async()=>{await runSavedReplySequences({origin,browser,control,sessions});});
+  await check("runSavedReplySequences",async()=>{await runSavedReplySequences({origin,browser,control,sessions,privateStorage});});
   await check("runFeedbackAcceptance",async()=>{await runFeedbackAcceptance({origin,browser,control,sessions});});
   await check("runTeamGroups",async()=>{await runTeamGroups({origin,browser,control,sessions});});
   await check("runInterestAcceptance",async()=>{await runInterestAcceptance({origin,browser,control,sessions});});

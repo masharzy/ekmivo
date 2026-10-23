@@ -9,7 +9,7 @@
 .pn-center button{cursor:pointer}.pn-center :is(button,input,select):focus-visible{outline:2px solid var(--pn-accent);outline-offset:2px}
 .pn-center button:disabled{opacity:.45;cursor:not-allowed}
 .pn-center .pn-header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}
-.pn-center .pn-header h1{font-size:26px;font-weight:700;letter-spacing:-.025em;line-height:1.3}
+.pn-center .pn-header :is(h1,h2){font-size:26px;font-weight:700;letter-spacing:-.025em;line-height:1.3}
 .pn-center .pn-header p{color:var(--pn-muted);margin-top:5px;font-size:13px}
 .pn-center .pn-header-actions{display:flex;gap:8px;align-items:center}
 .pn-center .pn-outline,.pn-center .pn-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--pn-surface);border:1px solid var(--pn-line);border-radius:9px;min-height:36px;padding:8px 13px;font-size:12.5px;font-weight:600;white-space:nowrap}

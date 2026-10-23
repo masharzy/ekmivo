@@ -4,6 +4,14 @@
 
 **Assessment: Phase 10 FULL CODE SEAL = OPEN. Production cutover = NOT AUTHORIZED.** Physical/real-provider testing belongs to the owner, outside the code-level gate. But missing *code* and unintegrated migrations/branches cannot be waived as “manual testing.” Do not relabel the phase complete because its existing baseline CI is green.
 
+## Latest verified continuation — 42/56 accounted, 14 unresolved (2026-10-23)
+
+[Foundation 39973112138](https://github.com/masharzy/ekmivo/actions/runs/39973112138) on `c5bdb164b78c6c8875f05490f91e9ff2f9bfa0ab` passed Go, Kotlin and runtime/migration image jobs. The web job passed every independent suite except `runChannelPolicies`: its deep link already opens Conversation tools, and the test clicked the summary closed before filling Handover reason. No channel row is closed until the corrected interaction completes the suite.
+
+Five rows now have actual named SQL/Go/Next/browser PASS: linked-order conversion reports, private product photo/text retrieval and labelled metrics, canonical API credential lifecycle, finance activity/export, and payment-method branding/permissions. Accounting is **41 Implemented+Tested + 1 honest external website-voice block = 42/56 accounted; 14 unresolved**. The previous entries below are historical checkpoints.
+
+The next increment adds native Inbox audio controls, a real synthetic Ogg fixture served through signed private HTTPS storage, original/forwarded byte verification and browser playback; adds notification filter/read-state/privacy/pagination checks and one primary page heading. Those new checks are not yet CI evidence. Full code seal remains OPEN; no merge, deployment, production migration, flags or live messages authorized.
+
 ## 2026-10-23 continuation — two source-contract failures, browser-device preferences uncounted
 
 - [Foundation CI 39922417298](https://github.com/masharzy/ekmivo/actions/runs/39922417298) on `6c460dd4` finished **RED** after Go, Kotlin and runtime/migration image PASS and after Next build, early auth/RLS, release negative and many independent financial smoke tests. Its **PG04 independent financial River + realm migration and durability** step reached PG09/PG06/PG08 named PASS before a **new test-fixture-only private function call** failed with `permission denied for function pg10_return_allowed`. This private function is intentionally revoked from the financial application role. Reworked the positive/negative registered-origin, lookalike-host, query, cross-realm and disabled-integration assertions to exercise **the authorized `pg10_write` payment-link create path**, without changing a single production permission or financial SQL rule. PG04 and all subsequent SQL/API/browser gates are not considered passed until the next exact-head run.

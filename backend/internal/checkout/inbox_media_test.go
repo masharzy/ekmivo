@@ -1,9 +1,16 @@
 package checkout
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"net/url"
+	"strconv"
 	"testing"
+	"time"
 )
 
 func TestMetaMediaHostBoundary(t *testing.T) {
@@ -55,5 +62,61 @@ func TestProviderOggAudioIsNotRejectedAsGenericOgg(t *testing.T) {
 	typ, err := validateInboxMedia(data, "audio/ogg")
 	if err != nil || typ != "audio/ogg" {
 		t.Fatal(typ, err)
+	}
+}
+
+// Provider URLs must be short-lived capabilities bound to the exact Store,
+// realm, conversation and file. A source storage key must never leave the API.
+func TestOutboundAttachmentCapabilityScope(t *testing.T) {
+	t.Setenv("INBOX_PUBLIC_API_ORIGIN", "https://media.example.test")
+	key := []byte("fictional-media-capability-key-32-bytes")
+	s := &Service{Pipeline: &Pipeline{Key: key}}
+	for _, channel := range []string{"ms", "ig"} {
+		for _, kind := range []string{"image", "audio", "document"} {
+			job := inboxSendJob{Workspace: "store", Environment: "sandbox", Thread: "thread", Type: kind, Channel: channel, Recipient: "customer", Content: map[string]any{"media_id": "file", "object_key": "private-source-must-not-leak"}}
+			payload, err := s.inboxSendPayload(context.Background(), job, "secret-token", "v25.0")
+			if channel == "ig" && kind == "document" {
+				if err == nil {
+					t.Fatal("unsupported Instagram document accepted")
+				}
+				continue
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw, _ := json.Marshal(payload)
+			if bytes.Contains(raw, []byte("private-source")) || bytes.Contains(raw, []byte("secret-token")) {
+				t.Fatal("private storage or token leaked")
+			}
+			message := payload["message"].(map[string]any)
+			attachment := message["attachment"].(map[string]any)
+			expected := kind
+			if kind == "document" {
+				expected = "file"
+			}
+			if attachment["type"] != expected {
+				t.Fatal("wrong provider attachment", attachment)
+			}
+			u, err := url.Parse(attachment["payload"].(map[string]any)["url"].(string))
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := u.Query()
+			expires, err := strconv.ParseInt(q.Get("expires"), 10, 64)
+			if err != nil || expires < time.Now().Add(9*time.Minute).Unix() || expires > time.Now().Add(11*time.Minute).Unix() {
+				t.Fatal("unbounded capability expiry")
+			}
+			if u.Scheme != "https" || u.Host != "media.example.test" || u.Path != "/v1/channels/media/file" || q.Get("w") != "store" || q.Get("e") != "sandbox" || q.Get("t") != "thread" {
+				t.Fatal("capability scope lost", u)
+			}
+			sign := func(realm string) string {
+				mac := hmac.New(sha256.New, key)
+				mac.Write([]byte("inbox-media|store|" + realm + "|thread|file|" + q.Get("expires")))
+				return hex.EncodeToString(mac.Sum(nil))
+			}
+			if q.Get("sig") != sign("sandbox") || q.Get("sig") == sign("live") {
+				t.Fatal("signature does not bind realm")
+			}
+		}
 	}
 }
