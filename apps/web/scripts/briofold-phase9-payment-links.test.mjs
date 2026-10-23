@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {unifiedDestination,unifiedFinancialDetailPath} from "../src/lib/unified-navigation.ts";
+import {unifiedDestination,unifiedFinancialDetailPath,unifiedSectionHref} from "../src/lib/unified-navigation.ts";
 
 const src=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
 const id="123e4567-e89b-42d3-a456-426614174000";
@@ -59,6 +59,19 @@ test("All canonical finance-source detail links round-trip into their authorized
  const dashboard=src("components/dashboard-content.tsx");
  assert.match(dashboard,/<PaymentOperations canonicalRoutes=\{canonicalRoutes\}/);
  assert.match(dashboard,/<PaymentDocuments canonicalRoutes=\{canonicalRoutes\}/);
+});
+
+test("Merchant-imported statement reconciliation has one real Store-scoped canonical route",()=>{
+ assert.equal(unifiedSectionHref("reconciliation","payments"),"/payments/reconciliation");
+ for(const mode of ["commerce","both"]){
+  assert.deepEqual(unifiedDestination(mode,"payments",["reconciliation"]),{section:"reconciliation",service:"payments"});
+ }
+ for(const mode of ["ai","off"]){
+  assert.equal(unifiedDestination(mode,"payments",["reconciliation"]),null);
+ }
+ assert.equal(unifiedDestination("both","payments",["reconciliation",id]),null,"reconciliation must not resolve as a payment record detail");
+ const content=src("components/dashboard-content.tsx");
+ assert.match(content,/section==="reconciliation"\?<PaymentReconciliation/);
 });
 
 test("Phase 9 continues to use server-selected tenant and realm, not IDs in the URL",()=>{
