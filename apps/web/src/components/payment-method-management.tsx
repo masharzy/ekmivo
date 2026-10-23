@@ -32,8 +32,12 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const [providerItems,setProviderItems]=useState<CatalogProvider[]>([]);
  const [providerError,setProviderError]=useState("");
  const [providerLoading,setProviderLoading]=useState(false);
- const providerName=(code:string)=>providerItems.find(p=>p.code===code)?.name||methodName[code]||code;
- const providerLogo=(code:string)=>providerItems.find(p=>p.code===code)?.logo||(isPaymentProvider(code)?paymentProviderAppearance[code].logo:"");
+ // Known wallet branding is served from reviewed, local assets. The public
+ // catalog decides provider availability, never an alternate logo/name for
+ // a known wallet or an arbitrary third-party asset loaded in merchant UI.
+ const providerName=(code:string)=>methodName[code]||providerItems.find(p=>p.code===code)?.name||code;
+ const providerLogo=(code:string)=>isPaymentProvider(code)?paymentProviderAppearance[code].logo:
+  (providerItems.find(p=>p.code===code)?.logo.match(/^\/payment-assets\/[a-z0-9_-]+\.(?:png|webp|svg)$/)?.[0]??"");
  const loadProviderCatalog=useCallback(async()=>{
   setProviderLoading(true);setProviderError("");setProviderItems([]);
   try{
@@ -155,7 +159,18 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
    <form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void create()}}>
     {methodLimit.blocked&&<PlanResourceStatus value={methodLimit} locale={locale}/>}
     {error&&<p className="ekv3-page-error" role="alert">{error}</p>}
-    {!method?<><label className="ek-ref-search ek-ref-provider-search"><DashboardIcon name="search" width={16} height={16}/><input aria-label={t("Search providers","মাধ্যম খুঁজুন")} placeholder={t("Search providers","মাধ্যম খুঁজুন")} value={providerQuery} onChange={e=>setProviderQuery(e.target.value)}/></label>{providerError&&<p className="ekv3-page-error" role="status">{providerError}<button type="button" onClick={()=>void loadProviderCatalog()}>{t("Retry","আবার চেষ্টা")}</button></p>}{providerLoading&&<p className="ek-ref-help">{t("Refreshing providers…","মাধ্যম লোড হচ্ছে…")}</p>}<div className="ek-ref-providers">{providerItems.filter(p=>p.name.toLowerCase().includes(providerQuery.toLowerCase())).map(({code:key,name,logo})=><button type="button" key={key} className="ek-ref-provider ek-provider-surface wc" style={providerSurfaceStyle(key)} onClick={()=>setMethod(key)}><span className={"ek-ref-logo ek-ref-"+key}>{logo||providerLogo(key)?<img className="ek-ref-provider-image" src={logo||providerLogo(key)} width={80} height={40} alt={name+" logo"}/>:name}</span><span className="ek-ref-provider-name">{name}</span></button>)}{!providerLoading&&!providerError&&!providerItems.some(p=>p.name.toLowerCase().includes(providerQuery.toLowerCase()))&&<div className="ek-ref-empty">{t("No provider found.","কোনো মাধ্যম পাওয়া যায়নি।")}</div>}</div></>:<div className="ek-ref-selected-provider ek-provider-surface" style={providerSurfaceStyle(method)}><span className={"ek-ref-logo ek-ref-"+method}>{providerLogo(method)?<img className="ek-ref-provider-image" src={providerLogo(method)} width={84} height={42} alt={providerName(method)+" logo"}/>:providerName(method)}</span><span className="ek-ref-provider-title">{providerName(method)}</span><button type="button" onClick={()=>setMethod("")}>{t("Change","পরিবর্তন")}</button></div>}
+    {!method?<>
+     <label className="ek-ref-search ek-ref-provider-search"><DashboardIcon name="search" width={16} height={16}/><input aria-label={t("Search providers","মাধ্যম খুঁজুন")} placeholder={t("Search providers","মাধ্যম খুঁজুন")} value={providerQuery} onChange={e=>setProviderQuery(e.target.value)}/></label>
+     {providerError&&<p className="ekv3-page-error" role="status">{providerError}<button type="button" onClick={()=>void loadProviderCatalog()}>{t("Retry","আবার চেষ্টা")}</button></p>}
+     {providerLoading&&<p className="ek-ref-help">{t("Refreshing providers…","মাধ্যম লোড হচ্ছে…")}</p>}
+     <div className="ek-ref-providers">{providerItems.filter(p=>providerName(p.code).toLowerCase().includes(providerQuery.toLowerCase())).map(({code:key})=><button type="button" key={key} className="ek-ref-provider ek-provider-surface wc" style={providerSurfaceStyle(key)} onClick={()=>setMethod(key)}>
+      <span className={"ek-ref-logo ek-ref-"+key}>{providerLogo(key)?<img className="ek-ref-provider-image" src={providerLogo(key)} width={80} height={40} alt={providerName(key)+" logo"}/>:providerName(key)}</span>
+      <span className="ek-ref-provider-name">{providerName(key)}</span>
+     </button>)}{!providerLoading&&!providerError&&!providerItems.some(p=>providerName(p.code).toLowerCase().includes(providerQuery.toLowerCase()))&&<div className="ek-ref-empty">{t("No provider found.","কোনো মাধ্যম পাওয়া যায়নি।")}</div>}</div>
+    </>:<div className="ek-ref-selected-provider ek-provider-surface" style={providerSurfaceStyle(method)}>
+     <span className={"ek-ref-logo ek-ref-"+method}>{providerLogo(method)?<img className="ek-ref-provider-image" src={providerLogo(method)} width={84} height={42} alt={providerName(method)+" logo"}/>:providerName(method)}</span>
+     <span className="ek-ref-provider-title">{providerName(method)}</span><button type="button" onClick={()=>setMethod("")}>{t("Change","পরিবর্তন")}</button>
+    </div>}
     {method&&<><label className="ek-ref-field">{t("Account number","অ্যাকাউন্ট নম্বর")}<input required type="tel" inputMode="tel" autoComplete="off" value={number} onChange={e=>setNumber(e.target.value)} placeholder="+880 1XXX XXXXXX"/></label>
     <label className="ek-ref-field">{t("Label","লেবেল")}<span className="ek-ref-help">{t("Optional, only you see this","ঐচ্ছিক, শুধু আপনি দেখবেন")}</span><input value={label} maxLength={100} placeholder={t("e.g. Main shop","যেমন: মূল দোকান")} onChange={e=>setLabel(e.target.value)}/></label>
     </>}<div className="pg-phone-actions"><button type="button" onClick={()=>createDialog.current?.close()}>{t("Cancel","বাতিল")}</button><button type="submit" className="ekv3-primary" disabled={busy||methodLimit.blocked||!method||!/^01[3-9][0-9]{8}$/.test(normalizeNumber(number))}>{t("Add account","অ্যাকাউন্ট যোগ করুন")}</button></div>
