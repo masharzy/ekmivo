@@ -106,7 +106,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldOrderAssignment({origin,browser,control,sessions});
   await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});
   if(phase9Fixture)await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});
-  if(phase9Fixture)await runBriofoldKeyLifecycle({origin,browser,control,sessions,workspaceId:phase9Fixture.workspaceId});
+  if(phase9Fixture)await runBriofoldKeyLifecycle({origin,browser,control,sessions,...phase9Fixture});
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }

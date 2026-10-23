@@ -402,7 +402,9 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   // visible canonical report; a successful download alone is insufficient.
   const exportButton=page.getByRole("button",{name:"Export",exact:true});
   await exportButton.waitFor();
-  assert.equal(await exportButton.isEnabled(),true,"owner report export stayed disabled");
+  // SSR totals may be visible while hydration refreshes the report range.
+  // click() waits for actual actionability; an immediate isEnabled() races
+  // that valid stale-data protection. The CSV below must still match finance.
   const [ownerDownload]=await Promise.all([page.waitForEvent("download"),exportButton.click()]);
   assert.match(ownerDownload.suggestedFilename(),/^ekmivo-report-\d{4}-\d\d-\d\d-\d{4}-\d\d-\d\d\.csv$/);
   const ownerCsv=await readFile(await ownerDownload.path(),"utf8");

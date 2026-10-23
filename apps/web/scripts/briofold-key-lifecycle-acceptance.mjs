@@ -5,12 +5,35 @@ import postgres from "postgres";
 
 // This is an actual browser -> Next server action -> CONTROL database test.
 // Never substitute a production account/password or print returned credentials.
-export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,workspaceId}){
+export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,workspaceId,liveDatabase,sandboxDatabase}){
  const target=new URL(control);
  assert.ok(["localhost","127.0.0.1","[::1]"].includes(target.hostname)&&!/prod/i.test(target.pathname),"Key acceptance refuses shared databases");
  const db=postgres(control,{max:1,prepare:false});
  let context,viewerContext,owner,originalHash,createdBindingTable=false,createdBinding=false;
  try{
+  for(const [realm,raw] of [["live",liveDatabase],["sandbox",sandboxDatabase]]){
+   const url=new URL(raw);
+   assert.ok(["localhost","127.0.0.1","[::1]"].includes(url.hostname)&&url.pathname===`/ekmivo_pg04_${realm}`,"key capacity fixture refuses shared financial databases");
+   url.username=`ekmivo_pg04_migrate_${realm}`;url.password=`pg04-${realm}-migration-only`;
+   const finance=postgres(url.toString(),{max:1,prepare:false});
+   try{
+    for(const [file,probe] of [["0068_payment_allowance.sql","SELECT to_regclass('public.payment_allowance_slots') IS NOT NULL AS ready"],
+     ["0093_payment_plan_resource_usage.sql","SELECT to_regprocedure('public.payment_plan_resource_usage(uuid,text)') IS NOT NULL AS ready"]]){
+     if(!(await finance.unsafe(probe))[0].ready)await finance.unsafe(await readFile(new URL("../../../infra/migrations/"+file,import.meta.url),"utf8")).simple();
+     assert.equal((await finance.unsafe(probe))[0].ready,true,"financial key-capacity prerequisite missing");
+    }
+   }finally{await finance.end({timeout:3});}
+  }
+  const apply=async name=>db.unsafe(await readFile(new URL("../../../infra/migrations/"+name,import.meta.url),"utf8")).simple();
+  // API-key capacity is read through this real CONTROL entrypoint, not a mock
+  // or a UI permission bypass. Install its canonical predecessors only after
+  // the earlier fixture journeys, since 0101 intentionally changes seat rules.
+  if(!(await db`SELECT to_regprocedure('public.platform_billing_system_workspace(uuid)') IS NOT NULL AS ready`)[0].ready){
+   await apply("0096_platform_receiving_workspace.sql");
+  }
+  if(!(await db`SELECT to_regprocedure('public.payment_plan_member_resource_usage(uuid,uuid)') IS NOT NULL AS ready`)[0].ready){
+   await apply("0101_dashboard_control_plan_limits.sql");
+  }
   const actor=async token=>String((await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash("sha256").update(token).digest("hex")}`)[0].user_id);
   owner=await actor(sessions.owner);
   const viewer=await actor(sessions.viewer);
