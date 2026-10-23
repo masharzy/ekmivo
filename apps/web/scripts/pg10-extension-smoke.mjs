@@ -87,6 +87,27 @@ export async function runPaymentExtensions({db,live,control,workspace,otherWorks
   reference:'UNTRUSTED-RETURN-'+randomUUID(),amount_minor:4500,
   return_url:'https://unregistered-ci.invalid/after-payment'
  }),error=>error.code==='23514','Unregistered merchant return URL was accepted');count++;
+ const registeredOrigin=`https://fixture-${randomUUID()}.example.invalid`;
+ await db.unsafe("INSERT INTO pg12_integrations(workspace_id,environment,kind,name,origin,status) VALUES($1::uuid,'sandbox','website','Fictional checkout redirect source',$2,'configured')",[workspace,registeredOrigin]);
+ const allowedReturn=async(url,realm='sandbox')=>scoped(workspace,async tx=>(await tx.unsafe(
+  'SELECT pg10_return_allowed($1::uuid,$2,$3) allowed',[workspace,realm,url]))[0].allowed);
+ equal(await allowedReturn(registeredOrigin+'/thank-you'),true,'registered exact-origin redirect was denied');
+ equal(await allowedReturn(registeredOrigin+'.attacker.invalid/thank-you'),false,'lookalike host bypassed registered return origin');
+ equal(await allowedReturn(registeredOrigin+'/thank-you?secret=1'),false,'unapproved query-bearing redirect accepted');
+ equal(await allowedReturn(registeredOrigin+'/thank-you','live'),false,'registered sandbox redirect escaped realm');
+ const allowedKey=randomUUID(),allowed=await create('payment-links',{
+  reference:'REGISTERED-RETURN-'+randomUUID(),amount_minor:4500,max_quantity:1,
+  expires_at:new Date(Date.now()+86400000).toISOString(),return_url:registeredOrigin+'/thank-you'
+ },allowedKey);
+ await scoped(workspace,tx=>tx.unsafe(
+  "SELECT pg10_write($1::uuid,'sandbox','payment-links',$2::uuid,'publish','{\"expected_version\":1}',$3,$4,$5,NULL)",
+  [workspace,allowed.id,randomUUID(),hash('registered-return-publish'),hash(allowedKey)]));
+ const allowedVisit=await db.unsafe('SELECT pg10_visit($1,$2,$3,$4,$5::jsonb) result',[
+  hash(allowedKey),randomUUID(),hash('registered return visit'),hash('registered return intent'),db.json({_quantity:1})
+ ]);
+ equal(Number(allowedVisit[0].result.amount_minor),4500,'registered future-expiring redirect link failed its server-priced visit');
+ await db.unsafe("UPDATE pg12_integrations SET status='disabled' WHERE workspace_id=$1::uuid AND environment='sandbox' AND origin=$2",[workspace,registeredOrigin]);
+ equal(await allowedReturn(registeredOrigin+'/thank-you'),false,'disabled integration still authorizes a checkout redirect');
  // Reconciliation is merchant-imported evidence, not an independent source of
  // verified funds. Associate only an existing, exact-amount/account financial
  // payment and preserve its original immutable verification provenance.

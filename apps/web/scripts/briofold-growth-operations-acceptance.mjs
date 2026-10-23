@@ -66,6 +66,8 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   await cmd('booking-status',{id:first.id,revision:2,status:'cancelled'});
   assert.equal((await read('booking')).items[0].status,'cancelled');
   await cmd('booking-create',{resource_id:resource,summary:'Rebook cancelled slot',starts_at:starts.toISOString(),ends_at:ends.toISOString(),time_zone:'Asia/Dhaka'});
+  await db`INSERT INTO briofold_customer_followups(id,workspace_id,environment,customer_id,due_at,requested_due_at,time_zone,body,created_by)
+   VALUES(${randomUUID()},${store},'live',${profile},now()-interval '3 minutes',now()-interval '3 minutes','Asia/Dhaka','Fictional due notification fixture',${owner})`;
   await assert.rejects(()=>cmd('booking-create',{resource_id:resource,summary:'Cross realm customer',customer_id:randomUUID(),starts_at:new Date(starts.getTime()+86400000).toISOString(),ends_at:new Date(ends.getTime()+86400000).toISOString(),time_zone:'Asia/Dhaka'}),e=>e.code==='22023');
   await assert.rejects(()=>cmd('resource-create',{title:'Outside Store'},randomUUID(),viewer),e=>e.code==='42501');
   const ops=(await db`SELECT briofold_growth_operational_snapshot(${store},'live',${owner}) data`)[0].data;
@@ -104,6 +106,18 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   }
   ctx=await browser.newContext();await ctx.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await ctx.newPage();page.setDefaultNavigationTimeout(90000);
+  assert.equal((await page.goto(origin+'/notifications')).status(),200);
+  await page.getByRole('region',{name:'Due CRM reminders'}).getByText('Fictional opted-in person',{exact:true}).waitFor();
+  await page.getByRole('region',{name:'Upcoming internal bookings'}).getByText('Rebook cancelled slot',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Reminders',exact:true}).click();
+  await page.getByRole('region',{name:'Due CRM reminders'}).waitFor();
+  assert.equal(await page.getByRole('region',{name:'Upcoming internal bookings'}).count(),0,'notification source filter included a different source');
+  await page.getByRole('button',{name:'Calls',exact:true}).click();
+  await page.getByText('No call event provider is connected. Incoming or missed calls cannot be verified here.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Bookings',exact:true}).click();
+  await page.getByRole('region',{name:'Upcoming internal bookings'}).getByText('Rebook cancelled slot',{exact:true}).waitFor();
+  await page.setViewportSize({width:320,height:900});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'notification source tabs overflow narrow screens');
   assert.equal((await page.goto(origin+'/customers/bookings')).status(),200);
   await page.getByRole('heading',{name:'Bookings & availability'}).waitFor();
   await page.getByText('Fictional consultation room').first().waitFor();

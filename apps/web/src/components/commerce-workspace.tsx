@@ -7,6 +7,7 @@ import styles from "./commerce.module.css";
 import {parseCatalogFile} from "../lib/client/commerce-import";
 import {OrderBarcode} from "./order-barcode";
 import {OrderBarcodeScanner} from "./order-barcode-scanner";
+import {CommerceProductAnalytics} from "./commerce-product-analytics";
 
 type Row=Record<string,unknown>;
 type Variant={id?:string;sku:string;barcode:string;price_minor:number;options:Record<string,string>;active:boolean};
@@ -46,7 +47,7 @@ function MoneyInput({value,onChange,required=true,percent=false}:{value:unknown;
  const [text,setText]=useState(value===null||value===undefined||value===""?"":(Number(value)/100).toFixed(2));
  return <input type="number" min={0} max={percent?100:1000000000} step="0.01" required={required} value={text} onChange={e=>{const raw=e.target.value;setText(raw);if(raw===""){e.target.setCustomValidity("");onChange(null);return;}if(!/^[0-9]{1,10}(\.[0-9]{0,2})?$/.test(raw)){e.target.setCustomValidity("Use at most two decimal places.");onChange(null);return;}e.target.setCustomValidity("");const [whole,fraction=""]=raw.split(".");onChange(Number(whole)*100+Number((fraction+"00").slice(0,2)));}}/>;
 }
-export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initial,assignmentEnabled=false,scanEnabled=false}:{workspaceId:string;actorId:string;bn:boolean;view:string;environment:"live"|"sandbox";initial:CommercePageData|null;assignmentEnabled?:boolean;scanEnabled?:boolean}){
+export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initial,assignmentEnabled=false,scanEnabled=false,productAnalyticsEnabled=false}:{workspaceId:string;actorId:string;bn:boolean;view:string;environment:"live"|"sandbox";initial:CommercePageData|null;assignmentEnabled?:boolean;scanEnabled?:boolean;productAnalyticsEnabled?:boolean}){
  const t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const scanMode=view==="scan",chaseMode=view==="to-chase",syncMode=view==="products-sync",resource=scanMode||chaseMode?"orders":syncMode?"products":view==="courier"?"delivery":view||"orders",api=`/api/go/workspaces/${workspaceId}/commerce?environment=${environment}`;
  const [data,setData]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState(initial?"":t("Commerce source unavailable. Retry refresh.","অর্ডারের তথ্য পাওয়া যাচ্ছে না। রিফ্রেশ করুন।")),[message,setMessage]=useState("");
@@ -116,6 +117,7 @@ export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initi
  const transitions=(s:string)=>s==="draft"||s==="hold"?["confirmed",s==="draft"?"hold":"draft","cancelled"]:s==="confirmed"?["packed","hold","cancelled"]:s==="packed"?["shipped","cancelled"]:s==="shipped"?["delivered"]:[];
  return <section className={styles.root} aria-label={t("Commerce workspace","কমার্স কর্মক্ষেত্র")} aria-busy={busy}>
  <header className={styles.noPrint}><div><h1>{scanMode?t("Scan & pack","স্ক্যান ও প্যাক"):chaseMode?t("Orders needing follow-up","ফলোআপ প্রয়োজন এমন অর্ডার"):t(...(labels[resource]??labels.orders))}</h1><p>{chaseMode?t("Review real draft or on-hold orders. These are not proof of an abandoned checkout, confirmed sale or payment; no customer message is sent automatically.","আসল খসড়া বা অপেক্ষমান অর্ডার দেখুন। এগুলো অসম্পূর্ণ চেকআউট, নিশ্চিত বিক্রি বা পেমেন্টের প্রমাণ নয়; গ্রাহককে স্বয়ংক্রিয় বার্তা পাঠানো হয় না।"):t("Orders, stock and delivery stay separate from verified payments.","অর্ডার, মজুত ও ডেলিভারির অবস্থা যাচাইকৃত পেমেন্ট থেকে আলাদা।")}</p>{chaseMode&&<p><Link href="/customers/follow-ups">{t("Open customer follow-ups","গ্রাহকের ফলোআপ খুলুন")}</Link> · <Link href="/orders">{t("All orders","সব অর্ডার")}</Link></p>}</div><button disabled={busy||dirty} onClick={()=>void refresh()}>{t("Refresh","রিফ্রেশ")}</button></header>
+ {resource==="products"&&productAnalyticsEnabled&&!syncMode&&<CommerceProductAnalytics workspaceId={workspaceId} environment={environment} bn={bn}/>}
  {scanMode&&<div className={styles.noPrint}>{scanEnabled?<OrderBarcodeScanner bn={bn} disabled={busy||dirty||unconfirmed} onDetected={value=>{setQ(value);setAppliedQuery(value);setOffset(0);setSelected([]);}}/>:<p role="status">{t("Barcode search is unavailable until the updated commerce service is activated. Orders remain accessible below.","নতুন কমার্স সার্ভিস চালু না হওয়া পর্যন্ত বারকোড সার্চ বন্ধ। নিচে অর্ডারগুলো দেখতে পারবেন।")}</p>}</div>}
  {error&&<p role="alert" className={styles.noPrint}>{commerceErrorText(error,bn)}</p>}{message&&<p role="status" className={styles.noPrint}>{message}</p>}
  {unconfirmed&&<button disabled={busy} onClick={()=>{const p=pending.current;if(p)void command(p.action,p.body,true);}}>{t("Retry unconfirmed operation","অনিশ্চিত কাজ আবার চেষ্টা করুন")}</button>}

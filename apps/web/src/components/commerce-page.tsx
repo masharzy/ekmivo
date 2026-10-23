@@ -10,5 +10,6 @@ export async function CommercePage(props:{workspaceId:string;actorId:string;bn:b
   initial=row.data as CommercePageData;}catch{/* Explicit unavailable state; never substitute empty data. */}
  return <CommerceWorkspace {...props} initial={initial}
    assignmentEnabled={process.env.BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED==="true"}
-   scanEnabled={process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true"}/>;
+   scanEnabled={process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true"}
+   productAnalyticsEnabled={process.env.BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED==="true"}/>;
 }

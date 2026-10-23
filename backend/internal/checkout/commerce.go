@@ -72,6 +72,13 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			}
 			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_order_scan($1::uuid,$2,$3::uuid,$4,$5,$6,$7)", ws, realm, actor.UserID,
 				r.URL.Query().Get("q"), off, r.URL.Query().Get("status"), r.URL.Query().Get("source")).Scan(&raw)
+		} else if r.URL.Query().Get("resource") == "product-analytics" {
+			if os.Getenv("BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED") != "true" {
+				fail(w, 503, "PRODUCT_ANALYTICS_UNAVAILABLE")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_product_operational_analytics($1::uuid,$2,$3::uuid,$4,$5)", ws, realm, actor.UserID,
+				off, r.URL.Query().Get("q")).Scan(&raw)
 		} else {
 			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_read($1::uuid,$2,$3::uuid,$4,$5::uuid,$6,$7,$8,$9)", ws, realm, actor.UserID, r.URL.Query().Get("resource"), nullableID(id), off, r.URL.Query().Get("q"), r.URL.Query().Get("status"), r.URL.Query().Get("source")).Scan(&raw)
 		}
