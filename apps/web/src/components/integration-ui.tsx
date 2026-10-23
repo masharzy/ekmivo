@@ -3,7 +3,7 @@ import Link from "next/link";
 import {useCallback,useEffect,useRef,useState,type ReactNode} from "react";
 import {registerDraft} from "../lib/client/draft-navigation";
 
-export type IntegrationScope={locale:"en"|"bn";workspaceId:string;environment:string;canManage:boolean};
+export type IntegrationScope={locale:"en"|"bn";workspaceId:string;environment:string;canManage:boolean;canonicalRoutes?:boolean};
 export type ActivityRow=Record<string,unknown>&{id:string};
 export class IntegrationRequestError extends Error{constructor(public status:number,message:string){super(message);this.name='IntegrationRequestError'}}
 export function IntegrationIcon({name}:{name:"code"|"hook"|"activity"|"plug"|"arrow"|"refresh"|"shield"}){
@@ -14,7 +14,12 @@ export function IntegrationNav({scope,active}:{scope:IntegrationScope;active:str
  const items=[['developers','Developers','ডেভেলপার','code'],['webhooks','Webhooks','ওয়েবহুক','hook'],['integrations','Integrations','সংযোগ','plug']] as const;
  return <nav className="int-nav" aria-label={scope.locale==="bn"?"ইন্টিগ্রেশন ও ইভেন্ট":"Integrations and events"}>{items.map(([id,en,bn,icon])=><Link key={id} href={integrationHref(scope,id)} aria-current={id===active?"page":undefined}><IntegrationIcon name={icon}/>{scope.locale==="bn"?bn:en}</Link>)}</nav>;
 }
-export function integrationHref(s:IntegrationScope,section:string,id?:string,tab?:string){const p=new URLSearchParams();if(tab)p.set("tab",tab);return `/${s.locale}/w/${s.workspaceId}/payments/${section}${id?"/"+encodeURIComponent(id):""}${p.size?'?'+p:''}`;}
+export function integrationHref(s:IntegrationScope,section:string,id?:string,tab?:string){
+ const p=new URLSearchParams();if(tab)p.set("tab",tab);
+ const canonical:Record<string,string>={developers:"/settings/api-keys",webhooks:"/settings/webhooks",events:"/settings/activity",integrations:"/settings/integrations"};
+ const base=s.canonicalRoutes&&canonical[section]?canonical[section]:`/${s.locale}/w/${s.workspaceId}/payments/${section}`;
+ return `${base}${id?'/'+encodeURIComponent(id):''}${p.size?'?'+p:''}`;
+}
 // Local view changes keep the application shell and do not trigger a new
 // server render/auth/database lookup. Next synchronizes useSearchParams.
 export function setIntegrationTab(tab:string){const u=new URL(window.location.href);u.searchParams.delete('env');u.searchParams.set('tab',tab);window.history.replaceState(null,'',u.pathname+u.search);}

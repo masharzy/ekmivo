@@ -19,6 +19,7 @@ export async function runProductPhotos({origin,browser,control,sessions,privateS
   }
   const product=async(name,images,realm='live',scope=store)=>(await db`INSERT INTO commerce_products(workspace_id,environment,name,images,description) VALUES(${scope},${realm},${name},${images}::uuid[],'Fictional catalog text') RETURNING id`)[0].id;
   const red=await product('Red Orchid shirt',[media[0].id,media[2].id]),blue=await product('Blue Orchid shirt',[media[1].id]);await product('Sandbox red',[],'sandbox');await product('Foreign red',[],'live',foreign);
+  for(const [id,sku] of [[red,'PHOTO-RED'],[blue,'PHOTO-BLUE']])await db`INSERT INTO commerce_variants(workspace_id,environment,product_id,sku,price_minor) VALUES(${store},'live',${id},${sku},10000)`;
   const search=async(h=hash,c=[255,0,0],q='',who=owner,realm='live',scope=store)=>(await db`SELECT commerce_photo_search(${scope},${realm},${who},${h},${c===null?null:db.json(c)},${q}) data`)[0].data;
   let data=await search();assert.deepEqual(data.items.map(x=>x.product_id),[red],'same product photos duplicated results or unrelated colors passed threshold');assert.equal(data.items[0].similarity,100);assert.equal(data.indexed_photos,3);
   assert.equal((await search(hash,[0,255,0])).items.length,0,'unknown color did not abstain');assert.equal((await search(hash,[0,0,255],'Red')).items.length,0,'photo lookup ignored catalog text');
@@ -55,6 +56,18 @@ export async function runProductPhotos({origin,browser,control,sessions,privateS
   assert.equal(await page.evaluate(value=>JSON.stringify({...localStorage,...sessionStorage}).includes(value),fixtures.red),false,'query photo persisted in browser storage');
   await page.getByLabel('Expected catalog product',{exact:true}).selectOption(red);await page.getByRole('button',{name:'Run labelled test',exact:true}).click();await page.getByText('Expected product found in the first five results.',{exact:true}).waitFor();
   assert.equal((await db`SELECT count(*)::integer n FROM commerce_photo_evaluations WHERE workspace_id=${store}`)[0].n,3,'browser labelled test was not recorded once');
+  await page.goto(origin+'/orders/products');await page.getByRole('row').filter({hasText:'Red Orchid shirt'}).getByRole('button',{name:'Edit product',exact:true}).click();
+  const editor=page.locator('#commerce-product-form-'+store);await editor.getByLabel('Color',{exact:true}).fill('Crimson');await editor.getByLabel('Unit price (BDT)',{exact:true}).fill('250.00');
+  await editor.getByRole('button',{name:'View photo 1',exact:true}).click();await editor.getByRole('img',{name:'Red Orchid shirt 1',exact:true}).waitFor();
+  await editor.getByRole('button',{name:'Move earlier',exact:true}).nth(1).click();
+  let saved=page.waitForResponse(response=>{try{return response.request().postDataJSON()?.action==='product';}catch{return false;}});await editor.getByRole('button',{name:'Save product',exact:true}).click();assert.equal((await saved).status(),200);
+  assert.deepEqual((await db`SELECT images FROM commerce_products WHERE id=${red}`)[0].images,[media[2].id,media[0].id]);
+  const variant=(await db`SELECT price_minor,options FROM commerce_variants WHERE workspace_id=${store} AND sku='PHOTO-RED'`)[0];assert.equal(Number(variant.price_minor),25000);assert.equal(variant.options.color,'Crimson');
+  await page.reload();await page.getByRole('row').filter({hasText:'Red Orchid shirt'}).getByRole('button',{name:'Edit product',exact:true}).click();
+  await editor.locator('figure').first().getByRole('button',{name:'Remove',exact:true}).click();await editor.getByText('Choose an existing photo',{exact:true}).click();await editor.getByRole('button',{name:'Fictional blue',exact:true}).click();
+  saved=page.waitForResponse(response=>{try{return response.request().postDataJSON()?.action==='product';}catch{return false;}});await editor.getByRole('button',{name:'Save product',exact:true}).click();assert.equal((await saved).status(),200);
+  assert.deepEqual((await db`SELECT images FROM commerce_products WHERE id=${red}`)[0].images,[media[0].id,media[1].id]);
+  console.log('CATALOG PHOTOS/VARIANTS SQL/Go/Next/browser PASS: private photo view, reorder, remove/add stored image, current variant price/options and durable reload; stock/operational metrics verified by independent commerce suite');
   const privatePage=await viewerContext.newPage();await privatePage.goto(origin+'/orders/products/photos');await privatePage.getByLabel('Catalog search text',{exact:true}).fill('Blue');await privatePage.getByRole('button',{name:'Find matches',exact:true}).click();await privatePage.getByRole('heading',{name:'Blue Orchid shirt',exact:true}).waitFor();assert.equal(await privatePage.getByRole('region',{name:'Private photo evaluation',exact:true}).count(),0);assert.equal(await privatePage.getByText('Index existing stored photos',{exact:true}).count(),0);
   await db`UPDATE workspace_members SET role='admin' WHERE workspace_id=${store} AND user_id=${viewer}`;
   response=await viewerContext.request.get(endpoint+'&resource=photo-metrics');assert.equal(response.status(),200);assert.equal((await response.json()).tested,0,'one account read another account labelled evaluations');

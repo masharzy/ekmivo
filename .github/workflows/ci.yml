@@ -136,7 +136,9 @@ jobs:
         timeout-minutes: 6
         env:
           PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: "45000"
-        run: npx playwright install --with-deps --only-shell chromium
+        run: |
+          npx --no-install playwright install --only-shell chromium
+          node scripts/playwright-readiness.mjs
       - name: Save installed browser before independent application checks
         if: steps.playwright.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5

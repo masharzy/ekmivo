@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {runFinanceLifecycle} from "./briofold-finance-lifecycle-acceptance.mjs";
 import {createCipheriv,createHash,randomBytes,randomUUID} from "node:crypto";
 import {mkdir,readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
@@ -665,6 +666,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   assert.deepEqual(errors,[],"Phase9 UI hydration/runtime errors");
   const after=await fetchRows(context,"payments");
   assert.equal(after.filter(r=>r.id===payment.id).length,1,"UI read caused a duplicate financial confirmation");
+  await runFinanceLifecycle({origin,context,viewerContext,page,finance,workspaceId,payment,webhook});
   console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, seller-managed refund idempotency, financial-source reporting, invoice create/issue/replay and viewer denial, cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, ${routes.length} routes; synthetic CI financial evidence only`);
  }finally{
   if(context)await context.close();if(viewerContext)await viewerContext.close();
