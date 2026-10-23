@@ -1,6 +1,8 @@
 -- CONTROL-only rolling seven-day conversation response metrics.
 BEGIN;
 DO $$ BEGIN IF to_regclass('public.briofold_inbox_work') IS NULL OR to_regclass('public.financial_realm') IS NOT NULL THEN RAISE EXCEPTION '0194 requires CONTROL Inbox';END IF;END $$;
+CREATE INDEX briofold_response_inbound_window ON inbox_messages(workspace_id,created_at,thread_id) WHERE sender='customer';
+CREATE INDEX briofold_response_success ON inbox_messages(workspace_id,thread_id,coalesce(sent_at,created_at),sequence) WHERE sender IN ('seller','ai') AND state IN ('sent','delivered','seen');
 CREATE FUNCTION briofold_response_snapshot(w uuid,e text,a uuid) RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE totals jsonb;channels jsonb;people jsonb;private_team boolean;

@@ -6,7 +6,7 @@ DECLARE result jsonb;rk text:=coalesce(f->>'reader_kind','device');off integer:=
  IF rk='user' THEN PERFORM briofold_inbox_actor(w,d,'inbox:read');END IF;
  IF NOT EXISTS(SELECT 1 FROM workspace_product_access WHERE workspace_id=w AND product='ai' AND enabled) THEN RAISE EXCEPTION 'AI disabled' USING ERRCODE='42501';END IF;
  IF t IS NOT NULL THEN RETURN inbox_page_media(w,e,d,t,before_seq,f);END IF;
- IF e IS NULL OR e NOT IN ('live','sandbox') OR length(q)>200 OR off NOT BETWEEN 0 AND 10000 OR queue NOT IN ('all','unread','mine','unassigned','attention','resolved','snoozed','open','pending','waiting') OR coalesce(f->>'channel','') NOT IN ('','ms','ig','wa') THEN RAISE EXCEPTION 'Invalid conversation filters' USING ERRCODE='22023';END IF;
+ IF e IS NULL OR e NOT IN ('live','sandbox') OR length(q)>200 OR off NOT BETWEEN 0 AND 10000 OR queue NOT IN ('all','unread','mine','unassigned','attention','resolved','snoozed','open','pending','waiting') OR coalesce(f->>'channel','') NOT IN ('','ms','ig','wa','web') THEN RAISE EXCEPTION 'Invalid conversation filters' USING ERRCODE='22023';END IF;
  IF length(tag)>40 OR (coalesce(f->>'from_date','')<>'' AND f->>'from_date'!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
  OR (coalesce(f->>'through_date','')<>'' AND f->>'through_date'!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN
   RAISE EXCEPTION 'Invalid conversation date or label' USING ERRCODE='22023';END IF;

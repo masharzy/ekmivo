@@ -78,6 +78,7 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   assert.equal((await list({queue:'mine'})).length,1);assert.equal((await list({queue:'unassigned'})).length,0);
   assert.equal((await list({queue:'attention'})).length,1);assert.equal((await list({queue:'resolved'})).length,0);
   assert.equal((await list({q:'complaint'})).length,1,'message content search missed conversation');assert.equal((await list({channel:'ig'})).length,0);
+  assert.equal((await list({channel:'web'})).length,0,'website filter admitted Messenger conversations');
   const activity=(await db`SELECT last_activity_at FROM inbox_threads WHERE id=${thread}`)[0].last_activity_at;
   await db`UPDATE inbox_threads SET last_activity_at='2026-01-02T23:59:59Z' WHERE id=${thread}`;
   assert.equal((await list({from_date:'2026-01-02',through_date:'2026-01-02',label:'delivery',queue:'open'})).length,1,'inclusive UTC day or exact label lost a match');
