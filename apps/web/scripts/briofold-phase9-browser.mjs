@@ -89,6 +89,27 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   context=await authenticated(sessions.owner,owner);
   viewerContext=await authenticated(sessions.viewer,viewer);
   const base=origin+`/api/go/workspaces/${workspaceId}`;
+  // Real finance-backed operational diagnostics. Only a templated route and
+  // an opaque correlation ID may be persisted: never a request URL, payer
+  // identity, cookie, bearer credential or request/response body.
+  const activityCorrelation=randomBytes(12).toString("hex");
+  const activityRoute="GET /v1/workspaces/{workspaceID}/operations/payments";
+  await finance.unsafe("SELECT pg58_record_api($1::uuid,'live','GET',$2,200,14,$3)",
+   [workspaceId,activityRoute,activityCorrelation]);
+  const activityEndpoint=`${base}/activity/api?environment=live&q=${activityCorrelation}`;
+  const activityRead=await context.request.get(activityEndpoint);
+  assert.equal(activityRead.status(),200,`owner finance activity source failed: ${await activityRead.text()}`);
+  const activityRows=(await activityRead.json()).items;
+  assert.equal(activityRows.length,1,"diagnostic correlation filter did not isolate the committed API log");
+  assert.equal(activityRows[0].route,activityRoute,"API logs exposed a raw request URL instead of a route template");
+  assert.equal(activityRows[0].http_status,200,"API log lost the response status");
+  assert.equal(activityRows[0].correlation_id,activityCorrelation,"API log lost its trace correlation");
+  assert.equal((await viewerContext.request.get(activityEndpoint)).status(),403,
+   "viewer could retrieve restricted private API activity from Go");
+  const unrelatedActivity=await context.request.get(`${origin}/api/go/workspaces/${randomUUID()}/activity/api?environment=live&q=${activityCorrelation}`);
+  assert.ok([403,404,409].includes(unrelatedActivity.status()),"API activity accepted a foreign Store");
+  const invalidActivity=await context.request.get(`${base}/activity/api?environment=live&q=${"X".repeat(97)}`);
+  assert.equal(invalidActivity.status(),422,"unbounded diagnostics search bypassed validation");
   const fetchRows=async(c,resource)=>{
    const response=await c.request.get(`${base}/operations/${resource}?environment=live`);
    assert.equal(response.status(),200,`${resource} authoritative Go reader failed: ${await response.text()}`);
@@ -287,6 +308,34 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
 
   const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   const errors=[];page.on("pageerror",err=>errors.push(err.message));
+  await page.goto(origin+"/settings/activity?tab=api");
+  await page.getByRole("heading",{name:"Activity logs",exact:true}).waitFor();
+  await page.getByRole("button",{name:"API logs",exact:true}).waitFor();
+  await page.getByText(activityRoute,{exact:true}).first().waitFor();
+  const [filteredActivity]=await Promise.all([
+   page.waitForResponse(response=>response.url().includes("/activity/api")&&response.url().includes("q="+activityCorrelation)&&response.status()===200),
+   page.getByRole("searchbox",{name:"Search activity"}).fill(activityCorrelation),
+  ]);
+  assert.equal((await filteredActivity.json()).items.length,1,"canonical activity filter returned unrelated diagnostics");
+  await page.getByText(activityRoute,{exact:true}).first().waitFor();
+  const [activityDownload]=await Promise.all([
+   page.waitForEvent("download"),page.getByRole("button",{name:"Export loaded",exact:true}).click(),
+  ]);
+  const activityJson=JSON.parse(await readFile(await activityDownload.path(),"utf8"));
+  assert.equal(activityJson.loaded_records_only,true,"API log export wrongly claimed full history");
+  assert.equal(activityJson.view,"api");
+  assert.equal(activityJson.items.length,1,"search-filtered API export disclosed additional records");
+  assert.equal(activityJson.items[0].correlation_id,activityCorrelation);
+  assert.equal(activityJson.items[0].route,activityRoute);
+  assert.ok(!JSON.stringify(activityJson).includes("01700007890")&&!JSON.stringify(activityJson).includes(payer),
+   "API log export leaked payer identity or receiving account details");
+  const viewerActivityPage=await viewerContext.newPage();
+  await viewerActivityPage.goto(origin+"/settings/activity?tab=api");
+  await viewerActivityPage.getByText("Restricted to owners and admins",{exact:true}).waitFor();
+  assert.equal(await viewerActivityPage.getByText(activityRoute,{exact:true}).count(),0,
+   "viewer activity page rendered a private API route");
+  await viewerActivityPage.close();
+  console.log("Phase9 activity/API diagnostics PASS: finance -> scoped Go -> canonical UI, correlation search, owner redacted export, foreign/viewer denial");
   // The canonical single-Store settings route reads the authoritative *live*
   // financial phone projection. Exercise heartbeat -> Next -> rendered health
   // and deletion without claiming a physical Android/provider test.
@@ -544,7 +593,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
 
   const evidence=new URL("../test-results/pg09/phase9/",import.meta.url);await mkdir(evidence,{recursive:true});
   let cases=0;
-  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/settings/api-keys","/payments/refunds","/reports/payments","/payments/reconciliation","/invoices"];
+  const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/settings/api-keys","/settings/activity","/payments/refunds","/reports/payments","/payments/reconciliation","/invoices"];
   for(const locale of ["en","bn"]){
    await context.addCookies([{name:"ekmivo-locale",value:locale,url:origin,sameSite:"Lax"}]);
    for(const theme of ["light","dark"]){
@@ -557,7 +606,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
       assert.equal(response.status(),200,`${route} HTTP failed at ${locale}/${theme}/${width}`);
       const ready=route.includes("/transactions/")||route.startsWith("/sms-data/")
        ?".pg-operation-detail":route==="/settings/payment-methods"?".pg-phone-panel"
-       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/settings/api-keys"?".ref-api-key-page":route==="/payments/refunds"?".refund-table":route==="/reports/payments"?".fin-volume-card":route==="/payments/reconciliation"?".pg10-workspace":"main h1";
+       :route==="/settings/webhooks"?".int-workspace":route==="/settings/checkout"?".ref-checkout-editor":route==="/settings/api-keys"?".ref-api-key-page":route==="/settings/activity"?".activity-logs":route==="/payments/refunds"?".refund-table":route==="/reports/payments"?".fin-volume-card":route==="/payments/reconciliation"?".pg10-workspace":"main h1";
       try{await page.locator(ready).first().waitFor({timeout:10000});}
       catch(error){
        const snapshot=await page.evaluate(()=>({pathname:location.pathname,headings:[...document.querySelectorAll("main h1,main h2")].map(node=>node.textContent?.trim()).slice(0,5),sections:[...document.querySelectorAll("main section")].map(node=>node.className).slice(0,9),excerpt:document.querySelector("main")?.textContent?.trim().slice(0,300)}));
@@ -578,8 +627,8 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
     }
    }
   }
-  assert.equal(routes.length,12,"Phase9 canonical route coverage changed");
-  assert.equal(cases,192,"Phase9 complete responsive matrix missing");
+  assert.equal(routes.length,13,"Phase9 canonical route coverage changed");
+  assert.equal(cases,208,"Phase9 complete responsive matrix missing");
   await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto(origin+"/payments");
   assert.ok(await page.evaluate(()=>matchMedia("(prefers-reduced-motion: reduce)").matches),"reduced-motion preference was not honored");
