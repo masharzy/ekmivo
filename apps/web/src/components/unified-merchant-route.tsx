@@ -24,6 +24,7 @@ import {BriofoldGrowthReports} from "./briofold-growth-reports";
 import {GrowthOperationsPage} from "./growth-operations-page";
 import {BriofoldOrderReport} from "./briofold-order-report";
 import {BriofoldUnifiedActivity} from "./briofold-unified-activity";
+import {TeamGroups} from "./team-groups";
 import {BrowserDevicePreferences} from "./browser-device-preferences";
 
 export const unifiedDynamic="force-dynamic";
@@ -54,6 +55,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  const campaignPostRoute=root==="customers"&&view.length===2&&view[0]==="campaigns"&&view[1]==="posts";
  if(root==="reports"&&view[0]==="orders"&&process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED!=="true")notFound();
  if(root==="settings"&&view[0]==="activity"&&workspace.mode==="ai"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED!=="true")notFound();
+ if(root==="settings"&&view[0]==="team"&&view[1]==="groups"&&process.env.BRIOFOLD_TEAM_GROUPS_ENABLED!=="true")notFound();
  const {section,service,kind,detailId}=destination;
  const paymentContext=service==="payments"
   ?await paymentContextFor(workspace,user.id,undefined)
@@ -62,6 +64,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
   :kind==="account-devices"
    ?<BrowserDevicePreferences bn={locale==="bn"}/>
+  :kind==="team-groups"
+   ?<TeamGroups key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :root==="settings"&&view[0]==="activity"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"
    ?<><BriofoldUnifiedActivity workspaceId={workspace.id} actorId={user.id} locale={locale}
        environment={paymentContext?.environment??"live"} filters={activityFilters}/>

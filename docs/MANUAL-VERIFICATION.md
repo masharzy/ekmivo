@@ -10,7 +10,7 @@ production flag change or staged cutover was performed by the Phase 10 reports i
 
 - [ ] Owner-provided test accounts/providers/handset and isolated merchant business: run the
   eleven groups in the Phase 10 evidence ledger and record actual pass/failure evidence.
-- [ ] Operator, **only after the owner explicitly authorizes merge/release**: exact merged SHA and green integrated CI; inspect the existing CONTROL schema (including checkout presentation 0100 and support topic 0073), then stage applicable CONTROL-only 0141/0142/0180–0190 migrations in dependency order with backups, checksummed review, known owner role, runtime grants, support ticket topic preservation and post-deploy health/rollback checks. Do not run them in either financial realm or as part of this code-only task.
+- [ ] Operator, **only after the owner explicitly authorizes merge/release**: exact merged SHA and green integrated CI; inspect the existing CONTROL schema (including checkout presentation 0100 and support topic 0073), then stage applicable CONTROL-only 0141/0142/0180–0198 migrations in dependency order with backups, checksummed review, known owner role, runtime grants, support ticket topic preservation and post-deploy health/rollback checks. Do not run them in either financial realm or as part of this code-only task.
 
 ## Nagad compact payer entry & bKash BD number normalization — 2026-10-14 (manual / build pending)
 

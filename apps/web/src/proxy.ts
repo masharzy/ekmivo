@@ -6,7 +6,7 @@ import {NextRequest,NextResponse} from "next/server";
 export function proxy(request:NextRequest){
  const path=request.nextUrl.pathname;
  if(path.startsWith("/api/")||path==="/api"||path.startsWith("/_next/")||
-    path==="/favicon.ico"||path==="/robots.txt"||path==="/sitemap.xml"||
+    path==="/favicon.ico"||path==="/robots.txt"||path==="/sitemap.xml"||path==="/manifest.webmanifest"||
     /\.[a-z0-9]{2,8}$/i.test(path))return NextResponse.next();
  const legacy=path.match(/^\/(bn|en)(?=\/|$)/);
  const preference=request.cookies.get("ekmivo-locale")?.value;

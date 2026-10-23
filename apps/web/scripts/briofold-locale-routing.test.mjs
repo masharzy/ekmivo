@@ -40,7 +40,7 @@ test("invalid preference falls back to English",()=>{
  assert.equal(new URL(exports.proxy(request("/dashboard","invalid")).url).pathname,"/en/dashboard");
 });
 test("API and static assets bypass locale rewrites",()=>{
- for(const path of ["/api/go/payments","/_next/static/app.js","/icon.svg","/robots.txt"])
+ for(const path of ["/api/go/payments","/_next/static/app.js","/icon.svg","/robots.txt","/manifest.webmanifest","/ekmivo-pwa-sw.js"])
   assert.equal(exports.proxy(request(path)).kind,"next");
 });
 test("public spoofed shell headers cannot turn marketing pages into merchant pages",()=>{

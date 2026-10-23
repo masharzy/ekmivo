@@ -2,6 +2,7 @@ import {readFile} from "node:fs/promises";
 import postgres from "postgres";
 import {spawn} from "node:child_process";
 import {chromium} from "@playwright/test";
+import {runTeamGroups} from "./briofold-team-groups-acceptance.mjs";
 import {runFeedbackAcceptance} from "./briofold-feedback-acceptance.mjs";
 import {runSavedReplySequences} from "./briofold-saved-reply-sequences-acceptance.mjs";
 import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
@@ -80,6 +81,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0193_briofold_inbox_filters.sql");
   await apply("0194_briofold_response_reporting.sql");
   await apply("0195_briofold_product_operational_analytics.sql");
+  await apply("0196_briofold_team_groups.sql");
   await apply("0197_briofold_saved_reply_sequences.sql");
   await apply("0198_briofold_feedback_screenshots.sql");
  }finally{await schema.end({timeout:3});}
@@ -99,27 +101,34 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  try{
   await ready(apiOrigin+"/healthz",200,api);
   server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
-   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
   });
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
-  await runBriofoldSettingsBrowser({origin,browser,control,sessions});
-  await runBriofoldOnboardingBrowser({origin,browser,control,sessions});
-  await runBriofoldInboxAccess({origin,browser,control,sessions});
-  await runBriofoldAiChannel({control,sessions});
-  await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});
-  await runBriofoldInboxDrafts({origin,browser,control,sessions});
-  await runBriofoldInboxWorkflow({origin,browser,control,sessions});
-  await runSavedReplySequences({origin,browser,control,sessions});
-  await runFeedbackAcceptance({origin,browser,control,sessions});
-  await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});
-  await runBriofoldCustomers({origin,browser,control,sessions,apiOrigin});
-  await runBriofoldCRMParity({origin,browser,control,sessions});
-  await runBriofoldResponseReport({origin,browser,control,sessions});
-  await runBriofoldCommerce({origin,browser,control,sessions,apiOrigin});
-  await runBriofoldOrderAssignment({origin,browser,control,sessions});
-  await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});
-  if(phase9Fixture)await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});
+  // Each suite creates its own fictional Store and closes its browser context.
+  // Collect independent failures so one UI assertion does not hide all later
+  // feature evidence. The final job remains red if any suite fails.
+  const failures=[];
+  const check=async(name,run)=>{try{await run();}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
+  await check("runBriofoldSettingsBrowser",async()=>{await runBriofoldSettingsBrowser({origin,browser,control,sessions});});
+  await check("runBriofoldOnboardingBrowser",async()=>{await runBriofoldOnboardingBrowser({origin,browser,control,sessions});});
+  await check("runBriofoldInboxAccess",async()=>{await runBriofoldInboxAccess({origin,browser,control,sessions});});
+  await check("runBriofoldAiChannel",async()=>{await runBriofoldAiChannel({control,sessions});});
+  await check("runBriofoldAiStudioAcceptance",async()=>{await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});});
+  await check("runBriofoldInboxDrafts",async()=>{await runBriofoldInboxDrafts({origin,browser,control,sessions});});
+  await check("runBriofoldInboxWorkflow",async()=>{await runBriofoldInboxWorkflow({origin,browser,control,sessions});});
+  await check("runSavedReplySequences",async()=>{await runSavedReplySequences({origin,browser,control,sessions});});
+  await check("runFeedbackAcceptance",async()=>{await runFeedbackAcceptance({origin,browser,control,sessions});});
+  await check("runTeamGroups",async()=>{await runTeamGroups({origin,browser,control,sessions});});
+  await check("runBriofoldChannelExtensions",async()=>{await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});});
+  await check("runBriofoldCustomers",async()=>{await runBriofoldCustomers({origin,browser,control,sessions,apiOrigin});});
+  await check("runBriofoldCRMParity",async()=>{await runBriofoldCRMParity({origin,browser,control,sessions});});
+  await check("runBriofoldResponseReport",async()=>{await runBriofoldResponseReport({origin,browser,control,sessions});});
+  await check("runBriofoldCommerce",async()=>{await runBriofoldCommerce({origin,browser,control,sessions,apiOrigin});});
+  await check("runBriofoldOrderAssignment",async()=>{await runBriofoldOrderAssignment({origin,browser,control,sessions});});
+  await check("runBriofoldGrowthOperations",async()=>{await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});});
+  if(phase9Fixture)await check("runBriofoldPhase9Browser",async()=>{await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});});
+  if(failures.length)throw new AggregateError(failures.map(x=>x.error),failures.map(x=>x.name+": "+x.error.message).join("\n"));
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
 }

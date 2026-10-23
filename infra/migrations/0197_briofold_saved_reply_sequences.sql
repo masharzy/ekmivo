@@ -104,7 +104,8 @@ BEGIN
   IF part->>'type'='text' THEN
    sent:=inbox_action(w,e,a,t,'send',jsonb_build_object('idempotency_key',key,'text',regexp_replace(part->>'text','\{\{\s*customer_name\s*\}\}',replace(v.customer_name,'\','\\'),'g')));
   ELSE
-   SELECT * INTO source FROM inbox_messages WHERE id=(part->>'message_id')::uuid AND workspace_id=w;
+   SELECT m.* INTO source FROM inbox_messages m JOIN inbox_threads th ON th.id=m.thread_id JOIN inbox_connections c ON c.id=th.connection_id AND c.enabled AND c.environment=e WHERE m.id=(part->>'message_id')::uuid AND m.workspace_id=w AND m.sender IN ('seller','ai') AND m.state IN ('sent','delivered','seen') AND m.type=part->>'type';
+   IF source.id IS NULL THEN RAISE EXCEPTION 'Reply media unavailable' USING ERRCODE='42501';END IF;
    IF source.thread_id=t THEN
     sent:=inbox_advanced(w,e,a,t,'send-media',jsonb_build_object('idempotency_key',key,'media_id',source.content->>'media_id'));
    ELSE

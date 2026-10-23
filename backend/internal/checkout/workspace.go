@@ -50,13 +50,19 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "NOT_FOUND")
 		return
 	}
+	if resource == "groups" && !s.Auth.GranularGrants {
+		fail(w, 503, "GROUP_PERMISSIONS_UNAVAILABLE")
+		return
+	}
 	if !s.budget(w, "workspace-tools:"+actor.UserID, 60) {
 		return
 	}
 	var raw []byte
 	if r.Method == "GET" {
 		target := r.PathValue("targetID")
-		if resource == "help" && target != "" {
+		if resource == "groups" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_team_groups_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
+		} else if resource == "help" && target != "" {
 			if !uuidPattern.MatchString(target) {
 				fail(w, 404, "NOT_FOUND")
 				return
@@ -91,7 +97,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		if resource == "change-role" || resource == "remove-member" || resource == "grants" || resource == "transfer-owner" {
+		if resource == "change-role" || resource == "remove-member" || resource == "grants" || resource == "transfer-owner" || resource == "groups" {
 			password, _ := b["current_password"].(string)
 			if e = s.Auth.ConfirmPassword(r.Context(), actor, password); e != nil {
 				authError(w, e)
@@ -104,6 +110,18 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch resource {
+		case "groups":
+			act, _ := b["action"].(string)
+			payload, ok := b["body"].(map[string]any)
+			if !ok || (act != "create" && act != "update" && act != "archive") {
+				fail(w, 422, "INVALID_TEAM_GROUP")
+				return
+			}
+			id, _ := payload["id"].(string)
+			if !uuidPattern.MatchString(id) {
+				fail(w, 422, "INVALID_TEAM_GROUP")
+				return
+			}
 		case "invite":
 			email, _ := b["email"].(string)
 			email = strings.ToLower(strings.TrimSpace(email))
@@ -213,6 +231,9 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			} else {
 				e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_feedback_write($1::uuid,$2::uuid,$3::uuid,$4::jsonb)", ws, actor.UserID, nullableID(r.Header.Get("Idempotency-Key")), string(data)).Scan(&raw)
 			}
+		} else if resource == "groups" {
+			groupBody, _ := json.Marshal(b["body"])
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_team_groups_write($1::uuid,$2::uuid,$3,$4::jsonb)", ws, actor.UserID, b["action"], string(groupBody)).Scan(&raw)
 		} else if resource == "resend-invite" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_invite_resend($1::uuid,$2::uuid,$3::uuid,$4)", ws, actor.UserID, nullableID(target), b["token_digest"]).Scan(&raw)
 		} else if resource == "grants" {
