@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {expect} from "@playwright/test";
 import {createHash,randomUUID} from "node:crypto";
 import postgres from "postgres";
 export async function runBriofoldSettingsBrowser({origin,browser,control,sessions}){
@@ -86,10 +87,10 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   // payment/mobile device pairing and must not imply server push delivery.
   assert.equal((await page.goto(origin+"/settings/account/devices")).status(),200);
   const sound=page.getByRole("checkbox",{name:/Allow a sound in this browser/});
-  await sound.waitFor();assert.equal(await sound.isChecked(),false);
+  await expect(sound).toBeEnabled();await expect(sound).not.toBeChecked();
   await sound.check();assert.equal(await sound.isChecked(),true);
   assert.equal(await page.evaluate(()=>localStorage.getItem("ekmivo:device:notification-sound:v1")),"on");
-  await page.reload();await sound.waitFor();assert.equal(await sound.isChecked(),true,"Device sound preference did not survive reload");
+  await page.reload();await expect(sound).toBeEnabled();await expect(sound).toBeChecked();
   assert.match(await page.getByRole("region",{name:"Browser permission"}).innerText(),/No push subscription or remote notification sender/);
   const manifest=await context.request.get(origin+"/manifest.webmanifest");
   assert.equal(manifest.status(),200);assert.equal((await manifest.json()).start_url,"/dashboard");
@@ -100,7 +101,7 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   await sound.uncheck();assert.equal(await sound.isChecked(),false);
   assert.equal((await viewerPage.goto(origin+"/settings/account/devices")).status(),200);
   const viewerSound=viewerPage.getByRole("checkbox",{name:/Allow a sound in this browser/});
-  await viewerSound.waitFor();assert.equal(await viewerSound.isChecked(),false,"Owner's local device preference leaked into viewer's browser context");
+  await expect(viewerSound).toBeEnabled();await expect(viewerSound).not.toBeChecked();
   for(const oldDocsPath of ["/settings/api-docs","/settings/developers/docs"]){
    const docs=await page.goto(origin+oldDocsPath);
    assert.equal(docs.status(),200,`Public API docs deep link ${oldDocsPath} failed`);

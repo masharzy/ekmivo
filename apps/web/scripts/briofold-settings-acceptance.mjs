@@ -2,6 +2,8 @@ import {readFile} from "node:fs/promises";
 import postgres from "postgres";
 import {spawn} from "node:child_process";
 import {chromium} from "@playwright/test";
+import {runFeedbackAcceptance} from "./briofold-feedback-acceptance.mjs";
+import {runSavedReplySequences} from "./briofold-saved-reply-sequences-acceptance.mjs";
 import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
 import {runBriofoldOnboardingBrowser} from "./briofold-onboarding-browser.mjs";
 import {runBriofoldAiChannel} from "./briofold-ai-channel-acceptance.mjs";
@@ -78,6 +80,8 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0193_briofold_inbox_filters.sql");
   await apply("0194_briofold_response_reporting.sql");
   await apply("0195_briofold_product_operational_analytics.sql");
+  await apply("0197_briofold_saved_reply_sequences.sql");
+  await apply("0198_briofold_feedback_screenshots.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
@@ -106,6 +110,8 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});
   await runBriofoldInboxDrafts({origin,browser,control,sessions});
   await runBriofoldInboxWorkflow({origin,browser,control,sessions});
+  await runSavedReplySequences({origin,browser,control,sessions});
+  await runFeedbackAcceptance({origin,browser,control,sessions});
   await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});
   await runBriofoldCustomers({origin,browser,control,sessions,apiOrigin});
   await runBriofoldCRMParity({origin,browser,control,sessions});

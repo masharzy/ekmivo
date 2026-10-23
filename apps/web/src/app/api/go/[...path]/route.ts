@@ -55,7 +55,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   const value = incoming.searchParams.get(key);
   if (value) target.searchParams.set(key, value);
  }
- const body = read ? undefined : await boundedBody(request,path.endsWith("/ai/knowledge-import")?7340032:aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:commercePath.test(path)?7340032:path.endsWith("/crm")?20000:growthPath.test(path)?16384:path.endsWith("/comments")?65536:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/settings$/i.test(path)?8192:4096);
+ const body = read ? undefined : await boundedBody(request,/\/workspace-tools\/help$/i.test(path)?750000:path.endsWith("/ai/knowledge-import")?7340032:aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:commercePath.test(path)?7340032:path.endsWith("/crm")?20000:growthPath.test(path)?16384:path.endsWith("/comments")?65536:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/settings$/i.test(path)?8192:4096);
  if (body === null)
   return Response.json({ code: "BODY_TOO_LARGE" }, { status: 413 });
  try {

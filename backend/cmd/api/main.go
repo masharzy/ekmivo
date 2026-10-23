@@ -115,6 +115,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/notifications", pay.HandleNotifications)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/notifications/{notificationID}/read", pay.HandleNotifications)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/workspace-tools/{tool}", pay.HandleWorkspaceTools)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/workspace-tools/{tool}/{targetID}", pay.HandleWorkspaceTools)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/workspace-tools/{tool}", pay.HandleWorkspaceTools)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/workspace-tools/{tool}/{targetID}", pay.HandleWorkspaceTools)
 	mux.HandleFunc("POST /v1/workspace-invites/{tool}", pay.HandleWorkspaceTools)

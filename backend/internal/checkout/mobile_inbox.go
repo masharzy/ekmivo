@@ -26,7 +26,7 @@ func webInboxCapability(action string) (authz.Capability, bool) {
 	switch action {
 	case "ai-review-read", "work-read", "list", "messages", "profile", "products", "info", "media-get", "read":
 		return authz.InboxRead, true
-	case "ai-review-done", "work", "takeover", "release", "ticket", "duty", "work-note", "send", "retry", "media-upload", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
+	case "send-saved-reply", "ai-review-done", "work", "takeover", "release", "ticket", "duty", "work-note", "send", "retry", "media-upload", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
 		return authz.InboxSend, true
 	case "saved-reply", "archive-reply", "ai", "product-save":
 		return authz.InboxManage, true
@@ -111,6 +111,21 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 	}
 	b.Body["reader_kind"] = reader
 	var result []byte
+	if reader == "user" && b.Action == "send-saved-reply" {
+		key, _ := b.Body["operation_key"].(string)
+		if thread == nil || !uuidPattern.MatchString(key) {
+			fail(w, 422, "INVALID_OPERATION_KEY")
+			return
+		}
+		body, _ := json.Marshal(b.Body)
+		err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_saved_reply_send($1::uuid,$2,$3::uuid,$4::uuid,$5::uuid,$6::jsonb)", d.Workspace, d.Environment, d.ID, thread, key, body).Scan(&result)
+		if err != nil {
+			inboxWorkFailure(w, err)
+			return
+		}
+		write(w, 200, json.RawMessage(result))
+		return
+	}
 	if reader == "user" && (b.Action == "ai-review-read" || b.Action == "ai-review-done") {
 		if b.Action == "ai-review-read" {
 			offset, valid := inboxWorkOffset(b.Filters["offset"])

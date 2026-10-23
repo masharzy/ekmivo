@@ -55,10 +55,23 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 	}
 	var raw []byte
 	if r.Method == "GET" {
-		e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_workspace_read($1::uuid,$2::uuid,$3)", ws, actor.UserID, resource).Scan(&raw)
+		target := r.PathValue("targetID")
+		if resource == "help" && target != "" {
+			if !uuidPattern.MatchString(target) {
+				fail(w, 404, "NOT_FOUND")
+				return
+			}
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_feedback_screenshot_read($1::uuid,$2::uuid,$3::uuid)", ws, actor.UserID, target).Scan(&raw)
+		} else {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_workspace_read($1::uuid,$2::uuid,$3)", ws, actor.UserID, resource).Scan(&raw)
+		}
 	} else {
 		var b map[string]any
-		if decodeBounded(w, r, &b, 8192) != nil {
+		limit := int64(8192)
+		if resource == "help" {
+			limit = 750000
+		}
+		if decodeBounded(w, r, &b, limit) != nil {
 			fail(w, 422, "INVALID_WORKSPACE_ACTION")
 			return
 		}
@@ -118,6 +131,14 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			b["token_digest"] = digest(cap)
 			b["_return_token"] = cap
 		case "help":
+			if normalizeFeedbackScreenshot(b) != nil {
+				fail(w, 422, "INVALID_SCREENSHOT")
+				return
+			}
+			if key := r.Header.Get("Idempotency-Key"); key != "" && !uuidPattern.MatchString(key) {
+				fail(w, 422, "INVALID_OPERATION_KEY")
+				return
+			}
 			if topic, ok := b["topic"].(string); ok && !map[string]bool{"payments": true, "sms": true, "refunds": true, "account": true, "bug": true, "feature": true, "usability": true, "other": true}[topic] {
 				fail(w, 422, "INVALID_SUPPORT_TOPIC")
 				return
@@ -177,7 +198,22 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		returnCap, _ := b["_return_token"].(string)
 		delete(b, "_return_token")
 		data, _ := json.Marshal(b)
-		if resource == "resend-invite" {
+		if resource == "help" {
+			var ready bool
+			if e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT to_regprocedure('public.briofold_feedback_write(uuid,uuid,uuid,jsonb)') IS NOT NULL").Scan(&ready); e != nil {
+				fail(w, 503, "SUPPORT_UNAVAILABLE")
+				return
+			}
+			if !ready {
+				if b["screenshot"] != nil {
+					fail(w, 503, "SUPPORT_SCREENSHOT_UNAVAILABLE")
+					return
+				}
+				e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_workspace_write($1::uuid,$2::uuid,'help',$3::jsonb,NULL)", ws, actor.UserID, string(data)).Scan(&raw)
+			} else {
+				e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_feedback_write($1::uuid,$2::uuid,$3::uuid,$4::jsonb)", ws, actor.UserID, nullableID(r.Header.Get("Idempotency-Key")), string(data)).Scan(&raw)
+			}
+		} else if resource == "resend-invite" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_invite_resend($1::uuid,$2::uuid,$3::uuid,$4)", ws, actor.UserID, nullableID(target), b["token_digest"]).Scan(&raw)
 		} else if resource == "grants" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_grants($1::uuid,$2::uuid,$3::uuid,$4::jsonb)", ws, actor.UserID, nullableID(target), string(data)).Scan(&raw)
