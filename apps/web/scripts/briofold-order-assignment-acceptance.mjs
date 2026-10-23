@@ -173,6 +173,33 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   await page.getByRole('button',{name:'Search',exact:true}).click();
   await page.getByText(reference,{exact:true}).first().waitFor();
   assert.equal(await page.getByRole('button',{name:'Scan with camera'}).count(),1,'camera action missing');
+  await page.getByRole('textbox',{name:'Search / scan barcode'}).fill('NOT-THIS-BARCODE');
+  await Promise.all([
+   page.waitForResponse(response=>response.url().includes('resource=scan')&&response.url().includes('q=NOT-THIS-BARCODE')),
+   page.getByRole('button',{name:'Search',exact:true}).click(),
+  ]);
+  // Exercise the camera path with a browser-owned synthetic MediaStream and
+  // BarcodeDetector. A real camera/permission test remains in the owner ledger.
+  await page.evaluate(code=>{
+   const stream=new MediaStream();
+   stream.getTracks=()=>[{stop(){globalThis.__briofoldScannerStopped=true;}}];
+   Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:async()=>stream}});
+   HTMLMediaElement.prototype.play=async()=>{};
+   globalThis.BarcodeDetector=class{constructor(options){if(!options.formats.includes('code_128'))throw Error('format missing');}async detect(){return [{rawValue:code}];}};
+   globalThis.__briofoldScannerStopped=false;
+  },barcode);
+  const [cameraSearch]=await Promise.all([
+   page.waitForResponse(response=>response.url().includes('resource=scan')&&response.url().includes('q='+barcode)&&response.status()===200),
+   page.getByRole('button',{name:'Scan with camera'}).click(),
+  ]);
+  assert.equal(cameraSearch.status(),200);
+  await page.waitForFunction(()=>globalThis.__briofoldScannerStopped===true);
+  assert.equal(await page.getByRole('textbox',{name:'Search / scan barcode'}).inputValue(),barcode);
+  await page.getByRole('button',{name:'Scan with camera'}).waitFor();
+  await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=async()=>{throw Error('permission denied');};});
+  await page.getByRole('button',{name:'Scan with camera'}).click();
+  await page.getByText('Camera permission or preview unavailable. Manual barcode search remains available.',{exact:true}).waitFor();
+  await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
   assert.equal((await page.goto(origin+'/orders/products/sync')).status(),200);
   const importView=page.locator('details').filter({has:page.getByText('Import / sync catalog',{exact:true})});
   await importView.waitFor();
