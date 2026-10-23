@@ -25,3 +25,11 @@ The key-capacity source also requires CONTROL 0096/0101 and financial 0068/0093.
 Run 39897459949 on 0f59b5a9 passed the actual payment CSV owner/viewer privacy test and the merchant statement preview/import/association/viewer-denial test. It then completed 192 responsive route cases and failed only at the outdated total assertion (`192 !== 176`), before the key journey. The route inventory is now explicitly asserted as 12 routes and 192 cases (2 locales × 2 themes × 4 widths × 12 routes), with an accurate dynamic route count in the PASS log. All per-case HTTP, theme, width, overflow and error checks are preserved.
 
 Credential acceptance now runs after the Phase 9 semantic writes and before the long read-only responsive matrix. This keeps the quota migration boundary intact and reports credential failures earlier. Its outcomes and the corrected complete run still require fresh CI. No full parity or production acceptance is claimed.
+
+## CRM implementation continuation
+
+Additive CONTROL migrations 0191/0192 implement source/stage/priority/assignee filtering before stable pagination, role-safe contact/assignment projections, offer reminders, terminal skip, original requested time and IANA-timezone quiet windows. The Go reader and canonical leads/follow-up UI use these functions. Existing financial relationships and applied migrations remain unchanged.
+
+`briofold-crm-parity-acceptance.mjs` exercises pagination beyond 50 matching records hidden behind newer nonmatches; combined filters; tenant/realm/role privacy; filtered CSV; real Go/Next scheduling and reload; skip; revision and idempotency; daytime/overnight and both DST transitions; 32 responsive locale/theme cases. It runs in the existing disposable acceptance database. TypeScript, ESLint, JavaScript syntax and diff checks pass locally. Database/browser results are still unsealed until CI executes this source.
+
+Run 39899417676 failed waiting for the Live key revoke drawer after earlier mutations. Success handling now keys off stable secret/key IDs, refreshes the router inventory once, and the acceptance opens the exact active UUID row. This is an application lifecycle correction awaiting fresh full CI, not a weakened assertion.

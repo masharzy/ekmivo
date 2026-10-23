@@ -66,7 +66,12 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Disposition", `attachment; filename="customer.json"`)
 			}
 		} else {
-			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customers_read($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7)", ws, realm, actor.UserID, nullableID(cid), off, r.URL.Query().Get("q"), r.URL.Query().Get("filter")).Scan(&raw)
+			source, priority, assigned := r.URL.Query().Get("source"), r.URL.Query().Get("priority"), r.URL.Query().Get("assignee")
+			if cid == "" && (source != "" || priority != "" || assigned != "") {
+				err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customers_search($1::uuid,$2,$3::uuid,$4,$5,$6,$7,$8,$9)", ws, realm, actor.UserID, off, r.URL.Query().Get("q"), r.URL.Query().Get("filter"), source, priority, assigned).Scan(&raw)
+			} else {
+				err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customers_read($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7)", ws, realm, actor.UserID, nullableID(cid), off, r.URL.Query().Get("q"), r.URL.Query().Get("filter")).Scan(&raw)
+			}
 		}
 	} else if r.Method == http.MethodPost {
 		var b struct {
