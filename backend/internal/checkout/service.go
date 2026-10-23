@@ -39,6 +39,8 @@ var (
 )
 
 type Service struct {
+	// Injectable only by package tests; production uses pinned HTTPS transport.
+	pathaoRequest       func(context.Context, *http.Request) (*http.Response, error)
 	SyncProjection      func(context.Context, string, string) error
 	NoticeSMTP          *receiptnotice.SMTPConfig
 	NoticeSchema        bool
@@ -66,7 +68,7 @@ type createRequest struct {
 	CustomerName    string          `json:"customer_name,omitempty"`
 	Fullname        string          `json:"fullname,omitempty"` // Merchant-friendly integration alias.
 	CustomerEmail   string          `json:"customer_email,omitempty"`
-	Email          string          `json:"email,omitempty"` // Merchant-friendly integration alias.
+	Email           string          `json:"email,omitempty"` // Merchant-friendly integration alias.
 	CustomerPhone   string          `json:"customer_phone,omitempty"`
 	Metadata        json.RawMessage `json:"metadata,omitempty"`
 }

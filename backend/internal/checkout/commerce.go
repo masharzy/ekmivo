@@ -138,7 +138,7 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 		case "media-upload":
 			s.commerceMediaUpload(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Body)
 			return
-		case "integration-save", "integration-disable", "courier-book", "courier-status", "woocommerce-preview":
+		case "integration-save", "integration-disable", "courier-book", "courier-status", "woocommerce-preview", "pathao-locations":
 			s.commerceIntegration(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Action, cmd.Body)
 			return
 		default:

@@ -72,7 +72,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   :kind==="product-photos"
    ?<ProductPhotoSearch key={workspace.id+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :kind==="courier-integrations"
-   ?<CourierIntegrations key={workspace.id+user.id} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}/>
+   ?<CourierIntegrations pathaoEnabled={process.env.BRIOFOLD_PATHAO_ENABLED==="true"} key={workspace.id+user.id} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}/>
   :kind==="channel-settings"&&detailId
    ?<ChannelSettings key={workspace.id+user.id+detailId} workspaceId={workspace.id} actorId={user.id} connectionId={detailId} bn={locale==="bn"}/>
   :kind==="account-devices"

@@ -9,7 +9,7 @@ export async function CommercePage(props:{workspaceId:string;actorId:string;bn:b
   ?await database()`SELECT commerce_read(${props.workspaceId}::uuid,${props.environment},${props.actorId}::uuid,${resource},NULL::uuid,0,'','draft','') AS data`
   :await database()`SELECT commerce_read(${props.workspaceId}::uuid,${props.environment},${props.actorId}::uuid,${resource}) AS data`;
   initial=row.data as CommercePageData;}catch{/* Explicit unavailable state; never substitute empty data. */}
- return <><CommerceWorkspace {...props} initial={initial}
+ return <><CommerceWorkspace {...props} initial={initial} pathaoEnabled={process.env.BRIOFOLD_PATHAO_ENABLED==="true"}
    assignmentEnabled={process.env.BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED==="true"}
    scanEnabled={process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true"}
    productPhotosEnabled={process.env.BRIOFOLD_PRODUCT_PHOTOS_ENABLED==="true"}

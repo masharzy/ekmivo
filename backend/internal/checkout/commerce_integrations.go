@@ -21,9 +21,11 @@ import (
 )
 
 type commerceCredentials struct {
-	APIKey string `json:"api_key"`
-	Secret string `json:"secret"`
-	Origin string `json:"origin"`
+	APIKey   string `json:"api_key"`
+	Secret   string `json:"secret"`
+	Origin   string `json:"origin"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
 }
 
 // Per-request DNS pinning prevents a merchant-supplied store hostname from
@@ -59,6 +61,10 @@ func (s *Service) commerceCommand(r *http.Request, ws, realm, actor, key, action
 }
 func (s *Service) commerceIntegration(w http.ResponseWriter, r *http.Request, ws, realm, actor, key, action string, b map[string]any) {
 	provider, _ := b["provider"].(string)
+	if provider == "pathao" || action == "pathao-locations" {
+		s.commercePathao(w, r, ws, realm, actor, key, action, b)
+		return
+	}
 	if action == "courier-book" || action == "courier-status" {
 		provider = "steadfast"
 	}
