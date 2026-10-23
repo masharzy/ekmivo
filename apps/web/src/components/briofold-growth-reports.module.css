@@ -19,3 +19,5 @@
 .note p{margin:0}
 .alert{color:var(--color-text-muted,#5c6474);border-left:3px solid #ad601c;padding:12px;margin:0}
 @media(max-width:390px){.metrics{grid-template-columns:minmax(0,1fr)}.heading{gap:10px}}
+
+.panel p{overflow-wrap:anywhere}

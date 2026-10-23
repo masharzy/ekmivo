@@ -78,6 +78,17 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   assert.equal((await list({queue:'mine'})).length,1);assert.equal((await list({queue:'unassigned'})).length,0);
   assert.equal((await list({queue:'attention'})).length,1);assert.equal((await list({queue:'resolved'})).length,0);
   assert.equal((await list({q:'complaint'})).length,1,'message content search missed conversation');assert.equal((await list({channel:'ig'})).length,0);
+  const activity=(await db`SELECT last_activity_at FROM inbox_threads WHERE id=${thread}`)[0].last_activity_at;
+  await db`UPDATE inbox_threads SET last_activity_at='2026-01-02T23:59:59Z' WHERE id=${thread}`;
+  assert.equal((await list({from_date:'2026-01-02',through_date:'2026-01-02',label:'delivery',queue:'open'})).length,1,'inclusive UTC day or exact label lost a match');
+  assert.equal((await list({from_date:'2026-01-03'})).length,0);
+  assert.equal((await list({through_date:'2026-01-01'})).length,0);
+  assert.equal((await list({label:'deliv'})).length,0,'label unexpectedly used a substring');
+  assert.equal((await list({queue:'pending'})).length,0);
+  await denied(()=>list({from_date:'2026-02-30'}),'22023');
+  await denied(()=>list({from_date:'2026-01-03',through_date:'2026-01-01'}),'22023');
+  await denied(()=>list({from_date:'2026-1-02'}),'22023');
+  await db`UPDATE inbox_threads SET last_activity_at=${activity} WHERE id=${thread}`;
   await db`INSERT INTO briofold_inbox_events(workspace_id,operation_key,thread_id,actor_id,action,request_hash,result) SELECT ${workspace},gen_random_uuid(),${thread},${actor},'fixture',repeat('a',64),'{}' FROM generate_series(1,40)`;
   const h1=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},${thread},0,0,0) AS data`)[0].data;
   const h2=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},${thread},0,0,50) AS data`)[0].data;
@@ -104,12 +115,34 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await page.goto(origin+'/inbox/tickets');await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('resolved');await page.getByText('Fictional delivery dispute',{exact:true}).waitFor();
   await page.getByRole('link',{name:'Open conversation and ticket',exact:true}).click();await page.waitForURL('**/inbox?thread='+thread);
   await page.getByLabel('Internal note',{exact:true}).waitFor();assert.equal(await page.getByLabel('Internal note',{exact:true}).inputValue(),'Browser internal note persisted');
+  await page.getByText('Date & label filters',{exact:true}).click();
+  await page.getByLabel('Exact label',{exact:true}).fill('browser');
+  await page.locator(`[data-thread-id="${thread}"]`).waitFor();
+  await page.getByLabel('Last activity from (UTC)',{exact:true}).fill('2099-01-01');
+  await page.getByText('No conversations found.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Clear date & label',exact:true}).click();
+  await page.locator(`[data-thread-id="${thread}"]`).waitFor();
+  await db`SELECT inbox_ingest(${c},'keyboard-inbound','keyboard-customer','Second keyboard customer','Needs a reply','text',now()+interval '1 minute')`;
+  const secondThread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${c} AND external_id='keyboard-customer'`)[0].id;
+  await page.locator(`[data-thread-id="${secondThread}"]`).waitFor();
+  await page.locator(`[data-thread-id="${secondThread}"]`).focus();
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await page.locator(`[data-thread-id="${thread}"]`).evaluate(el=>el===document.activeElement),true,'ArrowDown did not select the next conversation');
+  assert.equal(await page.locator(`[data-thread-id="${thread}"]`).getAttribute('aria-pressed'),'true');
+  await page.keyboard.press('Home');
+  assert.equal(await page.locator(`[data-thread-id="${secondThread}"]`).evaluate(el=>el===document.activeElement),true,'Home did not focus the first conversation');
+  await page.keyboard.press('End');
+  assert.equal(await page.locator(`[data-thread-id="${thread}"]`).evaluate(el=>el===document.activeElement),true,'End did not focus the last conversation');
+  await page.getByLabel('Conversation queue',{exact:true}).selectOption('pending');
+  await page.getByText('No conversations found.',{exact:true}).waitFor();
+  await page.getByLabel('Conversation queue',{exact:true}).selectOption('all');
+  await page.locator(`[data-thread-id="${thread}"]`).waitFor();
   // A real Unicode manual send remains permitted with zero AI credit.
   const endpoint=origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live';
   const sent=await context.request.post(endpoint,{headers:{Origin:origin},data:{action:'send',thread_id:thread,body:{text:'ক'.repeat(8000),idempotency_key:randomUUID()}}});assert.equal(sent.status(),200,'Bangla reply hit an incorrect byte/character limit');
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
   assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_inbox_duty WHERE workspace_id=${workspace} AND user_id=${actor}`)[0].n),0,'duty record blocked membership revocation');
   await denied(read,'42501');assert.deepEqual(errors,[]);
-  console.log('Phase6 WORKFLOW PASS: actual takeover/cancel/idempotency/revisions/assignment/labels/dispute/release/auto-return/tickets/notes/duty/saved replies/RLS; browser save/insert; Unicode human reply at zero credit');
+  console.log('Phase6 WORKFLOW PASS: actual takeover/cancel/idempotency/revisions/assignment/labels/dispute/release/auto-return/tickets/notes/duty/saved replies/RLS; browser save/insert/date/label/queue/keyboard; SQL inclusive UTC boundaries and invalid/reversed date denial; Unicode human reply at zero credit');
  }finally{if(context)await context.close();await db.end({timeout:3});}
 }

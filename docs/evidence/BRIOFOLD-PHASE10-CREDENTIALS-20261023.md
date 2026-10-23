@@ -33,3 +33,17 @@ Additive CONTROL migrations 0191/0192 implement source/stage/priority/assignee f
 `briofold-crm-parity-acceptance.mjs` exercises pagination beyond 50 matching records hidden behind newer nonmatches; combined filters; tenant/realm/role privacy; filtered CSV; real Go/Next scheduling and reload; skip; revision and idempotency; daytime/overnight and both DST transitions; 32 responsive locale/theme cases. It runs in the existing disposable acceptance database. TypeScript, ESLint, JavaScript syntax and diff checks pass locally. Database/browser results are still unsealed until CI executes this source.
 
 Run 39899417676 failed waiting for the Live key revoke drawer after earlier mutations. Success handling now keys off stable secret/key IDs, refreshes the router inventory once, and the acceptance opens the exact active UUID row. This is an application lifecycle correction awaiting fresh full CI, not a weakened assertion.
+
+## Independent row reconciliation and Inbox gaps
+
+Payment report CSV and reconciliation each emitted their own successful acceptance marker in run 39899417676 (web job 120237270849), before a later credential failure. Their two tracker rows now record that evidence explicitly. This reduces unresolved entries from 35 to 33; it does not turn the failed whole run green.
+
+Additive CONTROL migration 0193 extends the existing authorized Inbox page function with exact labels, inclusive UTC last-activity dates and Open/Pending/Waiting queues before pagination. The UI exposes those filters plus arrow/Home/End conversation navigation. Existing takeover, assignment, notes, tickets, permission checks, drafts and sends are preserved. Acceptance adds UTC boundaries, malformed/reversed date denial and real browser filter/keyboard checks.
+
+Website chat now explains actual visitor/message limits; isolated acceptance exhausts the real public admission rate and maximum visitor capacity and asserts rejected admission creates no extra visitor. This supplements the existing allowed-origin, private history, expiry, disabled-site, signed HTTP and browser checks. These new Inbox/website assertions await CI; neither row is prematurely sealed.
+
+A Neon isolated branch was attempted for additional migration verification, but the connected project rejected creation with `branches limit exceeded`. No existing branch was removed or modified. This is not Neon migration acceptance.
+
+Run 39901921426 on 2e804e03 passed build/lint/TypeScript, Go, Kotlin and image checks. Database acceptance passed CRM SQL pagination, privacy, DST quiet-hour calculations and durable skip/idempotency, then exposed a real proxy gap: Next forwarded `source` but dropped `priority`/`assignee`, making the viewer assignment-filter request return 200 instead of the expected 403. The proxy allowlist now forwards both keys with the existing duplicate-parameter rejection. No authorization assertion was relaxed. Full acceptance must be rerun.
+
+Additive CONTROL migration 0194 and the report panel implement rolling-seven-day first successful human/AI response metrics, five-minute response counts, channel breakdown and owner/admin-only current assignment workloads. Failed/queued replies are excluded; empty latency is null rather than a fabricated zero; current assignees are not described as historical responders. SQL and real SSR/browser acceptance covers fixed source arithmetic, tenant/realm and granular permission denial, viewer privacy and 16 responsive cases. This increment remains unsealed until CI executes it.

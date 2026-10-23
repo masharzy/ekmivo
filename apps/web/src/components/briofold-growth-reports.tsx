@@ -1,5 +1,6 @@
 import "server-only";
 import Link from "next/link";
+import {BriofoldResponseReport} from "./briofold-response-report";
 import {database} from "../lib/server/db";
 import styles from "./briofold-growth-reports.module.css";
 
@@ -104,6 +105,7 @@ export async function BriofoldGrowthReports({workspaceId,actorId,locale,environm
    {section.data===null||section.data===undefined?<p role="alert" className={styles.alert}>{t("This data source is unavailable; counts cannot be verified.","এই তথ্যের উৎস পাওয়া যাচ্ছে না; হিসাব যাচাই করা যাচ্ছে না।")}</p>
    :<dl className={styles.metrics}>{section.data.map(item=><div key={item.name}><dt>{names[item.name]?.[bn?1:0]??item.name}</dt><dd>{new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(item.value)}</dd></div>)}</dl>}
   </section>)}</div>
+  {mode!=="commerce"&&process.env.BRIOFOLD_GROWTH_ANALYTICS_ENABLED==="true"&&<BriofoldResponseReport workspaceId={workspaceId} actorId={actorId} environment={environment} locale={locale}/>}
   <aside className={styles.note}>
    <p>{t("Orders are workflow counts—not verified revenue. Payment totals remain solely in the authoritative payment report.","অর্ডারগুলো কাজের অবস্থার হিসাব, যাচাইকৃত আয় নয়। প্রকৃত পেমেন্টের হিসাব শুধু মূল পেমেন্ট রিপোর্টে আছে।")}</p>
    <p>{t("*Profile-level marketing consent is not a channel-specific send permission. Provider opt-in, quiet hours, suppression and audience validation are still required before any broadcast.","*প্রোফাইলে প্রচারণার সম্মতি থাকলেই কোনো চ্যানেলে মেসেজ পাঠানোর অনুমতি হয় না। Broadcast-এর আগে provider consent, quiet hours ও audience যাচাই জরুরি।")}</p>

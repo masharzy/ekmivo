@@ -11,6 +11,7 @@ import {runBriofoldAiStudioAcceptance} from "./briofold-ai-studio-acceptance.mjs
 import {runBriofoldChannelExtensions} from "./briofold-channel-extensions-acceptance.mjs";
 import {runBriofoldCommerce} from "./briofold-commerce-acceptance.mjs";
 import {runBriofoldCustomers} from "./briofold-customers-acceptance.mjs";
+import {runBriofoldResponseReport} from "./briofold-response-report-acceptance.mjs";
 import {runBriofoldCRMParity} from "./briofold-crm-parity-acceptance.mjs";
 import {runBriofoldInboxAccess} from "./briofold-inbox-access.mjs";
 import {runBriofoldPhase9Browser} from "./briofold-phase9-browser.mjs";
@@ -74,6 +75,8 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0189_briofold_crm_viewer_privacy.sql");
   await apply("0191_briofold_crm_search.sql");
   await apply("0192_briofold_followup_scheduling.sql");
+  await apply("0193_briofold_inbox_filters.sql");
+  await apply("0194_briofold_response_reporting.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
@@ -105,6 +108,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});
   await runBriofoldCustomers({origin,browser,control,sessions,apiOrigin});
   await runBriofoldCRMParity({origin,browser,control,sessions});
+  await runBriofoldResponseReport({origin,browser,control,sessions});
   await runBriofoldCommerce({origin,browser,control,sessions,apiOrigin});
   await runBriofoldOrderAssignment({origin,browser,control,sessions});
   await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});
