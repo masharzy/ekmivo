@@ -14,13 +14,13 @@ export async function runFeedbackAcceptance({origin,browser,control,sessions}){
   context=await browser.newContext();await context.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);
   const endpoint=origin+`/api/go/workspaces/${store}/workspace-tools/help?environment=live`;
   const input={topic:'bug',subject:'Fictional screenshot issue',message:'Fictional reproduction details for support.',screenshot:{data:screenshot,consent:true}};
-  const key=randomUUID();let response=await context.request.post(endpoint,{headers:{'Idempotency-Key':key},data:input});assert.equal(response.status(),200,await response.text());
+  const key=randomUUID();let response=await context.request.post(endpoint,{headers:{Origin:origin,'Idempotency-Key':key},data:input});assert.equal(response.status(),200,await response.text());
   const ticket=(await response.json()).id;
-  response=await context.request.post(endpoint,{headers:{'Idempotency-Key':key},data:input});assert.equal(response.status(),200);assert.equal((await response.json()).id,ticket);
+  response=await context.request.post(endpoint,{headers:{Origin:origin,'Idempotency-Key':key},data:input});assert.equal(response.status(),200);assert.equal((await response.json()).id,ticket);
   assert.equal(Number((await db`SELECT count(*) n FROM pg13_support WHERE workspace_id=${store}`)[0].n),1,'Lost-response retry duplicated feedback');
-  response=await context.request.post(endpoint,{headers:{'Idempotency-Key':key},data:{...input,subject:'Changed screenshot issue'}});assert.equal(response.status(),409);
-  response=await context.request.post(endpoint,{data:{...input,screenshot:{data:screenshot,consent:false}}});assert.equal(response.status(),422);
-  response=await context.request.post(endpoint,{data:{...input,screenshot:{data:Buffer.from('<svg onload="x"/>').toString('base64'),consent:true}}});assert.equal(response.status(),422);
+  response=await context.request.post(endpoint,{headers:{Origin:origin,'Idempotency-Key':key},data:{...input,subject:'Changed screenshot issue'}});assert.equal(response.status(),409);
+  response=await context.request.post(endpoint,{headers:{Origin:origin},data:{...input,screenshot:{data:screenshot,consent:false}}});assert.equal(response.status(),422);
+  response=await context.request.post(endpoint,{headers:{Origin:origin},data:{...input,screenshot:{data:Buffer.from('<svg onload="x"/>').toString('base64'),consent:true}}});assert.equal(response.status(),422);
   response=await context.request.get(endpoint);assert.equal(response.status(),200);const items=(await response.json()).items;assert.equal(items[0].screenshot_available,true);assert.equal(Object.hasOwn(items[0],'screenshot'),false,'History eagerly exposed attachment bytes');
   response=await context.request.get(endpoint.replace('?environment=live','/'+ticket+'?environment=live'));assert.equal(response.status(),200);assert.equal((await response.json()).screenshot.mime,'image/png');
   await assert.rejects(()=>db`SELECT briofold_feedback_screenshot_read(${store},${viewer},${ticket})`,e=>e.code==='42501');

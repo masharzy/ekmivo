@@ -20,7 +20,7 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const formattedAccount=(value:string)=>{const digits=value.replace(/\D/g,"");const local=digits.startsWith("880")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;return local.length===10?"+880 "+local.slice(0,4)+" "+local.slice(4):value};
  const base="/api/go/workspaces/"+workspaceId;
  const seed=useDashboardInitialData<{accounts:Account[]}>("phones");
- const [accounts,setAccounts]=useState<Account[]>(seed?.data?.accounts??[]),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(seed?.error??""),[notice,setNotice]=useState("");
+ const [accounts,setAccounts]=useState<Account[]>(seed?.data?.accounts??[]),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(()=>seed?.error==="403"?t("You do not have permission to view receiving accounts.","রিসিভিং অ্যাকাউন্ট দেখার অনুমতি নেই।"):seed?.error?t("Unable to load payment methods.","পেমেন্ট মাধ্যমের তথ্য পাওয়া যায়নি।"):""),[notice,setNotice]=useState("");
  const methodLimit=useResourceLimit("payment_methods",workspaceId,environment);
  const posting=useRef(false);
  const sharedDialog=useRef<HTMLDialogElement>(null);

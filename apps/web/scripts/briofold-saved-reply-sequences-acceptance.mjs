@@ -61,7 +61,7 @@ export async function runSavedReplySequences({control,sessions,origin,browser}){
   await page.getByText('Fictional sequence',{exact:true}).waitFor();await page.getByRole('button',{name:'Edit',exact:true}).click();
   await page.getByRole('textbox',{name:'Reply shortcut',exact:true}).fill('voice-help-updated');
   await page.getByRole('button',{name:'Save reply',exact:true}).click();await page.reload();await page.getByText(/voice-help-updated/).waitFor();
-  const api=await context.request.post(origin+`/api/go/workspaces/${workspace}/inbox?environment=live`,{data:{action:'send-saved-reply',thread_id:destination,body:{id:reply,revision:5,confirmed:true,operation_key:randomUUID()}}});
+  const api=await context.request.post(origin+`/api/go/workspaces/${workspace}/inbox?environment=live`,{headers:{Origin:origin},data:{action:'send-saved-reply',thread_id:destination,body:{id:reply,revision:5,confirmed:true,operation_key:randomUUID()}}});
   assert.equal(api.status(),200);assert.equal((await api.json()).queued.length,3);
   console.log('SAVED REPLY SEQUENCES SQL/Go/Next/browser PASS: private/team, archive, shortcut, media, voice, variables, ordered atomic queue, retry and denial');
  }finally{await context?.close();await db.end({timeout:3});}
