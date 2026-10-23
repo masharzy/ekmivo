@@ -93,6 +93,22 @@ export async function BriofoldAiOverview({workspaceId,userId,locale}:{
   <div className={styles.metrics}>{metrics.map(([name,value])=><article key={name}>
    <span>{name}</span><strong>{value===null||value===undefined?"—":new Intl.NumberFormat(bn?"bn-BD":"en-BD").format(value)}</strong>
   </article>)}</div>
+  <section className={styles.activity} aria-label={t("Business alerts","ব্যবসার সতর্কতা")}>
+   <div className={styles.activityHead}><h2>{t("Business alerts","ব্যবসার সতর্কতা")}</h2><Link href="/inbox">{t("Review queue","তালিকা দেখুন")}</Link></div>
+   {data===null?<p role="status">{t("Alerts are unavailable until the Inbox source can be read.","ইনবক্সের তথ্য না পাওয়া পর্যন্ত সতর্কতা দেখানো যাবে না।")}</p>
+   :data.stats.waiting>0?<p role="status">{t(`${data.stats.waiting} conversation(s) have a customer message waiting for a reply.`,`${new Intl.NumberFormat("bn-BD").format(data.stats.waiting)}টি কথোপকথনে গ্রাহকের মেসেজের উত্তর বাকি আছে।`)}</p>
+   :<p role="status">{t("No conversation currently ends with an unanswered customer message.","এই মুহূর্তে শেষ গ্রাহক মেসেজের উত্তর বাকি নেই।")}</p>}
+  </section>
+  <section className={styles.activity} aria-label={t("Store setup checklist","স্টোর সেটআপের তালিকা")}>
+   <div className={styles.activityHead}><h2>{t("Store setup checklist","স্টোর সেটআপের তালিকা")}</h2><Link href="/settings">{t("Open settings","সেটিংস খুলুন")}</Link></div>
+   <ul className={styles.checklist}>
+    <li><Link href="/settings/channels">{t("Connect messaging channels","মেসেজের চ্যানেল যুক্ত করুন")}</Link> · {data===null?t("Not verified","যাচাই হয়নি"):data.stats.channels>0?t("Connected","সংযুক্ত"):t("Action needed","কাজ বাকি")}</li>
+    <li><Link href="/inbox">{t("Review customer response queue","গ্রাহকের উত্তরের তালিকা দেখুন")}</Link> · {data===null?t("Not verified","যাচাই হয়নি"):data.stats.waiting>0?t("Needs attention","মনোযোগ প্রয়োজন"):t("No waiting replies","অপেক্ষায় কোনো উত্তর নেই")}</li>
+    <li><Link href="/inbox/agent-desk">{t("Review AI instructions and publish state","AI নির্দেশনা ও প্রকাশনার অবস্থা দেখুন")}</Link> · {t("Review required","পর্যালোচনা প্রয়োজন")}</li>
+    <li><Link href="/settings/business">{t("Review Store details","স্টোরের তথ্য দেখুন")}</Link> · {t("Review required","পর্যালোচনা প্রয়োজন")}</li>
+   </ul>
+   <p className={styles.empty}>{t("Only connection and queue statuses are measured here; opening other steps never silently marks them complete.","এখানে শুধু সংযোগ ও উত্তর-তালিকার অবস্থা যাচাই হয়; অন্য ধাপ খুললেই সম্পন্ন বলে ধরা হয় না।")}</p>
+  </section>
   <section className={styles.activity}>
    <div className={styles.activityHead}><h2>{t("Recent conversations","সাম্প্রতিক কথোপকথন")}</h2>
     <Link href="/inbox">{t("Open Inbox","ইনবক্স খুলুন")}</Link></div>

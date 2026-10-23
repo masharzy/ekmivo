@@ -33,7 +33,10 @@ export async function runBriofoldResponseReport({control,sessions,origin,browser
    (${store},'live','Won stage fixture one','won'),(${store},'live','Won stage fixture two','won'),
    (${store},'live','Qualified stage fixture','qualified'),(${store},'live','New stage fixture','new')`;
   const growth=async(realm='live',who=owner,scope=store)=>(await db`SELECT briofold_growth_snapshot(${scope},${realm},${who}) data`)[0].data;
-  assert.equal(Number((await growth()).customers.total),4);
+  // Each Inbox thread is also an actual CRM lead through the Phase 7 attach
+  // trigger. Four conversations + four explicit leads are eight active leads;
+  // excluding the conversation-derived leads would misstate conversion.
+  assert.equal(Number((await growth()).customers.total),8);
   assert.equal(Number((await growth()).customers.won),2);
   assert.equal(Number((await growth()).customers.qualified),1);
   assert.equal(Number((await growth('sandbox')).customers.total),0,'lead-stage conversion denominator crossed realms');
@@ -46,8 +49,8 @@ export async function runBriofoldResponseReport({control,sessions,origin,browser
   const page=await context.newPage();page.setDefaultNavigationTimeout(90000);
   await page.goto(origin+'/reports');const region=page.getByRole('region',{name:'Response time and team workload',exact:true});await region.waitFor();
   const conversion=page.getByRole('region',{name:'Lead stage conversion',exact:true});
-  await conversion.getByText('50%',{exact:false}).waitFor();
-  await conversion.getByText('2 / 4',{exact:true}).waitFor();
+  await conversion.getByText('25%',{exact:false}).waitFor();
+  await conversion.getByText('2 / 8',{exact:true}).waitFor();
   await conversion.getByText('A current CRM stage ratio, not attributed marketing conversions or verified payment revenue.',{exact:true}).waitFor();
   assert.equal(await region.getByRole('alert').count(),0);
   assert.equal(await region.locator('dl div').filter({has:page.getByText('Average first response (seconds)',{exact:true})}).locator('dd').innerText(),'360');

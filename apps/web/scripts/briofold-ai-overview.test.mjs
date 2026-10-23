@@ -41,3 +41,17 @@ test("AI overview uses scoped styles and never edits Inbox presentation",()=>{
  const page=read("components/unified-merchant-route.tsx");
  assert.match(page,/DashboardContent/);
 });
+test("AI dashboard setup and business alerts never fabricate completion",()=>{
+ const source=read("components/briofold-ai-overview.tsx");
+ const styles=read("components/briofold-ai-overview.module.css");
+ assert.match(source,/aria-label=\{t\("Business alerts"/);
+ assert.match(source,/data\.stats\.waiting>0/);
+ assert.match(source,/data===null\?<p role="status">/);
+ assert.match(source,/aria-label=\{t\("Store setup checklist"/);
+ assert.match(source,/data\.stats\.channels>0\?t\("Connected"/);
+ assert.match(source,/Review required/);
+ assert.match(source,/never silently marks them complete/);
+ for(const href of ["/settings/channels","/inbox","/inbox/agent-desk","/settings/business"])
+  assert.ok(source.includes(`href="${href}"`),`setup action missing ${href}`);
+ assert.match(styles,/\.checklist/);
+});

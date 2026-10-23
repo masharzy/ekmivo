@@ -13,6 +13,9 @@
 .customer{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .channel,.thread time{color:var(--color-text-muted);white-space:nowrap}
 .empty{font-size:13px;color:var(--color-text-muted);line-height:1.6}
+.checklist{display:grid;gap:10px;margin:0 0 12px;padding-left:22px;font-size:13px;line-height:1.55}
+.checklist li{overflow-wrap:anywhere}
+.checklist a{color:var(--color-primary);text-decoration:underline;text-underline-offset:2px}
 .alert{border:1px solid var(--color-border);padding:12px;border-radius:8px;color:var(--color-text);font-size:13px;margin:0}
 @media(max-width:850px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.metrics{gap:9px}.metrics article{padding:12px}.metrics article strong{font-size:22px}.thread{grid-template-columns:minmax(0,1fr) auto}.channel{display:none}}

@@ -102,6 +102,14 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
    {name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
    {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
+  await page.goto(origin+'/dashboard');
+  const businessAlerts=page.getByRole('region',{name:'Business alerts',exact:true});
+  await businessAlerts.getByText('1 conversation(s) have a customer message waiting for a reply.',{exact:true}).waitFor();
+  const setupChecklist=page.getByRole('region',{name:'Store setup checklist',exact:true});
+  await setupChecklist.getByText('Connected',{exact:true}).waitFor();
+  await setupChecklist.getByText('Needs attention',{exact:true}).waitFor();
+  await setupChecklist.getByText('Review required',{exact:true}).first().waitFor();
+  assert.equal(await setupChecklist.getByRole('link',{name:'Connect messaging channels',exact:true}).getAttribute('href'),'/settings/channels');
   await page.goto(origin+'/inbox');await page.getByRole('button',{name:/Workflow fictional customer/}).click();await page.getByText(/Conversation tools/).click();
   const save=async(action,button)=>{const response=page.waitForResponse(r=>{try{return r.request().postDataJSON()?.action===action;}catch{return false;}});await page.getByRole('button',{name:button,exact:true}).click();assert.equal((await response).status(),200);};
   await page.getByLabel('Internal note',{exact:true}).fill('Browser internal note persisted');await save('work-note','Save note');assert.equal((await read()).note,'Browser internal note persisted');
