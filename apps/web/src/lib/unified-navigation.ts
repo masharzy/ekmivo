@@ -38,6 +38,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  {slug:"developers",en:"Developers & integrations",bn:"ডেভেলপার ও ইন্টিগ্রেশন",items:[
   {slug:"api-keys",en:"API keys",bn:"API Keys",section:"developers",service:"payments"},
   {slug:"webhooks",en:"Webhooks & alerts",bn:"ওয়েবহুক ও অ্যালার্ট",section:"webhooks",service:"payments"},
+  {slug:"integrations/courier",en:"Courier credentials",bn:"কুরিয়ারের সংযোগ",section:"integrations",service:"common"},
   {slug:"integrations",en:"Integrations",bn:"ইন্টিগ্রেশন",section:"integrations",service:"payments"},
   {slug:"api-docs",en:"API documentation",bn:"API নির্দেশনা",section:"api-docs",service:"payments",external:true},
   {slug:"activity",en:"Activity logs",bn:"কার্যক্রমের ইতিহাস",section:"events",service:"common"},
@@ -53,7 +54,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"help-videos"|"channel-settings"};
+export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"help-videos"|"channel-settings"|"courier-integrations"};
 const financialRecordId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const financialDetailPrefixes={
  payments:"/payments/transactions",incoming:"/sms-data",gateways:"/settings/payment-methods",
@@ -111,6 +112,8 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   return mode==="commerce"?null:{section:"website",service:"ai"};
  if(root==="settings"&&view.length===2&&view[0]==="channels"&&financialRecordId.test(view[1]))
   return mode==="commerce"?null:{section:"channels",service:"ai",kind:"channel-settings",detailId:view[1]};
+ if(root==="settings"&&view.length===2&&view[0]==="integrations"&&view[1]==="courier")
+  return {section:"integrations",service:mode==="ai"?"ai":"payments",kind:"courier-integrations"};
  // The dedicated feedback deep link reuses the authenticated, durable help
  // ticket source. It must not be mistaken for a financial record detail.
  if(root==="settings"&&view.length===2&&view[0]==="help"&&view[1]==="feedback")

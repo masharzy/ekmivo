@@ -1,5 +1,6 @@
 import "server-only";
 import Link from "next/link";
+import {LinkedOrderConversionReport} from "./linked-order-conversion-report";
 import {BriofoldResponseReport} from "./briofold-response-report";
 import {database} from "../lib/server/db";
 import styles from "./briofold-growth-reports.module.css";
@@ -117,6 +118,7 @@ export async function BriofoldGrowthReports({workspaceId,actorId,locale,environm
    <p>{t("A current CRM stage ratio, not attributed marketing conversions or verified payment revenue.","এটি CRM-এর বর্তমান স্টেজের অনুপাত; প্রচারণা থেকে বিক্রির প্রমাণ বা যাচাইকৃত পেমেন্টের আয় নয়।")}</p>
   </section>}</div>
   {mode!=="commerce"&&process.env.BRIOFOLD_GROWTH_ANALYTICS_ENABLED==="true"&&<BriofoldResponseReport workspaceId={workspaceId} actorId={actorId} environment={environment} locale={locale}/>}
+  {process.env.BRIOFOLD_CONVERSION_REPORT_ENABLED==="true"&&<LinkedOrderConversionReport workspaceId={workspaceId} actorId={actorId} environment={environment} locale={locale}/>}
   <aside className={styles.note}>
    <p>{t("Orders are workflow counts—not verified revenue. Payment totals remain solely in the authoritative payment report.","অর্ডারগুলো কাজের অবস্থার হিসাব, যাচাইকৃত আয় নয়। প্রকৃত পেমেন্টের হিসাব শুধু মূল পেমেন্ট রিপোর্টে আছে।")}</p>
    <p>{t("*Profile-level marketing consent is not a channel-specific send permission. Provider opt-in, quiet hours, suppression and audience validation are still required before any broadcast.","*প্রোফাইলে প্রচারণার সম্মতি থাকলেই কোনো চ্যানেলে মেসেজ পাঠানোর অনুমতি হয় না। Broadcast-এর আগে provider consent, quiet hours ও audience যাচাই জরুরি।")}</p>

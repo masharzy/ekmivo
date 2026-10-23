@@ -12,6 +12,7 @@ export function UnifiedSettingsIndex({locale,mode}:{locale:"en"|"bn";mode:Busine
   <div className={styles.groups}>{unifiedSettings.map(group=>{
    const items=group.items.filter(item=>enabledUnifiedService(mode,item.service)&&
     (item.slug!=="activity"||mode!=="ai"||process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true")&&
+    (item.slug!=="integrations/courier"||process.env.BRIOFOLD_COURIER_SETTINGS_ENABLED==="true")&&
     (item.slug!=="team/groups"||process.env.BRIOFOLD_TEAM_GROUPS_ENABLED==="true"));
    if(!items.length)return null;
    return <details className={styles.group} key={group.slug} open={group.slug==="payment"&&mode!=="ai"}>

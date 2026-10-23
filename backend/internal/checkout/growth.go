@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -43,7 +44,26 @@ func (s *Service) HandleGrowth(w http.ResponseWriter, r *http.Request) {
 	var raw []byte
 	if r.Method == http.MethodGet {
 		kind := r.URL.Query().Get("kind")
-		if kind == "audience" && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" {
+		if kind == "conversion" {
+			if os.Getenv("BRIOFOLD_CONVERSION_REPORT_ENABLED") != "true" {
+				fail(w, 503, "CONVERSION_REPORT_UNAVAILABLE")
+				return
+			}
+			days, off := 30, 0
+			if value := r.URL.Query().Get("period"); value != "" {
+				days, err = strconv.Atoi(value)
+			}
+			if err == nil {
+				if value := r.URL.Query().Get("cursor"); value != "" {
+					off, err = strconv.Atoi(value)
+				}
+			}
+			if err != nil || (days != 7 && days != 30 && days != 90) || off < 0 || off > 10000 {
+				fail(w, 422, "INVALID_CONVERSION_FILTER")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_linked_order_conversion($1::uuid,$2,$3::uuid,$4,$5)", store, realm, actor.UserID, days, off).Scan(&raw)
+		} else if kind == "audience" && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" {
 			err = s.Pipeline.Control.QueryRow(r.Context(),
 				"SELECT briofold_growth_audience_preview($1::uuid,$2,$3::uuid,$4,$5)",
 				store, realm, actor.UserID, r.URL.Query().Get("channel"), r.URL.Query().Get("audience")).Scan(&raw)
