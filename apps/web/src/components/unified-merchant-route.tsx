@@ -24,6 +24,7 @@ import {BriofoldGrowthReports} from "./briofold-growth-reports";
 import {GrowthOperationsPage} from "./growth-operations-page";
 import {BriofoldOrderReport} from "./briofold-order-report";
 import {BriofoldUnifiedActivity} from "./briofold-unified-activity";
+import {BrowserDevicePreferences} from "./browser-device-preferences";
 
 export const unifiedDynamic="force-dynamic";
 
@@ -59,6 +60,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   :undefined;
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :kind==="account-devices"
+   ?<BrowserDevicePreferences bn={locale==="bn"}/>
   :root==="settings"&&view[0]==="activity"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"
    ?<><BriofoldUnifiedActivity workspaceId={workspace.id} actorId={user.id} locale={locale}
        environment={paymentContext?.environment??"live"} filters={activityFilters}/>

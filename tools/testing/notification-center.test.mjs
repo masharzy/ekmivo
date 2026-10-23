@@ -36,7 +36,11 @@ test("dropdown uses Hind Siliguri and links to actual notifications route",()=>{
  assert.match(nav,/"events","notifications"/);
  const entry=load("apps/web/src/app/[locale]/notifications/page.tsx");
  assert.match(entry,/preferredWorkspaceFor\(user\.id\)/);
- assert.match(entry,/paymentContext&&<PaymentNotificationCenter/);
+ assert.match(entry,/<MerchantNotifications/);
+ assert.match(entry,/paymentsEnabled=\{Boolean\(paymentContext\)\}/);
+ const unified=load("apps/web/src/components/merchant-notifications.tsx");
+ assert.match(unified,/paymentsEnabled&&\(kind==="all"\|\|kind==="payments"\)&&<PaymentNotificationCenter/);
+ assert.match(unified,/locale=\{locale\} workspaceId=\{workspaceId\} environment=\{environment\}/);
  assert.doesNotMatch(entry,/redirect\(`\/w\//);
 });
 test("payment notification deep links keep the primary Store URL and reject unsafe reference segments",()=>{

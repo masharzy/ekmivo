@@ -1,0 +1,13 @@
+.root{display:grid;gap:20px;max-width:1100px;margin-inline:auto;color:var(--ds-text,#e8eaf2)}
+.root header{display:grid;gap:6px}
+.root header h1{font-size:clamp(1.35rem,2.5vw,2rem);margin:0}
+.root p{line-height:1.6;margin:0;color:var(--ds-muted,#a1a9b9)}
+.eyebrow{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}
+.card{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:22px;border:1px solid var(--ds-border,rgba(128,138,159,.3));border-radius:16px;background:var(--ds-surface,rgba(30,38,56,.35))}
+.card h2{font-size:1.1rem;margin:0}
+.card button,.card a{display:inline-flex;align-items:center;min-height:40px;padding:8px 13px;border-radius:9px;border:1px solid var(--ds-border,#64748b);background:transparent;color:inherit;cursor:pointer;text-decoration:none}
+.card button:focus-visible,.card a:focus-visible{outline:3px solid #818cf8;outline-offset:2px}
+.toggle{display:flex;gap:12px;align-items:flex-start;line-height:1.45}
+.toggle input{margin-top:4px;accent-color:#747ef9;min-width:18px;min-height:18px}
+.error{padding:12px;border:1px solid #d47d7d;border-radius:9px}

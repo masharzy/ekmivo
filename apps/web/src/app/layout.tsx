@@ -31,6 +31,7 @@ const figtree = localFont({
 export const metadata: Metadata = {
   title: "Ekmivo — Conversations and commerce, together",
   description: "A clearer workspace for customer conversations, AI assistance, orders and automatic payment verification.",
+  manifest: "/manifest.webmanifest",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

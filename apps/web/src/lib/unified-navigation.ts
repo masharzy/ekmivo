@@ -20,6 +20,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  {slug:"business",en:"Business & verification",bn:"ব্যবসা ও যাচাই",items:[
   {slug:"business",en:"Business profile",bn:"ব্যবসার পরিচিতি",section:"store",service:"common"},
   {slug:"account",en:"Account & security",bn:"অ্যাকাউন্ট ও নিরাপত্তা",section:"settings",service:"common"},
+  {slug:"account/devices",en:"This browser & notifications",bn:"এই ব্রাউজার ও নোটিফিকেশন",section:"settings",service:"common"},
   {slug:"preferences",en:"Business preferences",bn:"ব্যবসার পছন্দ",section:"settings",service:"common"},
   {slug:"checkout",en:"Checkout appearance",bn:"চেকআউট ডিজাইন",section:"checkout-themes",service:"payments"},
  ]},
@@ -50,7 +51,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"};
+export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"};
 const financialRecordId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const financialDetailPrefixes={
  payments:"/payments/transactions",incoming:"/sms-data",gateways:"/settings/payment-methods",
@@ -110,6 +111,8 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  // ticket source. It must not be mistaken for a financial record detail.
  if(root==="settings"&&view.length===2&&view[0]==="help"&&view[1]==="feedback")
   return {section:"help",service:mode==="ai"?"ai":"payments"};
+ if(root==="settings"&&view.length===2&&view[0]==="account"&&view[1]==="devices")
+  return {section:"settings",service:mode==="ai"?"ai":"payments",kind:"account-devices"};
  // The campaign post editor has a canonical nested destination as well as
  // the pre-existing /customers/posts entry. Neither path sends or publishes.
  if(root==="customers"&&view.length===2&&view[0]==="campaigns"&&view[1]==="posts")

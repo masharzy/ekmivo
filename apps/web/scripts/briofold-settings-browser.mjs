@@ -82,13 +82,32 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   assert.ok(!viewerTickets.items.some(ticket=>ticket.subject.startsWith("Fixture ")),"Viewer saw owner's private feedback");
   const invalid=await context.request.post(feedback,{headers:{Origin:origin},data:{topic:"untrusted",subject:"Fixture invalid",message:"This should never create a ticket."}});
   assert.equal(invalid.status(),422,"Unrecognized feedback topic was accepted");
+  // Local device preferences must remain separate from authenticated
+  // payment/mobile device pairing and must not imply server push delivery.
+  assert.equal((await page.goto(origin+"/settings/account/devices")).status(),200);
+  const sound=page.getByRole("checkbox",{name:/Allow a sound in this browser/});
+  await sound.waitFor();assert.equal(await sound.isChecked(),false);
+  await sound.check();assert.equal(await sound.isChecked(),true);
+  assert.equal(await page.evaluate(()=>localStorage.getItem("ekmivo:device:notification-sound:v1")),"on");
+  await page.reload();await sound.waitFor();assert.equal(await sound.isChecked(),true,"Device sound preference did not survive reload");
+  assert.match(await page.getByRole("region",{name:"Browser permission"}).innerText(),/No push subscription or remote notification sender/);
+  const manifest=await context.request.get(origin+"/manifest.webmanifest");
+  assert.equal(manifest.status(),200);assert.equal((await manifest.json()).start_url,"/dashboard");
+  const worker=await context.request.get(origin+"/ekmivo-pwa-sw.js");
+  assert.equal(worker.status(),200);assert.doesNotMatch(await worker.text(),/caches\.open|fetch\(/,"PWA worker must not cache sensitive data");
+  await page.setViewportSize({width:320,height:740});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,"Device preferences overflow 320px");
+  await sound.uncheck();assert.equal(await sound.isChecked(),false);
+  assert.equal((await viewerPage.goto(origin+"/settings/account/devices")).status(),200);
+  const viewerSound=viewerPage.getByRole("checkbox",{name:/Allow a sound in this browser/});
+  await viewerSound.waitFor();assert.equal(await viewerSound.isChecked(),false,"Owner's local device preference leaked into viewer's browser context");
   for(const oldDocsPath of ["/settings/api-docs","/settings/developers/docs"]){
    const docs=await page.goto(origin+oldDocsPath);
    assert.equal(docs.status(),200,`Public API docs deep link ${oldDocsPath} failed`);
    assert.ok(new URL(page.url()).pathname.startsWith("/developers"),`API docs ${oldDocsPath} landed on a placeholder module`);
   }
   assert.deepEqual(pageErrors,[],"Settings browser reported a client runtime/hydration error");
-  console.log("Phase3 REAL SETTINGS BROWSER PASS: owner settings save/restore, viewer denial, typed feedback persistence/route/privacy");
+  console.log("Phase3 REAL SETTINGS BROWSER PASS: owner settings save/restore, viewer denial, typed feedback persistence/route/privacy, per-browser device sound/PWA source/320px");
  }finally{
   if(context)await context.close();if(readOnly)await readOnly.close();
   // Settings writes create append-only control audit references. Never delete

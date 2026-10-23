@@ -206,6 +206,21 @@ test("notifications open for the preferred single Store without a legacy workspa
  assert.match(center,/paymentsEnabled&&\(kind==="all"\|\|kind==="payments"\)&&<PaymentNotificationCenter/);
  assert.doesNotMatch(entry,/workspacesFor|redirect\(`\/w\//);
 });
+test("local device settings have a dedicated Store route and never masquerade as linked payment devices",()=>{
+ for(const mode of ["ai","commerce","both"]){
+  const device=navigation.unifiedDestination(mode,"settings",["account","devices"]);
+  assert.equal(device?.kind,"account-devices");
+  assert.equal(device?.section,"settings");
+  assert.notEqual(device?.kind,navigation.unifiedDestination(mode,"settings",["devices"])?.kind);
+ }
+ const route=source("components/unified-merchant-route.tsx");
+ assert.match(route,/kind==="account-devices"/);
+ assert.match(route,/<BrowserDevicePreferences/);
+ const client=source("components/browser-device-preferences.tsx");
+ assert.match(client,/ekmivo:device:notification-sound:v1/);
+ assert.match(client,/No push subscription or remote notification sender/);
+ assert.match(client,/session|Account sessions/);
+});
 test("unified operational activity preserves the financial event source",()=>{
  for(const mode of ["ai","commerce","both"])
   assert.equal(navigation.unifiedDestination(mode,"settings",["activity"]).section,"events");
