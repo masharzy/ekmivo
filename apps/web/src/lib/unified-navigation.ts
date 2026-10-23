@@ -101,6 +101,11 @@ export function enabledUnifiedService(mode:BusinessMode,service:"ai"|"payments"|
 }
 export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:readonly string[]):UnifiedDestination|null{
  if(mode==="off")return null;
+ // The website channel is part of the canonical Channels tree, not a
+ // financial UUID detail or a second Store. Keep the former one-level link
+ // working while merchant bookmarks move to /settings/channels/website.
+ if(root==="settings"&&view.length===2&&view[0]==="channels"&&view[1]==="website")
+  return mode==="commerce"?null:{section:"website",service:"ai"};
  // The dedicated feedback deep link reuses the authenticated, durable help
  // ticket source. It must not be mistaken for a financial record detail.
  if(root==="settings"&&view.length===2&&view[0]==="help"&&view[1]==="feedback")

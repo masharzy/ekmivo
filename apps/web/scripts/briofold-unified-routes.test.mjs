@@ -114,6 +114,19 @@ test("Inbox secondary navigation keeps canonical channel and device URLs",()=>{
  assert.match(inbox,/href="\/settings\/channels"/);assert.match(inbox,/href="\/settings\/devices"/);
  assert.doesNotMatch(inbox,/href=\{`\/w\//);
 });
+test("Website chat nested Channel route preserves its Store binding and AI-only gate",()=>{
+ for(const mode of ["ai","both"]){
+  const destination=navigation.unifiedDestination(mode,"settings",["channels","website"]);
+  assert.equal(destination?.section,"website");assert.equal(destination?.service,"ai");
+  assert.equal(navigation.unifiedDestination(mode,"settings",["website"]).section,"website");
+ }
+ for(const mode of ["commerce","off"])
+  assert.equal(navigation.unifiedDestination(mode,"settings",["channels","website"]),null);
+ for(const unsafe of ["__proto__","../website","other","website/extra"])
+  assert.equal(navigation.unifiedDestination("both","settings",["channels",unsafe]),null);
+ assert.equal(navigation.unifiedDestination("both","settings",["channels","website","extra"]),null);
+ assert.match(source("components/unified-settings-index.tsx"),/item\.slug==="website"\?"\/settings\/channels\/website"/);
+});
 
 test("canonical resolver rejects inherited names and unknown routes for every business mode",()=>{
  const invalid=["constructor","__proto__","prototype","toString","valueOf","hasOwnProperty","missing"];

@@ -198,7 +198,7 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   await page.getByRole('button',{name:'Scan with camera'}).waitFor();
   await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=async()=>{throw Error('permission denied');};});
   await page.getByRole('button',{name:'Scan with camera'}).click();
-  await page.getByText('Camera permission or preview unavailable. Manual barcode search remains available.',{exact:true}).waitFor();
+  await page.getByRole('alert').filter({hasText:'Camera permission or preview unavailable. Manual barcode search remains available.'}).waitFor();
   await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
   assert.equal((await page.goto(origin+'/orders/products/sync')).status(),200);
   const importView=page.locator('details').filter({has:page.getByText('Import / sync catalog',{exact:true})});

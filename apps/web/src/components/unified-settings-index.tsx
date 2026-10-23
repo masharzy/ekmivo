@@ -15,7 +15,7 @@ export function UnifiedSettingsIndex({locale,mode}:{locale:"en"|"bn";mode:Busine
    if(!items.length)return null;
    return <details className={styles.group} key={group.slug} open={group.slug==="payment"&&mode!=="ai"}>
     <summary>{group.slug==="payment"&&mode==="ai"?(bn?"ডিভাইস":"Devices"):group[locale]}<span className={styles.count}>{items.length}</span></summary>
-    <div className={styles.entries}>{items.map(item=><Link key={item.slug} href={item.external?"/developers":item.slug==="account"?"/account":"/settings/"+item.slug} prefetch={!item.external}>
+    <div className={styles.entries}>{items.map(item=><Link key={item.slug} href={item.external?"/developers":item.slug==="account"?"/account":item.slug==="website"?"/settings/channels/website":"/settings/"+item.slug} prefetch={!item.external}>
      <span>{item[locale]}</span><span className={styles.arrow} aria-hidden="true">→</span>
     </Link>)}</div>
    </details>;
