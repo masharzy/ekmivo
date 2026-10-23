@@ -3,6 +3,7 @@ import {createCipheriv,createHash,randomBytes,randomUUID} from "node:crypto";
 import {mkdir,readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import postgres from "postgres";
+import {runBriofoldKeyLifecycle} from "./briofold-key-lifecycle-acceptance.mjs";
 
 // Synthetic records in the disposable CI *live-realm database*. Nothing here
 // claims to simulate a provider callback, connected phone, or real money.
@@ -537,6 +538,10 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
    "Viewer API credential screen exposed a credential secret");
   await viewerKeys.close();
 
+  // All financial fixture writes are complete. Install the stricter capacity
+  // prerequisites and verify credentials before the long read-only matrix.
+  await runBriofoldKeyLifecycle({origin,browser,control,sessions,workspaceId,liveDatabase,sandboxDatabase});
+
   const evidence=new URL("../test-results/pg09/phase9/",import.meta.url);await mkdir(evidence,{recursive:true});
   let cases=0;
   const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/settings/api-keys","/payments/refunds","/reports/payments","/payments/reconciliation","/invoices"];
@@ -573,14 +578,15 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
     }
    }
   }
-  assert.equal(cases,176,"Phase9 complete responsive matrix missing");
+  assert.equal(routes.length,12,"Phase9 canonical route coverage changed");
+  assert.equal(cases,192,"Phase9 complete responsive matrix missing");
   await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto(origin+"/payments");
   assert.ok(await page.evaluate(()=>matchMedia("(prefers-reduced-motion: reduce)").matches),"reduced-motion preference was not honored");
   assert.deepEqual(errors,[],"Phase9 UI hydration/runtime errors");
   const after=await fetchRows(context,"payments");
   assert.equal(after.filter(r=>r.id===payment.id).length,1,"UI read caused a duplicate financial confirmation");
-  console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, seller-managed refund idempotency, financial-source reporting, invoice create/issue/replay and viewer denial, cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, 10 routes; synthetic CI financial evidence only`);
+  console.log(`Phase9 VERIFIED SOURCE+UI PASS: authenticated Go/live-test PG09 reader, exact record+amount, canonical/legacy detail parity, seller-managed refund idempotency, financial-source reporting, invoice create/issue/replay and viewer denial, cross-tenant scope, webhook write denial, one-time request access, ${cases} responsive cases across EN/BN, light/dark, 320/360/768/1440, ${routes.length} routes; synthetic CI financial evidence only`);
  }finally{
   if(context)await context.close();if(viewerContext)await viewerContext.close();
   await sandbox.end({timeout:3});await finance.end({timeout:3});await db.end({timeout:3});
