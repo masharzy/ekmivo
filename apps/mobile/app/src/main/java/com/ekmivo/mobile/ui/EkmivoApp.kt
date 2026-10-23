@@ -16,6 +16,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.ekmivo.mobile.data.*
 import com.ekmivo.mobile.receipt.*
 import com.ekmivo.mobile.inbox.InboxRoute
+import com.ekmivo.mobile.update.MandatoryUpdateGate
 import kotlinx.coroutines.*
 
 @Composable
@@ -90,5 +91,6 @@ fun EkmivoApp(preferences:AppPreferences,incomingPairingLink:String?=null,incomi
     if(!inboxDetail||page!=EkmivoReferencePage.INBOX)EkmivoReferenceBottomNav(bn,pages,page){selected=it}
    }
   }
+  MandatoryUpdateGate(bn)
  }
 }

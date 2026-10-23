@@ -21,6 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -29,6 +32,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
@@ -59,6 +64,19 @@ private fun online(context:Context):Boolean {
  return cm.activeNetwork?.let{cm.getNetworkCapabilities(it)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)}==true
 }
 private fun channelColor(channel:String)=when(channel){"wa"->Color(0xFF25D366);"ig"->Color(0xFFC13584);else->Color(0xFF0A7CFF)}
+@Composable private fun ChannelAvatar(initial:String,channel:String,size:androidx.compose.ui.unit.Dp=40.dp) {
+ val p=LocalEkmivoPalette.current
+ Box(Modifier.size(size+4.dp)) {
+  Box(Modifier.size(size).align(Alignment.TopStart).clip(CircleShape).background(p.raised),contentAlignment=Alignment.Center) {
+   Text(initial.take(2),style=EkmivoType.shop,color=p.text)
+  }
+  val bg=if(channel=="ig")Brush.linearGradient(listOf(Color(0xFFFEDA75),Color(0xFFFA7E1E),Color(0xFFD62976),Color(0xFF962FBF),Color(0xFF4F5BD5)))
+     else Brush.linearGradient(listOf(channelColor(channel),channelColor(channel)))
+  Box(Modifier.align(Alignment.BottomEnd).size(21.dp).clip(CircleShape).background(p.canvas).padding(2.dp).clip(CircleShape).background(bg),contentAlignment=Alignment.Center) {
+   EkmivoReferenceIcon(when(channel){"wa"->EkmivoGlyph.WA;"ig"->EkmivoGlyph.IG;else->EkmivoGlyph.MS},tint=Color.White,size=15.dp)
+  }
+ }
+}
 private fun channelName(channel:String)=when(channel){"wa"->"WhatsApp";"ig"->"Instagram";else->"Messenger"}
 private fun clock(raw:String,bn:Boolean)=runCatching{displayDigits(DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.of("Asia/Dhaka")).format(Instant.parse(raw)),bn)}.getOrDefault("")
 internal suspend fun inboxRequest(context:Context,action:String,thread:String?=null,filters:JSONObject?=null,body:JSONObject?=null,before:Long?=null):JSONObject=withContext(Dispatchers.IO){
@@ -95,6 +113,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
  var info by remember{mutableStateOf<JSONObject?>(null)}
  var profileOpen by remember{mutableStateOf(false)}
  var actionsMessage by remember{mutableStateOf<JSONObject?>(null)}
+ var actionsMode by remember{mutableStateOf("info")}
  var selected by remember{mutableStateOf<JSONObject?>(null)}
  var reply by remember{mutableStateOf<JSONObject?>(null)}
  var input by rememberSaveable(thread){mutableStateOf("")}
@@ -108,6 +127,15 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
  var hasMore by remember{mutableStateOf(false)}
  var olderAvailable by remember{mutableStateOf(false)}
  val scroll=rememberLazyListState()
+ val voiceWorkspaceKey=workspace.id+"|"+workspace.environment
+ val localVoices=remember(thread,voiceWorkspaceKey) {
+  mutableStateListOf<LocalVoiceMessage>().apply {
+   if(thread!=null)addAll(VoiceOutbox.load(app,voiceWorkspaceKey,thread!!))
+  }
+ }
+ fun persistVoices(){
+  thread?.let{VoiceOutbox.save(app,voiceWorkspaceKey,it,localVoices)}
+ }
  var openingReadSequence by remember{mutableLongStateOf(0L)}
  var refreshNonce by remember{mutableIntStateOf(0)}
  var refreshing by remember{mutableStateOf(false)}
@@ -126,6 +154,13 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
   val fetched=response.getJSONArray("items").rows()
   if(older||messages.isEmpty())olderAvailable=fetched.size==50
   messages=if(older)(fetched+messages).distinctBy{it.getString("id")}else (messages.filter{m->fetched.firstOrNull()?.optLong("sequence")?.let{m.optLong("sequence")<it}==true}+fetched).distinctBy{it.getString("id")}
+  val deliveredIds=messages.mapNotNull{it.optJSONObject("content")?.optString("media_id")?.takeIf(String::isNotBlank)}.toSet()
+  val reconciled=localVoices.filter{it.mediaId in deliveredIds}
+  if(reconciled.isNotEmpty()){
+   localVoices.removeAll(reconciled)
+   persistVoices()
+   reconciled.forEach{runCatching{it.file.delete()}}
+  }
   if(initializedThread!=id&&fetched.isNotEmpty()) {
    val cursor=info?.optLong("read_sequence")?:0L
    openingReadSequence=cursor
@@ -179,6 +214,20 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    }
   }
  }
+ fun dispatchVoice(voice:LocalVoiceMessage){
+  if(voice.status=="pending"||voice.status=="sent")return
+  voice.status="pending"
+  persistVoices()
+  scope.launch{
+   try {
+    submitRecordedVoice(api,voice)
+    voice.status="sent"
+    persistVoices()
+    runCatching{loadMessages(voice.threadId)}
+   }catch(e:CancellationException){voice.status="failed";persistVoices();throw e}
+   catch(_:Exception){voice.status="failed";persistVoices()}
+  }
+ }
  fun action(name:String,body:JSONObject){val id=thread?:return;scope.launch{busy=true;try{api.call(name,id,body=body);loadMessages(id);failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}}
  Column(Modifier.fillMaxSize().background(p.canvas)) {
   if(thread==null) {
@@ -192,16 +241,61 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
     listOf("wa","ig","ms").forEach{ch->EkmivoFilterChip(channelName(ch),channel==ch){channel=if(channel==ch)"" else ch;listPage=0}}
    }
 
+  }else if(selected!=null){
+   // Selected messages replace the customer header rather than adding an action menu.
+   Row(Modifier.fillMaxWidth().height(66.dp).topHairline(p.border)
+    .padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,
+    horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+    Spacer(Modifier.weight(1f))
+    Box(Modifier.size(43.dp).clickable{reply=selected;selected=null},
+     contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.Reply,contentDescription=if(bn)"উত্তর দিন" else "Reply",
+      tint=p.text,modifier=Modifier.size(23.dp))
+    }
+    Box(Modifier.size(43.dp).clickable{
+     actionsMode="info";actionsMessage=selected;selected=null
+    },contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.Info,contentDescription=if(bn)"মেসেজের তথ্য" else "Message info",
+      tint=p.text,modifier=Modifier.size(22.dp))
+    }
+    val copyEnabled=selected?.optString("type")=="text"
+    Box(Modifier.size(43.dp).clickable(enabled=copyEnabled){
+     (app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+      .setPrimaryClip(ClipData.newPlainText("",selected?.optString("body")))
+     selected=null
+    },contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.ContentCopy,contentDescription=if(bn)"কপি" else "Copy",
+      tint=if(copyEnabled)p.text else p.muted.copy(alpha=.45f),
+      modifier=Modifier.size(21.dp))
+    }
+    Box(Modifier.size(43.dp).clickable{
+     actionsMode="forward";actionsMessage=selected;selected=null
+    },contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.Forward,contentDescription=if(bn)"ফরওয়ার্ড" else "Forward",
+      tint=p.text,modifier=Modifier.size(23.dp))
+    }
+    Box(Modifier.size(43.dp).clickable{selected=null},
+     contentAlignment=Alignment.Center){
+     Icon(Icons.Outlined.Close,contentDescription=if(bn)"বাতিল" else "Cancel selection",
+      tint=p.text,modifier=Modifier.size(23.dp))
+    }
+   }
   }else {
-   Row(Modifier.fillMaxWidth().topHairline(p.border).padding(horizontal=10.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-    Box(Modifier.size(34.dp).clickable{thread=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.ARR,tint=p.secondary)}
-    Text(info?.optString("name").orEmpty(),style=EkmivoType.chatName,color=p.text,modifier=Modifier.weight(1f).clickable{profileOpen=true})
-    if(selected==null)EkmivoPill(if(info?.optBoolean("ai_enabled")==true)(if(bn)"AI চালু" else "AI on")else(if(bn)"AI বন্ধ" else "AI off"),info?.optBoolean("ai_enabled")==true){action("ai",JSONObject().put("enabled",info?.optBoolean("ai_enabled")!=true))}
-    else {
-     Box(Modifier.size(34.dp).clickable{reply=selected;selected=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.REP)}
-     if(selected?.optString("type")=="text")Box(Modifier.size(34.dp).clickable{(app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("",selected?.optString("body")));selected=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.COPY)}
-     Box(Modifier.size(34.dp).clickable{actionsMessage=selected;selected=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.INFO)}
-     Box(Modifier.size(34.dp).clickable{selected=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.X)}
+   Row(Modifier.fillMaxWidth().height(66.dp).topHairline(p.border)
+    .padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically,
+    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+    Box(Modifier.size(34.dp).clickable{thread=null},contentAlignment=Alignment.Center){
+     EkmivoReferenceIcon(EkmivoGlyph.ARR,tint=p.secondary)
+    }
+    ChannelAvatar(info?.optString("name").orEmpty().take(1),
+     info?.optString("channel").orEmpty(),34.dp)
+    Column(Modifier.weight(1f).clickable{profileOpen=true}) {
+     Text(info?.optString("name").orEmpty(),style=EkmivoType.chatName,color=p.text,maxLines=1)
+     Text(channelName(info?.optString("channel").orEmpty()),style=EkmivoType.meta,color=p.secondary)
+    }
+    EkmivoPill(if(info?.optBoolean("ai_enabled")==true)(if(bn)"AI চালু" else "AI on")
+     else(if(bn)"AI বন্ধ" else "AI off"),info?.optBoolean("ai_enabled")==true){
+     action("ai",JSONObject().put("enabled",info?.optBoolean("ai_enabled")!=true))
     }
    }
   }
@@ -213,7 +307,7 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
    if(!loaded&&!failure)item{Text(if(bn)"লোড হচ্ছে…" else "Loading…",modifier=Modifier.padding(16.dp),color=p.secondary)}
    if(loaded&&threads.isEmpty())item{Column(Modifier.fillMaxWidth().padding(30.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(if(bn)"কোনো কনভারসেশন পাওয়া যায়নি।" else "No conversations found.",style=EkmivoType.body,color=p.secondary);if(channel!=""||unread||mode!=""||days>0)EkmivoPill(if(bn)"ফিল্টার মুছুন" else "Clear filters",false){channel="";unread=false;mode="";days=0;listPage=0}}}
    items(threads,key={it.getString("id")}){t->Row(Modifier.fillMaxWidth().topHairline(p.border).clickable{thread=t.getString("id")}.padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-    Box(Modifier.size(40.dp).clip(CircleShape).background(p.raised),contentAlignment=Alignment.Center){Text(t.optString("name").take(1),style=EkmivoType.shop,color=p.text);Box(Modifier.align(Alignment.BottomEnd).size(18.dp).clip(CircleShape).background(channelColor(t.optString("channel"))),contentAlignment=Alignment.Center){EkmivoReferenceIcon(when(t.optString("channel")){"wa"->EkmivoGlyph.WA;"ig"->EkmivoGlyph.IG;else->EkmivoGlyph.MS},tint=Color.White,size=10.dp)}}
+    ChannelAvatar(t.optString("name").take(1),t.optString("channel"))
     Column(Modifier.weight(1f)){Text(t.optString("name"),style=EkmivoType.shop,color=p.text,maxLines=1);Text((if(t.optString("preview_sender")=="ai")"AI: " else "")+t.optString("preview"),style=EkmivoType.heroNote,color=p.secondary,maxLines=1)}
     Column(horizontalAlignment=Alignment.End){Text(clock(t.optString("last_activity_at"),bn),style=EkmivoType.meta,color=p.secondary);if(t.optInt("unread")>0)EkmivoStatusTag(displayDigits(t.optInt("unread").toString(),bn),p.text,p.onPrimary)}
    }}
@@ -230,8 +324,9 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
      val mediaGroup=if(batchID!=null&&m.optString("type")=="image")messages.drop(index).takeWhile{it.optString("batch_id")==batchID&&it.optString("type")=="image"}else emptyList()
 
      val own=m.optString("sender")!="customer"
-     val fill=if(m.optString("sender")=="seller")p.text else if(own)p.raised else p.surface
-     val ink=if(m.optString("sender")=="seller")p.onPrimary else p.text
+     // Human messages use a subtle tint, never the opposite theme's foreground as a fill.
+     val fill=when(m.optString("sender")){"seller"->lerp(p.raised,p.success,.10f);"ai"->p.raised;else->p.surface}
+     val ink=p.text
      var dragged by remember(m.getString("id")){mutableFloatStateOf(0f)}
      var crossed by remember(m.getString("id")){mutableStateOf(false)}
      val shift by animateFloatAsState(dragged,animationSpec=tween(if(dragged==0f)380 else 0),label="reply-swipe")
@@ -244,17 +339,32 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
       CompositionLocalProvider(LocalViewConfiguration provides exactPress) {
       Column(Modifier.graphicsLayer{translationX=shift}.semantics {customActions=listOf(CustomAccessibilityAction(if(bn)"উত্তর দিন" else "Reply"){reply=m;true})}.widthIn(max=maxBubble).clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp,bottomStart=if(!own&&messages.getOrNull(index+1)?.optString("sender")!=m.optString("sender"))5.dp else 16.dp,bottomEnd=if(own&&messages.getOrNull(index+1)?.optString("sender")!=m.optString("sender"))5.dp else 16.dp)).background(if(selected?.optString("id")==m.optString("id")||flashed==m.optString("id"))p.warningBackground else fill)
        .combinedClickable(onClick={if(mediaGroup.any{it.optString("state")=="failed"})mediaGroup.filter{it.optString("state")=="failed"}.forEach{action("retry",JSONObject().put("message_id",it.getString("id")))}else if(m.optString("state")=="failed")action("retry",JSONObject().put("message_id",m.getString("id")))else selected=null},onLongClick={selected=m})
-       .pointerInput(m.getString("id")){detectHorizontalDragGestures(onDragStart={dragged=0f;crossed=false;selected=null},onDragEnd={if(crossed&&m.optString("type")=="text")reply=m;dragged=0f},onDragCancel={dragged=0f},onHorizontalDrag={change,amount->change.consume();val next=(dragged+amount).coerceAtLeast(0f);val threshold=56.dp.toPx();dragged=if(next>threshold)threshold+(next-threshold)*.28f else next;if(dragged>=threshold&&!crossed){crossed=true;(app.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator)?.vibrate(android.os.VibrationEffect.createOneShot(12,android.os.VibrationEffect.DEFAULT_AMPLITUDE))}})}.padding(horizontal=12.dp,vertical=9.dp)) {
+       .pointerInput(m.getString("id")){detectHorizontalDragGestures(onDragStart={dragged=0f;crossed=false;selected=null},onDragEnd={if(crossed)reply=m;dragged=0f},onDragCancel={dragged=0f},onHorizontalDrag={change,amount->change.consume();val next=(dragged+amount).coerceAtLeast(0f);val threshold=56.dp.toPx();dragged=if(next>threshold)threshold+(next-threshold)*.28f else next;if(dragged>=threshold&&!crossed){crossed=true;(app.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator)?.vibrate(android.os.VibrationEffect.createOneShot(12,android.os.VibrationEffect.DEFAULT_AMPLITUDE))}})}.padding(horizontal=12.dp,vertical=9.dp)) {
        if(own&&messages.getOrNull(index-1)?.optString("sender")!=m.optString("sender"))Text(if(m.optString("sender")=="ai")"AI" else if(bn)"আপনি" else "You",style=EkmivoType.messageSender,color=ink.copy(alpha=.7f))
        val replyID=m.optString("reply_to").takeUnless{it.isBlank()||it=="null"}
-       val quoteBody=messages.firstOrNull{it.optString("id")==replyID}?.optString("body")?:m.optString("reply_body").takeUnless{it=="null"}
-       if(replyID!=null&&quoteBody!=null)Text(quoteBody,style=EkmivoType.heroNote,color=ink.copy(alpha=.7f),maxLines=1,modifier=Modifier.clip(RoundedCornerShape(8.dp)).drawBehind{drawLine(p.success,Offset.Zero,Offset(0f,size.height),3.dp.toPx())}.clickable{quoteOriginal(replyID)}.padding(5.dp))
+       val original=messages.firstOrNull{it.optString("id")==replyID}
+       val quoteBody=when(original?.optString("type")) {
+        "audio"->if(bn)"ভয়েস মেসেজ" else "Voice message"
+        "image"->if(bn)"ছবি" else "Photo"
+        "document"->if(bn)"ডকুমেন্ট" else "Document"
+        "product"->if(bn)"পণ্য" else "Product"
+        else->original?.optString("body").orEmpty().ifBlank {
+         m.optString("reply_body").takeUnless{it.isBlank()||it=="null"}?:if(bn)"মেসেজ" else "Message"
+        }
+       }
+       if(replyID!=null)Column(Modifier.clip(RoundedCornerShape(9.dp))
+        .background(ink.copy(alpha=.075f)).drawBehind{drawLine(p.success,Offset.Zero,Offset(0f,size.height),3.dp.toPx())}
+        .clickable{quoteOriginal(replyID)}.padding(horizontal=9.dp,vertical=6.dp)) {
+        Text(when(original?.optString("sender")){"customer"->info?.optString("name").orEmpty();"ai"->"AI";"seller"->if(bn)"আপনি" else "You";else->if(bn)"রিপ্লাই" else "Reply"},
+         style=EkmivoType.messageSender,color=p.success)
+        Text(quoteBody,style=EkmivoType.heroNote,color=ink.copy(alpha=.72f),maxLines=1)
+       }
        InboxMessageContent(m,mediaGroup,thread!!,bn,ink)
        Row(Modifier.align(Alignment.End),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
         Text(clock(m.optString("created_at"),bn),style=EkmivoType.messageTime,color=ink.copy(alpha=.65f))
         if(own) {
          val status=if(mediaGroup.isEmpty())m.optString("state")else listOf("uncertain","failed","queued","sending","sent","delivered","seen").firstOrNull{state->mediaGroup.any{it.optString("state")==state}}?:m.optString("state")
-         if(status in listOf("failed","uncertain"))Text("!",style=EkmivoType.messageTime,color=p.danger)
+         if(status in listOf("failed","uncertain"))EkmivoReferenceIcon(EkmivoGlyph.X,tint=p.danger,size=13.dp,description=if(bn)"আবার পাঠান" else "Retry message")
          else {
           val tint=if(status=="seen")p.seen else ink.copy(alpha=.65f)
           EkmivoReferenceIcon(if(status in listOf("queued","sending"))EkmivoGlyph.CLK else EkmivoGlyph.CHK,tint=tint,size=13.dp)
@@ -266,24 +376,89 @@ fun InboxRoute(bn:Boolean=false,workspace:WorkspaceAccess,onDetailChange:(Boolea
       }
      }
     }
+    items(localVoices,key={it.id}){voice->
+     LocalVoiceBubble(voice,bn,onRetry={dispatchVoice(voice)})
+    }
    }
-   if(awayFromBottom)Box(Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=10.dp).size(36.dp).clip(CircleShape).background(p.raised).clickable{scope.launch{scroll.animateScrollToItem((scroll.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}},contentAlignment=Alignment.Center){Text("↓",color=p.text)}
+   if(awayFromBottom)Box(Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=12.dp).size(40.dp).clip(CircleShape).background(p.raised).border(1.dp,p.border,CircleShape).clickable{scope.launch{scroll.animateScrollToItem((scroll.layoutInfo.totalItemsCount-1).coerceAtLeast(0))}}.semantics{contentDescription=if(bn)"নিচে যান" else "Jump to latest"},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.DOWN,tint=p.text,size=21.dp)}
    }
-   if(reply!=null)Row(Modifier.fillMaxWidth().padding(horizontal=12.dp).background(p.surface).padding(10.dp)) {Text(reply!!.optString("body"),style=EkmivoType.heroNote,color=p.success,maxLines=1,modifier=Modifier.weight(1f));Text("×",modifier=Modifier.clickable{reply=null},color=p.secondary)}
+   if(reply!=null)Row(Modifier.fillMaxWidth().padding(start=12.dp,end=12.dp,top=6.dp)
+     .clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp,bottomStart=8.dp,bottomEnd=8.dp)).background(p.surface)
+     .border(1.dp,p.border,RoundedCornerShape(topStart=16.dp,topEnd=16.dp,bottomStart=8.dp))
+     .padding(horizontal=12.dp,vertical=9.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+     Box(Modifier.width(3.dp).height(34.dp).clip(CircleShape).background(p.success))
+     Column(Modifier.weight(1f)) {
+      Text(if(reply!!.optString("sender")=="customer")info?.optString("name").orEmpty() else if(reply!!.optString("sender")=="ai")"AI" else if(bn)"আপনি" else "You",style=EkmivoType.messageSender,color=p.success)
+      Text(reply!!.optString("body").ifBlank { when(reply!!.optString("type")){"audio"->if(bn)"ভয়েস মেসেজ" else "Voice message";"image"->if(bn)"ছবি" else "Photo";else->if(bn)"মেসেজ" else "Message"} },style=EkmivoType.heroNote,color=p.secondary,maxLines=1)
+     }
+     Box(Modifier.size(30.dp).clip(CircleShape).clickable{reply=null},contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.X,tint=p.secondary,size=17.dp)}
+    }
    val window=info?.optBoolean("window_open")==true
    if(!window&&info!=null)Column(Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(14.dp)).background(p.surface).padding(12.dp)){Text(if(bn)"২৪ ঘণ্টা পার হয়ে গেছে" else "24 hours have passed",style=EkmivoType.shop,color=p.text);Text(if(bn)"কাস্টমার নতুন মেসেজ দিলে আবার উত্তর দেওয়া যাবে।" else "You can reply when the customer sends a new message.",style=EkmivoType.heroNote,color=p.secondary)}
-   else Row(Modifier.fillMaxWidth().topHairline(p.border).imePadding().padding(start=12.dp,end=12.dp,top=8.dp,bottom=14.dp),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-    InboxAttachments(thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),net&&!busy&&window,replyTo=reply?.optString("id"),onRecordingChange={recording=it}){reply=null;scope.launch{loadMessages(thread!!)}}
-    if(!recording)BasicTextField(input,{input=it.take(8000);pendingKey=null},enabled=net&&!busy&&window,textStyle=EkmivoType.chatMessage.copy(color=p.text),maxLines=4,modifier=Modifier.testTag("chat-input").weight(1f).heightIn(min=40.dp,max=96.dp).clip(RoundedCornerShape(20.dp)).background(p.surface).border(1.dp,p.border,RoundedCornerShape(20.dp)).padding(10.dp),decorationBox={inner->if(input.isEmpty())Text(if(bn)"মেসেজ লিখুন…" else "Write a message…",style=EkmivoType.chatMessage,color=p.secondary);inner()})
-    if(!recording)Box(Modifier.size(40.dp).clip(CircleShape).background(p.text).clickable(enabled=input.isNotBlank()&&!busy&&net&&window){
-     val id=thread!!;val text=input;val quote=reply;val key=pendingKey?:UUID.randomUUID().toString().also{pendingKey=it}
-     scope.launch{busy=true;try{val body=JSONObject().put("text",text).put("idempotency_key",key);if(quote!=null)body.put("reply_to",quote.getString("id"));api.call("send",id,body=body);pendingKey=null;input="";reply=null;loadMessages(id);scroll.animateScrollToItem((messages.size-1).coerceAtLeast(0));failure=false}catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}}
-    },contentAlignment=Alignment.Center){EkmivoReferenceIcon(EkmivoGlyph.SND,tint=p.onPrimary,description=if(bn)"মেসেজ পাঠান" else "Send message")}
-   }
+   else InboxAttachments(
+    thread=thread!!,
+    bn=bn,
+    capabilities=info?.optJSONObject("capabilities")?:JSONObject(),
+    enabled=net&&!busy&&window,
+    hasText=input.isNotBlank(),
+    replyTo=reply?.optString("id"),
+    onRecordingChange={recording=it},
+    onVoicePrepared={file,durationMs,quoteId->
+     val recorded=VoiceOutbox.preserve(app,file)
+     val mediaId=UUID.randomUUID().toString()
+     val voice=LocalVoiceMessage(
+      id="local-"+mediaId,threadId=thread!!,workspaceKey=voiceWorkspaceKey,
+      file=recorded,mediaId=mediaId,idempotencyKey=UUID.randomUUID().toString(),
+      batchId=UUID.randomUUID().toString(),durationMs=durationMs,replyTo=quoteId,
+      initialStatus="failed"
+     )
+     localVoices.add(voice)
+     persistVoices()
+     reply=null
+     dispatchVoice(voice)
+     scope.launch { kotlinx.coroutines.yield();scroll.animateScrollToItem((scroll.layoutInfo.totalItemsCount-1).coerceAtLeast(0)) }
+    },
+    onSendText={
+     if(input.isNotBlank()&&!busy&&net&&window) {
+      val id=thread!!;val value=input;val quote=reply;val key=pendingKey?:UUID.randomUUID().toString().also{pendingKey=it}
+      scope.launch {
+       busy=true
+       try {
+        val body=JSONObject().put("text",value).put("idempotency_key",key)
+        if(quote!=null)body.put("reply_to",quote.getString("id"))
+        api.call("send",id,body=body)
+        pendingKey=null;input="";reply=null;loadMessages(id)
+        scroll.animateScrollToItem((messages.size-1).coerceAtLeast(0))
+        failure=false
+       }catch(e:CancellationException){throw e}catch(_:Exception){fail()}finally{busy=false}
+      }
+     }
+    },
+    inputField={
+     BasicTextField(
+      input,
+      {input=it.take(8000);pendingKey=null},
+      enabled=net&&!busy&&window,
+      textStyle=EkmivoType.chatMessage.copy(color=p.text),
+      maxLines=4,
+      modifier=Modifier.testTag("chat-input").weight(1f)
+       .heightIn(min=38.dp,max=96.dp).padding(start=4.dp,end=2.dp,top=9.dp,bottom=9.dp),
+      decorationBox={inner->
+       Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.CenterStart) {
+        if(input.isEmpty())Text(if(bn)"মেসেজ লিখুন…" else "Write a message…",
+         style=EkmivoType.chatMessage,color=p.secondary)
+        inner()
+       }
+      }
+     )
+    },
+    onSent={reply=null;scope.launch{loadMessages(thread!!)}}
+   )
   }
  }
  if(profileOpen&&thread!=null)CustomerProfile(thread!!,bn,{profileOpen=false},{scope.launch{loadMessages(thread!!)}})
- actionsMessage?.let{message->if(thread!=null)InboxMessageActions(message,thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),{actionsMessage=null},{scope.launch{loadMessages(thread!!)}})}
+ actionsMessage?.let{message->if(thread!=null)InboxMessageActions(message,thread!!,bn,info?.optJSONObject("capabilities")?:JSONObject(),
+ actionsMode,{actionsMessage=null},{scope.launch{loadMessages(thread!!)}})}
  if(filterOpen)androidx.compose.material3.ModalBottomSheet(onDismissRequest={filterOpen=false},containerColor=p.raised,tonalElevation=0.dp,dragHandle=null,scrimColor=Color.Black.copy(alpha=.5f),shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)) {
   Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.raised).padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
    Text(if(bn)"ফিল্টার" else "Filters",style=EkmivoType.button,color=p.text)

@@ -12,8 +12,8 @@ android {
   applicationId = "com.ekmivo.mobile"
   minSdk = 26
   targetSdk = 35
-  versionCode = 6
-  versionName = "0.3.1"
+  versionCode = 10
+  versionName = "0.3.5"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   // Firebase client identifiers are public configuration, never service-account secrets.
   for (key in listOf("APPLICATION_ID", "API_KEY", "PROJECT_ID", "SENDER_ID")) {
