@@ -3,7 +3,6 @@ import {createCipheriv,createHash,randomBytes,randomUUID} from "node:crypto";
 import {mkdir,readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import postgres from "postgres";
-import {runBriofoldKeyLifecycle} from "./briofold-key-lifecycle-acceptance.mjs";
 
 // Synthetic records in the disposable CI *live-realm database*. Nothing here
 // claims to simulate a provider callback, connected phone, or real money.
@@ -621,9 +620,6 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
    "Viewer API credential screen exposed a credential secret");
   await viewerKeys.close();
 
-  // All financial fixture writes are complete. Install the stricter capacity
-  // prerequisites and verify credentials before the long read-only matrix.
-  await runBriofoldKeyLifecycle({origin,browser,control,sessions,workspaceId,liveDatabase,sandboxDatabase});
 
   const evidence=new URL("../test-results/pg09/phase9/",import.meta.url);await mkdir(evidence,{recursive:true});
   let cases=0;

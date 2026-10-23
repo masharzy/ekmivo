@@ -92,3 +92,19 @@ func TestStudioProposalNeverChangesModelOrPublishesImplicitly(t *testing.T) {
 		t.Fatal("quoted config crossed proposal instruction boundary", err)
 	}
 }
+
+func TestChannelGuidanceIsBoundedAndIncludedInProviderPrompt(t *testing.T) {
+	var c studioContext
+	c.Config.Model = "test/model"
+	c.Question = "Orchid?"
+	c.Products = []json.RawMessage{json.RawMessage(`{"name":"Orchid"}`)}
+	c.ChannelInstructions = "Only suggest a published Orchid product when asked."
+	messages, err := studioMessages(c)
+	if err != nil || !strings.Contains(messages[0].Content, c.ChannelInstructions) {
+		t.Fatal("channel guidance missing from provider prompt", err)
+	}
+	c.ChannelInstructions = strings.Repeat("x", 10001)
+	if _, err = studioMessages(c); err == nil {
+		t.Fatal("oversized channel guidance accepted")
+	}
+}

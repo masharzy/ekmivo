@@ -7,6 +7,7 @@ import {AppShell} from "./app-shell";
 import {DashboardContent} from "./dashboard-content";
 import {WorkspaceInbox} from "./workspace-inbox";
 import {WorkspaceMobileDevices} from "./workspace-mobile-devices";
+import {ChannelSettings} from "./channel-settings";
 import {WorkspaceChannels} from "./workspace-channels";
 import {StoreProfileEditor} from "./store-profile-editor";
 import {UnifiedSettingsIndex} from "./unified-settings-index";
@@ -61,8 +62,11 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  const paymentContext=service==="payments"
   ?await paymentContextFor(workspace,user.id,undefined)
   :undefined;
+ if(kind==="channel-settings"&&process.env.BRIOFOLD_CHANNEL_POLICIES_ENABLED!=="true")notFound();
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :kind==="channel-settings"&&detailId
+   ?<ChannelSettings key={workspace.id+user.id+detailId} workspaceId={workspace.id} actorId={user.id} connectionId={detailId} bn={locale==="bn"}/>
   :kind==="account-devices"
    ?<BrowserDevicePreferences bn={locale==="bn"}/>
   :kind==="help-videos"
@@ -103,7 +107,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   :kind==="inbox"
    ?<WorkspaceInbox key={user.id+":"+workspace.id} actorId={user.id} workspaceId={workspace.id} initialThread={thread} bn={locale==="bn"} role={workspace.role}/>
    :kind==="channels"
-    ?<WorkspaceChannels key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
+    ?<WorkspaceChannels key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"} detailsEnabled={process.env.BRIOFOLD_CHANNEL_POLICIES_ENABLED==="true"}/>
     :kind==="devices"
      ?<WorkspaceMobileDevices key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
     :kind==="mixed-devices"&&paymentContext

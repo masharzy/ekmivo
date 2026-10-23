@@ -26,6 +26,7 @@ export async function readAiWallet(workspaceId:string,actorId:string):Promise<Ai
    FROM workspace_members m JOIN workspace_product_access p
     ON p.workspace_id=m.workspace_id AND p.product='ai' AND p.enabled=true
    WHERE m.workspace_id=${workspaceId}::uuid AND m.user_id=${actorId}::uuid
+    AND pg13_capability_override(m.workspace_id,m.user_id,'product:ai') IS DISTINCT FROM false
     AND m.role IN ('owner','admin') LIMIT 1`;
   if(!member||member.capability_allowed===false)return unavailable;
   const [accountRows,journal,topups,tariff]=await Promise.all([

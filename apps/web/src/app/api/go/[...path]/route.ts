@@ -17,7 +17,7 @@ const aiRuntimePath=/^workspaces\/[0-9a-f-]{36}\/ai\/(?:test|studio-test|knowled
 const aiCreditPath=/^workspaces\/[0-9a-f-]{36}\/ai-credits\/(?:purchase|[0-9a-f-]{36}\/reconcile)$/i;
 const phonePath=/^workspaces\/[0-9a-f-]{36}\/phones(?:\/[0-9a-f-]{36}\/(?:attach|detach|rename|revoke|reconnect|delete|edit-account))?$/i;
 const documentPath=/^workspaces\/[0-9a-f-]{36}\/(?:documents\/(?:customers|invoices|payment-links)(?:\/(?:[0-9a-f-]{36}|commands)(?:\/(?:publish|archive|disable|delete|issue|cancel|correct|send|remind|import|import-preview|export))?)?|refunds(?:\/[0-9a-f-]{36}(?:\/(?:review|approve|reject|report-returned|cancel))?)?|reconciliation(?:\/(?:statement-preview|statement-import|settlement-link))?)$/i;
-const extensionPath=/^(?:workspace-invites\/accept-invite|workspaces\/[0-9a-f-]{36}\/(?:automatic-webhook-secret|activity\/(?:audit|api|exports)|sandbox\/(?:scenarios|runs|reset)|exports(?:\/[0-9a-f-]{36}(?:\/download)?)?|billing(?:\/(?:free|usage|limits|quote|schedule|undo)|\/[0-9a-f-]{36}\/reconcile)?|reports(?:\/ledger)?|privacy(?:\/[0-9a-f-]{36}\/cancel)?|notifications(?:\/(?:[0-9a-f-]{36}|all)\/read)?|integrations(?:\/[0-9a-f-]{36}\/(?:enable|disable|edit))?|workspace-tools\/(?:groups|team|settings|help|help-videos|invite|resend-invite|revoke-invite|remove-member|change-role|grants|transfer-owner)(?:\/[0-9a-f-]{36})?))$/i;
+const extensionPath=/^(?:workspace-invites\/accept-invite|workspaces\/[0-9a-f-]{36}\/(?:automatic-webhook-secret|activity\/(?:audit|api|exports)|sandbox\/(?:scenarios|runs|reset)|exports(?:\/[0-9a-f-]{36}(?:\/download)?)?|billing(?:\/(?:free|usage|limits|quote|schedule|undo)|\/[0-9a-f-]{36}\/reconcile)?|reports(?:\/ledger)?|privacy(?:\/[0-9a-f-]{36}\/cancel)?|notifications(?:\/(?:[0-9a-f-]{36}|all)\/read)?|integrations(?:\/[0-9a-f-]{36}\/(?:enable|disable|edit))?|workspace-tools\/(?:channel-settings|groups|team|settings|help|help-videos|invite|resend-invite|revoke-invite|remove-member|change-role|grants|transfer-owner)(?:\/[0-9a-f-]{36})?))$/i;
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
  const path = (await context.params).path.join("/");
  const read = request.method === "GET";
@@ -55,7 +55,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   const value = incoming.searchParams.get(key);
   if (value) target.searchParams.set(key, value);
  }
- const body = read ? undefined : await boundedBody(request,/\/workspace-tools\/help$/i.test(path)?750000:path.endsWith("/ai/knowledge-import")?7340032:aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:commercePath.test(path)?7340032:path.endsWith("/crm")?20000:growthPath.test(path)?16384:path.endsWith("/comments")?65536:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/settings$/i.test(path)?8192:4096);
+ const body = read ? undefined : await boundedBody(request,/\/workspace-tools\/help$/i.test(path)?750000:path.endsWith("/ai/knowledge-import")?7340032:aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:commercePath.test(path)?7340032:path.endsWith("/crm")?20000:growthPath.test(path)?16384:path.endsWith("/comments")?65536:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/(settings|channel-settings)$/i.test(path)?16384:4096);
  if (body === null)
   return Response.json({ code: "BODY_TOO_LARGE" }, { status: 413 });
  try {

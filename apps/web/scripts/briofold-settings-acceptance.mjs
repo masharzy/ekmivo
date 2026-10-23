@@ -1,3 +1,5 @@
+import {runWalletBrowser} from "./briofold-wallet-browser-acceptance.mjs";
+import {runBriofoldKeyLifecycle} from "./briofold-key-lifecycle-acceptance.mjs";
 import {readFile} from "node:fs/promises";
 import postgres from "postgres";
 import {spawn} from "node:child_process";
@@ -19,6 +21,7 @@ import {runBriofoldCustomers} from "./briofold-customers-acceptance.mjs";
 import {runBriofoldResponseReport} from "./briofold-response-report-acceptance.mjs";
 import {runBriofoldCRMParity} from "./briofold-crm-parity-acceptance.mjs";
 import {runBriofoldInboxAccess} from "./briofold-inbox-access.mjs";
+import {runChannelPolicies} from "./briofold-channel-policies-acceptance.mjs";
 import {runBriofoldPhase9Browser} from "./briofold-phase9-browser.mjs";
 import {runBriofoldGrowthOperations} from "./briofold-growth-operations-acceptance.mjs";
 import {runBriofoldOrderAssignment} from "./briofold-order-assignment-acceptance.mjs";
@@ -89,6 +92,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0199_briofold_unconverted_interest.sql");
   await apply("0200_briofold_help_videos.sql");
   await apply("0201_briofold_waiting_reply_truth.sql");
+  await apply("0202_briofold_channel_policies.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
@@ -106,7 +110,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  try{
   await ready(apiOrigin+"/healthz",200,api);
   server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
-   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_CHANNEL_POLICIES_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
   });
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
@@ -116,8 +120,10 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   const failures=[];
   const check=async(name,run)=>{try{await run();}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
   await check("runBriofoldSettingsBrowser",async()=>{await runBriofoldSettingsBrowser({origin,browser,control,sessions});});
+  await check("runWalletBrowser",async()=>{await runWalletBrowser({control,sessions,origin,browser});});
   await check("runBriofoldOnboardingBrowser",async()=>{await runBriofoldOnboardingBrowser({origin,browser,control,sessions});});
   await check("runBriofoldInboxAccess",async()=>{await runBriofoldInboxAccess({origin,browser,control,sessions});});
+  await check("runChannelPolicies",async()=>{await runChannelPolicies({control,sessions,origin,browser});});
   await check("runBriofoldAiChannel",async()=>{await runBriofoldAiChannel({control,sessions});});
   await check("runBriofoldAiStudioAcceptance",async()=>{await runBriofoldAiStudioAcceptance({origin,browser,control,sessions});});
   await check("runBriofoldInboxDrafts",async()=>{await runBriofoldInboxDrafts({origin,browser,control,sessions});});
@@ -135,6 +141,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runBriofoldOrderAssignment",async()=>{await runBriofoldOrderAssignment({origin,browser,control,sessions});});
   await check("runBriofoldGrowthOperations",async()=>{await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});});
   if(phase9Fixture)await check("runBriofoldPhase9Browser",async()=>{await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});});
+  if(phase9Fixture)await check("runBriofoldKeyLifecycle",async()=>{await runBriofoldKeyLifecycle({origin,browser,control,sessions,...phase9Fixture});});
   if(failures.length)throw new AggregateError(failures.map(x=>x.error),failures.map(x=>x.name+": "+x.error.message).join("\n"));
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}

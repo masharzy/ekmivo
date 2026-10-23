@@ -60,7 +60,13 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 	var raw []byte
 	if r.Method == "GET" {
 		target := r.PathValue("targetID")
-		if resource == "help-videos" {
+		if resource == "channel-settings" {
+			if target != "" && !uuidPattern.MatchString(target) {
+				fail(w, 404, "NOT_FOUND")
+				return
+			}
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_settings_read($1::uuid,$2::uuid,$3::uuid)", ws, actor.UserID, nullableID(target)).Scan(&raw)
+		} else if resource == "help-videos" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_help_videos_read($1::uuid,$2::uuid,$3)", ws, actor.UserID, r.URL.Query().Get("kind")).Scan(&raw)
 		} else if resource == "groups" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_team_groups_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
@@ -76,6 +82,9 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 	} else {
 		var b map[string]any
 		limit := int64(8192)
+		if resource == "channel-settings" {
+			limit = 16384
+		}
 		if resource == "help" {
 			limit = 750000
 		}
@@ -86,6 +95,9 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		target := r.PathValue("targetID")
 		if s.Auth.GranularGrants && resource != "help" && resource != "help-videos" {
 			cap := "members:manage"
+			if resource == "channel-settings" {
+				cap = "inbox:manage"
+			}
 			if resource == "settings" {
 				cap = "workspace:settings"
 			}
@@ -112,6 +124,11 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch resource {
+		case "channel-settings":
+			if key, ok := b["operation_key"].(string); !ok || !uuidPattern.MatchString(key) {
+				fail(w, 422, "INVALID_CHANNEL_OPERATION")
+				return
+			}
 		case "help-videos":
 			id, _ := b["id"].(string)
 			if !uuidPattern.MatchString(id) {
@@ -224,7 +241,10 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		returnCap, _ := b["_return_token"].(string)
 		delete(b, "_return_token")
 		data, _ := json.Marshal(b)
-		if resource == "help-videos" {
+		if resource == "channel-settings" {
+			payload, _ := json.Marshal(b)
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_settings_write($1::uuid,$2::uuid,$3::uuid,$4::jsonb)", ws, actor.UserID, b["operation_key"], string(payload)).Scan(&raw)
+		} else if resource == "help-videos" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_help_video_progress($1::uuid,$2::uuid,$3::jsonb)", ws, actor.UserID, string(data)).Scan(&raw)
 		} else if resource == "help" {
 			var ready bool

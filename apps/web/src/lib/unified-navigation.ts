@@ -53,7 +53,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"help-videos"};
+export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"help-videos"|"channel-settings"};
 const financialRecordId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const financialDetailPrefixes={
  payments:"/payments/transactions",incoming:"/sms-data",gateways:"/settings/payment-methods",
@@ -109,6 +109,8 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  // working while merchant bookmarks move to /settings/channels/website.
  if(root==="settings"&&view.length===2&&view[0]==="channels"&&view[1]==="website")
   return mode==="commerce"?null:{section:"website",service:"ai"};
+ if(root==="settings"&&view.length===2&&view[0]==="channels"&&financialRecordId.test(view[1]))
+  return mode==="commerce"?null:{section:"channels",service:"ai",kind:"channel-settings",detailId:view[1]};
  // The dedicated feedback deep link reuses the authenticated, durable help
  // ticket source. It must not be mistaken for a financial record detail.
  if(root==="settings"&&view.length===2&&view[0]==="help"&&view[1]==="feedback")
