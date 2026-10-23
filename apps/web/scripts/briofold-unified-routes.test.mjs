@@ -198,8 +198,12 @@ test("order reports are explicit and fail closed behind a deployment flag",()=>{
 test("notifications open for the preferred single Store without a legacy workspace detour",()=>{
  const entry=source("app/[locale]/notifications/page.tsx");
  assert.match(entry,/preferredWorkspaceFor\(user\.id\)/);
- assert.match(entry,/aiEnabled&&<InboxAlerts/);
- assert.match(entry,/paymentContext&&<PaymentNotificationCenter/);
+ assert.match(entry,/<MerchantNotifications/);
+ assert.match(entry,/aiEnabled=\{aiEnabled\}/);
+ assert.match(entry,/paymentsEnabled=\{Boolean\(paymentContext\)\}/);
+ const center=source("components/merchant-notifications.tsx");
+ assert.match(center,/aiEnabled&&\(kind==="all"\|\|kind==="inbox"\)&&<InboxAlerts/);
+ assert.match(center,/paymentsEnabled&&\(kind==="all"\|\|kind==="payments"\)&&<PaymentNotificationCenter/);
  assert.doesNotMatch(entry,/workspacesFor|redirect\(`\/w\//);
 });
 test("unified operational activity preserves the financial event source",()=>{
