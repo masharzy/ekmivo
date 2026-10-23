@@ -1,3 +1,5 @@
+import {startBriofoldPrivateStorage} from "./briofold-private-storage-fixture.mjs";
+import {runProductPhotos} from "./briofold-product-photo-acceptance.mjs";
 import {runLinkedOrderConversion} from "./briofold-conversion-acceptance.mjs";
 import {runCourierSettings} from "./briofold-courier-settings-acceptance.mjs";
 import {runWalletBrowser} from "./briofold-wallet-browser-acceptance.mjs";
@@ -96,9 +98,11 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0201_briofold_waiting_reply_truth.sql");
   await apply("0202_briofold_channel_policies.sql");
   await apply("0203_briofold_linked_order_conversion.sql");
+  await apply("0204_briofold_product_photo_search.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
- const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
+ const privateStorage=await startBriofoldPrivateStorage(control);
+ const api=spawn(apiBin,[],{env:{...apiEnv,...privateStorage.env,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
  let server,browser,logs="";
  const capture=child=>{for(const stream of [child.stdout,child.stderr])stream.on("data",chunk=>{logs=(logs+String(chunk)).slice(-5000);});};
  capture(api);
@@ -113,7 +117,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  try{
   await ready(apiOrigin+"/healthz",200,api);
   server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
-   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_COURIER_SETTINGS_ENABLED:"true",BRIOFOLD_CHANNEL_POLICIES_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_COURIER_SETTINGS_ENABLED:"true",BRIOFOLD_CHANNEL_POLICIES_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
   });
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
@@ -142,6 +146,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runLinkedOrderConversion",async()=>{await runLinkedOrderConversion({control,sessions,origin,browser});});
   await check("runBriofoldResponseReport",async()=>{await runBriofoldResponseReport({origin,browser,control,sessions});});
   await check("runCourierSettings",async()=>{await runCourierSettings({control,sessions,origin,browser});});
+  await check("runProductPhotos",async()=>{await runProductPhotos({control,sessions,origin,browser,privateStorage});});
   await check("runBriofoldCommerce",async()=>{await runBriofoldCommerce({origin,browser,control,sessions,apiOrigin});});
   await check("runBriofoldOrderAssignment",async()=>{await runBriofoldOrderAssignment({origin,browser,control,sessions});});
   await check("runBriofoldGrowthOperations",async()=>{await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});});
@@ -149,5 +154,5 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   if(phase9Fixture)await check("runBriofoldKeyLifecycle",async()=>{await runBriofoldKeyLifecycle({origin,browser,control,sessions,...phase9Fixture});});
   if(failures.length)throw new AggregateError(failures.map(x=>x.error),failures.map(x=>x.name+": "+x.error.message).join("\n"));
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
- finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");}
+ finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");await privateStorage.close();}
 }

@@ -21,9 +21,10 @@ function validSnapshot(value:unknown):value is Snapshot{
   typeof v.can_export==="boolean"&&(v.scope==="live"||v.scope==="sandbox")&&
   typeof v.cursor==="number"&&Number.isSafeInteger(v.cursor)&&v.cursor>=0;
 }
-export async function BriofoldUnifiedActivity({workspaceId,actorId,locale,environment,filters={}}:{
- workspaceId:string;actorId:string;locale:"bn"|"en";environment:"live"|"sandbox";filters?:Filters;
+export async function BriofoldUnifiedActivity({workspaceId,actorId,locale,environment,filters={},embedded=false}:{
+ workspaceId:string;actorId:string;locale:"bn"|"en";environment:"live"|"sandbox";filters?:Filters;embedded?:boolean;
 }){
+ const Heading=embedded?"h2":"h1";
  const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en;
  const category=pick(filters.category),query=pick(filters.q),cursorRaw=pick(filters.cursor);
  const cursor=cursorRaw===""?0:Number(cursorRaw);
@@ -42,7 +43,7 @@ export async function BriofoldUnifiedActivity({workspaceId,actorId,locale,enviro
  };
  const sourceLabel=(source:string)=>({orders:t("Orders","অর্ডার"),customers:t("Customers","গ্রাহক"),comments:t("Comments","কমেন্ট"),settings:t("Settings","সেটিংস")} as Record<string,string>)[source]??source;
  return <section className={styles.root} aria-label={t("Store operational activity","স্টোরের পরিচালনাগত ইতিহাস")}>
-  <header className={styles.heading}><div><h1>{t("Activity log","কার্যক্রমের ইতিহাস")}</h1>
+  <header className={styles.heading}><div><Heading>{t("Activity log","কার্যক্রমের ইতিহাস")}</Heading>
    <p>{t("Read-only activity from orders, customers, comments and Store settings. Sensitive details are omitted.","অর্ডার, গ্রাহক, কমেন্ট ও স্টোর সেটিংসের শুধু-পড়ার ইতিহাস। সংবেদনশীল তথ্য রাখা হয়নি।")}</p></div>
    <span className={styles.realm}>{environment==="live"?"Live":"Sandbox"}</span>
   </header>

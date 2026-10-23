@@ -61,3 +61,5 @@
 .ref-dashboard .ref-invoice-links .kv>span{min-width:0;overflow-wrap:anywhere}
 .ref-dashboard .ref-invoice-links .actionline{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px}
 @media(max-width:600px){.ref-dashboard .ref-invoice-summary{padding:12px}.ref-dashboard .ref-invoice-links .kv{align-items:flex-start;flex-direction:column}.ref-dashboard .ref-invoice-links .actionline{justify-content:flex-start}}
+
+.ref-api-key-page .ref-key-open{appearance:none;background:transparent;border:0;padding:0;color:inherit;text-align:left;font:inherit;font-weight:600;cursor:pointer}.ref-api-key-page .ref-key-open:focus-visible{outline:2px solid var(--color-focus);outline-offset:3px;border-radius:3px}

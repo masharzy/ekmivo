@@ -54,7 +54,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"help-videos"|"channel-settings"|"courier-integrations"};
+export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"help-videos"|"channel-settings"|"courier-integrations"|"product-photos"};
 const financialRecordId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const financialDetailPrefixes={
  payments:"/payments/transactions",incoming:"/sms-data",gateways:"/settings/payment-methods",
@@ -131,6 +131,8 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  // Catalog sync is a real subview, not an arbitrary two-part financial record.
  if(root==="orders"&&view.length===2&&view[0]==="products"&&view[1]==="sync")
   return {section:"products",service:mode==="ai"?"ai":"payments"};
+ if(root==="orders"&&view.length===2&&view[0]==="products"&&view[1]==="photos")
+  return {section:"products",service:mode==="ai"?"ai":"payments",kind:"product-photos"};
  // Only explicitly mapped, UUID-shaped finance details may have two segments.
  // The selected business and financial realm are still resolved by the server.
  if(view.length>1||view.length===1&&financialRecordId.test(view[0])){

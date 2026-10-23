@@ -7,6 +7,7 @@ import {AppShell} from "./app-shell";
 import {DashboardContent} from "./dashboard-content";
 import {WorkspaceInbox} from "./workspace-inbox";
 import {WorkspaceMobileDevices} from "./workspace-mobile-devices";
+import {ProductPhotoSearch} from "./product-photo-search";
 import {CourierIntegrations} from "./courier-integrations";
 import {ChannelSettings} from "./channel-settings";
 import {WorkspaceChannels} from "./workspace-channels";
@@ -63,10 +64,13 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  const paymentContext=service==="payments"
   ?await paymentContextFor(workspace,user.id,undefined)
   :undefined;
+ if(kind==="product-photos"&&process.env.BRIOFOLD_PRODUCT_PHOTOS_ENABLED!=="true")notFound();
  if(kind==="courier-integrations"&&process.env.BRIOFOLD_COURIER_SETTINGS_ENABLED!=="true")notFound();
  if(kind==="channel-settings"&&process.env.BRIOFOLD_CHANNEL_POLICIES_ENABLED!=="true")notFound();
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :kind==="product-photos"
+   ?<ProductPhotoSearch key={workspace.id+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :kind==="courier-integrations"
    ?<CourierIntegrations key={workspace.id+user.id} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}/>
   :kind==="channel-settings"&&detailId
@@ -79,7 +83,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
    ?<TeamGroups key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :root==="settings"&&view[0]==="activity"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"
    ?<><BriofoldUnifiedActivity workspaceId={workspace.id} actorId={user.id} locale={locale}
-       environment={paymentContext?.environment??"live"} filters={activityFilters}/>
+       environment={paymentContext?.environment??"live"} filters={activityFilters} embedded={!!paymentContext}/>
      {paymentContext&&<DashboardContent locale={locale} user={user} workspace={workspace}
        section="events" service="payments" paymentContext={paymentContext} canonicalRoutes framed/>}</>
   :root==="reports"&&view[0]==="orders"

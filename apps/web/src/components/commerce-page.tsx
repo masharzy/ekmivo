@@ -12,6 +12,7 @@ export async function CommercePage(props:{workspaceId:string;actorId:string;bn:b
  return <><CommerceWorkspace {...props} initial={initial}
    assignmentEnabled={process.env.BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED==="true"}
    scanEnabled={process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true"}
+   productPhotosEnabled={process.env.BRIOFOLD_PRODUCT_PHOTOS_ENABLED==="true"}
    productAnalyticsEnabled={process.env.BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED==="true"}/>
   {props.view==="to-chase"&&process.env.BRIOFOLD_UNCONVERTED_INTEREST_ENABLED==="true"&&<CustomerCRMPage workspaceId={props.workspaceId} actorId={props.actorId} bn={props.bn} view="interest" embedded financeEnabled={props.financeEnabled??false} environment={props.environment}/>}</>;
 }

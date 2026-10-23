@@ -70,3 +70,19 @@ Added the canonical courier credential screen using the existing encrypted integ
 0203 adds actual linked-order conversion cohorts (7/30/90 days), explicit customer/order relations across merged identities, per-source/current-assignee breakdown, safe paginated CSV and current role/product/privacy checks. A Won stage without an order is not a conversion; draft/hold/cancelled/returned orders do not qualify. No causal attribution or verified revenue. SQL/API/browser fixtures cover all exclusions, dedup, merged profiles, masked member names and spreadsheet formulas. Local TypeScript, targeted lint, Go tests and SQL syntax passed; integrated verification pending.
 
 The prior CI spent more than eight minutes in browser installation before application fixtures. Use the pinned headless Chromium shell supported by the installed Playwright CLI and https://playwright.dev/docs/browsers, bound the installation step, and save the version-keyed binary cache immediately after successful install so later application failures do not discard it. Existing browser assertions and database guards remain. Accounting remains 32/56; no seal.
+
+
+### Photo/text retrieval continuation (pending integrated verification)
+
+0204 adds private indexed catalog-photo signatures, bounded transient PNG/JPEG query decoding, text narrowing, conservative visual-similarity matches with unknown abstention, one result per product and source-SHA validation. It is explicitly a local structure/color similarity aid; it does not claim semantic identity or production accuracy. New uploads index opportunistically after existing scan/storage/save; an unavailable index is reported separately without discarding a valid saved upload. Existing stored photos can be indexed through the actual authenticated private object reader.
+
+Owner/admin labelled evaluations record expected-product rank/top-five hit privately per account, without retaining query images or customer text; retries cannot duplicate the test. Added colour/resize/JPEG/unknown fixtures, real SQL boundaries and browser workflows. The isolated verification starts a loopback TLS object fixture that verifies actual SigV4 signatures; Go trusts its generated test CA normally, with no TLS bypass. Original malware-scanner fail-closed tests remain unchanged. Also wired the conversion API flag explicitly in the isolated Go fixture (the Next fixture already enabled its corresponding renderer). All production flags remain unchanged.
+
+Local Go checkout/authz/API tests, TypeScript, targeted ESLint and SQL/PLpgSQL syntax pass. Full database/browser outcomes pending; accounting stays 32/56.
+
+
+### Exact 2c030cf4 evidence: 37/56 accounted, 19 unresolved
+
+Foundation 39968660063 / web job 120465720237 passed the complete new wallet browser journey, overview/waiting privacy/metrics through Workflow, feedback screenshots, groups and interest. Those five tracker rows are now Implemented+Tested. Existing Inbox, studio, saved sequences, video playback, signed website/comments, CRM, response reports, commerce, assignment and growth suites still pass. Courier credential configuration also passed, but its tracker row remains partial because the requested Pathao adapter is missing; the UI accurately says unavailable.
+
+Overall web job stays red on four independent suites: a channel textarea's implicit label, the missing conversion flag in the Go fixture, duplicate financial Activity headings, and ambiguous key row click. The continuation adds explicit textarea labels, enables only the isolated Go conversion fixture, fixes heading ownership, and gives each key name a semantic details button that its lifecycle test uses. Permissions, password checks, one-time secrets and lifecycle assertions remain. No source/build-only feature closure or production action.

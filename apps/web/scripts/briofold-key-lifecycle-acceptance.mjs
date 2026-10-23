@@ -122,7 +122,7 @@ export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,w
   await page.reload();
   assert.equal((await page.content()).includes(firstSecret),false,"raw secret reappeared after reload");
   await realm.getByRole("button",{name:"Sandbox",exact:true}).click();
-  await keyRow().filter({hasText:"Active"}).click();
+  await keyRow().filter({hasText:"Active"}).getByRole("button",{name,exact:true}).click();
   await page.getByRole("dialog",{name:"Details",exact:true}).getByRole("button",{name:"Rotate key",exact:true}).click();
   const change=page.getByRole("dialog",{name:"Confirm credential change",exact:true});
   await change.getByLabel("Current password",{exact:true}).fill(password);
@@ -140,7 +140,7 @@ export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,w
   assert.equal(new Date(next.expires_at).getTime(),new Date(first.expires_at).getTime(),"rotation extended expiry");
   assert.equal(next.secret_digest.trim(),createHash("sha256").update(nextSecret).digest("hex"));
   await copy.getByRole("button",{name:"Done",exact:true}).click();
-  await page.locator(`[data-key-id="${next.id}"][data-key-state="active"]`).click();
+  await page.locator(`[data-key-id="${next.id}"][data-key-state="active"]`).getByRole("button",{name,exact:true}).click();
   await page.getByRole("dialog",{name:"Details",exact:true}).getByRole("button",{name:"Revoke key",exact:true}).click();
   await change.getByLabel("Current password",{exact:true}).fill(password);
   await change.getByRole("button",{name:"Revoke key",exact:true}).click();
@@ -171,7 +171,7 @@ export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,w
   assert.equal(liveKeys.length,1,"Live create duplicated credential");
   assert.equal(liveKeys[0].secret_digest.trim(),createHash("sha256").update(liveSecret).digest("hex"));
   await copy.getByRole("button",{name:"Done",exact:true}).click();
-  await page.locator(`[data-key-id="${liveKeys[0].id}"][data-key-state="active"]`).click();
+  await page.locator(`[data-key-id="${liveKeys[0].id}"][data-key-state="active"]`).getByRole("button",{name:name+" Live",exact:true}).click();
   await page.getByRole("dialog",{name:"Details",exact:true}).getByRole("button",{name:"Revoke key",exact:true}).click();
   await change.getByLabel("Current password",{exact:true}).fill(password);
   await change.getByRole("button",{name:"Revoke key",exact:true}).click();

@@ -55,7 +55,13 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			fail(w, 422, "INVALID_FILTER")
 			return
 		}
-		if r.URL.Query().Get("resource") == "assignments" {
+		if r.URL.Query().Get("resource") == "photo-metrics" {
+			if os.Getenv("BRIOFOLD_PRODUCT_PHOTOS_ENABLED") != "true" {
+				fail(w, 503, "PRODUCT_PHOTOS_UNAVAILABLE")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_photo_metrics($1::uuid,$2,$3::uuid)", ws, realm, actor.UserID).Scan(&raw)
+		} else if r.URL.Query().Get("resource") == "assignments" {
 			if os.Getenv("BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED") != "true" {
 				fail(w, 503, "ASSIGNMENTS_UNAVAILABLE")
 				return
@@ -125,6 +131,9 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			}
 		case "media-read":
 			s.commerceMediaRead(w, r, ws, realm, actor.UserID, cmd.Body)
+			return
+		case "photo-search", "photo-evaluate", "photo-index":
+			s.commercePhotoAction(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Action, cmd.Body)
 			return
 		case "media-upload":
 			s.commerceMediaUpload(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Body)
@@ -256,6 +265,17 @@ func (s *Service) commerceMediaUpload(w http.ResponseWriter, r *http.Request, ws
 	if err != nil {
 		inboxWorkFailure(w, err)
 		return
+	}
+	if os.Getenv("BRIOFOLD_PRODUCT_PHOTOS_ENABLED") == "true" {
+		indexed := false
+		if signature, featureErr := productPhotoFeatures(data); featureErr == nil {
+			_ = s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_photo_index($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7::jsonb)", ws, realm, actor, key, hash, signature.Hash, photoColorsJSON(signature)).Scan(&indexed)
+		}
+		var result map[string]any
+		if json.Unmarshal(raw, &result) == nil {
+			result["photo_indexed"] = indexed
+			raw, _ = json.Marshal(result)
+		}
 	}
 	write(w, 200, json.RawMessage(raw))
 }
