@@ -24,6 +24,7 @@ import {BriofoldGrowthReports} from "./briofold-growth-reports";
 import {GrowthOperationsPage} from "./growth-operations-page";
 import {BriofoldOrderReport} from "./briofold-order-report";
 import {BriofoldUnifiedActivity} from "./briofold-unified-activity";
+import {HelpVideos} from "./help-videos";
 import {TeamGroups} from "./team-groups";
 import {BrowserDevicePreferences} from "./browser-device-preferences";
 
@@ -64,6 +65,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
   :kind==="account-devices"
    ?<BrowserDevicePreferences bn={locale==="bn"}/>
+  :kind==="help-videos"
+   ?<HelpVideos key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :kind==="team-groups"
    ?<TeamGroups key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :root==="settings"&&view[0]==="activity"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"
@@ -86,7 +89,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   :service==="ai"&&section==="comments"
    ?<CommentAutomation key={user.id+":"+workspace.id} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}/>
   :root==="orders"
-   ?<CommercePage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view.length===2&&view[0]==="products"?"products-sync":view[0]??""} environment={paymentContext?.environment??"live"}/>
+   ?<CommercePage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} financeEnabled={workspace.mode!=="ai"} view={view.length===2&&view[0]==="products"?"products-sync":view[0]??""} environment={paymentContext?.environment??"live"}/>
   :root==="customers"&&["","leads","follow-ups"].includes(view[0]??"")
    ?<CustomerCRMPage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} financeEnabled={workspace.mode!=="ai"} environment={paymentContext?.environment??"live"}/>
   :root==="customers"&&(["broadcasts","bookings","posts"].includes(view[0]??"")||campaignPostRoute)&&process.env.BRIOFOLD_GROWTH_OPERATIONS_ENABLED==="true"

@@ -60,7 +60,9 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 	var raw []byte
 	if r.Method == "GET" {
 		target := r.PathValue("targetID")
-		if resource == "groups" {
+		if resource == "help-videos" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_help_videos_read($1::uuid,$2::uuid,$3)", ws, actor.UserID, r.URL.Query().Get("kind")).Scan(&raw)
+		} else if resource == "groups" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_team_groups_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
 		} else if resource == "help" && target != "" {
 			if !uuidPattern.MatchString(target) {
@@ -82,7 +84,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		target := r.PathValue("targetID")
-		if s.Auth.GranularGrants && resource != "help" {
+		if s.Auth.GranularGrants && resource != "help" && resource != "help-videos" {
 			cap := "members:manage"
 			if resource == "settings" {
 				cap = "workspace:settings"
@@ -110,6 +112,12 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch resource {
+		case "help-videos":
+			id, _ := b["id"].(string)
+			if !uuidPattern.MatchString(id) {
+				fail(w, 422, "INVALID_TUTORIAL")
+				return
+			}
 		case "groups":
 			act, _ := b["action"].(string)
 			payload, ok := b["body"].(map[string]any)
@@ -216,7 +224,9 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		returnCap, _ := b["_return_token"].(string)
 		delete(b, "_return_token")
 		data, _ := json.Marshal(b)
-		if resource == "help" {
+		if resource == "help-videos" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_help_video_progress($1::uuid,$2::uuid,$3::jsonb)", ws, actor.UserID, string(data)).Scan(&raw)
+		} else if resource == "help" {
 			var ready bool
 			if e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT to_regprocedure('public.briofold_feedback_write(uuid,uuid,uuid,jsonb)') IS NOT NULL").Scan(&ready); e != nil {
 				fail(w, 503, "SUPPORT_UNAVAILABLE")

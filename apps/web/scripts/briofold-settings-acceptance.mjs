@@ -2,6 +2,8 @@ import {readFile} from "node:fs/promises";
 import postgres from "postgres";
 import {spawn} from "node:child_process";
 import {chromium} from "@playwright/test";
+import {runHelpVideos} from "./briofold-help-videos-acceptance.mjs";
+import {runInterestAcceptance} from "./briofold-interest-acceptance.mjs";
 import {runTeamGroups} from "./briofold-team-groups-acceptance.mjs";
 import {runFeedbackAcceptance} from "./briofold-feedback-acceptance.mjs";
 import {runSavedReplySequences} from "./briofold-saved-reply-sequences-acceptance.mjs";
@@ -84,6 +86,8 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0196_briofold_team_groups.sql");
   await apply("0197_briofold_saved_reply_sequences.sql");
   await apply("0198_briofold_feedback_screenshots.sql");
+  await apply("0199_briofold_unconverted_interest.sql");
+  await apply("0200_briofold_help_videos.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const api=spawn(apiBin,[],{env:{...apiEnv,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
@@ -101,7 +105,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  try{
   await ready(apiOrigin+"/healthz",200,api);
   server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
-   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
   });
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
@@ -120,6 +124,8 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runSavedReplySequences",async()=>{await runSavedReplySequences({origin,browser,control,sessions});});
   await check("runFeedbackAcceptance",async()=>{await runFeedbackAcceptance({origin,browser,control,sessions});});
   await check("runTeamGroups",async()=>{await runTeamGroups({origin,browser,control,sessions});});
+  await check("runInterestAcceptance",async()=>{await runInterestAcceptance({origin,browser,control,sessions});});
+  await check("runHelpVideos",async()=>{await runHelpVideos({origin,browser,control,sessions});});
   await check("runBriofoldChannelExtensions",async()=>{await runBriofoldChannelExtensions({origin,browser,control,sessions,apiOrigin,apiBin,apiEnv});});
   await check("runBriofoldCustomers",async()=>{await runBriofoldCustomers({origin,browser,control,sessions,apiOrigin});});
   await check("runBriofoldCRMParity",async()=>{await runBriofoldCRMParity({origin,browser,control,sessions});});
