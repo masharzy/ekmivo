@@ -110,6 +110,7 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   assert.equal(await p.getByRole('heading',{level:1}).count(),1,'unified notification page has duplicate primary headings');
   await p.getByRole('button',{name:'Inbox & AI',exact:true}).click();
   await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('handover');
+  await p.waitForFunction(()=>{const rows=[...document.querySelectorAll('article strong')];return rows.length===1&&rows[0].textContent==='Human handover';});
   await p.getByText('Alert customer',{exact:true}).waitFor();
   assert.equal(await p.getByText('Response overdue',{exact:true}).count(),0,'handover filter included SLA notices');
   await p.getByRole('checkbox',{name:'Unread only',exact:true}).check();
@@ -118,7 +119,7 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   const handed=(await db`SELECT briofold_inbox_alert_read(${workspace},${viewer},0,'','handover',true) data`)[0].data.items;
   assert.equal(handed.length,1,'owner marking a shared handover changed colleague read state');
   await p.getByRole('checkbox',{name:'Unread only',exact:true}).uncheck();await p.getByText('Alert customer',{exact:true}).waitFor();
-  await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('sla');await p.getByText('Alert customer',{exact:true}).waitFor();
+  await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('sla');await p.waitForFunction(()=>{const rows=[...document.querySelectorAll('article strong')];return rows.length===1&&rows[0].textContent==='Response overdue';});
   await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('ai-review');await p.getByText('No notifications match.',{exact:true}).waitFor();
   // Private fictional notices exercise the real canonical server action's
   // pagination without triggering a provider or customer message.

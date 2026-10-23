@@ -9,6 +9,7 @@ export function UnifiedSettingsIndex({locale,mode}:{locale:"en"|"bn";mode:Busine
    <h1 id="unified-settings-title">{bn?"সেটিংস":"Settings"}</h1>
    <p>{bn?"ব্যবসার প্রয়োজনীয় সংযোগ ও পছন্দ পরিচালনা করুন।":"Manage your business connections and preferences."}</p>
   </header>
+  <p><Link href="/setup/checklist">{bn?"স্টোর সেটআপ গাইড":"Store setup guide"}</Link></p>
   <div className={styles.groups}>{unifiedSettings.map(group=>{
    const items=group.items.filter(item=>enabledUnifiedService(mode,item.service)&&
     (item.slug!=="activity"||mode!=="ai"||process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true")&&

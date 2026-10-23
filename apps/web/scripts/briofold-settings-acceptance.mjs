@@ -12,6 +12,7 @@ import {runHelpVideos} from "./briofold-help-videos-acceptance.mjs";
 import {runInterestAcceptance} from "./briofold-interest-acceptance.mjs";
 import {runTeamGroups} from "./briofold-team-groups-acceptance.mjs";
 import {runFeedbackAcceptance} from "./briofold-feedback-acceptance.mjs";
+import {runSetupChecklist} from "./briofold-setup-checklist-acceptance.mjs";
 import {runSavedReplySequences} from "./briofold-saved-reply-sequences-acceptance.mjs";
 import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
 import {runBriofoldOnboardingBrowser} from "./briofold-onboarding-browser.mjs";
@@ -128,6 +129,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   const check=async(name,run)=>{try{await run();}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
   await check("runBriofoldSettingsBrowser",async()=>{await runBriofoldSettingsBrowser({origin,browser,control,sessions});});
   await check("runWalletBrowser",async()=>{await runWalletBrowser({control,sessions,origin,browser});});
+  await check("runSetupChecklist",async()=>{await runSetupChecklist({origin,browser,control,sessions});});
   await check("runBriofoldOnboardingBrowser",async()=>{await runBriofoldOnboardingBrowser({origin,browser,control,sessions});});
   await check("runBriofoldInboxAccess",async()=>{await runBriofoldInboxAccess({origin,browser,control,sessions});});
   await check("runChannelPolicies",async()=>{await runChannelPolicies({control,sessions,origin,browser});});

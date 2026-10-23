@@ -4,6 +4,12 @@
 
 **Assessment: Phase 10 FULL CODE SEAL = OPEN. Production cutover = NOT AUTHORIZED.** Physical/real-provider testing belongs to the owner, outside the code-level gate. But missing *code* and unintegrated migrations/branches cannot be waived as “manual testing.” Do not relabel the phase complete because its existing baseline CI is green.
 
+## Current continuation — 45/56 accounted, 11 unresolved
+
+[Foundation 39976319680](https://github.com/masharzy/ekmivo/actions/runs/39976319680), exact source `5cf9b36e9981580fadc1de2aca07f1372ea0405c`, passes channel policy SQL/Go/browser (12 responsive cases) and real private audio bytes plus native Chromium playback. Channel index/detail and Inbox media rows advance: **44 Implemented+Tested + 1 honest external block = 45/56 accounted; 11 unresolved**. Go, Kotlin and production image jobs pass. Every other suite passes except the new notification filter test, which saw the previous unfiltered list while the server action was debounced. It now waits for the actual filtered kind before asserting one row; privacy and count assertions remain.
+
+The new post-onboarding `/setup/checklist` reads current authorized saved configuration, links actual settings, covers product modes and provides a pre-live review without changing signup continuation, sending messages, booking shipments or enabling billing. Its new role/scope/responsive browser suite awaits integrated CI. Full seal remains OPEN. Earlier counts below are historical checkpoints.
+
 ## Latest verified continuation — 42/56 accounted, 14 unresolved (2026-10-23)
 
 [Foundation 39973112138](https://github.com/masharzy/ekmivo/actions/runs/39973112138) on `c5bdb164b78c6c8875f05490f91e9ff2f9bfa0ab` passed Go, Kotlin and runtime/migration image jobs. The web job passed every independent suite except `runChannelPolicies`: its deep link already opens Conversation tools, and the test clicked the summary closed before filling Handover reason. No channel row is closed until the corrected interaction completes the suite.
