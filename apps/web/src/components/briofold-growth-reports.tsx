@@ -81,6 +81,10 @@ export async function BriofoldGrowthReports({workspaceId,actorId,locale,environm
 }){
  const snapshot=await readSnapshot(workspaceId,actorId,environment,mode);
  const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en;
+ const currentLeadTotal=snapshot?.customers?.find(item=>item.name==="total")?.value;
+ const currentWonTotal=snapshot?.customers?.find(item=>item.name==="won")?.value;
+ const stageRate=typeof currentLeadTotal==="number"&&currentLeadTotal>0&&typeof currentWonTotal==="number"&&currentWonTotal<=currentLeadTotal
+  ?(100*currentWonTotal/currentLeadTotal).toLocaleString(bn?"bn-BD":"en-GB",{maximumFractionDigits:1})+"%":null;
  const sections=focus==="ai"?[
   {key:"inbox",title:t("Conversations","কথোপকথন"),href:"/inbox",data:snapshot?.inbox}
  ]:[
@@ -104,7 +108,14 @@ export async function BriofoldGrowthReports({workspaceId,actorId,locale,environm
    <div className={styles.sectionHead}><h2 id={`growth-${section.key}`}>{section.title}</h2><Link href={section.href}>{t("View records","তথ্য দেখুন")}</Link></div>
    {section.data===null||section.data===undefined?<p role="alert" className={styles.alert}>{t("This data source is unavailable; counts cannot be verified.","এই তথ্যের উৎস পাওয়া যাচ্ছে না; হিসাব যাচাই করা যাচ্ছে না।")}</p>
    :<dl className={styles.metrics}>{section.data.map(item=><div key={item.name}><dt>{names[item.name]?.[bn?1:0]??item.name}</dt><dd>{new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(item.value)}</dd></div>)}</dl>}
-  </section>)}</div>
+  </section>)}
+  {focus!=="ai"&&<section className={styles.panel} aria-label={t("Lead stage conversion","লিড স্টেজ কনভার্সন")}>
+   <h2>{t("Lead stage conversion","লিড স্টেজ কনভার্সন")}</h2>
+   {stageRate===null?<p role="status">{t("No verifiable conversion rate for the current profiles.","বর্তমান প্রোফাইলে যাচাইযোগ্য কনভার্সন হার নেই।")}</p>
+   :<><p><strong>{stageRate}</strong> · {t("Won-stage leads among all current leads","বর্তমান সব লিডের মধ্যে সফল স্টেজের লিড")}</p>
+   <p>{new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(currentWonTotal??0)} / {new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(currentLeadTotal??0)}</p></>}
+   <p>{t("A current CRM stage ratio, not attributed marketing conversions or verified payment revenue.","এটি CRM-এর বর্তমান স্টেজের অনুপাত; প্রচারণা থেকে বিক্রির প্রমাণ বা যাচাইকৃত পেমেন্টের আয় নয়।")}</p>
+  </section>}</div>
   {mode!=="commerce"&&process.env.BRIOFOLD_GROWTH_ANALYTICS_ENABLED==="true"&&<BriofoldResponseReport workspaceId={workspaceId} actorId={actorId} environment={environment} locale={locale}/>}
   <aside className={styles.note}>
    <p>{t("Orders are workflow counts—not verified revenue. Payment totals remain solely in the authoritative payment report.","অর্ডারগুলো কাজের অবস্থার হিসাব, যাচাইকৃত আয় নয়। প্রকৃত পেমেন্টের হিসাব শুধু মূল পেমেন্ট রিপোর্টে আছে।")}</p>

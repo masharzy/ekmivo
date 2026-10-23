@@ -107,6 +107,15 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   assert.equal((await page.goto(origin+'/customers/bookings')).status(),200);
   await page.getByRole('heading',{name:'Bookings & availability'}).waitFor();
   await page.getByText('Fictional consultation room').first().waitFor();
+  assert.equal((await page.goto(origin+'/customers/campaigns/posts')).status(),200,
+   'nested canonical campaign post route did not resolve');
+  await page.getByRole('heading',{name:'Campaign posts',exact:true}).waitFor();
+  await page.getByText('Fictional social post',{exact:true}).waitFor();
+  await page.getByRole('link',{name:'Review post/photo → product mappings and corrections',exact:true}).click();
+  await page.waitForURL('**/orders/products/sync');
+  await page.getByText('Import / sync catalog',{exact:true}).waitFor();
+  assert.equal((await page.goto(origin+'/customers/posts')).status(),200,'earlier post bookmark broke');
+  await page.getByText('Fictional social post',{exact:true}).waitFor();
   assert.equal((await ctx.request.get(origin+`/api/go/workspaces/${store}/growth?environment=live&kind=broadcast`)).status(),200);
   const audienceUrl=origin+`/api/go/workspaces/${store}/growth?environment=live&kind=audience&channel=email&audience=all`;
   const safePreview=await ctx.request.get(audienceUrl);
@@ -185,7 +194,7 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   await page.goto(origin+'/customers/broadcasts');
   await page.getByRole('button',{name:'Review consent evidence'}).click();
   await page.getByText('Channel proof missing:').first().waitFor();
-  let count=0;for(const lang of ['en','bn']){await ctx.addCookies([{name:'ekmivo-locale',value:lang,url:origin,sameSite:'Lax'}]);for(const theme of ['light','dark']){await ctx.addCookies([{name:'ekmivo-theme',value:theme,url:origin,sameSite:'Lax'}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});for(const [path,heading] of [['broadcasts',lang==='bn'?'ব্রডকাস্ট ড্রাফট':'Broadcast drafts'],['posts',lang==='bn'?'ক্যাম্পেইন পোস্ট':'Campaign posts'],['bookings',lang==='bn'?'বুকিং ও সময়সূচি':'Bookings & availability']]){await page.goto(origin+'/customers/'+path);await page.getByRole('heading',{name:heading,exact:true}).waitFor();assert.equal(await page.locator('html').getAttribute('data-theme'),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`growth overflow ${lang}/${theme}/${width}/${path}`);count++;}}}}
+  let count=0;for(const lang of ['en','bn']){await ctx.addCookies([{name:'ekmivo-locale',value:lang,url:origin,sameSite:'Lax'}]);for(const theme of ['light','dark']){await ctx.addCookies([{name:'ekmivo-theme',value:theme,url:origin,sameSite:'Lax'}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});for(const [path,heading] of [['broadcasts',lang==='bn'?'ব্রডকাস্ট ড্রাফট':'Broadcast drafts'],['campaigns/posts',lang==='bn'?'ক্যাম্পেইন পোস্ট':'Campaign posts'],['bookings',lang==='bn'?'বুকিং ও সময়সূচি':'Bookings & availability']]){await page.goto(origin+'/customers/'+path);await page.getByRole('heading',{name:heading,exact:true}).waitFor();assert.equal(await page.locator('html').getAttribute('data-theme'),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`growth overflow ${lang}/${theme}/${width}/${path}`);count++;}}}}
   console.log('Phase10 growth operations responsive cases PASS:',count);
   console.log('Phase10 growth operations PASS: CONTROL tenant/realm/RBAC, idempotency, consent-safe no-send drafts, editorial plan, booking slot conflicts and review, operational aggregates, role-safe CSV export, real Go/Next/browser and viewer denial. No provider delivery claimed.');
  }finally{if(ctx)await ctx.close();if(viewerCtx)await viewerCtx.close();await db.end({timeout:3});}

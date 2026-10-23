@@ -94,8 +94,18 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   // identity, cookie, bearer credential or request/response body.
   const activityCorrelation=randomBytes(12).toString("hex");
   const activityRoute="GET /v1/workspaces/{workspaceID}/operations/payments";
-  await finance.unsafe("SELECT pg58_record_api($1::uuid,'live','GET',$2,200,14,$3)",
-   [workspaceId,activityRoute,activityCorrelation]);
+  const recordActivity=(scope)=>finance.begin(async tx=>{
+   // Match the production finance-reader isolation boundary. The recorder
+   // must reject a missing or mismatched transaction scope; never disable it
+   // to simplify CI fixtures.
+   await tx.unsafe("SET LOCAL ROLE ekmivo_finance_reader");
+   await tx.unsafe("SELECT set_config('ekmivo.workspace_id',$1,true),set_config('ekmivo.environment','live',true)",[scope]);
+   return tx.unsafe("SELECT pg58_record_api($1::uuid,'live','GET',$2,200,14,$3)",
+    [workspaceId,activityRoute,activityCorrelation]);
+  });
+  await assert.rejects(()=>recordActivity(randomUUID()),error=>error.code==="42501",
+   "API diagnostic writer accepted a foreign financial transaction scope");
+  await recordActivity(workspaceId);
   const activityEndpoint=`${base}/activity/api?environment=live&q=${activityCorrelation}`;
   const activityRead=await context.request.get(activityEndpoint);
   assert.equal(activityRead.status(),200,`owner finance activity source failed: ${await activityRead.text()}`);

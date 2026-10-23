@@ -128,6 +128,25 @@ test("Website chat nested Channel route preserves its Store binding and AI-only 
  assert.match(source("components/unified-settings-index.tsx"),/item\.slug==="website"\?"\/settings\/channels\/website"/);
 });
 
+test("nested campaign posts reuse the authorized editorial source without provider publishing",()=>{
+ for(const mode of ["ai","both"]){
+  const nested=navigation.unifiedDestination(mode,"customers",["campaigns","posts"]);
+  assert.equal(nested?.section,"posts");assert.equal(nested?.service,"ai");
+  assert.equal(navigation.unifiedDestination(mode,"customers",["posts"])?.section,"posts");
+ }
+ for(const mode of ["commerce","off"])
+  assert.equal(navigation.unifiedDestination(mode,"customers",["campaigns","posts"]),null);
+ for(const unsafe of ["__proto__","send","other","../posts"])
+  assert.equal(navigation.unifiedDestination("both","customers",["campaigns",unsafe]),null);
+ assert.equal(navigation.unifiedDestination("both","customers",["campaigns","posts","extra"]),null);
+ assert.equal(navigation.unifiedSectionHref("posts","ai"),"/customers/campaigns/posts");
+ const entry=source("components/unified-merchant-route.tsx");
+ assert.match(entry,/campaignPostRoute=root==="customers"/);
+ assert.match(entry,/view\[0\]==="posts"\|\|campaignPostRoute\?"post"/);
+ const editor=source("components/growth-operations.tsx");
+ assert.match(editor,/Editorial state \(never sends\)/);
+});
+
 test("canonical resolver rejects inherited names and unknown routes for every business mode",()=>{
  const invalid=["constructor","__proto__","prototype","toString","valueOf","hasOwnProperty","missing"];
  for(const mode of ["ai","commerce","both","off"]){

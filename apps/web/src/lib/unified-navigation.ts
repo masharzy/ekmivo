@@ -80,7 +80,7 @@ export const unifiedSectionPaths:Partial<Record<SectionKey,string>>={
  overview:"/dashboard",inbox:"/inbox",comments:"/inbox/comments","saved-replies":"/inbox/saved-replies",tickets:"/inbox/tickets",
  orders:"/orders",products:"/orders/products",inventory:"/orders/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/orders/coupons",
  transactions:"/payments", "payment-links":"/payments/links",requests:"/payments/links",invoices:"/invoices",refunds:"/payments/refunds",incoming:"/sms-data",reconciliation:"/payments/reconciliation",
- customers:"/customers",contacts:"/customers",leads:"/customers/leads","follow-ups":"/customers/follow-ups",broadcasts:"/customers/broadcasts",bookings:"/customers/bookings",posts:"/customers/posts",
+ customers:"/customers",contacts:"/customers",leads:"/customers/leads","follow-ups":"/customers/follow-ups",broadcasts:"/customers/broadcasts",bookings:"/customers/bookings",posts:"/customers/campaigns/posts",
  reports:"/reports",settings:"/settings",gateways:"/settings/payment-methods",devices:"/settings/devices",
  store:"/settings/business","checkout-themes":"/settings/checkout",developers:"/settings/api-keys",webhooks:"/settings/webhooks",
  integrations:"/settings/integrations",events:"/settings/activity",team:"/settings/team",billing:"/settings/billing",
@@ -110,6 +110,10 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  // ticket source. It must not be mistaken for a financial record detail.
  if(root==="settings"&&view.length===2&&view[0]==="help"&&view[1]==="feedback")
   return {section:"help",service:mode==="ai"?"ai":"payments"};
+ // The campaign post editor has a canonical nested destination as well as
+ // the pre-existing /customers/posts entry. Neither path sends or publishes.
+ if(root==="customers"&&view.length===2&&view[0]==="campaigns"&&view[1]==="posts")
+  return mode==="commerce"?null:{section:"posts",service:"ai"};
  // Catalog sync is a real subview, not an arbitrary two-part financial record.
  if(root==="orders"&&view.length===2&&view[0]==="products"&&view[1]==="sync")
   return {section:"products",service:mode==="ai"?"ai":"payments"};

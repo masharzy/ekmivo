@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import {useCallback,useEffect,useRef,useState} from "react";
 import styles from "./growth-operations.module.css";
 
@@ -11,7 +12,7 @@ type Pending={action:string;body:Record<string,unknown>;key:string;time:number};
 type CampaignDraft=Pick<Campaign,"title"|"body"|"audience"|"time_zone"|"status">&{planned_at:string};
 const emptyCampaign:CampaignDraft={title:"",body:"",audience:"all",time_zone:"Asia/Dhaka",status:"draft",planned_at:""};
 function localInputDate(iso:string){const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60_000).toISOString().slice(0,16);}
-export function GrowthOperations({workspaceId,actorId,bn,environment,kind,initial,consentEnabled}:{workspaceId:string;actorId:string;bn:boolean;environment:"live"|"sandbox";kind:"broadcast"|"post"|"booking";initial:GrowthOperationsData|null;consentEnabled:boolean}){
+export function GrowthOperations({workspaceId,actorId,bn,environment,kind,initial,consentEnabled,commerceEnabled=false}:{workspaceId:string;actorId:string;bn:boolean;environment:"live"|"sandbox";kind:"broadcast"|"post"|"booking";initial:GrowthOperationsData|null;consentEnabled:boolean;commerceEnabled?:boolean}){
  const t=(en:string,be:string)=>bn?be:en;
  const [data,setData]=useState(initial),[error,setError]=useState(initial?"":t("This feature is unavailable until the growth migration is deployed.","গ্রোথ মাইগ্রেশন চালু না হওয়া পর্যন্ত এই ফিচার পাওয়া যাবে না।")),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
  const [editing,setEditing]=useState<Campaign|null>(null),[campaign,setCampaign]=useState(emptyCampaign),[resourceName,setResourceName]=useState(""),[resource,setResource]=useState(""),[customer,setCustomer]=useState(""),[summary,setSummary]=useState(""),[starts,setStarts]=useState(""),[ends,setEnds]=useState("");
@@ -87,6 +88,7 @@ export function GrowthOperations({workspaceId,actorId,bn,environment,kind,initia
  return <section className={styles.root} aria-busy={busy}>
   <header className={styles.header}><div><p className={styles.kicker}>{t("Single Store · Growth","একক স্টোর · গ্রোথ")}</p><h1>{isBooking?t("Bookings & availability","বুকিং ও সময়সূচি"):kind==="post"?t("Campaign posts","ক্যাম্পেইন পোস্ট"):t("Broadcast drafts","ব্রডকাস্ট ড্রাফট")}</h1>
   <p>{isBooking?t("Manage internal appointments with conflict protection. No external calendar or notification is connected.","অভ্যন্তরীণ অ্যাপয়েন্টমেন্ট পরিচালনা করুন; একই সময়ের বুকিং প্রতিরোধ করা হবে। বাইরের ক্যালেন্ডার বা নোটিফিকেশন সংযুক্ত নয়।"):t("Draft and plan content only. Verified marketing opt-in and an approved delivery provider are required before any customer send.","শুধু কনটেন্টের খসড়া ও পরিকল্পনা করুন। গ্রাহককে পাঠানোর আগে যাচাইকৃত সম্মতি ও অনুমোদিত প্রোভাইডার লাগবে।")}</p></div><button type="button" onClick={()=>void refresh().catch(()=>setError(t("Unable to reload.","আবার লোড হচ্ছে না।")))} disabled={busy}>{t("Refresh","রিফ্রেশ")}</button></header>
+  {kind==="post"&&commerceEnabled&&<p><Link href="/orders/products/sync">{t("Review post/photo → product mappings and corrections","পোস্ট/ছবি থেকে পণ্যের সংযোগ ও সংশোধন দেখুন")}</Link> · {t("Mapping does not publish a campaign.","পণ্যের সংযোগ দিলেই ক্যাম্পেইন প্রকাশ হয় না।")}</p>}
   {!isBooking&&<div className={styles.notice} role="status"><strong>{t("Sending is disabled","পাঠানো বন্ধ আছে")}</strong><p>{t("Potential matching CRM profiles:","সম্ভাব্য CRM প্রোফাইল:")} {data?.potential_audience??"—"}. {t("A profile preference or verified identity does not prove provider marketing consent. No send queue is activated.","প্রোফাইলের পছন্দ বা পরিচয় যাচাই প্রোভাইডারের প্রচারণা-সম্মতির প্রমাণ নয়। কোনো সেন্ড কিউ চালু নেই।")}</p></div>}
   {!isBooking&&consentEnabled&&data?.can_manage&&<div className={styles.panel}>
    <h2>{t("Channel consent & suppression review","চ্যানেলের সম্মতি ও অপ্ট-আউট যাচাই")}</h2>

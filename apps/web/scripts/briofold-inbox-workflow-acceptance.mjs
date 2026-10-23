@@ -77,6 +77,8 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   const list=async filters=>(await db`SELECT inbox_page(${workspace},'live',${actor},NULL,NULL,${db.json({reader_kind:'user',...filters})}) AS data`)[0].data.items;
   assert.equal((await list({queue:'mine'})).length,1);assert.equal((await list({queue:'unassigned'})).length,0);
   assert.equal((await list({queue:'attention'})).length,1);assert.equal((await list({queue:'resolved'})).length,0);
+  assert.equal((await list({queue:'unread'})).length,1,'unread queue omitted a not-yet-read inbound message');
+  assert.equal((await list({queue:'waiting'})).length,1,'waiting queue omitted the latest customer reply');
   assert.equal((await list({q:'complaint'})).length,1,'message content search missed conversation');assert.equal((await list({channel:'ig'})).length,0);
   assert.equal((await list({channel:'web'})).length,0,'website filter admitted Messenger conversations');
   const activity=(await db`SELECT last_activity_at FROM inbox_threads WHERE id=${thread}`)[0].last_activity_at;
@@ -135,6 +137,10 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await page.keyboard.press('End');
   assert.equal(await page.locator(`[data-thread-id="${thread}"]`).evaluate(el=>el===document.activeElement),true,'End did not focus the last conversation');
   await page.getByLabel('Conversation queue',{exact:true}).selectOption('pending');
+  await page.getByText('No conversations found.',{exact:true}).waitFor();
+  await page.getByLabel('Conversation queue',{exact:true}).selectOption('waiting');
+  await page.locator(`[data-thread-id="${thread}"]`).waitFor();
+  await page.getByLabel('Conversation queue',{exact:true}).selectOption('resolved');
   await page.getByText('No conversations found.',{exact:true}).waitFor();
   await page.getByLabel('Conversation queue',{exact:true}).selectOption('all');
   await page.locator(`[data-thread-id="${thread}"]`).waitFor();

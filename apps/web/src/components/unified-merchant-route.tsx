@@ -50,6 +50,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  if(setup&&setup!=="complete")redirect("/setup");
  const destination=unifiedDestination(workspace.mode,root,view);
  if(!destination)notFound();
+ const campaignPostRoute=root==="customers"&&view.length===2&&view[0]==="campaigns"&&view[1]==="posts";
  if(root==="reports"&&view[0]==="orders"&&process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED!=="true")notFound();
  if(root==="settings"&&view[0]==="activity"&&workspace.mode==="ai"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED!=="true")notFound();
  const {section,service,kind,detailId}=destination;
@@ -81,9 +82,10 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
    ?<CommercePage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view.length===2&&view[0]==="products"?"products-sync":view[0]??""} environment={paymentContext?.environment??"live"}/>
   :root==="customers"&&["","leads","follow-ups"].includes(view[0]??"")
    ?<CustomerCRMPage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} financeEnabled={workspace.mode!=="ai"} environment={paymentContext?.environment??"live"}/>
-  :root==="customers"&&["broadcasts","bookings","posts"].includes(view[0]??"")&&process.env.BRIOFOLD_GROWTH_OPERATIONS_ENABLED==="true"
+  :root==="customers"&&(["broadcasts","bookings","posts"].includes(view[0]??"")||campaignPostRoute)&&process.env.BRIOFOLD_GROWTH_OPERATIONS_ENABLED==="true"
    ?<GrowthOperationsPage workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}
-     environment={paymentContext?.environment??"live"} kind={view[0]==="bookings"?"booking":view[0]==="posts"?"post":"broadcast"}/>
+     environment={paymentContext?.environment??"live"} commerceEnabled={workspace.mode!=="ai"&&["owner","admin"].includes(workspace.role)}
+     kind={view[0]==="bookings"?"booking":view[0]==="posts"||campaignPostRoute?"post":"broadcast"}/>
   :kind==="business-profile"
    ?<StoreProfileEditor key={workspace.id} locale={locale} workspaceId={workspace.id} canManage={workspace.role==="owner"||workspace.role==="admin"}/>
   :service==="ai"&&(section==="saved-replies"||section==="tickets")

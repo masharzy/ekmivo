@@ -29,12 +29,26 @@ export async function runBriofoldResponseReport({control,sessions,origin,browser
   assert.equal(report.people[0].id,owner);assert.equal(report.people[0].open,1);assert.equal(report.people[0].overdue,1);
   assert.deepEqual((await read(viewer)).people,[]);assert.equal((await read(viewer)).can_view_people,false);
   assert.equal((await read(owner,store,'sandbox')).totals.conversations,0);assert.equal((await read(owner,store,'sandbox')).totals.average_seconds,null,'empty source became a fake zero latency');
+  await db`INSERT INTO briofold_customers(workspace_id,environment,name,stage) VALUES
+   (${store},'live','Won stage fixture one','won'),(${store},'live','Won stage fixture two','won'),
+   (${store},'live','Qualified stage fixture','qualified'),(${store},'live','New stage fixture','new')`;
+  const growth=async(realm='live',who=owner,scope=store)=>(await db`SELECT briofold_growth_snapshot(${scope},${realm},${who}) data`)[0].data;
+  assert.equal(Number((await growth()).customers.total),4);
+  assert.equal(Number((await growth()).customers.won),2);
+  assert.equal(Number((await growth()).customers.qualified),1);
+  assert.equal(Number((await growth('sandbox')).customers.total),0,'lead-stage conversion denominator crossed realms');
+  assert.equal(Number((await growth('live',viewer)).customers.won),2,'stage aggregate leaked or changed for viewer');
+  await assert.rejects(()=>growth('live',owner,foreign),e=>e.code==='42501');
   await assert.rejects(()=>read(owner,foreign),e=>e.code==='42501');await assert.rejects(()=>read(owner,store,'invalid'),e=>e.code==='22023');
   for(const role of ['ekmivo_financial_runtime','ekmivo_financial_projection'])assert.equal((await db`SELECT has_table_privilege(${role},'inbox_messages','SELECT') ok`)[0].ok,false);
   const authenticated=async(token,user)=>{const c=await browser.newContext();await c.addCookies([{name:'ekmivo-session',value:token,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:user+':'+store,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);return c;};
   context=await authenticated(sessions.owner,owner);viewerContext=await authenticated(sessions.viewer,viewer);
   const page=await context.newPage();page.setDefaultNavigationTimeout(90000);
   await page.goto(origin+'/reports');const region=page.getByRole('region',{name:'Response time and team workload',exact:true});await region.waitFor();
+  const conversion=page.getByRole('region',{name:'Lead stage conversion',exact:true});
+  await conversion.getByText('50%',{exact:false}).waitFor();
+  await conversion.getByText('2 / 4',{exact:true}).waitFor();
+  await conversion.getByText('A current CRM stage ratio, not attributed marketing conversions or verified payment revenue.',{exact:true}).waitFor();
   assert.equal(await region.getByRole('alert').count(),0);
   assert.equal(await region.locator('dl div').filter({has:page.getByText('Average first response (seconds)',{exact:true})}).locator('dd').innerText(),'360');
   await region.getByRole('heading',{name:'Current team workload (up to 50 members)',exact:true}).waitFor();
@@ -47,6 +61,6 @@ export async function runBriofoldResponseReport({control,sessions,origin,browser
   assert.equal(cases,16);
   await db`INSERT INTO pg13_member_grants(workspace_id,user_id,capability,allowed) VALUES(${store},${viewer},'inbox:read',false)`;
   await assert.rejects(()=>read(viewer),e=>e.code==='42501','granular revoked Inbox permission still read response reporting');
-  console.log('Phase10 RESPONSE REPORT PASS: authoritative first successful reply, failed/queued exclusion, AI/human/source breakdown, empty latency, rolling window, tenant/realm/granular role privacy, current assignment workload, actual SSR/browser and 16 responsive cases');
+  console.log('Phase10 RESPONSE REPORT PASS: authoritative first successful reply, failed/queued exclusion, AI/human/source breakdown, empty latency, rolling window, tenant/realm/granular role privacy, current assignment workload, current won-stage/total lead conversion denominator (no revenue attribution), actual SSR/browser and 16 responsive cases');
  }finally{if(context)await context.close();if(viewerContext)await viewerContext.close();await db.end({timeout:3});}
 }
