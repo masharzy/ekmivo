@@ -134,8 +134,9 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const phones=await context.request.get(`${base}/phones?environment=live`);
   assert.equal(phones.status(),200,`encrypted receiving-account UI reader failed: ${await phones.text()}`);
   assert.ok((await phones.json()).accounts?.some(a=>a.ID===account.id&&a.Number===receivingNumber),"payment settings reader disagrees with encrypted finance account");
-  // Owner configuration is private; viewer GET remains forbidden. Known wallet imagery must use
-  // the bundled official asset, not an overridable public-catalog URL.
+  // Receiving-account configuration is owner/admin-only. Verify the branded
+  // owner reader and the existing viewer denial rather than broadening GET
+  // authorization just to show sensitive settings in a read-only fixture.
   const ownerMethods=await context.newPage(),viewerMethods=await viewerContext.newPage();
   try{
    assert.equal((await ownerMethods.goto(origin+"/settings/payment-methods")).status(),200);
@@ -144,15 +145,14 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
    await ownerCard.waitFor();
    assert.equal(await ownerCard.getByRole("img",{name:"bKash logo"}).getAttribute("src"),"/payment-assets/bkash.png");
    assert.equal(await ownerMethods.getByRole("button",{name:"Add account",exact:true}).count()>0,true);
-   assert.equal((await viewerMethods.goto(origin+"/settings/payment-methods")).status(),200);
-   await viewerMethods.locator(".pg-phone-panel").waitFor();
    assert.equal((await viewerContext.request.get(`${base}/phones?environment=live`)).status(),403,"Viewer read private receiving-account configuration");
+   assert.equal((await viewerMethods.goto(origin+"/settings/payment-methods")).status(),200);
    await viewerMethods.getByRole("alert").filter({hasText:"You do not have permission to view receiving accounts."}).waitFor();
    assert.equal(await viewerMethods.locator(".ek-ref-account").count(),0,"Viewer rendered private receiving accounts");
    assert.equal(await viewerMethods.getByRole("button",{name:"Add account",exact:true}).count(),0,"Viewer could open payment account creation");
    assert.equal(await viewerMethods.getByRole("switch").count(),0,"Viewer could enable/disable receiving account");
    assert.equal(await viewerMethods.getByRole("button",{name:"Delete account",exact:true}).count(),0,"Viewer could delete a receiving account");
-   const unauthorized=await viewerContext.request.post(`${base}/operations/gateways/${account.id}/disable`,{headers:{Origin:origin},data:{}});
+   const unauthorized=await viewerContext.request.post(`${base}/operations/gateways/${account.id}/disable?environment=live`,{headers:{Origin:origin},data:{}});
    assert.equal(unauthorized.status(),403,"Server allowed viewer to disable receiving account");
    const ownerAfter=await context.request.get(`${base}/phones?environment=live`);
    assert.equal(ownerAfter.status(),200);

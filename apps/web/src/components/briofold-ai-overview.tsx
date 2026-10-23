@@ -3,7 +3,7 @@ import Link from "next/link";
 import {database} from "../lib/server/db";
 import styles from "./briofold-ai-overview.module.css";
 
-type Stat={conversations:number;waiting:number;channels:number;requests:number|null};
+type Stat={conversations:number;waiting:number;channels:number;requests:number|null;humanReplies:number;aiReplies:number};
 type Activity={id:string;name:string;channel:string;at:string};
 type Result={stats:Stat;recent:Activity[]}|null;
 const exactCount=(raw:unknown)=>{
@@ -23,6 +23,8 @@ async function readOverview(workspaceId:string,userId:string):Promise<Result>{
     JOIN workspace_product_access p ON p.workspace_id=m.workspace_id
       AND p.product='ai' AND p.enabled=true
    WHERE m.workspace_id=${workspaceId}::uuid AND m.user_id=${userId}::uuid
+    AND pg13_capability_override(m.workspace_id,m.user_id,'inbox:read') IS DISTINCT FROM false
+    AND pg13_capability_override(m.workspace_id,m.user_id,'product:ai') IS DISTINCT FROM false
    LIMIT 1`;
   if(!allowed)return null;
   const [counts,recent,exists]=await Promise.all([
@@ -30,13 +32,17 @@ async function readOverview(workspaceId:string,userId:string):Promise<Result>{
      (SELECT count(*)::bigint FROM inbox_threads t JOIN inbox_connections c
        ON c.id=t.connection_id AND c.workspace_id=t.workspace_id
        WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true) AS conversations,
-     (SELECT count(*)::bigint FROM (
-       SELECT DISTINCT ON(m.thread_id) m.thread_id,m.sender FROM inbox_messages m
-       JOIN inbox_threads t ON t.id=m.thread_id AND t.workspace_id=m.workspace_id
-       JOIN inbox_connections c ON c.id=t.connection_id
-       WHERE m.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true
-       ORDER BY m.thread_id,m.sequence DESC
-     ) latest WHERE latest.sender='customer') AS waiting,
+     (SELECT count(*)::bigint FROM inbox_threads t JOIN inbox_connections c ON c.id=t.connection_id
+       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true
+       AND EXISTS(SELECT 1 FROM inbox_messages request WHERE request.thread_id=t.id AND request.workspace_id=t.workspace_id AND request.sender='customer' AND NOT EXISTS(SELECT 1 FROM inbox_messages response WHERE response.thread_id=t.id AND response.workspace_id=t.workspace_id AND response.sender IN ('seller','ai') AND response.state IN ('sent','delivered','seen') AND response.sequence>request.sequence))) AS waiting,
+     (SELECT count(*)::bigint FROM inbox_messages reply JOIN inbox_threads t ON t.id=reply.thread_id
+       JOIN inbox_connections c ON c.id=t.connection_id WHERE reply.workspace_id=${workspaceId}::uuid
+       AND c.environment='live' AND c.enabled=true AND reply.sender='seller' AND reply.state IN ('sent','delivered','seen')
+       AND reply.created_at>=now()-interval '7 days') AS human_replies,
+     (SELECT count(*)::bigint FROM inbox_messages reply JOIN inbox_threads t ON t.id=reply.thread_id
+       JOIN inbox_connections c ON c.id=t.connection_id WHERE reply.workspace_id=${workspaceId}::uuid
+       AND c.environment='live' AND c.enabled=true AND reply.sender='ai' AND reply.state IN ('sent','delivered','seen')
+       AND reply.created_at>=now()-interval '7 days') AS ai_replies,
      (SELECT count(*)::bigint FROM inbox_connections c
        WHERE c.workspace_id=${workspaceId}::uuid AND c.environment='live'
        AND c.enabled=true) AS channels`,
@@ -60,7 +66,7 @@ async function readOverview(workspaceId:string,userId:string):Promise<Result>{
   if(!row)throw new Error("INBOX_COUNTS_NOT_RETURNED");
   return {
    stats:{conversations:exactCount(row.conversations),waiting:exactCount(row.waiting),
-    channels:exactCount(row.channels),requests},
+    channels:exactCount(row.channels),requests,humanReplies:exactCount(row.human_replies),aiReplies:exactCount(row.ai_replies)},
    recent:recent.map(x=>({id:String(x.id),name:String(x.customer_name),
     channel:String(x.provider),at:new Date(x.last_activity_at).toISOString()}))
   };
@@ -70,20 +76,23 @@ async function readOverview(workspaceId:string,userId:string):Promise<Result>{
  }
 }
 
-export async function BriofoldAiOverview({workspaceId,userId,locale}:{
- workspaceId:string;userId:string;locale:"bn"|"en";
+export async function BriofoldAiOverview({workspaceId,userId,locale,embedded=false}:{
+ workspaceId:string;userId:string;locale:"bn"|"en";embedded?:boolean;
 }){
  const bn=locale==="bn",data=await readOverview(workspaceId,userId);
  const t=(en:string,be:string)=>bn?be:en;
+ const Heading=embedded?"h2":"h1";
  const metrics=[
   [t("Conversations","কথোপকথন"),data?.stats.conversations],
   [t("Waiting for reply","উত্তরের অপেক্ষায়"),data?.stats.waiting],
   [t("AI requests · 7 days","AI অনুরোধ · ৭ দিন"),data?.stats.requests],
   [t("Connected channels","সংযুক্ত চ্যানেল"),data?.stats.channels],
+  [t("Human replies · 7 days","মানুষের উত্তর · ৭ দিন"),data?.stats.humanReplies],
+  [t("AI replies · 7 days","AI উত্তর · ৭ দিন"),data?.stats.aiReplies],
  ] as const;
  return <div className={styles.root}>
   <header className={styles.heading}>
-   <h1>{t("Overview","ওভারভিউ")}</h1>
+   <Heading>{embedded?t("AI & conversations","AI ও কথোপকথন"):t("Overview","ওভারভিউ")}</Heading>
    <p>{t("Your conversations and channel activity.","আপনার কথোপকথন ও চ্যানেলের কার্যক্রম।")}</p>
   </header>
   {data===null&&<p role="alert" className={styles.alert}>{t(

@@ -3,7 +3,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import postgres from 'postgres';
 export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}){
  const target=new URL(control);if(!['localhost','127.0.0.1','[::1]'].includes(target.hostname)||/prod/i.test(target.pathname))throw Error('Workflow acceptance refuses shared databases');
- const db=postgres(control,{max:3,prepare:false}),workspace=randomUUID();let context;
+ const db=postgres(control,{max:3,prepare:false}),workspace=randomUUID();let context,restrictedContext;
  try{
   const actor=(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(sessions.owner).digest('hex')}`)[0].user_id;
   const colleague=(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(sessions.viewer).digest('hex')}`)[0].user_id;
@@ -158,9 +158,35 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   // A real Unicode manual send remains permitted with zero AI credit.
   const endpoint=origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live';
   const sent=await context.request.post(endpoint,{headers:{Origin:origin},data:{action:'send',thread_id:thread,body:{text:'ক'.repeat(8000),idempotency_key:randomUUID()}}});assert.equal(sent.status(),200,'Bangla reply hit an incorrect byte/character limit');
+  assert.equal((await list({queue:'waiting'})).some(x=>x.id===thread),true,'queued human send hid an unanswered customer');
+  for(const [external,sender] of [['metric-human','seller'],['metric-ai','ai']]){
+   await db`SELECT inbox_ingest(${c},${external+'-in'},${external},${external+' fictional'},'A metric question','text',now())`;
+   const metricThread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${c} AND external_id=${external}`)[0].id;
+   await db`INSERT INTO inbox_messages(workspace_id,thread_id,sender,body,state) VALUES(${workspace},${metricThread},${sender},'Successful fictional response','sent')`;
+   await db`INSERT INTO inbox_messages(workspace_id,thread_id,sender,body,state,created_at) VALUES(${workspace},${metricThread},${sender},'Old response','sent',now()-interval '8 days'),(${workspace},${metricThread},${sender},'Failed response','failed',now()),(${workspace},${metricThread},${sender},'Queued response','queued',now())`;
+  }
+  assert.equal((await list({queue:'waiting'})).length,2,'successful replies and non-successful replies were conflated');
+  await page.goto(origin+'/dashboard');
+  for(const label of ['Human replies · 7 days','AI replies · 7 days']){
+   const metric=page.locator('article').filter({has:page.getByText(label,{exact:true})});
+   await metric.locator('strong').getByText('1',{exact:true}).waitFor();
+  }
+  await page.getByRole('region',{name:'Business alerts',exact:true}).getByText('2 conversation(s) have a customer message waiting for a reply.',{exact:true}).waitFor();
+  // Both-product Stores retain their finance overview and the AI section.
+  await db`INSERT INTO workspace_product_access(workspace_id,product,enabled) VALUES(${workspace},'payments',true) ON CONFLICT(workspace_id,product) DO UPDATE SET enabled=true`;
+  await page.goto(origin+'/dashboard');
+  await page.getByRole('heading',{name:'AI & conversations',exact:true}).waitFor();
+  await db`INSERT INTO pg13_member_grants(workspace_id,user_id,capability,allowed) VALUES(${workspace},${colleague},'inbox:read',false) ON CONFLICT(workspace_id,user_id,capability) DO UPDATE SET allowed=false`;
+  restrictedContext=await browser.newContext();await restrictedContext.addCookies([
+   {name:'ekmivo-session',value:sessions.viewer,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'ekmivo-default-workspace',value:colleague+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+  const restrictedPage=await restrictedContext.newPage();await restrictedPage.goto(origin+'/dashboard');
+  await restrictedPage.getByRole('alert').filter({hasText:'Inbox activity is temporarily unavailable'}).waitFor();
+  assert.equal(await restrictedPage.getByText('Workflow fictional customer',{exact:true}).count(),0,'dashboard leaked a denied Inbox customer');
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
   assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_inbox_duty WHERE workspace_id=${workspace} AND user_id=${actor}`)[0].n),0,'duty record blocked membership revocation');
   await denied(read,'42501');assert.deepEqual(errors,[]);
   console.log('Phase6 WORKFLOW PASS: actual takeover/cancel/idempotency/revisions/assignment/labels/dispute/release/auto-return/tickets/notes/duty/saved replies/RLS; browser save/insert/date/label/queue/keyboard; SQL inclusive UTC boundaries and invalid/reversed date denial; Unicode human reply at zero credit');
- }finally{if(context)await context.close();await db.end({timeout:3});}
+ }finally{if(restrictedContext)await restrictedContext.close();if(context)await context.close();await db.end({timeout:3});}
 }

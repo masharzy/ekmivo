@@ -264,7 +264,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if e != nil {
-		mapped(w, e)
+		inboxWorkFailure(w, e)
 		return
 	}
 	if r.Method == "GET" && resource == "team" && s.Auth.GranularGrants {
