@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createDecipheriv,randomUUID} from 'node:crypto';
+import {createDecipheriv,createHash,randomUUID} from 'node:crypto';
 // Called only inside the already-guarded disposable live-realm finance suite.
 export async function runFinanceLifecycle({origin,context,viewerContext,page,finance,workspaceId,payment,webhook,owner}){
  const base=origin+`/api/go/workspaces/${workspaceId}`,post=(path,data,key=randomUUID(),who=context)=>who.request.post(base+path+(path.includes('?')?'&':'?')+'environment=live',{headers:{Origin:origin,'Idempotency-Key':key},data});
@@ -45,9 +45,17 @@ export async function runFinanceLifecycle({origin,context,viewerContext,page,fin
  assert.equal((await publicVisit(expired.public_token)).status(),410,'expired link issued a checkout capability');assert.equal((await finance`SELECT count(*)::integer n FROM pg10_document_intents WHERE document_id=${expired.id}`)[0].n,0);
  for(const returnURL of ['https://unregistered.example.invalid/thanks',registered+'.attacker.invalid/thanks',registered+'/thanks?secret=1'])assert.equal((await post('/documents/payment-links',{amount_minor:4500,reference:'DENY-'+randomUUID(),return_url:returnURL})).status(),409,'unregistered return destination accepted');
  const active=await create({reference:'LIVE-'+randomUUID(),amount_minor:4500,max_quantity:1,max_uses:0,expires_at:new Date(Date.now()+86400000).toISOString(),return_url:registered+'/thanks'});
+ // The earlier device-health journey deliberately deletes its live fixture.
+ // Prove the unavailable-source gate, then provide a separate, freshly paired
+ // fictional handset for this checkout-capability test. Never relax freshness.
+ const offlineVisit=await publicVisit(active.public_token);assert.equal(offlineVisit.status(),503);assert.equal((await offlineVisit.json()).error.code,'RECEIVING_SOURCE_UNAVAILABLE');assert.equal((await finance`SELECT count(*)::integer n FROM pg10_document_intents WHERE document_id=${active.id}`)[0].n,0);
+ const phoneCreate=await post('/phones',{name:'Fictional link lifecycle handset'});assert.equal(phoneCreate.status(),200,await phoneCreate.text());const phone=await phoneCreate.json();
+ const claimed=(await finance`SELECT pg06_phone_claim(${createHash('sha256').update(phone.pairing_token).digest('hex')},${Buffer.alloc(64,32)}) data`)[0].data;assert.equal(claimed.id,phone.id);
+ assert.equal((await finance`SELECT pg06_phone_heartbeat(${phone.id}::uuid,true,0,'CI isolated link handset','ci-fixture',0,'') ok`)[0].ok,true);
  const visited=await publicVisit(active.public_token);assert.equal(visited.status(),201,await visited.text());const checkout=(await visited.json()).checkout_token;assert.ok(checkout);
  let checkoutView=await context.request.get(origin+'/api/checkout/'+checkout);assert.equal(checkoutView.status(),200,await checkoutView.text());assert.equal((await checkoutView.json()).return_url,registered+'/thanks');
  await finance`UPDATE pg12_integrations SET status='disabled' WHERE workspace_id=${workspaceId} AND origin=${registered}`;checkoutView=await context.request.get(origin+'/api/checkout/'+checkout);assert.equal(checkoutView.status(),200);assert.equal((await checkoutView.json()).return_url,null,'disabled registered origin still exposed a redirect');
  await page.goto(origin+`/payments/links/${expired.id}`);await page.getByRole('dialog').filter({hasText:expired.reference}).waitFor();assert.ok((await page.locator('main').innerText()).includes('Expired'),'canonical link detail hid source expiry');
+ const cleanup=await post(`/phones/${phone.id}/delete`,{phone_id:phone.id});assert.equal(cleanup.status(),200);
  console.log('CANONICAL PAYMENT LINK SQL/Go/Next/browser PASS: expired capability denial/no intent, registered return source, hostile/lookalike/query denial, actual checkout return URL and revocation, canonical source expiry detail; one-time request mode and sandbox isolation verified by existing suites');
 }

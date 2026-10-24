@@ -68,7 +68,7 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   await cmd('booking-create',{resource_id:resource,summary:'Rebook cancelled slot',starts_at:starts.toISOString(),ends_at:ends.toISOString(),time_zone:'Asia/Dhaka'});
   await db`INSERT INTO briofold_customer_followups(id,workspace_id,environment,customer_id,due_at,requested_due_at,time_zone,body,created_by)
    VALUES(${randomUUID()},${store},'live',${profile},now()-interval '3 minutes',now()-interval '3 minutes','Asia/Dhaka','Fictional due notification fixture',${owner})`;
-  await assert.rejects(()=>cmd('booking-create',{resource_id:resource,summary:'Cross realm customer',customer_id:randomUUID(),starts_at:new Date(starts.getTime()+86400000).toISOString(),ends_at:new Date(ends.getTime()+86400000).toISOString(),time_zone:'Asia/Dhaka'}),e=>e.code==='22023');
+  await assert.rejects(()=>cmd('booking-create',{resource_id:resource,summary:'Cross realm customer',customer_id:randomUUID(),starts_at:new Date(starts.getTime()+86400000).toISOString(),ends_at:new Date(ends.getTime()+86400000).toISOString(),time_zone:'Asia/Dhaka'}),e=>e.code==='42501');
   await assert.rejects(()=>cmd('resource-create',{title:'Outside Store'},randomUUID(),viewer),e=>e.code==='42501');
   const ops=(await db`SELECT briofold_growth_operational_snapshot(${store},'live',${owner}) data`)[0].data;
   assert.equal(Number(ops.campaigns.broadcast_planned),1);
