@@ -1,0 +1,6 @@
+# Qwen Omni provider configuration
+Stacked on PR149 (encrypted configuration storage migration0212).
+Admin Settings now supports masked QWEN_API_KEY and OPENROUTER_API_KEY and AI_DEFAULT_MODEL with Qwen Omni presets or another OpenRouter model ID. Default model selection applies before credit reservation/fingerprinting, preserving per-model tariffs and retry conflicts. Configure an active published tariff in Admin AI Credits before selecting a model; no fabricated exchange rates or activation is added.
+Direct Qwen uses the pinned Singapore endpoint and required SSE streaming with text output, bounded parsing, final usage validation and uncertain-outcome recovery. No cross-provider paid fallback occurs.
+IMPORTANT: current Inbox generation still supplies text only. This provider setup does not yet wire inbound images/audio into the metered engine; those capabilities must not be claimed live. No vector/memory implementation is added here.
+No production keys, activation flags, migrations, merges or deployment performed. Environment currently offline: source changes require CI compile/contract verification. Live paid Bengali/image/audio acceptance requires a funded API key and media integration before release.

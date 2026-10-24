@@ -1,4 +1,4 @@
-export type AiTariffTerms={provider:"openrouter";currency:"BDT";rounding:"ceil_minor";
+export type AiTariffTerms={provider:"openrouter"|"qwen";currency:"BDT";rounding:"ceil_minor";
  input_minor_per_million:number;cached_input_minor_per_million:number;output_minor_per_million:number;
  max_input_tokens:number;max_output_tokens:number;max_request_minor:number};
 export type AiTariffRow={id:string;model:string;revision:number;terms:AiTariffTerms;active:boolean;created_at:string};
@@ -21,6 +21,7 @@ export function aiTariffTerms(form:FormData):AiTariffTerms|null{
   !Number.isInteger(maxInput)||!Number.isInteger(maxOutput)||maxInput<1||maxOutput<1||maxInput>100000000||maxOutput>100000000)return null;
  const reserve=(BigInt(input)*BigInt(maxInput)+BigInt(output)*BigInt(maxOutput)+BigInt(999999))/BigInt(1000000);
  if(reserve>BigInt(cap))return null;
- return {provider:"openrouter",currency:"BDT",rounding:"ceil_minor",input_minor_per_million:input,
+ const model=String(form.get("model")??"");
+ return {provider:model==="qwen3.5-omni-flash"||model.startsWith("qwen3.5-omni-flash-")?"qwen":"openrouter",currency:"BDT",rounding:"ceil_minor",input_minor_per_million:input,
   cached_input_minor_per_million:cached,output_minor_per_million:output,max_input_tokens:maxInput,max_output_tokens:maxOutput,max_request_minor:cap};
 }

@@ -156,10 +156,10 @@ func parseStudioProposal(text, model string) (studioProposal, error) {
 }
 
 func (s *Service) studioEngine() aicredits.Engine {
-	return aicredits.Engine{Store: aiExecutionStore{db: s.Auth.DB}, Provider: aicredits.NewOpenRouter(os.Getenv("OPENROUTER_API_KEY")), Codec: aiExecutionCodec{key: s.Pipeline.Key}}
+	return aicredits.Engine{Store: aiExecutionStore{db: s.Auth.DB}, Provider: s.configuredAIProvider(), Codec: aiExecutionCodec{key: s.Pipeline.Key}}
 }
 func (s *Service) studioReady() bool {
-	return os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" && os.Getenv("OPENROUTER_API_KEY") != "" && s != nil && s.Auth != nil && s.Auth.DB != nil && s.Pipeline != nil && s.Pipeline.Control != nil && len(s.Pipeline.Key) == 32
+	return os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" && s.configuredAIKey() && s != nil && s.Auth != nil && s.Auth.DB != nil && s.Pipeline != nil && s.Pipeline.Control != nil && len(s.Pipeline.Key) == 32
 }
 
 func (s *Service) HandleStudioTest(w http.ResponseWriter, r *http.Request) {
@@ -239,7 +239,7 @@ func (s *Service) HandleStudioTest(w http.ResponseWriter, r *http.Request) {
 		fail(w, 422, "AI_CONTEXT_TOO_LARGE")
 		return
 	}
-	result, err := s.studioEngine().Run(r.Context(), aicredits.Request{Workspace: workspace, Actor: actor.UserID, Key: r.Header.Get("Idempotency-Key"), Model: c.Config.Model, Messages: messages})
+	result, err := s.studioEngine().Run(r.Context(), aicredits.Request{Workspace: workspace, Actor: actor.UserID, Key: r.Header.Get("Idempotency-Key"), Model: s.selectedAIModel(c.Config.Model), Messages: messages})
 	if err != nil {
 		aiExecutionFailure(w, err)
 		return
@@ -310,7 +310,7 @@ func (s *Service) runStudioJob(ctx context.Context) {
 		reason = "AI_CONTEXT_TOO_LARGE"
 	} else {
 		run, cancel := context.WithTimeout(ctx, 75*time.Second)
-		result, runErr := s.studioEngine().Run(run, aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: job.Context.Config.Model, Messages: messages})
+		result, runErr := s.studioEngine().Run(run, aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: s.selectedAIModel(job.Context.Config.Model), Messages: messages})
 		cancel()
 		if runErr != nil {
 			reason = "AI_REQUEST_UNKNOWN"
@@ -340,4 +340,15 @@ func (s *Service) runStudioJob(ctx context.Context) {
 	var result []byte
 	// A failed finish leaves the leased job for review; it cannot trigger another generation.
 	_ = s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_channel_finish($1::uuid,$2::uuid,$3,$4)", job.ID, job.Lease, body, reason).Scan(&result)
+}
+
+func(s *Service) configuredAIProvider() aicredits.Provider {
+ c,_:=s.channelConfig(context.Background())
+ return aicredits.ConfiguredProviders{Qwen:aicredits.NewQwenOmni(c["QWEN_API_KEY"]),OpenRouter:aicredits.NewOpenRouter(c["OPENROUTER_API_KEY"])}
+}
+func(s *Service) configuredAIKey()bool{
+ c,_:=s.channelConfig(context.Background());return c["QWEN_API_KEY"]!=""||c["OPENROUTER_API_KEY"]!=""
+}
+func(s *Service) selectedAIModel(published string)string{
+ c,_:=s.channelConfig(context.Background());if c["AI_DEFAULT_MODEL"]!=""{return c["AI_DEFAULT_MODEL"]};return published
 }
