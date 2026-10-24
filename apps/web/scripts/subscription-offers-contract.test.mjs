@@ -29,6 +29,7 @@ test("Admin offer drafts validate minor-unit BDT and describe AI credits without
 
 test("subscription offer catalog never auto-enables pending checkout",()=>{
  const route=read("app/[locale]/checkout/order/[plan]/page.tsx");
- assert.match(route,/purchaseEnabled=\{false\}/);
+ assert.match(route,/validPurchaseToken\(plan\)/);
+ assert.match(route,/intentId=\{intent\.id\}/);
  assert.doesNotMatch(migration,/\b(?:UPDATE|INSERT INTO)\s+(?:platform_billing_settings|pg13_platform_invoices|pg13_subscriptions)/i);
 });

@@ -938,6 +938,20 @@ func (s *Service) HandlePublic(w http.ResponseWriter, r *http.Request) {
 			fail(w, 503, "RECEIVING_SOURCE_UNAVAILABLE")
 			return
 		}
+		if subscriptionCheckout(initial) {
+			// The standalone SaaS pay screen must never accept an arbitrary
+			// merchant account or an account with unproven parser readiness.
+			if !uuidPattern.MatchString(body.ReceivingAccountID) {
+				fail(w, 503, "SUBSCRIPTION_ACCOUNT_UNAVAILABLE")
+				return
+			}
+			var encoded []byte
+			if err = pool.QueryRow(r.Context(), "SELECT pg98_checkout_accounts($1)", digest(token)).Scan(&encoded); err != nil ||
+				!subscriptionAccountEligible(s.eligibleSubscriptionAccounts(initial, encoded), body.Method, body.ReceivingAccountID) {
+				fail(w, 503, "SUBSCRIPTION_ACCOUNT_UNAVAILABLE")
+				return
+			}
+		}
 		lockSQL := "SELECT pg05_lock_payer($1,$2,$3,$4)"
 		if s.pipelineReady() {
 			lockSQL = "SELECT pg06_lock_route($1,$2,$3,$4)"
@@ -1089,29 +1103,40 @@ func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byt
 	if checkoutRealm(raw) == "live" {
 		available := s.liveMethods(raw)
 		list := []string{}
-		for _, method := range []string{"bkash", "nagad", "rocket", "bank", "other"} {
-			if available[method] {
-				list = append(list, method)
-			}
-		}
-		data["methods"] = list
-		data["verification_available"] = len(list) > 0
+		isSaaS := subscriptionCheckout(raw)
+		readyMethods := map[string]bool{}
 		if pool != nil && data["state"] == "requires_payer" {
 			var installed bool
 			if err := pool.QueryRow(r.Context(), "SELECT to_regprocedure('pg98_checkout_accounts(text)') IS NOT NULL").Scan(&installed); err == nil && installed {
 				var accounts []map[string]any
 				var encoded []byte
 				if err = pool.QueryRow(r.Context(), "SELECT pg98_checkout_accounts($1)", digest(r.PathValue("token"))).Scan(&encoded); err == nil && json.Unmarshal(encoded, &accounts) == nil {
-					// Show every enabled account; readiness gates payer locking, not tile visibility.
+					if isSaaS {
+						accounts = s.eligibleSubscriptionAccounts(raw, encoded)
+					} else {
+						// Merchant checkout keeps its existing account visibility.
+						for _, account := range accounts {
+							method, _ := account["method"].(string)
+							online, _ := account["source_online"].(bool)
+							account["ready"] = available[method] && online
+						}
+					}
 					for _, account := range accounts {
-						method, _ := account["method"].(string)
-						online, _ := account["source_online"].(bool)
-						account["ready"] = available[method] && online
+						if method, ok := account["method"].(string); ok && account["ready"] == true {
+							readyMethods[method] = true
+						}
 					}
 					data["receiving_accounts"] = accounts
 				}
 			}
 		}
+		for _, method := range []string{"bkash", "nagad", "rocket", "bank", "other"} {
+			if available[method] && (!isSaaS || readyMethods[method]) {
+				list = append(list, method)
+			}
+		}
+		data["methods"] = list
+		data["verification_available"] = len(list) > 0
 	} else if s.pipelineReady() {
 		for _, rule := range s.Pipeline.Rules {
 			if rule.Approved && (!rule.SandboxOnly || checkoutRealm(raw) == "sandbox") {

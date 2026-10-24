@@ -1,0 +1,137 @@
+name: Store Subscription Phase 5 — Focused Code Checks
+
+# Run explicitly on the Phase 5 branch/SHA. This does not launch the full
+# Foundation CI, mutate a database, or imply production/payment acceptance.
+on:
+  push:
+    branches: [agents/store-subscription-phase5-summary]
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact Phase 5 commit SHA (reject an old run)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: subscription-phase5-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  web:
+    name: Phase 5 web, contract and responsive synthetic browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check exact source revision
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install pinned web dependencies
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Phase 5 source contract
+        working-directory: apps/web
+        run: node --test scripts/subscription-order-contract.test.mjs scripts/subscription-intents-contract.test.mjs scripts/subscription-coupons-contract.test.mjs
+      - name: Focused ESLint and TypeScript
+        working-directory: apps/web
+        run: |
+          npx eslint src/components/subscription-order-summary.tsx 'src/app/[locale]/checkout/order/[plan]/page.tsx' 'src/app/api/go/[...path]/route.ts'
+          npx tsc --noEmit -p tsconfig.json
+      - name: Production Next.js build
+        working-directory: apps/web
+        run: npm run build
+      - name: Install isolated Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Responsive, locale, theme, consent and coupon journeys (synthetic Go)
+        working-directory: apps/web
+        run: node --test scripts/subscription-order-browser.test.mjs
+
+  go-and-sql:
+    name: Phase 5 Go authority and SQL syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check exact source revision
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Focused Go tests and vet
+        working-directory: backend
+        run: |
+          go test ./internal/checkout ./cmd/api ./cmd/financial-migrate
+          go vet ./internal/checkout ./cmd/api ./cmd/financial-migrate
+      - name: Parse Phase 5 migration without executing it
+        run: |
+          python3 -m pip install --user pglast==8.7
+          python3 -c 'from pathlib import Path; from pglast import parse_sql; p=Path("infra/migrations/0152_platform_subscription_order_summary.sql"); assert len(parse_sql(p.read_text())) >= 12; assert not Path("infra/migrations/0145_platform_subscription_order_summary.sql").exists(); print("Phase 5 SQL parsed; no migration applied")'
+
+  isolated-postgres:
+    name: Phase 5 real isolated PostgreSQL security, quote and invoice race
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ekmivo_pg00
+          POSTGRES_USER: ekmivo_test
+          POSTGRES_PASSWORD: local-only-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ekmivo_test -d ekmivo_pg00"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check exact source revision
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install locked PostgreSQL driver
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Phase 3/4/5 migration + role, legal, quote, coupon and invoice race
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/subscription-order-postgres-smoke.mjs
+      - name: Install isolated Chromium for SQL-backed React journey
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Real SQL-backed React coupon, three-consent, confirmation and resume
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/subscription-order-database-browser.mjs
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Real Go session HTTP quote, legal, idempotency and invoice recovery
+        working-directory: backend
+        env:
+          PHASE5_ORDER_HTTP_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo
+        run: go test ./internal/checkout -run TestSubscriptionOrderHTTPIsolatedPostgres -count=1 -v

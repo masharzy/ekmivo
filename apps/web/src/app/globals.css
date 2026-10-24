@@ -10,6 +10,8 @@
 @import "./pg13-reports.css";
 @import "./customer-pay.css";
 @import "./public-experience.css";
+/* Publish-only subscription catalog UI; does not alter seller checkout/Admin. */
+@import "./subscription-offer-pricing.css";
 @import "./public-polish.css";
 @import "./public-developers.css";
 @import "./payment-editorial.css";
@@ -28,6 +30,8 @@
 @import "../styles/brand/home-dark.css";
 /* Reference-faithful public homepage chrome (scoped; never affects admin). */
 @import "./landing-chrome.css";
+@import "./public-marketing-redesign.css";
+@import "./public-auth-redesign.css";
 /* Admin styles load last so marketing/merchant defaults cannot re-skin Admin. */
 @import "../styles/admin/admin-tokens.css";
 @import "../styles/admin/admin-theme.css";

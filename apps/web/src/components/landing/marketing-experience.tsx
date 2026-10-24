@@ -8,7 +8,7 @@ type Locale = "en" | "bn";
 const translation = new Map(copy.pairs.map(p => [p.en, p.bn] as const));
 
 /** Static product narrative. Live payment plans arrive through the server slot. */
-export function MarketingExperience({locale,pricing}:{locale:Locale;pricing?:import("react").ReactNode}){
+export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{locale:Locale;pricing?:import("react").ReactNode;aiPricing?:import("react").ReactNode;bundlePricing?:import("react").ReactNode}){
  const t = (english:string) => locale === "bn" ? (translation.get(english) ?? english) : english;
  useEffect(() => {
   const root=document.querySelector<HTMLElement>("main.ekm-landing");
@@ -696,7 +696,7 @@ export function MarketingExperience({locale,pricing}:{locale:Locale;pricing?:imp
 </section>
 <section id="pricing" className="ekm-pricing-host">
 <div className="w">
-<LandingPricing locale={locale} pricing={pricing} />
+<LandingPricing locale={locale} pricing={pricing} aiPricing={aiPricing} bundlePricing={bundlePricing} />
 </div>
 </section>
 <section id="faq" style={{"paddingTop": "0"}}>

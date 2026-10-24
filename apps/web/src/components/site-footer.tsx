@@ -8,13 +8,13 @@ export function SiteFooter({locale}:{locale:Locale}){
  const segment=useSelectedLayoutSegment();
  const path=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
  if(["setup","dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin|login|register|forgot-password|verify-email|pay|checkout|receipt|invoice)(?:\/|$)/.test(path))return null;
- if(path==="/")return <footer className="ekm-footer"><div className="ekm-footer-inner">
+ if(["/","/payment-gateway","/ai-bot","/pricing"].includes(path))return <footer className="ekm-footer" lang={locale}><div className="ekm-footer-inner">
   <Link className="ekm-footer-logo" href="/">ekmivo<b>.</b></Link>
   <nav aria-label={locale==="bn"?"ফুটার নেভিগেশন":"Footer navigation"}>
-   <a href="#payments">{locale==="bn"?"পেমেন্ট":"Payments"}</a>
-   <a href="#ai">{locale==="bn"?"এআই বট":"AI Bot"}</a>
-   <a href="#pricing">{locale==="bn"?"মূল্য":"Pricing"}</a>
-   <a href="#faq">{locale==="bn"?"প্রশ্নোত্তর":"FAQ"}</a>
+   <Link href="/payment-gateway">{locale==="bn"?"পেমেন্টস":"Payments"}</Link>
+   <Link href="/ai-bot">{locale==="bn"?"এআই বট":"AI Bot"}</Link>
+   <Link href="/pricing">{locale==="bn"?"মূল্য":"Pricing"}</Link>
+   <Link href="/developers">{locale==="bn"?"ডেভেলপারস":"Developers"}</Link>
   </nav>
   <span>© {new Date().getFullYear()} Ekmivo</span>
  </div></footer>;

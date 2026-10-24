@@ -1,0 +1,30 @@
+/* Scoped public subscription offer catalog, independent from merchant/admin/dashboard CSS. */
+.sop-root{margin:28px 0 32px;color:var(--color-text)}
+.sop-root *{box-sizing:border-box}
+.sop-heading{display:flex;align-items:baseline;justify-content:space-between;gap:18px;margin-bottom:16px}
+.sop-heading strong{font-size:19px;line-height:1.35}
+.sop-heading p{margin:8px 0 0;color:var(--color-text-secondary);font-size:14px;line-height:1.65}
+.sop-selector{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px;width:fit-content;max-width:100%;border-radius:12px;background:var(--color-surface-subtle);margin:0 0 12px}
+.sop-selector button{font:inherit;font-size:13px;font-weight:600;border:0;background:transparent;color:var(--color-text-secondary);border-radius:9px;min-height:38px;padding:8px 14px;cursor:pointer}
+.sop-selector button[aria-pressed="true"]{background:var(--color-surface-raised);color:var(--color-text);box-shadow:0 1px 5px rgb(0 0 0 / 8%)}
+.sop-selector button:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
+.sop-terms{margin-bottom:18px}
+.sop-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:14px}
+.sop-card{display:flex;flex-direction:column;min-width:0;gap:12px;padding:24px;border:1px solid var(--color-border);border-radius:16px;background:var(--color-surface-raised)}
+.sop-product{color:var(--color-text-muted);font-size:12px;font-weight:600;margin:0}
+.sop-card h3{font-size:19px;margin:0;line-height:1.35}
+.sop-price{font-weight:700;font-size:clamp(25px,3vw,32px);letter-spacing:-.02em;line-height:1.3;overflow-wrap:anywhere}
+.sop-price small{font-size:13px;color:var(--color-text-secondary);font-weight:500;letter-spacing:normal}
+.sop-savings{margin:0;font-size:12px;line-height:1.6;color:var(--color-success)}
+.sop-savings strong{font-weight:700}
+.sop-description,.sop-credits{font-size:13px;color:var(--color-text-secondary);line-height:1.6;margin:0}
+.sop-credits strong{color:var(--color-text)}
+.sop-availability{font-size:12px;color:var(--color-text-secondary);margin-top:auto;border-top:1px solid var(--color-border);padding-top:14px;line-height:1.6}
+.sop-disclaimer{font-size:12px;line-height:1.7;color:var(--color-text-secondary);margin:14px 0 0}
+.ekm-landing .sop-root{color:var(--ink)}
+.ekm-landing .sop-heading p,.ekm-landing .sop-product,.ekm-landing .sop-description,.ekm-landing .sop-credits,.ekm-landing .sop-disclaimer,.ekm-landing .sop-availability,.ekm-landing .sop-price small{color:var(--mute)}
+.ekm-landing .sop-card,.ekm-landing .sop-selector button[aria-pressed="true"]{background:var(--card);border-color:var(--line)}
+.ekm-landing .sop-selector{background:var(--soft)}
+.ekm-landing .sop-availability{border-color:var(--line)}
+@media(max-width:600px){.sop-card{padding:20px}.sop-heading strong{font-size:17px}.sop-selector{width:100%}.sop-selector button{flex:1;padding-inline:8px}}
+@media(prefers-reduced-motion:reduce){.sop-selector button{transition:none}}

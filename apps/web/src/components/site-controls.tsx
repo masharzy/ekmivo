@@ -13,11 +13,11 @@ function persistLocalePreference(next:"bn"|"en"){
  document.cookie=`ekmivo-locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
 }
 const landingLinks=[
- {id:"payments",en:"Payments",bn:"পেমেন্ট"},
- {id:"ai",en:"AI Bot",bn:"এআই বট"},
- {id:"together",en:"Together",bn:"একসাথে"},
- {id:"pricing",en:"Pricing",bn:"মূল্য"},
- {id:"faq",en:"FAQ",bn:"প্রশ্নোত্তর"},
+ {href:"/",en:"Home",bn:"হোম"},
+ {href:"/payment-gateway",en:"Payments",bn:"পেমেন্টস"},
+ {href:"/ai-bot",en:"AI Bot",bn:"এআই বট"},
+ {href:"/pricing",en:"Pricing",bn:"মূল্য"},
+ {href:"/developers",en:"Developers",bn:"ডেভেলপারস"},
 ] as const;
 export function SiteControls({locale,initialTheme,compactThemeToggle=false,marketing=false}:{locale:"bn"|"en";initialTheme:Theme;compactThemeToggle?:boolean;marketing?:boolean}){
  const pathname=usePathname();
@@ -79,7 +79,7 @@ export function SiteControls({locale,initialTheme,compactThemeToggle=false,marke
    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--soft)"/><circle cx="16" cy="17" r="3" fill="var(--soft)"/></svg>
   </button>
   {menuOpen&&<div className="ekm-control-menu" id="ekm-control-menu" role="dialog" aria-label={locale==="bn"?"মেনু, ভাষা ও থিম":"Menu, language and theme"}>
-   <nav className="ekm-mobile-links" aria-label={locale==="bn"?"মোবাইল মেনু":"Mobile menu"}>{landingLinks.map(link=><a href={`#${link.id}`} key={link.id} onClick={()=>setMenuOpen(false)}>{link[locale]}</a>)}</nav>
+   <nav className="ekm-mobile-links" aria-label={locale==="bn"?"মোবাইল মেনু":"Mobile menu"}>{landingLinks.map(link=><a href={link.href} key={link.href} onClick={()=>setMenuOpen(false)}>{link[locale]}</a>)}</nav>
    <div><small>{locale==="bn"?"ভাষা":"Language"}</small><div className="ekm-control-segment">{(["en","bn"] as const).map(value=><button type="button" key={value} lang={value} aria-pressed={locale===value} onClick={()=>selectLocale(value)}>{value==="en"?"English":"বাংলা"}</button>)}</div></div>
    <div><small>{locale==="bn"?"থিম":"Theme"}</small><div className="ekm-control-segment">{(["system","light","dark"] as const).map(value=><button type="button" key={value} aria-pressed={theme===value} onClick={()=>changeTheme(value)}>{value==="system"?(locale==="bn"?"সিস্টেম":"System"):value==="light"?(locale==="bn"?"লাইট":"Light"):(locale==="bn"?"ডার্ক":"Dark")}</button>)}</div></div>
   </div>}
