@@ -34,7 +34,7 @@ export async function runBriofoldInboxAccess({origin,browser,control,sessions}){
   const p=await context.newPage();p.setDefaultNavigationTimeout(90000);p.setDefaultTimeout(30000);
   await p.goto(origin+"/inbox");
   await p.getByRole("button",{name:/Fictional permissions customer/}).click();
-  await p.getByText("You have read-only access to this Inbox.",{exact:true}).waitFor();
+  await p.getByText("You have read-only access to this conversation.",{exact:true}).waitFor();
   assert.equal(await p.getByRole("textbox",{name:"Message",exact:true}).count(),0);
   assert.equal(await p.getByRole("button",{name:/^AI (on|off)$/}).count(),0);
   await p.close();
