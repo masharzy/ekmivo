@@ -16,7 +16,8 @@ async function load(relative,dependencies={}){
  return exports;
 }
 const sections=await load("../src/lib/dashboard-sections.ts");
-const nav=await load("../src/lib/dashboard-navigation.ts",{"./dashboard-sections":sections});
+const unified=await load("../src/lib/unified-navigation.ts");
+const nav=await load("../src/lib/dashboard-navigation.ts",{"./dashboard-sections":sections,"./unified-navigation":unified});
 const id="11111111-1111-4111-a111-111111111111";
 assert.equal(nav.defaultService("both"),"payments","Both-enabled merchants must enter Payment first");
 assert.equal(nav.defaultService("commerce"),"payments");
@@ -24,9 +25,9 @@ assert.equal(nav.defaultService("ai"),"ai");
 assert.equal(nav.serviceEnabled("payments","ai"),false);
 assert.equal(nav.serviceEnabled("ai","commerce"),false);
 assert.equal(nav.serviceEnabled("payments","both"),true);
-assert.equal(nav.dashboardHref("bn",id,"payments"),`/w/${id}/payments/overview`);
-assert.equal(nav.dashboardHref("en",id,"payments","incoming","live"),`/w/${id}/payments/incoming`);
-assert.equal(nav.dashboardHref("bn",id,"ai","inbox","live"),`/w/${id}/ai/inbox`);
+assert.equal(nav.dashboardHref("bn",id,"payments"),"/dashboard");
+assert.equal(nav.dashboardHref("en",id,"payments","incoming","live"),"/sms-data");
+assert.equal(nav.dashboardHref("bn",id,"ai","inbox","live"),"/inbox");
 for(const candidate of ["production","LIVE","Sandbox","..","live&foo=1","sandbox%2Flive"]){
  assert.equal(nav.canonicalEnvironment(candidate),null,"Untrusted environment query must reject "+candidate);
 }

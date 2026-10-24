@@ -33,7 +33,7 @@ export function BriofoldOnboardingClient({locale,step,businessId,businessName,mo
    <div className={styles.progress} aria-label={t("Setup steps","সেটআপ ধাপ")}>
     {(["business","services","billing"] as const).map((s,i)=><span key={s} data-active={s===step}>{i+1}</span>)}
    </div>
-   <h1>{step==="business"?t("Tell us about your store","আপনার স্টোরের তথ্য দিন")
+   <h1>{step==="business"?t("Tell us about your business","আপনার ব্যবসার তথ্য দিন")
     :step==="services"?t("What do you want to use?","কোন সেবা ব্যবহার করবেন?")
     :t("Choose how to get started","শুরু করার প্ল্যান বেছে নিন")}</h1>
    <p className={styles.subtitle}>{step==="billing"?
@@ -44,10 +44,10 @@ export function BriofoldOnboardingClient({locale,step,businessId,businessName,mo
     <input type="hidden" name="step" value={step}/>
     <input type="hidden" name="business_id" value={businessId}/>
     {step==="business"&&<>
-     <label>{t("Store name","স্টোরের নাম")}<input name="name" defaultValue={businessName==="New business"?"":businessName} required minLength={2} maxLength={40} autoFocus/></label>
+     <label>{t("Business name","ব্যবসার নাম")}<input name="name" defaultValue={businessName==="New business"?"":businessName} required minLength={2} maxLength={40} autoFocus/></label>
      <label>{t("Business type","ব্যবসার ধরন")}<select name="business_type" defaultValue="online">
-      <option value="online">{t("Online store","অনলাইন স্টোর")}</option>
-      <option value="physical">{t("Physical store","ফিজিক্যাল স্টোর")}</option>
+      <option value="online">{t("Online shop","অনলাইন দোকান")}</option>
+      <option value="physical">{t("Physical shop","সরাসরি দোকান")}</option>
       <option value="service">{t("Services","সেবা")}</option>
       <option value="other">{t("Other","অন্যান্য")}</option>
      </select></label>

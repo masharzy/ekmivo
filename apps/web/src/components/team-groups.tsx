@@ -13,7 +13,7 @@ const empty:Draft={id:"",name:"",denied_capabilities:[],members:[],revision:0};
 const caps:[string,string,string][]=[
  ["payments:read","Read payments","পেমেন্ট দেখা"],["payments:issue","Issue payment requests","পেমেন্ট অনুরোধ"],
  ["payments:manage","Manage payments","পেমেন্ট পরিচালনা"],["payments:export","Export payments","পেমেন্ট এক্সপোর্ট"],
- ["workspace:settings","Change Store settings","স্টোর সেটিংস"],["members:manage","Manage team","টিম পরিচালনা"],
+ ["workspace:settings","Change Business settings","ব্যবসা সেটিংস"],["members:manage","Manage team","টিম পরিচালনা"],
  ["product:payments","All Payments access","সমস্ত পেমেন্ট অ্যাক্সেস"],["inbox:read","Read Inbox","ইনবক্স দেখা"],
  ["inbox:send","Send Inbox messages","ইনবক্সে মেসেজ"],["inbox:manage","Manage Inbox/AI","ইনবক্স ও AI পরিচালনা"],
  ["product:ai","All AI access","সমস্ত AI অ্যাক্সেস"],
@@ -59,7 +59,7 @@ export function TeamGroups({workspaceId,bn,scopesEnabled=false}:{workspaceId:str
  };
  return <section className={styles.root} aria-busy={busy}>
  {scopesEnabled&&<Link href="/settings/team/scopes">{t("Manage channel and page restrictions","চ্যানেল ও পেজের অ্যাক্সেস সীমা")}</Link>}
-  <header><p className={styles.eyebrow}>{t("Store owner · security","স্টোর মালিক · নিরাপত্তা")}</p><h1>{t("Team permission groups","টিমের অনুমতি গ্রুপ")}</h1>
+  <header><p className={styles.eyebrow}>{t("Business owner · security","ব্যবসা মালিক · নিরাপত্তা")}</p><h1>{t("Team permission groups","টিমের অনুমতি গ্রুপ")}</h1>
    <p>{t("Group policies only restrict access. They cannot elevate a role or override a direct denial. Owner permissions are never changed by a group.","গ্রুপ শুধু অনুমতি সীমিত করতে পারে। দায়িত্বের চেয়ে বেশি অনুমতি বা ব্যক্তিগত নিষেধাজ্ঞা বাতিল করতে পারে না। মালিকের অনুমতি অপরিবর্তিত থাকে।")}</p>
    <Link href="/settings/team">{t("Manage individual team roles and grants","সদস্যদের দায়িত্ব ও আলাদা অনুমতি দেখুন")}</Link>
    <button type="button" disabled={busy||dirty} onClick={()=>void load().catch(()=>setError(t("Could not refresh groups.","গ্রুপ রিফ্রেশ হয়নি।")))}>{t("Refresh","রিফ্রেশ")}</button>
@@ -67,7 +67,7 @@ export function TeamGroups({workspaceId,bn,scopesEnabled=false}:{workspaceId:str
   {error&&<p className={styles.error} role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
   {!loaded&&<p role="status">{t("Loading authorized groups…","অনুমোদিত গ্রুপ লোড হচ্ছে…")}</p>}
   {loaded&&!data&&<p role="alert">{t("No permissions were assumed. Try again later.","কোনো অনুমতি ধরে নেওয়া হয়নি। পরে আবার চেষ্টা করুন।")}</p>}
-  {data&&!data.can_manage&&<p role="status">{t("Only the Store owner can inspect or change private group restrictions.","শুধু স্টোরের মালিক ব্যক্তিগত গ্রুপ নিষেধাজ্ঞা দেখতে বা বদলাতে পারবেন।")}</p>}
+  {data&&!data.can_manage&&<p role="status">{t("Only the Business owner can inspect or change private group restrictions.","শুধু ব্যবসার মালিক ব্যক্তিগত গ্রুপ নিষেধাজ্ঞা দেখতে বা বদলাতে পারবেন।")}</p>}
   {data?.can_manage&&<div className={styles.grid}>
    <section className={styles.panel}><h2>{t("Existing groups","বর্তমান গ্রুপ")}</h2>
     {data.groups.length===0?<p>{t("No restriction groups yet.","এখনো কোনো গ্রুপ নেই।")}</p>:data.groups.map(group=><article className={styles.group} key={group.id}><h3>{group.name}</h3><p>{t("Members","সদস্য")}: {group.members.length} · {t("Restrictions","নিষেধাজ্ঞা")}: {group.denied_capabilities.length}</p>

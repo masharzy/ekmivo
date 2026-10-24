@@ -17,10 +17,10 @@ export async function runSetupChecklist({origin,browser,control,sessions}){
    if(mode!=='commerce')await db`SELECT inbox_connection(${foreign},'live','ms',${'foreign-checklist-'+store},decode('abcd','hex'))`;
    await db`INSERT INTO commerce_products(workspace_id,environment,name) VALUES(${foreign},'live','Foreign product')`;
    assert.equal((await p.goto(origin+'/setup/checklist')).status(),200);
-   await p.getByRole('heading',{name:'Store setup guide',exact:true}).waitFor();
+   await p.getByRole('heading',{name:'Business setup guide',exact:true}).waitFor();
    const step=id=>p.locator('[data-setup-step="'+id+'"]');
    await step('products').getByText('Review setup',{exact:true}).waitFor();
-   await step('team').getByText('Optional for a solo Store',{exact:true}).waitFor();
+   await step('team').getByText('Optional for a solo Business',{exact:true}).waitFor();
    if(mode!=='commerce')await step('channels').getByText('Review setup',{exact:true}).waitFor();else assert.equal(await step('channels').count(),0);
    assert.equal(await step('payments').count(),mode==='ai'?0:1);
    await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${viewer},'viewer')`;
@@ -35,7 +35,7 @@ export async function runSetupChecklist({origin,browser,control,sessions}){
    if(mode!=='commerce')await step('channels').getByText('Configuration saved',{exact:true}).waitFor();
    assert.equal(await p.getByRole('heading',{level:1}).count(),1);
    await p.getByRole('link',{name:'Open dashboard',exact:true}).click();await p.waitForURL(origin+'/dashboard');
-   await p.goto(origin+'/settings');await p.getByRole('link',{name:'Store setup guide',exact:true}).click();await p.waitForURL(origin+'/setup/checklist');
+   await p.goto(origin+'/settings');await p.getByRole('link',{name:'Business setup guide',exact:true}).click();await p.waitForURL(origin+'/setup/checklist');
    await db`UPDATE workspace_members SET role='admin' WHERE workspace_id=${store} AND user_id=${owner}`;
    await db`INSERT INTO pg13_member_grants(workspace_id,user_id,capability,allowed) VALUES(${store},${owner},'workspace:settings',false)`;
    await p.reload();await p.getByRole('alert').filter({hasText:'Only an owner or permitted administrator'}).waitFor();assert.equal(await p.locator('[data-setup-step]').count(),0);
@@ -43,7 +43,7 @@ export async function runSetupChecklist({origin,browser,control,sessions}){
    await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${store} AND user_id=${owner}`;
    await p.reload();await p.getByRole('alert').filter({hasText:'Only an owner or permitted administrator'}).waitFor();
    await db`UPDATE workspace_members SET role='owner' WHERE workspace_id=${store} AND user_id=${owner}`;
-   for(const language of ['en','bn']){await c.addCookies([{name:'ekmivo-locale',value:language,url:origin}]);for(const theme of ['light','dark']){await c.addCookies([{name:'ekmivo-theme',value:theme,url:origin}]);await p.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await p.setViewportSize({width,height:900});await p.goto(origin+'/setup/checklist');await p.getByRole('heading',{name:language==='bn'?'স্টোর সেটআপ গাইড':'Store setup guide',exact:true}).waitFor();assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
+   for(const language of ['en','bn']){await c.addCookies([{name:'ekmivo-locale',value:language,url:origin}]);for(const theme of ['light','dark']){await c.addCookies([{name:'ekmivo-theme',value:theme,url:origin}]);await p.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await p.setViewportSize({width,height:900});await p.goto(origin+'/setup/checklist');await p.getByRole('heading',{name:language==='bn'?'ব্যবসা সেটআপ গাইড':'Business setup guide',exact:true}).waitFor();assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
    await c.close();
   }
   console.log('STORE SETUP GUIDE SQL/Next/browser PASS: active source-backed configuration, foreign/sandbox isolation, current role/settings restrictions, product-mode sections, real settings/dashboard links and responsive cases:',cases);

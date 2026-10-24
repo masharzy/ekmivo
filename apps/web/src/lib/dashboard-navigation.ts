@@ -1,8 +1,9 @@
+import {unifiedSectionHref} from "./unified-navigation";
 import { sections, type SectionKey } from "./dashboard-sections";
 
 export type Service = "ai" | "payments";
 export type Locale = "bn" | "en";
-export const serviceNames = { ai: { en: "AI Store", bn: "এআই স্টোর" }, payments: { en: "Payment gateway", bn: "পেমেন্ট গেটওয়ে" } } as const;
+export const serviceNames = { ai: { en: "AI assistant", bn: "AI সহকারী" }, payments: { en: "Payment gateway", bn: "পেমেন্ট গেটওয়ে" } } as const;
 export type NavigationGroup = { label: { en: string; bn: string }; items: SectionKey[] };
 export const navigation: Record<Service, NavigationGroup[]> = {
   ai: [
@@ -11,12 +12,12 @@ export const navigation: Record<Service, NavigationGroup[]> = {
     { label: { en: "Sales & growth", bn: "বিক্রয় ও ফলো-আপ" }, items: ["leads", "follow-ups", "broadcasts", "bookings"] },
     { label: { en: "Your AI", bn: "আপনার AI" }, items: ["ai-agent", "knowledge", "products", "posts"] },
     { label: { en: "Connections", bn: "সংযোগ" }, items: ["channels", "website"] },
-    { label: { en: "Store", bn: "স্টোর" }, items: ["team", "billing", "settings", "help"] },
+    { label: { en: "Business", bn: "ব্যবসা" }, items: ["team", "billing", "settings", "help"] },
   ],
   payments: [
-    { label: { en: "Store", bn: "স্টোর" }, items: ["overview", "transactions", "customers", "invoices", "payment-links", "reports", "refunds"] },
+    { label: { en: "Business", bn: "ব্যবসা" }, items: ["overview", "transactions", "customers", "invoices", "payment-links", "reports", "refunds"] },
     { label: { en: "Devices & methods", bn: "ডিভাইস ও মাধ্যম" }, items: ["gateways", "devices", "incoming"] },
-    { label: { en: "Store settings", bn: "স্টোর সেটিংস" }, items: ["checkout-themes", "store"] },
+    { label: { en: "Business settings", bn: "ব্যবসার সেটিংস" }, items: ["checkout-themes", "store"] },
     { label: { en: "Developers", bn: "ডেভেলপার" }, items: ["developers", "api-docs"] },
     { label: { en: "Account", bn: "অ্যাকাউন্ট" }, items: ["team"] },
   ],
@@ -39,12 +40,13 @@ export function canonicalEnvironment(raw: string | undefined | null): PaymentEnv
   return raw === "sandbox" || raw === "live" ? raw : null;
 }
 export function dashboardHref(locale: Locale, workspaceId: string, service: Service, section: SectionKey = "overview", environment: PaymentEnvironment = "live") {
-  const base = `/w/${workspaceId}/${service}/${section}`;
-  // Sandbox/Live URL selector deliberately paused. The authorized payment
-  // context resolves to Live server-side; keep the type for future reactivation.
-  // return service === "payments" ? `${base}?env=${environment}` : base;
-  void locale; void environment;
-  return base;
+  // Business IDs stay in server authorization/API boundaries, not merchant URLs.
+  void locale; void workspaceId; void environment;
+  if(section==="notifications")return "/notifications";
+  if(section==="api-docs")return "/developers";
+  if(section==="apps")return "/settings/apps";
+  if(section==="requests")return "/payments/links?view=requests";
+  return unifiedSectionHref(section,service)??"/dashboard";
 }
 export function searchableNavigation(service: Service, query: string) {
   const normalized = query.trim().toLocaleLowerCase();

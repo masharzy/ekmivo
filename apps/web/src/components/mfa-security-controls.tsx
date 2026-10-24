@@ -18,7 +18,7 @@ export function MfaSecurityControls({locale,recovery=false}:{locale:"bn"|"en";re
   </form>
   {state.codes&&<div aria-label={bn?"একবার প্রদর্শিত recovery codes":"Once-visible recovery codes"}>
    <ul>{state.codes.map(code=><li key={code}><code style={{overflowWrap:"anywhere"}}>{code}</code></li>)}</ul>
-   <p>{bn?"এই পৃষ্ঠা বন্ধ হলে কোডগুলো আর দেখা যাবে না। ব্যক্তিগতভাবে সংরক্ষণ করুন।":"These codes cannot be retrieved after leaving this page. Store them privately."}</p>
+   <p>{bn?"এই পৃষ্ঠা বন্ধ হলে কোডগুলো আর দেখা যাবে না। ব্যক্তিগতভাবে সংরক্ষণ করুন।":"These codes cannot be retrieved after leaving this page. Business them privately."}</p>
   </div>}
   {!recovery&&<form action={resetAction} className="ek-recovery-form">
    <h2>{bn?"Authenticator পরিবর্তন":"Replace authenticator"}</h2>

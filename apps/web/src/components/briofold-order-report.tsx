@@ -45,7 +45,7 @@ export async function BriofoldOrderReport({workspaceId,actorId,locale,environmen
  const count=(value:number|undefined)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD").format(value??0);
  return <section className={styles.root} aria-label={t("Order operations report","অর্ডার পরিচালনার রিপোর্ট")}>
   <header className={styles.heading}><div><h1>{t("Order reports","অর্ডার রিপোর্ট")}</h1>
-   <p>{t("Store-scoped workflow counts by date, source, status and assigned team member.","নির্বাচিত স্টোরের তারিখ, উৎস, অবস্থা ও দায়িত্বপ্রাপ্ত সদস্য অনুযায়ী অর্ডারের হিসাব।")}</p></div>
+   <p>{t("Business-scoped workflow counts by date, source, status and assigned team member.","নির্বাচিত ব্যবসার তারিখ, উৎস, অবস্থা ও দায়িত্বপ্রাপ্ত সদস্য অনুযায়ী অর্ডারের হিসাব।")}</p></div>
    <span className={styles.realm}>{environment==="live"?"Live":"Sandbox"}</span></header>
   <form className={styles.filters} method="GET" action="/reports/orders">
    <label>{t("From","শুরু")}<input type="date" name="from" defaultValue={start||report?.from||""}/></label>

@@ -19,7 +19,7 @@ function ProductSwitch({locale,workspaceId,product,enabled}:{locale:"bn"|"en";wo
   <input type="hidden" name="workspaceId" value={workspaceId}/>
   <input type="hidden" name="product" value={product}/>
   <input type="hidden" name="enabled" value={String(!enabled)}/>
-  <div><strong>{product==="ai"?(bn?"AI ওয়ার্কস্পেস":"AI workspace"):(bn?"পেমেন্ট গেটওয়ে":"Payment gateway")}</strong>
+  <div><strong>{product==="ai"?(bn?"AI ব্যবসা":"AI business"):(bn?"পেমেন্ট গেটওয়ে":"Payment gateway")}</strong>
    <span>{enabled?(bn?"এই ব্যবসায় সেবা নির্বাচিত":"Enabled for this business"):(bn?"সেবা বন্ধ":"Disabled")}</span></div>
   <ToggleSubmit bn={bn} enabled={enabled}/>
   {state.status!=="idle"&&<p role="status" className={state.status==="error"?"ek-form-error":"ek-account-success"}>{state.message}</p>}

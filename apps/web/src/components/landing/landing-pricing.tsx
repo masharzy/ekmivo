@@ -46,14 +46,14 @@ export function LandingPricing({locale,pricing,aiPricing,bundlePricing}:{locale:
     </div>
     <div role="tabpanel" id="ekm-panel-ai" aria-labelledby="ekm-tab-ai" hidden={panel!=="ai"}>
       <div className="wide">
-        <div><h3>{t("Pay as you go")}</h3><p>{locale==="bn"?"এআই ক্রেডিট আলাদাভাবে রিচার্জ করে ব্যবহার করা যায়। মূল্য ও উপলব্ধতা আপনার ওয়ার্কস্পেসে দেখুন।":"AI usage uses separate prepaid credit. Check your workspace for current rates and availability."}</p><Link className="btn" href="/register">{t("Start free")}</Link></div>
+        <div><h3>{t("Pay as you go")}</h3><p>{locale==="bn"?"এআই ক্রেডিট আলাদাভাবে রিচার্জ করে ব্যবহার করা যায়। মূল্য ও উপলব্ধতা আপনার ব্যবসাে দেখুন।":"AI usage uses separate prepaid credit. Check your business for current rates and availability."}</p><Link className="btn" href="/register">{t("Start free")}</Link></div>
         <div><span className="pill">{t("Pay as you go")}</span><ul>{["Customer replies","Image search","Posts & comments","Order taking"].map(x=><li key={x}>{t(x)}</li>)}</ul></div>
       </div>
       {aiPricing}
     </div>
     <div role="tabpanel" id="ekm-panel-both" aria-labelledby="ekm-tab-both" hidden={panel!=="both"}>
       <div className="wide dk">
-        <div><h3>{locale==="bn"?"এআই ও পেমেন্ট একসাথে।":"Use AI and payments together."}</h3><p>{locale==="bn"?"এআই বটের প্রিপেইড ক্রেডিট ও পেমেন্ট প্ল্যান আলাদা। বর্তমানে প্রযোজ্য অফার ও শর্ত ওয়ার্কস্পেসে দেখুন।":"The AI bot keeps separate prepaid billing. See your workspace for current payment-plan terms and any available offers."}</p><Link className="btn" href="/register">{t("Start free")}</Link></div>
+        <div><h3>{locale==="bn"?"এআই ও পেমেন্ট একসাথে।":"Use AI and payments together."}</h3><p>{locale==="bn"?"এআই বটের প্রিপেইড ক্রেডিট ও পেমেন্ট প্ল্যান আলাদা। বর্তমানে প্রযোজ্য অফার ও শর্ত ব্যবসাে দেখুন।":"The AI bot keeps separate prepaid billing. See your business for current payment-plan terms and any available offers."}</p><Link className="btn" href="/register">{t("Start free")}</Link></div>
         <div className="mix"><div><b>{t("AI Bot")}</b><span>{t("Pay as you go")}</span></div><ul>{["Customer orders in the chat","AI asks the payment server","Dashboard shows the result"].map(x=><li key={x}>{t(x)}</li>)}</ul></div>
       </div>
       {bundlePricing}

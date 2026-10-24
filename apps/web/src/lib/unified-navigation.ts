@@ -66,6 +66,10 @@ export type UnifiedFinancialResource=keyof typeof financialDetailPrefixes;
 export function unifiedFinancialDetailPath(resource:UnifiedFinancialResource,id:string):string|null{
  return financialRecordId.test(id)?`${financialDetailPrefixes[resource]}/${id}`:null;
 }
+export function isUnifiedFinancialDetailPath(path:string):boolean{
+ return Object.values(financialDetailPrefixes).some(prefix=>path.startsWith(prefix+"/")&&financialRecordId.test(path.slice(prefix.length+1)));
+}
+
 function financialDetail(root:UnifiedRoot,view:readonly string[]):UnifiedDestination|null{
  const id=view.at(-1);
  if(!id||!financialRecordId.test(id))return null;
@@ -123,7 +127,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  if(root==="settings"&&view.length===2&&view[0]==="help"&&view[1]==="videos")
   return {section:"help",service:mode==="ai"?"ai":"payments",kind:"help-videos"};
  if(root==="settings"&&view.length===2&&view[0]==="team"&&view[1]==="scopes")
-  return {section:"team",service:mode==="ai"?"ai":"payments",kind:"member-channel-scopes"};
+  return mode==="commerce"?null:{section:"team",service:"ai",kind:"member-channel-scopes"};
  if(root==="settings"&&view.length===2&&view[0]==="team"&&view[1]==="groups")
   return {section:"team",service:mode==="ai"?"ai":"payments",kind:"team-groups"};
  // The campaign post editor has a canonical nested destination as well as
@@ -151,12 +155,13 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},refunds:{section:"refunds",service:"payments"},reconciliation:{section:"reconciliation",service:"payments"}},
   "sms-data":{"":{section:"incoming",service:"payments"}},
   invoices:{"":{section:"invoices",service:"payments"}},
-  customers:{financial:{section:"customers",service:"payments"},"":{section:payments?"customers":"contacts",service:defaultService},leads:{section:"leads",service:defaultService},"follow-ups":{section:"follow-ups",service:defaultService},broadcasts:{section:"broadcasts",service:"ai"},bookings:{section:"bookings",service:"ai"},posts:{section:"posts",service:"ai"}},
+  customers:{financial:{section:"customers",service:"payments"},"":{section:payments?"customers":"contacts",service:defaultService},leads:{section:"leads",service:"ai"},"follow-ups":{section:"follow-ups",service:"ai"},broadcasts:{section:"broadcasts",service:"ai"},bookings:{section:"bookings",service:"ai"},posts:{section:"posts",service:"ai"}},
   reports:{"":{section:"reports",service:defaultService},orders:{section:"reports",service:defaultService},payments:{section:"reports",service:"payments"},ai:{section:"reports",service:"ai"}},
  };
  let destination:UnifiedDestination|undefined;
  if(root==="settings"){
   if(!part)return {section:"settings",service:defaultService,kind:"settings-index"};
+  if(part==="apps")return payments?{section:"apps",service:"payments"}:null;
   const setting=unifiedSettings.flatMap(g=>g.items).find(item=>item.slug===part);
   if(!setting||setting.external)return null;
   destination={section:setting.section,service:setting.service==="common"?defaultService:setting.service};

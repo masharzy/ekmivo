@@ -54,7 +54,7 @@ export async function runBriofoldOnboardingBrowser({origin,browser,control,sessi
     await p.locator('input[name="plan"][value="'+plan.id+'"]').check();
     await p.getByRole("button",{name:"Finish setup",exact:true}).click();
     if(plan.terms.kind==="paid"){
-     await p.waitForURL(u=>u.pathname===`/w/${workspace}/payments/billing`&&u.searchParams.get("plan")===plan.id);
+     await p.waitForURL(u=>u.pathname==="/settings/billing"&&u.searchParams.get("plan")===plan.id);
      assert.equal((await db`SELECT count(*)::int AS n FROM pg13_subscriptions WHERE workspace_id=${workspace}`)[0].n,0,"Paid selection activated subscription");
     }else{
      await p.waitForURL(origin+"/dashboard");

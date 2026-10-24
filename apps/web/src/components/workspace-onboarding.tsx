@@ -10,11 +10,11 @@ import { draftStorageKey, parseSavedDraft, encodeSavedDraft } from "../lib/onboa
 const modes=[
  {value:"ai",title:{en:"AI Communication",bn:"AI যোগাযোগ"},description:{en:"Inbox, AI, knowledge, CRM and follow-ups.",bn:"ইনবক্স, AI, নলেজ, CRM ও ফলো-আপ।"},icon:"✳"},
  {value:"commerce",title:{en:"Commerce & Payments",bn:"কমার্স ও পেমেন্ট"},description:{en:"Orders, payment verification, devices and courier operations.",bn:"অর্ডার, পেমেন্ট যাচাই, ডিভাইস ও কুরিয়ার পরিচালনা।"},icon:"▦"},
- {value:"both",title:{en:"Both services",bn:"দুটি সেবাই"},description:{en:"Keep both independent services in a connected workspace.",bn:"দুটি স্বাধীন সেবা একটি ওয়ার্কস্পেসে সংযুক্ত করুন।"},icon:"↔"}
+ {value:"both",title:{en:"Both services",bn:"দুটি সেবাই"},description:{en:"Keep both independent services in a connected business.",bn:"দুটি স্বাধীন সেবা একটি ব্যবসাে সংযুক্ত করুন।"},icon:"↔"}
 ] as const;
 function Submit({locale}:{locale:Locale}){
  const {pending}=useFormStatus();
- return <button className="ek-action" disabled={pending} type="submit">{pending?(locale==="bn"?"তৈরি হচ্ছে…":"Creating…"):(locale==="bn"?"ওয়ার্কস্পেস তৈরি করুন":"Create workspace")} <span>↗</span></button>;
+ return <button className="ek-action" disabled={pending} type="submit">{pending?(locale==="bn"?"তৈরি হচ্ছে…":"Creating…"):(locale==="bn"?"ব্যবসা তৈরি করুন":"Create business")} <span>↗</span></button>;
 }
 type Draft = {name:string;mode:"ai"|"commerce"|"both"};
 const EMPTY_DRAFT: Draft = {name:"",mode:"both"};
@@ -101,10 +101,10 @@ export function WorkspaceOnboarding({locale,userId}:{locale:Locale;userId:string
  };
  return <section className="ek-onboard" aria-labelledby="setup-title">
   <div className="ek-page-kicker">01 / WORKSPACE SETUP</div>
-  <h1 id="setup-title">{locale==="bn"?"ব্যবসার ওয়ার্কস্পেস তৈরি করুন।":"Create your workspace."}</h1>
+  <h1 id="setup-title">{locale==="bn"?"ব্যবসার ব্যবসা তৈরি করুন।":"Create your business."}</h1>
   <p className="ek-lead">{locale==="bn"?"আপনার কাজের ধরন বেছে নিন। পরেও সুবিধাগুলো স্বাধীনভাবে চালু বা বন্ধ করার ব্যবস্থা থাকবে।":"Choose a starting configuration. Service entitlements remain independent of this preference."}</p>
   <form action={action} className="ek-onboard-form" onSubmit={()=>{submitting.current=true;}}>
-   <label className="ek-input-label">{locale==="bn"?"ওয়ার্কস্পেসের নাম":"Business or workspace name"}
+   <label className="ek-input-label">{locale==="bn"?"ব্যবসার নাম":"Business or business name"}
     <input value={name} onChange={event=>setName(event.target.value)} name="name" type="text" minLength={2} maxLength={100} required placeholder={locale==="bn"?"যেমন: আমার ব্যবসা":"e.g. North Studio"} aria-invalid={!!state.fields?.name}/>
     {state.fields?.name&&<small className="ek-field-error">{state.fields.name}</small>}
    </label>

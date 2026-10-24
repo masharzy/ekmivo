@@ -29,8 +29,8 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  customers:[
   {en:"Financial records",bn:"আর্থিক রেকর্ড",href:"/customers/financial",service:"payments"},
   {en:"Customers",bn:"গ্রাহক",href:"/customers",service:"common"},
-  {en:"Leads",bn:"লিড",href:"/customers/leads",service:"common"},
-  {en:"Follow-ups",bn:"ফলো-আপ",href:"/customers/follow-ups",service:"common"},
+  {en:"Leads",bn:"লিড",href:"/customers/leads",service:"ai"},
+  {en:"Follow-ups",bn:"ফলো-আপ",href:"/customers/follow-ups",service:"ai"},
   {en:"Broadcasts",bn:"ব্রডকাস্ট",href:"/customers/broadcasts",service:"ai"},
   {en:"Bookings",bn:"বুকিং",href:"/customers/bookings",service:"ai"},
   {en:"Posts",bn:"পোস্ট",href:"/customers/posts",service:"ai"},

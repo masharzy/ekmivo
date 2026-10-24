@@ -137,8 +137,8 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
   <dialog ref={sharedDialog} className="ekv2-confirm-dialog ek-ref-shared-warning" aria-labelledby="shared-number-title" onCancel={e=>{if(busy)e.preventDefault()}}>
    <div className="ekv2-confirm-content">
     <span className="ek-ref-warning-icon" aria-hidden="true">!</span>
-    <h2 id="shared-number-title">{t("This number is connected to another workspace","এই নম্বরটি অন্য workspace-এ যুক্ত আছে")}</h2>
-    <p>{t("This number is already connected to another workspace. If it belongs to you or you have permission to use it, you may add it to this workspace at your own responsibility.","এই নম্বরটি ইতিমধ্যে অন্য একটি workspace-এর সঙ্গে যুক্ত আছে। নম্বরটি আপনার হলে অথবা এটি ব্যবহারের অনুমতি থাকলে, নিজ দায়িত্বে এই workspace-এ যোগ করতে পারেন।")}</p>
+    <h2 id="shared-number-title">{t("This number is connected to another business","এই নম্বরটি অন্য business-এ যুক্ত আছে")}</h2>
+    <p>{t("This number is already connected to another business. If it belongs to you or you have permission to use it, you may add it to this business at your own responsibility.","এই নম্বরটি ইতিমধ্যে অন্য একটি business-এর সঙ্গে যুক্ত আছে। নম্বরটি আপনার হলে অথবা এটি ব্যবহারের অনুমতি থাকলে, নিজ দায়িত্বে এই business-এ যোগ করতে পারেন।")}</p>
     <p>{t("If you are unsure or suspect a security issue, contact an admin.","নম্বরটি সম্পর্কে নিশ্চিত না হলে বা কোনো নিরাপত্তা সমস্যা মনে হলে অ্যাডমিনকে জানান।")}</p>
     <label className="ek-ref-consent"><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/><span>{t("I have the right to use this number and agree to add it.","নম্বরটি ব্যবহারের অধিকার আমার আছে এবং আমি যোগ করতে সম্মত।")}</span></label>
     {error&&<p role="alert">{error}</p>}

@@ -15,12 +15,12 @@ export const sections={
  refunds:{en:"Refunds",bn:"রিফান্ড",detail:{en:"Refund requests and their separate financial status.",bn:"টাকা ফেরতের রিকোয়েস্ট ও তার পৃথক অবস্থা।"},group:"commerce"},
  coupons:{en:"Coupons",bn:"কুপন",detail:{en:"Discounts, eligible customers and expiry dates.",bn:"ছাড়ের পরিমাণ, যোগ্য গ্রাহক ও মেয়াদ।"},group:"commerce"},
  returns:{en:"Returns & exchanges",bn:"রিটার্ন ও এক্সচেঞ্জ",detail:{en:"Return requests, inspection and exchange fulfilment.",bn:"ফেরতের রিকোয়েস্ট, পণ্য পরীক্ষা ও এক্সচেঞ্জ।"},group:"commerce"},
- webhooks:{en:"Payment alerts",bn:"পেমেন্ট নোটিফিকেশন",detail:{en:"Messages sent to your connected store.",bn:"সংযুক্ত স্টোরে পাঠানো পেমেন্ট নোটিফিকেশন।"},group:"commerce"},
+ webhooks:{en:"Payment alerts",bn:"পেমেন্ট নোটিফিকেশন",detail:{en:"Messages sent to your connected business.",bn:"সংযুক্ত ব্যবসায় পাঠানো পেমেন্ট নোটিফিকেশন।"},group:"commerce"},
  events:{en:"Activity logs",bn:"কার্যক্রমের ইতিহাস",detail:{en:"Payment events, API logs and changes.",bn:"পেমেন্ট, API লগ ও পরিবর্তনের ইতিহাস।"},group:"commerce"},
- integrations:{en:"Apps & integrations",bn:"অ্যাপ ও ইন্টিগ্রেশন",detail:{en:"Connect your store and commerce tools.",bn:"আপনার স্টোর ও ব্যবসার টুল সংযুক্ত করুন।"},group:"commerce"},
+ integrations:{en:"Apps & integrations",bn:"অ্যাপ ও ইন্টিগ্রেশন",detail:{en:"Connect your business and commerce tools.",bn:"আপনার ব্যবসা ও ব্যবসার টুল সংযুক্ত করুন।"},group:"commerce"},
  billing:{en:"Billing & usage",bn:"বিল ও ব্যবহার",detail:{en:"Your service plan, invoices and usage costs.",bn:"সেবার প্ল্যান, বিল ও ব্যবহারের খরচ।"},group:"common"},
  help:{en:"Help & feedback",bn:"সহায়তা ও মতামত",detail:{en:"Setup help and product feedback.",bn:"সেটআপ সহায়তা ও প্রোডাক্ট নিয়ে মতামত।"},group:"common"},
- overview:{en:"Overview",bn:"ওভারভিউ",detail:{en:"Your workspace activity and next steps, as soon as integrations are connected.",bn:"ইন্টিগ্রেশন যুক্ত হলে ব্যবসার কার্যক্রম ও পরবর্তী কাজ এখানে দেখা যাবে।"},group:"common"},
+ overview:{en:"Overview",bn:"ওভারভিউ",detail:{en:"Your business activity and next steps, as soon as integrations are connected.",bn:"ইন্টিগ্রেশন যুক্ত হলে ব্যবসার কার্যক্রম ও পরবর্তী কাজ এখানে দেখা যাবে।"},group:"common"},
  inbox:{en:"Inbox",bn:"ইনবক্স",detail:{en:"Customer conversations and human handover in one place.",bn:"গ্রাহকের মেসেজ ও হ্যান্ডওভার—এক জায়গায়।"},group:"ai"},
  channels:{en:"Channels",bn:"চ্যানেল",detail:{en:"Connect authorized Messenger, Instagram, WhatsApp, web and Telegram channels.",bn:"অনুমোদিত Messenger, Instagram, WhatsApp, web ও Telegram সংযোগ।"},group:"ai"},
  "ai-agent":{en:"AI agent",bn:"AI এজেন্ট",detail:{en:"Configure and test knowledge-guided assistance before publishing.",bn:"নলেজভিত্তিক সহায়তা প্রকাশের আগে সেটআপ ও পরীক্ষা।"},group:"ai"},
@@ -41,9 +41,9 @@ export const sections={
  "api-docs":{en:"API Docs",bn:"API নির্দেশনা",detail:{en:"Integration guides and API reference.",bn:"সংযোগের নির্দেশনা ও API reference।"},group:"commerce"},
  apps:{en:"Apps & Plugins",bn:"অ্যাপ ও প্লাগইন",detail:{en:"Android downloads and plugin availability.",bn:"Android অ্যাপ ডাউনলোড ও প্লাগইনের অবস্থা।"},group:"commerce"},
  reports:{en:"Reports",bn:"রিপোর্ট",detail:{en:"Operations analytics and exports once activity begins.",bn:"কার্যক্রম চালু হলে রিপোর্ট ও export এখানে থাকবে।"},group:"common"},
- team:{en:"Team & permissions",bn:"টিম ও অনুমতি",detail:{en:"Members, roles and workspace membership.",bn:"টিম সদস্য, role ও access control।"},group:"common"},
- store:{en:"Store",bn:"স্টোর",detail:{en:"Customer-facing store information and logo.",bn:"গ্রাহকের জন্য স্টোরের তথ্য ও লোগো।"},group:"commerce"},
- settings:{en:"Workspace settings",bn:"সেটিংস",detail:{en:"Profile, security, service configuration and preferences.",bn:"প্রোফাইল, নিরাপত্তা, সেবার ধরন ও পছন্দ।"},group:"common"},
+ team:{en:"Team & permissions",bn:"টিম ও অনুমতি",detail:{en:"Members, roles and business membership.",bn:"টিম সদস্য, role ও access control।"},group:"common"},
+ store:{en:"Business",bn:"ব্যবসা",detail:{en:"Customer-facing business information and logo.",bn:"গ্রাহকের জন্য ব্যবসার তথ্য ও লোগো।"},group:"commerce"},
+ settings:{en:"Business settings",bn:"সেটিংস",detail:{en:"Profile, security, service configuration and preferences.",bn:"প্রোফাইল, নিরাপত্তা, সেবার ধরন ও পছন্দ।"},group:"common"},
 } as const;
 export type SectionKey=keyof typeof sections;
 export function allowedSection(key:string,mode:"ai"|"commerce"|"both"|"off"){
