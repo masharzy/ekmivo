@@ -72,6 +72,23 @@ func TestStudioHistoryRemainsBoundedUntrustedData(t *testing.T) {
 	}
 }
 
+func TestStudioAmbiguousFollowupUsesHistoryWithoutMandatoryHandoff(t *testing.T) {
+	var c studioContext
+	if err := json.Unmarshal([]byte(`{"config":{"model":"test/model","language":"auto"},"question":"??","knowledge":[{"title":"Payment plans","content":"One month costs BDT 50."}],"history":[{"sender":"customer","text":"payment plan?"},{"sender":"ai","text":"One month costs BDT 50."}]}`), &c); err != nil {
+		t.Fatal(err)
+	}
+	messages, err := studioMessages(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(messages[0].Content, "If the facts do not answer the question, say a human needs to help") || !strings.Contains(messages[0].Content, "Use conversation_history") || !strings.Contains(messages[0].Content, "punctuation-only follow-up") || !strings.Contains(messages[0].Content, "Never invent") {
+		t.Fatal("clarification or grounding policy missing")
+	}
+	if !strings.Contains(messages[1].Content, `"conversation_history":[{"sender":"customer","text":"payment plan?"},{"sender":"ai","text":"One month costs BDT 50."}]`) || !strings.HasSuffix(messages[1].Content, "Customer question:\n??") {
+		t.Fatal("follow-up lost its ordered context")
+	}
+}
+
 func TestStudioProposalNeverChangesModelOrPublishesImplicitly(t *testing.T) {
 	valid := `{"instructions":"Be concise","model":"test/model","mode":"practice","language":"bn","tone":"friendly"}`
 	proposal, err := parseStudioProposal(valid, "test/model")
