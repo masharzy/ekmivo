@@ -372,3 +372,8 @@ Use a dedicated consented merchant test business/account and record device, time
 - Phase9 owner receiving-account rendering/brand assertion passed, then the viewer card timed out. That GET intentionally requires manage privilege. The corrected fixture retains its explicit 403, verifies no private cards or mutation UI and verifies denied writes leave the owner account intact. Initial 403 errors now have readable UI copy. No read privilege was expanded.
 - Interest/tutorial source was recovered from prepared commit 1347f824aaf41b052cac55baa9edf430c27478aa after the execution environment became unavailable. Corrections were reconstructed through GitHub from the exact prepared parent with guarded string matches. JavaScript syntax checks passed in the orchestration runtime. A fresh full CI must validate these final TypeScript/SQL changes; no local execution result after the environment outage is claimed.
 - No merge, deployment, production migration, provider send or flag activation. Phase10 full code seal remains OPEN.
+
+
+## Final engineering code seal — 2026-10-24
+
+The earlier open checkpoints above are historical. Exact code `23d84cf6f81ab49e454033ce4f0236ed207b10f3` passed all four jobs in Foundation 40076150642, including 796 isolated financial assertions, broadcasts/consent/offers, member channel scopes and canonical payment-link expiry/redirect lifecycle. The strict parity gate now records 56/56: 55 implemented/tested plus the honest external website-voice block. [Final evidence and boundaries](BRIOFOLD-PHASE10-CODE-SEAL-20261024.md) are authoritative. No merge, deployment, production migration/flag, live provider send or physical acceptance was performed. Final reconciliation changes documentation only.

@@ -1,5 +1,7 @@
 # Phase 10 broadcast continuation — verification pending
 
+> **Final status:** this historical checkpoint is superseded by the [2026-10-24 engineering code seal](BRIOFOLD-PHASE10-CODE-SEAL-20261024.md). Exact code 23d84cf passed all four Foundation jobs, including this increment’s relevant suites; provider/device acceptance remains separate.
+
 This increment does not seal the broadcast row or Phase 10. Previous verified accounting remains 46/56 accounted and 10 unresolved. PR #146 remains unmerged; production migration, deployment, flags and customer sends are not authorized.
 
 ## Follow-up source increment

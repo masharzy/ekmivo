@@ -1,5 +1,7 @@
 # Phase 10 team channel/page scope continuation — not sealed
 
+> **Final status:** this historical checkpoint is superseded by the [2026-10-24 engineering code seal](BRIOFOLD-PHASE10-CODE-SEAL-20261024.md). Exact code 23d84cf passed all four Foundation jobs, including this increment’s relevant suites; provider/device acceptance remains separate.
+
 Verified accounting is 50/56 accounted (49 implemented/tested, one honest external block), six rows unresolved. This source increment keeps the team row partial pending real isolated SQL/Go/browser acceptance. No merge, deploy, production migration/flag or provider send is authorized.
 
 CONTROL migration 0208 adds deny-only per-member/connection read/send scopes with current owner password confirmation through Go, owner protection, active member/Store binding, serial revision and durable control audit. The default-off editor is `/settings/team/scopes`, linked from team groups. Hiding the editor does not bypass installed SQL/API restrictions. A page is its exact Inbox connection; a restriction never grants base-role or product rights. Restricted members cannot manage global Inbox/AI configuration. Independent Store-owned signed devices remain separately owner-authorized; this is not a new per-user device model.

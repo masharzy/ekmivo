@@ -1,5 +1,7 @@
 # Phase 10 signed consent and offer follow-up — integrated verification pending
 
+> **Final status:** this historical checkpoint is superseded by the [2026-10-24 engineering code seal](BRIOFOLD-PHASE10-CODE-SEAL-20261024.md). Exact code 23d84cf passed all four Foundation jobs, including this increment’s relevant suites; provider/device acceptance remains separate.
+
 This increment closes implementation gaps found in the initial broadcast dispatcher; it does not advance the verified 50/56 accounting or seal Phase 10. No production migration, flag, deployment or provider send is authorized.
 
 0209 supplies a real consent acquisition path: only a verified Meta callback with the exact customer command `START OFFERS` may establish Messenger/Instagram marketing evidence. The SQL writer independently checks the durable inbound text, current connected Store/channel/source/profile, active AI product, event digest/provider record and ten-minute source freshness. Ordinary START/order text, forged signatures, stale messages, unrelated identities and CRM preferences cannot mint consent. Evidence retains the originating message and raw-event digest; duplicate callbacks do not grow proofs. Permanent STOP/global/legal suppression and DNC are never cleared by opt-in. Consent expires after thirty days and dispatch still requires a current conversation window. No automatic acknowledgement is sent.
