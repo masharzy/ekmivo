@@ -3,7 +3,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import postgres from 'postgres';
 export async function runBroadcastDispatch({control,sessions,origin,browser}){
  const target=new URL(control);if(!['localhost','127.0.0.1','[::1]'].includes(target.hostname)||/prod/i.test(target.pathname))throw Error('Broadcast refuses shared DB');
- const db=postgres(control,{max:3,prepare:false});let ctx;
+ const db=postgres(control,{max:3,prepare:false,connection:{application_name:'phase10_broadcast_dispatch',statement_timeout:20000,lock_timeout:5000}});let ctx;
  try{
   const actor=async token=>(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(token).digest('hex')}`)[0].user_id;
   const owner=await actor(sessions.owner),viewer=await actor(sessions.viewer),store=randomUUID(),foreign=randomUUID();
@@ -70,7 +70,8 @@ export async function runBroadcastDispatch({control,sessions,origin,browser}){
   const page=await ctx.newPage();page.setDefaultNavigationTimeout(90000);await page.goto(origin+'/customers/broadcasts');
   const panel=page.getByRole('region',{name:'Broadcast delivery',exact:true});await panel.getByRole('button',{name:'Load delivery review',exact:true}).click();
   await panel.getByLabel('Broadcast campaign',{exact:true}).selectOption(uiCampaign);await panel.getByLabel('Saved message sequence',{exact:true}).selectOption(reply);
-  await panel.getByLabel('Consented test customer ID (optional; leave empty for segment)',{exact:true}).fill(second.customer);
+  await panel.getByRole('button',{name:'Preview eligible audience',exact:true}).click();await panel.getByRole('heading',{name:'Approval preview',exact:true}).waitFor();
+  await panel.getByLabel('Test recipient (preview audience first)',{exact:true}).selectOption(second.customer);
   await panel.getByRole('button',{name:'Preview eligible audience',exact:true}).click();await panel.getByRole('heading',{name:'Approval preview',exact:true}).waitFor();
   await panel.getByText('Recipients: 1',{exact:false}).waitFor();await panel.getByLabel('I approve this audience, message sequence and schedule. Fresh opt-outs may reduce delivery.',{exact:true}).check();
   const approved=page.waitForResponse(r=>r.url().includes('/growth?')&&r.request().method()==='POST');await panel.getByRole('button',{name:'Approve consented test send',exact:true}).click();assert.equal((await approved).status(),200);

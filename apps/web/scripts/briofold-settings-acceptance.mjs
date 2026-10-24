@@ -1,4 +1,5 @@
 import {startBriofoldPrivateStorage} from "./briofold-private-storage-fixture.mjs";
+import {runSignedBroadcastOffers} from "./briofold-broadcast-optin-offers-acceptance.mjs";
 import {runMemberChannelScopes} from "./briofold-channel-scopes-acceptance.mjs";
 import {runBroadcastDispatch} from "./briofold-broadcast-dispatch-acceptance.mjs";
 import {runWooWebhookSources} from "./briofold-woo-hook-acceptance.mjs";
@@ -108,6 +109,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0206_briofold_woo_webhook_sources.sql");
   await apply("0207_briofold_broadcast_dispatch.sql");
   await apply("0208_briofold_member_channel_scopes.sql");
+  await apply("0209_briofold_broadcast_optin_offers.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const privateStorage=await startBriofoldPrivateStorage(control);
@@ -134,7 +136,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   // Collect independent failures so one UI assertion does not hide all later
   // feature evidence. The final job remains red if any suite fails.
   const failures=[];
-  const check=async(name,run)=>{try{await run();}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
+  const check=async(name,run)=>{console.log("BRIOFOLD INDEPENDENT SUITE START",name);try{await run();console.log("BRIOFOLD INDEPENDENT SUITE DONE",name);}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
   await check("runBriofoldSettingsBrowser",async()=>{await runBriofoldSettingsBrowser({origin,browser,control,sessions});});
   await check("runWalletBrowser",async()=>{await runWalletBrowser({control,sessions,origin,browser});});
   await check("runSetupChecklist",async()=>{await runSetupChecklist({origin,browser,control,sessions});});
@@ -166,6 +168,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runBriofoldCommerce",async()=>{await runBriofoldCommerce({origin,browser,control,sessions,apiOrigin});});
   await check("runBriofoldOrderAssignment",async()=>{await runBriofoldOrderAssignment({origin,browser,control,sessions});});
   await check("runMemberChannelScopes",async()=>{await runMemberChannelScopes({control,sessions,origin,browser});});
+  await check("runSignedBroadcastOffers",async()=>{await runSignedBroadcastOffers({control,sessions,apiOrigin});});
   await check("runBroadcastDispatch",async()=>{await runBroadcastDispatch({control,sessions,origin,browser});});
   await check("runBriofoldGrowthOperations",async()=>{await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});});
   if(phase9Fixture)await check("runBriofoldPhase9Browser",async()=>{await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});});

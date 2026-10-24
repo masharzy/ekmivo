@@ -57,7 +57,8 @@ async function readOverview(workspaceId:string,userId:string):Promise<Result>{
    db`SELECT to_regclass('public.briofold_ai_executions') AS rel`
   ]);
   let requests:number|null=null;
-  if(exists[0]?.rel){
+  const [meterAccess]=await db`SELECT pg13_capability_override(${workspaceId}::uuid,${userId}::uuid,'inbox:manage') IS DISTINCT FROM false AS allowed`;
+  if(exists[0]?.rel&&meterAccess.allowed){
    try{
     const [row]=await db`SELECT count(*)::bigint AS value
       FROM briofold_ai_executions WHERE workspace_id=${workspaceId}::uuid

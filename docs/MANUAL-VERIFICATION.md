@@ -862,3 +862,8 @@ After owner-approved integration only: connect an owned WooCommerce store using 
 
 - 0208 and `/settings/team/scopes` isolated SQL/Go/browser acceptance pending. Do not mark team parity complete from source or build. See `docs/evidence/BRIOFOLD-PHASE10-MEMBER-CHANNELS-20261024.md`.
 - Later owner review: restrict read on one page and send on a second, verify the member's real Inbox/CRM/media/search/notification behavior, revoke access after queueing, and restore restrictions with current password. Physical paired devices remain independent Store-owned authorization; no production settings/migration or message send is authorized now.
+
+### Phase 10 signed broadcast opt-in and merchant offers (2026-10-24 Dhaka)
+
+- 0209 and its isolated signed callback/offer suite are automated verification pending. See `docs/evidence/BRIOFOLD-PHASE10-SIGNED-OFFERS-20261024.md`. It also adds current channel permission metadata and read-only conversation controls.
+- Later authorized provider test: a designated fictional/test customer explicitly sends `START OFFERS`; review the exact account-bound audience and message sequence, select the named test recipient, and use an audience-bound merchant coupon within its start/expiry and redemption limits. Verify STOP remains permanent and a disabled/expired offer stops pending messages. No real customer send or production activation is authorized now.

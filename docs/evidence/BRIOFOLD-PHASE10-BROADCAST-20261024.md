@@ -2,6 +2,10 @@
 
 This increment does not seal the broadcast row or Phase 10. Previous verified accounting remains 46/56 accounted and 10 unresolved. PR #146 remains unmerged; production migration, deployment, flags and customer sends are not authorized.
 
+## Follow-up source increment
+
+0209 adds real signed `START OFFERS` consent acquisition, authoritative audience-bound merchant coupon snapshots and expiry/claim guards, named test-recipient selection and current member-scoped preview/control metadata. See `BRIOFOLD-PHASE10-SIGNED-OFFERS-20261024.md`. The original implementation/limitation discussion below records the earlier 0207 increment; audience-bound offers are now implemented but unverified, rather than missing. No additional row is closed until actual integrated evidence.
+
 ## Implementation
 
 CONTROL-only additive 0207 stores explicit campaign/reply revision approvals, audience snapshots, identity-bound consent/thread recipients and stable per-recipient sequence keys. Preview and approval are separate authenticated owner/admin actions. The selected saved reply is outgoing content; editorial campaign body remains planning text. The preview token binds Store, realm, actor, campaign/reply revisions, exact eligible audience and sequence. Up to 500 current-window Messenger/Instagram customers, at most twenty approval runs per Store/day; one audience run per campaign revision and one test run per revision/customer. Cancelled approvals cannot be recreated to accidentally resend.

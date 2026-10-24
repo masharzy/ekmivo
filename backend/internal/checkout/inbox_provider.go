@@ -239,6 +239,12 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		if err := tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,$6,$7)", connection, id, from, name, text, kind, at).Scan(&accepted); err != nil {
 			return err
 		}
+		if accepted && kind == "text" && (provider == "ms" || provider == "ig") && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" && os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") == "true" && strings.EqualFold(strings.TrimSpace(text), "START OFFERS") {
+			var consented bool
+			if err := tx.QueryRow(r.Context(), "SELECT briofold_growth_provider_opt_in($1::uuid,$2,$3)", connection, id, hash).Scan(&consented); err != nil {
+				return err
+			}
+		}
 		if accepted && kind == "text" && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" && signedChannelMarketingOptOut(text) {
 			// Signed Meta webhook and existing durable inbox message are both
 			// necessary. The CONTROL routine rechecks sender, message type,
