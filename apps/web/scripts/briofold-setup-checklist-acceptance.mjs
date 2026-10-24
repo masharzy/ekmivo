@@ -19,14 +19,16 @@ export async function runSetupChecklist({origin,browser,control,sessions}){
    assert.equal((await p.goto(origin+'/setup/checklist')).status(),200);
    await p.getByRole('heading',{name:'Business setup guide',exact:true}).waitFor();
    const step=id=>p.locator('[data-setup-step="'+id+'"]');
-   await step('products').getByText('Review setup',{exact:true}).waitFor();
+   await step('products').getByText('Optional',{exact:true}).waitFor();
    await step('team').getByText('Optional for a solo Business',{exact:true}).waitFor();
    if(mode!=='commerce')await step('channels').getByText('Review setup',{exact:true}).waitFor();else assert.equal(await step('channels').count(),0);
    assert.equal(await step('payments').count(),mode==='ai'?0:1);
+   assert.equal(await step('knowledge').count(),mode==='commerce'?0:1);
+   await step('courier').getByText('Optional',{exact:true}).waitFor();
    await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${viewer},'viewer')`;
    const product=(await db`INSERT INTO commerce_products(workspace_id,environment,name) VALUES(${store},'sandbox','Sandbox checklist product') RETURNING id`)[0].id;
    await db`INSERT INTO commerce_variants(workspace_id,environment,product_id,sku,price_minor) VALUES(${store},'sandbox',${product},'SANDBOX',100)`;
-   await p.reload();await step('products').getByText('Review setup',{exact:true}).waitFor();
+   await p.reload();await step('products').getByText('Optional',{exact:true}).waitFor();
    const active=(await db`INSERT INTO commerce_products(workspace_id,environment,name) VALUES(${store},'live','Fictional checklist product') RETURNING id`)[0].id;
    await db`INSERT INTO commerce_variants(workspace_id,environment,product_id,sku,price_minor) VALUES(${store},'live',${active},'CHECKLIST',100)`;
    await db`INSERT INTO commerce_integrations(workspace_id,environment,provider,secret_cipher) VALUES(${store},'live','steadfast',decode('abcd','hex'))`;

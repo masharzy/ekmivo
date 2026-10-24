@@ -123,6 +123,27 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   await page.getByRole('button',{name:'Publish configuration',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
   assert.equal((await read()).published.instructions,'Browser persisted instructions. Never invent a paid payment.');
   await page.goto(origin+'/settings/knowledge');
+  // The same editor supports services and business-only knowledge without a retail catalog.
+  await page.getByLabel('Business information title',{exact:true}).fill('IELTS business information');
+  await page.getByLabel('About your business',{exact:true}).fill('IELTS speaking practice. Open Saturday at 10am. Book by messaging our team.');
+  await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByText('IELTS business information',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Add product/service',exact:true}).click();
+  await page.getByLabel('Product/service name',{exact:true}).fill('Speaking mock test');
+  await page.getByLabel('Pricing & details',{exact:true}).fill('Speaking mock test: BDT 500 per session, 20 minutes with feedback.');
+  await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByText('Speaking mock test',{exact:true}).waitFor();
+  await page.reload();
+  assert.ok((await read()).sources.some(x=>x.title==='IELTS business information'));
+  assert.ok((await read()).sources.some(x=>x.title==='Speaking mock test'));
+  await page.getByRole('link',{name:'Open AI assistant to publish',exact:true}).click();
+  await page.getByLabel('Reason (10–500 characters)',{exact:true}).fill('Publish business and service information');
+  await page.getByLabel('I confirm this publication replaces the active configuration.',{exact:true}).check();
+  await page.getByRole('button',{name:'Publish configuration',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
+  await page.goto(origin+'/settings/knowledge');
+  await page.getByLabel('Search published sources',{exact:true}).check();
+  await page.getByLabel('Test question',{exact:true}).fill('Speaking');
+  await page.getByRole('button',{name:'Search sources',exact:true}).click();
+  await page.getByText('Speaking mock test: BDT 500 per session, 20 minutes with feedback.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Other information / FAQ',exact:true}).click();
   const importPath=origin+'/api/go/workspaces/'+workspace+'/ai/knowledge-import';
   const scanned=await context.request.post(importPath,{headers:{Origin:origin},data:{name:'Fictional.docx',data:Buffer.from('Fictional scanner probe').toString('base64')}});
   assert.equal(scanned.status(),503);assert.equal((await scanned.json()).error?.code,'FILE_SCAN_UNCONFIRMED');
