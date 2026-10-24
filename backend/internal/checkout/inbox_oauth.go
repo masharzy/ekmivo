@@ -69,7 +69,7 @@ func (s *Service) HandleInboxOAuthBegin(w http.ResponseWriter, r *http.Request) 
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
-	if err := s.mobileSession(r, ws, e); err != nil {
+	if err := s.inboxManageSession(r, ws, e); err != nil {
 		authError(w, err)
 		return
 	}
@@ -168,7 +168,7 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	if err = s.mobileSession(r, target.Workspace, target.Environment); err != nil {
+	if err = s.inboxManageSession(r, target.Workspace, target.Environment); err != nil {
 		authError(w, err)
 		return
 	}

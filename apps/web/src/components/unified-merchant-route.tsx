@@ -28,6 +28,7 @@ import {GrowthOperationsPage} from "./growth-operations-page";
 import {BriofoldOrderReport} from "./briofold-order-report";
 import {BriofoldUnifiedActivity} from "./briofold-unified-activity";
 import {HelpVideos} from "./help-videos";
+import {MemberChannelScopes} from "./member-channel-scopes";
 import {TeamGroups} from "./team-groups";
 import {BrowserDevicePreferences} from "./browser-device-preferences";
 
@@ -59,6 +60,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  const campaignPostRoute=root==="customers"&&view.length===2&&view[0]==="campaigns"&&view[1]==="posts";
  if(root==="reports"&&view[0]==="orders"&&process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED!=="true")notFound();
  if(root==="settings"&&view[0]==="activity"&&workspace.mode==="ai"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED!=="true")notFound();
+ if(root==="settings"&&view[0]==="team"&&view[1]==="scopes"&&process.env.BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED!=="true")notFound();
  if(root==="settings"&&view[0]==="team"&&view[1]==="groups"&&process.env.BRIOFOLD_TEAM_GROUPS_ENABLED!=="true")notFound();
  const {section,service,kind,detailId}=destination;
  const paymentContext=service==="payments"
@@ -79,8 +81,10 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
    ?<BrowserDevicePreferences bn={locale==="bn"}/>
   :kind==="help-videos"
    ?<HelpVideos key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
+  :kind==="member-channel-scopes"
+   ?<MemberChannelScopes workspaceId={workspace.id} bn={locale==="bn"}/>
   :kind==="team-groups"
-   ?<TeamGroups key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
+   ?<TeamGroups key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"} scopesEnabled={process.env.BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED==="true"}/>
   :root==="settings"&&view[0]==="activity"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"
    ?<><BriofoldUnifiedActivity workspaceId={workspace.id} actorId={user.id} locale={locale}
        environment={paymentContext?.environment??"live"} filters={activityFilters} embedded={!!paymentContext}/>

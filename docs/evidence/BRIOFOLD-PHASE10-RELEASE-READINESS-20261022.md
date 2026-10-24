@@ -4,6 +4,12 @@
 
 **Assessment: Phase 10 FULL CODE SEAL = OPEN. Production cutover = NOT AUTHORIZED.** Physical/real-provider testing belongs to the owner, outside the code-level gate. But missing *code* and unintegrated migrations/branches cannot be waived as “manual testing.” Do not relabel the phase complete because its existing baseline CI is green.
 
+## 2026-10-24 Dhaka verified continuation — 50/56 accounted, 6 unresolved
+
+Foundation [40053013312](https://github.com/masharzy/ekmivo/actions/runs/40053013312), source `c6b5ca70fb82fd22da02491f7f29df7b4af93fba`, passes Go/Kotlin/images and the named setup guide, actual canonical financial notification and courier settings suites. `TestPathaoControlBookingIsolation` individually passes the real SQL/service/provider-contract test; its collector remains red because the independent Woo sibling test failed. With prior handover/COD/print acceptance, four rows advance: **49 Implemented+Tested + 1 honest external block = 50/56 accounted, 6 unresolved**. The overall workflow is still red, not an exact-head seal.
+
+Remaining rows: broadcast dispatch, per-channel team scopes, campaign post mapping, Woo products/sync, payment link lifecycle, and webhook lifecycle. Woo source disable committed its SQL but attempted to scan PostgreSQL void into an untyped Go value, producing HTTP 503; execute the void command without scanning. Mapping browser retained BN locale from a previous matrix and searched an English link; explicitly restore locale. Webhook history has multiple legitimate deliveries; select the target event card before its attempt timeline. None of these test corrections removes uniqueness, authorization or business assertions. Broadcast and team scope increments require integrated acceptance; all production actions remain unauthorized.
+
 ## 2026-10-24 Dhaka continuation — 46/56 accounted, 10 unresolved
 
 [Foundation 40008415353](https://github.com/masharzy/ekmivo/actions/runs/40008415353) on `3c42c19dae0bb4aa9ec3309a46a807cb851614d9` passed Go, Kotlin and images. The new browser readiness check passed and application journeys executed. Catalog photo/variant private reads and edits/reload passed, as did full photo retrieval, Inbox notification filter/read/pagination, and prior finance/CRM/AI/order suites. The catalog row advances: **45 Implemented+Tested + 1 honest external block = 46/56 accounted, 10 unresolved**.

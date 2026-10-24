@@ -9,7 +9,7 @@ import (
 )
 
 // HandleGrowth serves drafts and internal appointments. It intentionally has
-// no delivery/send action: an unverified CRM opt-in is not transport consent.
+// delivery is separately flagged and uses fresh, identity-bound transport consent.
 func (s *Service) HandleGrowth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-store")
 	if !originAllowed(r) {
@@ -44,7 +44,21 @@ func (s *Service) HandleGrowth(w http.ResponseWriter, r *http.Request) {
 	var raw []byte
 	if r.Method == http.MethodGet {
 		kind := r.URL.Query().Get("kind")
-		if kind == "conversion" {
+		if kind == "broadcast-runs" {
+			if os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") != "true" {
+				fail(w, 503, "BROADCAST_DISPATCH_UNAVAILABLE")
+				return
+			}
+			off := 0
+			if value := r.URL.Query().Get("cursor"); value != "" {
+				off, err = strconv.Atoi(value)
+			}
+			if err != nil || off < 0 || off > 10000 || len(r.URL.Query().Get("q")) > 100 {
+				fail(w, 422, "INVALID_BROADCAST_FILTER")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_broadcast_read($1::uuid,$2,$3::uuid,$4,$5)", store, realm, actor.UserID, r.URL.Query().Get("q"), off).Scan(&raw)
+		} else if kind == "conversion" {
 			if os.Getenv("BRIOFOLD_CONVERSION_REPORT_ENABLED") != "true" {
 				fail(w, 503, "CONVERSION_REPORT_UNAVAILABLE")
 				return
@@ -84,7 +98,13 @@ func (s *Service) HandleGrowth(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		encoded, _ := json.Marshal(command.Body)
-		if command.Action == "suppress-contact" && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" {
+		if strings.HasPrefix(command.Action, "broadcast-") {
+			if os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") != "true" {
+				fail(w, 503, "BROADCAST_DISPATCH_UNAVAILABLE")
+				return
+			}
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_broadcast_command($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", store, realm, actor.UserID, command.Key, command.Action, encoded).Scan(&raw)
+		} else if command.Action == "suppress-contact" && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" {
 			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_growth_suppress_contact($1::uuid,$2,$3::uuid,$4::uuid,$5::jsonb)", store, realm, actor.UserID, command.Key, encoded).Scan(&raw)
 		} else {
 			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_growth_operations_write($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", store, realm, actor.UserID, command.Key, command.Action, encoded).Scan(&raw)

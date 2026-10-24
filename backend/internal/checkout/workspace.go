@@ -5,6 +5,7 @@ import (
 	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
 	"net/http"
 	"net/mail"
+	"os"
 	"strings"
 	"time"
 )
@@ -50,6 +51,10 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "NOT_FOUND")
 		return
 	}
+	if resource == "channel-scopes" && (os.Getenv("BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED") != "true" || !s.Auth.GranularGrants) {
+		fail(w, 503, "CHANNEL_SCOPES_UNAVAILABLE")
+		return
+	}
 	if resource == "groups" && !s.Auth.GranularGrants {
 		fail(w, 503, "GROUP_PERMISSIONS_UNAVAILABLE")
 		return
@@ -68,6 +73,8 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_settings_read($1::uuid,$2::uuid,$3::uuid)", ws, actor.UserID, nullableID(target)).Scan(&raw)
 		} else if resource == "help-videos" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_help_videos_read($1::uuid,$2::uuid,$3)", ws, actor.UserID, r.URL.Query().Get("kind")).Scan(&raw)
+		} else if resource == "channel-scopes" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_scopes_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
 		} else if resource == "groups" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_team_groups_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
 		} else if resource == "help" && target != "" {
@@ -111,7 +118,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		if resource == "change-role" || resource == "remove-member" || resource == "grants" || resource == "transfer-owner" || resource == "groups" {
+		if resource == "change-role" || resource == "remove-member" || resource == "grants" || resource == "transfer-owner" || resource == "groups" || resource == "channel-scopes" {
 			password, _ := b["current_password"].(string)
 			if e = s.Auth.ConfirmPassword(r.Context(), actor, password); e != nil {
 				authError(w, e)
@@ -233,7 +240,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-		case "revoke-invite", "remove-member", "change-role", "grants", "transfer-owner":
+		case "revoke-invite", "remove-member", "change-role", "grants", "transfer-owner", "channel-scopes":
 		default:
 			fail(w, 404, "NOT_FOUND")
 			return
@@ -261,6 +268,8 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			} else {
 				e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_feedback_write($1::uuid,$2::uuid,$3::uuid,$4::jsonb)", ws, actor.UserID, nullableID(r.Header.Get("Idempotency-Key")), string(data)).Scan(&raw)
 			}
+		} else if resource == "channel-scopes" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_scopes_write($1::uuid,$2::uuid,$3::jsonb)", ws, actor.UserID, string(data)).Scan(&raw)
 		} else if resource == "groups" {
 			groupBody, _ := json.Marshal(b["body"])
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_team_groups_write($1::uuid,$2::uuid,$3,$4::jsonb)", ws, actor.UserID, b["action"], string(groupBody)).Scan(&raw)

@@ -19,7 +19,7 @@ const caps:[string,string,string][]=[
  ["product:ai","All AI access","সমস্ত AI অ্যাক্সেস"],
 ];
 
-export function TeamGroups({workspaceId,bn}:{workspaceId:string;bn:boolean}){
+export function TeamGroups({workspaceId,bn,scopesEnabled=false}:{workspaceId:string;bn:boolean;scopesEnabled?:boolean}){
  const t=(en:string,be:string)=>bn?be:en;
  const [data,setData]=useState<Data|null>(null),[error,setError]=useState(""),[message,setMessage]=useState("");
  const [busy,setBusy]=useState(false),[draft,setDraft]=useState<Draft>(empty),[password,setPassword]=useState("");
@@ -58,6 +58,7 @@ export function TeamGroups({workspaceId,bn}:{workspaceId:string;bn:boolean}){
   finally{lock.current=false;setBusy(false);setPassword("");}
  };
  return <section className={styles.root} aria-busy={busy}>
+ {scopesEnabled&&<Link href="/settings/team/scopes">{t("Manage channel and page restrictions","চ্যানেল ও পেজের অ্যাক্সেস সীমা")}</Link>}
   <header><p className={styles.eyebrow}>{t("Store owner · security","স্টোর মালিক · নিরাপত্তা")}</p><h1>{t("Team permission groups","টিমের অনুমতি গ্রুপ")}</h1>
    <p>{t("Group policies only restrict access. They cannot elevate a role or override a direct denial. Owner permissions are never changed by a group.","গ্রুপ শুধু অনুমতি সীমিত করতে পারে। দায়িত্বের চেয়ে বেশি অনুমতি বা ব্যক্তিগত নিষেধাজ্ঞা বাতিল করতে পারে না। মালিকের অনুমতি অপরিবর্তিত থাকে।")}</p>
    <Link href="/settings/team">{t("Manage individual team roles and grants","সদস্যদের দায়িত্ব ও আলাদা অনুমতি দেখুন")}</Link>

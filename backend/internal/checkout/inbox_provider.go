@@ -34,7 +34,7 @@ func (s *Service) HandleInboxConnection(w http.ResponseWriter, r *http.Request) 
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
-	if err := s.mobileSession(r, ws, e); err != nil {
+	if err := s.inboxManageSession(r, ws, e); err != nil {
 		authError(w, err)
 		return
 	}
@@ -357,6 +357,9 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			ticks++
 			if s.Pipeline != nil && s.Pipeline.Control != nil {
 				s.sendInboxPush(ctx)
+				if os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") == "true" {
+					_, _ = s.Pipeline.Control.Exec(ctx, "SELECT briofold_broadcast_tick()")
+				}
 				if ticks%10 == 0 {
 					_, _ = s.Pipeline.Control.Exec(ctx, "SELECT briofold_inbox_alert_sweep()")
 				}
@@ -370,6 +373,10 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			}
 			var job inboxSendJob
 			if json.Unmarshal(raw, &job) != nil {
+				continue
+			}
+			if job.Broadcast && os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") != "true" {
+				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','BROADCAST_DISABLED')", job.ID)
 				continue
 			}
 			if job.Channel == "site" {
@@ -390,6 +397,20 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 				req, _ := http.NewRequestWithContext(ctx, "POST", "https://graph.facebook.com/"+version+"/"+url.PathEscape(job.Account)+"/messages", bytes.NewReader(data))
 				req.Header.Set("Authorization", "Bearer "+string(token))
 				req.Header.Set("Content-Type", "application/json")
+				if job.ChannelGuard {
+					var allowed bool
+					if s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_channel_send_valid($1::uuid)", job.ID).Scan(&allowed) != nil || !allowed {
+						_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','CHANNEL_ACCESS_REVOKED')", job.ID)
+						continue
+					}
+				}
+				if job.Broadcast {
+					var allowed bool
+					if os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") != "true" || s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_broadcast_send_check($1::uuid)", job.ID).Scan(&allowed) != nil || !allowed {
+						_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','BROADCAST_APPROVAL_CHANGED')", job.ID)
+						continue
+					}
+				}
 				response, e := inboxHTTP.Do(req)
 				if e != nil {
 					state = "uncertain"

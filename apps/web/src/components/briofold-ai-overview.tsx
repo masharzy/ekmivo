@@ -27,29 +27,32 @@ async function readOverview(workspaceId:string,userId:string):Promise<Result>{
     AND pg13_capability_override(m.workspace_id,m.user_id,'product:ai') IS DISTINCT FROM false
    LIMIT 1`;
   if(!allowed)return null;
+  const [scopeSchema]=await db`SELECT to_regclass('public.briofold_member_channel_scopes') IS NOT NULL AS present`;
+  const channelAccess=scopeSchema.present?db`briofold_channel_allowed(${workspaceId}::uuid,${userId}::uuid,c.id,'read')`:db`true`;
+
   const [counts,recent,exists]=await Promise.all([
    db`SELECT
      (SELECT count(*)::bigint FROM inbox_threads t JOIN inbox_connections c
        ON c.id=t.connection_id AND c.workspace_id=t.workspace_id
-       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true) AS conversations,
+       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true AND ${channelAccess}) AS conversations,
      (SELECT count(*)::bigint FROM inbox_threads t JOIN inbox_connections c ON c.id=t.connection_id
-       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true
+       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true AND ${channelAccess}
        AND EXISTS(SELECT 1 FROM inbox_messages request WHERE request.thread_id=t.id AND request.workspace_id=t.workspace_id AND request.sender='customer' AND NOT EXISTS(SELECT 1 FROM inbox_messages response WHERE response.thread_id=t.id AND response.workspace_id=t.workspace_id AND response.sender IN ('seller','ai') AND response.state IN ('sent','delivered','seen') AND response.sequence>request.sequence))) AS waiting,
      (SELECT count(*)::bigint FROM inbox_messages reply JOIN inbox_threads t ON t.id=reply.thread_id
        JOIN inbox_connections c ON c.id=t.connection_id WHERE reply.workspace_id=${workspaceId}::uuid
-       AND c.environment='live' AND c.enabled=true AND reply.sender='seller' AND reply.state IN ('sent','delivered','seen')
+       AND c.environment='live' AND c.enabled=true AND ${channelAccess} AND reply.sender='seller' AND reply.state IN ('sent','delivered','seen')
        AND reply.created_at>=now()-interval '7 days') AS human_replies,
      (SELECT count(*)::bigint FROM inbox_messages reply JOIN inbox_threads t ON t.id=reply.thread_id
        JOIN inbox_connections c ON c.id=t.connection_id WHERE reply.workspace_id=${workspaceId}::uuid
-       AND c.environment='live' AND c.enabled=true AND reply.sender='ai' AND reply.state IN ('sent','delivered','seen')
+       AND c.environment='live' AND c.enabled=true AND ${channelAccess} AND reply.sender='ai' AND reply.state IN ('sent','delivered','seen')
        AND reply.created_at>=now()-interval '7 days') AS ai_replies,
      (SELECT count(*)::bigint FROM inbox_connections c
        WHERE c.workspace_id=${workspaceId}::uuid AND c.environment='live'
-       AND c.enabled=true) AS channels`,
+       AND c.enabled=true AND ${channelAccess}) AS channels`,
    db`SELECT t.id,t.customer_name,c.provider,t.last_activity_at
        FROM inbox_threads t JOIN inbox_connections c
        ON c.id=t.connection_id AND c.workspace_id=t.workspace_id
-       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true
+       WHERE t.workspace_id=${workspaceId}::uuid AND c.environment='live' AND c.enabled=true AND ${channelAccess}
        ORDER BY t.last_activity_at DESC,t.id DESC LIMIT 6`,
    db`SELECT to_regclass('public.briofold_ai_executions') AS rel`
   ]);

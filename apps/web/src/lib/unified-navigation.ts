@@ -54,7 +54,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"help-videos"|"channel-settings"|"courier-integrations"|"product-photos"};
+export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"member-channel-scopes"|"help-videos"|"channel-settings"|"courier-integrations"|"product-photos"};
 const financialRecordId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const financialDetailPrefixes={
  payments:"/payments/transactions",incoming:"/sms-data",gateways:"/settings/payment-methods",
@@ -122,6 +122,8 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   return {section:"settings",service:mode==="ai"?"ai":"payments",kind:"account-devices"};
  if(root==="settings"&&view.length===2&&view[0]==="help"&&view[1]==="videos")
   return {section:"help",service:mode==="ai"?"ai":"payments",kind:"help-videos"};
+ if(root==="settings"&&view.length===2&&view[0]==="team"&&view[1]==="scopes")
+  return {section:"team",service:mode==="ai"?"ai":"payments",kind:"member-channel-scopes"};
  if(root==="settings"&&view.length===2&&view[0]==="team"&&view[1]==="groups")
   return {section:"team",service:mode==="ai"?"ai":"payments",kind:"team-groups"};
  // The campaign post editor has a canonical nested destination as well as

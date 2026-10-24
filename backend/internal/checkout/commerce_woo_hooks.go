@@ -45,8 +45,7 @@ func (s *Service) commerceWooHooks(w http.ResponseWriter, r *http.Request, ws, r
 		return
 	}
 	if action == "woo-hook-disable" {
-		var ignored any
-		err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_woo_hook_disable($1::uuid,$2,$3::uuid,$4::uuid)", ws, realm, actor, str(b, "id")).Scan(&ignored)
+		_, err := s.Pipeline.Control.Exec(r.Context(), "SELECT commerce_woo_hook_disable($1::uuid,$2,$3::uuid,$4::uuid)", ws, realm, actor, str(b, "id"))
 		if err != nil {
 			inboxWorkFailure(w, err)
 			return

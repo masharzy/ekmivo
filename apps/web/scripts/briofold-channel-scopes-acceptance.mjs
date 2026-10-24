@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict';
+import {createHash,randomBytes,randomUUID,scryptSync} from 'node:crypto';
+import postgres from 'postgres';
+export async function runMemberChannelScopes({control,sessions,origin,browser}){
+ const target=new URL(control);if(!['localhost','127.0.0.1','[::1]'].includes(target.hostname)||/prod/i.test(target.pathname))throw Error('Scopes refuse shared DB');
+ const db=postgres(control,{max:3,prepare:false});let ctx,memberCtx,owner,oldHash;
+ try{
+  const identity=async token=>(await db`SELECT u.id,u.password_hash FROM app_users u JOIN auth_sessions s ON s.user_id=u.id WHERE s.token_hash=${createHash('sha256').update(token).digest('hex')}`)[0];
+  const own=await identity(sessions.owner);owner=own.id;oldHash=own.password_hash;const member=(await identity(sessions.viewer)).id;
+  const password='Fictional-channel-'+randomUUID(),salt=randomBytes(24);await db`UPDATE app_users SET password_hash=${'scrypt-v1:'+salt.toString('hex')+':'+scryptSync(password,salt,64,{N:16384,r:8,p:1}).toString('hex')} WHERE id=${owner}`;
+  const store=randomUUID(),foreign=randomUUID();await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},'Fictional channel-scope Store','ai',${owner}),(${foreign},'Foreign scope Store','ai',${owner})`;
+  await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner'),(${store},${member},'editor')`;
+  const connection=async ws=>(await db`SELECT inbox_connection(${ws},'live','ms',${randomUUID()},decode('abcd','hex')) id`)[0].id;
+  const allowed=await connection(store),blocked=await connection(store),other=await connection(foreign);
+  await db`SELECT inbox_ingest(${allowed},${randomUUID()},'allowed-person','Allowed fictional person','Fictional inbound','text',now())`;
+  await db`SELECT inbox_ingest(${blocked},${randomUUID()},'blocked-person','Blocked fictional person','Fictional private inbound','text',now())`;
+  const thread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${allowed}`)[0].id,deniedThread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${blocked}`)[0].id;
+  // Newer denied records must be excluded before page size/offset, not filtered
+  // after serialization where they could starve every allowed conversation.
+  await db`INSERT INTO inbox_threads(workspace_id,connection_id,external_id,customer_name,last_customer_at,last_activity_at) SELECT ${store},${blocked},'blocked-'||n::text,'Private page '||n::text,now(),now()+interval '1 minute' FROM generate_series(1,55)n`;
+  const scope=async(body,actor=owner)=>(await db`SELECT briofold_channel_scopes_write(${store},${actor},${db.json(body)}) data`)[0].data;
+  const denied={user_id:member,connection_id:blocked,revision:0,deny_read:true,deny_send:false};await scope(denied);
+  await assert.rejects(()=>scope(denied),e=>e.code==='40001');await assert.rejects(()=>scope({...denied,user_id:owner}),e=>e.code==='42501');await assert.rejects(()=>scope({...denied,connection_id:other}),e=>e.code==='42501');await assert.rejects(()=>scope({...denied,connection_id:allowed},member),e=>e.code==='42501');
+  const list=async(who=member,off=0)=>(await db`SELECT inbox_page(${store},'live',${who},NULL,NULL,${db.json({reader_kind:'user',offset:off})}) data`)[0].data;
+  assert.equal((await list()).items.length,1);assert.equal((await list()).items[0].id,thread);assert.equal((await list(member,50)).items.length,0);assert.equal((await list(owner)).items.length,50);
+  await assert.rejects(()=>db`SELECT inbox_page(${store},'live',${member},${deniedThread},NULL,'{"reader_kind":"user"}')`,e=>e.code==='42501');
+  const search=async who=>(await db`SELECT briofold_customers_search(${store},'live',${who},0,'','','','','') data`)[0].data;
+  assert.equal((await search(member)).items.length,1);assert.equal((await search(owner)).items.length,51);
+  const allowedCustomer=(await db`SELECT customer_id FROM briofold_customer_sources WHERE source_id=${thread} AND kind='thread'`)[0].customer_id,blockedCustomer=(await db`SELECT customer_id FROM briofold_customer_sources WHERE source_id=${deniedThread} AND kind='thread'`)[0].customer_id;
+  await assert.rejects(()=>db`SELECT briofold_customers_read(${store},'live',${member},${blockedCustomer},0,'','')`,e=>e.code==='42501');
+  const rollback=async body=>{try{await db.begin(async tx=>{await body(tx);throw Error('ROLLBACK_ONLY_SCOPES');});}catch(e){if(e.message!=='ROLLBACK_ONLY_SCOPES')throw e;}};
+  await rollback(async tx=>{await tx`UPDATE briofold_customer_sources SET customer_id=${allowedCustomer} WHERE customer_id=${blockedCustomer}`;await tx`UPDATE briofold_customers SET merged_into=${allowedCustomer} WHERE id=${blockedCustomer}`;assert.equal((await tx`SELECT briofold_customers_search(${store},'live',${member},0,'','','','','') data`)[0].data.items.length,0,'merged denied identity leaked through allowed profile');await assert.rejects(()=>tx`SELECT briofold_customers_read(${store},'live',${member},${blockedCustomer},0,'','')`,e=>e.code==='42501');});
+  const privateMedia=randomUUID(),privateImage=randomUUID(),privateReply=randomUUID();
+  await db`INSERT INTO inbox_media(id,workspace_id,thread_id,object_key,name,mime,size_bytes,sha256) VALUES(${privateMedia},${store},${deniedThread},${'inbox/live/'+store+'/'+privateMedia+'/'+'a'.repeat(64)},'Fictional private image.png','image/png',10,${'a'.repeat(64)})`;
+  await db`INSERT INTO inbox_messages(id,workspace_id,thread_id,sender,type,body,state,content) VALUES(${privateImage},${store},${deniedThread},'seller','image','','sent',${db.json({media_id:privateMedia})})`;
+  await db`SELECT briofold_inbox_work_write(${store},'live',${owner},NULL,${randomUUID()},'saved-reply',${db.json({id:privateReply,revision:0,title:'Private source sequence',body:'Private source',messages:[{type:'image',message_id:privateImage}],visibility:'team'})})`;
+  const library=(await db`SELECT briofold_inbox_work_read(${store},'live',${member},NULL,0,0,0,'{}') data`)[0].data;assert.equal(library.saved_replies.length,0,'restricted media sequence exposed');assert.equal(library.reply_media.length,0,'restricted sent media exposed');
+  await assert.rejects(()=>db`SELECT briofold_saved_reply_send(${store},'live',${member},${thread},${randomUUID()},${db.json({id:privateReply,revision:1,confirmed:true})})`,e=>e.code==='42501');
+  const alert=(await db`INSERT INTO briofold_inbox_alerts(workspace_id,thread_id,kind,event_key) VALUES(${store},${deniedThread},'handover',${randomUUID()}) RETURNING id`)[0].id;
+  assert.equal((await db`SELECT briofold_inbox_alert_read(${store},${member},0,'','',false) data`)[0].data.items.length,0);await assert.rejects(()=>db`SELECT briofold_inbox_alert_mark(${store},${member},${alert})`,e=>e.code==='42501');
+  const privateMessage=(await db`INSERT INTO inbox_messages(workspace_id,thread_id,sender,type,body,state) VALUES(${store},${deniedThread},'seller','text','Private source','sent') RETURNING id`)[0].id;
+  ctx=await browser.newContext();memberCtx=await browser.newContext();
+  for(const [context,token,id]of[[ctx,sessions.owner,owner],[memberCtx,sessions.viewer,member]])await context.addCookies([{name:'ekmivo-session',value:token,url:origin,httpOnly:true},{name:'ekmivo-default-workspace',value:id+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);
+  const inbox=async(action,thread_id,body={})=>memberCtx.request.post(origin+`/api/go/workspaces/${store}/inbox?environment=live`,{headers:{Origin:origin},data:{action,thread_id,body}});
+  assert.equal((await inbox('profile',deniedThread)).status(),403);assert.equal((await inbox('media-get',deniedThread,{media_id:randomUUID()})).status(),403);assert.equal((await inbox('forward',thread,{message_id:privateMessage,idempotency_key:randomUUID()})).status(),403);
+  const key=randomUUID();assert.equal((await inbox('send',thread,{text:'Fictional permission-bound queue',idempotency_key:key})).status(),200);
+  const queued=(await db`SELECT id,requested_by FROM inbox_messages WHERE workspace_id=${store} AND idempotency_key=${key}`)[0];assert.equal(queued.requested_by,member);
+  await rollback(async tx=>{await tx`UPDATE inbox_messages SET state='failed',error_code='FICTIONAL_ROLLBACK_ISOLATION' WHERE state='queued' AND id<>${queued.id}`;const claim=(await tx`SELECT inbox_next_send() data`)[0].data;assert.equal(claim.id,queued.id);assert.equal(claim.channel_guard,true);await tx`INSERT INTO briofold_member_channel_scopes(workspace_id,user_id,connection_id,deny_send) VALUES(${store},${member},${allowed},true)`;assert.equal((await tx`SELECT briofold_channel_send_valid(${queued.id}) ok`)[0].ok,false,'revoked after claim still authorized transport');});
+  const endpoint=origin+`/api/go/workspaces/${store}/workspace-tools/channel-scopes?environment=live`;
+  assert.equal((await ctx.request.post(endpoint,{headers:{Origin:origin},data:{...denied,revision:1,current_password:'Wrong fictional password'}})).status(),401);
+  assert.equal((await memberCtx.request.get(endpoint)).status(),403);
+  const page=await ctx.newPage();page.setDefaultNavigationTimeout(90000);await page.goto(origin+'/settings/team/scopes');await page.getByRole('heading',{name:'Team channel access',exact:true}).waitFor();
+  await page.getByLabel('Team member',{exact:true}).selectOption(member);await page.getByLabel('Channel or page',{exact:true}).selectOption(allowed);await page.getByLabel('Block sending and conversation changes on this channel',{exact:true}).check();await page.getByLabel('Current owner password',{exact:true}).fill(password);await page.getByRole('button',{name:'Save channel restrictions',exact:true}).click();await page.getByText('Channel restrictions saved and audited. Current role and other restrictions still apply.',{exact:true}).waitFor();assert.equal(await page.getByLabel('Current owner password',{exact:true}).inputValue(),'');
+  assert.equal((await inbox('send',thread,{text:'Must not queue',idempotency_key:randomUUID()})).status(),403);assert.equal((await inbox('messages',thread)).status(),200,'send denial must retain read access');
+  await rollback(async tx=>{await tx`UPDATE inbox_messages SET state='failed',error_code='FICTIONAL_ROLLBACK_ISOLATION' WHERE state='queued' AND id<>${queued.id}`;assert.equal((await tx`SELECT inbox_next_send() data`)[0].data,null,'revoked queued message was dispatched');assert.equal((await tx`SELECT error_code FROM inbox_messages WHERE id=${queued.id}`)[0].error_code,'CHANNEL_ACCESS_REVOKED');});
+  await page.reload();await page.getByLabel('Team member',{exact:true}).selectOption(member);await page.getByLabel('Channel or page',{exact:true}).selectOption(allowed);assert.equal(await page.getByLabel('Block sending and conversation changes on this channel',{exact:true}).isChecked(),true);
+  let cases=0;for(const locale of ['en','bn'])for(const theme of ['light','dark','system'])for(const width of [320,1280]){await ctx.addCookies([{name:'ekmivo-locale',value:locale,url:origin},{name:'ekmivo-theme',value:theme,url:origin}]);await page.setViewportSize({width,height:900});await page.goto(origin+'/settings/team/scopes');assert.equal(await page.locator('h1').count(),1);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'scope screen overflow');cases++;}
+  await db`UPDATE inbox_messages SET state='failed',error_code='FICTIONAL_SCOPE_FIXTURE_END' WHERE id=${queued.id} AND state='queued'`;
+  console.log(`MEMBER CHANNEL SCOPES SQL/Go/Next/browser PASS: deny-only owner password/revision/audit, connection/Store isolation, pre-pagination Inbox/CRM privacy and merged identity, target/media/forward denial, read versus send, persisted requester, actual claim/transport revocation and ${cases} responsive cases; no provider call`);
+ }finally{if(owner&&oldHash)await db`UPDATE app_users SET password_hash=${oldHash} WHERE id=${owner}`;await ctx?.close();await memberCtx?.close();await db.end();}
+}

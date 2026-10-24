@@ -110,6 +110,24 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 		b.Body = map[string]any{}
 	}
 	b.Body["reader_kind"] = reader
+	if reader == "user" && thread != nil {
+		cap := "send"
+		if c, _ := webInboxCapability(b.Action); c == authz.InboxRead {
+			cap = "read"
+		}
+		source := ""
+		if b.Action == "forward" {
+			source, _ = b.Body["message_id"].(string)
+			if !uuidPattern.MatchString(source) {
+				fail(w, 422, "INVALID_MESSAGE")
+				return
+			}
+		}
+		if err = s.inboxChannelScope(r.Context(), d.Workspace, d.Environment, d.ID, b.Thread, cap, source); err != nil {
+			inboxWorkFailure(w, err)
+			return
+		}
+	}
 	var result []byte
 	if reader == "user" && b.Action == "send-saved-reply" {
 		key, _ := b.Body["operation_key"].(string)

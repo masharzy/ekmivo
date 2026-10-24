@@ -851,3 +851,14 @@ After owner-approved integration and an authorized test account only: configure 
 ### Briofold Phase 10 — WooCommerce signed catalog source
 
 After owner-approved integration only: connect an owned WooCommerce store using read-only consumer credentials, set its currency to BDT, configure WOO_WEBHOOK_PUBLIC_ORIGIN and the gated source, and create WooCommerce product webhooks using the displayed URL/secret. An unsigned activation ping checks reachability only. Confirm one real signed product notice appears, preview refetches the current simple/variable product, and reviewed Apply alone changes the catalog. Check stale API changes, unpublished/deleted products, signature tamper, source disable, credential/origin replacement and duplicate delivery handling. Never infer customer/payment authority from a product hook. This combined owner checklist item is manual pending; mock transport and local callback checks are code evidence only.
+
+### Phase 10 broadcast dispatch continuation (2026-10-24 Dhaka)
+
+- Automated acceptance pending for CONTROL migration 0207, current-window consented Messenger/Instagram sequence approval/queue/results, schedule/quiet/expiry/cancel and fresh consent/role guards. See `docs/evidence/BRIOFOLD-PHASE10-BROADCAST-20261024.md`.
+- Owner-only later: in an explicitly authorized test Store and provider account, review the exact audience/message preview, consented test recipient, opt-out immediately before send, schedule/quiet and cancellation results. No customer message, provider transport, production flag or migration is authorized now. Actual transport/device delivery remains manual pending, not inferred from queue acceptance.
+- Email/SMS/WhatsApp and outside-window template transports and audience-bound discounts remain unavailable in this increment; broadcast parity remains open.
+
+### Phase 10 team channel/page restrictions (2026-10-24 Dhaka)
+
+- 0208 and `/settings/team/scopes` isolated SQL/Go/browser acceptance pending. Do not mark team parity complete from source or build. See `docs/evidence/BRIOFOLD-PHASE10-MEMBER-CHANNELS-20261024.md`.
+- Later owner review: restrict read on one page and send on a second, verify the member's real Inbox/CRM/media/search/notification behavior, revoke access after queueing, and restore restrictions with current password. Physical paired devices remain independent Store-owned authorization; no production settings/migration or message send is authorized now.

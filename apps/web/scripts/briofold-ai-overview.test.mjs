@@ -18,10 +18,11 @@ test("AI overview is backed by real Inbox and current server-authorized tenant",
  assert.match(source,/c\.environment='live'/);
  // Inbox itself excludes disconnected channel conversations; overview counts
  // and recent list must use identical visibility constraints.
- assert.match(source,/c\.environment='live' AND c\.enabled=true\) AS conversations/);
- assert.match(source,/c\.environment='live' AND c\.enabled=true\s+ORDER BY t\.last_activity_at/);
+ assert.match(source,/c\.environment='live' AND c\.enabled=true AND \$\{channelAccess\}\) AS conversations/);
+ assert.match(source,/c\.environment='live' AND c\.enabled=true AND \$\{channelAccess\}\s+ORDER BY t\.last_activity_at/);
  assert.match(source,/WHERE t\.workspace_id=\$\{workspaceId\}::uuid AND c\.environment='live' AND c\.enabled=true/);
 
+ assert.match(source,/briofold_channel_allowed\(\$\{workspaceId\}::uuid,\$\{userId\}::uuid,c\.id,'read'\)/);
  assert.match(source,/FROM briofold_ai_executions WHERE workspace_id=\$\{workspaceId\}::uuid/);
  assert.match(source,/to_regclass\('public\.briofold_ai_executions'\)/);
  assert.doesNotMatch(source,/Math\.random|mockThread|fakeConversation/);
