@@ -846,3 +846,8 @@ Review populated Orders/Products/Inventory/Coupons/Delivery/Returns in EN/BN, Li
 ### Briofold Phase 10 — Pathao courier provider check
 
 After owner-approved integration and an authorized test account only: configure the merchant-issued Pathao client credentials, verify pickup Store and city/zone/area, book one explicitly approved test parcel with whole-taka COD, compare consignment and merchant reference in Pathao, check status, then record actual handover and later COD settlement separately. Verify normal customer/provider notifications with authorized recipients. Do not retry an unknown booking; reconcile the existing merchant reference first. BRIOFOLD_PATHAO_ENABLED is OFF by default. Automated fictional transport checks are code evidence, not this provider result; this entry is manual pending and no production action is authorized by it.
+
+
+### Briofold Phase 10 — WooCommerce signed catalog source
+
+After owner-approved integration only: connect an owned WooCommerce store using read-only consumer credentials, set its currency to BDT, configure WOO_WEBHOOK_PUBLIC_ORIGIN and the gated source, and create WooCommerce product webhooks using the displayed URL/secret. An unsigned activation ping checks reachability only. Confirm one real signed product notice appears, preview refetches the current simple/variable product, and reviewed Apply alone changes the catalog. Check stale API changes, unpublished/deleted products, signature tamper, source disable, credential/origin replacement and duplicate delivery handling. Never infer customer/payment authority from a product hook. This combined owner checklist item is manual pending; mock transport and local callback checks are code evidence only.

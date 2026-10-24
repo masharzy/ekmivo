@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -13,6 +14,7 @@ type wooProduct struct {
 	ID         int64  `json:"id"`
 	Name       string `json:"name"`
 	Type       string `json:"type"`
+	Status     string `json:"status"`
 	SKU        string `json:"sku"`
 	Price      string `json:"price"`
 	Attributes []struct {
@@ -61,6 +63,31 @@ func wooCurrencyIsBDT(reader io.Reader) bool {
 	return json.NewDecoder(io.LimitReader(reader, 65536)).Decode(&setting) == nil && setting.ID == "woocommerce_currency" && setting.Value == "BDT"
 }
 func (s *Service) commerceWooPreview(w http.ResponseWriter, r *http.Request, ws, realm, actor, key string, b map[string]any, cred commerceCredentials) {
+	request := commerceHTTPRequest
+	if s.wooRequest != nil {
+		request = s.wooRequest
+	}
+	productID := int64(0)
+	if eventID := str(b, "event_id"); eventID != "" {
+		if os.Getenv("BRIOFOLD_WOO_WEBHOOKS_ENABLED") != "true" || !uuidPattern.MatchString(eventID) {
+			fail(w, 422, "INVALID_WOO_EVENT")
+			return
+		}
+		var raw []byte
+		if err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_woo_event_source($1::uuid,$2,$3::uuid,$4::uuid)", ws, realm, actor, eventID).Scan(&raw); err != nil {
+			inboxWorkFailure(w, err)
+			return
+		}
+		var source struct {
+			ID     int64  `json:"product_id"`
+			Origin string `json:"origin"`
+		}
+		if json.Unmarshal(raw, &source) != nil || source.ID < 1 || source.Origin != cred.Origin {
+			fail(w, 409, "WOO_SOURCE_CHANGED")
+			return
+		}
+		productID = source.ID
+	}
 	page := 1
 	if n, ok := b["page"].(float64); ok {
 		if n < 1 || n > 10000 || n != float64(int(n)) {
@@ -75,7 +102,7 @@ func (s *Service) commerceWooPreview(w http.ResponseWriter, r *http.Request, ws,
 		return
 	}
 	currencyRequest.SetBasicAuth(cred.APIKey, cred.Secret)
-	currencyResponse, currencyErr := commerceHTTPRequest(r.Context(), currencyRequest)
+	currencyResponse, currencyErr := request(r.Context(), currencyRequest)
 	if currencyErr != nil {
 		fail(w, 503, "WOOCOMMERCE_CURRENCY_UNAVAILABLE")
 		return
@@ -86,19 +113,26 @@ func (s *Service) commerceWooPreview(w http.ResponseWriter, r *http.Request, ws,
 		fail(w, 422, "WOOCOMMERCE_BDT_CURRENCY_REQUIRED")
 		return
 	}
-	load := func(path string) ([]wooProduct, int, error) {
+	load := func(path string, single bool) ([]wooProduct, int, error) {
 		req, err := http.NewRequestWithContext(r.Context(), "GET", cred.Origin+"/wp-json/wc/v3/"+path, nil)
 		if err != nil {
 			return nil, 0, err
 		}
 		req.SetBasicAuth(cred.APIKey, cred.Secret)
-		response, err := commerceHTTPRequest(r.Context(), req)
+		response, err := request(r.Context(), req)
 		if err != nil {
 			return nil, 0, err
 		}
 		defer response.Body.Close()
 		if response.StatusCode != 200 {
 			return nil, 0, errors.New("store rejected request")
+		}
+		if single {
+			var product wooProduct
+			if json.NewDecoder(io.LimitReader(response.Body, 2097152)).Decode(&product) != nil || product.ID != productID || product.Status != "publish" {
+				return nil, 0, errors.New("product no longer published")
+			}
+			return []wooProduct{product}, 1, nil
 		}
 		var rows []wooProduct
 		if err = json.NewDecoder(io.LimitReader(response.Body, 2097152)).Decode(&rows); err != nil {
@@ -110,7 +144,14 @@ func (s *Service) commerceWooPreview(w http.ResponseWriter, r *http.Request, ws,
 		}
 		return rows, pages, nil
 	}
-	products, pages, err := load("products?per_page=10&page=" + strconv.Itoa(page) + "&status=publish")
+	var products []wooProduct
+	var pages int
+	var err error
+	if productID > 0 {
+		products, pages, err = load("products/"+strconv.FormatInt(productID, 10), true)
+	} else {
+		products, pages, err = load("products?per_page=10&page="+strconv.Itoa(page)+"&status=publish", false)
+	}
 	if err != nil {
 		fail(w, 503, "WOOCOMMERCE_SOURCE_UNAVAILABLE")
 		return
@@ -130,7 +171,7 @@ func (s *Service) commerceWooPreview(w http.ResponseWriter, r *http.Request, ws,
 	}
 	for _, p := range products {
 		if p.Type == "variable" {
-			variants, total, err := load("products/" + strconv.FormatInt(p.ID, 10) + "/variations?per_page=100")
+			variants, total, err := load("products/"+strconv.FormatInt(p.ID, 10)+"/variations?per_page=100", false)
 			if err != nil || total > 1 || len(variants) == 0 || len(rows)+len(variants) > 500 {
 				fail(w, 422, "VARIABLE_CATALOG_REQUIRES_SMALLER_REVIEW_BATCH")
 				return

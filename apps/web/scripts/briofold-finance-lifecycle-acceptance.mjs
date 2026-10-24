@@ -1,14 +1,24 @@
 import assert from 'node:assert/strict';
 import {createDecipheriv,randomUUID} from 'node:crypto';
 // Called only inside the already-guarded disposable live-realm finance suite.
-export async function runFinanceLifecycle({origin,context,viewerContext,page,finance,workspaceId,payment,webhook}){
+export async function runFinanceLifecycle({origin,context,viewerContext,page,finance,workspaceId,payment,webhook,owner}){
  const base=origin+`/api/go/workspaces/${workspaceId}`,post=(path,data,key=randomUUID(),who=context)=>who.request.post(base+path+(path.includes('?')?'&':'?')+'environment=live',{headers:{Origin:origin,'Idempotency-Key':key},data});
  await context.addCookies([{name:'ekmivo-locale',value:'en',url:origin}]);
  const amount=(await finance`SELECT count(*)::integer n FROM financial_payments WHERE workspace_id=${workspaceId}`)[0].n;
+ const notice=(await finance`INSERT INTO pg13_notifications(workspace_id,environment,type,resource_id,body) VALUES(${workspaceId},'live','payment.verified',${payment.id},${finance.json({amount_minor:23456,reference:'Fictional unified notice'})}) RETURNING id`)[0];
+ await page.goto(origin+'/notifications');await page.getByRole('navigation',{name:'Notification source filter',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
+ const paymentNotice=page.locator('.pn-notice').filter({hasText:payment.id.slice(0,8)}).first();await paymentNotice.getByRole('link',{name:'Verified payment',exact:true}).waitFor();
+ assert.equal(await page.getByRole('region',{name:'Due CRM reminders',exact:true}).count(),0);assert.equal(await page.getByRole('heading',{name:'Inbox notifications',exact:true}).count(),0);
+ const marked=page.waitForResponse(response=>response.url().includes('/notifications/'+notice.id)&&response.request().method()==='POST');await paymentNotice.getByRole('button',{name:'Mark notification as read',exact:true}).click();assert.equal((await marked).status(),200);
+ assert.equal((await finance`SELECT EXISTS(SELECT 1 FROM pg13_notification_reads WHERE notification_id=${notice.id} AND actor_id=${owner}) ok`)[0].ok,true);
+ const otherRead=await viewerContext.request.get(base+'/notifications?environment=live&page=1&page_size=50');assert.equal(otherRead.status(),200);assert.equal((await otherRead.json()).items.find(row=>row.id===notice.id)?.read_at,null,'owner read changed colleague state');
+ console.log('CANONICAL NOTIFICATION SOURCE SQL/Go/Next/browser PASS: actual financial notice in unified Payments filter, source separation, owner mark-read persistence and actor-private read states; Inbox/reminder/booking/call filters verified independently');
+
  let event=(await finance`SELECT id FROM pg07_events WHERE workspace_id=${workspaceId} AND payment_id=${payment.id}`)[0];
  if(!event)event=(await finance`INSERT INTO pg07_events(workspace_id,environment,payment_id,event_type,payload) VALUES(${workspaceId},'live',${payment.id},'payment.verified',${finance.json({version:1,data:{payment_id:payment.id,fictional_fixture:true}})}) RETURNING id`)[0];
- const delivery=(await finance`INSERT INTO pg08_deliveries(workspace_id,environment,endpoint_id,event_id,status,attempts,http_status,reason) VALUES(${workspaceId},'live',${webhook.id},${event.id},'failed',1,500,'Fictional transport failure') RETURNING id`)[0];
- await finance`UPDATE pg08_deliveries SET attempts=2,reason='Fictional second transport failure' WHERE id=${delivery.id}`;
+ let delivery=(await finance`SELECT id FROM pg08_deliveries WHERE endpoint_id=${webhook.id} AND event_id=${event.id} ORDER BY created_at,id LIMIT 1`)[0];
+ if(!delivery)delivery=(await finance`INSERT INTO pg08_deliveries(workspace_id,environment,endpoint_id,event_id,status,attempts) VALUES(${workspaceId},'live',${webhook.id},${event.id},'failed',0) RETURNING id`)[0];
+ await finance`UPDATE pg08_deliveries SET status='failed',attempts=2,http_status=500,reason='Fictional second transport failure' WHERE id=${delivery.id}`;
  await page.goto(origin+'/settings/webhooks');await page.locator('article').filter({hasText:'https://fictional-ci.example.invalid/payment-webhook'}).getByRole('link',{name:'View deliveries →',exact:true}).click();await page.waitForURL(origin+`/settings/webhooks/${webhook.id}`);await page.getByRole('link',{name:'Browse full delivery history →',exact:true}).click();await page.waitForURL(origin+`/settings/webhooks/${webhook.id}?tab=deliveries`);await page.getByRole('link',{name:event.id,exact:true}).waitFor();
  await page.getByText('Attempt timeline',{exact:true}).click();await page.locator('.int-trace').getByText('HTTP 500 · 2',{exact:true}).waitFor();
  assert.equal((await viewerContext.request.post(base+`/operations/deliveries/${delivery.id}/replay?environment=live`,{headers:{Origin:origin},data:{}})).status(),403);

@@ -106,7 +106,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
    ?<CustomerCRMPage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} financeEnabled={workspace.mode!=="ai"} environment={paymentContext?.environment??"live"}/>
   :root==="customers"&&(["broadcasts","bookings","posts"].includes(view[0]??"")||campaignPostRoute)&&process.env.BRIOFOLD_GROWTH_OPERATIONS_ENABLED==="true"
    ?<GrowthOperationsPage workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}
-     environment={paymentContext?.environment??"live"} commerceEnabled={workspace.mode!=="ai"&&["owner","admin"].includes(workspace.role)}
+     environment={paymentContext?.environment??"live"} commerceEnabled={["owner","admin"].includes(workspace.role)}
      kind={view[0]==="bookings"?"booking":view[0]==="posts"||campaignPostRoute?"post":"broadcast"}/>
   :kind==="business-profile"
    ?<StoreProfileEditor key={workspace.id} locale={locale} workspaceId={workspace.id} canManage={workspace.role==="owner"||workspace.role==="admin"}/>

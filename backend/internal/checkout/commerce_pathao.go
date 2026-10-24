@@ -255,6 +255,27 @@ func (s *Service) commercePathao(w http.ResponseWriter, r *http.Request, ws, rea
 		fail(w, 503, "PATHAO_UNAVAILABLE")
 		return
 	}
+	switch action {
+	case "integration-save", "integration-disable", "courier-book", "courier-status", "pathao-locations":
+	default:
+		fail(w, 422, "INVALID_PATHAO_ACTION")
+		return
+	}
+	if action == "pathao-locations" {
+		kind := str(b, "kind")
+		if kind != "stores" && kind != "cities" && kind != "zones" && kind != "areas" {
+			fail(w, 422, "INVALID_LOCATION")
+			return
+		}
+		if (kind == "zones" || kind == "areas") && pathaoNumber(b["parent_id"]) < 1 {
+			fail(w, 422, "INVALID_PARENT")
+			return
+		}
+	}
+	if (action == "courier-book" || action == "courier-status") && !uuidPattern.MatchString(str(b, "id")) {
+		fail(w, 422, "INVALID_DELIVERY")
+		return
+	}
 	associated := ws + "|" + realm + "|commerce|pathao"
 	if action == "integration-save" || action == "integration-disable" {
 		cred := commerceCredentials{APIKey: str(b, "api_key"), Secret: str(b, "secret"), Username: str(b, "username"), Password: str(b, "password")}

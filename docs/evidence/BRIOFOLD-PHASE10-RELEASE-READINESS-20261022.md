@@ -4,6 +4,14 @@
 
 **Assessment: Phase 10 FULL CODE SEAL = OPEN. Production cutover = NOT AUTHORIZED.** Physical/real-provider testing belongs to the owner, outside the code-level gate. But missing *code* and unintegrated migrations/branches cannot be waived as “manual testing.” Do not relabel the phase complete because its existing baseline CI is green.
 
+## 2026-10-24 Dhaka continuation — 46/56 accounted, 10 unresolved
+
+[Foundation 40008415353](https://github.com/masharzy/ekmivo/actions/runs/40008415353) on `3c42c19dae0bb4aa9ec3309a46a807cb851614d9` passed Go, Kotlin and images. The new browser readiness check passed and application journeys executed. Catalog photo/variant private reads and edits/reload passed, as did full photo retrieval, Inbox notification filter/read/pagination, and prior finance/CRM/AI/order suites. The catalog row advances: **45 Implemented+Tested + 1 honest external block = 46/56 accounted, 10 unresolved**.
+
+Five independent suites stayed red: setup seeded an AI connection in a payment-only Store; a Pathao fixture reused a UUID parameter as text; the courier provider selector lacked an explicit label; campaign mapping navigation was hidden for AI-only Stores despite common catalog availability; and the webhook test manufactured an extra delivery instead of using the real event outbox row. Correct these boundaries/fixtures without changing product permissions or uniqueness assertions. Add actual canonical financial notification/filter/actor-read acceptance as well.
+
+The next source increment implements signed WooCommerce notices and current API refetch/review. It and the above corrections require integrated CI. Broadcast dispatch and per-channel team scope remain missing implementation. Remaining tracker rows stay open until actual feature evidence; no overall seal, merge or production action.
+
 ## Current continuation — 45/56 accounted, 11 unresolved
 
 [Foundation 39976319680](https://github.com/masharzy/ekmivo/actions/runs/39976319680), exact source `5cf9b36e9981580fadc1de2aca07f1372ea0405c`, passes channel policy SQL/Go/browser (12 responsive cases) and real private audio bytes plus native Chromium playback. Channel index/detail and Inbox media rows advance: **44 Implemented+Tested + 1 honest external block = 45/56 accounted; 11 unresolved**. Go, Kotlin and production image jobs pass. Every other suite passes except the new notification filter test, which saw the previous unfiltered list while the server action was debounced. It now waits for the actual filtered kind before asserting one row; privacy and count assertions remain.

@@ -14,7 +14,7 @@ export async function runSetupChecklist({origin,browser,control,sessions}){
    await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner')`;
    const c=await browser.newContext();contexts.push(c);await c.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);
    const p=await c.newPage();p.setDefaultNavigationTimeout(90000);
-   await db`SELECT inbox_connection(${foreign},'live','ms',${'foreign-checklist-'+store},decode('abcd','hex'))`;
+   if(mode!=='commerce')await db`SELECT inbox_connection(${foreign},'live','ms',${'foreign-checklist-'+store},decode('abcd','hex'))`;
    await db`INSERT INTO commerce_products(workspace_id,environment,name) VALUES(${foreign},'live','Foreign product')`;
    assert.equal((await p.goto(origin+'/setup/checklist')).status(),200);
    await p.getByRole('heading',{name:'Store setup guide',exact:true}).waitFor();

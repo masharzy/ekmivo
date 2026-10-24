@@ -55,7 +55,10 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 			fail(w, 422, "INVALID_FILTER")
 			return
 		}
-		if r.URL.Query().Get("resource") == "photo-metrics" {
+		if r.URL.Query().Get("resource") == "woo-hooks" {
+			s.commerceWooHooksRead(w, r, ws, realm, actor.UserID, off)
+			return
+		} else if r.URL.Query().Get("resource") == "photo-metrics" {
 			if os.Getenv("BRIOFOLD_PRODUCT_PHOTOS_ENABLED") != "true" {
 				fail(w, 503, "PRODUCT_PHOTOS_UNAVAILABLE")
 				return
@@ -138,7 +141,7 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 		case "media-upload":
 			s.commerceMediaUpload(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Body)
 			return
-		case "integration-save", "integration-disable", "courier-book", "courier-status", "woocommerce-preview", "pathao-locations":
+		case "integration-save", "integration-disable", "courier-book", "courier-status", "woocommerce-preview", "pathao-locations", "woo-hook-create", "woo-hook-disable":
 			s.commerceIntegration(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Action, cmd.Body)
 			return
 		default:

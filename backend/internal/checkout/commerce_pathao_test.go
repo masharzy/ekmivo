@@ -16,6 +16,13 @@ import (
 )
 
 func TestPathaoContractBoundaries(t *testing.T) {
+	t.Setenv("BRIOFOLD_PATHAO_ENABLED", "true")
+	response := httptest.NewRecorder()
+	(&Service{}).commercePathao(response, httptest.NewRequest("POST", "https://app.example.invalid", nil), "", "", "", "", "woocommerce-preview", map[string]any{})
+	if response.Code != 422 {
+		t.Fatal("preview action could enter courier dispatch")
+	}
+
 	var sent map[string]any
 	client := pathaoClient{do: func(ctx context.Context, r *http.Request) (*http.Response, error) {
 		if r.URL.Scheme != "https" || r.URL.Host != "api-hermes.pathao.com" || r.URL.RawQuery != "" || r.Header.Get("Authorization") != "Bearer fictional-token" {
@@ -166,7 +173,7 @@ func TestPathaoControlBookingIsolation(t *testing.T) {
 	create := func(cod int64, provider string) string {
 		t.Helper()
 		oid, did := newUUID(), newUUID()
-		must("INSERT INTO commerce_orders(id,workspace_id,environment,reference,status,source,recipient,subtotal_minor,total_minor) VALUES($1,$2,'live',$1::text,'confirmed','manual','{\"name\":\"Fictional Customer\",\"phone\":\"+8801700001234\",\"address\":\"Fictional address only\"}',$3,$3)", oid, ws, cod)
+		must("INSERT INTO commerce_orders(id,workspace_id,environment,reference,status,source,recipient,subtotal_minor,total_minor) VALUES($1,$2,'live',$4,'confirmed','manual','{\"name\":\"Fictional Customer\",\"phone\":\"+8801700001234\",\"address\":\"Fictional address only\"}',$3,$3)", oid, ws, cod, "PATHAO-"+oid)
 		must("INSERT INTO commerce_deliveries(id,workspace_id,environment,order_id,provider,status,cod_minor) VALUES($1,$2,'live',$3,$4,'ready',$5)", did, ws, oid, provider, cod)
 		return did
 	}

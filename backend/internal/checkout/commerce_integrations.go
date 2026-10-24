@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgconn"
 	"io"
 	"net"
 	"net/http"
@@ -60,6 +61,10 @@ func (s *Service) commerceCommand(r *http.Request, ws, realm, actor, key, action
 	return raw, err
 }
 func (s *Service) commerceIntegration(w http.ResponseWriter, r *http.Request, ws, realm, actor, key, action string, b map[string]any) {
+	if action == "woo-hook-create" || action == "woo-hook-disable" {
+		s.commerceWooHooks(w, r, ws, realm, actor, key, action, b)
+		return
+	}
 	provider, _ := b["provider"].(string)
 	if provider == "pathao" || action == "pathao-locations" {
 		s.commercePathao(w, r, ws, realm, actor, key, action, b)
@@ -109,7 +114,12 @@ func (s *Service) commerceIntegration(w http.ResponseWriter, r *http.Request, ws
 	}
 	var cipher []byte
 	if err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT commerce_integration($1::uuid,$2,$3::uuid,$4)", ws, realm, actor, provider).Scan(&cipher); err != nil {
-		fail(w, 503, "INTEGRATION_NOT_CONFIGURED")
+		var denied *pgconn.PgError
+		if errors.As(err, &denied) && denied.Code == "42501" {
+			mapped(w, err)
+		} else {
+			fail(w, 503, "INTEGRATION_NOT_CONFIGURED")
+		}
 		return
 	}
 	plain, err := merchantwebhook.Decrypt(s.Pipeline.Key, cipher, associated)

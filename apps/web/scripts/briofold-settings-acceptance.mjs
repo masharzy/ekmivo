@@ -1,4 +1,5 @@
 import {startBriofoldPrivateStorage} from "./briofold-private-storage-fixture.mjs";
+import {runWooWebhookSources} from "./briofold-woo-hook-acceptance.mjs";
 import {runProductPhotos} from "./briofold-product-photo-acceptance.mjs";
 import {runLinkedOrderConversion} from "./briofold-conversion-acceptance.mjs";
 import {runCourierSettings} from "./briofold-courier-settings-acceptance.mjs";
@@ -102,10 +103,11 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0203_briofold_linked_order_conversion.sql");
   await apply("0204_briofold_product_photo_search.sql");
   await apply("0205_briofold_pathao_courier.sql");
+  await apply("0206_briofold_woo_webhook_sources.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const privateStorage=await startBriofoldPrivateStorage(control);
- const api=spawn(apiBin,[],{env:{...apiEnv,...privateStorage.env,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
+ const api=spawn(apiBin,[],{env:{...apiEnv,...privateStorage.env,PORT:"17912",GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_WOO_WEBHOOKS_ENABLED:"true",WOO_WEBHOOK_PUBLIC_ORIGIN:"https://fixture-hooks.example.invalid",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
  let server,browser,logs="";
  const capture=child=>{for(const stream of [child.stdout,child.stderr])stream.on("data",chunk=>{logs=(logs+String(chunk)).slice(-5000);});};
  capture(api);
@@ -120,7 +122,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  try{
   await ready(apiOrigin+"/healthz",200,api);
   server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
-   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_COURIER_SETTINGS_ENABLED:"true",BRIOFOLD_CHANNEL_POLICIES_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_WOO_WEBHOOKS_ENABLED:"true",WOO_WEBHOOK_PUBLIC_ORIGIN:"https://fixture-hooks.example.invalid",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_COURIER_SETTINGS_ENABLED:"true",BRIOFOLD_CHANNEL_POLICIES_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
   });
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
@@ -150,10 +152,11 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runLinkedOrderConversion",async()=>{await runLinkedOrderConversion({control,sessions,origin,browser});});
   await check("runBriofoldResponseReport",async()=>{await runBriofoldResponseReport({origin,browser,control,sessions});});
   await check("runPathaoControlBooking",async()=>{
-   const process=spawn("go",["test","./internal/checkout","-run","^TestPathaoControlBookingIsolation$","-v","-count=1"],{cwd:fileURLToPath(new URL("../../../backend/",import.meta.url)),env:{...globalThis.process.env,PG_PATHAO_TEST_CONTROL_URL:control},stdio:["ignore","pipe","pipe"]});
+   const process=spawn("go",["test","./internal/checkout","-run","^(TestPathaoControlBookingIsolation|TestWooControlWebhookSources)$","-v","-count=1"],{cwd:fileURLToPath(new URL("../../../backend/",import.meta.url)),env:{...globalThis.process.env,PG_PATHAO_TEST_CONTROL_URL:control,PG_WOO_TEST_CONTROL_URL:control},stdio:["ignore","pipe","pipe"]});
    let result="";for(const stream of [process.stdout,process.stderr])stream.on("data",chunk=>{result+=String(chunk);});
-   await new Promise((resolve,reject)=>{process.once("error",reject);process.once("exit",code=>code===0&&result.includes("PATHAO SQL/Go provider-contract PASS")?resolve():reject(Error("Isolated Pathao verification failed: "+result.slice(-6000))));});console.log(result.trim());
+   await new Promise((resolve,reject)=>{process.once("error",reject);process.once("exit",code=>code===0&&result.includes("PATHAO SQL/Go provider-contract PASS")&&result.includes("WOO SIGNED SOURCE SQL/Go PASS")?resolve():reject(Error("Isolated Pathao verification failed: "+result.slice(-6000))));});console.log(result.trim());
   });
+  await check("runWooWebhookSources",async()=>{await runWooWebhookSources({control,sessions,origin,browser,apiOrigin});});
   await check("runCourierSettings",async()=>{await runCourierSettings({control,sessions,origin,browser});});
   await check("runProductPhotos",async()=>{await runProductPhotos({control,sessions,origin,browser,privateStorage});});
   await check("runBriofoldCommerce",async()=>{await runBriofoldCommerce({origin,browser,control,sessions,apiOrigin});});
