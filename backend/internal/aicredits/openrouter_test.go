@@ -56,3 +56,29 @@ func TestOpenRouterErrorsNeverGuessUsageOrFollowRedirects(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenRouterChatReasoningBudget(t *testing.T) {
+	for _, model := range []string{"qwen/qwen3.8-omni-flash", "fixture-model"} {
+		t.Run(model, func(t *testing.T) {
+			provider := NewOpenRouter("fixture-key")
+			provider.client.Transport = routerTransport(func(r *http.Request) (*http.Response, error) {
+				var request map[string]json.RawMessage
+				if json.NewDecoder(r.Body).Decode(&request) != nil {
+					t.Fatal("invalid request")
+				}
+				if model == "qwen/qwen3.8-omni-flash" {
+					var reasoning map[string]bool
+					if json.Unmarshal(request["reasoning"], &reasoning) != nil || len(reasoning) != 1 || reasoning["enabled"] {
+						t.Fatal("chat thinking must be explicitly disabled")
+					}
+				} else if _, exists := request["reasoning"]; exists {
+					t.Fatal("unrelated model reasoning changed")
+				}
+				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"id":"fixture-generation","model":"` + model + `","choices":[{"message":{"content":"Hello"}}],"usage":{"prompt_tokens":100,"completion_tokens":20}}`)), Header: make(http.Header)}, nil
+			})
+			if _, err := provider.Generate(context.Background(), model, 1000, []Message{{Role: "user", Content: "Hello"}}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
