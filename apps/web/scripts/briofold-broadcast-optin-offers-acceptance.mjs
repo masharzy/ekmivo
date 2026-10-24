@@ -10,6 +10,10 @@ export async function runSignedBroadcastOffers({control,sessions,apiOrigin}){
   const conn=(await db`SELECT inbox_connection(${store},'live','ms',${account},decode('abcd','hex')) id`)[0].id;
   const event=(text,id=randomUUID())=>JSON.stringify({object:'page',entry:[{id:account,messaging:[{sender:{id:sender},timestamp:Date.now(),message:{mid:id,text}}]}]});
   const signed=async(raw,sig='sha256='+createHmac('sha256','phase6-comment-test-secret').update(raw).digest('hex'))=>fetch(apiOrigin+'/v1/channels/meta/webhook',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Signature-256':sig},body:raw});
+  for(const role of ['ekmivo_financial_runtime','ekmivo_financial_projection']){
+   assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_provider_opt_in(uuid,text,text)','EXECUTE') ok`)[0].ok,true,'signed opt-in requires the restricted inbound role');
+   assert.equal((await db`SELECT has_table_privilege(${role},'briofold_growth_channel_consents','INSERT') ok`)[0].ok,false,'callback permission must not grant direct consent writes');
+  }
   const first=event('START OFFERS');assert.equal((await signed(first,'sha256='+'0'.repeat(64))).status,403);assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_channel_consents WHERE workspace_id=${store}`)[0].n),0,'forged callback minted consent');
   assert.equal((await signed(event('Please start my order'))).status,200);assert.equal((await signed(event('START'))).status,200);assert.equal(Number((await db`SELECT count(*) n FROM briofold_growth_channel_consents WHERE workspace_id=${store}`)[0].n),0,'unrelated text minted consent');
   assert.equal((await signed(first)).status,200);assert.equal((await signed(first)).status,200);assert.equal((await signed(event(' start offers '))).status,200);

@@ -1611,6 +1611,15 @@ try{
  console.log("PG08 customer notice SQL PASS: verified consent, same-intent capabilities, atomic receipt enqueue, lease, unknown outcome, withdrawal, secret isolation (FICTIONAL)");
  const extensionEnv={...process.env,...pg06Env,PG10_ALLOW_MIGRATION:"true",PG10_MIGRATION_DIRECTORY:new URL("../../../infra/migrations/",import.meta.url).pathname};
  execFileSync("go",["run","./cmd/financial-migrate"],{cwd:new URL("../../../backend/",import.meta.url),env:extensionEnv,stdio:"pipe",timeout:90000});
+ // Match the physical-phone checkout/intent prerequisites in both disposable
+ // realms. Heartbeating a paired phone must exercise production SQL, while
+ // public collection still independently requires an approved live parser.
+ for(const realm of names){
+  const migrationDB=postgres(ds(`ekmivo_pg04_${realm}`,`ekmivo_pg04_migrate_${realm}`,`pg04-${realm}-migration-only`),{max:1,prepare:false});
+  try{for(const filename of ["0048_pg10_phone_forwarder_checkout.sql","0049_pg10_physical_phone_intent.sql"]){
+   await migrationDB.unsafe(await readFile(new URL("../../../infra/migrations/"+filename,import.meta.url),"utf8")).simple();
+  }}finally{await migrationDB.end({timeout:3});}
+ }
  // Both financial realms must expose the account-specific route; no SIM/phone account assignment.
  for(const realm of names){
   const accountSQL=await readFile(new URL("../../../infra/migrations/0098_checkout_account_tiles.sql",import.meta.url),"utf8");
