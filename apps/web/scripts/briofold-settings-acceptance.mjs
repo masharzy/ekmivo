@@ -113,6 +113,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0210_briofold_sender_guard_precedence.sql");
   await apply("0211_briofold_consent_scope_runtime.sql");
   await apply("0212_channel_platform_telegram.sql");
+  await apply("0213_qwen_provider_tariffs.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const privateStorage=await startBriofoldPrivateStorage(control);

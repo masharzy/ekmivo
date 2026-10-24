@@ -20,7 +20,7 @@ export function AdminAiTariffs({rows,canEdit,locale,operationKey}:{rows:AiTariff
    <input type="hidden" name="operation_key" value={operationKey}/>
    <input type="hidden" name="expected_version" value={current?.id??""}/>
    <label>{t("Configure model","মডেল নির্বাচন")}<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">{t("New model","নতুন মডেল")}</option>{rows.filter(row=>row.active).map(row=><option key={row.id} value={row.id}>{row.model}</option>)}</select></label>
-   <label>{t("OpenRouter model ID","OpenRouter মডেল ID")}<input name="model" defaultValue={current?.model??""} readOnly={!!current} placeholder="provider/model-id" required maxLength={200}/></label>
+   <label>{t("Provider model ID","Provider মডেল ID")}<input name="model" defaultValue={current?.model??""} readOnly={!!current} placeholder="qwen3.5-omni-flash or provider/model-id" required maxLength={200}/></label>
    <div className="pa-admin-form-pair">
     {([["input_rate","Input charge (৳ / 1M)","ইনপুট চার্জ (৳ / ১০ লাখ)",current?.terms.input_minor_per_million],
       ["cached_rate","Cached input charge (৳ / 1M)","ক্যাশড ইনপুট চার্জ (৳ / ১০ লাখ)",current?.terms.cached_input_minor_per_million],

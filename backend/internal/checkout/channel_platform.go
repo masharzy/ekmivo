@@ -16,8 +16,8 @@ import (
 	"strings"
 )
 
-var channelKeys = []string{"META_APP_ID", "META_APP_SECRET", "META_GRAPH_VERSION", "META_OAUTH_REDIRECT_URI", "META_WEBHOOK_VERIFY_TOKEN", "META_WHATSAPP_CONFIG_ID", "CHANNEL_PUBLIC_ORIGIN"}
-var channelSecrets = map[string]bool{"META_APP_SECRET": true, "META_WEBHOOK_VERIFY_TOKEN": true}
+var channelKeys = []string{"META_APP_ID", "META_APP_SECRET", "META_GRAPH_VERSION", "META_OAUTH_REDIRECT_URI", "META_WEBHOOK_VERIFY_TOKEN", "META_WHATSAPP_CONFIG_ID", "CHANNEL_PUBLIC_ORIGIN", "QWEN_API_KEY", "OPENROUTER_API_KEY", "AI_DEFAULT_MODEL"}
+var channelSecrets = map[string]bool{"META_APP_SECRET": true, "META_WEBHOOK_VERIFY_TOKEN": true, "QWEN_API_KEY":true, "OPENROUTER_API_KEY":true}
 var graphVersionPattern = regexp.MustCompile(`^v[0-9]{1,3}\.[0-9]{1,2}$`)
 var channelNumber = regexp.MustCompile(`^[0-9]{1,30}$`)
 
@@ -36,7 +36,9 @@ func validChannelSetting(k, v string) bool {
 	case "META_OAUTH_REDIRECT_URI", "CHANNEL_PUBLIC_ORIGIN":
 		u, e := url.Parse(v)
 		return e == nil && u.Scheme == "https" && u.Host != "" && u.User == nil && u.RawQuery == "" && u.Fragment == "" && (k != "CHANNEL_PUBLIC_ORIGIN" || u.Path == "" || u.Path == "/")
-	case "META_APP_SECRET", "META_WEBHOOK_VERIFY_TOKEN":
+	case "AI_DEFAULT_MODEL":
+ return regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$`).MatchString(v)
+ case "META_APP_SECRET", "META_WEBHOOK_VERIFY_TOKEN", "QWEN_API_KEY", "OPENROUTER_API_KEY":
 		return len(v) >= 16
 	}
 	return false
