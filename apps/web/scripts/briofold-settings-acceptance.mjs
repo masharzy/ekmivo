@@ -112,6 +112,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0209_briofold_broadcast_optin_offers.sql");
   await apply("0210_briofold_sender_guard_precedence.sql");
   await apply("0211_briofold_consent_scope_runtime.sql");
+  await apply("0212_channel_platform_telegram.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const privateStorage=await startBriofoldPrivateStorage(control);
@@ -160,9 +161,9 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runLinkedOrderConversion",async()=>{await runLinkedOrderConversion({control,sessions,origin,browser});});
   await check("runBriofoldResponseReport",async()=>{await runBriofoldResponseReport({origin,browser,control,sessions});});
   await check("runPathaoControlBooking",async()=>{
-   const process=spawn("go",["test","./internal/checkout","-run","^(TestPathaoControlBookingIsolation|TestWooControlWebhookSources)$","-v","-count=1"],{cwd:fileURLToPath(new URL("../../../backend/",import.meta.url)),env:{...globalThis.process.env,PG_PATHAO_TEST_CONTROL_URL:control,PG_WOO_TEST_CONTROL_URL:control},stdio:["ignore","pipe","pipe"]});
+   const process=spawn("go",["test","./internal/checkout","-run","^(TestPathaoControlBookingIsolation|TestWooControlWebhookSources|TestTelegramControlWebhookIsolation)$","-v","-count=1"],{cwd:fileURLToPath(new URL("../../../backend/",import.meta.url)),env:{...globalThis.process.env,PG_PATHAO_TEST_CONTROL_URL:control,PG_WOO_TEST_CONTROL_URL:control,PG_CHANNEL_SETUP_TEST_CONTROL_URL:control},stdio:["ignore","pipe","pipe"]});
    let result="";for(const stream of [process.stdout,process.stderr])stream.on("data",chunk=>{result+=String(chunk);});
-   await new Promise((resolve,reject)=>{process.once("error",reject);process.once("exit",code=>code===0&&result.includes("PATHAO SQL/Go provider-contract PASS")&&result.includes("WOO SIGNED SOURCE SQL/Go PASS")?resolve():reject(Error("Isolated Pathao verification failed: "+result.slice(-6000))));});console.log(result.trim());
+   await new Promise((resolve,reject)=>{process.once("error",reject);process.once("exit",code=>code===0&&result.includes("PATHAO SQL/Go provider-contract PASS")&&result.includes("WOO SIGNED SOURCE SQL/Go PASS")&&result.includes("CHANNEL SETUP SQL/Go PASS")?resolve():reject(Error("Isolated Pathao verification failed: "+result.slice(-6000))));});console.log(result.trim());
   });
   await check("runWooWebhookSources",async()=>{await runWooWebhookSources({control,sessions,origin,browser,apiOrigin});});
   await check("runCourierSettings",async()=>{await runCourierSettings({control,sessions,origin,browser});});

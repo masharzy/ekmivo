@@ -5,12 +5,13 @@ import { goOrigin } from "../../../../lib/server/go-origin";
 
 export const dynamic = "force-dynamic";
 export const maxDuration=60;
+const channelAdminPath=/^platform\/channel-config$/;
 const couponQuotePath=/^platform\/purchase-intents\/[0-9a-f-]{36}\/quote$/i;
 const adminPlanPath=/^platform\/workspaces\/[0-9a-f-]{36}\/payment-usage$/i;
 const adminWorkspaceRead=/^platform\/workspaces\/[0-9a-f-]{36}\/operations\/(payments|devices|overview)$/i;
 const operationPath=/^workspaces\/[0-9a-f-]{36}\/operations\/(payments|incoming|gateways|devices|webhooks|deliveries|events|parsers|overview|notices)(?:\/[0-9a-f-]{36}(?:\/(revoke|rename|reprocess|enable|disable|rotate|activate_rotation|revoke_previous|replay|retry))?)?$/i;
 const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources))$/i;
-const mobilePath=/^workspaces\/[0-9a-f-]{36}\/(?:mobile-devices(?:\/[0-9a-f-]{36}\/(?:revoke|reconnect|delete))?|comments|website-chat|inbox-connect|inbox|inbox-connections(?:\/[0-9a-f-]{36}\/disconnect)?)$/i;
+const mobilePath=/^workspaces\/[0-9a-f-]{36}\/(?:mobile-devices(?:\/[0-9a-f-]{36}\/(?:revoke|reconnect|delete))?|comments|website-chat|inbox-connect|inbox-channel-status|inbox-telegram|inbox|inbox-connections(?:\/[0-9a-f-]{36}\/disconnect)?)$/i;
 const commercePath=/^workspaces\/[0-9a-f-]{36}\/commerce$/i;
 const crmPath=/^workspaces\/[0-9a-f-]{36}\/crm$/i;
 const growthPath=/^workspaces\/[0-9a-f-]{36}\/growth$/i;
@@ -24,13 +25,13 @@ const extensionPath=/^(?:workspace-invites\/accept-invite|workspaces\/[0-9a-f-]{
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
  const path = (await context.params).path.join("/");
  const read = request.method === "GET";
- if (!(read && (["session", "platform/access"].includes(path)||adminPlanPath.test(path)||adminWorkspaceRead.test(path))) && !couponQuotePath.test(path) && !workspacePath.test(path) && !operationPath.test(path) && !documentPath.test(path) && !extensionPath.test(path) && !mobilePath.test(path)&&!phonePath.test(path)&&!aiCreditPath.test(path)&&!subscriptionOrderPath.test(path)&&!subscriptionPaymentPath.test(path)&&!aiRuntimePath.test(path)&&!crmPath.test(path)&&!commercePath.test(path)&&!growthPath.test(path))
+ if (!(read && (["session", "platform/access"].includes(path)||adminPlanPath.test(path)||adminWorkspaceRead.test(path))) && !channelAdminPath.test(path) && !couponQuotePath.test(path) && !workspacePath.test(path) && !operationPath.test(path) && !documentPath.test(path) && !extensionPath.test(path) && !mobilePath.test(path)&&!phonePath.test(path)&&!aiCreditPath.test(path)&&!subscriptionOrderPath.test(path)&&!subscriptionPaymentPath.test(path)&&!aiRuntimePath.test(path)&&!crmPath.test(path)&&!commercePath.test(path)&&!growthPath.test(path))
   return Response.json({ code: "NOT_FOUND" }, { status: 404 });
  if((aiCreditPath.test(path)||aiRuntimePath.test(path))&&request.method!=="POST")return Response.json({code:"METHOD_NOT_ALLOWED"},{status:405});
  if(subscriptionOrderPath.test(path)&&request.method!==(path.endsWith("/quote")||path.endsWith("/confirm")?"POST":"GET"))return Response.json({code:"METHOD_NOT_ALLOWED"},{status:405});
  if(couponQuotePath.test(path)&&!(["GET","POST"].includes(request.method)))return Response.json({code:"METHOD_NOT_ALLOWED"},{status:405});
  const intentPath=/^workspaces\/[0-9a-f-]{36}\/(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources)$/i.test(path);
- if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || ((couponQuotePath.test(path)||subscriptionOrderPath.test(path)||subscriptionPaymentPath.test(path)||commercePath.test(path)||crmPath.test(path)||growthPath.test(path)||intentPath||operationPath.test(path)||extensionPath.test(path)||mobilePath.test(path)||phonePath.test(path)||aiCreditPath.test(path)||aiRuntimePath.test(path))&&request.method==="POST") || (documentPath.test(path)&&["POST","PATCH"].includes(request.method))))
+ if(!read && !((path.endsWith("/settings")&&request.method==="PATCH") || ((channelAdminPath.test(path)||couponQuotePath.test(path)||subscriptionOrderPath.test(path)||subscriptionPaymentPath.test(path)||commercePath.test(path)||crmPath.test(path)||growthPath.test(path)||intentPath||operationPath.test(path)||extensionPath.test(path)||mobilePath.test(path)||phonePath.test(path)||aiCreditPath.test(path)||aiRuntimePath.test(path))&&request.method==="POST") || (documentPath.test(path)&&["POST","PATCH"].includes(request.method))))
   return Response.json({ code:"METHOD_NOT_ALLOWED" },{status:405});
  const requestUrl = new URL(request.url);
  // Next's local server may use localhost internally despite a 127.0.0.1 Host.
@@ -42,7 +43,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
  const token = (await cookies()).get("ekmivo-session")?.value;
  if (!token) return Response.json({ code: "UNAUTHENTICATED" }, { status: 401 });
  // Paid Studio work is tied to the server-selected business, including stale tabs.
- if(commercePath.test(path)||crmPath.test(path)||growthPath.test(path)||path.endsWith("/ai/studio-test")||path.endsWith("/ai/knowledge-import")){
+ if(path.endsWith("/inbox-telegram")||path.endsWith("/inbox-connect")||path.endsWith("/inbox-channel-status")||commercePath.test(path)||crmPath.test(path)||growthPath.test(path)||path.endsWith("/ai/studio-test")||path.endsWith("/ai/knowledge-import")){
   try{
    const actor=await currentUser();if(!actor)return Response.json({code:"UNAUTHENTICATED"},{status:401});
    const selected=await preferredWorkspaceFor(actor.id);
@@ -60,7 +61,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   const value = incoming.searchParams.get(key);
   if (value) target.searchParams.set(key, value);
  }
- const body = read ? undefined : await boundedBody(request,/\/workspace-tools\/help$/i.test(path)?750000:path.endsWith("/ai/knowledge-import")?7340032:aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:commercePath.test(path)?7340032:path.endsWith("/crm")?20000:growthPath.test(path)?16384:path.endsWith("/comments")?65536:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/(settings|channel-settings)$/i.test(path)?16384:4096);
+ const body = read ? undefined : await boundedBody(request,channelAdminPath.test(path)?32768:/\/workspace-tools\/help$/i.test(path)?750000:path.endsWith("/ai/knowledge-import")?7340032:aiRuntimePath.test(path)?16384:documentPath.test(path)?1048576:path.endsWith("/inbox")?7340032:commercePath.test(path)?7340032:path.endsWith("/crm")?20000:growthPath.test(path)?16384:path.endsWith("/comments")?65536:path.endsWith("/linked-sources")?16384:/\/workspace-tools\/(settings|channel-settings)$/i.test(path)?16384:4096);
  if (body === null)
   return Response.json({ code: "BODY_TOO_LARGE" }, { status: 413 });
  try {
@@ -71,7 +72,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
    headers: { Cookie: "ekmivo-session=" + token, "Content-Type": "application/json",
     "Idempotency-Key": request.headers.get("Idempotency-Key") || "",
     Origin: process.env.GO_WEB_ORIGIN || "https://ekmivo-web-masharzys-projects.vercel.app" },
-   signal: AbortSignal.timeout(aiRuntimePath.test(path)||commercePath.test(path)?50000:15000),
+   signal: AbortSignal.timeout(path.endsWith("/inbox-telegram")?50000:aiRuntimePath.test(path)||commercePath.test(path)?50000:15000),
   });
   return new Response(await upstream.text(), { status: upstream.status,
    headers: { "Content-Type": upstream.headers.get("Content-Type") || "application/json", "Cache-Control": "private, no-store",...(upstream.headers.has("X-Correlation-ID")?{"X-Correlation-ID":upstream.headers.get("X-Correlation-ID")!}:{}),...(upstream.headers.has("Retry-After")?{"Retry-After":upstream.headers.get("Retry-After")!}:{}) } });

@@ -342,7 +342,8 @@ func (s *Service) runCommentDelivery(ctx context.Context) {
 	if e == nil {
 		token, e = merchantwebhook.Decrypt(s.Pipeline.Key, encoded, job.Workspace+"|inbox|"+job.Provider+"|"+job.Account)
 	}
-	version := os.Getenv("META_GRAPH_VERSION")
+	cfg, _ := s.channelConfig(ctx)
+	version := cfg["META_GRAPH_VERSION"]
 	if e == nil && strings.HasPrefix(version, "v") && !strings.ContainsAny(version, "/?#") {
 		state, reason = sendComment(ctx, inboxHTTP, version, string(token), job)
 	}

@@ -1,3 +1,4 @@
+import {AdminChannelSetup} from "./admin-channel-setup";
 
 import {AdminTrustedDevices} from "./admin-trusted-devices";
 import {canReadAdmin} from "../lib/admin-permissions";
@@ -260,6 +261,7 @@ export async function PlatformAdminConsole({locale,segments=[],query="",after=""
  const roles=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"roles",query:""}):null;
  const sessions=isSuper?await AdminGlobalInventory({locale,kind:"staff",sub:"sessions",query:""}):null;
  body=<><PageHead title={t}/>{isSuper?<>
+ <AdminChannelSetup locale={locale}/>
  <AdminPlatformReceiving locale={locale} current={receiving[0]?{id:String(receiving[0].id),name:String(receiving[0].name)}:null} options={receivingOptions.map(w=>({id:String(w.id),name:String(w.name)}))}/>
  <section className="pa-surface pa-settings-grid"><div><h2>Email verification</h2><p>{settings?.emailVerification?"Required":"Off"}</p>
  <span className="pa-status-text"><span className={"pa-status-dot "+(mailReady()?"green":"grey")}/>Email service: {mailReady()?"Configured":"Configuration required"}</span>
