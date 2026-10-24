@@ -197,7 +197,7 @@ Payment phase 1 does not implement full AI। Phase 2 inbox/channel foundation; 
 | Broadcasts | Audience/draft/preview/schedule/approval/results, opt-out/suppression/templates, dedup। |
 | Bookings | Resource/day/list/calendar, availability/concurrent slots, request/confirm/advance/reminders/cancel/refund। |
 | AI Agent / Agent Desk | Practice/live/off, tone/language/tools, draft/live versions, natural-language edit/diff/test/publish/undo, unanswered questions। |
-| Knowledge | Text/Q&A/MD/CSV/PDF/Word/URL, sources/versions/ingest/errors/retrieval test/delete propagation। |
+| Knowledge | Business/about text অথবা optional product/service name + pricing/details; business-type form/catalog/image বাধ্যতামূলক নয়। একই draft→publish→retrieval flow। Text/Q&A/MD/CSV/PDF/Word/URL, sources/versions/ingest/errors/retrieval test/delete propagation। |
 | Products | Shared catalog variants/prices/images; recognition/ambiguity candidates; live stock authority B। |
 | Posts | Post→product association/context, provider sync/errors। |
 | Channels | Messenger/Instagram/WhatsApp/Telegram onboarding/status/access/reconnect, capability-specific options। |
