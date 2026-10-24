@@ -67,6 +67,49 @@ test("empty support filter does not claim the existing collection has no request
  assert.equal(h.text().includes("No support requests yet."),false);
 });
 
+test("feedback deep link and typed bug/feature/usability tickets preserve one Store and source",async()=>{
+ const navigation={};
+ const body=readFileSync(new URL("../src/lib/unified-navigation.ts",import.meta.url),"utf8");
+ vm.runInNewContext(ts.transpileModule(body,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:navigation});
+ for(const mode of ["ai","commerce","both"]){
+  const d=navigation.unifiedDestination(mode,"settings",["help","feedback"]);
+  assert.equal(d.section,"help");
+  assert.equal(d.service,mode==="ai"?"ai":"payments");
+ }
+ assert.equal(navigation.unifiedDestination("off","settings",["help","feedback"]),null);
+ assert.equal(navigation.unifiedDestination("both","settings",["help","untrusted"]),null);
+ assert.ok(navigation.unifiedSettings.flatMap(g=>g.items).some(i=>i.slug==="help/feedback"));
+ for(const [topic,label] of [["bug","Bug report"],["feature","Feature request"],["usability","Usability feedback"]]){
+  const h=helpHarness({seed:{data:{items:[]}}});
+  h.api.status=200;h.api.postStatus=200;
+  h.button(label).props.onClick();
+  h.input("support-subject").props.onChange({target:{value:"Fixture feedback"}});
+  h.input("support-description").props.onChange({target:{value:"A real description of the feedback being filed"}});
+  h.render();
+  h.nodes.find(n=>n.type==="form").props.onSubmit({preventDefault(){}});
+  await flush();
+  assert.equal(h.posts[0].body.topic,topic);
+ }
+ const migration=readFileSync(new URL("../../../infra/migrations/0190_briofold_feedback_topics.sql",import.meta.url),"utf8");
+ const go=readFileSync(new URL("../../../backend/internal/checkout/workspace.go",import.meta.url),"utf8");
+ for(const topic of ["bug","feature","usability"]){
+  assert.ok(migration.includes(`'${topic}'`));
+  assert.ok(go.includes(`"${topic}": true`));
+ }
+});
+
+test("disposable settings acceptance installs checkout logo presentation before browser theme round-trip",()=>{
+ const fixture=readFileSync(new URL("./briofold-settings-acceptance.mjs",import.meta.url),"utf8");
+ const store=fixture.indexOf('apply("0099_store_details.sql")');
+ const presentation=fixture.indexOf('apply("0100_checkout_logo_presentation.sql")');
+ const browser=fixture.indexOf("await runBriofoldPhase9Browser(");
+ assert.ok(store>=0&&presentation>store&&browser>presentation);
+ assert.ok(fixture.includes("dashboard_checkout_theme_read(uuid,uuid)"));
+ const support=fixture.indexOf('apply("0073_dashboard_support_topic.sql")');
+ const feedback=fixture.indexOf('apply("0190_briofold_feedback_topics.sql")');
+ assert.ok(support>presentation&&feedback>support&&browser>feedback);
+});
+
 test("business preferences stay separate from personal account security in all enabled product modes",()=>{
  const navigation={};
  const body=readFileSync(new URL("../src/lib/unified-navigation.ts",import.meta.url),"utf8");

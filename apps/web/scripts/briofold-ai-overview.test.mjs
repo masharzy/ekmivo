@@ -13,14 +13,16 @@ test("AI overview is backed by real Inbox and current server-authorized tenant",
  assert.match(source,/m\.workspace_id=\$\{workspaceId\}::uuid AND m\.user_id=\$\{userId\}::uuid/);
  assert.match(source,/FROM inbox_threads t JOIN inbox_connections c/);
  assert.match(source,/WHERE m\.workspace_id=\$\{workspaceId\}::uuid/);
- assert.match(source,/latest\.sender='customer'/);
+ assert.match(source,/response\.state IN \('sent','delivered','seen'\)/);
+ assert.match(source,/response\.sequence>request\.sequence/);
  assert.match(source,/c\.environment='live'/);
  // Inbox itself excludes disconnected channel conversations; overview counts
  // and recent list must use identical visibility constraints.
- assert.match(source,/c\.environment='live' AND c\.enabled=true\) AS conversations/);
- assert.match(source,/c\.environment='live' AND c\.enabled=true\s+ORDER BY t\.last_activity_at/);
- assert.match(source,/WHERE m\.workspace_id=\$\{workspaceId\}::uuid AND c\.environment='live' AND c\.enabled=true/);
+ assert.match(source,/c\.environment='live' AND c\.enabled=true AND \$\{channelAccess\}\) AS conversations/);
+ assert.match(source,/c\.environment='live' AND c\.enabled=true AND \$\{channelAccess\}\s+ORDER BY t\.last_activity_at/);
+ assert.match(source,/WHERE t\.workspace_id=\$\{workspaceId\}::uuid AND c\.environment='live' AND c\.enabled=true/);
 
+ assert.match(source,/briofold_channel_allowed\(\$\{workspaceId\}::uuid,\$\{userId\}::uuid,c\.id,'read'\)/);
  assert.match(source,/FROM briofold_ai_executions WHERE workspace_id=\$\{workspaceId\}::uuid/);
  assert.match(source,/to_regclass\('public\.briofold_ai_executions'\)/);
  assert.doesNotMatch(source,/Math\.random|mockThread|fakeConversation/);
@@ -40,4 +42,18 @@ test("AI overview uses scoped styles and never edits Inbox presentation",()=>{
  assert.match(css,/var\(--color-border\)/);
  const page=read("components/unified-merchant-route.tsx");
  assert.match(page,/DashboardContent/);
+});
+test("AI dashboard setup and business alerts never fabricate completion",()=>{
+ const source=read("components/briofold-ai-overview.tsx");
+ const styles=read("components/briofold-ai-overview.module.css");
+ assert.match(source,/aria-label=\{t\("Business alerts"/);
+ assert.match(source,/data\.stats\.waiting>0/);
+ assert.match(source,/data===null\?<p role="status">/);
+ assert.match(source,/aria-label=\{t\("Store setup checklist"/);
+ assert.match(source,/data\.stats\.channels>0\?t\("Connected"/);
+ assert.match(source,/Review required/);
+ assert.match(source,/never silently marks them complete/);
+ for(const href of ["/settings/channels","/inbox","/inbox/agent-desk","/settings/business"])
+  assert.ok(source.includes(`href="${href}"`),`setup action missing ${href}`);
+ assert.match(styles,/\.checklist/);
 });

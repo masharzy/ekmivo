@@ -1,12 +1,14 @@
 # Briofold — Unified dashboard implementation roadmap
 
-**Owner decision:** 2026-10-20. **State:** Phase 0 planning baseline complete in this document; product implementation phases NOT claimed as implemented. Ekmivo is the current repository identity; Briofold is the owner's confirmed future brand spelling. This is a staged migration, not a replacement of the finance engine.
+**Owner decision:** 2026-10-20; updated 2026-10-22. **State:** Historical execution baseline; consult per-phase evidence for actual implementation status. Ekmivo is the current repository identity; Briofold is the owner's confirmed future brand spelling. This is a staged migration, not a replacement of the finance engine.
+
+**2026-10-22 owner supersession:** **Phase 1 CSS isolation is cancelled/WAIVED**. The merchant dashboard will intentionally share the public homepage's CSS/design direction during a subsequent owner-directed redesign. Do not split `globals.css`, add CSS isolation as a release blocker, or regress existing designs to satisfy the superseded requirement. Keep tested route/component styles and the independently approved Admin design stable until that redesign. The account model is **one user-facing Store**, not multiple switchable workspaces; internal `workspace_id` remains for tenant/financial compatibility and exceptional historic access, not a license to reintroduce workspace-switch UX. See `docs/STORE-FIRST-SUBSCRIPTION-CHECKOUT-EXECUTION.bn.md`.
 
 ## 0. Non-negotiable product contract
 
 1. One customer-facing business dashboard; **no AI vs Payment dashboard switch**. Only relevant features are exposed per business entitlement. One business can enable AI, Payments or Both.
 2. The **current approved Payment Gateway dashboard** (Overview and the merchant dashboard reference family) is the ONLY visual standard for the unified dashboard. Homepage/marketing and checkout are separate design surfaces. Preserve payment dashboard spacing, radii, typography, table patterns, drawers, dialogs, statuses, responsive behavior and light/dark theme.
-3. **No reliance on `apps/web/src/app/globals.css` to style dashboard views.** Today `apps/web/src/app/layout.tsx` imports `globals.css`, which imports marketing, payment, admin, checkout and dashboard styles together. This violates the owner's desired isolation. Phase 1 must physically split route-level stylesheet ownership and prevent marketing selectors/tokens from styling merchant screens; using higher-specificity overrides alone is NOT acceptance. Scoped CSS modules or an isolated dashboard stylesheet with namespace `.bf-dashboard` are acceptable. Keep only minimal neutral, audited root infrastructure (fonts/accessibility) if strictly necessary; no public-site visual rules on dashboard. Do not copy a new homepage look into dashboards. Admin remains independently scoped too.
+3. **Superseded CSS-isolation mandate.** The owner cancelled Phase 1 on 2026-10-22 and plans to adopt homepage CSS/design in the merchant dashboard. Preserve current production UI, accessibility and independently locked Admin styling until separately approved changes. Do not require a physical `globals.css` split or report it as incomplete work.
 4. **No feature removal:** route/name changes are allowed, but every existing Ekmivo capability and the audited AiPraktor-visible capability must have a documented, discoverable destination and a tested functionality/permission contract. No dead menu, mock save, source-unavailable presented as zero, or misleading "connected".
 5. **No `/bn` or `/en` in visible links** and no workspace UUID or AI/payment service slug for normal merchant navigation. New primary paths are `/dashboard`, `/inbox`, `/orders`, `/payments`, `/customers`, `/reports`, `/settings`. Locale is user preference, not a URL segment. Legacy links redirect without internal proxy loops. Internal business IDs persist for authorization.
 6. **Payment truth remains authoritative:** original wallet SMS/notification evidence matching, financial realm isolation, transaction idempotency, webhook delivery, device pairing, plan limits, refund and reconciliation semantics do not move into AI authority. No invented verified payments.
@@ -19,7 +21,7 @@
 
 - Current code: `apps/web/src/lib/dashboard-navigation.ts` defines separate `ai` and `payments` groups, `dashboard-frame.tsx` renders service picker, and `src/app/[locale]/w/[workspaceId]/...` houses current merchant pages.
 - Current approved payment visual source: `apps/web/src/app/dashboard-v2.css`, `dashboard-shell-v3.css`, `dashboard-pass2.css`, `dashboard-refinement.css`, `apps/web/src/components/dashboard-reference.css` and `docs/evidence/DASHBOARD-SHELL-V3-UI-HANDOFF.md`. They currently contain cascading overrides; resolve actual approved computed styles at Phase 1 rather than blindly choosing the first CSS declaration. Preserve owner-approved overview appearance.
-- Current global-CSS leak: `src/app/layout.tsx` loads `globals.css`, which imports public and merchant CSS in the same entrypoint.
+- Shared CSS: `src/app/layout.tsx` loads `globals.css` for public and merchant surfaces. This is **not a defect or Phase 10 blocker** after the owner's 2026-10-22 correction.
 - **Source boundary on comments:** the audited AiPraktor UI shows a Comments/Posts view, moderation rules and blocked keywords. It does **not conclusively prove** an individual post allowlist/exclusion editor. Per-post inclusion/exclusion and AI/fixed/human policy are **new explicit Briofold requirements from the owner**, to implement and verify independently; do not attribute them to a verified live competitor feature.
 - Competitor evidence: `docs/research/AIPRAKTOR-DASHBOARD-AUDIT.bn.md`, `docs/research/AIPRAKTOR-UI-INVENTORY.md`, `docs/research/aipraktor-dashboard-coverage.csv` (32 inspected routes, 157 screenshots reported). This is a **visible-UI inventory**, not proof that provider integrations work. Customer's separately uploaded ZIP/Markdown files should be compared again during visual QA; do not pretend they have been line-by-line verified if unreadable in a given runtime.
 - Explicitly unobserved competitor capabilities include populated chat composer/sends, live provider connection, courier end-to-end, AI publish/runtime, booking details, website voice availability, real usage billing, mobile layout. Build meaningful tested parity, not imaginary copy claims.
@@ -99,19 +101,18 @@ All dates are **sequence estimates**, not automatic background execution or a pr
 - Freeze design screenshots (light/dark, Bengali/English, 360/768/1440), payment gateway component taxonomy, current token computed values. Record feature gates, DB ownership and CI acceptance.
 - Deliver: `docs/BRIOFOLD-UNIFIED-IMPLEMENTATION-ROADMAP.bn.md`, completed traceability tracker and failing guard tests for style leak/legacy navigation. This document itself is the initial Phase 0 artifact, **not a completed audit of every route**.
 
-### Phase 1 — CSS isolation and approved Payment UI foundation (2–4 focused working days, after Phase 0)
-- Split monolithic `globals.css` route imports into marketing/auth, checkout, merchant and admin ownership. Change route/layout ownership safely with no style leakage on client navigation. Isolate all merchant visual tokens under a dedicated `.bf-dashboard` shell, with payment-approved computed tokens and reusable components (button, field, select/date, checkbox, tabs, table, modal, drawer, toast, skeleton, empty state, typography).
-- Prevent marketing styles, tokens and effects from affecting merchant components. Avoid non-scoped `h1`, `button`, `body` rules in merchant styles. Keep old payment screens visually identical first.
-- Gate: static CSS isolation test + screenshots + fonts + all modes/viewport checks + zero checkout/admin/public regressions.
+### Phase 1 — WAIVED by owner (2026-10-22; no CSS-isolation work)
+- Historical PR #90's style regression guards may stay; no physical route-level CSS split is required or planned.
+- The future homepage-to-dashboard design migration is a separate owner-directed task. Existing accessibility and Admin regression checks still apply; Phase 1 cannot block subsequent code seals.
 
 ### Phase 2 — Business resolution, canonical routes and migration adapters (2–4 days, after Phase 1)
 - Unified server-side current-business context; one tenant-scoped auth/entitlement resolver for top-level routes, no URL workspace IDs for normal merchant navigation.
 - Create `/dashboard`, `/inbox`, `/orders`, `/payments`, `/customers`, `/reports`, `/settings/...` route shells with canonical links, old bookmarks redirect without loops, guarded unsaved drafts, explicit 403/404 and tenancy tests.
-- Support optional multiple businesses via server-authorized selector; do not expose workspace internals or let cookie/business slug authorize finance queries.
+- **Updated one-Store contract:** new accounts have one primary Store. Do not expose business/workspace switching; preserve exceptional historic memberships and financial IDs without destructive reassignment. No cookie/business slug grants finance access.
 - Gate: direct typed URLs work, refresh/history works, no `/bn`/`/en`, UUID or service-switch routes in new nav, old deep links work.
 
 ### Phase 3 — Minimal unified shell, Settings and feature retention (3–5 days, after Phase 2)
-- 7 menu entries; compact user/business header, global search, alerts, profile, one overview, one reports entry.
+- One Store header, global search, alerts, profile, one overview and one reports entry. Seven original groups plus the owner's later explicit **SMS Data** and **Invoices** primary entries (nine current routes); never render a service/product switch.
 - Implement categorized accordion Settings with **dedicated pages** (AI, channels, comments rules, payments/devices/methods, checkout, developer keys/webhooks/docs, staff/security/billing/help). Move by adapter rather than rewriting settled payment APIs.
 - Hide service-inapplicable menu entries; retain direct access and perms to all current settings features.
 - Gate: route-per-feature traceability, action and RBAC regression matrix, mobile/a11y UX.
@@ -158,7 +159,7 @@ All dates are **sequence estimates**, not automatic background execution or a pr
 
 ## 6. Dependencies, release mechanics and sequence
 
-- **Phase 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10** is the default release order; Phase 7 CRM foundation can be built in parallel with Phase 5/6 only with tested tenant/identity contract.
+- **Phase 0 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10** is the current release order; Phase 1 was waived by owner. Phase 7 CRM foundation can be built in parallel with Phase 5/6 only with tested Store/tenant identity contracts.
 - Every phase: inspect repo main/active PRs → scope minimal migration → implement code/tests → lint/typecheck → CI and browser smoke → PR review → merge → deploy verification → collect evidence → next phase.
 - Feature flags allow modernized route to coexist with legacy route. Redirect/delete only after parity gates; never ship partial UI with records hidden.
 - Rough size, not deadline: about **34–66 focused engineering workdays** across phases before full feature parity, potentially more if provider certification/integration is blocked. Progress is recorded by acceptance checks, not a fabricated percent. There is no autonomous work between chat turns without a scheduled execution tool; code work proceeds when the assistant is actively invoked.
@@ -168,7 +169,7 @@ All dates are **sequence estimates**, not automatic background execution or a pr
 ## 7. Phase-by-phase Definition of Done (for EVERY phase)
 
 - No current product feature, keyboard control, warning or permission silently removed.
-- No dashboard styling inherited from public `globals.css`; payment dashboard design tokens/spacing components remain canonical.
+- Existing dashboard/marketing/Admin visual behavior remains regression-tested; **CSS isolation is expressly not a completion gate**. Future homepage design adoption requires separate approval.
 - Server-side RBAC, tenant membership and financial environment validation enforced; no client-only hiding.
 - EN/BN cookie-selected translations but zero visible `/bn` or `/en` URLs.
 - Accessible 320/360/768/1440 layout in light/dark/system and reduced-motion; Bengali font correct.
@@ -178,4 +179,4 @@ All dates are **sequence estimates**, not automatic background execution or a pr
 
 ## 8. This change's exact status
 
-Only roadmap/feature-preservation planning docs are being authored here. **Phase 1–10 implementation, schema changes, production rollout and full AiPraktor parity are NOT done in this PR.** A subsequent scoped PR will start the Phase 1 CSS isolation foundation after Phase 0 traceability is filled out.
+Historical note: this section described the initial Phase 0 PR only. Later Phase 2–10 work has separate PRs and evidence. **Phase 1 was cancelled on 2026-10-22**, and neither full Phase 10 parity nor production cutover may be inferred from this original planning document.

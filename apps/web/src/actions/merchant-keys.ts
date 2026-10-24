@@ -13,7 +13,7 @@ export type KeyActionState={
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const SCOPES=new Set([
  "payments:read","payments:write","customers:read","customers:write",
- "invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage"
+ "invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage","orders:read","orders:write"
 ]);
 type Operation="create"|"rotate"|"revoke";
 function error(bn:boolean,code:"bad"|"denied"|"reauth"|"limit"|"missing"|"offline"|"plan"|"planLimit"):KeyActionState{
@@ -45,7 +45,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
  const scopes=selected.filter((v):v is string=>typeof v==="string");
  if(operation==="create" && (
   name.length<2||name.length>80||/[\u0000-\u001F\u007F]/.test(name)||
-  ![0,7,30,90,365].includes(days)||scopes.length<1||scopes.length>9||
+  ![0,7,30,90,365].includes(days)||scopes.length<1||scopes.length>11||
   new Set(scopes).size!==scopes.length||scopes.some(scope=>!SCOPES.has(scope))
  ))return error(bn,"bad");
  try{
@@ -60,6 +60,11 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
      AND s.revoked_at IS NULL AND s.expires_at>now() AND u.disabled_at IS NULL
     LIMIT 1`;
    if(session.length!==1)return {code:"reauth" as const};
+   const [bindingSchema]=await tx`SELECT to_regclass('public.platform_primary_stores') AS ready`;
+   if(bindingSchema?.ready){
+    const binding=await tx`SELECT workspace_id FROM platform_primary_stores WHERE user_id=${actor.id}::uuid`;
+    if(binding.length&&String(binding[0].workspace_id)!==workspace)return {code:"denied" as const};
+   }
    const member=await tx`SELECT role FROM workspace_members
     WHERE workspace_id=${workspace}::uuid AND user_id=${actor.id}::uuid FOR UPDATE`;
    if(member.length!==1||!["owner","admin"].includes(String(member[0].role)))return {code:"denied" as const};
@@ -70,7 +75,12 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
     WHERE workspace_id=${workspace}::uuid AND product='payments' FOR SHARE`;
    if(realm.length!==1||product.length!==1||!product[0].enabled)return {code:"denied" as const};
    if(operation==="create" && environment==="live"){
-    const entitlement=await tx`SELECT (platform_billing_system_workspace(${workspace}::uuid) OR pg13_billing_allowed(${workspace}::uuid)) AS allowed`;
+    // Legacy control databases may predate the optional platform receiver.
+    // Absence must deny that exemption while retaining the purchased plan.
+    const [receiver]=await tx`SELECT to_regprocedure('public.platform_billing_system_workspace(uuid)') IS NOT NULL AS ready`;
+    const entitlement=receiver?.ready
+     ?await tx`SELECT (platform_billing_system_workspace(${workspace}::uuid) OR pg13_billing_allowed(${workspace}::uuid)) AS allowed`
+     :await tx`SELECT pg13_billing_allowed(${workspace}::uuid) AS allowed`;
     if(entitlement.length!==1 || entitlement[0].allowed!==true)return {code:"plan" as const};
    }
    if(!await passwordMatches(password,String(session[0].password_hash)))return {code:"reauth" as const};
@@ -115,7 +125,8 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
   });
   if(result.code==="denied"||result.code==="reauth"||result.code==="limit"||result.code==="missing"||result.code==="plan")return error(bn,result.code);
   revalidatePath(`/${locale}/w/${workspace}/payments/developers`);
-  if(result.code==="revoked")return {status:"success",message:bn?"কীটি বাতিল করা হয়েছে।":"API key revoked."};
+  revalidatePath(`/${locale}/settings/api-keys`);
+  if(result.code==="revoked")return {status:"success",keyId:oldId,message:bn?"কীটি বাতিল করা হয়েছে।":"API key revoked."};
   return {status:"success",message:bn?"গোপন কীটি এখনই কপি করুন। এটি আর দেখানো হবে না।":"Copy this secret now. It will never be shown again.",rawSecret:result.raw,keyId:result.keyId};
  }catch(e){
   if(e&&typeof e==="object"&&"code" in e&&e.code==="P6802")return error(bn,"plan");

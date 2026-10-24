@@ -34,7 +34,7 @@ func TestInboxWorkOffset(t *testing.T) {
 	}
 }
 func TestInboxWorkCapabilities(t *testing.T) {
-	for action, want := range map[string]authz.Capability{"ai-review-read": authz.InboxRead, "ai-review-done": authz.InboxSend, "work-read": authz.InboxRead, "takeover": authz.InboxSend, "release": authz.InboxSend, "work": authz.InboxSend, "ticket": authz.InboxSend, "work-note": authz.InboxSend, "duty": authz.InboxSend, "saved-reply": authz.InboxManage, "archive-reply": authz.InboxManage} {
+	for action, want := range map[string]authz.Capability{"send-saved-reply": authz.InboxSend, "ai-review-read": authz.InboxRead, "ai-review-done": authz.InboxSend, "work-read": authz.InboxRead, "takeover": authz.InboxSend, "release": authz.InboxSend, "work": authz.InboxSend, "ticket": authz.InboxSend, "work-note": authz.InboxSend, "duty": authz.InboxSend, "saved-reply": authz.InboxManage, "archive-reply": authz.InboxManage} {
 		got, ok := webInboxCapability(action)
 		if !ok || got != want {
 			t.Fatalf("%s capability mismatch", action)

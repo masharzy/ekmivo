@@ -15,9 +15,9 @@ function fixture({signedIn=true,selected=workspace,authUnavailable=false}={}){
    name.endsWith("/auth")?{currentUser:async()=>{if(authUnavailable)throw Error("unavailable");return signedIn?{id:workspace}:null;},preferredWorkspaceFor:async()=>({id:selected})}:
    name.endsWith("go-origin")?{goOrigin:()=>"https://api.example"}:undefined,
  });
- return {calls,call:async(action="purchase",method="POST",origin="https://web.example",body="{}",namespace="ai-credits")=>{
-  const path=`workspaces/${workspace}/${namespace}/${action}`;
-  const request=new Request("https://web.example/api/go/"+path,{method,headers:{host:"web.example",origin,"Idempotency-Key":"fixture-key-00000001"},...(method==="GET"?{}:{body})});
+ return {calls,call:async(action="purchase",method="POST",origin="https://web.example",body="{}",namespace="ai-credits",query="")=>{
+  const path=`workspaces/${workspace}/${namespace}${action?"/"+action:""}`;
+  const request=new Request("https://web.example/api/go/"+path+query,{method,headers:{host:"web.example",origin,"Idempotency-Key":"fixture-key-00000001"},...(method==="GET"?{}:{body})});
   return exports[method](request,{params:Promise.resolve({path:path.split("/")})});
  }};
 }
@@ -50,4 +50,18 @@ test("paid Studio proxy rejects stale business and unavailable authority before 
  const stale=fixture({selected:topup});assert.equal((await stale.call("studio-test","POST","https://web.example","{}","ai")).status,409);assert.equal(stale.calls.length,0);
  const unavailable=fixture({authUnavailable:true});assert.equal((await unavailable.call("studio-test","POST","https://web.example","{}","ai")).status,503);assert.equal(unavailable.calls.length,0);
  const current=fixture();assert.equal((await current.call("studio-test","POST","https://web.example","{}","ai")).status,201);assert.equal(current.calls.length,1);
+});
+
+// Proxy boundary checks, not a substitute for SQL or browser authorization.
+test("CRM priority and assignee filters reach Go together with tenant-selected scope",async()=>{
+ const f=fixture();const response=await f.call("","GET","https://web.example","","crm",`?source=api&priority=hot&assignee=${topup}&filter=qualified`);
+ assert.equal(response.status,201);assert.equal(f.calls.length,1);
+ const target=new URL(f.calls[0].url);
+ assert.equal(target.pathname,`/v1/workspaces/${workspace}/crm`);
+ assert.equal(target.searchParams.get('priority'),'hot');assert.equal(target.searchParams.get('assignee'),topup);
+ assert.equal(target.searchParams.get('source'),'api');assert.equal(target.searchParams.get('filter'),'qualified');
+ for(const query of [`?priority=hot&priority=cold`,`?assignee=${workspace}&assignee=${topup}`]){
+  const duplicate=fixture();assert.equal((await duplicate.call("","GET","https://web.example","","crm",query)).status,400);assert.equal(duplicate.calls.length,0);
+ }
+ const stale=fixture({selected:topup});assert.equal((await stale.call("","GET","https://web.example","","crm",'?priority=hot')).status,409);assert.equal(stale.calls.length,0);
 });

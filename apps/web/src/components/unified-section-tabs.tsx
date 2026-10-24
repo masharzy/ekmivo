@@ -13,11 +13,13 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  ],
  orders:[
   {en:"Orders",bn:"অর্ডার",href:"/orders",service:"common"},
+  {en:"To follow up",bn:"ফলোআপের অর্ডার",href:"/orders/to-chase",service:"common"},
+  {en:"Scan & pack",bn:"স্ক্যান ও প্যাক",href:"/orders/scan",service:"common"},
   {en:"Products",bn:"পণ্য",href:"/orders/products",service:"common"},
-  {en:"Inventory",bn:"স্টক",href:"/orders/inventory",service:"payments"},
-  {en:"Delivery",bn:"ডেলিভারি",href:"/orders/delivery",service:"payments"},
-  {en:"Returns",bn:"রিটার্ন",href:"/orders/returns",service:"payments"},
-  {en:"Coupons",bn:"কুপন",href:"/orders/coupons",service:"payments"},
+  {en:"Inventory",bn:"স্টক",href:"/orders/inventory",service:"common"},
+  {en:"Delivery",bn:"ডেলিভারি",href:"/orders/delivery",service:"common"},
+  {en:"Returns",bn:"রিটার্ন",href:"/orders/returns",service:"common"},
+  {en:"Coupons",bn:"কুপন",href:"/orders/coupons",service:"common"},
  ],
  payments:[
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},
@@ -34,7 +36,8 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
   {en:"Posts",bn:"পোস্ট",href:"/customers/posts",service:"ai"},
  ],
  reports:[
-  {en:"Overview",bn:"সারসংক্ষেপ",href:"/reports",service:"common"},
+  {en:"Business activity",bn:"ব্যবসার কার্যক্রম",href:"/reports",service:"common"},
+  {en:"Order reports",bn:"অর্ডার রিপোর্ট",href:"/reports/orders",service:"common"},
   {en:"Payment reports",bn:"পেমেন্ট রিপোর্ট",href:"/reports/payments",service:"payments"},
   {en:"AI reports",bn:"AI রিপোর্ট",href:"/reports/ai",service:"ai"},
  ]
@@ -43,7 +46,9 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
 export function UnifiedSectionTabs({root,mode,locale,view}:{
  root:UnifiedRoot;mode:BusinessMode;locale:"bn"|"en";view:readonly string[];
 }){
- const available=tabs[root]?.filter(tab=>enabledUnifiedService(mode,tab.service))??[];
+ const available=tabs[root]?.filter(tab=>enabledUnifiedService(mode,tab.service)&&
+   (tab.href!=="/orders/scan"||process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true")&&
+   (tab.href!=="/reports/orders"||process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED==="true"))??[];
  if(!available.length)return null;
  const active="/"+root+(view.length?"/"+view.join("/"):"");
  return <nav className={styles.tabs} aria-label={locale==="bn"?"পৃষ্ঠার বিভাগ":"Page sections"}>

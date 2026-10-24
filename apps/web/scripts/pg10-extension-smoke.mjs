@@ -69,6 +69,103 @@ export async function runPaymentExtensions({db,live,control,workspace,otherWorks
  const visitor=(await visit(2,visitorKey))[0].result;equal(Number(visitor.amount_minor),25000,'Link quantity must derive server total');
  equal((await visit(2,visitorKey))[0].result.id,visitor.id,'Per-visitor idempotency must not issue twice');
  await reject(()=>visit(4,randomUUID()));
+ // Expiry and return destinations are hard server policies; browser UI
+ // countdowns and client redirects cannot make an expired link payable or
+ // authorize an arbitrary destination. All sources are disposable.
+ const expiredKey=randomUUID(),expired=await create('payment-links',{
+  reference:'EXPIRING-'+randomUUID(),amount_minor:4500,max_quantity:1,
+  expires_at:new Date(Date.now()-60000).toISOString()
+ },expiredKey);
+ await scoped(workspace,tx=>tx.unsafe(
+  "SELECT pg10_write($1::uuid,'sandbox','payment-links',$2::uuid,'publish','{\"expected_version\":1}',$3,$4,$5,NULL)",
+  [workspace,expired.id,randomUUID(),hash('publish-expired'),hash('expired-cap')]
+ ));
+ await assert.rejects(()=>db.unsafe('SELECT pg10_visit($1,$2,$3,$4,$5::jsonb)',[
+  hash(expiredKey),randomUUID(),hash('new expired visit'),hash('expired intent'),db.json({_quantity:1})
+ ]),error=>error.code==='23514','Expired link unexpectedly issued a new payment capability');count++;
+ await assert.rejects(()=>create('payment-links',{
+  reference:'UNTRUSTED-RETURN-'+randomUUID(),amount_minor:4500,
+  return_url:'https://unregistered-ci.invalid/after-payment'
+ }),error=>error.code==='23514','Unregistered merchant return URL was accepted');count++;
+ const registeredOrigin=`https://fixture-${randomUUID()}.example.invalid`;
+ await db.unsafe("INSERT INTO pg12_integrations(workspace_id,environment,kind,name,origin,status) VALUES($1::uuid,'sandbox','website','Fictional checkout redirect source',$2,'configured')",[workspace,registeredOrigin]);
+ // pg10_return_allowed is deliberately PRIVATE. Verify it through the
+ // authorized security-definer document writer, never by granting execution
+ // to the financial application role just to satisfy a fixture.
+ const rejectedReturn=async(url,label)=>{
+  await assert.rejects(()=>create('payment-links',{
+   reference:'DENIED-RETURN-'+randomUUID(),amount_minor:4500,return_url:url
+  }),error=>error.code==='23514',label);count++;
+ };
+ await rejectedReturn(registeredOrigin+'.attacker.invalid/thank-you','lookalike host bypassed registered return origin');
+ await rejectedReturn(registeredOrigin+'/thank-you?secret=1','unapproved query-bearing redirect accepted');
+ const otherRealmOrigin=`https://live-only-${randomUUID()}.example.invalid`;
+ // Live registration belongs in the independently isolated live realm.
+ // Never manufacture a cross-realm registry row in the sandbox database.
+ await live.begin(async tx=>{
+  await tx.unsafe("INSERT INTO financial_workspace_registry(workspace_id,environment,status,entitlement_version) VALUES($1::uuid,'live','active',1) ON CONFLICT(workspace_id,environment) DO NOTHING",[workspace]);
+  await tx.unsafe("INSERT INTO pg12_integrations(workspace_id,environment,kind,name,origin,status) VALUES($1::uuid,'live','website','Other realm redirect source',$2,'configured')",[workspace,otherRealmOrigin]);
+ });
+ await rejectedReturn(otherRealmOrigin+'/thank-you','live-only registered origin escaped into sandbox');
+ const allowedKey=randomUUID(),allowed=await create('payment-links',{
+  reference:'REGISTERED-RETURN-'+randomUUID(),amount_minor:4500,max_quantity:1,
+  expires_at:new Date(Date.now()+86400000).toISOString(),return_url:registeredOrigin+'/thank-you'
+ },allowedKey);
+ await scoped(workspace,tx=>tx.unsafe(
+  "SELECT pg10_write($1::uuid,'sandbox','payment-links',$2::uuid,'publish','{\"expected_version\":1}',$3,$4,$5,NULL)",
+  [workspace,allowed.id,randomUUID(),hash('registered-return-publish'),hash(allowedKey)]));
+ const allowedVisit=await db.unsafe('SELECT pg10_visit($1,$2,$3,$4,$5::jsonb) result',[
+  hash(allowedKey),randomUUID(),hash('registered return visit'),hash('registered return intent'),db.json({_quantity:1})
+ ]);
+ equal(Number(allowedVisit[0].result.amount_minor),4500,'registered future-expiring redirect link failed its server-priced visit');
+ await db.unsafe("UPDATE pg12_integrations SET status='disabled' WHERE workspace_id=$1::uuid AND environment='sandbox' AND origin=$2",[workspace,registeredOrigin]);
+ await rejectedReturn(registeredOrigin+'/thank-you','disabled integration still authorizes a checkout redirect');
+ // Reconciliation is merchant-imported evidence, not an independent source of
+ // verified funds. Associate only an existing, exact-amount/account financial
+ // payment and preserve its original immutable verification provenance.
+ const verified=(await db.unsafe(
+  "SELECT p.id AS payment_id,p.verified_amount_minor,p.verification_method,p.currency,a.receiving_account_id "+
+  "FROM financial_payments p JOIN payment_attempts a ON a.id=p.attempt_id "+
+  "WHERE p.workspace_id=$1::uuid AND p.environment='sandbox' LIMIT 1",[workspace]))[0];
+ assert.ok(verified?.payment_id,'PG07 fictional verified financial source is required for reconciliation');count++;
+ const addStatement=(line,amount,digest,sourceAccount=verified.receiving_account_id,direction='incoming')=>scoped(workspace,async tx=>(await tx.unsafe(
+  "SELECT pg11_statement($1::uuid,'sandbox',$2::uuid,$3,$4,$5,'BDT',$6,now(),$7) id",
+  [workspace,sourceAccount,line,'CI-merchant-statement',amount,direction,digest]))[0].id);
+ const associate=(id)=>scoped(workspace,async tx=>(await tx.unsafe(
+  "SELECT pg11_settlement($1::uuid,'sandbox',$2::uuid,$3::uuid,$4,NULL) result",
+  [workspace,id,verified.payment_id,'CI reviewed imported bank statement']))[0].result);
+ const mismatchedLine='WRONG-AMOUNT-'+randomUUID();
+ const wrongStatement=await addStatement(mismatchedLine,Number(verified.verified_amount_minor)+1,hash(mismatchedLine));
+ await assert.rejects(()=>associate(wrongStatement),error=>error.code==='23514',
+  'Wrong-amount merchant statement was associated with a verified payment');count++;
+ const outgoingLine='OUTGOING-'+randomUUID();
+ const outgoing=await addStatement(outgoingLine,Number(verified.verified_amount_minor),hash(outgoingLine),verified.receiving_account_id,'outgoing');
+ await assert.rejects(()=>associate(outgoing),error=>error.code==='23514',
+  'Outgoing bank statement was associated with an incoming verified payment');count++;
+ const alternate=(await db.unsafe(
+  "SELECT id FROM financial_receiving_accounts WHERE workspace_id=$1::uuid AND environment='sandbox' AND id<>$2::uuid LIMIT 1",
+  [workspace,verified.receiving_account_id]))[0];
+ assert.ok(alternate?.id,'PG07 other fictional receiving account is required for reconciliation mismatch');count++;
+ const wrongAccountLine='WRONG-ACCOUNT-'+randomUUID();
+ const wrongAccount=await addStatement(wrongAccountLine,Number(verified.verified_amount_minor),hash(wrongAccountLine),alternate.id);
+ await assert.rejects(()=>associate(wrongAccount),error=>error.code==='23514',
+  'Other receiving account statement was attached to a verified payment');count++;
+ const matchingLine='EXACT-AMOUNT-'+randomUUID();
+ const matchingDigest=hash(matchingLine);
+ const exactStatement=await addStatement(matchingLine,Number(verified.verified_amount_minor),matchingDigest);
+ equal(await addStatement(matchingLine,Number(verified.verified_amount_minor),matchingDigest),exactStatement,
+  'Lost-response statement import duplicated an identical source line');
+ await assert.rejects(()=>addStatement(matchingLine,Number(verified.verified_amount_minor)+1,hash('changed-'+matchingLine)),
+  error=>error.code==='23505','Reused statement line silently changed its original evidence');count++;
+ const association=await associate(exactStatement);
+ equal(association.payment_id,verified.payment_id,'Imported statement was linked to the wrong financial payment');
+ equal(association.provider_verified,false,'Merchant statement was mislabeled as provider settlement');
+ await assert.rejects(()=>associate(exactStatement),error=>error.code==='23514',
+  'A statement linked twice to the same payment');count++;
+ const financialAfter=(await db.unsafe('SELECT verification_method FROM financial_payments WHERE id=$1::uuid',
+  [verified.payment_id]))[0].verification_method;
+ equal(financialAfter,verified.verification_method,
+  'Merchant statement association mutated the original verified receipt provenance');
  const publicView=(await db.unsafe('SELECT pg10_public($1) data',[hash(linkKey)]))[0].data;equal(publicView.paid_minor,0,'Link public page must not expose other visitors receipts');
  const isolated=(await live.unsafe('SELECT pg10_public($1) data',[hash(linkKey)]))[0].data;equal(isolated,null,'Sandbox capability must not cross into live');
  await reject(()=>scoped(workspace,tx=>tx.unsafe('SELECT * FROM pg10_documents')));

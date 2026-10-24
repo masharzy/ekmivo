@@ -169,6 +169,7 @@ test("Phase 5: refresh a confirmed order resumes original invoice, never issues 
   const state=sandbox();state.current={status:"confirmed",invoice_id:key,quote_id:key,total_minor:"129900",
    currency:"BDT",checkout_enabled:true,snapshot:{total_minor:"129900"}};
   await setup(page,"en","system",state);
+  await page.getByText("Your confirmed invoice will be resumed, not recreated.",{exact:true}).waitFor();
   assert.ok(await page.getByText("Your confirmed invoice will be resumed, not recreated.").isVisible());
   assert.equal(await consents(page).count(),3);
   await page.getByRole("button",{name:"Go to Pay"}).click();

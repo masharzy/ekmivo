@@ -5,6 +5,7 @@ import (
 	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
 	"net/http"
 	"net/mail"
+	"os"
 	"strings"
 	"time"
 )
@@ -50,21 +51,60 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, "NOT_FOUND")
 		return
 	}
+	if resource == "channel-scopes" && (os.Getenv("BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED") != "true" || !s.Auth.GranularGrants) {
+		fail(w, 503, "CHANNEL_SCOPES_UNAVAILABLE")
+		return
+	}
+	if resource == "groups" && !s.Auth.GranularGrants {
+		fail(w, 503, "GROUP_PERMISSIONS_UNAVAILABLE")
+		return
+	}
 	if !s.budget(w, "workspace-tools:"+actor.UserID, 60) {
 		return
 	}
 	var raw []byte
 	if r.Method == "GET" {
-		e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_workspace_read($1::uuid,$2::uuid,$3)", ws, actor.UserID, resource).Scan(&raw)
+		target := r.PathValue("targetID")
+		if resource == "channel-settings" {
+			if target != "" && !uuidPattern.MatchString(target) {
+				fail(w, 404, "NOT_FOUND")
+				return
+			}
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_settings_read($1::uuid,$2::uuid,$3::uuid)", ws, actor.UserID, nullableID(target)).Scan(&raw)
+		} else if resource == "help-videos" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_help_videos_read($1::uuid,$2::uuid,$3)", ws, actor.UserID, r.URL.Query().Get("kind")).Scan(&raw)
+		} else if resource == "channel-scopes" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_scopes_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
+		} else if resource == "groups" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_team_groups_read($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw)
+		} else if resource == "help" && target != "" {
+			if !uuidPattern.MatchString(target) {
+				fail(w, 404, "NOT_FOUND")
+				return
+			}
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_feedback_screenshot_read($1::uuid,$2::uuid,$3::uuid)", ws, actor.UserID, target).Scan(&raw)
+		} else {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_workspace_read($1::uuid,$2::uuid,$3)", ws, actor.UserID, resource).Scan(&raw)
+		}
 	} else {
 		var b map[string]any
-		if decodeBounded(w, r, &b, 8192) != nil {
+		limit := int64(8192)
+		if resource == "channel-settings" {
+			limit = 16384
+		}
+		if resource == "help" {
+			limit = 750000
+		}
+		if decodeBounded(w, r, &b, limit) != nil {
 			fail(w, 422, "INVALID_WORKSPACE_ACTION")
 			return
 		}
 		target := r.PathValue("targetID")
-		if s.Auth.GranularGrants && resource != "help" {
+		if s.Auth.GranularGrants && resource != "help" && resource != "help-videos" {
 			cap := "members:manage"
+			if resource == "channel-settings" {
+				cap = "inbox:manage"
+			}
 			if resource == "settings" {
 				cap = "workspace:settings"
 			}
@@ -78,7 +118,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		if resource == "change-role" || resource == "remove-member" || resource == "grants" || resource == "transfer-owner" {
+		if resource == "change-role" || resource == "remove-member" || resource == "grants" || resource == "transfer-owner" || resource == "groups" || resource == "channel-scopes" {
 			password, _ := b["current_password"].(string)
 			if e = s.Auth.ConfirmPassword(r.Context(), actor, password); e != nil {
 				authError(w, e)
@@ -91,6 +131,29 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		switch resource {
+		case "channel-settings":
+			if key, ok := b["operation_key"].(string); !ok || !uuidPattern.MatchString(key) {
+				fail(w, 422, "INVALID_CHANNEL_OPERATION")
+				return
+			}
+		case "help-videos":
+			id, _ := b["id"].(string)
+			if !uuidPattern.MatchString(id) {
+				fail(w, 422, "INVALID_TUTORIAL")
+				return
+			}
+		case "groups":
+			act, _ := b["action"].(string)
+			payload, ok := b["body"].(map[string]any)
+			if !ok || (act != "create" && act != "update" && act != "archive") {
+				fail(w, 422, "INVALID_TEAM_GROUP")
+				return
+			}
+			id, _ := payload["id"].(string)
+			if !uuidPattern.MatchString(id) {
+				fail(w, 422, "INVALID_TEAM_GROUP")
+				return
+			}
 		case "invite":
 			email, _ := b["email"].(string)
 			email = strings.ToLower(strings.TrimSpace(email))
@@ -118,7 +181,15 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 			b["token_digest"] = digest(cap)
 			b["_return_token"] = cap
 		case "help":
-			if topic, ok := b["topic"].(string); ok && !map[string]bool{"payments": true, "sms": true, "refunds": true, "account": true, "other": true}[topic] {
+			if normalizeFeedbackScreenshot(b) != nil {
+				fail(w, 422, "INVALID_SCREENSHOT")
+				return
+			}
+			if key := r.Header.Get("Idempotency-Key"); key != "" && !uuidPattern.MatchString(key) {
+				fail(w, 422, "INVALID_OPERATION_KEY")
+				return
+			}
+			if topic, ok := b["topic"].(string); ok && !map[string]bool{"payments": true, "sms": true, "refunds": true, "account": true, "bug": true, "feature": true, "usability": true, "other": true}[topic] {
 				fail(w, 422, "INVALID_SUPPORT_TOPIC")
 				return
 			}
@@ -169,7 +240,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-		case "revoke-invite", "remove-member", "change-role", "grants", "transfer-owner":
+		case "revoke-invite", "remove-member", "change-role", "grants", "transfer-owner", "channel-scopes":
 		default:
 			fail(w, 404, "NOT_FOUND")
 			return
@@ -177,7 +248,32 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		returnCap, _ := b["_return_token"].(string)
 		delete(b, "_return_token")
 		data, _ := json.Marshal(b)
-		if resource == "resend-invite" {
+		if resource == "channel-settings" {
+			payload, _ := json.Marshal(b)
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_settings_write($1::uuid,$2::uuid,$3::uuid,$4::jsonb)", ws, actor.UserID, b["operation_key"], string(payload)).Scan(&raw)
+		} else if resource == "help-videos" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_help_video_progress($1::uuid,$2::uuid,$3::jsonb)", ws, actor.UserID, string(data)).Scan(&raw)
+		} else if resource == "help" {
+			var ready bool
+			if e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT to_regprocedure('public.briofold_feedback_write(uuid,uuid,uuid,jsonb)') IS NOT NULL").Scan(&ready); e != nil {
+				fail(w, 503, "SUPPORT_UNAVAILABLE")
+				return
+			}
+			if !ready {
+				if b["screenshot"] != nil {
+					fail(w, 503, "SUPPORT_SCREENSHOT_UNAVAILABLE")
+					return
+				}
+				e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_workspace_write($1::uuid,$2::uuid,'help',$3::jsonb,NULL)", ws, actor.UserID, string(data)).Scan(&raw)
+			} else {
+				e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_feedback_write($1::uuid,$2::uuid,$3::uuid,$4::jsonb)", ws, actor.UserID, nullableID(r.Header.Get("Idempotency-Key")), string(data)).Scan(&raw)
+			}
+		} else if resource == "channel-scopes" {
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_channel_scopes_write($1::uuid,$2::uuid,$3::jsonb)", ws, actor.UserID, string(data)).Scan(&raw)
+		} else if resource == "groups" {
+			groupBody, _ := json.Marshal(b["body"])
+			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_team_groups_write($1::uuid,$2::uuid,$3,$4::jsonb)", ws, actor.UserID, b["action"], string(groupBody)).Scan(&raw)
+		} else if resource == "resend-invite" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_invite_resend($1::uuid,$2::uuid,$3::uuid,$4)", ws, actor.UserID, nullableID(target), b["token_digest"]).Scan(&raw)
 		} else if resource == "grants" {
 			e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT pg13_grants($1::uuid,$2::uuid,$3::uuid,$4::jsonb)", ws, actor.UserID, nullableID(target), string(data)).Scan(&raw)
@@ -197,7 +293,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if e != nil {
-		mapped(w, e)
+		inboxWorkFailure(w, e)
 		return
 	}
 	if r.Method == "GET" && resource == "team" && s.Auth.GranularGrants {

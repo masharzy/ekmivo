@@ -11,7 +11,8 @@ const categories=["all","payments","refunds","alerts"] as const;
 type Category=typeof categories[number];
 type Status="all"|"unread"|"read";
 const fmt=(v:string,bn:boolean,dateOnly=false)=>new Intl.DateTimeFormat(bn?"bn-BD":"en-GB",{timeZone:"Asia/Dhaka",...(dateOnly?{dateStyle:"medium" as const}:{dateStyle:"medium" as const,timeStyle:"short" as const})}).format(new Date(v));
-export function PaymentNotificationCenter({locale,workspaceId,environment}:{locale:"en"|"bn";workspaceId:string;environment:string}){
+export function PaymentNotificationCenter({locale,workspaceId,environment,embedded=false}:{locale:"en"|"bn";workspaceId:string;environment:string;embedded?:boolean}){
+ const Heading=embedded?"h2":"h1";
  const bn=locale==="bn",router=useRouter();
  const t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const base=`/api/go/workspaces/${workspaceId}/notifications`;
@@ -53,7 +54,7 @@ export function PaymentNotificationCenter({locale,workspaceId,environment}:{loca
  const dates=new Map<string,PaymentNotice[]>();for(const item of data.items){const date=fmt(item.created_at,bn,true);dates.set(date,[...(dates.get(date)||[]),item])}
  const filterLabel=(key:Category)=>key==="all"?t("All","সব"):key==="payments"?t("Payments","পেমেন্ট"):key==="refunds"?t("Refunds","রিফান্ড"):t("Alerts","সতর্কতা");
  return <div className="pn-center" lang={locale}>
-  <header className="pn-header"><div><h1>{t("Notifications","নোটিফিকেশন")}</h1><p>{t("Updates and activity for your payments.","আপনার পেমেন্টের সব নোটিফিকেশন ও কার্যক্রম।")}</p></div>
+  <header className="pn-header"><div><Heading>{t("Notifications","নোটিফিকেশন")}</Heading><p>{t("Updates and activity for your payments.","আপনার পেমেন্টের সব নোটিফিকেশন ও কার্যক্রম।")}</p></div>
    <div className="pn-header-actions"><button type="button" className="pn-outline" disabled={loading} onClick={reload}><RefIcon className="pn-icon" name="refresh"/>{t("Refresh","রিফ্রেশ")}</button><button type="button" className="pn-primary" disabled={loading||!!busy||data.unread===0} onClick={()=>void mark("all")}>{t("Mark all read","সব পড়া হয়েছে")}</button></div>
   </header>
   <section className="pn-panel">

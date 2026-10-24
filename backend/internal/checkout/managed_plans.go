@@ -19,8 +19,17 @@ func (s *Service) planSnapshot(ctx context.Context, ws, realm string) ([]byte, e
 	}
 	var system bool
 	// Quota exemption must not replace the feature snapshot used by private SQL guards.
-	if err := s.Auth.DB.QueryRowContext(ctx, "SELECT platform_billing_system_workspace($1::uuid)", ws).Scan(&system); err != nil {
+	// Some isolated installations predate the platform receiver (migration 0096).
+	// In that case there is no system exemption: never infer an unlimited plan.
+	var hasSystemReader bool
+	if err := s.Auth.DB.QueryRowContext(ctx,
+		"SELECT to_regprocedure('public.platform_billing_system_workspace(uuid)') IS NOT NULL").Scan(&hasSystemReader); err != nil {
 		return nil, err
+	}
+	if hasSystemReader {
+		if err := s.Auth.DB.QueryRowContext(ctx, "SELECT platform_billing_system_workspace($1::uuid)", ws).Scan(&system); err != nil {
+			return nil, err
+		}
 	}
 	var installed bool
 	if err := s.Auth.DB.QueryRowContext(ctx, "SELECT to_regprocedure('payment_plan_effective(uuid)') IS NOT NULL").Scan(&installed); err != nil {

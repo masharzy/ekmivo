@@ -1,6 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {noticeHref} from "../../apps/web/src/lib/payment-notice.ts";
 const load=(name)=>readFileSync(new URL("../../"+name,import.meta.url),"utf8");
 test("payment notifications are scoped to workspace and current financial realm",()=>{
  const go=load("backend/internal/checkout/reporting.go");
@@ -30,8 +31,23 @@ test("dropdown uses Hind Siliguri and links to actual notifications route",()=>{
  const css=load("apps/web/src/components/notifications-reference.css");
  const nav=load("apps/web/src/lib/dashboard-navigation.ts");
  assert.match(css,/ref-notifications\[lang="bn"\].*font-hind-siliguri/);
- assert.match(dropdown,/payments\/notifications/);
+ assert.match(dropdown,/href="\/notifications"/);
  assert.match(dropdown,/setTotalUnread/);
  assert.match(nav,/"events","notifications"/);
- assert.match(load("apps/web/src/app/[locale]/notifications/page.tsx"),/payments\/notifications/);
+ const entry=load("apps/web/src/app/[locale]/notifications/page.tsx");
+ assert.match(entry,/preferredWorkspaceFor\(user\.id\)/);
+ assert.match(entry,/<MerchantNotifications/);
+ assert.match(entry,/paymentsEnabled=\{Boolean\(paymentContext\)\}/);
+ const unified=load("apps/web/src/components/merchant-notifications.tsx");
+ assert.match(unified,/paymentsEnabled&&\(kind==="all"\|\|kind==="payments"\)&&<PaymentNotificationCenter/);
+ assert.match(unified,/locale=\{locale\} workspaceId=\{workspaceId\} environment=\{environment\}/);
+ assert.doesNotMatch(entry,/redirect\(`\/w\//);
+});
+test("payment notification deep links keep the primary Store URL and reject unsafe reference segments",()=>{
+ const id="31d06427-5384-4a72-bacd-e39dfb7c895a";
+ assert.equal(noticeHref("legacy-workspace",{type:"payment.verified",resource_id:id}),`/payments/transactions/${id}`);
+ assert.equal(noticeHref("legacy-workspace",{type:"refund.requested",resource_id:id}),`/payments/refunds/${id}`);
+ assert.equal(noticeHref("legacy-workspace",{type:"device.warning",resource_id:id}),`/sms-data/${id}`);
+ assert.equal(noticeHref("legacy-workspace",{type:"payment.verified",resource_id:"../../admin"}),"/payments/transactions");
+ assert.equal(noticeHref("legacy-workspace",{type:"device.warning",resource_id:null}),"/sms-data");
 });

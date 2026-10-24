@@ -34,7 +34,7 @@ func (s *Service) HandleInboxConnection(w http.ResponseWriter, r *http.Request) 
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
-	if err := s.mobileSession(r, ws, e); err != nil {
+	if err := s.inboxManageSession(r, ws, e); err != nil {
 		authError(w, err)
 		return
 	}
@@ -121,6 +121,18 @@ func inboxWebhookSignature(secret, header string, raw []byte) bool {
 	expected.Write(raw)
 	supplied, err := hex.DecodeString(strings.TrimPrefix(header, "sha256="))
 	return secret != "" && strings.HasPrefix(header, "sha256=") && err == nil && hmac.Equal(expected.Sum(nil), supplied)
+}
+
+// A small, exact opt-out vocabulary prevents substring false positives such
+// as "please stop order 123". This only removes marketing eligibility; it
+// never changes ordinary support conversations or establishes opt-in.
+func signedChannelMarketingOptOut(message string) bool {
+	switch strings.ToLower(strings.TrimSpace(message)) {
+	case "stop", "stop all", "unsubscribe":
+		return true
+	default:
+		return false
+	}
 }
 func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 	if s == nil || s.Pipeline == nil || s.Pipeline.Control == nil {
@@ -226,6 +238,24 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		var accepted bool
 		if err := tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,$6,$7)", connection, id, from, name, text, kind, at).Scan(&accepted); err != nil {
 			return err
+		}
+		if accepted && kind == "text" && (provider == "ms" || provider == "ig") && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" && os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") == "true" && strings.EqualFold(strings.TrimSpace(text), "START OFFERS") {
+			var consented bool
+			if err := tx.QueryRow(r.Context(), "SELECT briofold_growth_provider_opt_in($1::uuid,$2,$3)", connection, id, hash).Scan(&consented); err != nil {
+				return err
+			}
+		}
+		if accepted && kind == "text" && os.Getenv("BRIOFOLD_GROWTH_CONSENT_ENABLED") == "true" && signedChannelMarketingOptOut(text) {
+			// Signed Meta webhook and existing durable inbox message are both
+			// necessary. The CONTROL routine rechecks sender, message type,
+			// connected Store/realm and exact STOP body independently.
+			var suppressed bool
+			if err := tx.QueryRow(r.Context(), "SELECT briofold_growth_provider_opt_out($1::uuid,$2)", connection, id).Scan(&suppressed); err != nil {
+				return err
+			}
+			if !suppressed {
+				return errors.New("signed marketing opt-out could not be recorded")
+			}
 		}
 		if provider == "wa" && accepted {
 			_, err := tx.Exec(r.Context(), "SELECT briofold_customer_whatsapp_identity($1::uuid,$2)", connection, from)
@@ -333,6 +363,9 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			ticks++
 			if s.Pipeline != nil && s.Pipeline.Control != nil {
 				s.sendInboxPush(ctx)
+				if os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") == "true" {
+					_, _ = s.Pipeline.Control.Exec(ctx, "SELECT briofold_broadcast_tick()")
+				}
 				if ticks%10 == 0 {
 					_, _ = s.Pipeline.Control.Exec(ctx, "SELECT briofold_inbox_alert_sweep()")
 				}
@@ -346,6 +379,10 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			}
 			var job inboxSendJob
 			if json.Unmarshal(raw, &job) != nil {
+				continue
+			}
+			if job.Broadcast && os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") != "true" {
+				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','BROADCAST_DISABLED')", job.ID)
 				continue
 			}
 			if job.Channel == "site" {
@@ -366,6 +403,20 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 				req, _ := http.NewRequestWithContext(ctx, "POST", "https://graph.facebook.com/"+version+"/"+url.PathEscape(job.Account)+"/messages", bytes.NewReader(data))
 				req.Header.Set("Authorization", "Bearer "+string(token))
 				req.Header.Set("Content-Type", "application/json")
+				if job.ChannelGuard {
+					var allowed bool
+					if s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_channel_send_valid($1::uuid)", job.ID).Scan(&allowed) != nil || !allowed {
+						_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','CHANNEL_ACCESS_REVOKED')", job.ID)
+						continue
+					}
+				}
+				if job.Broadcast {
+					var allowed bool
+					if os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") != "true" || s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_broadcast_send_check($1::uuid)", job.ID).Scan(&allowed) != nil || !allowed {
+						_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','BROADCAST_APPROVAL_CHANGED')", job.ID)
+						continue
+					}
+				}
 				response, e := inboxHTTP.Do(req)
 				if e != nil {
 					state = "uncertain"

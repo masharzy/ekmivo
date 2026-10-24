@@ -139,6 +139,16 @@
     "path": "/v1/public/documents/{token}/files",
     "public": true
   },
+  "readCommerceOrders": {
+    "method": "GET",
+    "path": "/v1/commerce/orders",
+    "public": false
+  },
+  "createCommerceOrder": {
+    "method": "POST",
+    "path": "/v1/commerce/orders",
+    "public": false
+  },
   "customerReceiptNotice": {
     "method": "POST",
     "path": "/v1/public/checkout/{token}/notices/{noticeAction}",

@@ -32,6 +32,28 @@ test("authorized business context and realm resolution are server-side",()=>{
  assert.match(action,/selectDefaultWorkspace\(user\.id,workspaceId\)/);
  assert.doesNotMatch(action,/selectDefaultWorkspace\(.*request\.userId/);
 });
+test("legacy API documentation settings paths resolve to the existing public developer portal",()=>{
+ const route=source("components/unified-merchant-route.tsx");
+ const settings=source("lib/unified-navigation.ts");
+ const index=source("components/unified-settings-index.tsx");
+ assert.match(settings,/slug:"api-docs"[\s\S]*?external:true/);
+ assert.match(index,/item\.external\?"\/developers"/);
+ assert.match(route,/view\[0\]==="api-docs"/);
+ assert.match(route,/view\[0\]==="developers"&&view\[1\]==="docs"/);
+ assert.ok(route.indexOf('redirect("/developers")')<route.indexOf("await requireUser(locale)"),
+  "Public documentation should not depend on a Store session/database read");
+ assert.ok(existsSync(at("app/(developer-portal)/[locale]/developers/[[...slug]]/page.tsx")));
+});
+test("single-Store account binding supersedes legacy selection without deleting historic memberships",()=>{
+ const auth=source("lib/server/auth.ts"),shell=source("components/app-shell.tsx");
+ const workspaces=source("app/[locale]/workspaces/page.tsx"),proxy=source("app/api/go/[...path]/route.ts");
+ assert.match(auth,/primaryStoreFor\(userId\)/);
+ assert.match(auth,/if\(bound\)return spaces\.find\(space=>space\.id===bound\)\?\?null/);
+ assert.match(auth,/if\(bound && workspaceId!==bound\)return false/);
+ assert.match(shell,/primaryStoreId\?memberships\.filter\(space=>space\.id===primaryStoreId\):memberships/);
+ assert.match(workspaces,/if\(bound\|\|spaces\.length===1\)redirect\("\/workspaces\/open"\)/);
+ assert.match(proxy,/STALE_BUSINESS/);
+});
 test("global marketing header and footer do not render on unified application routes",()=>{
  for(const cssless of ["components/site-header.tsx","components/site-footer.tsx","proxy.ts"]){
   const src=source(cssless);
@@ -50,12 +72,21 @@ test("settings uses opt-in CSS module and preserves legacy payment screens",()=>
  assert.match(frame,/!unified&&service==="payments"/);
 });
 
+test("unsupported website voice cannot be advertised as live or billed",()=>{
+ const website=source("components/website-chat-settings.tsx");
+ assert.match(website,/Voice calling is currently unavailable\./);
+ assert.match(website,/The public chat address is unavailable/);
+ assert.doesNotMatch(website,/voice(?:_enabled|Enabled)\s*[:=]\s*true/i);
+});
+
 test("simplified Payments has no request or reconciliation user-facing tab",()=>{
  const nav=source("lib/unified-navigation.ts");
  const tabs=source("components/unified-section-tabs.tsx");
  const links=source("components/payment-documents.tsx");
  assert.doesNotMatch(nav,/requests:\{section:"requests"/);
- assert.doesNotMatch(nav,/reconciliation:\{section:"reconciliation"/);
+ // Reconciliation remains a permission-scoped canonical deep link, not a
+ // second top-level Payments tab or a workspace selector.
+ assert.match(nav,/reconciliation:\{section:"reconciliation",service:"payments"\}/);
  const paymentTabs=tabs.split(" payments:[")[1]?.split(" customers:[")[0]??"";
  assert.ok(paymentTabs.includes("/payments/links"));
  assert.doesNotMatch(paymentTabs,/\/payments\/(?:requests|incoming|invoices|reconciliation)/);
@@ -83,6 +114,38 @@ test("Inbox secondary navigation keeps canonical channel and device URLs",()=>{
  assert.match(inbox,/href="\/settings\/channels"/);assert.match(inbox,/href="\/settings\/devices"/);
  assert.doesNotMatch(inbox,/href=\{`\/w\//);
 });
+test("Website chat nested Channel route preserves its Store binding and AI-only gate",()=>{
+ for(const mode of ["ai","both"]){
+  const destination=navigation.unifiedDestination(mode,"settings",["channels","website"]);
+  assert.equal(destination?.section,"website");assert.equal(destination?.service,"ai");
+  assert.equal(navigation.unifiedDestination(mode,"settings",["website"]).section,"website");
+ }
+ for(const mode of ["commerce","off"])
+  assert.equal(navigation.unifiedDestination(mode,"settings",["channels","website"]),null);
+ for(const unsafe of ["__proto__","../website","other","website/extra"])
+  assert.equal(navigation.unifiedDestination("both","settings",["channels",unsafe]),null);
+ assert.equal(navigation.unifiedDestination("both","settings",["channels","website","extra"]),null);
+ assert.match(source("components/unified-settings-index.tsx"),/item\.slug==="website"\?"\/settings\/channels\/website"/);
+});
+
+test("nested campaign posts reuse the authorized editorial source without provider publishing",()=>{
+ for(const mode of ["ai","both"]){
+  const nested=navigation.unifiedDestination(mode,"customers",["campaigns","posts"]);
+  assert.equal(nested?.section,"posts");assert.equal(nested?.service,"ai");
+  assert.equal(navigation.unifiedDestination(mode,"customers",["posts"])?.section,"posts");
+ }
+ for(const mode of ["commerce","off"])
+  assert.equal(navigation.unifiedDestination(mode,"customers",["campaigns","posts"]),null);
+ for(const unsafe of ["__proto__","send","other","../posts"])
+  assert.equal(navigation.unifiedDestination("both","customers",["campaigns",unsafe]),null);
+ assert.equal(navigation.unifiedDestination("both","customers",["campaigns","posts","extra"]),null);
+ assert.equal(navigation.unifiedSectionHref("posts","ai"),"/customers/campaigns/posts");
+ const entry=source("components/unified-merchant-route.tsx");
+ assert.match(entry,/campaignPostRoute=root==="customers"/);
+ assert.match(entry,/view\[0\]==="posts"\|\|campaignPostRoute\?"post"/);
+ const editor=source("components/growth-operations.tsx");
+ assert.match(editor,/Editorial state \(never sends\)/);
+});
 
 test("canonical resolver rejects inherited names and unknown routes for every business mode",()=>{
  const invalid=["constructor","__proto__","prototype","toString","valueOf","hasOwnProperty","missing"];
@@ -93,6 +156,81 @@ test("canonical resolver rejects inherited names and unknown routes for every bu
   }
   for(const root of invalid)assert.equal(navigation.unifiedDestination(mode,root,[]),null);
  }
+});
+test("canonical commerce deep links reuse real scoped scanner, courier and catalog import resources",()=>{
+ for(const mode of ["ai","commerce","both"]){
+  assert.equal(navigation.unifiedDestination(mode,"orders",["scan"]).section,"orders");
+  assert.equal(navigation.unifiedDestination(mode,"orders",["courier"]).section,"shipping");
+  assert.equal(navigation.unifiedDestination(mode,"orders",["products","sync"]).section,"products");
+  assert.equal(navigation.unifiedDestination(mode,"orders",["products","invalid"]),null);
+ }
+ assert.equal(navigation.unifiedDestination("off","orders",["products","sync"]),null);
+ const page=source("components/unified-merchant-route.tsx");
+ assert.match(page,/view\.length===2&&view\[0\]==="products"\?"products-sync"/);
+ const entry=source("components/commerce-page.tsx");
+ assert.match(entry,/props\.view==="products-sync"\?"products"/);
+ assert.match(entry,/props\.view==="courier"\?"delivery"/);
+});
+test("unconverted-order follow-up route reads only draft or hold source, never a fictional commerce resource",()=>{
+ for(const mode of ["ai","commerce","both"])
+  assert.equal(navigation.unifiedDestination(mode,"orders",["to-chase"]).section,"orders");
+ assert.equal(navigation.unifiedDestination("off","orders",["to-chase"]),null);
+ const page=source("components/commerce-page.tsx");
+ assert.match(page,/\["scan","to-chase"\]\.includes\(props\.view\)/);
+ assert.match(page,/NULL::uuid,0,'','draft',''/);
+ const view=source("components/commerce-workspace.tsx");
+ assert.match(view,/chaseMode\?"draft":""/);
+ assert.match(view,/chaseMode\?\["draft","hold"\]:states/);
+ assert.match(view,/Open customer follow-ups/);
+ assert.match(view,/no customer message is sent automatically/i);
+});
+test("order reports are explicit and fail closed behind a deployment flag",()=>{
+ for(const mode of ["ai","commerce","both"])
+  assert.equal(navigation.unifiedDestination(mode,"reports",["orders"]).section,"reports");
+ assert.equal(navigation.unifiedDestination("off","reports",["orders"]),null);
+ const route=source("components/unified-merchant-route.tsx");
+ assert.match(route,/BRIOFOLD_COMMERCE_REPORTS_ENABLED!=="true"/);
+ assert.match(route,/BriofoldOrderReport/);
+ const report=source("components/briofold-order-report.tsx");
+ assert.match(report,/commerce_order_report/);
+ assert.match(report,/No totals have been assumed/);
+});
+test("notifications open for the preferred single Store without a legacy workspace detour",()=>{
+ const entry=source("app/[locale]/notifications/page.tsx");
+ assert.match(entry,/preferredWorkspaceFor\(user\.id\)/);
+ assert.match(entry,/<MerchantNotifications/);
+ assert.match(entry,/aiEnabled=\{aiEnabled\}/);
+ assert.match(entry,/paymentsEnabled=\{Boolean\(paymentContext\)\}/);
+ const center=source("components/merchant-notifications.tsx");
+ assert.match(center,/aiEnabled&&\(kind==="all"\|\|kind==="inbox"\)&&<InboxAlerts/);
+ assert.match(center,/paymentsEnabled&&\(kind==="all"\|\|kind==="payments"\)&&<PaymentNotificationCenter/);
+ assert.doesNotMatch(entry,/workspacesFor|redirect\(`\/w\//);
+});
+test("local device settings have a dedicated Store route and never masquerade as linked payment devices",()=>{
+ for(const mode of ["ai","commerce","both"]){
+  const device=navigation.unifiedDestination(mode,"settings",["account","devices"]);
+  assert.equal(device?.kind,"account-devices");
+  assert.equal(device?.section,"settings");
+  assert.notEqual(device?.kind,navigation.unifiedDestination(mode,"settings",["devices"])?.kind);
+ }
+ const route=source("components/unified-merchant-route.tsx");
+ assert.match(route,/kind==="account-devices"/);
+ assert.match(route,/<BrowserDevicePreferences/);
+ const client=source("components/browser-device-preferences.tsx");
+ assert.match(client,/ekmivo:device:notification-sound:v1/);
+ assert.match(client,/No push subscription or remote notification sender/);
+ assert.match(client,/session|Account sessions/);
+});
+test("unified operational activity preserves the financial event source",()=>{
+ for(const mode of ["ai","commerce","both"])
+  assert.equal(navigation.unifiedDestination(mode,"settings",["activity"]).section,"events");
+ const route=source("components/unified-merchant-route.tsx");
+ assert.match(route,/BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"/);
+ assert.match(route,/BriofoldUnifiedActivity/);
+ assert.match(route,/section="events" service="payments"/);
+ const sql=source("components/briofold-unified-activity.tsx");
+ assert.match(sql,/briofold_unified_activity/);
+ assert.match(sql,/no empty history has been assumed/);
 });
 test("canonical product gates cover all roots, settings and valid subroutes",()=>{
  for(const mode of ["ai","commerce","both","off"]){

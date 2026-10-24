@@ -30,6 +30,8 @@ var Operations=map[string]Operation{"listcustomers": {Method:"GET",Path:"/v1/wor
 "listPaymentIntegrations": {Method:"GET",Path:"/v1/workspaces/{workspaceID}/integrations",Public:false},
 "getPaymentVolumeReport": {Method:"GET",Path:"/v1/workspaces/{workspaceID}/reports",Public:false},
 "uploadPrivateDocumentField": {Method:"POST",Path:"/v1/public/documents/{token}/files",Public:true},
+"readCommerceOrders": {Method:"GET",Path:"/v1/commerce/orders",Public:false},
+"createCommerceOrder": {Method:"POST",Path:"/v1/commerce/orders",Public:false},
 "customerReceiptNotice": {Method:"POST",Path:"/v1/public/checkout/{token}/notices/{noticeAction}",Public:true},
 "listFinancialOperations": {Method:"GET",Path:"/v1/workspaces/{workspaceID}/operations/{resource}",Public:false},
 "getFinancialOperation": {Method:"GET",Path:"/v1/workspaces/{workspaceID}/operations/{resource}/{resourceID}",Public:false},

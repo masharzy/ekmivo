@@ -15,12 +15,12 @@ import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 type Account={ID:string;Method:string;Number:string;Label:string;Disabled:boolean};
 type CatalogProvider={code:string;name:string;logo:string;checkout:boolean;live:boolean};
 const methodName:Record<string,string>=Object.fromEntries(paymentProviderKeys.map(key=>[key,paymentProviderAppearance[key].name]));
-export function PaymentMethodManagement({locale,workspaceId,environment,canManage}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean}){
+export function PaymentMethodManagement({locale,workspaceId,environment,canManage,detailId}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;detailId?:string}){
  const bn=locale==="bn",t=useCallback((en:string,bd:string)=>bn?bd:en,[bn]);
  const formattedAccount=(value:string)=>{const digits=value.replace(/\D/g,"");const local=digits.startsWith("880")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;return local.length===10?"+880 "+local.slice(0,4)+" "+local.slice(4):value};
  const base="/api/go/workspaces/"+workspaceId;
  const seed=useDashboardInitialData<{accounts:Account[]}>("phones");
- const [accounts,setAccounts]=useState<Account[]>(seed?.data?.accounts??[]),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(seed?.error??""),[notice,setNotice]=useState("");
+ const [accounts,setAccounts]=useState<Account[]>(seed?.data?.accounts??[]),[loading,setLoading]=useState(!seed),[busy,setBusy]=useState(false),[error,setError]=useState(()=>seed?.error==="403"?t("You do not have permission to view receiving accounts.","রিসিভিং অ্যাকাউন্ট দেখার অনুমতি নেই।"):seed?.error?t("Unable to load payment methods.","পেমেন্ট মাধ্যমের তথ্য পাওয়া যায়নি।"):""),[notice,setNotice]=useState("");
  const methodLimit=useResourceLimit("payment_methods",workspaceId,environment);
  const posting=useRef(false);
  const sharedDialog=useRef<HTMLDialogElement>(null);
@@ -32,8 +32,12 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
  const [providerItems,setProviderItems]=useState<CatalogProvider[]>([]);
  const [providerError,setProviderError]=useState("");
  const [providerLoading,setProviderLoading]=useState(false);
- const providerName=(code:string)=>providerItems.find(p=>p.code===code)?.name||methodName[code]||code;
- const providerLogo=(code:string)=>providerItems.find(p=>p.code===code)?.logo||(isPaymentProvider(code)?paymentProviderAppearance[code].logo:"");
+ // Known wallet branding is served from reviewed, local assets. The public
+ // catalog decides provider availability, never an alternate logo/name for
+ // a known wallet or an arbitrary third-party asset loaded in merchant UI.
+ const providerName=(code:string)=>methodName[code]||providerItems.find(p=>p.code===code)?.name||code;
+ const providerLogo=(code:string)=>isPaymentProvider(code)?paymentProviderAppearance[code].logo:
+  (providerItems.find(p=>p.code===code)?.logo.match(/^\/payment-assets\/[a-z0-9_-]+\.(?:png|webp|svg)$/)?.[0]??"");
  const loadProviderCatalog=useCallback(async()=>{
   setProviderLoading(true);setProviderError("");setProviderItems([]);
   try{
@@ -52,12 +56,13 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
 
  const visibleAccounts=accounts.filter(a=>(filter==="all"||(filter==="active"?!a.Disabled:a.Disabled))&&[a.Label,a.Number,formattedAccount(a.Number),providerName(a.Method)].join(" ").toLowerCase().includes(query.trim().toLowerCase()));
  const openAdd=()=>{if(methodLimit.blocked)return;setMethod("");setNumber("");setLabel("");setProviderQuery("");setError("");createDialog.current?.showModal();void loadProviderCatalog()};
- const [selected,setSelected]=useState<string|null>(null),[edited,setEdited]=useState<string|null>(null),[newLabel,setNewLabel]=useState(""),[newNumber,setNewNumber]=useState("");
+ const [selected,setSelected]=useState<string|null>(detailId??null),[edited,setEdited]=useState<string|null>(null),[newLabel,setNewLabel]=useState(""),[newNumber,setNewNumber]=useState("");
  const [confirmAccount,setConfirmAccount]=useState<Account|null>(null);
  const current=accounts.find(account=>account.ID===selected)||null;
+ // Deep links open only after the authorized list contains the requested ID.
  
  useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(""),2400);return()=>clearTimeout(timer)},[notice]);
- useEffect(()=>{const dialog=detailsDialog.current;if(!dialog)return;if(selected&&!dialog.open)dialog.showModal();else if(!selected&&dialog.open)dialog.close()},[selected]);
+ useEffect(()=>{const dialog=detailsDialog.current;if(!dialog)return;if(selected&&current&&!dialog.open)dialog.showModal();else if((!selected||!current)&&dialog.open)dialog.close()},[selected,current]);
  useEffect(()=>{const dialog=editDialog.current;if(!dialog)return;if(edited&&!dialog.open)dialog.showModal();else if(!edited&&dialog.open)dialog.close()},[edited]);
  const load=useCallback(async(signal?:AbortSignal)=>{
   setLoading(true);setError("");
@@ -154,7 +159,18 @@ export function PaymentMethodManagement({locale,workspaceId,environment,canManag
    <form className="pg-phone-setup" onSubmit={e=>{e.preventDefault();void create()}}>
     {methodLimit.blocked&&<PlanResourceStatus value={methodLimit} locale={locale}/>}
     {error&&<p className="ekv3-page-error" role="alert">{error}</p>}
-    {!method?<><label className="ek-ref-search ek-ref-provider-search"><DashboardIcon name="search" width={16} height={16}/><input aria-label={t("Search providers","মাধ্যম খুঁজুন")} placeholder={t("Search providers","মাধ্যম খুঁজুন")} value={providerQuery} onChange={e=>setProviderQuery(e.target.value)}/></label>{providerError&&<p className="ekv3-page-error" role="status">{providerError}<button type="button" onClick={()=>void loadProviderCatalog()}>{t("Retry","আবার চেষ্টা")}</button></p>}{providerLoading&&<p className="ek-ref-help">{t("Refreshing providers…","মাধ্যম লোড হচ্ছে…")}</p>}<div className="ek-ref-providers">{providerItems.filter(p=>p.name.toLowerCase().includes(providerQuery.toLowerCase())).map(({code:key,name,logo})=><button type="button" key={key} className="ek-ref-provider ek-provider-surface wc" style={providerSurfaceStyle(key)} onClick={()=>setMethod(key)}><span className={"ek-ref-logo ek-ref-"+key}>{logo||providerLogo(key)?<img className="ek-ref-provider-image" src={logo||providerLogo(key)} width={80} height={40} alt={name+" logo"}/>:name}</span><span className="ek-ref-provider-name">{name}</span></button>)}{!providerLoading&&!providerError&&!providerItems.some(p=>p.name.toLowerCase().includes(providerQuery.toLowerCase()))&&<div className="ek-ref-empty">{t("No provider found.","কোনো মাধ্যম পাওয়া যায়নি।")}</div>}</div></>:<div className="ek-ref-selected-provider ek-provider-surface" style={providerSurfaceStyle(method)}><span className={"ek-ref-logo ek-ref-"+method}>{providerLogo(method)?<img className="ek-ref-provider-image" src={providerLogo(method)} width={84} height={42} alt={providerName(method)+" logo"}/>:providerName(method)}</span><span className="ek-ref-provider-title">{providerName(method)}</span><button type="button" onClick={()=>setMethod("")}>{t("Change","পরিবর্তন")}</button></div>}
+    {!method?<>
+     <label className="ek-ref-search ek-ref-provider-search"><DashboardIcon name="search" width={16} height={16}/><input aria-label={t("Search providers","মাধ্যম খুঁজুন")} placeholder={t("Search providers","মাধ্যম খুঁজুন")} value={providerQuery} onChange={e=>setProviderQuery(e.target.value)}/></label>
+     {providerError&&<p className="ekv3-page-error" role="status">{providerError}<button type="button" onClick={()=>void loadProviderCatalog()}>{t("Retry","আবার চেষ্টা")}</button></p>}
+     {providerLoading&&<p className="ek-ref-help">{t("Refreshing providers…","মাধ্যম লোড হচ্ছে…")}</p>}
+     <div className="ek-ref-providers">{providerItems.filter(p=>providerName(p.code).toLowerCase().includes(providerQuery.toLowerCase())).map(({code:key})=><button type="button" key={key} className="ek-ref-provider ek-provider-surface wc" style={providerSurfaceStyle(key)} onClick={()=>setMethod(key)}>
+      <span className={"ek-ref-logo ek-ref-"+key}>{providerLogo(key)?<img className="ek-ref-provider-image" src={providerLogo(key)} width={80} height={40} alt={providerName(key)+" logo"}/>:providerName(key)}</span>
+      <span className="ek-ref-provider-name">{providerName(key)}</span>
+     </button>)}{!providerLoading&&!providerError&&!providerItems.some(p=>providerName(p.code).toLowerCase().includes(providerQuery.toLowerCase()))&&<div className="ek-ref-empty">{t("No provider found.","কোনো মাধ্যম পাওয়া যায়নি।")}</div>}</div>
+    </>:<div className="ek-ref-selected-provider ek-provider-surface" style={providerSurfaceStyle(method)}>
+     <span className={"ek-ref-logo ek-ref-"+method}>{providerLogo(method)?<img className="ek-ref-provider-image" src={providerLogo(method)} width={84} height={42} alt={providerName(method)+" logo"}/>:providerName(method)}</span>
+     <span className="ek-ref-provider-title">{providerName(method)}</span><button type="button" onClick={()=>setMethod("")}>{t("Change","পরিবর্তন")}</button>
+    </div>}
     {method&&<><label className="ek-ref-field">{t("Account number","অ্যাকাউন্ট নম্বর")}<input required type="tel" inputMode="tel" autoComplete="off" value={number} onChange={e=>setNumber(e.target.value)} placeholder="+880 1XXX XXXXXX"/></label>
     <label className="ek-ref-field">{t("Label","লেবেল")}<span className="ek-ref-help">{t("Optional, only you see this","ঐচ্ছিক, শুধু আপনি দেখবেন")}</span><input value={label} maxLength={100} placeholder={t("e.g. Main shop","যেমন: মূল দোকান")} onChange={e=>setLabel(e.target.value)}/></label>
     </>}<div className="pg-phone-actions"><button type="button" onClick={()=>createDialog.current?.close()}>{t("Cancel","বাতিল")}</button><button type="submit" className="ekv3-primary" disabled={busy||methodLimit.blocked||!method||!/^01[3-9][0-9]{8}$/.test(normalizeNumber(number))}>{t("Add account","অ্যাকাউন্ট যোগ করুন")}</button></div>

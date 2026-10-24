@@ -1,0 +1,67 @@
+import assert from 'node:assert/strict';
+import {createHash,randomUUID} from 'node:crypto';
+import postgres from 'postgres';
+export async function runChannelPolicies({origin,browser,control,sessions}){
+ const target=new URL(control);if(!['localhost','127.0.0.1','[::1]'].includes(target.hostname)||/prod/i.test(target.pathname))throw Error('Channel policy acceptance refuses shared DB');
+ const db=postgres(control,{max:3,prepare:false});let context,viewerContext,store;
+ try{
+  const actor=async token=>(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(token).digest('hex')}`)[0].user_id;
+  const owner=await actor(sessions.owner),viewer=await actor(sessions.viewer);store=randomUUID();
+  await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},'Fictional channel policy business','ai',${owner})`;
+  await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner'),(${store},${viewer},'viewer')`;
+  const connections=[];
+  for(const provider of ['ms','ig','wa'])connections.push((await db`SELECT inbox_connection(${store},'live',${provider},${provider+'-policy-'+store},decode('abcd','hex')) id`)[0].id);
+  const connection=connections[0];await db`SELECT inbox_connection(${store},'sandbox','ms',${'sandbox-policy-'+store},decode('abcd','hex'))`;
+  const read=async(who=owner,c=connection)=>(await db`SELECT briofold_channel_settings_read(${store},${who},${c}) data`)[0].data;
+  const write=async(body,key=randomUUID(),who=owner)=>(await db`SELECT briofold_channel_settings_write(${store},${who},${key},${db.json(body)}) data`)[0].data;
+  assert.equal((await read(owner,null)).items.length,3,'channel settings crossed realms');
+  await assert.rejects(()=>read(viewer),e=>e.code==='42501');await assert.rejects(()=>read(owner,randomUUID()),e=>e.code==='42501');
+  const policy={mode:'human',sla_minutes:5,return_after_minutes:15,review_guidance:'Ask for an honest review only when requested.',upsell_guidance:'Orchid suggestions must use the published catalog.'};
+  const initial={id:connection,revision:0,policy},key=randomUUID();const saved=await write(initial,key);assert.deepEqual(await write(initial,key),saved);
+  await assert.rejects(()=>write({...initial,policy:{...policy,sla_minutes:6}},key),e=>e.code==='23505');
+  await assert.rejects(()=>write(initial),e=>e.code==='40001');await assert.rejects(()=>write({...initial,revision:1,policy:{...policy,sla_minutes:0}}),e=>e.code==='22023');
+  const studio=async(kind,body)=>(await db`SELECT briofold_ai_studio_write(${store},${owner},${randomUUID()},${kind},${db.json(body)}) data`)[0].data;
+  const model=(await db`SELECT model FROM briofold_ai_tariff_catalog ORDER BY model LIMIT 1`)[0].model;
+  await studio('draft',{revision:0,config:{instructions:'Answer only verified facts.',mode:'live',language:'auto',tone:'neutral',model}});
+  await studio('source',{id:randomUUID(),expected_version:null,title:'Orchid channel policy',kind:'text',content:'Orchid delivery takes three days.'});
+  const draft=(await db`SELECT briofold_ai_studio_read(${store},${owner},0,0) data`)[0].data;await studio('publish',{revision:draft.revision,confirmed:true,reason:'Fictional per-channel policy test'});
+  const ingest=async()=>db`SELECT inbox_ingest(${connection},${randomUUID()},'policy-customer','Fictional policy customer','Orchid delivery','text',now()-interval '30 minutes')`;
+  await ingest();const thread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${connection}`)[0].id;
+  assert.equal((await db`SELECT state FROM briofold_ai_channel_jobs WHERE workspace_id=${store}`)[0].state,'cancelled','human channel queued paid generation');
+  assert.equal((await read()).items[0].overdue,1);assert.equal((await read()).items[0].waiting,1);
+  await write({id:connection,revision:1,policy:{...policy,mode:'ai'}});await ingest();
+  const job=(await db`SELECT briofold_ai_channel_claim() data`)[0].data;assert.equal(job.workspace_id,store);
+  assert.ok(job.context.channel_instructions.includes(policy.review_guidance));assert.ok(job.context.channel_instructions.includes(policy.upsell_guidance));
+  assert.equal(job.context.channel_policy_revision,2);
+  assert.equal((await db`SELECT briofold_channel_work_valid(${job.id},${job.lease_id}) ok`)[0].ok,true);
+  assert.equal((await db`SELECT briofold_channel_work_valid(${job.id},${randomUUID()}) ok`)[0].ok,false);
+  await write({id:connection,revision:2,policy});assert.equal((await db`SELECT briofold_ai_channel_valid(${job.id}) ok`)[0].ok,false,'changed channel policy retained a stale AI job');
+  assert.equal((await db`SELECT state FROM briofold_ai_channel_jobs WHERE id=${job.id}`)[0].state,'cancelled');
+  assert.equal((await db`SELECT briofold_ai_channel_claim() data`)[0].data,null,'human mode generated a replacement job');
+  for(const table of ['briofold_channel_policies','briofold_channel_policy_events'])assert.equal((await db`SELECT has_table_privilege('ekmivo_financial_runtime',${table},'SELECT') ok`)[0].ok,false);
+  await assert.rejects(()=>db`UPDATE briofold_channel_policy_events SET request_hash='rewrite' WHERE workspace_id=${store}`,e=>e.code==='42501');
+  const authenticated=async(token,user)=>{const c=await browser.newContext();await c.addCookies([{name:'ekmivo-session',value:token,url:origin,httpOnly:true},{name:'ekmivo-default-workspace',value:user+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);return c;};
+  context=await authenticated(sessions.owner,owner);viewerContext=await authenticated(sessions.viewer,viewer);
+  const endpoint=origin+`/api/go/workspaces/${store}/workspace-tools/channel-settings?environment=live`;
+  let response=await viewerContext.request.get(endpoint);assert.equal(response.status(),403);
+  response=await context.request.get(endpoint);assert.equal(response.status(),200);assert.equal((await response.json()).items.length,3);
+  response=await viewerContext.request.post(endpoint,{headers:{Origin:origin},data:{...initial,revision:3,operation_key:randomUUID()}});assert.equal(response.status(),403);
+  response=await context.request.post(origin+`/api/go/workspaces/${store}/inbox?environment=live`,{headers:{Origin:origin},data:{action:'send',thread_id:thread,body:{text:'Manual reply while automatic work is disabled',idempotency_key:randomUUID()}}});assert.equal(response.status(),200,'human-only channel blocked a manual reply');
+  const page=await context.newPage();page.setDefaultTimeout(30000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(origin+'/settings/channels');await page.getByRole('link',{name:'Channel settings',exact:true}).first().waitFor();
+  await page.goto(origin+'/settings/channels/'+connection);await page.getByLabel('Response mode',{exact:true}).selectOption('ai');
+  await page.getByLabel('Reply SLA (minutes)',{exact:true}).fill('10');
+  await page.getByRole('button',{name:'Save channel settings',exact:true}).click();await page.getByText('Channel settings saved.',{exact:true}).waitFor();
+  await page.reload();await page.getByLabel('Response mode',{exact:true}).waitFor();assert.equal(await page.getByLabel('Response mode',{exact:true}).inputValue(),'ai');
+  assert.equal(await page.getByLabel('Reply SLA (minutes)',{exact:true}).inputValue(),'10');
+  assert.equal(await page.getByLabel('Review request guidance',{exact:true}).inputValue(),policy.review_guidance);
+  await page.goto(origin+'/inbox?thread='+thread);const conversationTools=page.getByText('Conversation tools',{exact:false});await conversationTools.waitFor();if(!await conversationTools.evaluate(element=>element.parentElement.open))await conversationTools.click();
+  await page.getByLabel('Handover reason',{exact:true}).fill('Fictional policy default takeover');
+  const taken=page.waitForResponse(r=>{try{return r.request().postDataJSON()?.action==='takeover';}catch{return false;}});await page.getByRole('button',{name:'Take over',exact:true}).click();assert.equal((await taken).status(),200);
+  const returned=(await db`SELECT return_at FROM briofold_inbox_work WHERE thread_id=${thread}`)[0].return_at;
+  assert.ok(returned.getTime()>Date.now()+14*60000&&returned.getTime()<Date.now()+16*60000,'channel auto-return default was not persisted');
+  let cases=0;for(const lang of ['en','bn']){await context.addCookies([{name:'ekmivo-locale',value:lang,url:origin}]);for(const theme of ['light','dark']){await context.addCookies([{name:'ekmivo-theme',value:theme,url:origin}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});await page.goto(origin+'/settings/channels/'+connection);await page.getByRole('heading',{name:lang==='bn'?'চ্যানেলের সেটিংস':'Channel settings',exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
+  const deniedPage=await viewerContext.newPage();await deniedPage.goto(origin+'/settings/channels/'+connection);await deniedPage.getByRole('alert').filter({hasText:'You cannot manage this channel.'}).waitFor();assert.equal(await deniedPage.getByLabel('Review request guidance',{exact:true}).count(),0);
+  assert.deepEqual(errors,[]);console.log('CHANNEL POLICIES SQL/Go/Next/browser PASS: scoped modes/SLA, private guidance, versioned AI context/queue invalidation, manual reply, default auto-return, revision/retry/denial and responsive cases:',cases);
+ }finally{if(store)await db`UPDATE briofold_ai_channel_jobs SET state='cancelled' WHERE workspace_id=${store} AND state IN ('queued','running')`;await context?.close();await viewerContext?.close();await db.end({timeout:3});}
+}

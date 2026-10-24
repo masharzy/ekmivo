@@ -3,7 +3,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import postgres from 'postgres';
 export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}){
  const target=new URL(control);if(!['localhost','127.0.0.1','[::1]'].includes(target.hostname)||/prod/i.test(target.pathname))throw Error('Workflow acceptance refuses shared databases');
- const db=postgres(control,{max:3,prepare:false}),workspace=randomUUID();let context;
+ const db=postgres(control,{max:3,prepare:false}),workspace=randomUUID();let context,restrictedContext;
  try{
   const actor=(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(sessions.owner).digest('hex')}`)[0].user_id;
   const colleague=(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(sessions.viewer).digest('hex')}`)[0].user_id;
@@ -77,7 +77,21 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   const list=async filters=>(await db`SELECT inbox_page(${workspace},'live',${actor},NULL,NULL,${db.json({reader_kind:'user',...filters})}) AS data`)[0].data.items;
   assert.equal((await list({queue:'mine'})).length,1);assert.equal((await list({queue:'unassigned'})).length,0);
   assert.equal((await list({queue:'attention'})).length,1);assert.equal((await list({queue:'resolved'})).length,0);
+  assert.equal((await list({queue:'unread'})).length,1,'unread queue omitted a not-yet-read inbound message');
+  assert.equal((await list({queue:'waiting'})).length,1,'waiting queue omitted the latest customer reply');
   assert.equal((await list({q:'complaint'})).length,1,'message content search missed conversation');assert.equal((await list({channel:'ig'})).length,0);
+  assert.equal((await list({channel:'web'})).length,0,'website filter admitted Messenger conversations');
+  const activity=(await db`SELECT last_activity_at FROM inbox_threads WHERE id=${thread}`)[0].last_activity_at;
+  await db`UPDATE inbox_threads SET last_activity_at='2026-01-02T23:59:59Z' WHERE id=${thread}`;
+  assert.equal((await list({from_date:'2026-01-02',through_date:'2026-01-02',label:'delivery',queue:'open'})).length,1,'inclusive UTC day or exact label lost a match');
+  assert.equal((await list({from_date:'2026-01-03'})).length,0);
+  assert.equal((await list({through_date:'2026-01-01'})).length,0);
+  assert.equal((await list({label:'deliv'})).length,0,'label unexpectedly used a substring');
+  assert.equal((await list({queue:'pending'})).length,0);
+  await denied(()=>list({from_date:'2026-02-30'}),'22023');
+  await denied(()=>list({from_date:'2026-01-03',through_date:'2026-01-01'}),'22023');
+  await denied(()=>list({from_date:'2026-1-02'}),'22023');
+  await db`UPDATE inbox_threads SET last_activity_at=${activity} WHERE id=${thread}`;
   await db`INSERT INTO briofold_inbox_events(workspace_id,operation_key,thread_id,actor_id,action,request_hash,result) SELECT ${workspace},gen_random_uuid(),${thread},${actor},'fixture',repeat('a',64),'{}' FROM generate_series(1,40)`;
   const h1=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},${thread},0,0,0) AS data`)[0].data;
   const h2=(await db`SELECT briofold_inbox_work_read(${workspace},'live',${actor},${thread},0,0,50) AS data`)[0].data;
@@ -88,6 +102,17 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
    {name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
    {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
+  await page.goto(origin+'/dashboard');
+  const businessAlerts=page.getByRole('region',{name:'Business alerts',exact:true});
+  await businessAlerts.getByText('1 conversation(s) have a customer message waiting for a reply.',{exact:true}).waitFor();
+  const setupChecklist=page.getByRole('region',{name:'Store setup checklist',exact:true});
+  // Each status is a text node within its checklist <li>, not a separate
+  // element. Assert the labeled source row and its actual server-owned state.
+  await setupChecklist.getByRole('listitem').filter({hasText:/Connect messaging channels.*Connected/}).waitFor();
+  await setupChecklist.getByRole('listitem').filter({hasText:/Review customer response queue.*Needs attention/}).waitFor();
+  await setupChecklist.getByRole('listitem').filter({hasText:/Review AI instructions and publish state.*Review required/}).waitFor();
+  await setupChecklist.getByRole('listitem').filter({hasText:/Review Store details.*Review required/}).waitFor();
+  assert.equal(await setupChecklist.getByRole('link',{name:'Connect messaging channels',exact:true}).getAttribute('href'),'/settings/channels');
   await page.goto(origin+'/inbox');await page.getByRole('button',{name:/Workflow fictional customer/}).click();await page.getByText(/Conversation tools/).click();
   const save=async(action,button)=>{const response=page.waitForResponse(r=>{try{return r.request().postDataJSON()?.action===action;}catch{return false;}});await page.getByRole('button',{name:button,exact:true}).click();assert.equal((await response).status(),200);};
   await page.getByLabel('Internal note',{exact:true}).fill('Browser internal note persisted');await save('work-note','Save note');assert.equal((await read()).note,'Browser internal note persisted');
@@ -104,12 +129,64 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await page.goto(origin+'/inbox/tickets');await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('resolved');await page.getByText('Fictional delivery dispute',{exact:true}).waitFor();
   await page.getByRole('link',{name:'Open conversation and ticket',exact:true}).click();await page.waitForURL('**/inbox?thread='+thread);
   await page.getByLabel('Internal note',{exact:true}).waitFor();assert.equal(await page.getByLabel('Internal note',{exact:true}).inputValue(),'Browser internal note persisted');
+  await page.getByText('Date & label filters',{exact:true}).click();
+  await page.getByLabel('Exact label',{exact:true}).fill('browser');
+  await page.locator(`[data-thread-id="${thread}"]`).waitFor();
+  await page.getByLabel('Last activity from (UTC)',{exact:true}).fill('2099-01-01');
+  await page.getByText('No conversations found.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Clear date & label',exact:true}).click();
+  await page.locator(`[data-thread-id="${thread}"]`).waitFor();
+  await db`SELECT inbox_ingest(${c},'keyboard-inbound','keyboard-customer','Second keyboard customer','Needs a reply','text',now()+interval '1 minute')`;
+  const secondThread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${c} AND external_id='keyboard-customer'`)[0].id;
+  await page.locator(`[data-thread-id="${secondThread}"]`).waitFor();
+  await page.locator(`[data-thread-id="${secondThread}"]`).focus();
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await page.locator(`[data-thread-id="${thread}"]`).evaluate(el=>el===document.activeElement),true,'ArrowDown did not select the next conversation');
+  assert.equal(await page.locator(`[data-thread-id="${thread}"]`).getAttribute('aria-pressed'),'true');
+  await page.keyboard.press('Home');
+  assert.equal(await page.locator(`[data-thread-id="${secondThread}"]`).evaluate(el=>el===document.activeElement),true,'Home did not focus the first conversation');
+  await page.keyboard.press('End');
+  assert.equal(await page.locator(`[data-thread-id="${thread}"]`).evaluate(el=>el===document.activeElement),true,'End did not focus the last conversation');
+  await page.getByLabel('Conversation queue',{exact:true}).selectOption('pending');
+  await page.getByText('No conversations found.',{exact:true}).waitFor();
+  await page.getByLabel('Conversation queue',{exact:true}).selectOption('waiting');
+  await page.locator(`[data-thread-id="${thread}"]`).waitFor();
+  await page.getByLabel('Conversation queue',{exact:true}).selectOption('resolved');
+  await page.getByText('No conversations found.',{exact:true}).waitFor();
+  await page.getByLabel('Conversation queue',{exact:true}).selectOption('all');
+  await page.locator(`[data-thread-id="${thread}"]`).waitFor();
   // A real Unicode manual send remains permitted with zero AI credit.
   const endpoint=origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live';
   const sent=await context.request.post(endpoint,{headers:{Origin:origin},data:{action:'send',thread_id:thread,body:{text:'ক'.repeat(8000),idempotency_key:randomUUID()}}});assert.equal(sent.status(),200,'Bangla reply hit an incorrect byte/character limit');
+  assert.equal((await list({queue:'waiting'})).some(x=>x.id===thread),true,'queued human send hid an unanswered customer');
+  for(const [external,sender] of [['metric-human','seller'],['metric-ai','ai']]){
+   await db`SELECT inbox_ingest(${c},${external+'-in'},${external},${external+' fictional'},'A metric question','text',now())`;
+   const metricThread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${c} AND external_id=${external}`)[0].id;
+   await db`INSERT INTO inbox_messages(workspace_id,thread_id,sender,body,state) VALUES(${workspace},${metricThread},${sender},'Successful fictional response','sent')`;
+   await db`INSERT INTO inbox_messages(workspace_id,thread_id,sender,body,state,created_at) VALUES(${workspace},${metricThread},${sender},'Old response','sent',now()-interval '8 days'),(${workspace},${metricThread},${sender},'Failed response','failed',now()),(${workspace},${metricThread},${sender},'Queued response','queued',now())`;
+  }
+  assert.equal((await list({queue:'waiting'})).length,2,'successful replies and non-successful replies were conflated');
+  await page.goto(origin+'/dashboard');
+  for(const label of ['Human replies · 7 days','AI replies · 7 days']){
+   const metric=page.locator('article').filter({has:page.getByText(label,{exact:true})});
+   await metric.locator('strong').getByText('1',{exact:true}).waitFor();
+  }
+  await page.getByRole('region',{name:'Business alerts',exact:true}).getByText('2 conversation(s) have a customer message waiting for a reply.',{exact:true}).waitFor();
+  // Both-product Stores retain their finance overview and the AI section.
+  await db`INSERT INTO workspace_product_access(workspace_id,product,enabled) VALUES(${workspace},'payments',true) ON CONFLICT(workspace_id,product) DO UPDATE SET enabled=true`;
+  await page.goto(origin+'/dashboard');
+  await page.getByRole('heading',{name:'AI & conversations',exact:true}).waitFor();
+  await db`INSERT INTO pg13_member_grants(workspace_id,user_id,capability,allowed) VALUES(${workspace},${colleague},'inbox:read',false) ON CONFLICT(workspace_id,user_id,capability) DO UPDATE SET allowed=false`;
+  restrictedContext=await browser.newContext();await restrictedContext.addCookies([
+   {name:'ekmivo-session',value:sessions.viewer,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'ekmivo-default-workspace',value:colleague+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+  const restrictedPage=await restrictedContext.newPage();await restrictedPage.goto(origin+'/dashboard');
+  await restrictedPage.getByRole('alert').filter({hasText:'Inbox activity is temporarily unavailable'}).waitFor();
+  assert.equal(await restrictedPage.getByText('Workflow fictional customer',{exact:true}).count(),0,'dashboard leaked a denied Inbox customer');
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
   assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_inbox_duty WHERE workspace_id=${workspace} AND user_id=${actor}`)[0].n),0,'duty record blocked membership revocation');
   await denied(read,'42501');assert.deepEqual(errors,[]);
-  console.log('Phase6 WORKFLOW PASS: actual takeover/cancel/idempotency/revisions/assignment/labels/dispute/release/auto-return/tickets/notes/duty/saved replies/RLS; browser save/insert; Unicode human reply at zero credit');
- }finally{if(context)await context.close();await db.end({timeout:3});}
+  console.log('Phase6 WORKFLOW PASS: actual takeover/cancel/idempotency/revisions/assignment/labels/dispute/release/auto-return/tickets/notes/duty/saved replies/RLS; browser save/insert/date/label/queue/keyboard; SQL inclusive UTC boundaries and invalid/reversed date denial; Unicode human reply at zero credit');
+ }finally{if(restrictedContext)await restrictedContext.close();if(context)await context.close();await db.end({timeout:3});}
 }

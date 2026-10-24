@@ -57,7 +57,7 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   await page.getByText('Fictional attachment.png · 1 KB',{exact:true}).waitFor();
   const attachmentFailed=page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send-media';}catch{return false;}}});
   await page.getByRole('button',{name:'Send attachment',exact:true}).click();await attachmentFailed;
-  await page.getByText('Could not confirm the attachment.',{exact:false}).waitFor();
+  await page.getByRole('alert').filter({hasText:'Could not confirm the attachment.'}).waitFor();
   await page.reload();await choose(0);await page.getByRole('button',{name:'Send attachment',exact:true}).click();
   await page.getByRole('button',{name:'Discard attachment',exact:true}).waitFor({state:'detached'});
   assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller' AND content->>'media_id'=${mediaId}`)[0].n),1,'lost attachment response queued twice');
@@ -66,7 +66,9 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   const scan=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live',{headers:{Origin:origin},data:{action:'media-upload',thread_id:(await db`SELECT id FROM inbox_threads WHERE workspace_id=${workspace} AND customer_name='Draft fixture customer 0'`)[0].id,body:{media_id:randomUUID(),data:Buffer.alloc(100000,65).toString('base64'),mime:'text/plain',name:'Fictional scanner probe.txt'}}});
   assert.equal(scan.status(),503);assert.equal((await scan.json()).error?.code,'FILE_SCAN_UNCONFIRMED','proxy blocked before secure scanner or scanner was bypassed');
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
-  await page.getByText('You no longer have access to this Inbox. Retrying when access is restored.',{exact:true}).waitFor();
+  // Both the unified shell and the Inbox may explain a revoked membership.
+  // Assert the accessibility alert instead of a globally ambiguous text node.
+  await page.getByRole('alert').filter({hasText:'You no longer have access to this Inbox. Retrying when access is restored.'}).first().waitFor();
   assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).count(),0,'revocation retained conversation composer');
   assert.deepEqual(errors,[]);
   console.log('Phase6 INBOX DRAFT PASS: 8 long conversations across 3 mock channels, thread isolation, saved navigation/reload, lost-response text and attachment retry exactly once, mock private attachment rendering, real proxy scanner fail-closed, revoked-access clearing');

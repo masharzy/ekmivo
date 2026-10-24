@@ -42,8 +42,37 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   const p=await context.newPage();p.setDefaultTimeout(30000);p.setDefaultNavigationTimeout(90000);
   await p.goto(origin+'/settings/website');await p.getByLabel('Website origin',{exact:true}).waitFor();assert.equal(await p.getByLabel('Website origin',{exact:true}).inputValue(),shop);
   await p.getByLabel('Website origin',{exact:true}).fill('https://replacement-shop.example');await p.getByRole('button',{name:'Save',exact:true}).click();await p.getByText('Settings saved.',{exact:true}).waitFor();await p.reload();assert.equal(await p.getByLabel('Website origin',{exact:true}).inputValue(),'https://replacement-shop.example');
+  const nestedWebsite=await p.goto(origin+'/settings/channels/website');
+  assert.equal(nestedWebsite.status(),200,'canonical nested website Channel route did not resolve');
+  await p.getByLabel('Website origin',{exact:true}).waitFor();
+  assert.equal(await p.getByLabel('Website origin',{exact:true}).inputValue(),'https://replacement-shop.example',
+   'nested website Channel route lost the same persisted Store settings');
+  await p.getByText('Voice calling is currently unavailable.',{exact:true}).waitFor();
   assert.equal((await publicCall({action:'read',secret},'https://replacement-shop.example')).status,403,'origin change retained visitor');
   await db`SELECT briofold_website_save(${workspace},${actor},'https://replacement-shop.example',false,2,${randomUUID()})`;assert.equal((await publicCall({action:'start'},'https://replacement-shop.example')).status,403,'disabled site remained public');
+  // Exercise public visitor admission through Go, not a mock response.
+  await db`SELECT briofold_website_save(${workspace},${actor},'https://replacement-shop.example',true,3,${randomUUID()})`;
+  let rateBlocked=false;
+  for(let attempt=0;attempt<3&&!rateBlocked;attempt++){
+   await db`INSERT INTO briofold_website_rates(site_id,identity,bucket,hits)
+    VALUES(${site},'site-start',date_trunc('minute',now()),100)
+    ON CONFLICT(site_id,identity) DO UPDATE SET bucket=excluded.bucket,hits=100`;
+   const response=await publicCall({action:'start'},'https://replacement-shop.example');
+   assert.ok([200,429].includes(response.status));rateBlocked=response.status===429;
+  }
+  assert.equal(rateBlocked,true,'site visitor rate admission was not enforced');
+  await db`DELETE FROM briofold_website_rates WHERE site_id=${site} AND identity='site-start'`;
+  await db`WITH created AS (
+   INSERT INTO inbox_threads(workspace_id,connection_id,external_id,customer_name)
+   SELECT ${workspace},connection_id,'capacity-'||n,'Capacity fixture'
+   FROM briofold_website_sites CROSS JOIN generate_series(1,10000) n WHERE id=${site}
+   RETURNING id)
+   INSERT INTO briofold_website_visitors(site_id,secret_hash,thread_id)
+   SELECT ${site},encode(sha256(convert_to(id::text,'UTF8')),'hex'),id FROM created`;
+  const countBefore=Number((await db`SELECT count(*) n FROM briofold_website_visitors WHERE site_id=${site}`)[0].n);
+  assert.ok(countBefore>=10000);
+  assert.equal((await publicCall({action:'start'},'https://replacement-shop.example')).status,429,'site visitor capacity was not enforced');
+  assert.equal(Number((await db`SELECT count(*) n FROM briofold_website_visitors WHERE site_id=${site}`)[0].n),countBefore,'rejected capacity created an extra visitor');
   const account='comment-fixture-'+randomUUID(),connection=(await db`SELECT inbox_connection(${workspace},'live','ms',${account},decode('abcd','hex')) AS id`)[0].id;
   const endpoint=`${origin}/api/go/workspaces/${workspace}/comments`,rule={id:randomUUID(),revision:0,connection_id:connection,enabled:true,name:'Fictional price rule',posts:'selected',selected:['post_1'],excluded:['post_2'],match:'keyword',keywords:['price','দাম'],intent:'question',threshold:.9,mode:'fixed',reply:'See our catalog.',action:'reply'},operation=randomUUID();
   const command=(action,body,key=operation)=>context.request.post(endpoint,{headers:{Origin:origin},data:{action,operation_key:key,body}});
@@ -78,6 +107,27 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   for(const table of ['briofold_website_visitors','briofold_comments','briofold_comment_rules','briofold_comment_audit','briofold_inbox_alerts','briofold_inbox_alert_reads'])for(const role of ['ekmivo_financial_runtime','ekmivo_financial_projection'])assert.equal((await db`SELECT has_table_privilege(${role},${table},'SELECT') AS ok`)[0].ok,false);
   await p.goto(origin+'/inbox/comments');await p.getByRole('heading',{name:'Comment automation',exact:true}).waitFor();await p.getByText('price?',{exact:true}).waitFor();await p.getByText('Rules and post selection',{exact:true}).click();await p.getByRole('button',{name:'Edit',exact:true}).click();assert.equal(await p.getByLabel('Name',{exact:true}).inputValue(),rule.name);
   await p.getByLabel('Preview post ID',{exact:true}).fill('post_1');await p.getByLabel('Sample comment',{exact:true}).fill('price?');await p.getByRole('button',{name:'Dry-run without sending',exact:true}).click();await p.getByRole('status').filter({hasText:'RULE_MATCH'}).waitFor();await p.getByRole('button',{name:'Discard edits',exact:true}).click();await p.goto(origin+'/notifications');await p.getByRole('heading',{name:'Inbox notifications',exact:true}).waitFor();await p.getByText('Alert customer',{exact:true}).first().waitFor();
-  console.log('Briofold website/comment signed HTTP, SQL and browser acceptance PASS; durable alerts PASS');
+  assert.equal(await p.getByRole('heading',{level:1}).count(),1,'unified notification page has duplicate primary headings');
+  await p.getByRole('button',{name:'Inbox & AI',exact:true}).click();
+  await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('handover');
+  await p.waitForFunction(()=>{const rows=[...document.querySelectorAll('article strong')];return rows.length===1&&rows[0].textContent==='Human handover';});
+  await p.getByText('Alert customer',{exact:true}).waitFor();
+  assert.equal(await p.locator('article strong').filter({hasText:'Response overdue'}).count(),0,'handover filter included SLA notices');
+  await p.getByRole('checkbox',{name:'Unread only',exact:true}).check();
+  await p.getByRole('button',{name:'Mark read',exact:true}).click();
+  await p.getByText('No notifications match.',{exact:true}).waitFor();
+  const handed=(await db`SELECT briofold_inbox_alert_read(${workspace},${viewer},0,'','handover',true) data`)[0].data.items;
+  assert.equal(handed.length,1,'owner marking a shared handover changed colleague read state');
+  await p.getByRole('checkbox',{name:'Unread only',exact:true}).uncheck();await p.getByText('Alert customer',{exact:true}).waitFor();
+  await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('sla');await p.waitForFunction(()=>{const rows=[...document.querySelectorAll('article strong')];return rows.length===1&&rows[0].textContent==='Response overdue';});
+  await p.getByRole('combobox',{name:'Type',exact:true}).selectOption('ai-review');await p.getByText('No notifications match.',{exact:true}).waitFor();
+  // Private fictional notices exercise the real canonical server action's
+  // pagination without triggering a provider or customer message.
+  await db`INSERT INTO briofold_inbox_alerts(workspace_id,thread_id,kind,event_key,recipient_id) SELECT ${workspace},${thread},'ai-review',${'phase10-pagination-'+workspace}||':'||n,${actor} FROM generate_series(1,51) n`;
+  await p.getByRole('button',{name:'Refresh',exact:true}).click();await p.getByText('Alert customer',{exact:true}).first().waitFor();
+  assert.equal(await p.getByText('Alert customer',{exact:true}).count(),50);
+  await p.getByRole('button',{name:'Next',exact:true}).click();await p.waitForFunction(()=>document.querySelectorAll('article').length===1);assert.equal(await p.getByText('Alert customer',{exact:true}).count(),1);
+  assert.equal((await db`SELECT briofold_inbox_alert_read(${workspace},${viewer},0,'','ai-review',false) data`)[0].data.items.length,0,'private AI alert leaked to colleague');
+  console.log('Briofold website/comment signed HTTP, SQL and browser acceptance PASS; visitor rate/capacity denial and durable alerts PASS');
  }finally{if(worker)worker.kill('SIGTERM');if(context)await context.close();await db.end({timeout:3});}
 }

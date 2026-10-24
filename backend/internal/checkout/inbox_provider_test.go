@@ -39,3 +39,16 @@ func TestInstagramSeenMessageID(t *testing.T) {
 		t.Fatal("Instagram read ID missing")
 	}
 }
+
+func TestSignedChannelMarketingOptOutExactPhrases(t *testing.T) {
+	for _, text := range []string{"STOP", " stop ", "UNSUBSCRIBE", " Stop All "} {
+		if !signedChannelMarketingOptOut(text) {
+			t.Errorf("known opt-out phrase rejected: %q", text)
+		}
+	}
+	for _, text := range []string{"", "stopping", "please stop order 123", "do not unsubscribe me", "cancel order", "subscribe", "STOP!"} {
+		if signedChannelMarketingOptOut(text) {
+			t.Errorf("ambiguous text must not opt out: %q", text)
+		}
+	}
+}

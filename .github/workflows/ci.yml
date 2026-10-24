@@ -72,7 +72,13 @@ jobs:
         run: node --test scripts/briofold-design-boundary.test.mjs scripts/dashboard-responsive-cascade.test.mjs
       - name: Briofold Phase 2 and 3 canonical route and authorization contract
         working-directory: apps/web
-        run: node --test scripts/briofold-unified-routes.test.mjs scripts/briofold-locale-routing.test.mjs scripts/briofold-account-settings-routing.test.mjs scripts/briofold-unified-devices.test.mjs scripts/briofold-ai-overview.test.mjs scripts/briofold-ai-business-profile.test.mjs scripts/briofold-ai-team-quota.test.mjs scripts/briofold-settings-interactions.test.mjs
+        run: node --test scripts/briofold-unified-routes.test.mjs scripts/briofold-locale-routing.test.mjs scripts/briofold-account-settings-routing.test.mjs scripts/briofold-unified-devices.test.mjs scripts/briofold-ai-overview.test.mjs scripts/briofold-ai-business-profile.test.mjs scripts/briofold-ai-team-quota.test.mjs scripts/briofold-settings-interactions.test.mjs scripts/briofold-product-operational-analytics.test.mjs
+      - name: Briofold Phase 9 canonical finance-source detail contract
+        working-directory: apps/web
+        run: node --test scripts/briofold-phase9-payment-links.test.mjs scripts/briofold-phase9-refund-report-prerequisites.test.mjs
+      - name: Briofold CRM authorized page CSV and spreadsheet injection guard
+        working-directory: apps/web
+        run: node --test scripts/briofold-crm-csv.test.mjs
       - name: Single Store signup, switching and typography regression contracts
         working-directory: apps/web
         run: node --test scripts/primary-store-binding-contract.test.mjs
@@ -84,7 +90,7 @@ jobs:
         run: node --test scripts/briofold-onboarding-client.test.mjs scripts/signup-transaction-smoke.mjs scripts/briofold-onboarding-contract.test.mjs scripts/briofold-onboarding-actions.test.mjs scripts/briofold-ai-tariff.test.mjs scripts/briofold-topup-proxy.test.mjs scripts/briofold-topup-proof-integrity.test.mjs
       - name: Briofold full AI wallet statement and low balance contract
         working-directory: apps/web
-        run: node --test scripts/briofold-ai-statement.test.mjs scripts/briofold-ai-studio.test.mjs scripts/briofold-inbox-drafts.test.mjs scripts/briofold-inbox-attachments.test.mjs scripts/briofold-studio-requests.test.mjs
+        run: node --test scripts/briofold-commerce-import.test.mjs scripts/briofold-ai-statement.test.mjs scripts/briofold-ai-studio.test.mjs scripts/briofold-inbox-drafts.test.mjs scripts/briofold-inbox-attachments.test.mjs scripts/briofold-studio-requests.test.mjs
       - name: Phase 6 SaaS payment, recovery and migration safety contract
         working-directory: apps/web
         run: node --test scripts/subscription-payment-handoff-contract.test.mjs
@@ -118,7 +124,7 @@ jobs:
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.payment-examples.json
       - name: Release gate negative tests (fictional fixtures)
-        run: node --test tools/release/evidence.test.mjs tools/testing/sdk-transport.test.mjs tools/privacy/store-registry.test.mjs tools/privacy/archive-codec.test.mjs tools/recovery/backup-registry.test.mjs tools/release/compile-cohort.test.mjs tools/testing/pg06-physical-phone-contract.test.mjs tools/testing/pg10-physical-phone-intent.test.mjs tools/testing/public-pay-design.test.mjs tools/testing/checkout-logo-presentation.test.mjs tools/testing/notification-center.test.mjs
+        run: node --test tools/release/evidence.test.mjs tools/testing/sdk-transport.test.mjs tools/privacy/store-registry.test.mjs tools/privacy/archive-codec.test.mjs tools/recovery/backup-registry.test.mjs tools/release/compile-cohort.test.mjs tools/testing/pg06-physical-phone-contract.test.mjs tools/testing/pg10-physical-phone-intent.test.mjs tools/testing/sms-device-lifecycle-contract.test.mjs tools/testing/public-pay-design.test.mjs tools/testing/checkout-logo-presentation.test.mjs tools/testing/notification-center.test.mjs
       - name: Verify PostgreSQL schema on ephemeral local database
         working-directory: apps/web
         env:
@@ -158,9 +164,26 @@ jobs:
         env:
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
         run: node scripts/pg02-tenant-context-smoke.mjs
+      - name: Restore pinned Playwright browser binaries
+        id: playwright
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-headless-${{ hashFiles('apps/web/package-lock.json') }}
       - name: Install browser for real PG05 checkout journeys
         working-directory: apps/web
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 6
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: "45000"
+        run: |
+          npx --no-install playwright install --only-shell chromium
+          node scripts/playwright-readiness.mjs
+      - name: Save installed browser before independent application checks
+        if: steps.playwright.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.cache-primary-key }}
       - name: Phase 2 published subscription pricing responsive browser acceptance
         working-directory: apps/web
         run: node --test scripts/subscription-public-responsive-browser.test.mjs

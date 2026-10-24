@@ -14,18 +14,20 @@ import (
 )
 
 type inboxSendJob struct {
-	ID          string         `json:"id"`
-	Workspace   string         `json:"workspace_id"`
-	Thread      string         `json:"thread_id"`
-	Environment string         `json:"environment"`
-	Text        string         `json:"text"`
-	Type        string         `json:"type"`
-	Content     map[string]any `json:"content"`
-	Reply       string         `json:"reply_provider_id"`
-	Channel     string         `json:"channel"`
-	Account     string         `json:"account"`
-	Recipient   string         `json:"recipient"`
-	Credential  string         `json:"credential"`
+	ChannelGuard bool           `json:"channel_guard"`
+	Broadcast    bool           `json:"broadcast"`
+	ID           string         `json:"id"`
+	Workspace    string         `json:"workspace_id"`
+	Thread       string         `json:"thread_id"`
+	Environment  string         `json:"environment"`
+	Text         string         `json:"text"`
+	Type         string         `json:"type"`
+	Content      map[string]any `json:"content"`
+	Reply        string         `json:"reply_provider_id"`
+	Channel      string         `json:"channel"`
+	Account      string         `json:"account"`
+	Recipient    string         `json:"recipient"`
+	Credential   string         `json:"credential"`
 }
 
 func str(m map[string]any, k string) string { v, _ := m[k].(string); return v }

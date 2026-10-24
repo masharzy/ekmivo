@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {expect} from "@playwright/test";
 import {createHash,randomUUID} from "node:crypto";
 import postgres from "postgres";
 export async function runBriofoldSettingsBrowser({origin,browser,control,sessions}){
@@ -57,8 +58,57 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   const denied=await readOnly.request.post(base,{headers:{Origin:origin},data:{expected_version:current.version,body:{...current.body,timezone:changed}}});
   assert.equal(denied.status(),403,"Viewer preference mutation was not forbidden by backend");
   assert.equal((await (await context.request.get(base)).json()).body.timezone,original,"Forbidden write modified settings");
+  // Reuse the real support history with typed feedback, rather than claiming
+  // that a decorative feedback route persists user reports.
+  const feedback=origin+"/api/go/workspaces/"+workspace+"/workspace-tools/help?environment=live";
+  assert.equal((await page.goto(origin+"/settings/help/feedback")).status(),200);
+  await page.getByRole("button",{name:"Bug report",exact:true}).click();
+  await page.locator("#support-subject").fill("Fixture browser bug report");
+  await page.locator("#support-description").fill("This fictional browser report checks authorized durable feedback.");
+  const [submitted]=await Promise.all([
+   page.waitForResponse(r=>r.url().includes("/workspace-tools/help")&&r.request().method()==="POST"),
+   page.getByRole("button",{name:"Submit request",exact:true}).click()
+  ]);
+  assert.equal(submitted.status(),200,"Bug report was not persisted by Go");
+  await page.locator('[data-feedback="success"]').waitFor();
+  for(const topic of ["feature","usability"]){
+   const response=await context.request.post(feedback,{headers:{Origin:origin},data:{topic,subject:`Fixture ${topic} feedback`,message:"Fictional feature feedback is safely persisted here."}});
+   assert.equal(response.status(),200,`Feedback topic ${topic} rejected`);
+  }
+  const entries=await db`SELECT topic FROM pg13_support WHERE workspace_id=${workspace}::uuid AND subject LIKE 'Fixture %' ORDER BY topic`;
+  assert.deepEqual(entries.map(entry=>entry.topic),["bug","feature","usability"]);
+  const privateView=await readOnly.request.get(feedback);
+  assert.equal(privateView.status(),200);
+  const viewerTickets=await privateView.json();
+  assert.ok(!viewerTickets.items.some(ticket=>ticket.subject.startsWith("Fixture ")),"Viewer saw owner's private feedback");
+  const invalid=await context.request.post(feedback,{headers:{Origin:origin},data:{topic:"untrusted",subject:"Fixture invalid",message:"This should never create a ticket."}});
+  assert.equal(invalid.status(),422,"Unrecognized feedback topic was accepted");
+  // Local device preferences must remain separate from authenticated
+  // payment/mobile device pairing and must not imply server push delivery.
+  assert.equal((await page.goto(origin+"/settings/account/devices")).status(),200);
+  const sound=page.getByRole("checkbox",{name:/Allow a sound in this browser/});
+  await expect(sound).toBeEnabled();await expect(sound).not.toBeChecked();
+  await sound.check();assert.equal(await sound.isChecked(),true);
+  assert.equal(await page.evaluate(()=>localStorage.getItem("ekmivo:device:notification-sound:v1")),"on");
+  await page.reload();await expect(sound).toBeEnabled();await expect(sound).toBeChecked();
+  assert.match(await page.getByRole("region",{name:"Browser permission"}).innerText(),/No push subscription or remote notification sender/);
+  const manifest=await context.request.get(origin+"/manifest.webmanifest");
+  assert.equal(manifest.status(),200);assert.equal((await manifest.json()).start_url,"/dashboard");
+  const worker=await context.request.get(origin+"/ekmivo-pwa-sw.js");
+  assert.equal(worker.status(),200);assert.doesNotMatch(await worker.text(),/caches\.open|fetch\(/,"PWA worker must not cache sensitive data");
+  await page.setViewportSize({width:320,height:740});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,"Device preferences overflow 320px");
+  await sound.uncheck();assert.equal(await sound.isChecked(),false);
+  assert.equal((await viewerPage.goto(origin+"/settings/account/devices")).status(),200);
+  const viewerSound=viewerPage.getByRole("checkbox",{name:/Allow a sound in this browser/});
+  await expect(viewerSound).toBeEnabled();await expect(viewerSound).not.toBeChecked();
+  for(const oldDocsPath of ["/settings/api-docs","/settings/developers/docs"]){
+   const docs=await page.goto(origin+oldDocsPath);
+   assert.equal(docs.status(),200,`Public API docs deep link ${oldDocsPath} failed`);
+   assert.ok(new URL(page.url()).pathname.startsWith("/developers"),`API docs ${oldDocsPath} landed on a placeholder module`);
+  }
   assert.deepEqual(pageErrors,[],"Settings browser reported a client runtime/hydration error");
-  console.log("Phase3 REAL SETTINGS BROWSER PASS: owner initial state/save/reload/restore, viewer disabled editor, real backend mutation denial");
+  console.log("Phase3 REAL SETTINGS BROWSER PASS: owner settings save/restore, viewer denial, typed feedback persistence/route/privacy, per-browser device sound/PWA source/320px");
  }finally{
   if(context)await context.close();if(readOnly)await readOnly.close();
   // Settings writes create append-only control audit references. Never delete

@@ -7,6 +7,7 @@ import {PaymentWebhooks} from "./payment-webhooks";
 import {PaymentEvents} from "./payment-events";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {registerDraft} from "../lib/client/draft-navigation";
+import {unifiedFinancialDetailPath} from "../lib/unified-navigation";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 type Row=Record<string,unknown>&{id:string};
 type Resource="payments"|"incoming"|"gateways"|"devices"|"webhooks"|"events"|"deliveries";
@@ -32,15 +33,15 @@ function show(value:unknown,key:string,locale:Locale):string{
  if(statuses[String(value)])return statuses[String(value)][bn?1:0];return String(value)
 }
 const blank={name:"",account_id:"",source:"",binding:"",parser_id:"",url:"",method:"bkash",account_number:""};
-type PaymentOperationsProps={locale:Locale;workspaceId:string;userId:string;environment:PaymentEnvironment;resource:Resource;canManage:boolean;detailId?:string};
+type PaymentOperationsProps={locale:Locale;workspaceId:string;userId:string;environment:PaymentEnvironment;resource:Resource;canManage:boolean;detailId?:string;canonicalRoutes?:boolean};
 export function PaymentOperations(props:PaymentOperationsProps){
  if(props.resource==="webhooks")return <PaymentWebhooks {...props}/>;
  if(props.resource==="events")return <PaymentEvents {...props}/>;
  if(props.resource==="devices")return <PaymentPhoneManagement locale={props.locale} workspaceId={props.workspaceId} environment={props.environment} canManage={props.canManage} detailId={props.detailId}/>;
- if(props.resource==="gateways")return <PaymentMethodManagement locale={props.locale} workspaceId={props.workspaceId} environment={props.environment} canManage={props.canManage}/>;
+ if(props.resource==="gateways")return <PaymentMethodManagement key={`${props.workspaceId}:${props.environment}:${props.detailId??""}`} locale={props.locale} workspaceId={props.workspaceId} environment={props.environment} canManage={props.canManage} detailId={props.detailId}/>;
  return <PaymentOperationsScoped key={[props.userId,props.workspaceId,props.environment,props.resource,props.detailId||""].join(":")} {...props}/>;
 }
-function PaymentOperationsScoped({locale,workspaceId,userId,environment,resource,canManage,detailId}:PaymentOperationsProps){
+function PaymentOperationsScoped({locale,workspaceId,userId,environment,resource,canManage,detailId,canonicalRoutes=false}:PaymentOperationsProps){
  const bn=locale==="bn",base=`/api/go/workspaces/${workspaceId}/operations/`;
  const [rows,setRows]=useState<Row[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[online,setOnline]=useState(true),[cursor,setCursor]=useState<string|null>(null),[busy,setBusy]=useState(false),[filter,setFilter]=useState("");
  const [draft,setDraft]=useState(blank),[saved,setSaved]=useState(blank),[secret,setSecret]=useState(""),[secretScope,setSecretScope]=useState(""),[notice,setNotice]=useState(""),[accounts,setAccounts]=useState<Row[]>([]),[parsers,setParsers]=useState<Row[]>([]),[deliveryRows,setDeliveryRows]=useState<Row[]>([]),[confirm,setConfirm]=useState<{id:string;action:string}|null>(null);
@@ -76,6 +77,11 @@ function PaymentOperationsScoped({locale,workspaceId,userId,environment,resource
  const clearFilters=()=>{setQueryFilters({status:"",account:"",method:"",from:"",to:""});setFilter("")};
  const activeFilters=Object.values(queryFilters).filter(Boolean).length;
  const editable=(resource==="devices"||resource==="webhooks"||resource==="gateways")&&!detailId&&canManage;
+ const rowHref=(row:Row)=>{
+  const id=resource==="deliveries"?String(row.endpoint_id):row.id;
+  return canonicalRoutes?unifiedFinancialDetailPath(resource,id)
+   :`/${locale}/w/${workspaceId}/payments/${resource==="deliveries"?"webhooks":resource}/${id}?env=${environment}`;
+ };
  return <section className="ds-panel pg-operations" aria-busy={loading||busy}>
   <div className="ds-panel-heading"><p>{environment==="sandbox"?(bn?"Sandbox · কোনো live payment নয়":"Sandbox · no live payments"):(bn?"Live environment":"Live environment")}</p><button disabled={loading||busy||!online} onClick={()=>void load()}>{bn?"Refresh":"Refresh"}</button></div>
   {!online&&<p role="status">{bn?"আপনি offline। সংরক্ষিত data পুরোনো হতে পারে; পরিবর্তন বন্ধ আছে।":"You are offline. Displayed data may be stale; changes are disabled."}</p>}
@@ -98,7 +104,7 @@ function PaymentOperationsScoped({locale,workspaceId,userId,environment,resource
    <label>{bn?"থেকে (device-এর timezone)":"From (device timezone)"}<DashboardDateTimePicker locale={locale} label={bn?"শুরু":"From"} value={queryFilters.from} onChange={from=>setQueryFilters({...queryFilters,from})}/></label>
    <label>{bn?"পর্যন্ত, অন্তর্ভুক্ত নয়":"Until, exclusive"}<DashboardDateTimePicker locale={locale} label={bn?"শেষ":"Until"} value={queryFilters.to} onChange={to=>setQueryFilters({...queryFilters,to})}/></label>
   </div></>}
-  {loading&&rows.length===0?<div className="pg-operation-skeleton" role="status">{bn?"Records লোড হচ্ছে…":"Loading records…"}</div>:error&&rows.length===0?<p role="status">{bn?"ডেটা পাওয়া যায়নি। Retry/Refresh করুন; এটি কোনো শূন্য রেকর্ডের প্রমাণ নয়।":"Data could not be loaded. Retry/refresh; this is not an empty-result confirmation."}</p>:visible.length===0?<p role="status">{detailId?(bn?"এই record পাওয়া যায়নি বা access নেই।":"Record unavailable or outside your access."):(filter||activeFilters>0?(bn?"এই ফিল্টারে কোনো রেকর্ড নেই।":"No records match the selected filters."):(bn?"এই environment-এ এখনো কোনো record নেই।":"No records yet in this environment."))}</p>:<div className="pg-operation-table"><table><thead><tr><th scope="col">{bn?"বিস্তারিত":"Details"}</th>{fields[resource].map(key=><th scope="col" key={key}>{labels[key]?.[bn?1:0]||key}</th>)}{canManage&&<th scope="col">{bn?"কাজ":"Actions"}</th>}</tr></thead><tbody>{visible.map(row=><tr key={row.id}><td><Link href={`/${locale}/w/${workspaceId}/payments/${resource==="deliveries"?"webhooks":resource}/${resource==="deliveries"?String(row.endpoint_id):row.id}?env=${environment}`}>{row.id.slice(0,8)}…</Link></td>{fields[resource].map(key=><td key={key}>{show(row[key],key,locale)}</td>)}{canManage&&<td>
+  {loading&&rows.length===0?<div className="pg-operation-skeleton" role="status">{bn?"Records লোড হচ্ছে…":"Loading records…"}</div>:error&&rows.length===0?<p role="status">{bn?"ডেটা পাওয়া যায়নি। Retry/Refresh করুন; এটি কোনো শূন্য রেকর্ডের প্রমাণ নয়।":"Data could not be loaded. Retry/refresh; this is not an empty-result confirmation."}</p>:visible.length===0?<p role="status">{detailId?(bn?"এই record পাওয়া যায়নি বা access নেই।":"Record unavailable or outside your access."):(filter||activeFilters>0?(bn?"এই ফিল্টারে কোনো রেকর্ড নেই।":"No records match the selected filters."):(bn?"এই environment-এ এখনো কোনো record নেই।":"No records yet in this environment."))}</p>:<div className="pg-operation-table"><table><thead><tr><th scope="col">{bn?"বিস্তারিত":"Details"}</th>{fields[resource].map(key=><th scope="col" key={key}>{labels[key]?.[bn?1:0]||key}</th>)}{canManage&&<th scope="col">{bn?"কাজ":"Actions"}</th>}</tr></thead><tbody>{visible.map(row=><tr key={row.id}><td>{rowHref(row)?<Link href={rowHref(row)!}>{row.id.slice(0,8)}…</Link>:<span>{row.id.slice(0,8)}…</span>}</td>{fields[resource].map(key=><td key={key}>{show(row[key],key,locale)}</td>)}{canManage&&<td>
    {resource==="devices"&&!row.revoked_at&&<button disabled={busy||!online} onClick={()=>setConfirm({id:row.id,action:"revoke"})}>{bn?"Revoke":"Revoke"}</button>}
    {resource==="gateways"&&row.source_status!=="sandbox_fixture"&&<button disabled={busy||!online} onClick={()=>void mutate(row.id,row.disabled_at?"enable":"disable")}>{row.disabled_at?(bn?"নতুন request চালু করুন":"Enable new requests"):(bn?"নতুন request বন্ধ করুন":"Disable new requests")}</button>}
    {resource==="incoming"&&["unmatched","ambiguous"].includes(String(row.status))&&<button disabled={busy||!online} onClick={()=>void mutate(row.id,"reprocess")}>{bn?"আবার মিলিয়ে দেখুন":"Reprocess"}</button>}

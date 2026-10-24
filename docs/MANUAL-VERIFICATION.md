@@ -1,3 +1,18 @@
+## Briofold Phase 10 — consolidated owner acceptance (2026-10-22, NOT PASSED)
+
+The consolidated Briofold 0–10 implementation/evidence matrix and one owner checklist are in
+`docs/evidence/BRIOFOLD-PHASE10-RELEASE-READINESS-20261022.md`. The owner handles consented
+physical devices, live providers and subjective visual/accessibility checks. Do not turn these
+into code blockers once code is actually complete. However Phase 10 still has independent
+code blockers (campaigns/broadcasts/bookings/parity) and an unapplied Phase 8 migration;
+these must not be reclassified as owner manual work. No migration, money, provider send,
+production flag change or staged cutover was performed by the Phase 10 reports increment.
+
+- [ ] Owner-provided test accounts/providers/handset and isolated merchant business: run the
+  eleven groups in the Phase 10 evidence ledger and record actual pass/failure evidence.
+- [ ] Operator, **only after the owner explicitly authorizes merge/release**: exact merged SHA and green integrated CI; inspect the existing CONTROL schema (including checkout presentation 0100 and support topic 0073), then stage applicable CONTROL-only 0141/0142/0180–0200 migrations in dependency order with backups, checksummed review, known owner role, runtime grants, support ticket topic preservation and post-deploy health/rollback checks. Do not run them in either financial realm or as part of this code-only task.
+
+
 ## Store-first subscription checkout Phase 6 — 2026-10-22 (NOT SEALED)
 
 - [ ] Integrate and verify Phase 2–5 versioned quotes, three legal documents, coupon reservations, Store-bound purchase intent and confirmed invoice before enabling any paid subscription.
@@ -831,6 +846,50 @@ Code and automated acceptance evidence: `docs/evidence/BRIOFOLD-PHASE7-20261021.
 With an authorized operator SMTP account and HTTPS CRM_PUBLIC_ORIGIN, request a customer-consented email confirmation, receive the actual message, confirm the fragment is removed, and verify expiry/single use/contact-change rejection. With an approved WhatsApp test account, verify actual signed inbound sender proof and cross-business/account isolation; fictional signed webhook tests are not provider proof. No unsolicited customer message is authorized by this checklist.
 
 With owner/admin/editor/viewer test memberships, review Customers, Leads and Follow-ups at 320/768/1024/desktop in EN/BN and Light/Dark/System, keyboard and large text; verify contact masking, stale business tabs, dirty navigation, offline/retry recovery, merged history/export, dispute suppression and confirmed CRM erasure. Confirm retained financial/channel records are explained. Follow-ups are internal reminders; outbound campaigns belong to a later phase. These manual/provider checks remain pending and do not block the explicitly scoped code-and-automated-acceptance seal.
+
+## Briofold Phase 8 — commerce (2026-10-21) — operator/manual pending
+
+Source/evidence: `docs/evidence/BRIOFOLD-PHASE8-20261021.md`. Production rollout requires additive control migration 0141 before the compatible API. No Phase 8 production migration has been performed.
+
+Use an authorized test business and provider accounts: configure the existing private object store and malware scanner; upload/reorder/view ten product photos, refuse the eleventh/invalid or unscanned file; revoke membership and verify private image access fails. Configure that business's Steadfast credentials, explicitly book one test parcel, verify its stable invoice/consignment, timeout reconciliation and real status/handover/label. Verify physical Code 39 scanner and packing labels. Other courier manual workflows must be labeled merchant-recorded, never API-verified. No unsolicited booking/message is authorized by this ledger.
+
+Connect an authorized WooCommerce test store with read-only credentials; review paginated simple/variable SKU diffs, grouped variants, stale edits, unsupported types/batch limits and explicit apply. Compare actual variant attributes/prices and preserve stock. Verify real source-owned payment/invoice/refund links and partial payments; COD receipts must not become gateway verification, and return inspection must not move money. Customer notifications/campaign delivery remain separate from internal team status notifications.
+
+Review populated Orders/Products/Inventory/Coupons/Delivery/Returns in EN/BN, Light/Dark/System and 320/768/1440 widths, keyboard/large fonts, offline uncertain-response reload, business switch drafts, viewer recipient masking, role revocation, multi-warehouse transfers, packing, damaged returns and exchange links. Automated fixtures are fictional; no live provider or financial acceptance is inferred from them.
+
+## Briofold Phase 3 / Phase 10 owner clarification (2026-10-22)
+
+- **Phase 1 CSS isolation was waived:** do not request separate dashboard/marketing CSS testing as a release gate. A future homepage-to-dashboard visual migration is a different task; present approved Admin styling remains independently protected.
+- Accounts have **one user-facing Store**. Verify Store setup/resume and that new/primary-bound users see no workspace switch/create control. Old financial `workspace_id` and rare legacy multi-membership handling are compatibility infrastructure, not an invitation to create several user-facing Stores.
+- Phase 3 code-level shell/Settings verification is recorded separately; your real visual, keyboard, phone and provider tests are deliberately outside that seal.
+- Phase 10 editorial drafts and internal bookings (migration `0180`, flag `BRIOFOLD_GROWTH_OPERATIONS_ENABLED` initially OFF): inspect created broadcast and post drafts, future editorial plan, update conflict, disabled customer sending, booked resource and overlapping-slot refusal, cancel/rebook and role boundaries. Test at 320/768/1440 in both languages and themes. A planned draft **must never be represented as an actual scheduled provider send**. Existing CRM marketing preferences or verified email identity are NOT provider-specific consent; real opt-in, suppression, provider policies, dispatch and uncertain-delivery review remain separate implementation/provider gates.
+- Phase 10 aggregate operations (migration `0181`, flag `BRIOFOLD_GROWTH_ANALYTICS_ENABLED` initially OFF): check draft/planned campaign totals, internal booking statuses, Inbox assigned/pending/overdue and seven-day customer/human/AI reply counts. Owner/admin download metrics CSV; editor/viewer denied; no names/contact information or verified finance amounts may occur in CSV. A missing function must show unavailable rather than a fictitious zero.
+
+
+### Briofold Phase 10 — Pathao courier provider check
+
+After owner-approved integration and an authorized test account only: configure the merchant-issued Pathao client credentials, verify pickup Store and city/zone/area, book one explicitly approved test parcel with whole-taka COD, compare consignment and merchant reference in Pathao, check status, then record actual handover and later COD settlement separately. Verify normal customer/provider notifications with authorized recipients. Do not retry an unknown booking; reconcile the existing merchant reference first. BRIOFOLD_PATHAO_ENABLED is OFF by default. Automated fictional transport checks are code evidence, not this provider result; this entry is manual pending and no production action is authorized by it.
+
+
+### Briofold Phase 10 — WooCommerce signed catalog source
+
+After owner-approved integration only: connect an owned WooCommerce store using read-only consumer credentials, set its currency to BDT, configure WOO_WEBHOOK_PUBLIC_ORIGIN and the gated source, and create WooCommerce product webhooks using the displayed URL/secret. An unsigned activation ping checks reachability only. Confirm one real signed product notice appears, preview refetches the current simple/variable product, and reviewed Apply alone changes the catalog. Check stale API changes, unpublished/deleted products, signature tamper, source disable, credential/origin replacement and duplicate delivery handling. Never infer customer/payment authority from a product hook. This combined owner checklist item is manual pending; mock transport and local callback checks are code evidence only.
+
+### Phase 10 broadcast dispatch continuation (2026-10-24 Dhaka)
+
+- Automated acceptance pending for CONTROL migration 0207, current-window consented Messenger/Instagram sequence approval/queue/results, schedule/quiet/expiry/cancel and fresh consent/role guards. See `docs/evidence/BRIOFOLD-PHASE10-BROADCAST-20261024.md`.
+- Owner-only later: in an explicitly authorized test Store and provider account, review the exact audience/message preview, consented test recipient, opt-out immediately before send, schedule/quiet and cancellation results. No customer message, provider transport, production flag or migration is authorized now. Actual transport/device delivery remains manual pending, not inferred from queue acceptance.
+- Email/SMS/WhatsApp and outside-window template transports and audience-bound discounts remain unavailable in this increment; broadcast parity remains open.
+
+### Phase 10 team channel/page restrictions (2026-10-24 Dhaka)
+
+- 0208 and `/settings/team/scopes` isolated SQL/Go/browser acceptance pending. Do not mark team parity complete from source or build. See `docs/evidence/BRIOFOLD-PHASE10-MEMBER-CHANNELS-20261024.md`.
+- Later owner review: restrict read on one page and send on a second, verify the member's real Inbox/CRM/media/search/notification behavior, revoke access after queueing, and restore restrictions with current password. Physical paired devices remain independent Store-owned authorization; no production settings/migration or message send is authorized now.
+
+### Phase 10 signed broadcast opt-in and merchant offers (2026-10-24 Dhaka)
+
+- 0209 and its isolated signed callback/offer suite are automated verification pending. See `docs/evidence/BRIOFOLD-PHASE10-SIGNED-OFFERS-20261024.md`. It also adds current channel permission metadata and read-only conversation controls.
+- Later authorized provider test: a designated fictional/test customer explicitly sends `START OFFERS`; review the exact account-bound audience and message sequence, select the named test recipient, and use an audience-bound merchant coupon within its start/expiry and redemption limits. Verify STOP remains permanent and a disabled/expired offer stops pending messages. No real customer send or production activation is authorized now.
 
 ## Store-first subscription checkout Phase 5 (2026-10-22, NOT SEALED)
 
