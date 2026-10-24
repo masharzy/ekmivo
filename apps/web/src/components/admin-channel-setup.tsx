@@ -35,7 +35,8 @@ export function AdminChannelSetup({locale}:{locale:"en"|"bn"}){
  function discard(){setDraft({});setReason("");setReveal({});setError("");setProvider(isDirect(field("AI_DEFAULT_MODEL")?.value??"")?"qwen":"openrouter");}
  async function save():Promise<boolean>{
   if(saving.current||locked||!data)return false;
-  const values=Object.fromEntries(Object.entries(draft).map(([key,input])=>[key,input.trim()]).filter(([,input])=>input));
+  const values:Record<string,string>={};
+  for(const [key,input] of Object.entries(draft))if(input.trim())values[key]=input.trim();
   const model=values.AI_DEFAULT_MODEL??field("AI_DEFAULT_MODEL")?.value??"";
   const key=provider==="openrouter"?"OPENROUTER_API_KEY":"QWEN_API_KEY";
   const aiChanged=Object.keys(values).some(k=>["AI_DEFAULT_MODEL","OPENROUTER_API_KEY","QWEN_API_KEY"].includes(k));
