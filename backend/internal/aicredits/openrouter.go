@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -27,11 +28,14 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 		return result, ErrRejected
 	}
 	body, err := json.Marshal(struct {
-		Model    string    `json:"model"`
-		Messages []Message `json:"messages"`
-		Max      int64     `json:"max_completion_tokens"`
-		Stream   bool      `json:"stream"`
-	}{model, messages, maxOutput, false})
+		Model     string    `json:"model"`
+		Messages  []Message `json:"messages"`
+		Max       int64     `json:"max_completion_tokens"`
+		Stream    bool      `json:"stream"`
+		Reasoning *struct {
+			Enabled bool `json:"enabled"`
+		} `json:"reasoning,omitempty"`
+	}{Model: model, Messages: messages, Max: maxOutput, Stream: false, Reasoning: chatReasoning(model)})
 	if err != nil {
 		return result, ErrRejected
 	}
@@ -43,6 +47,7 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 	request.Header.Set("Content-Type", "application/json")
 	response, err := p.client.Do(request)
 	if err != nil {
+		log.Print("openrouter generation unavailable: transport")
 		return result, errors.New("provider result uncertain")
 	}
 	defer response.Body.Close()
@@ -51,10 +56,12 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 		return result, ErrRejected
 	}
 	if response.StatusCode != 200 {
+		log.Printf("openrouter generation unavailable: status=%d", response.StatusCode)
 		return result, errors.New("provider result uncertain")
 	}
 	raw, err := io.ReadAll(io.LimitReader(response.Body, 131073))
 	if err != nil || len(raw) > 131072 {
+		log.Print("openrouter generation unavailable: response bound or read")
 		return result, errors.New("provider response incomplete")
 	}
 	var parsed struct {
@@ -74,12 +81,16 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 		} `json:"usage"`
 	}
 	if json.Unmarshal(raw, &parsed) != nil {
+		log.Print("openrouter generation unavailable: invalid JSON")
 		return result, errors.New("provider response invalid")
 	}
 	if len(parsed.ID) <= 200 {
 		result.ID = parsed.ID
 	}
 	if result.ID == "" || parsed.Model != model || len(parsed.Choices) != 1 || parsed.Choices[0].Message.Content == nil || parsed.Usage == nil || parsed.Usage.Input == nil || parsed.Usage.Output == nil {
+		// Log structural facts only: no credentials, customer text or provider body.
+		hasContent := len(parsed.Choices) == 1 && parsed.Choices[0].Message.Content != nil
+		log.Printf("openrouter generation unavailable: id=%t model_match=%t choices=%d content=%t usage=%t", result.ID != "", parsed.Model == model, len(parsed.Choices), hasContent, parsed.Usage != nil)
 		return result, errors.New("provider usage unavailable")
 	}
 	result.Text = *parsed.Choices[0].Message.Content
@@ -88,4 +99,17 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 	}
 	result.Usage = Usage{InputTokens: *parsed.Usage.Input, OutputTokens: *parsed.Usage.Output, CachedInputTokens: parsed.Usage.Details.Cached}
 	return result, nil
+}
+
+// This optional-thinking chat model otherwise spends the small reply budget on
+// hidden reasoning and can return no visible answer. Leave other models alone.
+func chatReasoning(model string) *struct {
+	Enabled bool `json:"enabled"`
+} {
+	if model == "qwen/qwen3.8-omni-flash" {
+		return &struct {
+			Enabled bool `json:"enabled"`
+		}{Enabled: false}
+	}
+	return nil
 }
