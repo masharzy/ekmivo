@@ -161,6 +161,7 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByText('public.example/policy',{exact:true}).waitFor();
   await page.getByLabel('Title or question',{exact:true}).fill('Browser warranty');await page.getByLabel('Content or answer',{exact:true}).fill('Marigold warranty is one year.');
   await page.getByRole('button',{name:'Save source',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();
+  await page.getByLabel('Search published sources',{exact:true}).uncheck();
   await page.getByLabel('Test question',{exact:true}).fill('Marigold');await page.getByRole('button',{name:'Search sources',exact:true}).click();await page.getByText('Marigold warranty is one year.',{exact:true}).waitFor();
   await page.reload();await page.getByText('Browser warranty',{exact:true}).waitFor();
   await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${workspace} AND user_id=${actor}`;

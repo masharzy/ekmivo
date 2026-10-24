@@ -83,7 +83,8 @@ func (s *Service) HandleInboxConnection(w http.ResponseWriter, r *http.Request) 
 		fail(w, 422, "INVALID_CONNECTION")
 		return
 	}
-	version := os.Getenv("META_GRAPH_VERSION")
+	cfg, _ := s.channelConfig(r.Context())
+	version := cfg["META_GRAPH_VERSION"]
 	if !strings.HasPrefix(version, "v") || strings.ContainsAny(version, "/?#") {
 		fail(w, 503, "CHANNEL_NOT_CONFIGURED")
 		return
@@ -140,7 +141,8 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "GET" {
-		expected := os.Getenv("META_WEBHOOK_VERIFY_TOKEN")
+		cfg, _ := s.channelConfig(r.Context())
+		expected := cfg["META_WEBHOOK_VERIFY_TOKEN"]
 		if expected == "" || r.URL.Query().Get("hub.mode") != "subscribe" || !hmac.Equal([]byte(expected), []byte(r.URL.Query().Get("hub.verify_token"))) {
 			fail(w, 403, "WEBHOOK_VERIFICATION_REJECTED")
 			return
@@ -154,7 +156,8 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		fail(w, 413, "BODY_TOO_LARGE")
 		return
 	}
-	if !inboxWebhookSignature(os.Getenv("META_APP_SECRET"), r.Header.Get("X-Hub-Signature-256"), raw) {
+	cfg, _ := s.channelConfig(r.Context())
+	if !inboxWebhookSignature(cfg["META_APP_SECRET"], r.Header.Get("X-Hub-Signature-256"), raw) {
 		fail(w, 403, "WEBHOOK_SIGNATURE_REJECTED")
 		return
 	}
@@ -385,12 +388,18 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','BROADCAST_DISABLED')", job.ID)
 				continue
 			}
+			if job.Channel == "tg" {
+				state, id, safe := s.sendTelegram(ctx, job)
+				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,$2,$3,$4)", job.ID, id, state, safe)
+				continue
+			}
 			if job.Channel == "site" {
 				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,$2,'sent','')", job.ID, "site:"+job.ID)
 				continue
 			}
 			state, id, safe := "failed", "", "CHANNEL_NOT_CONFIGURED"
-			version := os.Getenv("META_GRAPH_VERSION")
+			cfg, _ := s.channelConfig(ctx)
+			version := cfg["META_GRAPH_VERSION"]
 			encoded, err := base64.StdEncoding.DecodeString(job.Credential)
 			token, decryptErr := merchantwebhook.Decrypt(s.Pipeline.Key, encoded, job.Workspace+"|inbox|"+job.Channel+"|"+job.Account)
 			if err == nil && decryptErr == nil && strings.HasPrefix(version, "v") && !strings.ContainsAny(version, "/?#") {

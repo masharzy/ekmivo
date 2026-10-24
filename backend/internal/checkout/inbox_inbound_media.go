@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -209,7 +208,8 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	}
 	mediaURL := ref["url"]
 	if str(src, "provider") == "wa" {
-		version := os.Getenv("META_GRAPH_VERSION")
+		cfg, _ := s.channelConfig(ctx)
+		version := cfg["META_GRAPH_VERSION"]
 		if !strings.HasPrefix(version, "v") || strings.ContainsAny(version, "/?#") {
 			return errors.New("CHANNEL_NOT_CONFIGURED")
 		}

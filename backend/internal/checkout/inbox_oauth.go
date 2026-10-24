@@ -1,19 +1,20 @@
 package checkout
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
 )
 
-func metaConfig() (string, string, string, string, error) {
-	app, secret, version, redirect := os.Getenv("META_APP_ID"), os.Getenv("META_APP_SECRET"), os.Getenv("META_GRAPH_VERSION"), os.Getenv("META_OAUTH_REDIRECT_URI")
+func (s *Service) metaConfig(ctx context.Context) (string, string, string, string, error) {
+	cfg, _ := s.channelConfig(ctx)
+	app, secret, version, redirect := cfg["META_APP_ID"], cfg["META_APP_SECRET"], cfg["META_GRAPH_VERSION"], cfg["META_OAUTH_REDIRECT_URI"]
 	u, err := url.Parse(redirect)
 	if app == "" || secret == "" || !strings.HasPrefix(version, "v") || strings.ContainsAny(version, "/?#") || err != nil || u.Scheme != "https" || u.Host == "" {
 		return "", "", "", "", errors.New("channel not configured")
@@ -81,7 +82,12 @@ func (s *Service) HandleInboxOAuthBegin(w http.ResponseWriter, r *http.Request) 
 		fail(w, 422, "INVALID_CHANNEL")
 		return
 	}
-	app, _, version, redirect, err := metaConfig()
+	cfgStatus, _ := s.channelConfig(r.Context())
+	if len(channelReadiness(cfgStatus)[b.Provider].([]string)) > 0 {
+		fail(w, 503, "CHANNEL_NOT_CONFIGURED")
+		return
+	}
+	app, _, version, redirect, err := s.metaConfig(r.Context())
 	if err != nil {
 		fail(w, 503, "CHANNEL_NOT_CONFIGURED")
 		return
@@ -107,7 +113,8 @@ func (s *Service) HandleInboxOAuthBegin(w http.ResponseWriter, r *http.Request) 
 	}
 	query := url.Values{"client_id": {app}, "redirect_uri": {redirect}, "state": {state}, "response_type": {"code"}}
 	if b.Provider == "wa" {
-		config := os.Getenv("META_WHATSAPP_CONFIG_ID")
+		cfg, _ := s.channelConfig(r.Context())
+		config := cfg["META_WHATSAPP_CONFIG_ID"]
 		if config == "" {
 			fail(w, 503, "CHANNEL_NOT_CONFIGURED")
 			return
@@ -143,7 +150,7 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 		authError(w, err)
 		return
 	}
-	app, secret, version, redirect, err := metaConfig()
+	app, secret, version, redirect, err := s.metaConfig(r.Context())
 	if err != nil {
 		fail(w, 503, "CHANNEL_NOT_CONFIGURED")
 		return
