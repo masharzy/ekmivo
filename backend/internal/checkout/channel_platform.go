@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
 	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,7 +18,7 @@ import (
 )
 
 var channelKeys = []string{"META_APP_ID", "META_APP_SECRET", "META_GRAPH_VERSION", "META_OAUTH_REDIRECT_URI", "META_WEBHOOK_VERIFY_TOKEN", "META_WHATSAPP_CONFIG_ID", "CHANNEL_PUBLIC_ORIGIN", "QWEN_API_KEY", "OPENROUTER_API_KEY", "AI_DEFAULT_MODEL"}
-var channelSecrets = map[string]bool{"META_APP_SECRET": true, "META_WEBHOOK_VERIFY_TOKEN": true, "QWEN_API_KEY":true, "OPENROUTER_API_KEY":true}
+var channelSecrets = map[string]bool{"META_APP_SECRET": true, "META_WEBHOOK_VERIFY_TOKEN": true, "QWEN_API_KEY": true, "OPENROUTER_API_KEY": true}
 var graphVersionPattern = regexp.MustCompile(`^v[0-9]{1,3}\.[0-9]{1,2}$`)
 var channelNumber = regexp.MustCompile(`^[0-9]{1,30}$`)
 
@@ -37,8 +38,8 @@ func validChannelSetting(k, v string) bool {
 		u, e := url.Parse(v)
 		return e == nil && u.Scheme == "https" && u.Host != "" && u.User == nil && u.RawQuery == "" && u.Fragment == "" && (k != "CHANNEL_PUBLIC_ORIGIN" || u.Path == "" || u.Path == "/")
 	case "AI_DEFAULT_MODEL":
- return regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$`).MatchString(v)
- case "META_APP_SECRET", "META_WEBHOOK_VERIFY_TOKEN", "QWEN_API_KEY", "OPENROUTER_API_KEY":
+		return regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$`).MatchString(v)
+	case "META_APP_SECRET", "META_WEBHOOK_VERIFY_TOKEN", "QWEN_API_KEY", "OPENROUTER_API_KEY":
 		return len(v) >= 16
 	}
 	return false
@@ -124,6 +125,25 @@ func (s *Service) HandleChannelPlatform(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	c, storage, revision := s.loadChannelConfig(r.Context())
+	w.Header().Set("Cache-Control", "private, no-store")
+	// Read-only provider authentication check. Never generates tokens, enables
+	// paid AI, or returns provider response bodies/credential metadata.
+	if r.Method == "GET" && r.URL.Query().Get("capability") == "credentials" {
+		if !s.budget(w, "provider-key-check:"+actor.UserID, 5) {
+			return
+		}
+		if c["OPENROUTER_API_KEY"] == "" {
+			fail(w, 422, "OPENROUTER_KEY_MISSING")
+			return
+		}
+		valid, err := checkOpenRouterKey(r.Context(), inboxHTTP, c["OPENROUTER_API_KEY"])
+		if err != nil {
+			fail(w, 503, "PROVIDER_CHECK_UNAVAILABLE")
+			return
+		}
+		write(w, 200, map[string]any{"provider": "openrouter", "credential_valid": valid, "model": c["AI_DEFAULT_MODEL"], "generation_tested": false})
+		return
+	}
 	if r.Method == "POST" {
 		var body struct {
 			Values   map[string]string `json:"values"`
@@ -175,6 +195,34 @@ func (s *Service) HandleChannelPlatform(w http.ResponseWriter, r *http.Request) 
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	write(w, 200, map[string]any{"fields": fields, "storage_ready": storage, "channels": channelReadiness(c), "revision": revision, "meta_webhook_url": strings.TrimRight(c["CHANNEL_PUBLIC_ORIGIN"], "/") + "/v1/channels/meta/webhook"})
+}
+
+func checkOpenRouterKey(ctx context.Context, client *http.Client, key string) (bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://openrouter.ai/api/v1/key", nil)
+	if err != nil {
+		return false, errors.New("provider check unavailable")
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
+	res, err := client.Do(req)
+	if err != nil {
+		return false, errors.New("provider check unavailable")
+	}
+	defer res.Body.Close()
+	if res.StatusCode == 401 || res.StatusCode == 403 {
+		return false, nil
+	}
+	if res.StatusCode != 200 {
+		return false, errors.New("provider check unavailable")
+	}
+	var body struct {
+		Data *struct {
+			Usage *float64 `json:"usage"`
+		} `json:"data"`
+	}
+	if json.NewDecoder(io.LimitReader(res.Body, 65536)).Decode(&body) != nil || body.Data == nil || body.Data.Usage == nil {
+		return false, errors.New("invalid provider check response")
+	}
+	return true, nil
 }
 func (s *Service) HandleChannelReadiness(w http.ResponseWriter, r *http.Request) {
 	if e := s.inboxManageSession(r, r.PathValue("workspaceID"), explicitRealm(r)); e != nil {
