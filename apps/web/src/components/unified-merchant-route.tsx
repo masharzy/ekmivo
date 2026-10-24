@@ -1,4 +1,5 @@
 import "server-only";
+import Link from "next/link";
 import {notFound,redirect} from "next/navigation";
 import {requireUser,preferredWorkspaceFor} from "../lib/server/auth";
 import {paymentContextFor} from "../lib/server/workspace-context";
@@ -49,7 +50,15 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  // Preferred business is rechecked against memberships on every server read.
  // No client-provided workspace ID, query, locale or cookie grants financial access.
  const workspace=await preferredWorkspaceFor(user.id);
- if(!workspace||workspace.mode==="off")redirect("/workspaces");
+ if(!workspace)redirect("/workspaces");
+ if(workspace.mode==="off"){
+  if(root!=="dashboard"||view.length)notFound();
+  return <main className="ek-app-shell ek-workspace-page"><div className="ek-page-wrap">
+   <p className="ek-page-kicker">EKMIVO / BUSINESS ACCESS</p><h1>{locale==="bn"?"এই ব্যবসায় এখন কোনো সেবা চালু নেই":"No enabled services for this business"}</h1>
+   <p className="ek-lead">{locale==="bn"?"আপনার সদস্যপদ ও আগের তথ্য অক্ষত আছে। সেবা চালু করতে মালিক বা অ্যাডমিনের সঙ্গে যোগাযোগ করুন।":"Your membership and existing history are preserved. Contact the owner or administrator to enable a service."}</p>
+   <Link className="ek-action" href="/account">{locale==="bn"?"অ্যাকাউন্ট ও নিরাপত্তা":"Account & security"}</Link>
+  </div></main>;
+ }
  // Keep previously issued /settings/account deep links working while serving
  // the real session/MFA/account security screen rather than workspace settings.
  if(root==="settings"&&view.length===1&&view[0]==="account")redirect("/account");
@@ -84,7 +93,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   :kind==="member-channel-scopes"
    ?<MemberChannelScopes workspaceId={workspace.id} bn={locale==="bn"}/>
   :kind==="team-groups"
-   ?<TeamGroups key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"} scopesEnabled={process.env.BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED==="true"}/>
+   ?<TeamGroups key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"} scopesEnabled={workspace.mode!=="commerce"&&process.env.BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED==="true"}/>
   :root==="settings"&&view[0]==="activity"&&process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true"
    ?<><BriofoldUnifiedActivity workspaceId={workspace.id} actorId={user.id} locale={locale}
        environment={paymentContext?.environment??"live"} filters={activityFilters} embedded={!!paymentContext}/>

@@ -81,7 +81,7 @@ jobs:
         run: node --test scripts/briofold-crm-csv.test.mjs
       - name: Single Store signup, switching and typography regression contracts
         working-directory: apps/web
-        run: node --test scripts/primary-store-binding-contract.test.mjs
+        run: node --test scripts/primary-store-binding-contract.test.mjs scripts/business-canonical-routes.test.mjs
       - name: Published subscription pricing contracts (Phase 2)
         working-directory: apps/web
         run: node --test scripts/subscription-public-catalog.test.mjs scripts/subscription-public-quote.test.mjs scripts/subscription-offer-render.test.mjs scripts/subscription-offer-review-contract.test.mjs

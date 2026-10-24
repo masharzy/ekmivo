@@ -41,7 +41,7 @@ export async function DeveloperConsole({locale,workspace,environment,userId}:{
  }
  const keyPanel=(realm:PaymentEnvironment)=>!allowed?<div role="alert" className="ds-empty">
    <h3>{bn?"API key পরিচালনার অনুমতি নেই":"Key management restricted"}</h3>
-   <p>{bn?"শুধু ব্যবসার মালিক বা অ্যাডমিন API key দেখতে ও পরিবর্তন করতে পারবেন।":"Only the workspace owner or admin can view and manage keys."}</p>
+   <p>{bn?"শুধু ব্যবসার মালিক বা অ্যাডমিন API key দেখতে ও পরিবর্তন করতে পারবেন।":"Only the business owner or admin can view and manage keys."}</p>
   </div>:unavailable?<div role="alert" className="ds-empty">
    <h3>{bn?"Credential service পাওয়া যাচ্ছে না":"Credential service unavailable"}</h3>
    <p>{bn?"ডাটাবেস migration এবং service readiness নিশ্চিত করতে হবে। কোনো demo কী দেখানো হচ্ছে না।":"Database migration and service readiness must be checked. No demo keys are shown."}</p>

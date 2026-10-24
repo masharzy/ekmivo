@@ -65,7 +65,8 @@ test("settings uses opt-in CSS module and preserves legacy payment screens",()=>
  assert.match(src,/unified-settings-index\.module\.css/);
  assert.match(src,/enabledUnifiedService\(mode,item\.service\)/);
  const layout=source("app/[locale]/w/[workspaceId]/[section]/layout.tsx");
- assert.match(layout,/AppShell/);
+ assert.doesNotMatch(layout,/<AppShell/);
+ assert.match(source("app/[locale]/w/[workspaceId]/[section]/[serviceSection]/page.tsx"),/redirectLegacyDashboard/);
  const frame=source("components/dashboard-frame.tsx");
  assert.match(frame,/unified\?"/);
  assert.match(frame,/data-service=\{unified\?"payments":service\}/);
@@ -270,7 +271,7 @@ function renderDraftSwitch({save=true,discard=true,choose=true,pathname="/dashbo
  const exports={};
  const compile=(text)=>ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
  const sections={};runInNewContext(compile(source("lib/dashboard-sections.ts")),{exports:sections});
- const legacy={};runInNewContext(compile(source("lib/dashboard-navigation.ts")),{exports:legacy,require:()=>sections});
+ const legacy={};runInNewContext(compile(source("lib/dashboard-navigation.ts")),{exports:legacy,require:id=>id==="./unified-navigation"?navigation:sections});
  const deps={
   react,"react/jsx-runtime":{jsx,jsxs:jsx,Fragment:"fragment"},
   "next/navigation":{useRouter:()=>router,usePathname:()=>pathname},

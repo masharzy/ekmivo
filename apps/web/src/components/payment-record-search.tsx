@@ -1,4 +1,5 @@
 "use client";
+import {unifiedFinancialDetailPath} from "../lib/unified-navigation";
 import {planSectionAllowed} from "../lib/plan-features";
 import type {PlanTerms} from "../lib/payment-plans";
 import {useEffect,useState} from "react";
@@ -36,6 +37,7 @@ export function PaymentRecordSearch({locale,workspaceId,environment,query,open,o
     if(!Array.isArray(json.items))throw Error("INVALID_RESULT");
     return json.items.slice(0,5).flatMap((item:SourceItem)=>{
      if(typeof item.id!=="string"||!uuid.test(item.id))return [];
+     const href=unifiedFinancialDetailPath(section,item.id);if(!href)return [];
      const raw=item.body?.name??item.merchant_reference??item.reference??item.method??item.status;
      const title=typeof raw==="string"&&raw.length?raw.slice(0,120):item.id.slice(0,8);
      const amount=item.verified_amount_minor??item.amount_minor;
@@ -43,7 +45,7 @@ export function PaymentRecordSearch({locale,workspaceId,environment,query,open,o
       ?new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(amount/100)
       :typeof item.status==="string"?item.status.slice(0,30):"";
      return [{id:item.id,section,title,detail,
-      href:`/w/${workspaceId}/payments/${section==="payments"?"transactions":section}/${item.id}`}];
+      href}];
     });
    }));
    if(controller.signal.aborted)return;

@@ -70,7 +70,7 @@ export function BrowserDevicePreferences({bn}:{bn:boolean}){
   }catch{setInstallStatus(t("The install prompt was unavailable.","ইনস্টল অপশন পাওয়া যায়নি।"));}
  };
  return <section className={styles.root}>
-  <header><p className={styles.eyebrow}>{t("This browser only","শুধু এই ব্রাউজার")}</p><h1>{t("Device & notification preferences","ডিভাইস ও নোটিফিকেশন পছন্দ")}</h1><p>{t("Local settings are stored in this browser, not in your Store profile. Other devices keep their own settings.","এই পছন্দগুলো শুধু এই ব্রাউজারে থাকে; স্টোর প্রোফাইলে নয়। অন্য ডিভাইসের পছন্দ আলাদা থাকবে।")}</p></header>
+  <header><p className={styles.eyebrow}>{t("This browser only","শুধু এই ব্রাউজার")}</p><h1>{t("Device & notification preferences","ডিভাইস ও নোটিফিকেশন পছন্দ")}</h1><p>{t("Local settings are stored in this browser, not in your Business profile. Other devices keep their own settings.","এই পছন্দগুলো শুধু এই ব্রাউজারে থাকে; ব্যবসা প্রোফাইলে নয়। অন্য ডিভাইসের পছন্দ আলাদা থাকবে।")}</p></header>
   {error&&<p className={styles.error} role="alert">{error}</p>}
   <div className={styles.grid}>
    <section className={styles.card} aria-label={t("Sound preferences","সাউন্ড পছন্দ")}>

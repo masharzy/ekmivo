@@ -105,13 +105,13 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await page.goto(origin+'/dashboard');
   const businessAlerts=page.getByRole('region',{name:'Business alerts',exact:true});
   await businessAlerts.getByText('1 conversation(s) have a customer message waiting for a reply.',{exact:true}).waitFor();
-  const setupChecklist=page.getByRole('region',{name:'Store setup checklist',exact:true});
+  const setupChecklist=page.getByRole('region',{name:'Business setup checklist',exact:true});
   // Each status is a text node within its checklist <li>, not a separate
   // element. Assert the labeled source row and its actual server-owned state.
   await setupChecklist.getByRole('listitem').filter({hasText:/Connect messaging channels.*Connected/}).waitFor();
   await setupChecklist.getByRole('listitem').filter({hasText:/Review customer response queue.*Needs attention/}).waitFor();
   await setupChecklist.getByRole('listitem').filter({hasText:/Review AI instructions and publish state.*Review required/}).waitFor();
-  await setupChecklist.getByRole('listitem').filter({hasText:/Review Store details.*Review required/}).waitFor();
+  await setupChecklist.getByRole('listitem').filter({hasText:/Review Business details.*Review required/}).waitFor();
   assert.equal(await setupChecklist.getByRole('link',{name:'Connect messaging channels',exact:true}).getAttribute('href'),'/settings/channels');
   await page.goto(origin+'/inbox');await page.getByRole('button',{name:/Workflow fictional customer/}).click();await page.getByText(/Conversation tools/).click();
   const save=async(action,button)=>{const response=page.waitForResponse(r=>{try{return r.request().postDataJSON()?.action===action;}catch{return false;}});await page.getByRole('button',{name:button,exact:true}).click();assert.equal((await response).status(),200);};

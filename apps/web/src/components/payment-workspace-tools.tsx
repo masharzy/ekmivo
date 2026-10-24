@@ -83,7 +83,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
     setTickets(d.items);
    }
    setLoaded(true);
-  }catch(e){if(!signal?.aborted){if(resource==="settings")setLoaded(false);setError(t("Unable to load workspace data. Check the connection and retry.","ওয়ার্কস্পেসের তথ্য পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।")+" ("+(e instanceof Error?e.message:"UNKNOWN")+")")}}
+  }catch(e){if(!signal?.aborted){if(resource==="settings")setLoaded(false);setError(t("Unable to load business data. Check the connection and retry.","ব্যবসার তথ্য পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।")+" ("+(e instanceof Error?e.message:"UNKNOWN")+")")}}
   finally{if(!signal?.aborted)setLoading(false)}
  },[base,resource,environment,t,workspaceName]);
  useEffect(()=>{if(seed)return;const c=new AbortController();void Promise.resolve().then(()=>{if(!c.signal.aborted)return load(c.signal)});return()=>c.abort()},[load,seed]);
@@ -129,18 +129,18 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
  async function invite(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(teamLimit.blocked)return;if(await command("invite",{email:email.trim().toLowerCase(),role})){setEmail("");setRole("viewer")}}
  async function support(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(await command("help",{subject:subject.trim(),message:issue.trim()})){setSubject("");setIssue("")}}
  const visible=members.filter(member=>(member.name+" "+(member.email??"")+" "+member.role).toLowerCase().includes(find.trim().toLowerCase())&&(roleFilter==="all"||member.role===roleFilter));
- const resourceTitle=resource==="team"?t("Team & permissions","টিম ও অনুমতি"):resource==="settings"?t("Workspace settings","ওয়ার্কস্পেস সেটিংস"):t("Help & feedback","সহায়তা ও মতামত");
+ const resourceTitle=resource==="team"?t("Team & permissions","টিম ও অনুমতি"):resource==="settings"?t("Business settings","ব্যবসা সেটিংস"):t("Help & feedback","সহায়তা ও মতামত");
  return <div className={resource==="team"?"ek-team-page":"ws-workbench"} aria-busy={busy}>
   <header className={resource==="team"?"tp-header":"ws-page-head"}><div><h1>{resourceTitle}</h1><p>{resource==="team"?t("People and permissions for this business.","এই ব্যবসার সদস্য ও তাদের অনুমতি।"):resource==="settings"?t("Business identity, checkout branding and customer contact.","ব্যবসার পরিচয়, চেকআউট ও যোগাযোগ।"):t("Contact support and follow your submitted requests.","সহায়তার অনুরোধ পাঠান ও অগ্রগতি দেখুন।")}</p></div><button type="button" className="ws-refresh" disabled={busy||loading} onClick={refresh}>{t("Refresh","রিফ্রেশ")}</button></header>
   {error&&<div className="ws-alert" role="alert"><span>{error}</span><button type="button" onClick={refresh} disabled={busy}>{t("Retry","আবার চেষ্টা")}</button></div>}
   {notice&&<p data-feedback="success" className="ws-note" role="status">{notice}</p>}
-  {loading?<div className="ws-loading" role="status">{t("Loading workspace…","ওয়ার্কস্পেস লোড হচ্ছে…")}</div>:!loaded?<p className="ws-empty" role="status">{t("Workspace data is unavailable. Try Refresh.","ওয়ার্কস্পেসের তথ্য পাওয়া যায়নি। রিফ্রেশ করুন।")}</p>:<>
+  {loading?<div className="ws-loading" role="status">{t("Loading business…","ব্যবসা লোড হচ্ছে…")}</div>:!loaded?<p className="ws-empty" role="status">{t("Business data is unavailable. Try Refresh.","ব্যবসার তথ্য পাওয়া যায়নি। রিফ্রেশ করুন।")}</p>:<>
    {resource==="team"&&<>
     <PlanResourceStatus value={teamLimit} locale={locale}/>
     <div className="tp-stats" aria-label={t("Team summary","টিমের সারসংক্ষেপ")}><div><span>{t("Active members","সক্রিয় সদস্য")}</span><strong>{members.length}</strong></div><div><span>{t("Pending invites","অপেক্ষমাণ আমন্ত্রণ")}</span><strong>{invites.length}</strong></div><div><span>{t("Your role","আপনার দায়িত্ব")}</span><strong className="tp-stat-role">{isOwner?t("Owner","মালিক"):canManage?t("Admin","অ্যাডমিন"):t("Member","সদস্য")}</strong></div></div>
     <div className="tp-columns"><div className="tp-column">
      <section className="tp-panel">
-      <div className="tp-panel-header"><h2>{t("Members","সদস্য")}</h2><p>{t("Who belongs to this workspace.","এই ওয়ার্কস্পেসের সদস্যরা।")}</p></div>
+      <div className="tp-panel-header"><h2>{t("Members","সদস্য")}</h2><p>{t("Who belongs to this business.","এই ব্যবসার সদস্যরা।")}</p></div>
       <div className="tp-search-row"><input type="search" aria-label={t("Search members","সদস্য খুঁজুন")} value={find} onChange={e=>setFind(e.target.value)} placeholder={t("Search by name or email","নাম বা ইমেইল লিখে খুঁজুন")}/><select aria-label={t("Filter by role","দায়িত্ব অনুযায়ী খুঁজুন")} value={roleFilter} onChange={e=>setRoleFilter(e.target.value)}><option value="all">{t("All roles","সব দায়িত্ব")}</option>{["owner","admin","editor","viewer"].map(r=><option value={r} key={r}>{memberRole(r)}</option>)}</select></div>
       {visible.length===0?<div className="tp-empty"><strong>{t("No matching members","কোনো সদস্য পাওয়া যায়নি")}</strong><span>{t("Try another search or role.","অন্য নাম বা দায়িত্ব দিয়ে খুঁজুন।")}</span></div>:
       <div className="tp-members">{visible.map(member=>{
@@ -163,7 +163,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
        [t("View payments & reports","পেমেন্ট ও রিপোর্ট দেখা"),1,1,1,1],
        [t("Issue refunds","রিফান্ড দেওয়া"),1,1,0,0],
        [t("Manage API keys","API key পরিচালনা"),1,1,0,0],
-       [t("Store settings","স্টোর সেটিংস"),1,1,0,0],
+       [t("Business settings","ব্যবসা সেটিংস"),1,1,0,0],
        [t("Manage team","টিম পরিচালনা"),1,1,0,0],
        [t("Billing & usage","বিল ও ব্যবহার"),1,0,0,0]
       ].map((row,i)=><tr key={i}><th scope="row">{row[0]}</th>{row.slice(1).map((v,j)=><td key={j}>{v?<span className="tp-yes" aria-label={t("Allowed","অনুমোদিত")}>✓</span>:<span className="tp-no">–</span>}</td>)}</tr>)}</tbody></table></div>}
@@ -182,7 +182,7 @@ export function PaymentWorkspaceTools({locale,workspaceId,environment,resource,c
     </dialog>
    </>}
    {resource==="settings"&&<nav className="ref-settings-categories" aria-label={t("Settings categories","সেটিংস বিভাগ")}>
- {[['business-profile',t("Business identity","ব্যবসার পরিচয়"),t("Name and checkout presentation","নাম ও চেকআউটের পরিচয়"),'◈'],['customer-contact',t("Contact & policies","যোগাযোগ ও নীতিমালা"),t("Support, notices and legal links","সহায়তা, নোটিশ ও শর্তাবলি"),'↗'],['language-region',t("Language & region","ভাষা ও অঞ্চল"),t("Checkout language and timezone","চেকআউটের ভাষা ও সময়"),'◎'],...(isOwner?[['privacy-data',t("Privacy & data","গোপনীয়তা ও তথ্য"),t("Workspace data requests","ওয়ার্কস্পেসের তথ্যের অনুরোধ"),'◇']]:[])].map(([id,title,description,icon])=><a key={id} href={"#"+id}><span aria-hidden="true">{icon}</span><div><strong>{title}</strong><small>{description}</small></div><b aria-hidden="true">↗</b></a>)}
+ {[['business-profile',t("Business identity","ব্যবসার পরিচয়"),t("Name and checkout presentation","নাম ও চেকআউটের পরিচয়"),'◈'],['customer-contact',t("Contact & policies","যোগাযোগ ও নীতিমালা"),t("Support, notices and legal links","সহায়তা, নোটিশ ও শর্তাবলি"),'↗'],['language-region',t("Language & region","ভাষা ও অঞ্চল"),t("Checkout language and timezone","চেকআউটের ভাষা ও সময়"),'◎'],...(isOwner?[['privacy-data',t("Privacy & data","গোপনীয়তা ও তথ্য"),t("Business data requests","ব্যবসার তথ্যের অনুরোধ"),'◇']]:[])].map(([id,title,description,icon])=><a key={id} href={"#"+id}><span aria-hidden="true">{icon}</span><div><strong>{title}</strong><small>{description}</small></div><b aria-hidden="true">↗</b></a>)}
  </nav>}
  {resource==="settings"&&<div className="ws-two-col ws-settings-layout"><div className="ws-sidebar-col">
     <section className="ws-card" id="business-profile"><div className="ws-section-heading"><div><h2>{t("Business profile","ব্যবসার পরিচয়")}</h2><p>{t("What customers see at checkout.","চেকআউটে গ্রাহক যা দেখবেন।")}</p></div></div>

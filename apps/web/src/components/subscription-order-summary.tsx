@@ -187,7 +187,7 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
       <div className="ek-order-product"><div className="ek-order-product-icon" aria-hidden="true">E</div><div><h3>{bn?order.offer.name_bn||order.offer.name:order.offer.name}</h3>
        <p>{({payments:t("Payments subscription","পেমেন্টস সাবস্ক্রিপশন"),ai_credit:t("AI prepaid credits","এআই প্রিপেইড ক্রেডিট"),bundle:t("Payments + AI bundle","পেমেন্টস + এআই বান্ডেল")})[order.offer.product]}</p>
        {order.offer.included_ai_credits&&<p>{t("Included AI credits:","অন্তর্ভুক্ত এআই ক্রেডিট:")} {order.offer.included_ai_credits}</p>}</div></div>
-      <div className="ek-order-field"><span>{t("Store","স্টোর")}</span><strong>{storeName}</strong></div>
+      <div className="ek-order-field"><span>{t("Business","ব্যবসা")}</span><strong>{storeName}</strong></div>
       <div className="ek-order-field"><span>{t("Term","মেয়াদ")}</span><strong>{({monthly:t("Monthly","মাসিক"),yearly:t("Yearly","বার্ষিক"),one_time:t("One time","এককালীন")})[order.offer.term]}</strong></div>
       <div className="ek-order-field"><span>{t("Quantity","পরিমাণ")}</span><strong>{order.offer.quantity}</strong></div>
       <div className="ek-order-field"><span>{t("Published price version","প্রকাশিত মূল্য সংস্করণ")}</span><strong className="ek-order-version">{order.offer.version_id}</strong></div>

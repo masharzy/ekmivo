@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { sections, type SectionKey } from "../lib/dashboard-sections";
 import { dashboardHref, navigation, searchableNavigation, searchableBusinesses, serviceEnabled, serviceNames, sectionInService, type Locale, type Service, type PaymentEnvironment } from "../lib/dashboard-navigation";
 import { DashboardIcon as Icon } from "./dashboard-icon";
-import {unifiedNavigation,enabledUnifiedService,unifiedSectionHref} from "../lib/unified-navigation";
+import {unifiedNavigation,enabledUnifiedService,unifiedSectionHref,isUnifiedFinancialDetailPath} from "../lib/unified-navigation";
 import {chooseUnifiedBusiness} from "../actions/unified-business";
 import { SiteControls } from "./site-controls";
 import { DashboardFeedback } from "./dashboard-feedback";
@@ -258,7 +258,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  };
  const switchBusiness=(target:Space)=>{
   if(target.id===workspace.id){setSearchOpen(false);setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;return;}
-  if(unified&&target.mode!=="off"){
+  if(unified){
    setSearchOpen(false);setMobileOpen(false);if(businessMenu.current)businessMenu.current.open=false;
    if(activeDrafts().length){setBlockedRoute("/dashboard",target.id);setDraftError("");return;}
    startTransition(async()=>{if(await chooseUnifiedBusiness(target.id)){router.push("/dashboard");router.refresh();}});
@@ -281,7 +281,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
   goTo(workspace.id,service,environment,key);
  };
  const openPaymentSearchResult=(destination:string)=>{
-  if(!destination.startsWith(`/w/${workspace.id}/payments/`))return;
+  if(!isUnifiedFinancialDetailPath(destination))return;
   setSearchOpen(false);
   if(activeDrafts().length){setBlockedRoute(destination);setDraftError("");return;}
   startTransition(()=>router.push(destination));
@@ -303,17 +303,17 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
   <div className="ds-business-block">{spaces.length<=1?
-   <div className="ds-business-static" role="group" aria-label={bn?"আপনার স্টোর":"Your Store"}>
+   <div className="ds-business-static" role="group" aria-label={bn?"আপনার ব্যবসা":"Your Business"}>
     <span className="ds-business-avatar" aria-hidden="true">{workspace.name.slice(0,1).toUpperCase()}</span>
     <strong className="ds-business-current-name">{workspace.name}</strong>
    </div>:
    <details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
-   <summary aria-label={bn?"ওয়ার্কস্পেস পরিবর্তন":"Switch workspace"} title={workspace.name}><span className="ds-business-avatar">{workspace.name.slice(0,1).toUpperCase()}</span><strong className="ds-business-current-name">{workspace.name}</strong><Icon name="chevron"/></summary>
-   <div className="ds-business-menu" role="group" aria-label={bn?"ওয়ার্কস্পেস":"Workspaces"}>
+   <summary aria-label={bn?"ব্যবসা পরিবর্তন":"Switch business"} title={workspace.name}><span className="ds-business-avatar">{workspace.name.slice(0,1).toUpperCase()}</span><strong className="ds-business-current-name">{workspace.name}</strong><Icon name="chevron"/></summary>
+   <div className="ds-business-menu" role="group" aria-label={bn?"ব্যবসা":"Businesses"}>
     <label className="ds-switch-search"><span className="sr-only">{bn?"ব্যবসা খুঁজুন":"Find business"}</span><input value={businessQuery} onChange={event=>setBusinessQuery(event.target.value)} placeholder={bn?"ব্যবসা খুঁজুন…":"Search businesses…"} /></label>
     {visibleBusinesses.map(space=><button key={space.id} type="button" aria-current={space.id===workspace.id?"true":undefined} onClick={()=>switchBusiness(space)}><span className="ds-business-avatar">{space.name.slice(0,1).toUpperCase()}</span><span><strong>{space.name}</strong><small>{roleNames[space.role][locale]}</small></span>{space.id===workspace.id&&<Icon name="check"/>}</button>)}
     {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No businesses match"}</p>}
-    <div className="ds-business-actions"><Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"ওয়ার্কস্পেস পরিচালনা":"Manage workspaces"}</Link><Link href="/workspaces?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন ওয়ার্কস্পেস":"New workspace"}</Link></div>
+    <div className="ds-business-actions"><Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"ব্যবসা পরিচালনা":"Manage businesses"}</Link><Link href="/workspaces?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন ব্যবসা":"New business"}</Link></div>
    </div>
   </details>}
   </div>
@@ -329,7 +329,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  return <div className="ds-app" data-service={unified?"payments":service} data-unified={unified?"true":undefined} data-environment={environment}><DashboardFeedback locale={locale}/>
   <a className="ds-skip" href="#dashboard-content">{bn?"মূল অংশে যান":"Skip to content"}</a>
   <aside className="ds-sidebar">{sidebar()}</aside>
-  <dialog ref={drawer} className="ds-mobile-dialog" aria-label={bn?"ওয়ার্কস্পেস মেনু":"Workspace menu"} onCancel={()=>setMobileOpen(false)} onClose={()=>setMobileOpen(false)}>{sidebar(true)}</dialog>
+  <dialog ref={drawer} className="ds-mobile-dialog" aria-label={bn?"ব্যবসা মেনু":"Business menu"} onCancel={()=>setMobileOpen(false)} onClose={()=>setMobileOpen(false)}>{sidebar(true)}</dialog>
   <div className="ds-main">
    <header className="ds-topbar">
     <div className="ds-topbar-leading">
@@ -379,7 +379,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
       <div className="ds-profile-popover">
        <strong>{userName}</strong>
        <Link href="/account"><Icon name="settings"/>{bn?"অ্যাকাউন্ট সেটিংস":"Account settings"}</Link>
-       <Link href={`/w/${workspace.id}/mobile-devices`}><Icon name="devices"/>{bn?"ডিভাইস":"Devices"}</Link>
+       <Link href="/settings/devices"><Icon name="devices"/>{bn?"ডিভাইস":"Devices"}</Link>
        {service==="payments"&&<Link href={dashboardHref(locale,workspace.id,"payments","events",environment)}><Icon name="events"/>{bn?"কার্যক্রমের ইতিহাস":"Activity logs"}</Link>}
        {platformAdmin&&<Link href="/admin"><Icon name="shield"/>{bn?"প্ল্যাটফর্ম অ্যাডমিন":"Platform admin"}</Link>}
        {logout}
@@ -399,7 +399,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    <main id="dashboard-content" className="ds-content" tabIndex={-1} aria-busy={isNavigating}>{children}</main>
    <footer className="ds-footnote"><span>{unified?workspace.name:serviceNames[service][locale]+" · "+workspace.name}</span><span>Asia/Dhaka</span></footer>
   </div>
-  <dialog ref={searchDialog} className="ds-search-dialog" aria-label={bn?"ওয়ার্কস্পেস খুঁজুন":"Search workspace"} onCancel={()=>setSearchOpen(false)} onClose={()=>setSearchOpen(false)}>
+  <dialog ref={searchDialog} className="ds-search-dialog" aria-label={bn?"ব্যবসা খুঁজুন":"Search business"} onCancel={()=>setSearchOpen(false)} onClose={()=>setSearchOpen(false)}>
    <div className="ds-search-top"><Icon name="search"/><input ref={searchInput} autoFocus role="combobox" aria-autocomplete="list" aria-expanded={searchOpen} aria-controls="ds-global-results" aria-activedescendant={resultCount?`ds-global-result-${Math.min(activeResult,resultCount-1)}`:undefined} value={globalQuery} onChange={event=>{setGlobalQuery(event.target.value);setActiveResult(0);}} placeholder={bn?"পৃষ্ঠা, পেমেন্ট, ইনভয়েস বা গ্রাহক খুঁজুন…":"Find pages, payments, invoices or customers…"} aria-label={bn?"পৃষ্ঠা বা পেমেন্ট রেকর্ড খুঁজুন":"Find pages or payment records"}
      onKeyDown={event=>{
       if(event.key==="ArrowDown"){event.preventDefault();setActiveResult(i=>resultCount?(i+1)%resultCount:0);}

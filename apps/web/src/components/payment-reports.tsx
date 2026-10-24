@@ -117,7 +117,6 @@ export function PaymentReports({locale,workspaceId,environment,canReveal,canExpo
  const [loading,setLoading]=useState(!seed),[error,setError]=useState(seed?.error??""),[refresh,setRefresh]=useState(0);
  const [accounts,setAccounts]=useState<AccountOption[]>(accountSeed?.data?.receiving?.items??[]),[accountError,setAccountError]=useState(false);
  const [accountNumbers,setAccountNumbers]=useState<Record<string,string>>({});
- const root="/w/"+workspaceId+"/payments/";
  useEffect(()=>{
   if(!canReveal)return;
   const controller=new AbortController();
@@ -243,7 +242,7 @@ export function PaymentReports({locale,workspaceId,environment,canReveal,canExpo
       <div><span className="lbl">{t("Change","পরিবর্তন")}</span><div className={"num md "+(delta&&delta.startsWith("-")?"dn":delta?"up":"mu")}>{!compare?t("Not compared","তুলনা করা হয়নি"):compareLoading?t("Loading…","লোড হচ্ছে…"):compareError||!matchedCompare?t("No data","তথ্য নেই"):delta??t("No data","তথ্য নেই")}</div>{matchedCompare&&<span className="lbl">{t("vs","বনাম")} {money(matchedCompare.report.verified_gross_minor)} {t("in the previous period","আগের সময়সীমায়")}</span>}</div>
       <label className="sw"><input type="checkbox" checked={compare} onChange={e=>{setCompare(e.target.checked);setCompareError("")}}/><span>{t("Compare previous period","আগের সময়ের সঙ্গে তুলনা")}</span></label></div>
     </section>
-    <section className="card pb"><div className="pbh"><h3>{t("Payment breakdown","পেমেন্টের হিসাব")}</h3><Link className="lk" href={root+"reconciliation"}>{t("Reconciliation","হিসাব মিল")} ↗</Link></div>
+    <section className="card pb"><div className="pbh"><h3>{t("Payment breakdown","পেমেন্টের হিসাব")}</h3><Link className="lk" href="/payments/reconciliation">{t("Reconciliation","হিসাব মিল")} ↗</Link></div>
      <div className="split">{matching.map((value,i)=>value>0?<i key={i} style={{flex:value,background:["var(--ok)","var(--warn)","var(--ac)"][i]}}/>:null)}</div>
      <div className="leg">{([["Matched","মিলেছে"],["Not matched","মেলেনি"],["Statement matches","স্টেটমেন্টে মিলেছে"]] as const).map(([en,bd],i)=><div key={en} style={{"--c":["var(--ok)","var(--warn)","var(--ac)"][i]} as React.CSSProperties}><span>{t(en,bd)}</span><b dir="ltr">{money(matching[i])}</b><em>{percent(matching[i])}% {t("of total","মোটের")}</em></div>)}</div>
     </section></>:!loading&&<div className="empty"><b>{t("No report available yet","এখনো রিপোর্ট পাওয়া যায়নি")}</b></div>}

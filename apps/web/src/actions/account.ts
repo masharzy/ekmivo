@@ -10,7 +10,7 @@ import { asText, strongPassword, validEmail, validatedName, type FormErrorState,
 
 const strings = {
  en:{invalid:"Check the highlighted fields.",generic:"The server could not complete your request. Please try again.",invalidLogin:"Invalid email or password.",locked:"Too many attempts. Try again in 15 minutes.",duplicate:"This email is already registered.",unauthorized:"Please sign in again.",mode:"Choose a service mode.",name:"Enter a store name (2–100 characters).",storeExists:"Your account already has a store. Open your store instead."},
- bn:{invalid:"চিহ্নিত তথ্যগুলো ঠিক করুন।",generic:"সার্ভারের সমস্যায় অনুরোধ সম্পন্ন হয়নি। আবার চেষ্টা করুন।",invalidLogin:"ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।",locked:"অনেকবার চেষ্টা হয়েছে। ১৫ মিনিট পরে চেষ্টা করুন।",duplicate:"এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে।",unauthorized:"আবার লগ ইন করুন।",mode:"সেবার ধরন বেছে নিন।",name:"স্টোরের নাম ২–১০০ অক্ষর হতে হবে।",storeExists:"আপনার অ্যাকাউন্টে ইতিমধ্যে স্টোর আছে। সেটিই খুলুন।"}
+ bn:{invalid:"চিহ্নিত তথ্যগুলো ঠিক করুন।",generic:"সার্ভারের সমস্যায় অনুরোধ সম্পন্ন হয়নি। আবার চেষ্টা করুন।",invalidLogin:"ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।",locked:"অনেকবার চেষ্টা হয়েছে। ১৫ মিনিট পরে চেষ্টা করুন।",duplicate:"এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে।",unauthorized:"আবার লগ ইন করুন।",mode:"সেবার ধরন বেছে নিন।",name:"ব্যবসার নাম ২–১০০ অক্ষর হতে হবে।",storeExists:"আপনার অ্যাকাউন্টে ইতিমধ্যে ব্যবসা আছে। সেটিই খুলুন।"}
 } as const;
 function fail(message:string,fields?:Record<string,string>):FormErrorState{return {status:"error",message,fields};}
 function report(label:string,error:unknown){
@@ -117,7 +117,7 @@ export async function createWorkspaceAction(localeParam:string,_previous:FormErr
  // First created workspace is automatically the default, as before.
  try{if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,workspaceId);}
  catch(e){report("set initial workspace default",e);}
- redirect(`/w/${workspaceId}/dashboard`);
+ redirect("/dashboard");
 }
 
 

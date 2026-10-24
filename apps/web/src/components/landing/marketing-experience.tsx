@@ -662,7 +662,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("See what is sent")}
 </h3>
 <p>
-{t("Every SMS field that reaches the server is visible to you in your workspace.")}
+{t("Every SMS field that reaches the server is visible to you in your business.")}
 </p>
 </div>
 </div>
@@ -745,7 +745,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("How do I install the app?")}
 </summary>
 <p>
-{t("Download the Ekmivo app (APK) from your workspace and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.")}
+{t("Download the Ekmivo app (APK) from your business and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.")}
 </p>
 </details>
 <details>
@@ -806,7 +806,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("Let your customers pay. Skip the chasing.")}
 </h2>
 <a className="btn" href={`/${locale}/register`} data-go="signup">
-{t("Create a workspace")}
+{t("Create a business")}
 </a>
 </div>
 </div>

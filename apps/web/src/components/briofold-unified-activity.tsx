@@ -42,9 +42,9 @@ export async function BriofoldUnifiedActivity({workspaceId,actorId,locale,enviro
   if(next)params.set("cursor",String(next));return "/settings/activity"+(params.size?"?"+params.toString():"");
  };
  const sourceLabel=(source:string)=>({orders:t("Orders","অর্ডার"),customers:t("Customers","গ্রাহক"),comments:t("Comments","কমেন্ট"),settings:t("Settings","সেটিংস")} as Record<string,string>)[source]??source;
- return <section className={styles.root} aria-label={t("Store operational activity","স্টোরের পরিচালনাগত ইতিহাস")}>
+ return <section className={styles.root} aria-label={t("Business operational activity","ব্যবসার পরিচালনাগত ইতিহাস")}>
   <header className={styles.heading}><div><Heading>{t("Activity log","কার্যক্রমের ইতিহাস")}</Heading>
-   <p>{t("Read-only activity from orders, customers, comments and Store settings. Sensitive details are omitted.","অর্ডার, গ্রাহক, কমেন্ট ও স্টোর সেটিংসের শুধু-পড়ার ইতিহাস। সংবেদনশীল তথ্য রাখা হয়নি।")}</p></div>
+   <p>{t("Read-only activity from orders, customers, comments and Business settings. Sensitive details are omitted.","অর্ডার, গ্রাহক, কমেন্ট ও ব্যবসা সেটিংসের শুধু-পড়ার ইতিহাস। সংবেদনশীল তথ্য রাখা হয়নি।")}</p></div>
    <span className={styles.realm}>{environment==="live"?"Live":"Sandbox"}</span>
   </header>
   <form action="/settings/activity" method="GET" className={styles.filters}>
@@ -67,7 +67,7 @@ export async function BriofoldUnifiedActivity({workspaceId,actorId,locale,enviro
     {events.map((event,i)=><tr key={`${event.created_at}:${event.source}:${event.action}:${i}`}>
      <td><time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString(bn?"bn-BD":"en-GB",{timeZone:"Asia/Dhaka"})}</time></td>
      <td>{sourceLabel(event.source)}</td><td>{event.action}</td><td>{event.actor_name}</td>
-     <td>{event.scope==="store"?t("Whole Store","সম্পূর্ণ স্টোর"):environment}</td>
+     <td>{event.scope==="store"?t("Whole Business","সম্পূর্ণ ব্যবসা"):environment}</td>
     </tr>)}
     {!events.length&&<tr><td colSpan={5}>{t("No events match this filter.","এই ফিল্টারে কোনো কার্যক্রম নেই।")}</td></tr>}
    </tbody></table></div>

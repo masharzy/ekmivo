@@ -1,4 +1,5 @@
 "use client";
+import {legacyDashboardPath} from "../lib/legacy-dashboard";
 import {useDashboardInitialData} from "./dashboard-initial-data";
 import Link from "next/link";
 import {DashboardIcon} from "./dashboard-icon";
@@ -52,8 +53,7 @@ async function read<T>(path:string,signal:AbortSignal):Promise<Read<T>>{
 export function PaymentOverviewMission({locale,workspaceId,environment,canManage,canPaymentLinks=false,canReports=false}:{locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;canPaymentLinks?:boolean;canReports?:boolean}){
  const bn=locale==="bn";
  const t=(en:string,bnText:string)=>bn?bnText:en;
- const root="/w/"+workspaceId+"/payments/";
- const go=(section:string)=>root+section;
+ const go=(value:string)=>{const [section,id]=value.split("/");return legacyDashboardPath("commerce","payments",section,id)??"/payments";};
  const api="/api/go/workspaces/"+workspaceId;
  const billingSeed=useDashboardInitialData<Billing>("billing");
  const settingsSeed=useDashboardInitialData<Settings>("settings");

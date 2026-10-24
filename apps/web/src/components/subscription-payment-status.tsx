@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import {useCallback,useEffect,useState} from "react";
 import {readSubscriptionPayment,type SubscriptionPaymentResult} from "../lib/subscription-payment-client";
@@ -35,7 +36,7 @@ export function SubscriptionPaymentStatus({workspace,intent,locale}:{workspace:s
  return <main className="mx-auto max-w-xl px-5 py-12" lang={locale} aria-live="polite">
   <h1 className="text-2xl font-semibold">{t("Subscription payment status","সাবস্ক্রিপশন পেমেন্ট স্ট্যাটাস")}</h1>
   <p className="mt-4" role="status">{label}</p>
-  {error&&<p role="alert" className="mt-3">{error==="NOT_FOUND"?t("This order is unavailable for your Store.","এই অর্ডারটি আপনার স্টোরের জন্য উপলব্ধ নয়।"):
+  {error&&<p role="alert" className="mt-3">{error==="NOT_FOUND"?t("This order is unavailable for your Business.","এই অর্ডারটি আপনার ব্যবসার জন্য উপলব্ধ নয়।"):
     t("Status temporarily unavailable. Do not send a second payment.","স্ট্যাটাস সাময়িকভাবে পাওয়া যাচ্ছে না। আবার টাকা পাঠাবেন না।")}</p>}
   {data&&<section className="mt-6 space-y-2" aria-label={t("Invoice","ইনভয়েস")}>
    <p>{t("Invoice: ","ইনভয়েস: ")}<code>{data.invoice_id}</code></p>
@@ -46,7 +47,7 @@ export function SubscriptionPaymentStatus({workspace,intent,locale}:{workspace:s
   </section>}
   <nav className="mt-8 flex flex-wrap gap-4">
    <button type="button" className="underline" onClick={()=>void refresh()}>{t("Refresh status","স্ট্যাটাস রিফ্রেশ")}</button>
-   <a className="underline" href={`/w/${workspace}/billing`}>{t("Store Billing","স্টোর বিলিং")}</a>
+   <Link className="underline" href="/settings/billing">{t("Business Billing","ব্যবসা বিলিং")}</Link>
   </nav>
  </main>;
 }

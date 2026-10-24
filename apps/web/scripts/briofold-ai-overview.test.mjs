@@ -49,7 +49,7 @@ test("AI dashboard setup and business alerts never fabricate completion",()=>{
  assert.match(source,/aria-label=\{t\("Business alerts"/);
  assert.match(source,/data\.stats\.waiting>0/);
  assert.match(source,/data===null\?<p role="status">/);
- assert.match(source,/aria-label=\{t\("Store setup checklist"/);
+ assert.match(source,/aria-label=\{t\("Business setup checklist"/);
  assert.match(source,/data\.stats\.channels>0\?t\("Connected"/);
  assert.match(source,/Review required/);
  assert.match(source,/never silently marks them complete/);

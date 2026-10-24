@@ -23,23 +23,23 @@ export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:s
    if(!validStoreProfile(data.body)||!Number.isInteger(data.version))throw Error("INVALID_STORE");
    if(signal?.aborted)return;
    setBody(data.body);setSaved(data.body);setVersion(data.version);
-  }catch{if(!signal?.aborted)setError(t("Could not load store details. Retry.","স্টোরের তথ্য লোড হয়নি। আবার চেষ্টা করুন।"))}
+  }catch{if(!signal?.aborted)setError(t("Could not load business details. Retry.","ব্যবসার তথ্য লোড হয়নি। আবার চেষ্টা করুন।"))}
   finally{if(!signal?.aborted)setLoading(false)}
  },[base,t]);
  useEffect(()=>{const c=new AbortController();void Promise.resolve().then(()=>{if(!c.signal.aborted)return load(c.signal)});return()=>c.abort()},[load]);
  const set=(key:keyof StoreProfile,value:string)=>{setBody(old=>({...old,[key]:value}));setInvalid(null);setNotice("")};
  const save=useCallback(async()=>{
   if(!canManage||loading||busy||version<1)return false;
-  if(!validStoreProfile(body)){setError(t("Check the highlighted fields: store name, phone, website or statement name.","স্টোরের নাম, ফোন, ওয়েবসাইট বা স্টেটমেন্ট নাম যাচাই করুন।"));setInvalid("name");return false}
+  if(!validStoreProfile(body)){setError(t("Check the highlighted fields: business name, phone, website or statement name.","ব্যবসার নাম, ফোন, ওয়েবসাইট বা স্টেটমেন্ট নাম যাচাই করুন।"));setInvalid("name");return false}
   setBusy(true);setError("");setNotice("");
   try{
    const r=await fetch(base,{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({body,version})});
    const result=await r.json();
-   if(!r.ok)throw Error(result.code==="VERSION_CONFLICT"?t("Store was changed elsewhere. Refresh before saving.","অন্য জায়গায় স্টোর পরিবর্তিত হয়েছে। রিফ্রেশ করুন।"):t("Store could not be saved.","স্টোর সংরক্ষণ করা যায়নি।"));
+   if(!r.ok)throw Error(result.code==="VERSION_CONFLICT"?t("Business was changed elsewhere. Refresh before saving.","অন্য জায়গায় ব্যবসা পরিবর্তিত হয়েছে। রিফ্রেশ করুন।"):t("Business could not be saved.","ব্যবসা সংরক্ষণ করা যায়নি।"));
    if(!validStoreProfile(result.body))throw Error("INVALID_STORE_RESPONSE");
    setBody(result.body);setSaved(result.body);setVersion(result.version);
    setNotice(t("Changes saved","পরিবর্তন সংরক্ষিত হয়েছে"));router.refresh();return true;
-  }catch(e){setError(e instanceof Error?e.message:t("Could not save store.","স্টোর সংরক্ষণ করা যায়নি।"));return false}
+  }catch(e){setError(e instanceof Error?e.message:t("Could not save business.","ব্যবসা সংরক্ষণ করা যায়নি।"));return false}
   finally{setBusy(false)}
  },[body,base,version,busy,loading,canManage,router,t]);
  const latest=useRef({body,saved,save});useEffect(()=>{latest.current={body,saved,save}},[body,saved,save]);
@@ -65,22 +65,22 @@ export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:s
  }
  const discard=()=>{setBody(saved);setInvalid(null);setError("")};
  return <div className="store-settings-page" lang={locale}>
-  <header className="ss-header"><div><h1>{t("Store","স্টোর")}</h1><p>{t("Store details and logo for your customers.","গ্রাহকের জন্য স্টোরের তথ্য ও লোগো।")}</p></div><button className="ss-btn" type="button" disabled={loading||busy||dirty} onClick={()=>void load()}>{t("Refresh","রিফ্রেশ")}</button></header>
+  <header className="ss-header"><div><h1>{t("Business","ব্যবসা")}</h1><p>{t("Business details and logo for your customers.","গ্রাহকের জন্য ব্যবসার তথ্য ও লোগো।")}</p></div><button className="ss-btn" type="button" disabled={loading||busy||dirty} onClick={()=>void load()}>{t("Refresh","রিফ্রেশ")}</button></header>
   {error&&<p className="ss-error" role="alert">{error}</p>}
   {notice&&<p className="ss-toast" role="status">{notice}</p>}
-  {loading?<div className="ss-loading" role="status">{t("Loading store…","স্টোর লোড হচ্ছে…")}</div>:
+  {loading?<div className="ss-loading" role="status">{t("Loading business…","ব্যবসা লোড হচ্ছে…")}</div>:
   <div className="ss-panel">
    <section className="ss-section">
     <div className="ss-logo-line">
-     <div className="ss-logo-box">{body.logo?/* eslint-disable-next-line @next/next/no-img-element */<img src={body.logo} alt={t("Store logo","স্টোরের লোগো")}/>:<span>{body.name.slice(0,1).toUpperCase()||"S"}</span>}</div>
-     <div><h2>{t("Store logo","স্টোরের লোগো")}</h2><p>{t("PNG, JPG or WebP · Up to 1 MB · Square works best","PNG, JPG বা WebP · সর্বোচ্চ ১ MB · বর্গাকার হলে ভালো")}</p>
+     <div className="ss-logo-box">{body.logo?/* eslint-disable-next-line @next/next/no-img-element */<img src={body.logo} alt={t("Business logo","ব্যবসার লোগো")}/>:<span>{body.name.slice(0,1).toUpperCase()||"S"}</span>}</div>
+     <div><h2>{t("Business logo","ব্যবসার লোগো")}</h2><p>{t("PNG, JPG or WebP · Up to 1 MB · Square works best","PNG, JPG বা WebP · সর্বোচ্চ ১ MB · বর্গাকার হলে ভালো")}</p>
       <div className="ss-actions"><label className="ss-btn ss-upload">{t("Upload","আপলোড")}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={!canManage||busy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void upload(file)}}/></label>{body.logo&&<button type="button" className="ss-btn" disabled={!canManage||busy} onClick={()=>set("logo","")}>{t("Remove","মুছুন")}</button>}</div>
      </div>
     </div>
     <div className="ss-grid">
-     <label className="ss-field"><span>{t("Store name","স্টোরের নাম")} <small>{body.name.length}/40</small></span><input value={body.name} maxLength={40} required className={invalid==="name"?"ss-invalid":undefined} disabled={!canManage||busy} onChange={e=>set("name",e.target.value)}/></label>
-     <label className="ss-field"><span>{t("Business type","ব্যবসার ধরন")}</span><select value={body.business_type} disabled={!canManage||busy} onChange={e=>set("business_type",e.target.value)}><option value="online">{t("E-commerce / online shop","ই-কমার্স / অনলাইন শপ")}</option><option value="physical">{t("Physical store","ফিজিক্যাল স্টোর")}</option><option value="service">{t("Services","সেবা")}</option><option value="other">{t("Other","অন্যান্য")}</option></select></label>
-     <label className="ss-field ss-full"><span>{t("Short description (optional)","সংক্ষিপ্ত পরিচিতি (ঐচ্ছিক)")} <small>{body.description.length}/60</small></span><input maxLength={60} value={body.description} disabled={!canManage||busy} placeholder={t("What does your store sell?","যেমন: প্রতিদিনের বাজার, দোনাজপুর")} onChange={e=>set("description",e.target.value)}/></label>
+     <label className="ss-field"><span>{t("Business name","ব্যবসার নাম")} <small>{body.name.length}/40</small></span><input value={body.name} maxLength={40} required className={invalid==="name"?"ss-invalid":undefined} disabled={!canManage||busy} onChange={e=>set("name",e.target.value)}/></label>
+     <label className="ss-field"><span>{t("Business type","ব্যবসার ধরন")}</span><select value={body.business_type} disabled={!canManage||busy} onChange={e=>set("business_type",e.target.value)}><option value="online">{t("E-commerce / online shop","ই-কমার্স / অনলাইন শপ")}</option><option value="physical">{t("Physical shop","সরাসরি দোকান")}</option><option value="service">{t("Services","সেবা")}</option><option value="other">{t("Other","অন্যান্য")}</option></select></label>
+     <label className="ss-field ss-full"><span>{t("Short description (optional)","সংক্ষিপ্ত পরিচিতি (ঐচ্ছিক)")} <small>{body.description.length}/60</small></span><input maxLength={60} value={body.description} disabled={!canManage||busy} placeholder={t("What does your business sell?","যেমন: প্রতিদিনের বাজার, দোনাজপুর")} onChange={e=>set("description",e.target.value)}/></label>
 
     </div>
    </section>
