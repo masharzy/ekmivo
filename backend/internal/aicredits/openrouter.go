@@ -55,7 +55,10 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 	}
 	defer response.Body.Close()
 	switch response.StatusCode {
-	case 400, 401, 403, 404, 413, 422, 429:
+	case 400, 401, 402, 403, 404, 413, 422, 429:
+		if response.StatusCode == 402 {
+			log.Print("openrouter generation rejected: provider credit/budget limit (402)")
+		}
 		return result, ErrRejected
 	}
 	if response.StatusCode != 200 {

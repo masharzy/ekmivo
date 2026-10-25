@@ -37,7 +37,7 @@ func TestOpenRouterErrorsNeverGuessUsageOrFollowRedirects(t *testing.T) {
 		body     string
 		rejected bool
 	}{
-		{"unauthorized", 401, "secret provider error", true}, {"rate limit", 429, "", true}, {"unknown upstream", 502, "", false},
+		{"unauthorized", 401, "secret provider error", true}, {"provider credit limit", 402, "private billing details", true}, {"rate limit", 429, "", true}, {"unknown upstream", 502, "", false},
 		{"missing usage", 200, `{"id":"fixture","model":"fixture-model","choices":[{"message":{"content":"Hello"}}]}`, false},
 		{"wrong model", 200, `{"id":"fixture","model":"another-model","choices":[{"message":{"content":"Hello"}}],"usage":{"prompt_tokens":1,"completion_tokens":1}}`, false},
 		{"redirect", 302, "", false}, {"oversized", 200, strings.Repeat("x", 131073), false},
