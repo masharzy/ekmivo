@@ -59,9 +59,13 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 	defer response.Body.Close()
 	switch response.StatusCode {
 	case 400, 401, 402, 403, 404, 413, 422, 429:
+		raw, _ := io.ReadAll(io.LimitReader(response.Body, 32768))
 		if response.StatusCode == 402 {
-			raw, _ := io.ReadAll(io.LimitReader(response.Body, 32768))
 			log.Printf("openrouter generation rejected: %s", creditRejectionDiagnostic(raw, maxOutput))
+		} else if ctx.Value(providerDiagnosticContextKey{}) == true {
+			log.Printf("openrouter generation rejected: status=%d summary=%s", response.StatusCode, providerRejectionSummary(raw))
+		} else {
+			log.Printf("openrouter generation rejected: status=%d", response.StatusCode)
 		}
 		return result, ErrRejected
 	}
@@ -155,4 +159,50 @@ func creditRejectionDiagnostic(raw []byte, max int64) string {
 		return "unreported"
 	}
 	return "status=402 source=" + source + " reason=" + reason + " max_output=" + strconv.FormatInt(max, 10) + " requested=" + number(`requested (?:up to )?([0-9]+)`) + " affordable=" + number(`(?:can only afford|can afford) ([0-9]+)`)
+}
+
+func providerRejectionSummary(raw []byte) string {
+	var p struct {
+		Error struct {
+			Message  string `json:"message"`
+			Metadata struct {
+				Raw string `json:"raw"`
+			} `json:"metadata"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(raw, &p) != nil {
+		return "unparsed rejection"
+	}
+	message := p.Error.Message
+	var upstream struct {
+		Message string `json:"message"`
+		Error   struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if json.Unmarshal([]byte(p.Error.Metadata.Raw), &upstream) == nil {
+		if upstream.Error.Message != "" {
+			message += "; upstream: " + upstream.Error.Message
+		} else if upstream.Message != "" {
+			message += "; upstream: " + upstream.Message
+		}
+	}
+	// Report error messages, never raw provider metadata. Redact credentials,
+	// media payloads and contact strings before bounding the diagnostic.
+	for _, pattern := range []string{`(?i)sk-[a-z0-9_-]+`, `[A-Za-z0-9+/=_-]{64,}`, `https?://[^\s]+`, `[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]+`, `[0-9]{7,}`} {
+		message = regexp.MustCompile(pattern).ReplaceAllString(message, "[redacted]")
+	}
+	message = strings.Join(strings.Fields(message), " ")
+	if len(message) > 600 {
+		message = message[:600]
+	}
+	return message
+}
+
+type providerDiagnosticContextKey struct{}
+
+// WithProviderDiagnostics opts an operator-requested diagnostic into redacted
+// error messages; ordinary customer requests log status codes only.
+func WithProviderDiagnostics(ctx context.Context) context.Context {
+	return context.WithValue(ctx, providerDiagnosticContextKey{}, true)
 }

@@ -93,3 +93,10 @@ func TestCreditRejectionDiagnosticsAreWhitelisted(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestProviderRejectionSummaryRedactsSecrets(t *testing.T) {
+	got := providerRejectionSummary([]byte(`{"error":{"message":"Provider returned error","metadata":{"raw":"{\"error\":{\"message\":\"input_audio requires data URI; sk-or-v1-secret-token https://private.example/a user@example.test 01712345678\"}}"}}}`))
+	if !strings.Contains(got, "input_audio requires data URI") || strings.Contains(got, "secret-token") || strings.Contains(got, "private.example") || strings.Contains(got, "user@example") || strings.Contains(got, "01712345678") {
+		t.Fatal(got)
+	}
+}

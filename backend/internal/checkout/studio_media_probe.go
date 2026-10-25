@@ -32,7 +32,7 @@ func (s *Service) runStudioMediaProbe(parent context.Context) {
 	defer cancel()
 	model := s.selectedAIModel("qwen/qwen3.8-omni-flash")
 	run := func(kind string, messages []aicredits.Message) bool {
-		result, err := s.studioEngine().Run(ctx, aicredits.Request{Workspace: p.Workspace, Actor: p.Actor, Key: "media-probe:v1:" + p.Media + ":" + kind, Model: model, Messages: messages})
+		result, err := s.studioEngine().Run(aicredits.WithProviderDiagnostics(ctx), aicredits.Request{Workspace: p.Workspace, Actor: p.Actor, Key: "media-probe:v2:" + p.Media + ":" + kind, Model: model, Messages: messages})
 		if err != nil {
 			class := "unavailable"
 			if errors.Is(err, aicredits.ErrRejected) {
