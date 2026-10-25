@@ -20,22 +20,25 @@ func NewOpenRouter(key string) *OpenRouter {
 	return &OpenRouter{key: key, client: &http.Client{Timeout: 40 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 }
 
-// Only non-streaming text generation is enabled here. Tools/media/voice must
-// use their own bounded, metered adapter instead of silently adding paid work.
+// Bounded text or server-fetched media input; output remains text-only.
 func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64, messages []Message) (Output, error) {
 	var result Output
 	if p == nil || p.key == "" || maxOutput < 1 || !modelID.MatchString(model) {
 		return result, ErrRejected
 	}
+	wire, err := providerMessages(model, messages)
+	if err != nil {
+		return result, err
+	}
 	body, err := json.Marshal(struct {
-		Model     string    `json:"model"`
-		Messages  []Message `json:"messages"`
-		Max       int64     `json:"max_completion_tokens"`
-		Stream    bool      `json:"stream"`
+		Model     string           `json:"model"`
+		Messages  []map[string]any `json:"messages"`
+		Max       int64            `json:"max_completion_tokens"`
+		Stream    bool             `json:"stream"`
 		Reasoning *struct {
 			Enabled bool `json:"enabled"`
 		} `json:"reasoning,omitempty"`
-	}{Model: model, Messages: messages, Max: maxOutput, Stream: false, Reasoning: chatReasoning(model)})
+	}{Model: model, Messages: wire, Max: maxOutput, Stream: false, Reasoning: chatReasoning(model)})
 	if err != nil {
 		return result, ErrRejected
 	}

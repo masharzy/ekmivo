@@ -136,10 +136,16 @@ func (s *Service) HandleTelegramConnect(w http.ResponseWriter, r *http.Request) 
 type telegramUpdate struct {
 	ID      int64 `json:"update_id"`
 	Message *struct {
-		ID   int64  `json:"message_id"`
-		Date int64  `json:"date"`
-		Text string `json:"text"`
-		From struct {
+		ID        int64               `json:"message_id"`
+		Date      int64               `json:"date"`
+		Text      string              `json:"text"`
+		Caption   string              `json:"caption"`
+		Photo     []telegramMediaFile `json:"photo"`
+		Voice     *telegramMediaFile  `json:"voice"`
+		Audio     *telegramMediaFile  `json:"audio"`
+		Video     *telegramMediaFile  `json:"video"`
+		VideoNote *telegramMediaFile  `json:"video_note"`
+		From      struct {
 			ID        int64  `json:"id"`
 			IsBot     bool   `json:"is_bot"`
 			FirstName string `json:"first_name"`
@@ -151,6 +157,50 @@ type telegramUpdate struct {
 	} `json:"message"`
 }
 
+type telegramMediaFile struct {
+	ID       string `json:"file_id"`
+	Size     int64  `json:"file_size"`
+	Duration int    `json:"duration"`
+	MIME     string `json:"mime_type"`
+}
+
+func telegramMedia(u telegramUpdate) (string, *telegramMediaFile) {
+	if u.Message == nil {
+		return "", nil
+	}
+	m := u.Message
+	if len(m.Photo) > 0 {
+		return "image", &m.Photo[len(m.Photo)-1]
+	}
+	if m.Voice != nil {
+		return "audio", m.Voice
+	}
+	if m.Audio != nil {
+		return "audio", m.Audio
+	}
+	if m.Video != nil {
+		return "video", m.Video
+	}
+	if m.VideoNote != nil {
+		return "video", m.VideoNote
+	}
+	return "", nil
+}
+func parseTelegramIncoming(raw []byte) (telegramUpdate, bool) {
+	var u telegramUpdate
+	if json.Unmarshal(raw, &u) != nil || u.ID < 0 || u.Message == nil {
+		return u, false
+	}
+	m := u.Message
+	if m.ID <= 0 || m.Date <= 0 || m.Chat.Type != "private" || m.Chat.ID <= 0 || m.From.ID != m.Chat.ID || m.From.IsBot || len(m.Text) > 16000 || len(m.Caption) > 8000 {
+		return u, false
+	}
+	if strings.TrimSpace(m.Text) != "" {
+		return u, true
+	}
+	_, file := telegramMedia(u)
+	return u, file != nil && file.ID != "" && len(file.ID) <= 1024
+}
 func parseTelegramText(raw []byte) (telegramUpdate, bool) {
 	var u telegramUpdate
 	if json.Unmarshal(raw, &u) != nil || u.ID < 0 {
@@ -174,8 +224,8 @@ func (s *Service) HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) 
 		fail(w, 413, "BODY_TOO_LARGE")
 		return
 	}
-	u, text := parseTelegramText(raw)
-	if !text {
+	u, supported := parseTelegramIncoming(raw)
+	if !supported {
 		write(w, 200, map[string]bool{"accepted": true})
 		return
 	}
@@ -205,8 +255,19 @@ func (s *Service) HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) 
 	}
 	var fresh bool
 	if err = tx.QueryRow(r.Context(), "SELECT inbox_webhook_record($1,'tg',$2)", event, cipher).Scan(&fresh); err == nil && fresh {
-		var accepted bool
-		err = tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,'text',$6)", conn, strconv.FormatInt(u.Message.ID, 10), strconv.FormatInt(u.Message.Chat.ID, 10), u.Message.From.FirstName, u.Message.Text, time.Unix(u.Message.Date, 0)).Scan(&accepted)
+		kind, file := telegramMedia(u)
+		if file != nil && strings.TrimSpace(u.Message.Text) == "" {
+			ref, _ := json.Marshal(map[string]string{"provider_id": file.ID, "mime": file.MIME, "caption": u.Message.Caption})
+			source, encryptErr := deviceevidence.Encrypt(s.Pipeline.Key, ref, ws+"|inbox-source")
+			if encryptErr != nil {
+				err = encryptErr
+			} else {
+				_, err = tx.Exec(r.Context(), "SELECT inbox_inbound_media($1::uuid,$2,$3,$4,$5,$6,$7)", conn, strconv.FormatInt(u.Message.ID, 10), strconv.FormatInt(u.Message.Chat.ID, 10), u.Message.From.FirstName, kind, source, time.Unix(u.Message.Date, 0))
+			}
+		} else {
+			var accepted bool
+			err = tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,'text',$6)", conn, strconv.FormatInt(u.Message.ID, 10), strconv.FormatInt(u.Message.Chat.ID, 10), u.Message.From.FirstName, u.Message.Text, time.Unix(u.Message.Date, 0)).Scan(&accepted)
+		}
 	}
 	if err != nil || tx.Commit(r.Context()) != nil {
 		fail(w, 503, "SOURCE_UNAVAILABLE")

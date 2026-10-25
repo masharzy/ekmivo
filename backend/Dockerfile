@@ -1,8 +1,8 @@
 FROM alpine:3.24 AS pdf-tools
-RUN apk add --no-cache poppler-utils poppler-data util-linux-misc && \
+RUN apk add --no-cache poppler-utils poppler-data util-linux-misc ffmpeg && \
     mkdir -p /out/pdf-runtime/usr/bin /out/pdf-runtime/usr/share/doc/briofold-pdf && \
-    cp /usr/bin/pdftotext /usr/bin/prlimit /out/pdf-runtime/usr/bin/ && \
-    for program in /usr/bin/pdftotext /usr/bin/prlimit; do \
+    cp /usr/bin/ffmpeg /usr/bin/ffprobe /usr/bin/pdftotext /usr/bin/prlimit /out/pdf-runtime/usr/bin/ && \
+    for program in /usr/bin/ffmpeg /usr/bin/ffprobe /usr/bin/pdftotext /usr/bin/prlimit; do \
       for library in $(ldd "$program" | awk '$1 ~ /^\// {print $1} $3 ~ /^\// {print $3}'); do \
         mkdir -p "/out/pdf-runtime$(dirname "$library")"; \
         cp -L "$library" "/out/pdf-runtime$library"; \
@@ -11,7 +11,7 @@ RUN apk add --no-cache poppler-utils poppler-data util-linux-misc && \
     cp -a /usr/share/poppler /out/pdf-runtime/usr/share/ && \
     if [ -d /etc/fonts ]; then mkdir -p /out/pdf-runtime/etc; cp -a /etc/fonts /out/pdf-runtime/etc/; fi && \
     if [ -d /usr/share/licenses ]; then cp -a /usr/share/licenses /out/pdf-runtime/usr/share/; fi && \
-    apk info -v poppler-utils poppler-data util-linux-misc > /out/pdf-runtime/usr/share/doc/briofold-pdf/packages.txt
+    apk info -v ffmpeg poppler-utils poppler-data util-linux-misc > /out/pdf-runtime/usr/share/doc/briofold-pdf/packages.txt
 COPY internal/knowledge/PDF-RUNTIME-NOTICE.txt /out/pdf-runtime/usr/share/doc/briofold-pdf/NOTICE.txt
 
 FROM golang:1.27.0-alpine AS build

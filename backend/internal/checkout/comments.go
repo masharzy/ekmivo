@@ -302,7 +302,7 @@ func (s *Service) runCommentEvaluation(parent context.Context) {
 					if e == nil {
 						var answer aicredits.Result
 						answer, e = s.studioEngine().Run(ctx, aicredits.Request{Workspace: job.Workspace, Actor: selected.Actor, Key: fmt.Sprintf("comment:%s:%d:reply", job.ID, job.Revision), Model: source.Config.Model, Messages: messages})
-						decision.Reply = answer.Text
+						decision.Reply = studioSafeReply(source, answer.Text)
 					}
 				}
 			}
