@@ -62,6 +62,9 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 		raw, _ := io.ReadAll(io.LimitReader(response.Body, 32768))
 		if response.StatusCode == 402 {
 			log.Printf("openrouter generation rejected: %s", creditRejectionDiagnostic(raw, maxOutput))
+			if ctx.Value(providerDiagnosticContextKey{}) == true {
+				log.Printf("openrouter credit validation detail: %s", providerRejectionSummary(raw))
+			}
 		} else if ctx.Value(providerDiagnosticContextKey{}) == true {
 			log.Printf("openrouter generation rejected: status=%d summary=%s", response.StatusCode, providerRejectionSummary(raw))
 		} else {
