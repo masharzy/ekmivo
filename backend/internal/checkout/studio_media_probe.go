@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/masharzy/ekmivo/backend/internal/aicredits"
+	"github.com/masharzy/ekmivo/backend/internal/authz"
 )
 
 // Temporary operator-selected diagnostic, explicitly requested by the owner.
@@ -33,11 +34,11 @@ func (s *Service) runStudioMediaProbe(parent context.Context) {
 	defer cancel()
 	// Authorize before reading media or spending credits. The test uses precisely
 	// the same ownership/settings permission as normal paid execution.
-	var allowed bool
-	if s.Auth.DB.QueryRowContext(ctx, "SELECT briofold_ai_studio_read($1::uuid,$2::uuid,0,0) IS NOT NULL", p.Workspace, p.Actor).Scan(&allowed) != nil || !allowed {
+	if _, err := s.Auth.AuthorizeWorkspace(ctx, authz.Principal{UserID: p.Actor}, p.Workspace, authz.Live, authz.WorkspaceSettings); err != nil {
 		log.Print("AI media probe: access denied")
 		return
 	}
+
 	var sourceJSON []byte
 	if s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_media_source($1::uuid,'live',$2::uuid,$3::uuid)", p.Workspace, p.Thread, p.Media).Scan(&sourceJSON) != nil {
 		log.Print("AI media probe: source unavailable")
