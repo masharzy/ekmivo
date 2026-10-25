@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/masharzy/ekmivo/backend/internal/aicredits"
 	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
@@ -138,5 +139,41 @@ func TestStudioMediaDownloadKeepsSecretsOnServer(t *testing.T) {
 	calls = 0
 	if _, _, err = s.loadStudioMedia(context.Background(), "other-business", source); err == nil || calls != 0 {
 		t.Fatal("cross-business media access")
+	}
+}
+
+func TestStudioVoiceContextFitsPublishedSixteenThousandTokenTariff(t *testing.T) {
+	var c studioContext
+	raw := `{"config":{"model":"qwen/qwen3.8-omni-flash","language":"auto"},"question":"Please understand the customer attachment.","knowledge":[{"title":"Business","content":"` + strings.Repeat("বাংলা তথ্য ", 140) + `"},{"title":"Services","content":"` + strings.Repeat("সেবার তথ্য ", 140) + `"},{"title":"FAQ","content":"` + strings.Repeat("সহায়তার তথ্য ", 140) + `"}],"history":[`
+	for i := 0; i < 8; i++ {
+		if i > 0 {
+			raw += ","
+		}
+		raw += `{"sender":"customer","text":"` + strings.Repeat("আগের কথোপকথন ", 30) + `"}`
+	}
+	raw += `]}`
+	if err := json.Unmarshal([]byte(raw), &c); err != nil {
+		t.Fatal(err)
+	}
+	c.media = []aicredits.Media{{Kind: "audio", MIME: "audio/wav", Data: base64.StdEncoding.EncodeToString([]byte("fixture"))}}
+	messages, err := studioMessages(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	budget := 512 + 8192
+	for _, m := range messages {
+		budget += len(m.Content) + len(m.Role) + 64
+		if !utf8.ValidString(m.Content) {
+			t.Fatal("invalid Unicode")
+		}
+	}
+	if budget > 16000 {
+		t.Fatalf("voice still rejected by current tariff: %d", budget)
+	}
+	if len(messages[1].Media) != 1 {
+		t.Fatal("budgeting discarded the voice")
+	}
+	if !strings.Contains(messages[0].Content, studioAttachedMediaPolicy) {
+		t.Fatal("budgeting discarded capability safety rules")
 	}
 }
