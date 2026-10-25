@@ -19,8 +19,8 @@ import (
 )
 
 type inboxIncomingMedia struct {
-	Account, Message, Sender, Kind, URL, ProviderID, Mime, Filename string
-	At                                                              time.Time
+	Account, Message, Sender, Kind, URL, ProviderID, Mime, Filename, Caption string
+	At                                                                       time.Time
 }
 
 func parseInboxMedia(raw []byte) []inboxIncomingMedia {
@@ -45,7 +45,7 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 				if kind == "file" {
 					kind = "document"
 				}
-				if kind != "image" && kind != "audio" && kind != "document" {
+				if kind != "image" && kind != "audio" && kind != "video" && kind != "document" {
 					continue
 				}
 				id := str(msg, "mid")
@@ -53,7 +53,7 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 					id += "/" + strconv.Itoa(index)
 				}
 				stamp, _ := m["timestamp"].(float64)
-				out = append(out, inboxIncomingMedia{Account: str(e, "id"), Message: id, Sender: str(obj(m["sender"]), "id"), Kind: kind, URL: str(obj(a["payload"]), "url"), At: time.UnixMilli(int64(stamp))})
+				out = append(out, inboxIncomingMedia{Account: str(e, "id"), Message: id, Sender: str(obj(m["sender"]), "id"), Kind: kind, Caption: str(msg, "text"), URL: str(obj(a["payload"]), "url"), At: time.UnixMilli(int64(stamp))})
 			}
 		}
 		for _, change := range rows(e["changes"]) {
@@ -61,7 +61,7 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 			for _, message := range rows(v["messages"]) {
 				m := obj(message)
 				kind := str(m, "type")
-				if kind != "image" && kind != "audio" && kind != "document" {
+				if kind != "image" && kind != "audio" && kind != "video" && kind != "document" {
 					continue
 				}
 				media := obj(m[kind])
@@ -69,7 +69,7 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 				if err != nil {
 					continue
 				}
-				out = append(out, inboxIncomingMedia{Account: str(obj(v["metadata"]), "phone_number_id"), Message: str(m, "id"), Sender: str(m, "from"), Kind: kind, ProviderID: str(media, "id"), Mime: str(media, "mime_type"), Filename: str(media, "filename"), At: time.Unix(sec, 0)})
+				out = append(out, inboxIncomingMedia{Account: str(obj(v["metadata"]), "phone_number_id"), Message: str(m, "id"), Sender: str(m, "from"), Kind: kind, Caption: str(media, "caption"), ProviderID: str(media, "id"), Mime: str(media, "mime_type"), Filename: str(media, "filename"), At: time.Unix(sec, 0)})
 			}
 		}
 	}
@@ -136,7 +136,7 @@ func (s *Service) persistInboxMedia(ctx context.Context, tx pgx.Tx, provider str
 		if err != nil {
 			return err
 		}
-		ref, _ := json.Marshal(map[string]string{"url": m.URL, "provider_id": m.ProviderID, "mime": m.Mime, "name": m.Filename})
+		ref, _ := json.Marshal(map[string]string{"url": m.URL, "provider_id": m.ProviderID, "mime": m.Mime, "name": m.Filename, "caption": m.Caption})
 		cipher, err := deviceevidence.Encrypt(s.Pipeline.Key, ref, ws+"|inbox-source")
 		if err != nil {
 			return err

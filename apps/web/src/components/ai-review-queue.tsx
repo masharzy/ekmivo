@@ -3,7 +3,7 @@ import Link from "next/link";
 import {useCallback,useEffect,useRef,useState} from "react";
 type Item={id:string;thread_id:string;reason:string;question:string;customer_name:string};
 type Data={items:Item[];can_send:boolean};
-const reasons:Record<string,[string,string]>={NO_GROUNDED_SOURCE:["No matching knowledge","মিল থাকা নলেজ নেই"],AI_CREDITS_REQUIRED:["AI credits required","AI ক্রেডিট প্রয়োজন"],WORKER_OUTCOME_UNKNOWN:["Generation outcome needs recovery","উত্তরের ফলাফল যাচাই প্রয়োজন"],AI_REQUEST_UNKNOWN:["Generation outcome needs recovery","উত্তরের ফলাফল যাচাই প্রয়োজন"],PUBLISHER_ACCESS_REVOKED:["Assistant publisher access changed","সহকারী প্রকাশকারীর অনুমতি বদলেছে"],CONVERSATION_OR_SOURCE_CHANGED:["Conversation or facts changed","কথোপকথন বা তথ্য বদলেছে"]};
+const reasons:Record<string,[string,string]>={AI_MEDIA_UNAVAILABLE:["Attachment could not be read","সংযুক্ত ফাইল পড়া যায়নি"],NO_GROUNDED_SOURCE:["No matching knowledge","মিল থাকা নলেজ নেই"],AI_CREDITS_REQUIRED:["AI credits required","AI ক্রেডিট প্রয়োজন"],WORKER_OUTCOME_UNKNOWN:["Generation outcome needs recovery","উত্তরের ফলাফল যাচাই প্রয়োজন"],AI_REQUEST_UNKNOWN:["Generation outcome needs recovery","উত্তরের ফলাফল যাচাই প্রয়োজন"],PUBLISHER_ACCESS_REVOKED:["Assistant publisher access changed","সহকারী প্রকাশকারীর অনুমতি বদলেছে"],CONVERSATION_OR_SOURCE_CHANGED:["Conversation or facts changed","কথোপকথন বা তথ্য বদলেছে"]};
 export function AiReviewQueue({workspaceId,bn}:{workspaceId:string;bn:boolean}){
  const t=(en:string,be:string)=>bn?be:en;
  const [data,setData]=useState<Data|null>(null),[query,setQuery]=useState(""),[offset,setOffset]=useState(0),[error,setError]=useState(false),[busy,setBusy]=useState(false),[refresh,setRefresh]=useState(0);

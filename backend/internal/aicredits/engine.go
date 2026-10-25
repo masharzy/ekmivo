@@ -19,8 +19,9 @@ var ErrRequestConflict = errors.New("AI request key conflicts with previous inpu
 var ErrInvalidRequest = errors.New("invalid AI execution request")
 
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string  `json:"role"`
+	Content string  `json:"content"`
+	Media   []Media `json:"media,omitempty"`
 }
 type Request struct {
 	Workspace, Actor, Key, Model, Thread string
@@ -78,6 +79,16 @@ func (r Request) fingerprint() (string, int64, error) {
 			return "", 0, ErrInvalidRequest
 		}
 		budget += int64(len(message.Content) + len(message.Role) + 64)
+		if len(message.Media) > 1 || (len(message.Media) > 0 && (message.Role != "user" || !mediaModel(r.Model))) {
+			return "", 0, ErrInvalidRequest
+		}
+		for _, media := range message.Media {
+			bound, err := media.inputBound()
+			if err != nil {
+				return "", 0, err
+			}
+			budget += bound
+		}
 	}
 	if budget > 65536 {
 		return "", 0, ErrInvalidRequest
