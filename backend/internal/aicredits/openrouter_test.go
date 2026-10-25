@@ -82,3 +82,14 @@ func TestOpenRouterChatReasoningBudget(t *testing.T) {
 		})
 	}
 }
+
+func TestCreditRejectionDiagnosticsAreWhitelisted(t *testing.T) {
+	raw := []byte(`{"error":{"message":"This request requires more credits. You requested up to 1000 tokens but can only afford 42. secret-customer-text", "metadata":{"limit_source":"openrouter_key_limit","reason":"weight_exceeds_budget","raw":"private provider dump"}}}`)
+	got := creditRejectionDiagnostic(raw, 1000)
+	if !strings.Contains(got, "source=openrouter_key_limit") || !strings.Contains(got, "requested=1000") || !strings.Contains(got, "affordable=42") || strings.Contains(got, "secret") || strings.Contains(got, "private") {
+		t.Fatal(got)
+	}
+	if got := creditRejectionDiagnostic([]byte(`{"error":{"metadata":{"limit_source":"secret-key","reason":"private text"}}}`), 1000); strings.Contains(got, "secret") || strings.Contains(got, "private") {
+		t.Fatal(got)
+	}
+}

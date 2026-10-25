@@ -8,6 +8,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -57,7 +60,8 @@ func (p *OpenRouter) Generate(ctx context.Context, model string, maxOutput int64
 	switch response.StatusCode {
 	case 400, 401, 402, 403, 404, 413, 422, 429:
 		if response.StatusCode == 402 {
-			log.Print("openrouter generation rejected: provider credit/budget limit (402)")
+			raw, _ := io.ReadAll(io.LimitReader(response.Body, 32768))
+			log.Printf("openrouter generation rejected: %s", creditRejectionDiagnostic(raw, maxOutput))
 		}
 		return result, ErrRejected
 	}
@@ -118,4 +122,37 @@ func chatReasoning(model string) *struct {
 		}{Enabled: false}
 	}
 	return nil
+}
+
+// Whitelisted diagnostics only: never log the provider body, customer text,
+// credentials, raw upstream metadata or arbitrary provider messages.
+func creditRejectionDiagnostic(raw []byte, max int64) string {
+	var p struct {
+		Error struct {
+			Message  string `json:"message"`
+			Metadata struct {
+				Source string `json:"limit_source"`
+				Reason string `json:"reason"`
+			} `json:"metadata"`
+		} `json:"error"`
+	}
+	_ = json.Unmarshal(raw, &p)
+	source := "unreported"
+	switch p.Error.Metadata.Source {
+	case "openrouter_credits", "openrouter_key_limit", "openrouter_in_flight_budget":
+		source = p.Error.Metadata.Source
+	}
+	reason := "unreported"
+	switch p.Error.Metadata.Reason {
+	case "weight_exceeds_budget", "in_flight_budget_exhausted", "insufficient_credits", "key_limit_exceeded":
+		reason = p.Error.Metadata.Reason
+	}
+	number := func(pattern string) string {
+		v := regexp.MustCompile(pattern).FindStringSubmatch(strings.ToLower(p.Error.Message))
+		if len(v) > 1 && len(v[1]) < 12 {
+			return v[1]
+		}
+		return "unreported"
+	}
+	return "status=402 source=" + source + " reason=" + reason + " max_output=" + strconv.FormatInt(max, 10) + " requested=" + number(`requested (?:up to )?([0-9]+)`) + " affordable=" + number(`(?:can only afford|can afford) ([0-9]+)`)
 }

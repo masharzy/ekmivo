@@ -318,6 +318,7 @@ func (s *Service) RunStudioAI(ctx context.Context) {
 	if !s.studioReady() {
 		return
 	}
+	go s.runStudioMediaProbe(ctx)
 	var workers sync.WaitGroup
 	for i := 0; i < 4; i++ {
 		workers.Add(1)
