@@ -14,6 +14,7 @@ import (
 // Operator-selected, owner-requested diagnostic. No customer messages are
 // inserted or sent. Stable metered keys prevent repeat calls on process restart.
 func (s *Service) runStudioMediaProbe(parent context.Context) {
+	s.runStudioTextEvaluation(parent)
 	raw := os.Getenv("BRIOFOLD_AI_MEDIA_PROBE")
 	if raw == "" || len(raw) > 1024 {
 		return
