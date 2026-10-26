@@ -132,8 +132,11 @@ func (s *Service) runStudioTextEvaluation(parent context.Context) {
 	if raw == "" || len(raw) > 512 {
 		return
 	}
-	var p struct{ Workspace, Actor, Run string }
-	if json.Unmarshal([]byte(raw), &p) != nil || !uuidPattern.MatchString(p.Workspace) || !uuidPattern.MatchString(p.Actor) || !uuidPattern.MatchString(p.Run) {
+	var p struct {
+		Workspace, Actor, Run string
+		ExpiresAt             time.Time
+	}
+	if json.Unmarshal([]byte(raw), &p) != nil || p.ExpiresAt.Before(time.Now()) || p.ExpiresAt.After(time.Now().Add(time.Hour)) || !uuidPattern.MatchString(p.Workspace) || !uuidPattern.MatchString(p.Actor) || !uuidPattern.MatchString(p.Run) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(parent, 20*time.Minute)
