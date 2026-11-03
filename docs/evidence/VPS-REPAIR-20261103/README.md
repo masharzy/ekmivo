@@ -18,3 +18,11 @@ The production migration exposed three independent failures:
 - No password was displayed, real message sent, payment initiated, or customer draft modified during verification.
 
 This evidence covers migration/configuration repair and authorized read/page loads, not every product mutation or provider workflow.
+
+## Owner-authorized growth enablement
+
+The owner explicitly requested production activation after the migration repair. Set production frontend GROWTH_OPERATIONS, GROWTH_REPORTS, GROWTH_CONSENT and BROADCAST_DISPATCH flags; deployment dpl_GoaLFB815kp4CvW3mQGLATDs6r4w is READY. Enabled backend consent/dispatch flags using the prepared one-shot admin script; no persistent passwordless sudo permission was added. The compatibility Render service received matching flags while its background sender remains disabled.
+
+Verified production Bookings form and Broadcasts approval/consent interface in the signed-in browser. Authenticated broadcast-runs API returned the supported Messenger/Instagram transport list without an unavailable error. Actual restricted-web-role booking/broadcast reads passed. Transaction-rollback checks passed for booking create/idempotency, overlapping-slot denial, unrelated-actor denial, unsupported broadcast-transport denial and rejection of an unapproved message ID. Approved broadcast runs and pending recipients were both zero before activation. No real campaign was approved or message sent by the agent.
+
+These checks validate the stated boundaries; they are not a blanket security certification or proof of every provider delivery path.
