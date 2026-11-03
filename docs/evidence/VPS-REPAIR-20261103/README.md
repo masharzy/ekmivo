@@ -26,3 +26,7 @@ The owner explicitly requested production activation after the migration repair.
 Verified production Bookings form and Broadcasts approval/consent interface in the signed-in browser. Authenticated broadcast-runs API returned the supported Messenger/Instagram transport list without an unavailable error. Actual restricted-web-role booking/broadcast reads passed. Transaction-rollback checks passed for booking create/idempotency, overlapping-slot denial, unrelated-actor denial, unsupported broadcast-transport denial and rejection of an unapproved message ID. Approved broadcast runs and pending recipients were both zero before activation. No real campaign was approved or message sent by the agent.
 
 These checks validate the stated boundaries; they are not a blanket security certification or proof of every provider delivery path.
+
+## Overview channel predicate follow-up
+
+The AI overview uses `briofold_channel_allowed` inside composed SQL fragments. The initial static SELECT-call audit missed this nested predicate. Reproduced a real `permission denied for function briofold_channel_allowed` under the web role. Migration 0218 grants only EXECUTE on this stable SECURITY DEFINER authorization predicate. Actual owner channel reads returned four authorized channels; an unrelated actor returned zero. Verified the production dashboard visibly rendered eleven conversations, one waiting reply, four channels and the existing AI/human activity totals, with no unavailable warning. Counts describe the verification snapshot, not fixed expected production values.
