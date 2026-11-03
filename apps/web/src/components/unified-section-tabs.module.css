@@ -3,3 +3,6 @@
 .tabs a:hover{color:var(--color-text)}
 .tabs a.active{border-bottom-color:var(--color-primary);color:var(--color-text);font-weight:600}
 .tabs a:focus-visible{outline:2px solid var(--color-focus);outline-offset:-2px}
+.inboxTabs{align-items:flex-end;gap:22px;margin:0 0 18px}.inboxTabs a{font-size:14px;padding:10px 2px}.inboxTabs a.active{border-bottom-color:var(--color-text)}
+.inboxActions{display:flex;gap:8px;align-items:center;margin-left:auto;margin-bottom:8px}.inboxActions a{padding:7px 14px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);font-size:13px;text-decoration:none;white-space:nowrap}.inboxActions a:hover{background:var(--color-hover,var(--color-surface-subtle))}
+@media(max-width:700px){.inboxActions{margin-left:12px}.inboxTabs{gap:16px}}
