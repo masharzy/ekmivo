@@ -139,7 +139,10 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  const t=(en:string,be:string)=>bn?be:en;
  return <section className={`${styles.root} ${styles.inbox}`}>
   <header className={styles.pageHeading}><div><p className={styles.eyebrow}>{t("CUSTOMER COMMUNICATION","গ্রাহক যোগাযোগ")}</p><h1>{t("Inbox","ইনবক্স")}</h1><p>{t("Keep every customer conversation in one place.","সব চ্যানেলের গ্রাহক কথোপকথন এক জায়গায়।")}</p></div>
-   <div className={styles.links}><Link href="/settings/channels"><Icon name="settings"/>{t("Channels","চ্যানেল")}</Link></div>
+   <div className={styles.links}>
+    <Link href="/settings/channels"><Icon name="settings"/>{t("Channels","চ্যানেল")}</Link>
+    <Link href="/settings/devices"><Icon name="smartphone"/>{t("Devices","ডিভাইস")}</Link>
+   </div>
   </header>
   {forbidden&&<p className={styles.alert} role="alert">{t("You no longer have access to this Inbox. Retrying when access is restored.","এই ইনবক্স দেখার অনুমতি নেই। অনুমতি ফিরলে আবার চেষ্টা হবে।")}</p>}
   {draftError&&<p className={styles.alert} role="alert">{t("Could not save your draft. Keep your text and retry.","খসড়া সংরক্ষণ করা যায়নি। লেখা রেখে আবার চেষ্টা করুন।")}</p>}
