@@ -125,3 +125,53 @@
 .ds-app[data-service="payments"] .opw-dates>summary::after,.ds-app[data-service="payments"] .ekv2-report-accounts>summary::after{content:"⌄";display:inline-block;margin-left:8px;font-size:14px;color:var(--color-text-muted)}
 .ds-app[data-service="payments"] .opw-dates[open]>summary::after,.ds-app[data-service="payments"] .ekv2-report-accounts[open]>summary::after{transform:rotate(180deg)}
 .ds-app[data-service="payments"] textarea{resize:none!important}
+
+/* 2026-11-03: compact the Business identity/header without changing menu items.
+   These apply to the live unified merchant shell, not the locked Admin UI. */
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-brand-row{
+ min-height:37px;padding:0 7px 8px;gap:6px
+}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-brand-row .ek-wordmark{font-size:17px;line-height:1.2}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-business-block{
+ margin:0 0 4px;padding:0 0 7px
+}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-business-picker summary,
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-business-static{
+ display:flex;align-items:center;gap:7px;width:100%;height:35px;min-height:35px;
+ padding:4px 7px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface)
+}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-business-avatar,
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-business-picker .ds-business-avatar{
+ width:24px;height:24px;min-width:24px;font-size:11px;border-radius:6px
+}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-business-current-name{font-size:12px;line-height:1.2}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-navigation{padding-top:3px}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-nav-section{margin-bottom:8px}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-nav-section h2{
+ font-size:10px;line-height:1.4;letter-spacing:0;margin:4px 8px 2px;opacity:1
+}
+.ds-app[data-unified="true"] :is(.ds-sidebar,.ds-mobile-dialog) .ds-nav-section a{
+ min-height:33px;height:auto;max-height:none;padding:6px 9px;margin:1px 0
+}
+
+/* Agent Desk is the fifth Inbox tab, not a separate visual system. */
+.ds-app[data-unified="true"] .inbox-agent-desk{
+ --ss-card:var(--color-surface);--ss-soft:var(--color-surface-subtle);
+ --ss-line:var(--color-border);--ss-line2:var(--color-control-border);
+ --ss-tx:var(--color-text);--ss-mut:var(--color-text-muted);
+ --ss-ac:var(--color-primary);--ss-on:var(--color-on-primary);
+ max-width:none;width:100%;padding:0 0 24px;margin:0;font:inherit
+}
+.ds-app[data-unified="true"] .inbox-agent-desk h1{font-size:23px;font-weight:600;line-height:1.35}
+.ds-app[data-unified="true"] .inbox-agent-desk .ss-header{margin-bottom:18px}
+.ds-app[data-unified="true"] .inbox-agent-desk .ss-header p{font-size:12.5px}
+.ds-app[data-unified="true"] .inbox-agent-desk .ss-panel{
+ border-radius:12px;box-shadow:none;margin-bottom:14px
+}
+.ds-app[data-unified="true"] .inbox-agent-desk .ss-section{padding:20px}
+.ds-app[data-unified="true"] .inbox-agent-desk .ss-section h2{font-size:14px}
+.ds-app[data-unified="true"] .inbox-agent-desk :is(.ss-btn,.ss-field>input,.ss-field select,.ss-field textarea){border-radius:8px}
+.ds-app[data-unified="true"] .inbox-agent-desk .ss-btn[aria-pressed="true"]{
+ background:var(--color-primary-soft);border-color:var(--color-primary);color:var(--color-primary)
+}
+@media(max-width:640px){.ds-app[data-unified="true"] .inbox-agent-desk .ss-section{padding:15px}}

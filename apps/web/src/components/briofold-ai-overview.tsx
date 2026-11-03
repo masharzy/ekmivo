@@ -1,6 +1,7 @@
 import "server-only";
 import Link from "next/link";
 import {database} from "../lib/server/db";
+import {DashboardIcon as Icon} from "./dashboard-icon";
 import styles from "./briofold-ai-overview.module.css";
 
 type Stat={conversations:number;waiting:number;channels:number;requests:number|null;humanReplies:number;aiReplies:number};
@@ -103,9 +104,11 @@ export async function BriofoldAiOverview({workspaceId,userId,locale,embedded=fal
    "Inbox activity is temporarily unavailable. No zero counts are being assumed.",
    "ইনবক্সের তথ্য এখন পাওয়া যাচ্ছে না। অনুমান করে শূন্য দেখানো হচ্ছে না।"
   )}</p>}
-  <div className={styles.metrics}>{metrics.map(([name,value])=><article key={name}>
-   <span>{name}</span><strong>{value===null||value===undefined?"—":new Intl.NumberFormat(bn?"bn-BD":"en-BD").format(value)}</strong>
+  <div className={styles.metrics}>{metrics.map(([name,value],index)=><article key={name} data-attention={index===1&&typeof value==="number"&&value>0?"true":undefined}>
+   <div className={styles.metricHead}><span>{name}</span><Icon name={["inbox","notifications","ai-agent","channels","team","ai-agent"][index]}/></div>
+   <strong>{value===null||value===undefined?"—":new Intl.NumberFormat(bn?"bn-BD":"en-BD").format(value)}</strong>
   </article>)}</div>
+  <div className={styles.insights}>
   <section className={styles.activity} aria-label={t("Business alerts","ব্যবসার সতর্কতা")}>
    <div className={styles.activityHead}><h2>{t("Business alerts","ব্যবসার সতর্কতা")}</h2><Link href="/inbox">{t("Review queue","তালিকা দেখুন")}</Link></div>
    {data===null?<p role="status">{t("Alerts are unavailable until the Inbox source can be read.","ইনবক্সের তথ্য না পাওয়া পর্যন্ত সতর্কতা দেখানো যাবে না।")}</p>
@@ -122,6 +125,7 @@ export async function BriofoldAiOverview({workspaceId,userId,locale,embedded=fal
    </ul>
    <p className={styles.empty}>{t("Only connection and queue statuses are measured here; opening other steps never silently marks them complete.","এখানে শুধু সংযোগ ও উত্তর-তালিকার অবস্থা যাচাই হয়; অন্য ধাপ খুললেই সম্পন্ন বলে ধরা হয় না।")}</p>
   </section>
+  </div>
   <section className={styles.activity}>
    <div className={styles.activityHead}><h2>{t("Recent conversations","সাম্প্রতিক কথোপকথন")}</h2>
     <Link href="/inbox">{t("Open Inbox","ইনবক্স খুলুন")}</Link></div>
@@ -130,7 +134,8 @@ export async function BriofoldAiOverview({workspaceId,userId,locale,embedded=fal
     "এখনও কোনো কথোপকথন নেই। মেসেজ পেতে চ্যানেল যুক্ত করুন।"
    )}{" "}<Link href="/settings/channels">{t("Manage channels","চ্যানেল পরিচালনা")}</Link></p>:
    data?.recent.map(item=><div key={item.id} className={styles.thread}>
-     <span className={styles.customer}>{item.name}</span>
+     <span className={styles.customerAvatar} aria-hidden="true">{item.name.slice(0,1).toLocaleUpperCase()}</span>
+     <Link className={styles.customer} href={`/inbox?thread=${item.id}`}>{item.name}</Link>
      <span className={styles.channel}>{item.channel==="wa"?"WhatsApp":item.channel==="ig"?"Instagram":item.channel==="ms"?"Messenger":t("Channel","চ্যানেল")}</span>
      <time dateTime={item.at}>{new Date(item.at).toLocaleString(bn?"bn-BD":"en-BD",{dateStyle:"medium",timeStyle:"short"})}</time>
     </div>)}
