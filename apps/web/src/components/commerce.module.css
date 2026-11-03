@@ -71,3 +71,5 @@
 
 .breadcrumb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px;font-size:12px;line-height:18px;color:var(--color-text-muted)}
 .breadcrumb a{text-decoration:none}.breadcrumb a:hover{color:var(--color-text);text-decoration:underline}
+
+.table .emptyTable{min-width:0;table-layout:fixed}
