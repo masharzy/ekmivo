@@ -73,3 +73,18 @@
 .breadcrumb a{text-decoration:none}.breadcrumb a:hover{color:var(--color-text);text-decoration:underline}
 
 .table .emptyTable{min-width:0;table-layout:fixed}
+/* Match the dashboard's compact rows and toolbars. */
+.root .pageHeader{margin-bottom:16px;gap:16px;align-items:center}
+.root .pageHeader h1{font-size:23px;margin-bottom:3px}
+.root .breadcrumb{margin-bottom:8px}
+.root>details{padding:8px 12px;margin-bottom:10px;border-radius:8px}
+.root .filters{padding:10px 12px;gap:8px;margin-bottom:10px;border-radius:10px}
+.root .filters label{gap:4px}
+.root .filters input,.root .filters select{min-height:34px;padding:6px 9px}
+.root .actions{margin-bottom:10px;gap:6px}
+.root .table th{padding:9px 12px}.root .table td{padding:10px 12px}
+.root .empty{padding:27px 16px}.root .empty p{margin-top:3px}
+.root .pagination{padding:9px 0}
+.root .panel{padding:18px;margin-top:14px}.root .panel fieldset{gap:12px}
+.root .fields{gap:12px 16px}
+@media(max-width:640px){.root .filters{padding:10px}.root .panel{padding:14px}.root .fields{gap:12px}.root .empty{padding:24px 12px}}
