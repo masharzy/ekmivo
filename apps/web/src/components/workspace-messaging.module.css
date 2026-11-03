@@ -26,3 +26,5 @@
 .inbox .chatEmpty{margin:auto;text-align:center;padding:32px 20px;color:var(--mm);max-width:320px}.chatEmpty>span{width:44px;height:44px;display:grid;place-items:center;margin:0 auto 12px;border:1px solid var(--mb);border-radius:14px;background:var(--ms);color:var(--color-primary)}.chatEmpty strong{display:block;color:var(--mt);font-size:14px;font-weight:600}.chatEmpty p{font-size:12px;line-height:1.55;margin:5px 0 0}
 .inbox .chat .workflow{padding:8px 16px;background:var(--ms)}.inbox .chat .workflow>summary{font-size:12px}.inbox .workflow fieldset{gap:8px;border-radius:8px}.inbox .workflow input,.inbox .workflow select,.inbox .workflow textarea{font-size:12px;border-radius:8px;padding:7px 9px}.inbox .workflow>div{gap:12px}
 @media(max-width:700px){.inbox .grid{display:flex;flex-direction:column;height:auto;min-height:0;max-height:none}.inbox .threads{max-height:330px;border-right:0;border-bottom:1px solid var(--mb)}.inbox .chat{min-height:350px}.inbox .messages{min-height:180px;max-height:50vh}.inbox .inboxHeading h1{font-size:21px}.inbox .chatEmpty{padding:36px 18px}}
+
+.inbox .workflowWrap{overflow:auto;max-height:38%;flex-shrink:0}
