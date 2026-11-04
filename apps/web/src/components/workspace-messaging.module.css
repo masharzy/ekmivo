@@ -100,3 +100,28 @@
 .inbox .thread[aria-pressed=true]{position:relative;box-shadow:none}.inbox .thread[aria-pressed=true]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ib-ok)}
 .infoRows{display:grid}.infoRows>div{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--ib-line);font-size:13px}.infoRows>div:first-child{border-top:0}.infoRows>div svg{width:18px;height:18px;color:var(--ib-muted);flex:none}.infoRows>div :last-child{margin-left:auto;text-align:right;color:var(--ib-muted);font-size:12px}
 .unreadDivider{align-self:center;margin:10px 0 6px;padding:3px 12px;border-radius:99px;background:var(--ib-s2);color:var(--ib-text);font-size:11px}
+
+/* Approved Inbox layout: keep the requested composer and controls on their own surfaces. */
+.channelWeb{background:#64748b}
+.inbox .channelBadge{box-sizing:content-box;flex:none;isolation:isolate}
+.inbox .channelBadge svg{width:12px;height:12px;stroke-width:2;overflow:visible}
+.inbox .compose{min-width:0;box-sizing:border-box}
+.inbox .composeInput{min-width:0;max-width:100%;box-sizing:border-box;overflow:hidden}
+.inbox .composeInput textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow-y:auto}
+.inbox .composeInput .attachTrigger,.inbox .directCamera{color:var(--ib-text);transition:background-color .16s,color .16s}
+.inbox .composeInput .attachTrigger:hover,.inbox .directCamera:hover{background:var(--ib-s2);color:var(--ib-ok);border-radius:10px}
+.inbox .voiceMic{border-color:var(--ib-line);transition:background-color .16s,color .16s,border-color .16s}
+.inbox .voiceMic:hover:not(:disabled){background:color-mix(in srgb,var(--ib-ok) 14%,var(--ib-s1));color:var(--ib-ok);border-color:var(--ib-ok)}
+.inbox .filterTrigger:hover{background:var(--ib-s2);color:var(--ib-text)}
+.inbox .filterSheet .extraFilters>summary{display:flex;align-items:center;justify-content:space-between;list-style:none;cursor:pointer;padding:10px 12px;border:1px solid var(--ib-line);border-radius:10px;background:var(--ib-s1);color:var(--ib-text)}
+.inbox .filterSheet .extraFilters>summary::-webkit-details-marker{display:none}
+.inbox .filterSheet .extraFilters>summary::after{content:"";display:block;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .16s}
+.inbox .filterSheet .extraFilters[open]>summary::after{transform:rotate(225deg)}
+.inbox .filterSheet .extraFilters>label,.inbox .filterSheet .extraFilters>details{margin:12px 0 0}
+.inbox .filterSheet .filterApply{background:color-mix(in srgb,var(--ib-ok) 12%,var(--ib-s1));color:var(--ib-ok);border-color:var(--ib-ok);font-weight:600}
+.inbox .filterSheet .filterApply:hover{background:color-mix(in srgb,var(--ib-ok) 20%,var(--ib-s1))}
+.inbox .workflow .internalNote fieldset{background:color-mix(in srgb,#d5a448 9%,var(--ib-s1));border-color:color-mix(in srgb,#d5a448 30%,var(--ib-line));color:var(--ib-text)}
+.inbox .workflow .internalNote textarea{background:var(--ib-s1);border:1px solid var(--ib-line);color:var(--ib-text);box-sizing:border-box}
+.inbox .workflow .internalNote button[type=submit]{background:var(--ib-s1);color:var(--ib-text);border:1px solid var(--ib-line)}
+.inbox .workflow .internalNote button[type=submit]:hover:not(:disabled){background:var(--ib-s2);border-color:var(--ib-ok)}
+@media(max-width:700px){.inbox .compose{padding:10px 12px 12px}.inbox .composeInput{padding-left:9px}.inbox .composeInput .attachTrigger,.inbox .directCamera{width:30px}}
