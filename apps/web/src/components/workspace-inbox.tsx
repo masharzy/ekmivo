@@ -78,13 +78,18 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
   }
   renderedThread.current = selected;
   previousMessage.current = last;
+ }, [selected, before, messages, outbox]);
+ useLayoutEffect(() => {
+  const pane = messagePane.current;
+  const content = messageContent.current;
+  if (!pane || !content || !selected || before !== null) return;
   const observer = new ResizeObserver(() => {
    if (wasNearBottom.current) pane.scrollTop = pane.scrollHeight;
   });
   observer.observe(content);
   observer.observe(pane);
   return () => observer.disconnect();
- }, [selected, before, messages, outbox]);
+ }, [selected, before]);
  useEffect(()=>{knownActivity.current.clear();listPrimed.current=false;},[workspaceId,actorId]);
  useEffect(()=>{if(!incoming)return;const timer=setTimeout(()=>setIncoming(null),3200);return()=>clearTimeout(timer);},[incoming]);
  const refresh=useCallback(async()=>{
