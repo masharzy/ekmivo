@@ -102,3 +102,4 @@
 .unreadDivider{align-self:center;margin:10px 0 6px;padding:3px 12px;border-radius:99px;background:var(--ib-s2);color:var(--ib-text);font-size:11px}
 .messages{overflow-anchor:none}
 .messageContent{display:flex;flex-direction:column;flex:none;min-width:0;gap:inherit}
+.loadOlder{align-self:center;margin:0 0 8px}
