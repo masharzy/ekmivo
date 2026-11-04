@@ -107,10 +107,10 @@
 .inbox .channelBadge svg{width:12px;height:12px;stroke-width:2;overflow:visible}
 .inbox .compose{min-width:0;box-sizing:border-box}
 .inbox .composeInput{flex:1 1 0;min-width:0;max-width:100%;box-sizing:border-box;overflow:hidden;gap:2px;background:#262622;border-color:#3b3b36}
-.inbox .composeInput textarea{flex:1 1 0;display:block;width:0;min-width:0;max-width:none;box-sizing:border-box;overflow-y:auto;margin:0;background:transparent}
+.inbox .composeInput textarea{flex:1 1 0;display:block;width:0;min-width:0;max-width:none;box-sizing:border-box;overflow-y:auto;margin:0;padding:9px 4px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
 .inbox .composeInput .attachTrigger{flex:0 0 34px;width:34px;position:relative;z-index:1}
-.inbox .search input{background:#262622;border-color:#3b3b36;color:var(--ib-text)}
-.inbox .search input::placeholder,.inbox .composeInput textarea::placeholder{color:#aaa99f}
+.inbox .search input{height:38px!important;min-height:0!important;padding:6px 10px 6px 32px!important;background:#262622!important;border:1px solid #3b3b36!important;border-radius:12px!important;box-shadow:none!important;color:var(--ib-text)}
+.inbox .search input::placeholder,.inbox .composeInput textarea::placeholder{color:#aaa99f!important}
 .inbox .composeInput .attachTrigger,.inbox .directCamera{color:var(--ib-text);transition:background-color .16s,color .16s}
 .inbox .composeInput .attachTrigger:hover,.inbox .directCamera:hover{background:var(--ib-s2);color:var(--ib-ok);border-radius:10px}
 .inbox .voiceMic{border-color:var(--ib-line);transition:background-color .16s,color .16s,border-color .16s}
@@ -127,7 +127,7 @@
 .inbox .filterShortcuts a{display:inline-flex;align-items:center;gap:5px;padding:5px;color:var(--ib-muted);font-size:12px;text-decoration:none}
 .inbox .filterShortcuts a:hover{color:var(--ib-ok)}
 .inbox .workflow .internalNote fieldset{background:color-mix(in srgb,#d5a448 9%,var(--ib-s1));border-color:color-mix(in srgb,#d5a448 30%,var(--ib-line));color:var(--ib-text)}
-.inbox .workflow .internalNote textarea{background:var(--ib-s1);border:1px solid var(--ib-line);color:var(--ib-text);box-sizing:border-box}
+.inbox .workflow .internalNote textarea{background:#262622!important;border:1px solid #3b3b36!important;border-radius:8px!important;color:var(--ib-text);box-sizing:border-box}
 .inbox .workflow .internalNote button[type=submit]{background:var(--ib-s1);color:var(--ib-text);border:1px solid var(--ib-line)}
 .inbox .workflow .internalNote button[type=submit]:hover:not(:disabled){background:var(--ib-s2);border-color:var(--ib-ok)}
 @media(max-width:700px){.inbox .compose{padding:10px 12px 12px}.inbox .composeInput{padding-left:9px}.inbox .composeInput .attachTrigger,.inbox .directCamera{width:30px}}
