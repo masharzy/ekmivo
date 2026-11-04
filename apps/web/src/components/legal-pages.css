@@ -1,0 +1,70 @@
+/* Public legal documents share the marketing chrome, but use a quiet reading layout. */
+.ek-legal {
+  min-height: 100vh;
+  padding: 148px 24px 112px;
+  color: var(--color-text);
+  background: var(--color-canvas);
+  font-family: var(--font-figtree), var(--font-hind-siliguri), sans-serif;
+}
+.ek-legal:lang(bn) { font-family: var(--font-hind-siliguri), sans-serif; }
+.ek-legal-wrap { max-width: 1120px; margin-inline: auto; }
+.ek-legal-topline { display: flex; align-items: center; gap: 10px; color: var(--color-text-secondary); font-size: 12px; font-weight: 600; }
+.ek-legal-topline a { color: var(--color-text); text-decoration: none; }
+.ek-legal-topline a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ek-legal-topline span[aria-hidden] { color: var(--color-text-muted); }
+.ek-legal-intro { border-bottom: 1px solid var(--color-border); padding: 61px 0 38px; max-width: 960px; }
+.ek-legal-eyebrow { display: inline-block; margin-bottom: 17px; color: var(--color-text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .13em; }
+.ek-legal:lang(bn) .ek-legal-eyebrow { letter-spacing: 0; font-size: 13px; }
+.ek-legal-intro h1 { font: 600 clamp(42px, 5.4vw, 70px)/1.13 var(--font-outfit), var(--font-hind-siliguri), sans-serif; letter-spacing: -.045em; margin: 0; max-width: 930px; }
+.ek-legal:lang(bn) .ek-legal-intro h1 { font-family: var(--font-hind-siliguri), sans-serif; line-height: 1.4; letter-spacing: 0; font-size: clamp(31px, 4.6vw, 52px); }
+.ek-legal-intro>p { max-width: 730px; font-size: 17px; line-height: 1.8; color: var(--color-text-secondary); margin: 15px 0 0; }
+.ek-legal-meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 28px; font-size: 12px; color: var(--color-text-secondary); }
+.ek-legal-meta span { display: inline-flex; align-items: center; gap: 8px; }
+.ek-legal-meta span:before { content: ""; width: 5px; height: 5px; background: var(--color-text-muted); border-radius: 50%; }
+.ek-legal-layout { display: grid; grid-template-columns: 246px minmax(0, 1fr); gap: clamp(32px, 6vw, 82px); padding-top: 44px; align-items: start; }
+.ek-legal-aside { position: sticky; top: 116px; min-width: 0; }
+.ek-legal-aside>strong { display: block; font-size: 12px; font-weight: 700; color: var(--color-text-secondary); margin: 0 0 17px; }
+.ek-legal-aside nav { display: grid; gap: 2px; border-inline-start: 1px solid var(--color-border); }
+.ek-legal-aside nav a { color: var(--color-text-secondary); text-decoration: none; display: grid; grid-template-columns: 26px 1fr; gap: 9px; padding: 9px 10px 9px 15px; margin-inline-start: -1px; border-inline-start: 2px solid transparent; font-size: 13px; line-height: 1.55; }
+.ek-legal-aside nav a span { color: var(--color-text-muted); font-size: 10px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.ek-legal-aside nav a:hover,.ek-legal-aside nav a:focus-visible { color: var(--color-text); background: var(--color-surface-subtle); border-inline-start-color: var(--color-text); }
+.ek-legal-aside-links { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--color-border); margin-top: 20px; padding-top: 20px; }
+.ek-legal-aside-links a { color: var(--color-text); text-underline-offset: 4px; font-size: 13px; font-weight: 600; }
+.ek-legal-body { min-width: 0; }
+.ek-legal-callout { border: 1px solid var(--color-border); background: var(--color-surface-subtle); border-radius: 12px; padding: 24px 27px; margin-bottom: 24px; }
+.ek-legal-callout strong { display: block; font-size: 15px; margin-bottom: 5px; }
+.ek-legal-callout p { margin: 0; color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
+.ek-legal-section { display: grid; grid-template-columns: 35px minmax(0, 1fr); gap: 20px; padding: 30px 0 34px; border-bottom: 1px solid var(--color-border); scroll-margin-top: 120px; }
+.ek-legal-section:first-of-type { padding-top: 0; }
+.ek-legal-section-count { color: var(--color-text-muted); font-size: 12px; padding-top: 7px; font-variant-numeric: tabular-nums; }
+.ek-legal-section h2 { margin: 0 0 14px; font-size: 23px; line-height: 1.4; font-weight: 650; letter-spacing: -.025em; }
+.ek-legal:lang(bn) .ek-legal-section h2 { font-size: 22px; font-weight: 600; line-height: 1.55; letter-spacing: 0; }
+.ek-legal-prose { color: var(--color-text-secondary); font-size: 15px; line-height: 1.85; overflow-wrap: anywhere; }
+.ek-legal-prose p { margin: 0 0 14px; }
+.ek-legal-prose p:last-child { margin-bottom: 0; }
+.ek-legal-prose ul,.ek-legal-prose ol { margin: 0; padding-inline-start: 22px; }
+.ek-legal-prose li { padding-inline-start: 5px; margin-block: 9px; }
+.ek-legal-prose strong { color: var(--color-text); font-weight: 650; }
+.ek-legal-prose a,.ek-legal-bottom a { color: var(--color-text); text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.ek-legal-prose a:hover { text-decoration-thickness: 2px; }
+.ek-legal-bottom { margin-top: 33px; padding: 28px 30px; background: var(--color-surface-subtle); border-radius: 12px; border: 1px solid var(--color-border); }
+.ek-legal-bottom strong { display: block; font-size: 18px; }
+.ek-legal-bottom p { font-size: 14px; color: var(--color-text-secondary); line-height: 1.8; margin: 8px 0 18px; }
+.ek-legal-bottom a { font-size: 14px; font-weight: 650; }
+.ek-legal-bottom a span { margin-inline-start: 7px; }
+.ek-legal-contact-links { display: flex; flex-wrap: wrap; gap: 12px 22px; }
+@media (max-width: 860px) {
+  .ek-legal { padding: 116px 22px 70px; }
+  .ek-legal-layout { grid-template-columns: minmax(0,1fr); gap: 0; padding-top: 14px; }
+  .ek-legal-aside { position: static; display: none; }
+  .ek-legal-intro { padding: 45px 0 31px; }
+}
+@media (max-width: 580px) {
+  .ek-legal { padding-inline: 18px; }
+  .ek-legal-intro>p { font-size: 15px; }
+  .ek-legal-meta { gap: 8px; flex-direction: column; }
+  .ek-legal-section { grid-template-columns: 26px minmax(0,1fr); gap: 10px; padding: 25px 0; }
+  .ek-legal-section h2,.ek-legal:lang(bn) .ek-legal-section h2 { font-size: 20px; }
+  .ek-legal-prose { font-size: 14px; }
+  .ek-legal-callout,.ek-legal-bottom { padding: 20px; }
+}
