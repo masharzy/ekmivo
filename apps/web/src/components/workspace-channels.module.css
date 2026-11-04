@@ -1,0 +1,35 @@
+.root{display:grid;gap:16px;color:var(--dashboard-text);min-width:0}
+.heading,.provider,.account,.actions,.notice{display:flex;align-items:center;gap:10px}
+.heading,.notice{justify-content:space-between}
+.heading h1,.provider h2,.heading p,.empty,.telegram p{margin:0}
+.heading h1{font-size:clamp(21px,2vw,26px);line-height:1.2}
+.heading p,.empty,.provider small,.identity small,.telegram p{color:var(--dashboard-muted);font-size:13px}
+.heading p{margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:12px;align-items:start}
+.card,.fixtures,.notice{border:1px solid var(--dashboard-border);border-radius:12px;background:var(--dashboard-surface);min-width:0}
+.provider,.account,.empty,.telegram,.fixtures,.notice{padding:10px 12px}
+.provider h2{font-size:15px;flex:1}
+.icon{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:color-mix(in srgb,currentColor 12%,transparent);color:#3478d4;flex:none}
+.icon[data-provider=wa]{color:#218f64}
+.icon[data-provider=ig]{color:#c44980}
+.icon[data-provider=tg]{color:#1688bd}
+.accounts{padding:0;margin:0;list-style:none}
+.account,.empty,.telegram{border-top:1px solid var(--dashboard-border)}
+.account{justify-content:space-between;flex-wrap:wrap}
+.identity{display:grid;min-width:0;overflow-wrap:anywhere;font-size:13px}
+.identity small{font-size:11px}
+.actions{flex-wrap:wrap;gap:6px}
+.status{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--dashboard-subtle);white-space:nowrap}
+.status[data-connected=true]{background:color-mix(in srgb,#329366 15%,var(--dashboard-surface))}
+.root button,.actions a{font:inherit;font-size:12px;color:inherit;text-decoration:none;background:var(--dashboard-surface);border:1px solid var(--dashboard-border);border-radius:7px;padding:5px 9px;white-space:nowrap}
+.root button:not(:disabled),.root summary{cursor:pointer}
+.root button:disabled{opacity:.55}
+.root button:hover:not(:disabled),.actions a:hover{background:var(--dashboard-subtle)}
+.root button.primary{background:#285fa8;color:white;border-color:transparent}
+.root button.primary:hover:not(:disabled){background:#1f4d8a}
+.root :focus-visible{outline:2px solid #397dcc;outline-offset:2px}
+.telegram summary,.fixtures summary{font-size:13px;font-weight:600}
+.telegram form{display:grid;gap:8px;justify-items:start;margin-top:8px}
+.telegram label{display:grid;gap:4px;width:100%;font-size:13px}
+.telegram input{padding:6px 8px;border:1px solid var(--dashboard-border);border-radius:7px;background:var(--dashboard-surface);color:inherit;width:100%;box-sizing:border-box}
+.fixtures .accounts{margin-top:8px}
