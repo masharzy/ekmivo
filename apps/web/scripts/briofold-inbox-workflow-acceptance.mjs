@@ -129,12 +129,12 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await page.goto(origin+'/inbox/tickets');await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('resolved');await page.getByText('Fictional delivery dispute',{exact:true}).waitFor();
   await page.getByRole('link',{name:'Open conversation and ticket',exact:true}).click();await page.waitForURL('**/inbox?thread='+thread);
   await page.getByLabel('Internal note',{exact:true}).waitFor();assert.equal(await page.getByLabel('Internal note',{exact:true}).inputValue(),'Browser internal note persisted');
-  await page.getByText('Date & label filters',{exact:true}).click();
+  await page.getByText('More filters',{exact:true}).click();
   await page.getByLabel('Exact label',{exact:true}).fill('browser');
   await page.locator(`[data-thread-id="${thread}"]`).waitFor();
-  await page.getByLabel('Last activity from (UTC)',{exact:true}).fill('2099-01-01');
-  await page.getByText('No conversations found.',{exact:true}).waitFor();
-  await page.getByRole('button',{name:'Clear date & label',exact:true}).click();
+  await page.getByLabel('From (UTC)',{exact:true}).fill('2099-01-01');
+  await page.getByText('No conversations match your filters.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Clear filters',exact:true}).click();
   await page.locator(`[data-thread-id="${thread}"]`).waitFor();
   await db`SELECT inbox_ingest(${c},'keyboard-inbound','keyboard-customer','Second keyboard customer','Needs a reply','text',now()+interval '1 minute')`;
   const secondThread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${c} AND external_id='keyboard-customer'`)[0].id;
