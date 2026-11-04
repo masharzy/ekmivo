@@ -108,21 +108,13 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		Mime string `json:"mime"`
 	}
 	if json.Unmarshal(raw, &f) != nil || f.Key == "" {
-		if err := s.hydrateInboxMedia(r.Context(), d, thread, id); err != nil {
+		media, err := s.fetchInboundInboxMedia(r.Context(), d, thread, id)
+		if err != nil {
 			fail(w, 503, "MEDIA_UNAVAILABLE")
 			return
 		}
-		if err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_media_access($1::uuid,$2,$3::uuid,$4::uuid)", d.Workspace, d.Environment, thread, id).Scan(&raw); err != nil {
-			mapped(w, err)
-			return
-		}
-		if json.Unmarshal(raw, &f) != nil || f.Key == "" {
-			fail(w, 404, "NOT_FOUND")
-			return
-		}
-	}
-	if f.Key == "" {
-		fail(w, 404, "NOT_FOUND")
+		w.Header().Set("Cache-Control", "private, no-store")
+		write(w, 200, map[string]any{"data": base64.StdEncoding.EncodeToString(media.Data), "mime": media.MIME, "name": media.Name})
 		return
 	}
 	data, err := objectRequest(r.Context(), "GET", f.Key, nil)

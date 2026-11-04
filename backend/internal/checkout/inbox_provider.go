@@ -171,9 +171,15 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 				} `json:"sender"`
 				Timestamp int64 `json:"timestamp"`
 				Message   struct {
-					MID    string `json:"mid"`
-					Text   string `json:"text"`
-					IsEcho bool   `json:"is_echo"`
+					MID         string      `json:"mid"`
+					Text        string      `json:"text"`
+					IsEcho      bool        `json:"is_echo"`
+					StickerID   json.Number `json:"sticker_id"`
+					Attachments []struct {
+						Payload struct {
+							StickerID json.Number `json:"sticker_id"`
+						} `json:"payload"`
+					} `json:"attachments"`
 				} `json:"message"`
 			} `json:"messaging"`
 			Changes []struct {
@@ -228,6 +234,9 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
+	profileContext, cancelProfiles := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancelProfiles()
+	profileNames := make(map[[2]string]string)
 	ingest := func(account, id, from, name, text, kind string, at time.Time) error {
 		var connection, workspace string
 		var token []byte
@@ -238,6 +247,23 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 			}
 			return queryErr
 		} // durable raw event retained for connections not linked yet
+		if provider == "ms" && channelNumber.MatchString(from) && graphVersionPattern.MatchString(cfg["META_GRAPH_VERSION"]) {
+			key := [2]string{account, from}
+			if _, cached := profileNames[key]; !cached && profileContext.Err() == nil {
+				profileNames[key] = ""
+				pageToken, decryptErr := merchantwebhook.Decrypt(s.Pipeline.Key, token, workspace+"|inbox|ms|"+account)
+				if decryptErr == nil {
+					var profile struct {
+						FirstName string `json:"first_name"`
+						LastName  string `json:"last_name"`
+					}
+					if metaGet(r.WithContext(profileContext), cfg["META_GRAPH_VERSION"], from+"?fields=first_name,last_name", string(pageToken), &profile) == nil {
+						profileNames[key] = strings.TrimSpace(profile.FirstName + " " + profile.LastName)
+					}
+				}
+			}
+			name = profileNames[key]
+		}
 		var accepted bool
 		if err := tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,$6,$7)", connection, id, from, name, text, kind, at).Scan(&accepted); err != nil {
 			return err
@@ -295,6 +321,15 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 				}
 				kind := "text"
 				text := m.Message.Text
+				if provider == "ms" && text == "" {
+					like := messengerLikeSticker(m.Message.StickerID.String())
+					for _, attachment := range m.Message.Attachments {
+						like = like || messengerLikeSticker(attachment.Payload.StickerID.String())
+					}
+					if like {
+						text = "👍"
+					}
+				}
 				if text == "" {
 					kind = "unsupported"
 					text = "এই ধরনের মেসেজ এখানে দেখানো যায় না।"

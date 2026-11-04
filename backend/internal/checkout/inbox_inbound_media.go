@@ -1,15 +1,15 @@
 package checkout
 
 import (
+	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
 	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"image/gif"
 	"io"
 	"net/http"
 	"net/url"
@@ -23,9 +23,31 @@ type inboxIncomingMedia struct {
 	At                                                                       time.Time
 }
 
+func messengerLikeSticker(id string) bool {
+	switch id {
+	case "369239263222822", "369239343222814", "369239383222810":
+		return true
+	default:
+		return false
+	}
+}
+
+func inboxStickerID(value any) string {
+	switch id := value.(type) {
+	case json.Number:
+		return id.String()
+	case string:
+		return id
+	default:
+		return ""
+	}
+}
+
 func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 	var root map[string]any
-	if json.Unmarshal(raw, &root) != nil {
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
+	if decoder.Decode(&root) != nil {
 		return nil
 	}
 	var out []inboxIncomingMedia
@@ -36,14 +58,20 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 		for _, message := range rows(e["messaging"]) {
 			m := obj(message)
 			msg := obj(m["message"])
-			if msg["is_echo"] == true {
+			if msg["is_echo"] == true || (str(root, "object") == "page" && messengerLikeSticker(inboxStickerID(msg["sticker_id"]))) {
 				continue
 			}
 			for index, attachment := range rows(msg["attachments"]) {
 				a := obj(attachment)
+				if str(root, "object") == "page" && messengerLikeSticker(inboxStickerID(obj(a["payload"])["sticker_id"])) {
+					continue
+				}
 				kind := str(a, "type")
-				if kind == "file" {
+				switch kind {
+				case "file":
 					kind = "document"
+				case "sticker", "gif":
+					kind = "image"
 				}
 				if kind != "image" && kind != "audio" && kind != "video" && kind != "document" {
 					continue
@@ -52,8 +80,9 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 				if index > 0 {
 					id += "/" + strconv.Itoa(index)
 				}
-				stamp, _ := m["timestamp"].(float64)
-				out = append(out, inboxIncomingMedia{Account: str(e, "id"), Message: id, Sender: str(obj(m["sender"]), "id"), Kind: kind, Caption: str(msg, "text"), URL: str(obj(a["payload"]), "url"), At: time.UnixMilli(int64(stamp))})
+				timestamp, _ := m["timestamp"].(json.Number)
+				stamp, _ := timestamp.Int64()
+				out = append(out, inboxIncomingMedia{Account: str(e, "id"), Message: id, Sender: str(obj(m["sender"]), "id"), Kind: kind, Caption: str(msg, "text"), URL: str(obj(a["payload"]), "url"), At: time.UnixMilli(stamp)})
 			}
 		}
 		for _, change := range rows(e["changes"]) {
@@ -177,47 +206,54 @@ func safeMetaMediaURL(raw string) bool {
 	}
 	return false
 }
-func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id string) error {
+
+type inboxMediaDownload struct {
+	Data []byte
+	MIME string
+	Name string
+}
+
+func (s *Service) fetchInboundInboxMedia(ctx context.Context, d mobileIdentity, t, id string) (inboxMediaDownload, error) {
 	var raw []byte
 	if err := s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_media_source($1::uuid,$2,$3::uuid,$4::uuid)", d.Workspace, d.Environment, t, id).Scan(&raw); err != nil {
-		return err
+		return inboxMediaDownload{}, err
 	}
 	var src map[string]any
 	if json.Unmarshal(raw, &src) != nil || str(src, "reference") == "" {
-		return errors.New("MEDIA_UNAVAILABLE")
+		return inboxMediaDownload{}, errors.New("MEDIA_UNAVAILABLE")
 	}
 	cipher, err := base64.StdEncoding.DecodeString(str(src, "reference"))
 	if err != nil {
-		return err
+		return inboxMediaDownload{}, err
 	}
 	data, err := merchantwebhook.Decrypt(s.Pipeline.Key, cipher, d.Workspace+"|inbox-source")
 	if err != nil {
-		return err
+		return inboxMediaDownload{}, err
 	}
 	var ref map[string]string
 	if json.Unmarshal(data, &ref) != nil {
-		return errors.New("MEDIA_UNAVAILABLE")
+		return inboxMediaDownload{}, errors.New("MEDIA_UNAVAILABLE")
 	}
 	credential, err := base64.StdEncoding.DecodeString(str(src, "credential"))
 	if err != nil {
-		return err
+		return inboxMediaDownload{}, err
 	}
 	token, err := merchantwebhook.Decrypt(s.Pipeline.Key, credential, d.Workspace+"|inbox|"+str(src, "provider")+"|"+str(src, "account"))
 	if err != nil {
-		return err
+		return inboxMediaDownload{}, err
 	}
 	mediaURL := ref["url"]
 	if str(src, "provider") == "wa" {
 		cfg, _ := s.channelConfig(ctx)
 		version := cfg["META_GRAPH_VERSION"]
 		if !strings.HasPrefix(version, "v") || strings.ContainsAny(version, "/?#") {
-			return errors.New("CHANNEL_NOT_CONFIGURED")
+			return inboxMediaDownload{}, errors.New("CHANNEL_NOT_CONFIGURED")
 		}
 		req, _ := http.NewRequestWithContext(ctx, "GET", "https://graph.facebook.com/"+version+"/"+url.PathEscape(ref["provider_id"]), nil)
 		req.Header.Set("Authorization", "Bearer "+string(token))
 		res, err := inboxHTTP.Do(req)
 		if err != nil {
-			return err
+			return inboxMediaDownload{}, err
 		}
 		var result struct {
 			URL string `json:"url"`
@@ -225,12 +261,12 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 		err = json.NewDecoder(io.LimitReader(res.Body, 65536)).Decode(&result)
 		res.Body.Close()
 		if err != nil || res.StatusCode != 200 {
-			return errors.New("MEDIA_UNAVAILABLE")
+			return inboxMediaDownload{}, errors.New("MEDIA_UNAVAILABLE")
 		}
 		mediaURL = result.URL
 	}
 	if !safeMetaMediaURL(mediaURL) {
-		return errors.New("MEDIA_HOST_DENIED")
+		return inboxMediaDownload{}, errors.New("MEDIA_HOST_DENIED")
 	}
 	req, _ := http.NewRequestWithContext(ctx, "GET", mediaURL, nil)
 	if str(src, "provider") == "wa" {
@@ -238,36 +274,58 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	}
 	res, err := inboxHTTP.Do(req)
 	if err != nil {
-		return err
+		return inboxMediaDownload{}, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
+		return inboxMediaDownload{}, errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
 	}
 	data, err = io.ReadAll(io.LimitReader(res.Body, inboxMediaLimit+1))
 	if err != nil {
-		return err
+		return inboxMediaDownload{}, err
 	}
 	declared := ref["mime"]
 	if declared == "" && str(src, "kind") == "audio" {
 		declared = strings.Split(res.Header.Get("Content-Type"), ";")[0]
 	}
-	typ, err := validateInboxMedia(data, declared)
+	typ, err := validateInboundInboxMedia(data, declared, str(src, "kind"))
 	if err != nil {
-		return err
+		return inboxMediaDownload{}, err
 	}
 	if scanFile(ctx, data) != nil {
-		return errors.New("FILE_SCAN_UNCONFIRMED")
-	}
-	hash := sha256.Sum256(data)
-	key := "inbox/" + d.Environment + "/" + d.Workspace + "/" + id + "/" + hex.EncodeToString(hash[:])
-	if _, err = objectRequest(ctx, "PUT", key, data); err != nil {
-		return err
+		return inboxMediaDownload{}, errors.New("FILE_SCAN_UNCONFIRMED")
 	}
 	name := ref["name"]
 	if name == "" {
 		name = "attachment"
 	}
-	_, err = s.Pipeline.Control.Exec(ctx, "SELECT inbox_inbound_store($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8)", d.Workspace, t, id, key, name, typ, len(data), hex.EncodeToString(hash[:]))
-	return err
+	return inboxMediaDownload{Data: data, MIME: typ, Name: name}, nil
+}
+
+// Inbound GIF and MP4 are display formats. Outbound uploads keep their separate
+// validation and still require the provider to support the chosen file type.
+func validateInboundInboxMedia(data []byte, declared, kind string) (string, error) {
+	if len(data) == 0 || len(data) > inboxMediaLimit {
+		return "", errors.New("FILE_LIMIT_EXCEEDED")
+	}
+	switch http.DetectContentType(data) {
+	case "image/gif":
+		if kind == "image" {
+			cfg, err := gif.DecodeConfig(bytes.NewReader(data))
+			if err != nil || cfg.Width < 1 || cfg.Height < 1 || int64(cfg.Width)*int64(cfg.Height) > 20000000 {
+				return "", errors.New("INVALID_IMAGE")
+			}
+			return "image/gif", nil
+		}
+	case "video/mp4":
+		if kind == "video" {
+			return "video/mp4", nil
+		}
+	}
+	mediaType, err := validateInboxMedia(data, declared)
+	if err != nil && kind == "document" {
+		// Other document formats are download-only. The caller still scans bytes.
+		return "application/octet-stream", nil
+	}
+	return mediaType, err
 }
