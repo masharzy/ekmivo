@@ -120,6 +120,9 @@
 .inbox .filterSheet .extraFilters>label,.inbox .filterSheet .extraFilters>details{margin:12px 0 0}
 .inbox .filterSheet .filterApply{background:color-mix(in srgb,var(--ib-ok) 12%,var(--ib-s1));color:var(--ib-ok);border-color:var(--ib-ok);font-weight:600}
 .inbox .filterSheet .filterApply:hover{background:color-mix(in srgb,var(--ib-ok) 20%,var(--ib-s1))}
+.inbox .filterShortcuts{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:13px}
+.inbox .filterShortcuts a{display:inline-flex;align-items:center;gap:5px;padding:5px;color:var(--ib-muted);font-size:12px;text-decoration:none}
+.inbox .filterShortcuts a:hover{color:var(--ib-ok)}
 .inbox .workflow .internalNote fieldset{background:color-mix(in srgb,#d5a448 9%,var(--ib-s1));border-color:color-mix(in srgb,#d5a448 30%,var(--ib-line));color:var(--ib-text)}
 .inbox .workflow .internalNote textarea{background:var(--ib-s1);border:1px solid var(--ib-line);color:var(--ib-text);box-sizing:border-box}
 .inbox .workflow .internalNote button[type=submit]{background:var(--ib-s1);color:var(--ib-text);border:1px solid var(--ib-line)}
