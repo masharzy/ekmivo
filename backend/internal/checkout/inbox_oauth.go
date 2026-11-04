@@ -196,18 +196,20 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	accounts := map[string]string{}
+	accountNames := map[string]string{}
 	subscriptions := map[string]string{}
 	if target.Provider == "ms" || target.Provider == "ig" {
 		var pages struct {
 			Data []struct {
 				ID        string `json:"id"`
+				Name      string `json:"name"`
 				Token     string `json:"access_token"`
 				Instagram *struct {
 					ID string `json:"id"`
 				} `json:"instagram_business_account"`
 			} `json:"data"`
 		}
-		if err = metaGet(r, version, "me/accounts?fields=id,access_token,instagram_business_account&limit=100", token.Token, &pages); err != nil {
+		if err = metaGet(r, version, "me/accounts?fields=id,name,access_token,instagram_business_account&limit=100", token.Token, &pages); err != nil {
 			fail(w, 503, "CHANNEL_UNAVAILABLE")
 			return
 		}
@@ -215,6 +217,7 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 			subscriptions[page.ID] = page.Token
 			if target.Provider == "ms" {
 				accounts[page.ID] = page.Token
+				accountNames[page.ID] = page.Name
 			} else if page.Instagram != nil {
 				accounts[page.Instagram.ID] = page.Token
 			}
@@ -296,7 +299,7 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		var id string
-		if err = tx.QueryRow(r.Context(), "SELECT inbox_connection($1::uuid,$2,$3,$4,$5)", target.Workspace, target.Environment, target.Provider, account, cipher).Scan(&id); err != nil {
+		if err = tx.QueryRow(r.Context(), "SELECT inbox_connection_named($1::uuid,$2,$3,$4,$5,$6)", target.Workspace, target.Environment, target.Provider, account, cipher, accountNames[account]).Scan(&id); err != nil {
 			mapped(w, err)
 			return
 		}
