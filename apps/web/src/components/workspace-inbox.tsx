@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {DashboardIcon as Icon} from "./dashboard-icon";
+import {InboxChannelIcon,inboxChannelName} from "./inbox-channel-icon";
 import {InboxAttachment} from "./inbox-attachment";
 import {InboxAttachmentComposer} from "./inbox-attachment-composer";
 import {InboxWorkflow} from "./inbox-workflow";
@@ -21,7 +22,6 @@ const queues=[
  {id:"pending",en:"Pending",bn:"অপেক্ষমাণ"},{id:"waiting",en:"Waiting for reply",bn:"উত্তরের অপেক্ষায়"},
  {id:"resolved",en:"Resolved",bn:"সমাধান হয়েছে"},{id:"snoozed",en:"Snoozed",bn:"পরে দেখুন"}
 ] as const;
-const channelName=(channel?:string)=>({ms:"Messenger",ig:"Instagram",wa:"WhatsApp",web:"Website"})[channel as "ms"|"ig"|"wa"|"web"]??channel??"";
 
 export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewer"}:{workspaceId:string;actorId:string;bn:boolean;initialThread?:string;role?:"owner"|"admin"|"editor"|"viewer"}){
  const [threads,setThreads]=useState<Thread[]>([]),[messages,setMessages]=useState<Message[]>([]);
@@ -29,7 +29,8 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  const [error,setError]=useState(false),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[chatLoading,setChatLoading]=useState(!!initialThread);
  const [ai,setAi]=useState(true),[windowOpen,setWindowOpen]=useState(false),[query,setQuery]=useState("");
  const [queue,setQueue]=useState("all"),[channel,setChannel]=useState(""),[fromDate,setFromDate]=useState(""),[throughDate,setThroughDate]=useState(""),[label,setLabel]=useState("");
- const [workflowBusy,setWorkflowBusy]=useState(false),[attachmentBusy,setAttachmentBusy]=useState(false),[documentAllowed,setDocumentAllowed]=useState(false),[mediaAllowed,setMediaAllowed]=useState(false);
+ const [workflowBusy,setWorkflowBusy]=useState(false),[attachmentBusy,setAttachmentBusy]=useState(false);
+ const [mediaCapabilities,setMediaCapabilities]=useState({image:false,audio:false,document:false});
  const [before,setBefore]=useState<number|null>(null),[hasOlder,setHasOlder]=useState(false),[offset,setOffset]=useState(0),[selectedName,setSelectedName]=useState("");
  const [threadSendAllowed,setThreadSendAllowed]=useState(false),[threadManageAllowed,setThreadManageAllowed]=useState(false);
  const [draftError,setDraftError]=useState(false),[forbidden,setForbidden]=useState(false);
@@ -63,8 +64,9 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
   if(!draft){try{const saved=readInboxDraft(window.sessionStorage,inboxDraftKey(actorId,workspaceId,id));draft={text:saved.text,saved:saved.text,sendKey:saved.sendKey,savedKey:saved.sendKey};drafts.current.set(id,draft);}catch{setDraftError(true);return;}}
   generation.current++;activeThread.current=id;setSelected(id);setBefore(null);setHasOlder(false);
   setSelectedName(threads.find(t=>t.id===id)?.name??"");setThreadSendAllowed(false);setThreadManageAllowed(false);
+  setMediaCapabilities({image:false,audio:false,document:false});
   const hit=cached.current.get(id);setMessages(hit?.items??[]);setChatLoading(!hit);
-  if(hit){setAi(hit.thread.ai_enabled);setWindowOpen(hit.thread.window_open);setThreadSendAllowed(hit.thread.send_allowed!==false);setThreadManageAllowed(hit.thread.manage_allowed!==false);}
+  if(hit){setAi(hit.thread.ai_enabled);setWindowOpen(hit.thread.window_open);setThreadSendAllowed(hit.thread.send_allowed!==false);setThreadManageAllowed(hit.thread.manage_allowed!==false);setMediaCapabilities({image:hit.thread.capabilities?.image===true,audio:hit.thread.capabilities?.audio===true,document:hit.thread.capabilities?.document===true});}
   stickToLatest.current=true;shownThread.current=null;pending.current=draft.sendKey||null;setText(draft.text);
  }
  function backToList(){
@@ -93,8 +95,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    setMessages(previous=>JSON.stringify(previous)===JSON.stringify(chat.items)?previous:chat.items);
    setChatLoading(false);setSelectedName(chat.thread.name);setHasOlder(chat.items.length===50);
    setAi(chat.thread.ai_enabled);setWindowOpen(chat.thread.window_open);
-   setDocumentAllowed(chat.thread.capabilities?.document===true);
-   setMediaAllowed(chat.thread.capabilities?.image===true||chat.thread.capabilities?.audio===true||chat.thread.capabilities?.document===true);
+   setMediaCapabilities({image:chat.thread.capabilities?.image===true,audio:chat.thread.capabilities?.audio===true,document:chat.thread.capabilities?.document===true});
    if(before===null){cached.current.delete(selected);cached.current.set(selected,chat);if(cached.current.size>12)cached.current.delete(cached.current.keys().next().value!);}
    const last=before===null?chat.items.at(-1):undefined;
    if(last&&last.sequence>(lastRead.current.get(selected)??0)){
@@ -137,6 +138,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
 
  const chosen=threads.find(t=>t.id===selected);
  const t=(en:string,be:string)=>bn?be:en;
+ const extraFilterCount=Number(Boolean(fromDate))+Number(Boolean(throughDate))+Number(Boolean(label.trim()));
  return <section className={`${styles.root} ${styles.inbox}`}>
   <header className={styles.pageHeading}><div><p className={styles.eyebrow}>{t("CUSTOMER COMMUNICATION","গ্রাহক যোগাযোগ")}</p><h1>{t("Inbox","ইনবক্স")}</h1><p>{t("Keep every customer conversation in one place.","সব চ্যানেলের গ্রাহক কথোপকথন এক জায়গায়।")}</p></div>
    <div className={styles.links}>
@@ -158,7 +160,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
      </div>
      <div className={styles.filterRow}><label><span>{t("Queue","তালিকা")}</span><select value={queue} aria-label={t("Conversation queue","কথোপকথনের তালিকা")} onChange={e=>{invalidate();setQueue(e.target.value);setOffset(0);}}>{queues.map(item=><option key={item.id} value={item.id}>{bn?item.bn:item.en}</option>)}</select></label>
       <label><span>{t("Channel","চ্যানেল")}</span><select value={channel} aria-label={t("Channel filter","চ্যানেল ফিল্টার")} onChange={e=>{invalidate();setChannel(e.target.value);setOffset(0);}}><option value="">{t("All channels","সব চ্যানেল")}</option><option value="ms">Messenger</option><option value="ig">Instagram</option><option value="wa">WhatsApp</option><option value="web">{t("Website","ওয়েবসাইট")}</option></select></label></div>
-     <details className={styles.advancedFilters}><summary>{t("Date & label filters","তারিখ ও লেবেল ফিল্টার")}</summary><div>
+     <details className={styles.advancedFilters}><summary><Icon name="sliders"/>{t("More filters","আরও ফিল্টার")}{extraFilterCount>0&&<span className={styles.filterCount}>{extraFilterCount}</span>}</summary><div>
       <label>{t("From (UTC)","শুরু (UTC)")}<input type="date" value={fromDate} max={throughDate||undefined} disabled={busy||workflowBusy||attachmentBusy} onChange={e=>{invalidate();setFromDate(e.target.value);setOffset(0);}}/></label>
       <label>{t("Through (UTC)","শেষ (UTC)")}<input type="date" value={throughDate} min={fromDate||undefined} disabled={busy||workflowBusy||attachmentBusy} onChange={e=>{invalidate();setThroughDate(e.target.value);setOffset(0);}}/></label>
       <label>{t("Exact label","নির্দিষ্ট লেবেল")}<input value={label} maxLength={40} disabled={busy||workflowBusy||attachmentBusy} onChange={e=>{invalidate();setLabel(e.target.value);setOffset(0);}}/></label>
@@ -173,7 +175,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
      }}><span className={styles.threadAvatar} aria-hidden="true">{item.name?.slice(0,1).toLocaleUpperCase()||"?"}</span><span className={styles.threadBody}>
       <span className={styles.threadTop}><strong>{item.name}</strong><small>{item.last_activity_at?new Date(item.last_activity_at).toLocaleDateString(bn?"bn-BD":"en-BD",{month:"short",day:"numeric"}):""}</small></span>
       <span className={styles.threadPreview}>{item.preview||t("Attachment or activity","সংযুক্তি বা কার্যক্রম")}</span>
-      <span className={styles.threadMeta}><span>{channelName(item.channel)}</span>{item.overdue&&<span className={styles.overdue}>{t("Overdue","সময় পেরিয়েছে")}</span>}</span>
+      <span className={styles.threadMeta}><span className={styles.channelBadge} data-channel={item.channel}><InboxChannelIcon channel={item.channel}/>{inboxChannelName(item.channel)}</span>{item.overdue&&<span className={styles.overdue}>{t("Overdue","সময় পেরিয়েছে")}</span>}</span>
      </span>{item.unread>0&&<span className={styles.unreadBadge} aria-label={t(`${item.unread} unread messages`,`${item.unread}টি অপঠিত মেসেজ`)}>{item.unread>99?"99+":item.unread}</span>}</button>)}
      {!loaded&&!error&&<p className={styles.listEmpty} role="status">{t("Loading conversations…","কথোপকথন আসছে…")}</p>}
      {loaded&&!threads.length&&<p className={styles.listEmpty}>{t("No conversations match your filters.","এই ফিল্টারে কোনো কথোপকথন নেই।")}</p>}
@@ -182,7 +184,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    </aside>
    <div className={styles.chat}>
     {selected?<>
-     <header className={styles.chatHeader}><button type="button" className={styles.backToList} aria-label={t("Back to conversations","কথোপকথনের তালিকায় ফিরুন")} onClick={backToList}><Icon name="chevron"/></button><div className={styles.chatIdentity}><span className={styles.chatAvatar} aria-hidden="true">{selectedName?.slice(0,1).toLocaleUpperCase()||"?"}</span><div><h2>{selectedName||t("Conversation","কথোপকথন")}</h2><p>{channelName(chosen?.channel)}{chosen?.status?` · ${chosen.status}`:""}</p></div></div>
+     <header className={styles.chatHeader}><button type="button" className={styles.backToList} aria-label={t("Back to conversations","কথোপকথনের তালিকায় ফিরুন")} onClick={backToList}><Icon name="chevron"/></button><div className={styles.chatIdentity}><span className={styles.chatAvatar} aria-hidden="true">{selectedName?.slice(0,1).toLocaleUpperCase()||"?"}</span><div><h2>{selectedName||t("Conversation","কথোপকথন")}</h2><p className={styles.headerChannel}><InboxChannelIcon channel={chosen?.channel}/>{inboxChannelName(chosen?.channel)}{chosen?.status?` · ${chosen.status}`:""}</p></div></div>
       {canManage?<button type="button" className={styles.aiControl} aria-pressed={ai} disabled={busy||workflowBusy||attachmentBusy} onClick={()=>{setBusy(true);void api("ai",selected,{enabled:!ai}).then(refresh).catch(()=>setError(true)).finally(()=>setBusy(false));}}><span className={ai?styles.statusDot:styles.statusOff}/>{ai?t("AI on","AI চালু"):t("AI off","AI বন্ধ")}</button>:<span className={styles.aiReadOnly}>{ai?t("AI on","AI চালু"):t("AI off","AI বন্ধ")}</span>}
      </header>
      <div className={styles.chatBody}>
@@ -197,10 +199,13 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
        </div>
        <div className={styles.composerPanel}>
         {!canSend?<p className={styles.composeNotice}>{t("You have read-only access to this conversation.","এই কথোপকথনে আপনার শুধু দেখার অনুমতি আছে।")}</p>:windowOpen?<form className={styles.compose} onSubmit={e=>{e.preventDefault();void send();}}>
-         <textarea aria-label={t("Message","মেসেজ")} id="inbox-message" value={text} maxLength={8000} rows={2} placeholder={t("Write a message…","মেসেজ লিখুন…")} disabled={busy||workflowBusy||attachmentBusy} aria-keyshortcuts="Control+Enter Meta+Enter" onKeyDown={e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();e.currentTarget.form?.requestSubmit();}}} onChange={e=>changeText(e.target.value)}/>
-         <button type="submit" disabled={busy||workflowBusy||attachmentBusy||!text.trim()}>{busy?t("Sending…","পাঠানো হচ্ছে…"):t("Send","পাঠান")}<Icon name="arrow"/></button>
+         <textarea aria-label={t("Message","মেসেজ")} id="inbox-message" value={text} maxLength={8000} rows={2} placeholder={t("Write a message…","মেসেজ লিখুন…")} disabled={busy||workflowBusy||attachmentBusy} aria-keyshortcuts="Enter Shift+Enter Control+Enter Meta+Enter" onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();e.currentTarget.form?.requestSubmit();}}} onChange={e=>changeText(e.target.value)}/>
+         <div className={styles.composeToolbar}>
+          <InboxAttachmentComposer key={selected} workspaceId={workspaceId} actorId={actorId} threadId={selected} bn={bn} disabled={busy||workflowBusy||attachmentBusy} capabilities={mediaCapabilities} onBusy={setAttachmentBusy} onSent={refresh}/>
+          <span className={styles.composeHint}>{t("Enter to send · Shift+Enter for a new line","Enter-এ পাঠান · নতুন লাইনে Shift+Enter")}</span>
+          <button className={styles.sendButton} type="submit" disabled={busy||workflowBusy||attachmentBusy||!text.trim()}>{busy?t("Sending…","পাঠানো হচ্ছে…"):t("Send","পাঠান")}<Icon name="send"/></button>
+         </div>
         </form>:<p className={styles.composeNotice}>{t("Reply window is closed. You can respond after the customer sends a new message.","উত্তর দেওয়ার সময়সীমা শেষ। গ্রাহক নতুন মেসেজ দিলে উত্তর দিতে পারবেন।")}</p>}
-        {canSend&&windowOpen&&mediaAllowed&&<InboxAttachmentComposer key={selected} workspaceId={workspaceId} actorId={actorId} threadId={selected} bn={bn} disabled={busy||workflowBusy} documentAllowed={documentAllowed} onBusy={setAttachmentBusy} onSent={refresh}/>}
        </div>
       </div>
       <aside className={styles.inspector} aria-label={t("Conversation tools","কথোপকথনের কাজ")}>
