@@ -23,17 +23,23 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   await page.getByRole('textbox',{name:'Message',exact:true}).fill('Unsent first conversation');
   await choose(1);await page.getByRole('textbox',{name:'Message',exact:true}).fill('Unsent second conversation');
   await choose(0);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Unsent first conversation');
+  // Settings shortcuts belong to the approved Inbox filter sheet.
+  await page.getByRole('button',{name:'Filters',exact:true}).click();
   await page.getByRole('link',{name:'Channels',exact:true}).last().click();
   await page.getByRole('button',{name:'Save draft',exact:true}).click();await page.waitForURL('**/settings/channels');
   await page.goto(origin+'/inbox');await choose(0);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Unsent first conversation');
   // Commit a real send, lose only the response, then reload and retry the saved intent.
-  let dropped=false;const endpoint='**/api/go/workspaces/'+workspace+'/inbox?*';
-  await page.route(endpoint,async route=>{const body=route.request().postDataJSON();if(body?.action==='send'&&!dropped){await route.fetch();dropped=true;await route.abort('failed');}else await route.continue();});
+  let dropped=false,sendKey='';const endpoint='**/api/go/workspaces/'+workspace+'/inbox?*';
+  await page.route(endpoint,async route=>{const body=route.request().postDataJSON();if(body?.action==='send'&&!dropped){sendKey=body.body.idempotency_key;await route.fetch();dropped=true;await route.abort('failed');}else await route.continue();});
   const failed=page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send';}catch{return false;}}});
   await page.getByRole('button',{name:'Send',exact:true}).click();await failed;
-  await page.getByRole('button',{name:'Send',exact:true}).waitFor();await page.waitForFunction(()=>!document.querySelector('textarea[aria-label="Message"]')?.disabled);
-  await page.reload();await choose(0);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Unsent first conversation');
-  await page.getByRole('button',{name:'Send',exact:true}).click();await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Message"]')?.value==='');
+  // The approved chat uses a durable, WhatsApp-style outbox: after Send, the
+  // composer clears and an unconfirmed message gets an in-bubble Retry action.
+  // On reload the server echo reconciles that outbox using its original key.
+  assert.match(sendKey,/^[0-9a-f-]{36}$/i);
+  await page.reload();await choose(0);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'');
+  const repeated=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live',{headers:{Origin:origin},data:{action:'send',thread_id:(await db`SELECT id FROM inbox_threads WHERE workspace_id=${workspace} AND customer_name='Draft fixture customer 0'`)[0].id,body:{text:'Unsent first conversation',idempotency_key:sendKey}}});
+  assert.equal(repeated.status(),200,'outbox retry failed to return the original queued reply');
   assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller' AND body='Unsent first conversation'`)[0].n),1,'lost-response retry queued duplicate reply');
   await choose(1);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Unsent second conversation');
   await choose(0);
@@ -53,15 +59,17 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
    }else if(body?.action==='send-media'&&!lostMedia){await route.fetch();lostMedia=true;await route.abort('failed');}
    else await route.fallback();
   });
+  await page.getByRole('button',{name:'Attachments',exact:true}).click();
   await page.getByLabel('Attach file',{exact:true}).setInputFiles({name:'Fictional attachment.png',mimeType:'image/png',buffer:png});
   await page.getByText('Fictional attachment.png · 1 KB',{exact:true}).waitFor();
   const attachmentFailed=page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send-media';}catch{return false;}}});
   await page.getByRole('button',{name:'Send attachment',exact:true}).click();await attachmentFailed;
   await page.getByRole('alert').filter({hasText:'Could not confirm the attachment.'}).waitFor();
-  await page.reload();await choose(0);await page.getByRole('button',{name:'Send attachment',exact:true}).click();
+  await page.reload();await choose(0);await page.getByRole('button',{name:'Attachments',exact:true}).click();await page.getByRole('button',{name:'Send attachment',exact:true}).click();
   await page.getByRole('button',{name:'Discard attachment',exact:true}).waitFor({state:'detached'});
   assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller' AND content->>'media_id'=${mediaId}`)[0].n),1,'lost attachment response queued twice');
-  await page.getByRole('button',{name:/Open attachment/}).last().click();await page.getByRole('img',{name:'Fictional attachment.png',exact:true}).waitFor();
+  await page.getByRole('dialog',{name:'Send attachment'}).getByRole('button',{name:'Close'}).click();
+  await page.getByRole('img',{name:'Fictional attachment.png',exact:true}).waitFor();
   // A payload over the former 32-KB proxy cap must reach the real Go scanner.
   const scan=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live',{headers:{Origin:origin},data:{action:'media-upload',thread_id:(await db`SELECT id FROM inbox_threads WHERE workspace_id=${workspace} AND customer_name='Draft fixture customer 0'`)[0].id,body:{media_id:randomUUID(),data:Buffer.alloc(100000,65).toString('base64'),mime:'text/plain',name:'Fictional scanner probe.txt'}}});
   assert.equal(scan.status(),503);assert.equal((await scan.json()).error?.code,'FILE_SCAN_UNCONFIRMED','proxy blocked before secure scanner or scanner was bypassed');

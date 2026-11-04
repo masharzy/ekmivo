@@ -72,7 +72,10 @@ export async function runSavedReplySequences({control,sessions,origin,browser,pr
   for(const thread of [source,destination]){const response=await getMedia(thread);assert.equal(response.status(),200,await response.text());const file=await response.json();assert.equal(file.mime,'audio/ogg');assert.equal(createHash('sha256').update(Buffer.from(file.data,'base64')).digest('hex'),voiceSha,'forwarded voice bytes changed');}
   assert.ok(privateStorage.requests.some(x=>x.method==='GET'&&x.key===voiceKey),'voice did not pass through signed private TLS storage');
   const reads=privateStorage.requests.length;assert.notEqual((await getMedia(destination,'sandbox')).status(),200);assert.equal(privateStorage.requests.length,reads,'wrong realm fetched private voice');
-  await page.goto(origin+'/inbox?thread='+destination);await page.getByRole('button',{name:'Open attachment · Fictional voice.ogg',exact:true}).first().click();await page.locator('audio').first().waitFor();
+  // The approved Inbox eagerly loads visible voice messages. The Open attachment
+  // control can become disabled and disappear as soon as its media request starts.
+  await page.goto(origin+'/inbox?thread='+destination);
+  await page.locator('audio').first().waitFor();
   const audio=page.locator('audio').first();await audio.evaluate(async element=>{element.load();await element.play();});assert.ok(await audio.evaluate(element=>element.duration>1&&element.duration<2),'voice is not decodable by browser');await audio.evaluate(element=>element.pause());
   console.log('SAVED REPLY SEQUENCES SQL/Go/Next/browser PASS: private/team, archive, shortcut, media, voice, variables, ordered atomic queue, signed private voice bytes and native playback, retry and denial');
  }finally{await context?.close();await db.end({timeout:3});}

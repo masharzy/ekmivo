@@ -113,7 +113,11 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await setupChecklist.getByRole('listitem').filter({hasText:/Review AI instructions and publish state.*Review required/}).waitFor();
   await setupChecklist.getByRole('listitem').filter({hasText:/Review Business details.*Review required/}).waitFor();
   assert.equal(await setupChecklist.getByRole('link',{name:'Connect messaging channels',exact:true}).getAttribute('href'),'/settings/channels');
-  await page.goto(origin+'/inbox');await page.getByRole('button',{name:/Workflow fictional customer/}).click();await page.getByText(/Conversation tools/).click();
+  await page.goto(origin+'/inbox');await page.getByRole('button',{name:/Workflow fictional customer/}).first().click();
+  // Conversation tools belong to the customer's slide-out profile in the
+  // approved Inbox layout; selecting a thread does not open the profile.
+  await page.getByRole('button',{name:/Workflow fictional customer/}).last().click();
+  await page.getByText(/Conversation tools/).click();
   const save=async(action,button)=>{const response=page.waitForResponse(r=>{try{return r.request().postDataJSON()?.action===action;}catch{return false;}});await page.getByRole('button',{name:button,exact:true}).click();assert.equal((await response).status(),200);};
   await page.getByLabel('Internal note',{exact:true}).fill('Browser internal note persisted');await save('work-note','Save note');assert.equal((await read()).note,'Browser internal note persisted');
   await page.getByLabel('Labels (comma separated)',{exact:true}).fill('browser,follow-up');await save('work','Save conversation');assert.deepEqual((await read()).work.labels,['browser','follow-up']);
@@ -129,11 +133,18 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await page.goto(origin+'/inbox/tickets');await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('resolved');await page.getByText('Fictional delivery dispute',{exact:true}).waitFor();
   await page.getByRole('link',{name:'Open conversation and ticket',exact:true}).click();await page.waitForURL('**/inbox?thread='+thread);
   await page.getByLabel('Internal note',{exact:true}).waitFor();assert.equal(await page.getByLabel('Internal note',{exact:true}).inputValue(),'Browser internal note persisted');
+  await page.getByRole('button',{name:'Filters',exact:true}).click();
   await page.getByText('More filters',{exact:true}).click();
+  await page.getByText('Date & label filters',{exact:true}).click();
   await page.getByLabel('Exact label',{exact:true}).fill('browser');
+  await page.getByRole('button',{name:'View conversations',exact:true}).click();
   await page.locator(`[data-thread-id="${thread}"]`).waitFor();
-  await page.getByLabel('From (UTC)',{exact:true}).fill('2099-01-01');
-  await page.getByText('No conversations match your filters.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Filters',exact:true}).click();
+  await page.getByText('More filters',{exact:true}).click();
+  await page.getByText('Date & label filters',{exact:true}).click();
+  await page.getByLabel('Last activity from (UTC)',{exact:true}).fill('2099-01-01');
+  await page.getByRole('button',{name:'View conversations',exact:true}).click();
+  await page.getByText('No conversations found.',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Clear filters',exact:true}).click();
   await page.locator(`[data-thread-id="${thread}"]`).waitFor();
   await db`SELECT inbox_ingest(${c},'keyboard-inbound','keyboard-customer','Second keyboard customer','Needs a reply','text',now()+interval '1 minute')`;
@@ -147,13 +158,14 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   assert.equal(await page.locator(`[data-thread-id="${secondThread}"]`).evaluate(el=>el===document.activeElement),true,'Home did not focus the first conversation');
   await page.keyboard.press('End');
   assert.equal(await page.locator(`[data-thread-id="${thread}"]`).evaluate(el=>el===document.activeElement),true,'End did not focus the last conversation');
-  await page.getByLabel('Conversation queue',{exact:true}).selectOption('pending');
+  const chooseQueue=async value=>{await page.getByRole('button',{name:'Filters',exact:true}).click();await page.getByText('More filters',{exact:true}).click();await page.getByLabel('Queue',{exact:true}).selectOption(value);await page.getByRole('button',{name:'View conversations',exact:true}).click();};
+  await chooseQueue('pending');
   await page.getByText('No conversations found.',{exact:true}).waitFor();
-  await page.getByLabel('Conversation queue',{exact:true}).selectOption('waiting');
+  await chooseQueue('waiting');
   await page.locator(`[data-thread-id="${thread}"]`).waitFor();
-  await page.getByLabel('Conversation queue',{exact:true}).selectOption('resolved');
+  await chooseQueue('resolved');
   await page.getByText('No conversations found.',{exact:true}).waitFor();
-  await page.getByLabel('Conversation queue',{exact:true}).selectOption('all');
+  await chooseQueue('all');
   await page.locator(`[data-thread-id="${thread}"]`).waitFor();
   // A real Unicode manual send remains permitted with zero AI credit.
   const endpoint=origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live';
