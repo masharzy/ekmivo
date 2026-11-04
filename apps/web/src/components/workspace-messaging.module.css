@@ -100,3 +100,4 @@
 .inbox .thread[aria-pressed=true]{position:relative;box-shadow:none}.inbox .thread[aria-pressed=true]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ib-ok)}
 .infoRows{display:grid}.infoRows>div{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--ib-line);font-size:13px}.infoRows>div:first-child{border-top:0}.infoRows>div svg{width:18px;height:18px;color:var(--ib-muted);flex:none}.infoRows>div :last-child{margin-left:auto;text-align:right;color:var(--ib-muted);font-size:12px}
 .unreadDivider{align-self:center;margin:10px 0 6px;padding:3px 12px;border-radius:99px;background:var(--ib-s2);color:var(--ib-text);font-size:11px}
+.messageContent{display:flex;flex-direction:column;min-width:0;gap:inherit}
