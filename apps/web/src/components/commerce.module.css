@@ -2,3 +2,89 @@
 .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.board article{border:1px solid var(--color-border);padding:16px;border-radius:10px;background:var(--color-surface)}.board article button{width:100%;text-align:start;margin-top:8px}.summary{display:flex;flex-wrap:wrap;gap:24px;margin:20px 0}.root nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}.root small{display:block;color:var(--color-text-secondary);margin-top:6px}.images{display:flex;gap:12px;flex-wrap:wrap}.images figure{margin:0;width:120px}.images img{width:100%;height:100px;object-fit:contain}.line{display:grid;grid-template-columns:minmax(120px,1fr) 90px auto;align-items:end;gap:12px}.barcode{max-width:100%;height:64px}.printOnly{display:none}@media(max-width:640px){.board{grid-template-columns:1fr}.line{grid-template-columns:1fr}.summary{gap:12px}}@media print{.root .noPrint{display:none!important}}
 
 .printArea{min-width:0}
+/* Commerce uses the same surfaces, density and type scale as the dashboard. */
+.root{width:100%;max-width:none;min-width:0;font-size:14px;line-height:1.5}
+.root .pageHeader{position:static;height:auto;min-height:0;background:none;border:0;padding:0;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin:0 0 24px}
+.root .pageHeader>div{min-width:0;max-width:740px}
+.root h1{font-size:24px;font-weight:600;letter-spacing:-.025em;line-height:1.35;margin:0 0 8px}
+.root h2{font-size:16px;font-weight:600;line-height:1.5;margin:0 0 16px}
+.root h3{font-size:14px;font-weight:600;margin:0 0 12px}
+.root p{margin:8px 0 0;font-size:13px}
+.root button{display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:36px;padding:7px 12px;font-size:13px;font-weight:500;line-height:20px;white-space:normal;transition:background .12s,border-color .12s}
+.root button:hover:not(:disabled){background:var(--color-hover,var(--color-surface-subtle));border-color:var(--color-text-muted)}
+.root input,.root select,.root textarea{min-height:38px;font-size:13px;background:var(--color-canvas,var(--color-surface));line-height:20px}
+.root label{margin:0;gap:7px;color:var(--color-text-secondary);font-size:12px;line-height:18px;min-width:0}
+.root label:has(>input[type=checkbox]){display:flex;align-items:center;gap:8px;color:var(--color-text);padding:8px 0}
+.root input[type=checkbox]{height:16px;min-height:16px;width:16px;flex:none;accent-color:var(--color-primary);margin:0 10px 0 0;vertical-align:middle}
+.root .filters{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;padding:16px;margin:0 0 16px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface)}
+.filters label{flex:1 1 130px}
+.filters label:first-child{flex:2 1 240px}
+.root .actions{display:flex;flex-direction:row;flex:none;overflow:visible;gap:8px;align-items:center;flex-wrap:wrap;padding:0;margin:0 0 16px}
+.actions:empty{display:none}
+.root .actions>.primary,.root button[type=submit]{background:var(--color-text);border-color:var(--color-text);color:var(--color-canvas,var(--color-surface))}
+.root .actions>.primary:hover:not(:disabled),.root button[type=submit]:hover:not(:disabled){background:var(--color-text);opacity:.88}
+.root>details{padding:12px 16px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);margin:0 0 16px;font-size:13px}
+.root summary{font-weight:500;line-height:22px}
+.root details[open]>summary{margin-bottom:12px}
+.root .table{border-radius:12px;background:var(--color-surface)}
+.table table{min-width:540px;font-size:13px}
+.root .table th{padding:11px 16px;font-size:12px;line-height:18px;background:var(--color-surface-subtle);font-weight:500;white-space:nowrap}
+.root .table td{padding:16px;vertical-align:middle;line-height:22px}
+.table tbody tr:last-child td{border-bottom:0}
+.table tbody tr:hover{background:var(--color-hover,var(--color-surface-subtle))}
+.table td:first-child{width:30%}
+.table td:last-child{width:26%}
+.table td button{margin:4px 6px 4px 0}
+.root small{font-size:12px;line-height:19px;margin-top:4px}
+.root .empty{padding:44px 24px;text-align:center}
+.empty strong{font-size:14px;font-weight:500}
+.root .empty p{margin:6px auto 0;max-width:360px;color:var(--color-text-muted)}
+.root .pagination{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:14px 0;margin:0;font-size:12px;color:var(--color-text-secondary)}
+.pagination>span{margin-inline-end:auto;order:-1}
+.root .panel{padding:24px;margin-top:20px;min-width:0}
+.root .panel fieldset{display:flex;flex-direction:column;gap:16px;margin:0}
+.root .fields{gap:16px 20px;align-items:start}
+.root .panel .panel{padding:20px;margin:0;background:var(--color-canvas,var(--color-surface-subtle))}
+.root .toolbar{display:flex;align-items:center;justify-content:flex-start;gap:8px;margin:0;flex-wrap:wrap}
+.root .panel .toolbar{padding-top:16px;border-top:1px solid var(--color-border)}
+.root .line{padding:16px;border:1px solid var(--color-border);border-radius:10px;grid-template-columns:minmax(160px,1fr) 100px auto;background:var(--color-canvas,var(--color-surface-subtle))}
+.root .summary{gap:12px;margin:16px 0}
+.summary>span,.summary>div{padding:12px 16px;border:1px solid var(--color-border);border-radius:10px;flex:1 1 150px}
+.board{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.board article{padding:16px;background:var(--color-surface-subtle)}
+.board article h2{font-size:13px;margin:0 0 12px}
+.board article button{padding:12px;justify-content:flex-start;min-height:56px;background:var(--color-surface)}
+.root [role=alert]{background:var(--color-danger-bg,var(--color-surface));padding:12px 16px;margin:0 0 16px}
+.root [role=status]{padding:12px 16px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);margin:0 0 16px}
+@media(max-width:1000px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){
+ .root .pageHeader{gap:16px;margin-bottom:20px}.root h1{font-size:22px}
+ .root .filters{padding:14px;gap:12px}.filters label:first-child{flex-basis:100%}.filters label{flex-basis:calc(50% - 6px)}
+ .filters>button{flex:1}.root .panel{padding:16px}.root .fields{grid-template-columns:1fr;gap:16px}
+ .root .line{grid-template-columns:1fr;gap:12px}.root .line button{justify-self:start}
+ .root .actions{gap:8px}.root .actions button{flex:1 1 auto}
+ .root .table th,.root .table td{padding:12px}.root .empty{padding:32px 16px}
+ .root .pagination{gap:8px}.root .pagination button{padding:7px 10px}
+ .board{grid-template-columns:1fr}.root .panel .panel{padding:16px}
+}
+@media(prefers-reduced-motion:reduce){.root button{transition:none}}
+
+.breadcrumb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px;font-size:12px;line-height:18px;color:var(--color-text-muted)}
+.breadcrumb a{text-decoration:none}.breadcrumb a:hover{color:var(--color-text);text-decoration:underline}
+
+.table .emptyTable{min-width:0;table-layout:fixed}
+/* Match the dashboard's compact rows and toolbars. */
+.root .pageHeader{margin-bottom:16px;gap:16px;align-items:center}
+.root .pageHeader h1{font-size:23px;margin-bottom:3px}
+.root .breadcrumb{margin-bottom:8px}
+.root>details{padding:8px 12px;margin-bottom:10px;border-radius:8px}
+.root .filters{padding:10px 12px;gap:8px;margin-bottom:10px;border-radius:10px}
+.root .filters label{gap:4px}
+.root .filters input,.root .filters select{min-height:34px;padding:6px 9px}
+.root .actions{margin-bottom:10px;gap:6px}
+.root .table th{padding:9px 12px}.root .table td{padding:10px 12px}
+.root .empty{padding:27px 16px}.root .empty p{margin-top:3px}
+.root .pagination{padding:9px 0}
+.root .panel{padding:18px;margin-top:14px}.root .panel fieldset{gap:12px}
+.root .fields{gap:12px 16px}
+@media(max-width:640px){.root .filters{padding:10px}.root .panel{padding:14px}.root .fields{gap:12px}.root .empty{padding:24px 12px}}

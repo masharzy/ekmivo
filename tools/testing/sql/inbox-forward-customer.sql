@@ -1,0 +1,30 @@
+DO $test$
+DECLARE u uuid:=gen_random_uuid(); w uuid:=gen_random_uuid(); otherw uuid:=gen_random_uuid(); c uuid; t uuid; t2 uuid; source uuid; k uuid:=gen_random_uuid(); r jsonb; limited uuid:=gen_random_uuid(); c2 uuid; t3 uuid;
+BEGIN
+ INSERT INTO app_users(id,email,display_name,password_hash) VALUES(u,'forward-'||u||'@example.test','Forward fixture','not-a-login-hash');
+ INSERT INTO app_users(id,email,display_name,password_hash) VALUES(limited,'limited-'||limited||'@example.test','Limited fixture','not-a-login-hash');
+ INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(w,'Forward fixture','both',u),(otherw,'Other fixture','both',u);
+ UPDATE workspace_product_access SET enabled=true WHERE workspace_id IN (w,otherw);
+ c:=inbox_connection(w,'live','wa','forward-'||w,decode('abcd','hex'));
+ PERFORM inbox_ingest(c,'forward-a','person-a','First','hello','text',now());
+ PERFORM inbox_ingest(c,'forward-b','person-b','Second','hello','text',now());
+ INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(w,limited,'editor') ON CONFLICT DO NOTHING;
+ c2:=inbox_connection(w,'live','ms','forward-target-'||w,decode('abcd','hex'));
+ PERFORM inbox_ingest(c2,'forward-c','person-c','Third','hello','text',now());
+ SELECT id INTO t3 FROM inbox_threads WHERE connection_id=c2 AND external_id='person-c';
+ INSERT INTO briofold_member_channel_scopes(workspace_id,user_id,connection_id,deny_read,deny_send) VALUES(w,limited,c,true,true);
+ SELECT id INTO t FROM inbox_threads WHERE connection_id=c AND external_id='person-a';
+ SELECT id INTO t2 FROM inbox_threads WHERE connection_id=c AND external_id='person-b';
+ SELECT id INTO source FROM inbox_messages WHERE thread_id=t AND sender='customer' LIMIT 1;
+ r:=inbox_advanced(w,'live',u,t2,'forward',jsonb_build_object('message_id',source,'idempotency_key',k));
+ IF r->>'body'<>'hello' THEN RAISE EXCEPTION 'forward content mismatch'; END IF;
+ UPDATE inbox_messages SET requested_by=limited WHERE id=(r->>'id')::uuid;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(inbox_page(w,'live',gen_random_uuid(),t2,NULL,'{"reader_kind":"device"}'::jsonb)->'items') x WHERE x->>'client_key' IS NOT NULL) THEN RAISE EXCEPTION 'device request key exposed'; END IF;
+ IF inbox_advanced(w,'live',u,t2,'forward',jsonb_build_object('message_id',source,'idempotency_key',k))->>'id'<>r->>'id' THEN RAISE EXCEPTION 'duplicate forward'; END IF;
+ r:=inbox_advanced(w,'live',limited,t3,'forward',jsonb_build_object('message_id',source,'idempotency_key',gen_random_uuid()));
+ UPDATE inbox_messages SET requested_by=limited WHERE id=(r->>'id')::uuid;
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(inbox_page(w,'live',limited,t3,NULL,'{"reader_kind":"user"}'::jsonb)->'items') x WHERE x->>'id'=r->>'id' AND x->>'client_key' IS NOT NULL) THEN RAISE EXCEPTION 'sender key unavailable'; END IF;
+ BEGIN PERFORM inbox_advanced(w,'live',limited,t3,'forward',jsonb_build_object('reader_kind','user','message_id',source,'idempotency_key',gen_random_uuid())); RAISE EXCEPTION 'source channel restriction bypassed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM inbox_advanced(otherw,'live',u,t2,'forward',jsonb_build_object('message_id',source,'idempotency_key',gen_random_uuid())); RAISE EXCEPTION 'foreign workspace accepted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM inbox_advanced(w,'sandbox',u,t2,'forward',jsonb_build_object('message_id',source,'idempotency_key',gen_random_uuid())); RAISE EXCEPTION 'foreign environment accepted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $test$;
