@@ -75,7 +75,8 @@ export async function runSavedReplySequences({control,sessions,origin,browser,pr
   // The approved Inbox eagerly loads visible voice messages. The Open attachment
   // control can become disabled and disappear as soon as its media request starts.
   await page.goto(origin+'/inbox?thread='+destination);
-  await page.locator('audio').first().waitFor();
+  const player=page.locator('audio').first();await player.waitFor({state:'attached'});
+  assert.match(await player.getAttribute('src'),/^blob:/,'private voice bytes did not reach the native audio player');
   const audio=page.locator('audio').first();await audio.evaluate(async element=>{element.load();await element.play();});assert.ok(await audio.evaluate(element=>element.duration>1&&element.duration<2),'voice is not decodable by browser');await audio.evaluate(element=>element.pause());
   console.log('SAVED REPLY SEQUENCES SQL/Go/Next/browser PASS: private/team, archive, shortcut, media, voice, variables, ordered atomic queue, signed private voice bytes and native playback, retry and denial');
  }finally{await context?.close();await db.end({timeout:3});}

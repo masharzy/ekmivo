@@ -158,7 +158,7 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   assert.equal(await page.locator(`[data-thread-id="${secondThread}"]`).evaluate(el=>el===document.activeElement),true,'Home did not focus the first conversation');
   await page.keyboard.press('End');
   assert.equal(await page.locator(`[data-thread-id="${thread}"]`).evaluate(el=>el===document.activeElement),true,'End did not focus the last conversation');
-  const chooseQueue=async value=>{await page.getByRole('button',{name:'Filters',exact:true}).click();await page.getByText('More filters',{exact:true}).click();await page.getByLabel('Queue',{exact:true}).selectOption(value);await page.getByRole('button',{name:'View conversations',exact:true}).click();};
+  const chooseQueue=async value=>{await page.getByRole('button',{name:'Filters',exact:true}).click();await page.getByText('More filters',{exact:true}).click();await page.getByRole('dialog',{name:'Filters'}).locator('select').first().selectOption(value);await page.getByRole('button',{name:'View conversations',exact:true}).click();};
   await chooseQueue('pending');
   await page.getByText('No conversations found.',{exact:true}).waitFor();
   await chooseQueue('waiting');
