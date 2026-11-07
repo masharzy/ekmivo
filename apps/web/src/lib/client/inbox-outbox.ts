@@ -1,0 +1,6 @@
+import {inboxDraftKey,type InboxDraftStorage} from "./inbox-drafts";
+export type OutboxEntry={key:string;body:string;replyTo:string;createdAt:string;state:"sending"|"failed"};
+const uuid=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+export function outboxKey(actor:string,workspace:string,thread:string){return inboxDraftKey(actor,workspace,thread).replace(":inbox-draft:",":inbox-outbox:");}
+export function readOutbox(storage:InboxDraftStorage,key:string):OutboxEntry[]{const raw=storage.getItem(key);if(!raw)return [];const data:unknown=JSON.parse(raw);if(!Array.isArray(data)||data.length>100)throw Error("Invalid outbox");return data.map(value=>{if(!value||typeof value!=="object")throw Error("Invalid outbox item");const item=value as OutboxEntry;if(!uuid.test(item.key)||typeof item.body!=="string"||!item.body.trim()||item.body.length>8000||typeof item.replyTo!=="string"||(item.replyTo&&!uuid.test(item.replyTo))||!Number.isFinite(Date.parse(item.createdAt))||!['sending','failed'].includes(item.state))throw Error("Invalid outbox item");return {...item,state:"failed" as const};});}
+export function writeOutbox(storage:InboxDraftStorage,key:string,entries:OutboxEntry[]){if(entries.length>100)throw Error("Outbox is full");if(!entries.length)storage.removeItem(key);else storage.setItem(key,JSON.stringify(entries));}

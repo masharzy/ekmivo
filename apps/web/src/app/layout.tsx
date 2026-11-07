@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import localFont from "next/font/local";
 import "@fontsource-variable/geist";
 import "./globals.css";
+import "./tailwind.css";
 import {InterfaceLocaleProvider} from "../components/interface-locale-provider";
 
 const hindSiliguri = localFont({

@@ -24,3 +24,12 @@ test('quota errors propagate so navigation cannot falsely claim a saved draft',(
 });
 
 test('retry keys survive navigation with saved content',()=>{const s=storage(),key=exports.inboxDraftKey(a,b,c);exports.writeInboxDraft(s,key,'Reply',a);assert.equal(exports.readInboxDraft(s,key).sendKey,a);});
+
+test('quoted replies retain the target and request key across reloads',()=>{
+ const s=storage(),key=exports.inboxDraftKey(a,b,c);
+ exports.writeInboxDraft(s,key,'Reply',a,b);
+ const restored=exports.readInboxDraft(s,key);assert.equal(restored.text,'Reply');assert.equal(restored.sendKey,a);assert.equal(restored.replyTo,b);
+ exports.writeInboxDraft(s,key,'',a,b);
+ assert.equal(exports.readInboxDraft(s,key).replyTo,b);
+ assert.throws(()=>exports.writeInboxDraft(s,key,'Reply',a,'not-a-uuid'));
+});

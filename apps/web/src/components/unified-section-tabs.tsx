@@ -1,4 +1,5 @@
 import Link from "next/link";
+import {InboxIcon} from "./inbox-icon";
 import {enabledUnifiedService,type BusinessMode,type UnifiedRoot} from "../lib/unified-navigation";
 import styles from "./unified-section-tabs.module.css";
 
@@ -51,9 +52,10 @@ export function UnifiedSectionTabs({root,mode,locale,view}:{
    (tab.href!=="/reports/orders"||process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED==="true"))??[];
  if(!available.length)return null;
  const active="/"+root+(view.length?"/"+view.join("/"):"");
- return <nav className={styles.tabs} aria-label={locale==="bn"?"পৃষ্ঠার বিভাগ":"Page sections"}>
+ return <nav className={`${styles.tabs} ${root==="inbox"&&!view.length?styles.inboxTabs:""}`} aria-label={locale==="bn"?"পৃষ্ঠার বিভাগ":"Page sections"}>
   {available.map(tab=><Link key={tab.href} href={tab.href}
    className={tab.href===active?styles.active:undefined}
    aria-current={tab.href===active?"page":undefined}>{tab[locale]}</Link>)}
+  {root==="inbox"&&!view.length&&<span className={styles.inboxActions}><Link href="/settings/channels"><InboxIcon name="settings" size={16}/>{locale==="bn"?"চ্যানেল":"Channels"}</Link><Link href="/settings/devices"><InboxIcon name="grid" size={16}/>{locale==="bn"?"ডিভাইস":"Devices"}</Link></span>}
  </nav>;
 }
