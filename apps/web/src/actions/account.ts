@@ -23,7 +23,7 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
  const name=asText(form.get("name")),email=asText(form.get("email")).toLowerCase();
  const password=form.get("password"),confirm=form.get("confirm");
  // The business details are collected after verification, never at signup.
- const workspaceName="New business";
+ const workspaceName="New store";
  const fields:Record<string,string>={};
  if(!validatedName(name))fields.name=locale==="bn"?"নাম অন্তত ২ অক্ষরের হতে হবে।":"Enter 2–100 characters.";
 

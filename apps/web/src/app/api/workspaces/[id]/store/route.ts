@@ -30,7 +30,11 @@ async function handle(request:Request,{params}:{params:Promise<{id:string}>}){
    digest=createHash("sha256").update(png).digest("hex");
    body.logo="/api/checkout-logos/"+digest;
   }
-  const rows=await db`SELECT dashboard_store_write(${id}::uuid,${user.id}::uuid,${db.json(body)},${value.version as number},${digest},${png}) AS value`;
+  const rows=await db.begin(async tx=>{
+   const saved=await tx`SELECT dashboard_store_write(${id}::uuid,${user.id}::uuid,${tx.json(body)},${value.version as number},${digest},${png}) AS value`;
+   await tx`SELECT dashboard_workspace_rename(${id}::uuid,${user.id}::uuid,${body.name})`;
+   return saved;
+  });
   return reply(rows[0].value);
  }catch(e){
   const code=e&&typeof e==="object"&&"code" in e?e.code:"";

@@ -30,7 +30,7 @@ export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:s
  const set=(key:keyof StoreProfile,value:string)=>{setBody(old=>({...old,[key]:value}));setInvalid(null);setNotice("")};
  const save=useCallback(async()=>{
   if(!canManage||loading||busy||version<1)return false;
-  if(!validStoreProfile(body)){setError(t("Check the highlighted fields: business name, phone, website or statement name.","ব্যবসার নাম, ফোন, ওয়েবসাইট বা স্টেটমেন্ট নাম যাচাই করুন।"));setInvalid("name");return false}
+  if(!validStoreProfile(body)){setError(t("Check the highlighted fields: business name, phone, website or statement name.","স্টোরের নাম, ফোন, ওয়েবসাইট বা স্টেটমেন্ট নাম যাচাই করুন।"));setInvalid("name");return false}
   setBusy(true);setError("");setNotice("");
   try{
    const r=await fetch(base,{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({body,version})});
@@ -68,7 +68,7 @@ export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:s
   <header className="ss-header"><div><h1>{t("Business","ব্যবসা")}</h1><p>{t("Business details and logo for your customers.","গ্রাহকের জন্য ব্যবসার তথ্য ও লোগো।")}</p></div><button className="ss-btn" type="button" disabled={loading||busy||dirty} onClick={()=>void load()}>{t("Refresh","রিফ্রেশ")}</button></header>
   {error&&<p className="ss-error" role="alert">{error}</p>}
   {notice&&<p className="ss-toast" role="status">{notice}</p>}
-  {loading?<div className="ss-loading" role="status">{t("Loading business…","ব্যবসা লোড হচ্ছে…")}</div>:
+  {loading?<div className="ss-loading" role="status">{t("Loading business…","স্টোর লোড হচ্ছে…")}</div>:
   <div className="ss-panel">
    <section className="ss-section">
     <div className="ss-logo-line">
@@ -78,7 +78,7 @@ export function StoreProfileEditor({workspaceId,locale,canManage}:{workspaceId:s
      </div>
     </div>
     <div className="ss-grid">
-     <label className="ss-field"><span>{t("Business name","ব্যবসার নাম")} <small>{body.name.length}/40</small></span><input value={body.name} maxLength={40} required className={invalid==="name"?"ss-invalid":undefined} disabled={!canManage||busy} onChange={e=>set("name",e.target.value)}/></label>
+     <label className="ss-field"><span>{t("Store name","স্টোরের নাম")} <small>{body.name.length}/40</small></span><input value={body.name} maxLength={40} required className={invalid==="name"?"ss-invalid":undefined} disabled={!canManage||busy} onChange={e=>set("name",e.target.value)}/></label>
      <label className="ss-field"><span>{t("Business type","ব্যবসার ধরন")}</span><select value={body.business_type} disabled={!canManage||busy} onChange={e=>set("business_type",e.target.value)}><option value="online">{t("E-commerce / online shop","ই-কমার্স / অনলাইন শপ")}</option><option value="physical">{t("Physical shop","সরাসরি দোকান")}</option><option value="service">{t("Services","সেবা")}</option><option value="other">{t("Other","অন্যান্য")}</option></select></label>
      <label className="ss-field ss-full"><span>{t("Short description (optional)","সংক্ষিপ্ত পরিচিতি (ঐচ্ছিক)")} <small>{body.description.length}/60</small></span><input maxLength={60} value={body.description} disabled={!canManage||busy} placeholder={t("What does your business sell?","যেমন: প্রতিদিনের বাজার, দোনাজপুর")} onChange={e=>set("description",e.target.value)}/></label>
 
