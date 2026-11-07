@@ -2,6 +2,7 @@
 package main
 
 import (
+	_ "github.com/masharzy/briofold/backend/internal/envcompat"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -33,13 +34,13 @@ func run() error {
 	realm := flag.String("realm", "", "live or sandbox")
 	output := flag.String("output", "", "private encrypted export path")
 	flag.Parse()
-	if (*action != "export" && *action != "expire") || (*realm != "live" && *realm != "sandbox") || os.Getenv("EKMIVO_PRIVACY_OBJECTS_ENABLED") != "true" {
+	if (*action != "export" && *action != "expire") || (*realm != "live" && *realm != "sandbox") || os.Getenv("BRIOFOLD_PRIVACY_OBJECTS_ENABLED") != "true" {
 		return errors.New("explicit operator configuration required")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	controlURL := os.Getenv("EKMIVO_PRIVACY_CONTROL_DATABASE_URL")
-	financialURL := os.Getenv("EKMIVO_PRIVACY_" + strings.ToUpper(*realm) + "_DATABASE_URL")
+	controlURL := os.Getenv("BRIOFOLD_PRIVACY_CONTROL_DATABASE_URL")
+	financialURL := os.Getenv("BRIOFOLD_PRIVACY_" + strings.ToUpper(*realm) + "_DATABASE_URL")
 	if strings.TrimSpace(controlURL) == "" || strings.TrimSpace(financialURL) == "" {
 		return errors.New("explicit control and financial database URLs required")
 	}
@@ -60,7 +61,7 @@ func run() error {
 	}
 	defer pool.Close()
 	if *action == "expire" {
-		if os.Getenv("EKMIVO_PRIVACY_EXPIRE_ENABLED") != "true" || len(os.Getenv("PRIVATE_S3_UNVERSIONED_REVIEW_REFERENCE")) < 10 {
+		if os.Getenv("BRIOFOLD_PRIVACY_EXPIRE_ENABLED") != "true" || len(os.Getenv("PRIVATE_S3_UNVERSIONED_REVIEW_REFERENCE")) < 10 {
 			return errors.New("reviewed unversioned storage disposition required")
 		}
 		count, err := checkout.DeleteExpiredPrivateObjects(ctx, pool, *workspace, *realm)
@@ -73,7 +74,7 @@ func run() error {
 		}
 		return json.NewEncoder(os.Stdout).Encode(map[string]any{"status": "expired_current_objects_deleted", "deleted_count": count, "remaining_objects": remaining, "complete_store_erasure_verified": false, "privacy_request_complete": false})
 	}
-	key, err := hex.DecodeString(os.Getenv("EKMIVO_PRIVACY_EXPORT_KEY_HEX"))
+	key, err := hex.DecodeString(os.Getenv("BRIOFOLD_PRIVACY_EXPORT_KEY_HEX"))
 	if err != nil || len(key) != 32 || *output == "" {
 		return errors.New("export key/output required")
 	}

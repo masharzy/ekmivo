@@ -1,13 +1,13 @@
 // Real HTTP quickstart for dedicated Sandbox accounts; never marks a payment paid.
 import {randomUUID,createHash} from 'node:crypto';import {writeFile} from 'node:fs/promises';
-const [output,mode='plan']=process.argv.slice(2),rawOrigin=process.env.EKMIVO_QUICKSTART_SANDBOX_ORIGIN,workspace=process.env.EKMIVO_QUICKSTART_WORKSPACE_ID,key=process.env.EKMIVO_QUICKSTART_READ_WRITE_KEY;
+const [output,mode='plan']=process.argv.slice(2),rawOrigin=process.env.BRIOFOLD_QUICKSTART_SANDBOX_ORIGIN,workspace=process.env.BRIOFOLD_QUICKSTART_WORKSPACE_ID,key=process.env.BRIOFOLD_QUICKSTART_READ_WRITE_KEY;
 if(!output||!['plan','run'].includes(mode)||!rawOrigin||!workspace||!key)throw Error('Dedicated Sandbox origin/workspace/server read-write key and output required');
 const origin=new URL(rawOrigin),uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 if(!uuid.test(workspace)||origin.username||origin.password||origin.search||origin.hash||origin.pathname!=='/'||origin.protocol!=='https:'&&!(['localhost','127.0.0.1'].includes(origin.hostname)&&origin.protocol==='http:'))throw Error('Explicit root Sandbox API origin required');
 const cases=['Live realm denied','wrong tenant denied','server intent created','same-key same-body returns same intent','same-key different-body rejected','public checkout matches server total','browser cannot supply verified status'];
 if(mode==='plan'){await writeFile(output,JSON.stringify({mode,executed:false,cases,receipt_confirmation_verified:false,merchant_webhook_verified:false},null,2)+'\n',{flag:'wx',mode:0o600})}
 else{
- if(process.env.EKMIVO_QUICKSTART_RUN_ENABLED!=='true')throw Error('Explicit dedicated Sandbox test execution authorization required');
+ if(process.env.BRIOFOLD_QUICKSTART_RUN_ENABLED!=='true')throw Error('Explicit dedicated Sandbox test execution authorization required');
  const results=[],reference='quickstart-'+randomUUID(),requestKey=createHash('sha256').update(reference).digest('hex'),body={merchant_reference:reference,amount_minor:100,currency:'BDT',expires_in_minutes:15};
  async function request(path,{method='GET',payload,idempotency,authenticated=true}={}){const h={'Content-Type':'application/json'};if(authenticated)h.Authorization='Bearer '+key;if(idempotency)h['Idempotency-Key']=idempotency;const r=await fetch(new URL(path,origin),{method,headers:h,body:payload===undefined?undefined:JSON.stringify(payload),redirect:'error',signal:AbortSignal.timeout(15000)});let data;try{data=await r.json()}catch{data=null}return {status:r.status,data}}
  function check(name,actual,pass){results.push({case:name,http_status:actual.status,pass});if(!pass)throw Error('Quickstart case failed; inspect dedicated account without recording credentials')}

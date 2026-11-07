@@ -37,22 +37,22 @@ type event struct {
 }
 
 func main() {
-	origin, e := url.Parse(os.Getenv("EKMIVO_API_ORIGIN"))
+	origin, e := url.Parse(os.Getenv("BRIOFOLD_API_ORIGIN"))
 	if e != nil || origin.Scheme != "https" || origin.User != nil || origin.Host == "" {
 		log.Fatal("configured HTTPS API origin required")
 	}
-	realm, workspace := os.Getenv("EKMIVO_ENVIRONMENT"), os.Getenv("EKMIVO_WORKSPACE_ID")
-	key := os.Getenv("EKMIVO_MERCHANT_API_KEY")
+	realm, workspace := os.Getenv("BRIOFOLD_ENVIRONMENT"), os.Getenv("BRIOFOLD_WORKSPACE_ID")
+	key := os.Getenv("BRIOFOLD_MERCHANT_API_KEY")
 	if (realm != "sandbox" && realm != "live") || workspace == "" || key == "" {
 		log.Fatal("merchant scope configuration required")
 	}
-	secrets := [][]byte{[]byte(os.Getenv("EKMIVO_WEBHOOK_SECRET"))}
+	secrets := [][]byte{[]byte(os.Getenv("BRIOFOLD_WEBHOOK_SECRET"))}
 	if len(secrets[0]) < 32 {
 		log.Fatal("signing secret required")
 	}
 	var previousUntil time.Time
-	if previous := os.Getenv("EKMIVO_PREVIOUS_WEBHOOK_SECRET"); previous != "" {
-		until, e := time.Parse(time.RFC3339, os.Getenv("EKMIVO_PREVIOUS_SECRET_UNTIL"))
+	if previous := os.Getenv("BRIOFOLD_PREVIOUS_WEBHOOK_SECRET"); previous != "" {
+		until, e := time.Parse(time.RFC3339, os.Getenv("BRIOFOLD_PREVIOUS_SECRET_UNTIL"))
 		if e != nil || !time.Now().Before(until) || len(previous) < 32 {
 			log.Fatal("previous key requires a future overlap expiry")
 		}

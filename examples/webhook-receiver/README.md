@@ -7,12 +7,12 @@ This is **merchant-owned infrastructure**, **not** a second Briofold financial d
 Use a separately owned disposable PostgreSQL database (never the Briofold control, sandbox finance or live finance DB). Apply `schema.sql`, insert a merchant order with an exact `reference` and `amount_minor`, then set:
 
 - `MERCHANT_DATABASE_URL`: merchant-only Postgres DSN.
-- `EKMIVO_API_ORIGIN`: **HTTPS** authoritative Briofold API origin (no embedded credentials).
-- `EKMIVO_ENVIRONMENT`: `sandbox` or `live`, matching the event and the API key.
-- `EKMIVO_WORKSPACE_ID`: authorized workspace UUID.
-- `EKMIVO_MERCHANT_API_KEY`: merchant backend-only bearer with the least payment-read scope required by the payment-status endpoint.
-- `EKMIVO_WEBHOOK_SECRET`: exact secret displayed **once** when creating/configuring the endpoint. Never commit it or log it.
-- Optional `EKMIVO_PREVIOUS_WEBHOOK_SECRET` and `EKMIVO_PREVIOUS_SECRET_UNTIL` (RFC3339) for a time-limited key overlap.
+- `BRIOFOLD_API_ORIGIN`: **HTTPS** authoritative Briofold API origin (no embedded credentials).
+- `BRIOFOLD_ENVIRONMENT`: `sandbox` or `live`, matching the event and the API key.
+- `BRIOFOLD_WORKSPACE_ID`: authorized workspace UUID.
+- `BRIOFOLD_MERCHANT_API_KEY`: merchant backend-only bearer with the least payment-read scope required by the payment-status endpoint.
+- `BRIOFOLD_WEBHOOK_SECRET`: exact secret displayed **once** when creating/configuring the endpoint. Never commit it or log it.
+- Optional `BRIOFOLD_PREVIOUS_WEBHOOK_SECRET` and `BRIOFOLD_PREVIOUS_SECRET_UNTIL` (RFC3339) for a time-limited key overlap.
 
 Run the compiled `go run ./cmd/webhook-receiver-example` from `backend/` after the standalone merchant database and env are configured. It listens on `:8081` for `POST /webhooks/briofold`; use a trusted public HTTPS reverse proxy for incoming delivery, with the proxy forwarding the raw HTTP request body unchanged. An Briofold webhook endpoint must be publicly DNS-resolvable with an allowed public IP on HTTPS port 443. The Briofold sender intentionally refuses localhost/private/metadata addresses and HTTP redirects. Do **not** weaken SSRF protection or directly register a development `localhost` URL.
 

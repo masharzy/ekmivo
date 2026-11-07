@@ -3,15 +3,15 @@ import {useState} from "react";
 import {PublicIcon} from "./public-icon";
 const payload=JSON.stringify({amount:125,redirect_url:"https://merchant.example/success"},null,2);
 const snippets:Record<string,string>={
- cURL:`curl "$EKMIVO_API_ORIGIN/v1/payment/create" \\
-  -H "Authorization: Bearer $EKMIVO_API_KEY" \\
+ cURL:`curl "$BRIOFOLD_API_ORIGIN/v1/payment/create" \\
+  -H "Authorization: Bearer $BRIOFOLD_API_KEY" \\
   -H "Content-Type: application/json" \\
   -H "Idempotency-Key: my-order-123-payment" \\
   --data '${payload}'`,
- "Node.js":`const res = await fetch(process.env.EKMIVO_API_ORIGIN + "/v1/payment/create", {
+ "Node.js":`const res = await fetch(process.env.BRIOFOLD_API_ORIGIN + "/v1/payment/create", {
   method: "POST",
   headers: {
-    Authorization: "Bearer " + process.env.EKMIVO_API_KEY,
+    Authorization: "Bearer " + process.env.BRIOFOLD_API_KEY,
     "Content-Type": "application/json",
     "Idempotency-Key": "my-order-123-payment"
   },
@@ -21,8 +21,8 @@ if (!res.ok) throw new Error("Payment creation failed");
 const payment = await res.json();
 // Redirect the customer to payment.payment_url`,
  Python:`import os, requests
-r = requests.post(os.environ["EKMIVO_API_ORIGIN"] + "/v1/payment/create",
-  headers={"Authorization": "Bearer " + os.environ["EKMIVO_API_KEY"],
+r = requests.post(os.environ["BRIOFOLD_API_ORIGIN"] + "/v1/payment/create",
+  headers={"Authorization": "Bearer " + os.environ["BRIOFOLD_API_KEY"],
            "Idempotency-Key": "my-order-123-payment"},
   json={"amount": 125, "redirect_url": "https://merchant.example/success"},
   timeout=15)
@@ -30,11 +30,11 @@ r.raise_for_status()
 payment = r.json()
 # Redirect the customer to payment["payment_url"]`,
  PHP:`<?php
-$ch = curl_init(getenv("EKMIVO_API_ORIGIN") . "/v1/payment/create");
+$ch = curl_init(getenv("BRIOFOLD_API_ORIGIN") . "/v1/payment/create");
 curl_setopt_array($ch, [
   CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,
   CURLOPT_HTTPHEADER => [
-    "Authorization: Bearer " . getenv("EKMIVO_API_KEY"),
+    "Authorization: Bearer " . getenv("BRIOFOLD_API_KEY"),
     "Content-Type: application/json",
     "Idempotency-Key: my-order-123-payment"
   ],
@@ -48,8 +48,8 @@ curl_close($ch);`,
 import ("bytes"; "net/http"; "os")
 func main() {
   body := []byte(\`{"amount":125,"redirect_url":"https://merchant.example/success"}\`)
-  req, _ := http.NewRequest("POST", os.Getenv("EKMIVO_API_ORIGIN")+"/v1/payment/create", bytes.NewReader(body))
-  req.Header.Set("Authorization", "Bearer "+os.Getenv("EKMIVO_API_KEY"))
+  req, _ := http.NewRequest("POST", os.Getenv("BRIOFOLD_API_ORIGIN")+"/v1/payment/create", bytes.NewReader(body))
+  req.Header.Set("Authorization", "Bearer "+os.Getenv("BRIOFOLD_API_KEY"))
   req.Header.Set("Content-Type", "application/json")
   req.Header.Set("Idempotency-Key", "my-order-123-payment")
   res, err := http.DefaultClient.Do(req)
@@ -61,7 +61,7 @@ func main() {
 #include <stdio.h>
 #include <stdlib.h>
 int main(void) {
-  const char *origin=getenv("EKMIVO_API_ORIGIN"), *key=getenv("EKMIVO_API_KEY");
+  const char *origin=getenv("BRIOFOLD_API_ORIGIN"), *key=getenv("BRIOFOLD_API_KEY");
   if(!origin||!key) return 1;
   char url[1024], auth[1024];
   if(snprintf(url,sizeof url,"%s/v1/payment/create",origin)>=(int)sizeof url ||

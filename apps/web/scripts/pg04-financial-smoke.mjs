@@ -378,7 +378,7 @@ try{
   pg09Auth={sessions:{...sessions},tokenSecret,payerSecret};
   const child=spawn(apiBin,[],{cwd:goCwd,env:{
     ...process.env,PORT:String(port),GO_WEB_ORIGIN:origin,
-    EKMIVO_REQUIRE_AUTHZ:"true",
+    BRIOFOLD_REQUIRE_AUTHZ:"true",
     AUTHZ_DATABASE_URL:ds(source.pathname.slice(1),"ekmivo_financial_runtime","pg01-ci-only-password"),
     PG05_SANDBOX_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_finance_reader_sandbox","pg04-sandbox-reader-only"),
     PG05_TOKEN_SECRET:tokenSecret,PG05_PAYER_SECRET:payerSecret
@@ -644,7 +644,7 @@ try{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env,timeout:100000
  });
  const workerBase={...env,
-  EKMIVO_WORKER_ENVIRONMENT:"sandbox",
+  BRIOFOLD_WORKER_ENVIRONMENT:"sandbox",
   FINANCIAL_WORKER_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_financial_worker_sandbox","pg04-sandbox-worker-only"),
   PG04_WORKER_CONTROL_PROJECTION_URL:ds(source.pathname.slice(1),"ekmivo_financial_projection_operator","pg04-control-projection-only")};
  const sleep=ms=>new Promise(res=>setTimeout(res,ms));
@@ -1438,7 +1438,7 @@ try{
  });
  const apiTestPort=17888,apiTestOrigin="http://127.0.0.1:"+apiTestPort;
  const apiProcess=spawn(apiTestBin,[],{cwd:new URL("../../../backend/",import.meta.url),env:{
-  ...process.env,PORT:String(apiTestPort),GO_WEB_ORIGIN:apiTestOrigin,EKMIVO_REQUIRE_AUTHZ:"true",
+  ...process.env,PORT:String(apiTestPort),GO_WEB_ORIGIN:apiTestOrigin,BRIOFOLD_REQUIRE_AUTHZ:"true",
   AUTHZ_DATABASE_URL:ds(source.pathname.slice(1),"ekmivo_financial_runtime","pg01-ci-only-password"),
   PG05_SANDBOX_DATABASE_URL:ds("ekmivo_pg04_sandbox","ekmivo_finance_reader_sandbox","pg04-sandbox-reader-only"),
   PG05_TOKEN_SECRET:pg09Auth.tokenSecret,PG05_PAYER_SECRET:pg09Auth.payerSecret,
@@ -1523,7 +1523,7 @@ try{
   const newAccount=await fetch(route+"gateways?environment=sandbox",{method:"POST",headers:head("owner"),body:JSON.stringify({method:"bkash",account_number:fixtureReceiving})});
   same(newAccount.status,200,"signed HTTP fixture account creation failed");
   const fixtureAccount=(await newAccount.json()).id;
-  const newPair=await fetch(route+"devices?environment=sandbox",{method:"POST",headers:head("owner"),body:JSON.stringify({account_id:fixtureAccount,name:"Fictional signed ingress",source:"EKMIVO_SANDBOX",binding:"sms:1",parser_id:"sandbox-incoming-v1"})});
+  const newPair=await fetch(route+"devices?environment=sandbox",{method:"POST",headers:head("owner"),body:JSON.stringify({account_id:fixtureAccount,name:"Fictional signed ingress",source:"BRIOFOLD_SANDBOX",binding:"sms:1",parser_id:"sandbox-incoming-v1"})});
   same(newPair.status,200,"signed HTTP fixture enrollment failed");
   const pair=(await newPair.json());
   const fixtureKeys=generateKeyPairSync("ec",{namedCurve:"prime256v1"});
@@ -1548,7 +1548,7 @@ try{
   same(lock.status,200,"signed HTTP real customer payer lock failed");
   const parts=Object.fromEntries(new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dhaka",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(Date.now()+2000)).map(p=>[p.type,p.value]));
   const stampText=`${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
-  const packet={...scoped,source:"EKMIVO_SANDBOX",binding:"sms:1",kind:"device_sms",evidence:`Received 55.00 from ${fixturePayer} at ${stampText} ref CI${randomUUID().replaceAll("-","").toUpperCase()}`,observed_at:new Date().toISOString(),sequence:1};
+  const packet={...scoped,source:"BRIOFOLD_SANDBOX",binding:"sms:1",kind:"device_sms",evidence:`Received 55.00 from ${fixturePayer} at ${stampText} ref CI${randomUUID().replaceAll("-","").toUpperCase()}`,observed_at:new Date().toISOString(),sequence:1};
   same((await signedPost("events",packet,randomUUID(),undefined,true)).status,403,"tampered signed HTTP packet accepted");
   same((await signedPost("events",{...packet,environment:"live"})).status,403,"signed HTTP packet crossed physical realm");
   same((await signedPost("events",{...packet,source:"WRONG_SOURCE"})).status,422,"signed wrong-source HTTP packet accepted");

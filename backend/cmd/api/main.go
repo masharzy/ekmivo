@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "github.com/masharzy/briofold/backend/internal/envcompat"
 	"context"
 	"crypto/rand"
 	"database/sql"
@@ -392,7 +393,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 func main() {
 	var repo *authz.Repository
 	connection := os.Getenv("AUTHZ_DATABASE_URL")
-	if os.Getenv("EKMIVO_REQUIRE_AUTHZ") == "true" && connection == "" {
+	if os.Getenv("BRIOFOLD_REQUIRE_AUTHZ") == "true" && connection == "" {
 		log.Fatal("authorization database is mandatory for deployed Go API")
 	}
 	if connection != "" {

@@ -41,7 +41,7 @@ test("APK updates require an authenticated release feed, digest and standard ins
  const backend=read("backend/cmd/api/mobile_release.go");
  const app=read("apps/mobile/app/src/main/java/com/briofold/mobile/update/AppUpdateService.kt");
  const manifest=read("apps/mobile/app/src/main/AndroidManifest.xml");
- assert.match(backend,/EKMIVO_ANDROID_APK_SHA256/);
+ assert.match(backend,/BRIOFOLD_ANDROID_APK_SHA256/);
  assert.match(app,/MessageDigest.getInstance\("SHA-256"\)/);
  assert.match(app,/UPDATE_PACKAGE_MISMATCH/);
  assert.match(app,/Intent.ACTION_VIEW/);

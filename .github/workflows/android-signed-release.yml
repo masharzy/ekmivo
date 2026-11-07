@@ -104,12 +104,12 @@ jobs:
       - name: Load release keystore from encrypted GitHub Actions secrets
         shell: bash
         env:
-          RELEASE_KEYSTORE_B64: ${{ secrets.EKMIVO_ANDROID_KEYSTORE_B64 }}
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.EKMIVO_ANDROID_KEYSTORE_PASSWORD }}
+          RELEASE_KEYSTORE_B64: ${{ secrets.BRIOFOLD_ANDROID_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.BRIOFOLD_ANDROID_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
           if [[ -z "$RELEASE_KEYSTORE_B64" || -z "$RELEASE_KEYSTORE_PASSWORD" ]]; then
-            echo 'Add EKMIVO_ANDROID_KEYSTORE_B64 and EKMIVO_ANDROID_KEYSTORE_PASSWORD as GitHub Actions secrets.' >&2
+            echo 'Add BRIOFOLD_ANDROID_KEYSTORE_B64 and BRIOFOLD_ANDROID_KEYSTORE_PASSWORD as GitHub Actions secrets.' >&2
             exit 1
           fi
           umask 077
@@ -118,12 +118,12 @@ jobs:
       - name: Assemble signed release APK
         working-directory: apps/mobile
         env:
-          EKMIVO_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/briofold-production-release.p12
-          EKMIVO_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.EKMIVO_ANDROID_KEYSTORE_PASSWORD }}
-          EKMIVO_FIREBASE_APPLICATION_ID: ${{ vars.EKMIVO_FIREBASE_APPLICATION_ID }}
-          EKMIVO_FIREBASE_API_KEY: ${{ vars.EKMIVO_FIREBASE_API_KEY }}
-          EKMIVO_FIREBASE_PROJECT_ID: ${{ vars.EKMIVO_FIREBASE_PROJECT_ID }}
-          EKMIVO_FIREBASE_SENDER_ID: ${{ vars.EKMIVO_FIREBASE_SENDER_ID }}
+          BRIOFOLD_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/briofold-production-release.p12
+          BRIOFOLD_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.BRIOFOLD_ANDROID_KEYSTORE_PASSWORD }}
+          BRIOFOLD_FIREBASE_APPLICATION_ID: ${{ vars.BRIOFOLD_FIREBASE_APPLICATION_ID }}
+          BRIOFOLD_FIREBASE_API_KEY: ${{ vars.BRIOFOLD_FIREBASE_API_KEY }}
+          BRIOFOLD_FIREBASE_PROJECT_ID: ${{ vars.BRIOFOLD_FIREBASE_PROJECT_ID }}
+          BRIOFOLD_FIREBASE_SENDER_ID: ${{ vars.BRIOFOLD_FIREBASE_SENDER_ID }}
         run: gradle --no-daemon --console=plain :app:assembleRelease
       - name: Verify APK signature and expected production certificate
         shell: bash

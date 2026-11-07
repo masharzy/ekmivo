@@ -25,7 +25,7 @@ test("checkout binds three versioned published links, with server gate for confi
  const ui=read("components/subscription-order-summary.tsx");
  assert.match(page,/intentId=\{intent\.id\}/);
  assert.match(loader,/platform_subscription_policy_public\(\)/);
- assert.doesNotMatch(loader,/process\.env\.EKMIVO_TERMS_URL/);
+ assert.doesNotMatch(loader,/process\.env\.BRIOFOLD_TERMS_URL/);
  assert.match(ui,/doc\?\.version/);
  assert.match(ui,/policyConsent\("terms"/);
  assert.match(ui,/policyConsent\("privacy"/);

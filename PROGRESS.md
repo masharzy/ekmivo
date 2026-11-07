@@ -225,3 +225,10 @@ following docs/design/briofold-phase-prompts.md; no UI changes in Phase 1.
 - APK versionCode 4 / v0.2.2, CI artifact 12109299410, SHA-256 `e90bc976cc0813a0552eedc4c6645923dad71c6084d5e315b874ddc8c2a8f7fc`. Debug build is not an update-safe release with a stable signing key.
 - `0083_phone_self_revoke.sql` additive SQL function applied in Neon production branch to **ekmivo_sandbox_financial** and **ekmivo_live_financial** databases; both inspected as installed with EXECUTE privileges for `ekmivo_finance_reader`, without modifying existing receipt/payment rows.
 - **Not yet verified**: Render Go deployment of this commit, Vercel Web deployment and user Samsung end-to-end revoke tests, exact pixel screenshot comparisons, future real signed release APK hosting and release-environment configuration.
+
+## Env rename (EKMIVO_* -> BRIOFOLD_*)
+- Code, workflows and docs now read BRIOFOLD_*. Go services load `internal/envcompat`, which copies a legacy EKMIVO_X into BRIOFOLD_X when the new name is unset (temporary; delete once Render uses new names).
+- Auto-webhook signing label is now `briofold:auto-webhook:v1`: every workspace's automatic signing secret CHANGES; receivers must re-copy it from the dashboard.
+- Vercel ekmivo-web: BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED added; old EKMIVO_ one kept until verified.
+- Left on purpose: DB roles/schemas/GUCs (ekmivo_*, ekmivo.*), historical migrations/evidence, github.com/masharzy/ekmivo URLs (until repo rename), GOOGLE_AUTH_ORIGIN (ekmivo-web.vercel.app).
+- Needs owner: GitHub Actions secrets rename (BRIOFOLD_ANDROID_KEYSTORE_*), Render envs, Google/Meta settings.

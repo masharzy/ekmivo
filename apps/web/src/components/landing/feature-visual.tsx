@@ -16,7 +16,7 @@ export function FeatureVisual({kind,chips,locale}:VisualProps) {
    <div className="v3-visual-top"><span className="v3-leds"><i/><i/><i/></span><span>{t.illustration}</span><span className="v3-visual-live"><i/>{t.online}</span></div>
    <div className="v3-visual-body">
     {(kind==="channels"||kind==="integrations") && <div className="v3-network">
-      <div className="v3-network-hub"><span>e.</span><small>EKMIVO</small></div>
+      <div className="v3-network-hub"><span>e.</span><small>BRIOFOLD</small></div>
       {chips.slice(0,5).map((ch,i)=><div className={`v3-network-node node-${i}`} key={ch}><span className="v3-network-ping"/>{ch}</div>)}
       <div className="v3-network-caption">{t.channels} <span>↔</span></div>
     </div>}
@@ -32,7 +32,7 @@ export function FeatureVisual({kind,chips,locale}:VisualProps) {
     {kind==="payments"&&<div className="v3-pay-mock"><div className="v3-pay-icon">✓</div><h4>{t.matched}</h4><div className="v3-pay-rows">{chips.slice(0,5).map(ch=><p key={ch}><span>✓</span>{ch}<i/></p>)}</div><small>{t.notLive}</small></div>}
     {kind==="fulfilment"&&<div className="v3-delivery-mock"><div className="v3-delivery-path">{chips.map((c,i)=><div className="v3-delivery-stop" key={c}><div className={i<2?"done":""}>{i<2?"✓":i+1}</div><small>{c}</small></div>)}</div><div className="v3-delivery-footer"><span>ORDER → COURIER</span><span>{t.status}</span></div></div>}
     {kind==="booking"&&<div className="v3-booking-mock"><div className="v3-calendar-head"><b>{t.today}</b><span>← &nbsp; →</span></div><div className="v3-calendar-grid">{Array.from({length:21},(_,i)=><span className={i===10?"active":""} key={i}>{i+1}</span>)}</div><div className="v3-booking-slot"><span>◷</span>{t.slot}<b>↗</b></div></div>}
-    {kind==="devices"&&<div className="v3-device-mock"><div className="v3-device-web"><span className="v3-device-top">EKMIVO / WEB</span><div className="v3-device-grid"><span/><span/><span/><span/></div></div><div className="v3-device-phone"><span/><div><b>e.</b><i/><i/><i/></div><span/></div><div className="v3-device-label">WEB ↔ MOBILE</div></div>}
+    {kind==="devices"&&<div className="v3-device-mock"><div className="v3-device-web"><span className="v3-device-top">BRIOFOLD / WEB</span><div className="v3-device-grid"><span/><span/><span/><span/></div></div><div className="v3-device-phone"><span/><div><b>e.</b><i/><i/><i/></div><span/></div><div className="v3-device-label">WEB ↔ MOBILE</div></div>}
     {kind==="analytics"&&<div className="v3-analytics-mock"><div className="v3-analytics-header"><small>{t.total}</small><span>↗</span></div><div className="v3-chart-bars">{[35,57,48,74,52,89,65,95,75,90,67,82].map((v,i)=><span key={i} style={{height:`${v}%`}}/>)}</div><div className="v3-analytics-bottom">{chips.slice(0,3).map(ch=><span key={ch}>{ch}</span>)}</div></div>}
    </div>
    <div className="v3-visual-foot"><span>{iconByKind[kind]??"◉"} &nbsp;{chips[0]}</span><span>EK / PREVIEW</span></div>

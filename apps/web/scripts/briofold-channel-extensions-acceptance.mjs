@@ -93,7 +93,7 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_ai_credit_journal WHERE workspace_id=${workspace}`)[0].n),0,'fixed reply debited credits');
   // Run the actual Go worker against the actual isolated control database. No
   // provider delivery or paid model is enabled; fixed policy is genuinely run.
-  worker=spawn(apiBin,[],{env:{...apiEnv,PORT:'17914',GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:'true',PG10_EXTENSIONS_ENABLED:'true',INBOX_SENDER_ENABLED:'false',BRIOFOLD_COMMENTS_ENABLED:'true',BRIOFOLD_COMMENT_DELIVERY_ENABLED:'false',BRIOFOLD_AI_RUNTIME_ENABLED:'false',BRIOFOLD_AI_TOPUPS_ENABLED:'false'},stdio:['ignore','pipe','pipe']});
+  worker=spawn(apiBin,[],{env:{...apiEnv,PORT:'17914',GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_REQUIRE_AUTHZ:'true',PG10_EXTENSIONS_ENABLED:'true',INBOX_SENDER_ENABLED:'false',BRIOFOLD_COMMENTS_ENABLED:'true',BRIOFOLD_COMMENT_DELIVERY_ENABLED:'false',BRIOFOLD_AI_RUNTIME_ENABLED:'false',BRIOFOLD_AI_TOPUPS_ENABLED:'false'},stdio:['ignore','pipe','pipe']});
   worker.stdout.resume();worker.stderr.resume();
   await db`SELECT briofold_comment_ingest('ms',${account},'comment_2','post_1','fixture-customer','price please',false)`;
   await db`SELECT briofold_comment_ingest('ms',${account},'comment_3','post_1','fixture-customer','price ০১৭১২৩৪৫৬৭৮',false)`;

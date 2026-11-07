@@ -11,7 +11,7 @@ const paths=['operations/payments','documents/customers','documents/invoices','r
 const rate=50,seconds=60;
 if(mode==='plan'){await writeFile(output,JSON.stringify({mode,executed:false,simulation:true,workspace_count:25,rate,seconds,paths,target_p95_ms:500},null,2)+'\n',{flag:'wx',mode:0o600})}
 else{
- if(process.env.EKMIVO_ALLOW_SANDBOX_LOAD!=='true'||process.env.EKMIVO_LOAD_SANDBOX_ORIGIN!==origin.origin)throw Error('Explicit sandbox load authorization required');
+ if(process.env.BRIOFOLD_ALLOW_SANDBOX_LOAD!=='true'||process.env.BRIOFOLD_LOAD_SANDBOX_ORIGIN!==origin.origin)throw Error('Explicit sandbox load authorization required');
  const pending=new Set(),samples=[];let dropped=0;
  async function read(n){const account=fixture.accounts[n%25],route=paths[Math.floor(n/25)%paths.length],started=performance.now();let status=null,valid=false;
   try{const result=await fetch(new URL(`/v1/workspaces/${account.workspace_id}/${route}?environment=sandbox`,origin),{headers:{Authorization:'Bearer '+account.read_key},redirect:'error',signal:AbortSignal.timeout(10000)});status=result.status;const data=await result.json();valid=status===200&&data&&typeof data==='object'&&!data.error;if(route==='reconciliation')valid=valid&&Array.isArray(data.items?.statements);else valid=valid&&Array.isArray(data.items)}catch{}

@@ -7,7 +7,7 @@ type Section={id:string;title:string;body:ReactNode};
 
 function LegalShell({locale,kind,title,summary,sections,aside}:{locale:Locale;kind:string;title:string;summary:string;sections:Section[];aside?:ReactNode}){
  const bn=locale==="bn";
- const configuredContact=process.env.EKMIVO_PRIVACY_CONTACT_EMAIL?.trim()??"";
+ const configuredContact=process.env.BRIOFOLD_PRIVACY_CONTACT_EMAIL?.trim()??"";
  const contactEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(configuredContact)?configuredContact:null;
  return <main className="ek-legal" lang={locale} id="main-content">
   <div className="ek-legal-wrap">

@@ -54,7 +54,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  if(workspace.mode==="off"){
   if(root!=="dashboard"||view.length)notFound();
   return <main className="ek-app-shell ek-workspace-page"><div className="ek-page-wrap">
-   <p className="ek-page-kicker">EKMIVO / BUSINESS ACCESS</p><h1>{locale==="bn"?"এই ব্যবসায় এখন কোনো সেবা চালু নেই":"No enabled services for this business"}</h1>
+   <p className="ek-page-kicker">BRIOFOLD / BUSINESS ACCESS</p><h1>{locale==="bn"?"এই ব্যবসায় এখন কোনো সেবা চালু নেই":"No enabled services for this business"}</h1>
    <p className="ek-lead">{locale==="bn"?"আপনার সদস্যপদ ও আগের তথ্য অক্ষত আছে। সেবা চালু করতে মালিক বা অ্যাডমিনের সঙ্গে যোগাযোগ করুন।":"Your membership and existing history are preserved. Contact the owner or administrator to enable a service."}</p>
    <Link className="ek-action" href="/account">{locale==="bn"?"অ্যাকাউন্ট ও নিরাপত্তা":"Account & security"}</Link>
   </div></main>;

@@ -13,10 +13,10 @@ import (
 // All write flags remain off until preceding phases and the payment adapter pass.
 func subscriptionMutationEnabled(action string) bool {
 	if action == "quote" {
-		return os.Getenv("EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED") == "true"
+		return os.Getenv("BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED") == "true"
 	}
-	return action == "confirm" && os.Getenv("EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED") == "true" &&
-		os.Getenv("EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED") == "true"
+	return action == "confirm" && os.Getenv("BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED") == "true" &&
+		os.Getenv("BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED") == "true"
 }
 
 func subscriptionOrderError(w http.ResponseWriter, err error) {
@@ -73,7 +73,7 @@ func (s *Service) HandleSubscriptionOrder(w http.ResponseWriter, r *http.Request
 			return
 		}
 		if !subscriptionMutationEnabled(operation) ||
-			(operation == "confirm" && os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED") != "true") {
+			(operation == "confirm" && os.Getenv("BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED") != "true") {
 			fail(w, 503, "ORDER_CHECKOUT_NOT_RELEASED")
 			return
 		}
@@ -131,7 +131,7 @@ func (s *Service) HandleSubscriptionOrder(w http.ResponseWriter, r *http.Request
 			return
 		}
 		data["checkout_enabled"] = subscriptionMutationEnabled("confirm") &&
-			os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED") == "true"
+			os.Getenv("BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED") == "true"
 		write(w, 200, data)
 		return
 	}

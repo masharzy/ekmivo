@@ -19,7 +19,7 @@ export function PublicDevelopers({locale}:{locale:"en"|"bn"}){
    <Link href={"/"+locale+"/docs/payments"}><PublicIcon name="book"/> {t("Full API docs","সম্পূর্ণ API Docs")} ↗</Link>
   </aside>
   <div id="developer-start" className="ek-dev-mini-header">
-   <div><span className="ek-doc-kicker"><PublicIcon name="code"/> EKMiVO · DEVELOPERS</span><h1>{t("Payments, made simple to build.","পেমেন্ট ইন্টিগ্রেশন, এবার সহজ।")}</h1><p>{t("Easy examples, cheerful docs and a checkout you can trust. No complicated workspace URLs.","সহজ উদাহরণ, সুন্দর ডকুমেন্টেশন আর নির্ভরযোগ্য checkout। জটিল workspace URL-এর দরকার নেই।")}</p></div>
+   <div><span className="ek-doc-kicker"><PublicIcon name="code"/> BRIOFOLD · DEVELOPERS</span><h1>{t("Payments, made simple to build.","পেমেন্ট ইন্টিগ্রেশন, এবার সহজ।")}</h1><p>{t("Easy examples, cheerful docs and a checkout you can trust. No complicated workspace URLs.","সহজ উদাহরণ, সুন্দর ডকুমেন্টেশন আর নির্ভরযোগ্য checkout। জটিল workspace URL-এর দরকার নেই।")}</p></div>
    <Link className="ek-dev-primary" href={"/"+locale+"/docs/payments"}>{t("Read the docs","API Docs খুলুন")} ↗</Link>
   </div>
   <div id="developer-topics" className="ek-dev-friendly-grid">{cards.map(card=><Link href={"/"+locale+"/docs/payments#"+card.anchor} className={"ek-dev-friendly-card "+card.color} key={card.title}><span aria-hidden="true"><PublicIcon name={card.icon as Parameters<typeof PublicIcon>[0]["name"]}/></span><strong>{card.title}</strong><small>{card.body}</small><span className="ek-dev-card-arrow" aria-hidden="true">↗</span></Link>)}</div>

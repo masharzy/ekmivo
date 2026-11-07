@@ -8,9 +8,9 @@ test("last phase is isolated from legacy seller pay, with safe default-off purch
  const phase6=read("backend/internal/checkout/subscription_order.go");
  const worker=read("backend/internal/checkout/maintenance_worker.go");
  const route=read("apps/web/src/app/[locale]/checkout/order/[plan]/page.tsx");
- assert.match(phase6,/EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED/);
- assert.match(phase6,/EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED/);
- assert.match(phase6,/EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED/);
+ assert.match(phase6,/BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED/);
+ assert.match(phase6,/BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED/);
+ assert.match(phase6,/BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED/);
  assert.match(phase6,/== "true"/);
  assert.match(worker,/reconcileSubscriptionPayments/);
  assert.match(route,/validPurchaseToken\(plan\)/);

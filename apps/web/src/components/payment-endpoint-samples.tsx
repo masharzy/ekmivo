@@ -10,18 +10,18 @@ function codeFor(kind:Kind, language:Language):string {
  const path=kind==="status"?"/v1/payment/verify":"/v1/payment-intents/INTENT_ID/verify-transaction";
  const method="POST";
  const payload=kind==="status"?'{"invoice_id":"INVOICE_UUID"}':'{"transaction_id":"TXN123456789","provider":"bkash","amount_minor":12500}';
- const origin="EKMIVO_API_ORIGIN";
+ const origin="BRIOFOLD_API_ORIGIN";
  switch(language){
   case "cURL":return [
     "curl --fail-with-body --max-time 15 -X "+method+" \"$"+origin+path+"\" \\",
-    "  -H \"Authorization: Bearer $EKMIVO_API_KEY\""+" \\",
+    "  -H \"Authorization: Bearer $BRIOFOLD_API_KEY\""+" \\",
     ...["  -H \"Content-Type: application/json\" \\","  --data '"+payload+"'"]
   ].join("\n");
   case "Node.js":return [
     "const response = await fetch(",
-    "  process.env.EKMIVO_API_ORIGIN + \""+path+"\",",
+    "  process.env.BRIOFOLD_API_ORIGIN + \""+path+"\",",
     "  { method: \""+method+"\",",
-    "    headers: { Authorization: \"Bearer \" + process.env.EKMIVO_API_KEY"+", \"Content-Type\": \"application/json\""+" },",
+    "    headers: { Authorization: \"Bearer \" + process.env.BRIOFOLD_API_KEY"+", \"Content-Type\": \"application/json\""+" },",
     ...["    body: JSON.stringify("+payload+"),"],
     "    signal: AbortSignal.timeout(15000) }",
     ");",
@@ -30,11 +30,11 @@ function codeFor(kind:Kind, language:Language):string {
   ].join("\n");
   case "PHP":return [
     "<?php",
-    "$url = getenv('EKMIVO_API_ORIGIN') . '"+path+"';",
+    "$url = getenv('BRIOFOLD_API_ORIGIN') . '"+path+"';",
     "$curl = curl_init($url);",
     "curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);",
     "curl_setopt($curl, CURLOPT_TIMEOUT, 15);",
-    "curl_setopt($curl, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . getenv('EKMIVO_API_KEY')"+", 'Content-Type: application/json'"+"]);",
+    "curl_setopt($curl, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . getenv('BRIOFOLD_API_KEY')"+", 'Content-Type: application/json'"+"]);",
     ...["curl_setopt($curl, CURLOPT_POST, true);","curl_setopt($curl, CURLOPT_POSTFIELDS, '"+payload+"');"],
     "$out = curl_exec($curl);",
     "$status = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);",
@@ -45,8 +45,8 @@ function codeFor(kind:Kind, language:Language):string {
   case "Python":return [
     "import os, requests",
     "r = requests."+ "post" +"(",
-    "  os.environ['EKMIVO_API_ORIGIN'] + '"+path+"',",
-    "  headers={'Authorization': 'Bearer ' + os.environ['EKMIVO_API_KEY']},",
+    "  os.environ['BRIOFOLD_API_ORIGIN'] + '"+path+"',",
+    "  headers={'Authorization': 'Bearer ' + os.environ['BRIOFOLD_API_KEY']},",
     ...["  json="+payload+","],
     "  timeout=15)",
     "r.raise_for_status()",
@@ -58,9 +58,9 @@ function codeFor(kind:Kind, language:Language):string {
     "func main() {",
     "  client := &http.Client{Timeout:15*time.Second}",
     "  body := strings.NewReader(`"+payload+"`)",
-    "  req,err := http.NewRequest(\""+method+"\", os.Getenv(\"EKMIVO_API_ORIGIN\")+\""+path+"\", "+"body"+")",
+    "  req,err := http.NewRequest(\""+method+"\", os.Getenv(\"BRIOFOLD_API_ORIGIN\")+\""+path+"\", "+"body"+")",
     "  if err != nil { panic(err) }",
-    "  req.Header.Set(\"Authorization\", \"Bearer \"+os.Getenv(\"EKMIVO_API_KEY\"))",
+    "  req.Header.Set(\"Authorization\", \"Bearer \"+os.Getenv(\"BRIOFOLD_API_KEY\"))",
     ...["  req.Header.Set(\"Content-Type\", \"application/json\")"],
     "  res,err := client.Do(req); if err != nil { panic(err) }",
     "  defer res.Body.Close()",
@@ -74,7 +74,7 @@ function codeFor(kind:Kind, language:Language):string {
     "#include <stdio.h>",
     "#include <stdlib.h>",
     "int main(void) {",
-    "  const char *origin=getenv(\"EKMIVO_API_ORIGIN\"), *key=getenv(\"EKMIVO_API_KEY\");",
+    "  const char *origin=getenv(\"BRIOFOLD_API_ORIGIN\"), *key=getenv(\"BRIOFOLD_API_KEY\");",
     "  if (!origin || !key) return 1;",
     "  char url[1024], auth[1024];",
     "  if (snprintf(url,sizeof url,\"%s"+path+"\",origin)>=(int)sizeof url) return 1;",

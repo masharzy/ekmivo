@@ -13,7 +13,7 @@ export const metadata:Metadata={title:"Pay Briofold subscription · Secure check
 export default async function SubscriptionPaymentPage({params}:{params:Promise<{locale:string;token:string}>}){
  const {locale,token}=await params;
  if((locale!=="bn"&&locale!=="en")||!/^[A-Za-z0-9_-]{43}$/.test(token)||
-   process.env.EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED!=="true")notFound();
+   process.env.BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED!=="true")notFound();
  const user=await requireUser(locale);
  let purchase:{intent_id:string;workspace_id:string}|null=null;
  try{

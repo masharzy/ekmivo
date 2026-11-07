@@ -39,7 +39,7 @@ export function AuthForm({locale,mode,googleReady=false,googleNotice=""}:{locale
    {icon:"shield" as const,title:t("Receipt verification","পেমেন্ট যাচাই"),body:t("Follow the result of each payment.","প্রতিটি পেমেন্টের অবস্থা দেখুন।")},
    {icon:"business" as const,title:t("Your business","আপনার ব্যবসা"),body:t("Your team and business tools.","আপনার টিম ও ব্যবসার সেবা।")}
   ].map(item=><div key={item.title}><span className="ek-auth-workflow-icon"><PublicIcon name={item.icon}/></span><div><strong>{item.title}</strong><p>{item.body}</p></div><span className="ekm-auth-workflow-arrow" aria-hidden="true">↗</span></div>)}</div>
-   <span className="ekm-auth-rail-bottom">EKMIVO <span aria-hidden="true">✳</span> {t("A calmer way to work","গুছিয়ে কাজ করার সহজ উপায়")}</span>
+   <span className="ekm-auth-rail-bottom">BRIOFOLD <span aria-hidden="true">✳</span> {t("A calmer way to work","গুছিয়ে কাজ করার সহজ উপায়")}</span>
   </section>
   <section className="ek-auth-login-area" aria-labelledby="auth-heading"><div className="ek-auth-v2-form">
    <span className="ekm-auth-form-eyebrow"><i aria-hidden="true"/>{login?t("WELCOME BACK","আবার স্বাগতম"):t("GET STARTED","চলুন শুরু করি")}</span>

@@ -14,7 +14,7 @@ import (
 // coupon reservation and issued the authoritative invoice. This endpoint can
 // neither choose a price nor mark a payment paid from a browser request.
 func (s *Service) HandleSubscriptionPayment(w http.ResponseWriter,r *http.Request) {
-	if os.Getenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED")!="true" {
+	if os.Getenv("BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED")!="true" {
 		fail(w,503,"SUBSCRIPTION_PAYMENT_NOT_ENABLED");return
 	}
 	if s==nil||s.Auth==nil||s.Auth.DB==nil||!s.pipelineReady()||s.Pipeline.Live==nil {

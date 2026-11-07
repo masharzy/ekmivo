@@ -61,7 +61,7 @@ export function PaymentScrollJourney({steps,locale}:{steps:FlowStep[];locale:"bn
      <div className="ek-journey-card-top"><span>{locale==="bn"?"ধাপ":"STEP"} {String(i+1).padStart(2,"0")}</span><span className="ek-journey-card-graphic" aria-hidden="true">{["↗","⌁","◈","✓","◎"][i]||"↗"}</span></div>
      <div className="ek-journey-card-art" aria-hidden="true"><span>{["01","02","03","04","05"][i]}</span><i/><i/><i/></div>
      <h3>{step.title}</h3><p>{step.body}</p>
-     <div className="ek-journey-card-bottom"><span>EKMIVO / PAYMENT GATEWAY</span><span aria-hidden="true">↗</span></div>
+     <div className="ek-journey-card-bottom"><span>BRIOFOLD / PAYMENT GATEWAY</span><span aria-hidden="true">↗</span></div>
     </article>)}
   </div>
  </div>;

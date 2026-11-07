@@ -16,7 +16,7 @@ function PolicyEditor({locale,onClose}:{locale:Locale;onClose:()=>void}){
    <form action={action}><div className="pa-dialog-body pa-admin-fields">
     <label>{t("Document","ডকুমেন্ট")}<select name="kind"><option value="terms">Terms of Service</option><option value="privacy">Privacy Policy</option><option value="refund">Refund Policy</option></select></label>
     <label>{t("Immutable version label","অপরিবর্তনযোগ্য সংস্করণ")}<input name="version_label" required maxLength={64} placeholder="2026-10-v1" pattern="[A-Za-z0-9][A-Za-z0-9._-]*"/></label>
-    <label>{t("Approved public HTTPS URL","অনুমোদিত HTTPS লিংক")}<input name="url" type="url" required placeholder="https://ekmivo.com/terms"/></label>
+    <label>{t("Approved public HTTPS URL","অনুমোদিত HTTPS লিংক")}<input name="url" type="url" required placeholder="https://briofold.tech/terms"/></label>
     <label>{t("SHA-256 of approved document bytes","অনুমোদিত ডকুমেন্টের SHA-256")}<input name="content_sha256" minLength={64} maxLength={64} required pattern="[0-9a-fA-F]{64}" placeholder="64-character lowercase SHA-256"/></label>
     <label>{t("Audit reason","পরিবর্তনের কারণ")}<textarea name="reason" minLength={10} maxLength={500} required/></label>
     {state.status!=="idle"&&<p className={state.status==="error"?"pa-action-error":"pa-action-success"} role="status">{state.message}</p>}

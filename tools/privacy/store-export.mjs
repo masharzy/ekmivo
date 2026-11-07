@@ -5,13 +5,13 @@ import {redactExportRow,scopedExportTables,childExportQueries} from './store-reg
 const require=createRequire(new URL('../../apps/web/package.json',import.meta.url)),postgres=require('postgres');
 const [requestId,workspace,store,output]=process.argv.slice(2);
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-if(!uuid.test(requestId||'')||!uuid.test(workspace||'')||!['control','financial_live','financial_sandbox'].includes(store)||!output||process.env.EKMIVO_PRIVACY_EXPORT_ENABLED!=='true'||!/^[a-f0-9]{64}$/i.test(process.env.EKMIVO_PRIVACY_EXPORT_KEY_HEX||''))throw Error('Reviewed request, SQL store, private output and explicit export configuration required');
-const urls={control:process.env.EKMIVO_PRIVACY_CONTROL_DATABASE_URL,financial_live:process.env.EKMIVO_PRIVACY_LIVE_DATABASE_URL,financial_sandbox:process.env.EKMIVO_PRIVACY_SANDBOX_DATABASE_URL};
+if(!uuid.test(requestId||'')||!uuid.test(workspace||'')||!['control','financial_live','financial_sandbox'].includes(store)||!output||process.env.BRIOFOLD_PRIVACY_EXPORT_ENABLED!=='true'||!/^[a-f0-9]{64}$/i.test(process.env.BRIOFOLD_PRIVACY_EXPORT_KEY_HEX||''))throw Error('Reviewed request, SQL store, private output and explicit export configuration required');
+const urls={control:process.env.BRIOFOLD_PRIVACY_CONTROL_DATABASE_URL,financial_live:process.env.BRIOFOLD_PRIVACY_LIVE_DATABASE_URL,financial_sandbox:process.env.BRIOFOLD_PRIVACY_SANDBOX_DATABASE_URL};
 if(!urls.control||!urls[store])throw Error('Dedicated operator connections required');
 const connect=url=>postgres(url,{max:1,prepare:false,connect_timeout:10,idle_timeout:5,onnotice:()=>{}});
 const control=connect(urls.control),database=store==='control'?control:connect(urls[store]);
 let file,created=false,complete=false;
-const counts={},iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',Buffer.from(process.env.EKMIVO_PRIVACY_EXPORT_KEY_HEX,'hex'),iv),hash=createHash('sha256');
+const counts={},iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',Buffer.from(process.env.BRIOFOLD_PRIVACY_EXPORT_KEY_HEX,'hex'),iv),hash=createHash('sha256');
 let bytes=0,rows=0;
 async function write(chunk){hash.update(chunk);let offset=0;while(offset<chunk.length){const result=await file.write(chunk,offset,chunk.length-offset);if(!result.bytesWritten)throw Error("Private export write failed");offset+=result.bytesWritten}}
 async function record(data){const plain=Buffer.from(JSON.stringify(data)+'\n');bytes+=plain.length;if(bytes>536870912||++rows>1000000)throw Error('Bounded export exceeded; reviewed partitioned export required');await write(cipher.update(plain))}

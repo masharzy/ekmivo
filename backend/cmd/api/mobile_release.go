@@ -12,10 +12,10 @@ import (
 // Public, read-only release manifest. An unavailable release is 204, not
 // a fabricated "up to date" claim. Configure all fields together on Render.
 func handleAndroidRelease(w http.ResponseWriter, r *http.Request) {
- codeRaw := strings.TrimSpace(os.Getenv("EKMIVO_ANDROID_VERSION_CODE"))
- version := strings.TrimSpace(os.Getenv("EKMIVO_ANDROID_VERSION_NAME"))
- download := strings.TrimSpace(os.Getenv("EKMIVO_ANDROID_APK_URL"))
- sha := strings.ToLower(strings.TrimSpace(os.Getenv("EKMIVO_ANDROID_APK_SHA256")))
+ codeRaw := strings.TrimSpace(os.Getenv("BRIOFOLD_ANDROID_VERSION_CODE"))
+ version := strings.TrimSpace(os.Getenv("BRIOFOLD_ANDROID_VERSION_NAME"))
+ download := strings.TrimSpace(os.Getenv("BRIOFOLD_ANDROID_APK_URL"))
+ sha := strings.ToLower(strings.TrimSpace(os.Getenv("BRIOFOLD_ANDROID_APK_SHA256")))
  if codeRaw == "" || version == "" || download == "" || sha == "" {
   w.Header().Set("Cache-Control","no-store")
   w.WriteHeader(http.StatusNoContent)

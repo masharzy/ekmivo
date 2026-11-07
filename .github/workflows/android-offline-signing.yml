@@ -33,10 +33,10 @@ jobs:
       - name: Run unit checks and build release APK
         working-directory: apps/mobile
         env:
-          EKMIVO_FIREBASE_APPLICATION_ID: ${{ vars.EKMIVO_FIREBASE_APPLICATION_ID }}
-          EKMIVO_FIREBASE_API_KEY: ${{ vars.EKMIVO_FIREBASE_API_KEY }}
-          EKMIVO_FIREBASE_PROJECT_ID: ${{ vars.EKMIVO_FIREBASE_PROJECT_ID }}
-          EKMIVO_FIREBASE_SENDER_ID: ${{ vars.EKMIVO_FIREBASE_SENDER_ID }}
+          BRIOFOLD_FIREBASE_APPLICATION_ID: ${{ vars.BRIOFOLD_FIREBASE_APPLICATION_ID }}
+          BRIOFOLD_FIREBASE_API_KEY: ${{ vars.BRIOFOLD_FIREBASE_API_KEY }}
+          BRIOFOLD_FIREBASE_PROJECT_ID: ${{ vars.BRIOFOLD_FIREBASE_PROJECT_ID }}
+          BRIOFOLD_FIREBASE_SENDER_ID: ${{ vars.BRIOFOLD_FIREBASE_SENDER_ID }}
         run: gradle --no-daemon --console=plain :app:testDebugUnitTest :app:assembleRelease
       - name: Prepare offline signing tools and identity
         env:

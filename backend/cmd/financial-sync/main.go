@@ -3,6 +3,7 @@
 package main
 
 import(
+	_ "github.com/masharzy/briofold/backend/internal/envcompat"
  "context"
  "log"
  "os"
