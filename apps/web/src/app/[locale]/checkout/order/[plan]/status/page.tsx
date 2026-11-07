@@ -4,7 +4,7 @@ import {requireUser,preferredWorkspaceFor} from "../../../../../../lib/server/au
 import {SubscriptionPaymentStatus} from "../../../../../../components/subscription-payment-status";
 
 export const dynamic="force-dynamic";
-export const metadata:Metadata={title:"Subscription payment status · Ekmivo",robots:{index:false,follow:false},referrer:"no-referrer"};
+export const metadata:Metadata={title:"Subscription payment status · Briofold",robots:{index:false,follow:false},referrer:"no-referrer"};
 export default async function SubscriptionOrderStatusPage({params}:{params:Promise<{locale:string;plan:string}>}){
  const {locale,plan}=await params;
  if((locale!=="en"&&locale!=="bn")||

@@ -48,7 +48,7 @@ export function VerificationForm({locale,email}:{locale:Locale;email:string}){
    <section className="ek-auth-login-rail" aria-label={t("Account security","অ্যাকাউন্টের নিরাপত্তা")}>
     <span className="ekm-auth-rail-kicker"><i aria-hidden="true"/>{t("ONE LAST STEP","আর মাত্র এক ধাপ")}</span>
     <div className="ek-auth-login-rail-copy">
-     <span>{t("SECURE YOUR EKMIVO ACCOUNT","আপনার Ekmivo অ্যাকাউন্ট নিরাপদ রাখুন")}</span>
+     <span>{t("SECURE YOUR EKMIVO ACCOUNT","আপনার Briofold অ্যাকাউন্ট নিরাপদ রাখুন")}</span>
      <h2>{t("Your space. Only yours.","আপনার জায়গা, শুধু আপনার।")}</h2>
      <p>{t("A quick email check helps make sure only you can access your business tools.","একবার ইমেইল যাচাই করলেই আপনার ব্যবসার টুলগুলো নিরাপদে ব্যবহার করতে পারবেন।")}</p>
     </div>

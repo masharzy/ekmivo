@@ -8,7 +8,7 @@ import (
 
 // Public links are independent of the dashboard origin allowed by CORS.
 // Old deployment aliases must never become customer-facing payment URLs.
-const defaultCheckoutOrigin = "https://ekmivo-web.vercel.app"
+const defaultCheckoutOrigin = "https://briofold.tech"
 
 var publicCheckoutOrigin = defaultCheckoutOrigin
 

@@ -15,7 +15,7 @@ export const portalPages: {id:PortalPageId;path:string;en:string;bn:string;descr
 ];
 export const portalGroups = [["Get started","শুরু করুন"],["Payments","পেমেন্ট"],["Payment alerts","পেমেন্টের বার্তা"],["Reference","তথ্যসূত্র"],["Tools","পরীক্ষার সরঞ্জাম"]] as const;
 export const portalHref=(id:PortalPageId)=>"/developers"+(portalPages.find(p=>p.id===id)?.path||"");
-export const portalTitle=(id:PortalPageId,locale:PortalLocale)=>portalPages.find(p=>p.id===id)?.[locale]||"Ekmivo";
+export const portalTitle=(id:PortalPageId,locale:PortalLocale)=>portalPages.find(p=>p.id===id)?.[locale]||"Briofold";
 export function resolvePortalPage(slug:string[]=[]){return portalPages.find(p=>p.path===(slug.length?"/"+slug.join("/"):""));}
 export const portalAnchors:Record<PortalPageId,[string,string,string][]>={
  home:[["quickstart","Quickstart","শুরু করুন"],["resources","Resources","সহায়ক নির্দেশিকা"],["service-status","Service status","সেবার অবস্থা"],["latest","Latest changes","সাম্প্রতিক পরিবর্তন"],["try-api","Try the API","API পরীক্ষা করুন"]],

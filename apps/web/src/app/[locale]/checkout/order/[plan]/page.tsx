@@ -9,7 +9,7 @@ import {FreePurchaseClaim} from "../../../../../components/free-purchase-claim";
 import "../../../../../components/subscription-order-summary.css";
 
 export const dynamic="force-dynamic";
-export const metadata:Metadata={title:"Review your order · Ekmivo",robots:{index:false,follow:false},referrer:"no-referrer"};
+export const metadata:Metadata={title:"Review your order · Briofold",robots:{index:false,follow:false},referrer:"no-referrer"};
 
 function SelectionUnavailable({locale,code}:{locale:"bn"|"en";code:string}){
  const bn=locale==="bn";

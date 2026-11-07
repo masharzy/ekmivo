@@ -85,7 +85,7 @@ export async function AdminBillingPage({locale,query}:{locale:AdminLocale;query:
  const s=stats[0],money=(minor:unknown)=>"৳"+(Number(minor)/100).toLocaleString("en-BD",{minimumFractionDigits:0,maximumFractionDigits:2});
  const timestamp=(v:unknown)=>v?new Date(String(v)).toLocaleDateString("en-GB"):"—";
  return <>
-  <div className="pa-page-head"><div><h1>Billing & Revenue</h1><p>Ekmivo subscription invoices and collected revenue, not merchant payment volume.</p></div>
+  <div className="pa-page-head"><div><h1>Billing & Revenue</h1><p>Briofold subscription invoices and collected revenue, not merchant payment volume.</p></div>
    <a className="pa-button" href={base+"/exports?"+new URLSearchParams({kind:"invoices",q}).toString()}>Export invoices CSV</a>
   </div>
   <section className="pa-surface pa-stats-strip" style={{gridTemplateColumns:"repeat(3,minmax(0,1fr))"}}>

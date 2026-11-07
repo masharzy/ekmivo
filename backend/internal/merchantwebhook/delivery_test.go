@@ -63,7 +63,7 @@ func TestPinnedSignedHTTPSDelivery(t *testing.T) {
   calls++
   raw,readErr:=io.ReadAll(r.Body);if readErr!=nil{t.Error(readErr)}
   if r.Method!="POST" || r.Host!="webhook.example.com" || r.URL.Path!="/receive" ||
-   r.Header.Get("X-Ekmivo-Event-ID")!=id ||r.Header.Get("X-Ekmivo-Delivery-ID")!=lease ||
+   r.Header.Get("X-Ekmivo-Event-ID")!=id || r.Header.Get("X-Briofold-Event-ID")!=id || r.Header.Get("X-Briofold-Signature")!=r.Header.Get("X-Ekmivo-Signature") ||r.Header.Get("X-Ekmivo-Delivery-ID")!=lease ||
    string(raw)!=string(body) {
    t.Errorf("altered signed request: %s %s %s",r.Method,r.Host,r.URL)
   }

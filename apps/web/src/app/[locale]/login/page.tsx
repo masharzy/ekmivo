@@ -7,7 +7,7 @@ import {googleConfiguration} from "../../../lib/google-oidc";
 import {googleMessage} from "../../../lib/google-message";
 export const dynamic="force-dynamic";
 
-export const metadata: Metadata = { title: "Log in | Ekmivo" };
+export const metadata: Metadata = { title: "Log in | Briofold" };
 
 export default async function LoginPage({ params,searchParams }: { params: Promise<{ locale: string }>;searchParams:Promise<{google?:string}> }) {
   const { locale } = await params;

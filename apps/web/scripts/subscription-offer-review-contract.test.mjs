@@ -35,7 +35,7 @@ test("stale published versions fail closed; review creates no invoices, wallet s
  assert.match(page,/result\.status==="price_changed"/);
  assert.match(page,/Go to Pay/);
  assert.match(page,/disabled/);
- assert.match(page,/Pay with Ekmivo/);
+ assert.match(page,/Pay with Briofold/);
  assert.match(page,/policies\.terms/);
  assert.match(page,/policies\.privacy/);
  assert.match(page,/policies\.refund/);

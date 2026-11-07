@@ -57,7 +57,7 @@ export const landingCopy = {
       {name:"Online stores",title:"From product question to shipped order",body:"Help with product choices, create catalog-backed orders, verify payments and track fulfilment."},
       {name:"Service teams",title:"From first inquiry to confirmed booking",body:"Turn a conversation into a scheduled service, with reminders, handover and clear payment status."},
       {name:"Agencies",title:"Multiple brands, distinct ownership",body:"Manage client workspaces, roles, service budgets and records without mixing customer data."},
-      {name:"Developers",title:"Your system, connected to Ekmivo",body:"Use scoped APIs, signed webhooks and merchant payment requests for authorized workflows."}
+      {name:"Developers",title:"Your system, connected to Briofold",body:"Use scoped APIs, signed webhooks and merchant payment requests for authorized workflows."}
     ],
     pricingTag:"FLEXIBLE BY DESIGN",pricingTitle:"Start with what your business needs.",pricingLead:"Pricing is not announced yet. Below are product configurations, not purchasable plans.",
     pricing:[
@@ -159,7 +159,7 @@ export const landingCopy = {
       ["পেমেন্টের প্রমাণ না মিললে কী হবে?","Pending অথবা exception থাকবে। ভুল বা পরস্পরবিরোধী প্রমাণে কখনো কৃত্রিম verification দেখানো হবে না।"],
       ["AI-এর বদলে মানুষ উত্তর দিতে পারবেন?","হ্যাঁ, human takeover পরিকল্পনার অংশ। চ্যানেলভেদে প্রযোজ্য অনুমতির সীমা থাকবে।"],
       ["Messenger, Instagram, WhatsApp যুক্ত করা যাবে?","এই চ্যানেলগুলো scope-এ আছে, তবে official platform approval প্রয়োজন। অনুমোদনবিহীন সুবিধাকে live হিসেবে দেখানো হচ্ছে না।"],
-      ["Ekmivo কি এখন ব্যবহার করা যাবে?","এটি product preview। বাস্তব business integration, signup ও paid subscription তৈরি হচ্ছে; এখনো চালু নয়।"]
+      ["Briofold কি এখন ব্যবহার করা যাবে?","এটি product preview। বাস্তব business integration, signup ও paid subscription তৈরি হচ্ছে; এখনো চালু নয়।"]
     ],
     finalTag:"আপনার ব্যবসার পরবর্তী অধ্যায়",finalTitle:"প্রতিটি মেসেজ গুরুত্বপূর্ণ। প্রতিটি ধাপ এগিয়ে নিন।",finalText:"কথোপকথন ও কমার্সের একটি ওয়ার্কস্পেস। নিয়ন্ত্রণ আপনার, সেবা দুটি স্বাধীন। বাস্তব ব্যবসার প্রয়োজনেই তৈরি হচ্ছে।",finalAction:"প্রথম রিলিজ দেখুন",finalNote:"Development preview — signup ও integration এখনো live নয়।",sampleCaption:"শুধু নমুনা · বাস্তব মার্চেন্ট ডেটা নয়",next:"পরের ধাপ",previous:"আগের ধাপ",step:"ধাপ",view:"সুবিধাগুলো দেখুন",close:"বন্ধ করুন",
   }

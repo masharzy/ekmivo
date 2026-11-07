@@ -1,4 +1,4 @@
-/** This catalog concerns Ekmivo subscriptions, never seller-store order coupons. */
+/** This catalog concerns Briofold subscriptions, never seller-store order coupons. */
 export type SubscriptionCouponStatus="draft"|"scheduled"|"active"|"paused"|"expired"|"archived";
 export type SubscriptionCoupon={
  id:string;code_normalized:string;status:SubscriptionCouponStatus;

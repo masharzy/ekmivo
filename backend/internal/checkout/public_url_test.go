@@ -9,7 +9,7 @@ func TestCheckoutURLIsCanonicalAndIndependentOfDashboardAlias(t *testing.T) {
 	if err := SetPublicCheckoutOrigin(""); err != nil {
 		t.Fatal(err)
 	}
-	if got := publicCheckoutURL("opaque-token"); got != "https://ekmivo-web.vercel.app/checkout/opaque-token" {
+	if got := publicCheckoutURL("opaque-token"); got != "https://briofold.tech/checkout/opaque-token" {
 		t.Fatal(got)
 	}
 	if err := SetPublicCheckoutOrigin("https://pay.example.com/"); err != nil {

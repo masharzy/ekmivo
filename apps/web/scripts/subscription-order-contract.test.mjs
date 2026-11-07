@@ -35,7 +35,7 @@ test("summary uses opaque intent, no seller wallet and no client amount calculat
  const route=read("app/[locale]/checkout/order/[plan]/page.tsx");
  const proxy=read("app/api/go/[...path]/route.ts");
  const pay=read("app/[locale]/pay/subscription/[token]/page.tsx");
- assert.match(summary,/Go to Pay/);assert.match(summary,/Pay with Ekmivo/);
+ assert.match(summary,/Go to Pay/);assert.match(summary,/Pay with Briofold/);
  for(const kind of ["terms","privacy","refund"])assert.match(summary,new RegExp(`policyConsent\\("${kind}"`));
  assert.match(summary,/postCoupon\(command\.code,command\.revision,command\.key\)/);
  assert.match(summary,/post\("confirm"/);

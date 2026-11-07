@@ -54,7 +54,7 @@ export function AuthForm({locale,mode,googleReady=false,googleNotice=""}:{locale
     {server.status==="error"&&<p className="ek-form-error" role="alert">{server.message}</p>}
     {!login&&currentStep===1?<button className="ek-auth-primary ek-auth-submit" type="submit">{t("Continue","পরবর্তী ধাপ")}<span aria-hidden="true">→</span></button>:<Submit bn={bn} label={login?t("Sign in","লগইন করুন"):t("Create account","অ্যাকাউন্ট খুলুন")}/>}
    </form>{!login&&<p className="ek-auth-register-tip">{t("Creating an account does not activate a paid plan.","অ্যাকাউন্ট খুললেই পেইড প্যাকেজ চালু হবে না।")}</p>}
-   <div className="ek-auth-switch"><span>{login?t("New to Ekmivo?","Ekmivo-তে নতুন?"):t("Already have an account?","আগেই অ্যাকাউন্ট আছে?")}</span><Link href={login?"/register":"/login"}>{login?t("Create account","অ্যাকাউন্ট খুলুন"):t("Sign in","লগইন করুন")}</Link></div><Link className="ek-auth-return" href="/">← {t("Back to home","হোমপেজে ফিরুন")}</Link>
+   <div className="ek-auth-switch"><span>{login?t("New to Briofold?","Briofold-তে নতুন?"):t("Already have an account?","আগেই অ্যাকাউন্ট আছে?")}</span><Link href={login?"/register":"/login"}>{login?t("Create account","অ্যাকাউন্ট খুলুন"):t("Sign in","লগইন করুন")}</Link></div><Link className="ek-auth-return" href="/">← {t("Back to home","হোমপেজে ফিরুন")}</Link>
   </div></section>
  </div></main>;
 }

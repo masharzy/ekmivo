@@ -2,8 +2,8 @@ import type {MetadataRoute} from "next";
 
 export default function manifest():MetadataRoute.Manifest{
  return {
-  name:"Ekmivo Merchant",
-  short_name:"Ekmivo",
+  name:"Briofold Merchant",
+  short_name:"Briofold",
   description:"Merchant conversations and commerce",
   start_url:"/dashboard",
   display:"standalone",

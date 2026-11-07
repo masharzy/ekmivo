@@ -1,6 +1,6 @@
 # Website and custom-bot hosted checkout
 
-`checkoutForAuthorizedOrder` is a server function for a website or custom bot. Adapt the `MerchantDatabase` transaction/query interface to your PostgreSQL driver. Install the local SDK and the merchant schema in `examples/webhook-receiver/schema.sql`. That schema belongs to the merchant application, not the Ekmivo financial database.
+`checkoutForAuthorizedOrder` is a server function for a website or custom bot. Adapt the `MerchantDatabase` transaction/query interface to your PostgreSQL driver. Install the local SDK and the merchant schema in `examples/webhook-receiver/schema.sql`. That schema belongs to the merchant application, not the Briofold financial database.
 
 Your existing server must authenticate the buyer, authorize the order and create its price from your catalog before calling this function. A bot must resolve its verified platform user to its own order; a chat message cannot select another buyer's reference. Never accept the amount, API key, workspace or environment from a browser or chat message.
 

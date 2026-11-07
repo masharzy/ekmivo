@@ -29,7 +29,7 @@ const figtree = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Ekmivo — Conversations and commerce, together",
+  title: "Briofold — Conversations and commerce, together",
   description: "A clearer workspace for customer conversations, AI assistance, orders and automatic payment verification.",
   manifest: "/manifest.webmanifest",
 };

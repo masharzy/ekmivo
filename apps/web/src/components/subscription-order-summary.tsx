@@ -202,7 +202,7 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
       {couponError&&<p role="alert" className="ek-order-warning">{couponError}</p>}
       {couponSuccess&&<p role="status" className="ek-order-success">{couponSuccess}</p>}
      </form>
-     <div className="ek-order-paywith"><p>{t("Payment provider","পেমেন্ট প্রোভাইডার")}</p><label><input type="radio" name="provider" checked readOnly value="ekmivo"/><span className="ek-order-provider-name"><b>Pay with Ekmivo</b><small>{t("Payment methods appear after order confirmation.","অর্ডার নিশ্চিত হলে পেমেন্ট মেথড দেখা যাবে।")}</small></span></label></div>
+     <div className="ek-order-paywith"><p>{t("Payment provider","পেমেন্ট প্রোভাইডার")}</p><label><input type="radio" name="provider" checked readOnly value="ekmivo"/><span className="ek-order-provider-name"><b>Pay with Briofold</b><small>{t("Payment methods appear after order confirmation.","অর্ডার নিশ্চিত হলে পেমেন্ট মেথড দেখা যাবে।")}</small></span></label></div>
      <fieldset className="ek-order-legal"><legend>{t("Review and accept each policy","প্রতিটি নীতিমালা পড়ে সম্মতি দিন")}</legend>
       {policyConsent("terms",t("Terms of Service","সেবার শর্তাবলি"))}
       {policyConsent("privacy",t("Privacy Policy","গোপনীয়তা নীতি"))}

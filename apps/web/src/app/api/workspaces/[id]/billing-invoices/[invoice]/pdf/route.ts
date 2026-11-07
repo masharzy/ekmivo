@@ -18,6 +18,6 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string;i
   const line=(value:string,size=12)=>{const lines=font.widthOfTextAtSize(value,size)>490?value.match(/.{1,62}/gu)??[value]:[value];for(const text of lines){page.drawText(text,{x:50,y,size,font,color:rgb(.08,.09,.11)});y-=size+12}};
   line('ekmivo.',24);line('Subscription invoice',18);y-=12;
   for(const [label,value] of [['Invoice',invoice],['Workspace',workspace?.name??id],['Created',inv.created_at],['Plan',plan?.name??inv.plan_id],['Period',`${inv.period_days} days`],['Amount',`BDT ${(Number(inv.amount_minor)/100).toFixed(2)}`],['Status',inv.status],...(inv.paid_at?[['Paid at',inv.paid_at]]:[]),...(inv.source_payment_id?[['Verified payment',inv.source_payment_id]]:[])])line(`${label}: ${value}`);
-  pdf.setTitle('Ekmivo subscription invoice '+invoice);const bytes=await pdf.save();return new Response(Buffer.from(bytes),{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="ekmivo-invoice-${invoice}.pdf"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
+  pdf.setTitle('Briofold subscription invoice '+invoice);const bytes=await pdf.save();return new Response(Buffer.from(bytes),{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="ekmivo-invoice-${invoice}.pdf"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
  }catch{return Response.json({code:'INVOICE_UNAVAILABLE'},{status:503,headers:{'Cache-Control':'no-store'}})}
 }

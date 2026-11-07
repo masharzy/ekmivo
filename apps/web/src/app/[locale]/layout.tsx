@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 export async function generateMetadata({ params }: { params: Promise<{locale:string}> }): Promise<Metadata> {
  const {locale}=await params;
  const bn=locale==="bn";
- const title=bn?"Ekmivo — Payment Gateway ও AI Bot":"Ekmivo — Payments and AI, made clearer";
+ const title=bn?"Briofold — Payment Gateway ও AI Bot":"Briofold — Payments and AI, made clearer";
  const description=bn
-  ?"Ekmivo দিয়ে পেমেন্ট লিংক, ইনভয়েস ও চেকআউট পরিচালনা করুন। AI Bot দিয়ে কাস্টমার কথোপকথন ও স্টোরের তথ্য একসঙ্গে সামলান।"
-   :"Create payment links, invoices and checkout experiences with Ekmivo. Connect customer conversations, Store knowledge and payments with AI Bot.";
- return {title,description,openGraph:{title,description,type:"website",siteName:"Ekmivo"}};
+  ?"Briofold দিয়ে পেমেন্ট লিংক, ইনভয়েস ও চেকআউট পরিচালনা করুন। AI Bot দিয়ে কাস্টমার কথোপকথন ও স্টোরের তথ্য একসঙ্গে সামলান।"
+   :"Create payment links, invoices and checkout experiences with Briofold. Connect customer conversations, Store knowledge and payments with AI Bot.";
+ return {title,description,openGraph:{title,description,type:"website",siteName:"Briofold"}};
 }
 
 import { cookies } from "next/headers";

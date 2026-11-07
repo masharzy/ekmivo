@@ -42,7 +42,7 @@ export function SubscriptionPaymentStatus({workspace,intent,locale}:{workspace:s
    <p>{t("Invoice: ","ইনভয়েস: ")}<code>{data.invoice_id}</code></p>
    <p>{t("Exact amount: ","সঠিক পরিমাণ: ")}৳{(data.amount_minor/100).toFixed(2)}</p>
    {!data.verified&&<p>{t("Closing this tab will not stop automatic verification. If you already paid, do not pay again.","ট্যাব বন্ধ করলেও স্বয়ংক্রিয় যাচাই চলবে। টাকা পাঠিয়ে থাকলে আবার পাঠাবেন না।")}</p>}
-   {data.status==="recovery_required"&&<p>{t("Contact Ekmivo support for operator-led recovery; no automatic refund has been sent.","অপারেটর-পরিচালিত সমাধানের জন্য Ekmivo সাপোর্টে যোগাযোগ করুন; স্বয়ংক্রিয় রিফান্ড পাঠানো হয়নি।")}</p>}
+   {data.status==="recovery_required"&&<p>{t("Contact Briofold support for operator-led recovery; no automatic refund has been sent.","অপারেটর-পরিচালিত সমাধানের জন্য Briofold সাপোর্টে যোগাযোগ করুন; স্বয়ংক্রিয় রিফান্ড পাঠানো হয়নি।")}</p>}
    <a className="underline" href={`/api/workspaces/${workspace}/billing-invoices/${data.invoice_id}/pdf`}>{t("Real invoice (PDF)","আসল ইনভয়েস (PDF)")}</a>
   </section>}
   <nav className="mt-8 flex flex-wrap gap-4">

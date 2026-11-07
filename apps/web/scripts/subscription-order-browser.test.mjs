@@ -98,7 +98,7 @@ test("Phase 5: 320/375/768/1024/1440 × EN/BN × light/dark/system, no overflow,
      const state=sandbox();await setup(page,locale,theme,state);
      const dimensions=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
      assert.ok(dimensions.scroll<=dimensions.viewport+1,JSON.stringify(dimensions));
-     assert.equal(await page.getByRole("radio",{name:/Pay with Ekmivo/}).count(),1);
+     assert.equal(await page.getByRole("radio",{name:/Pay with Briofold/}).count(),1);
      assert.equal(await consents(page).count(),3);
      for(let i=0;i<3;i++)assert.equal(await consents(page).nth(i).isChecked(),false);
      assert.equal(await page.getByRole("button",{name:"Go to Pay"}).isDisabled(),true);

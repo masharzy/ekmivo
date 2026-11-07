@@ -22,7 +22,7 @@ export function SubscriptionOfferPricing({offers,locale,compact=false,initialPro
  return <section className={"sop-root"+(compact?" sop-compact":"")} aria-label={t("Approved subscription offers","অনুমোদিত সাবস্ক্রিপশন অফার")}>
   <div className="sop-heading"><div>
    <strong>{t("Published offers","প্রকাশিত অফার")}</strong>
-   <p>{t("Exact prices from the approved Ekmivo catalog. AI credits are prepaid, not recurring.","Ekmivo-র অনুমোদিত ক্যাটালগের নির্দিষ্ট মূল্য। AI ক্রেডিট প্রিপেইড, স্বয়ংক্রিয় মাসিক চার্জ নয়।")}</p>
+   <p>{t("Exact prices from the approved Briofold catalog. AI credits are prepaid, not recurring.","Briofold-র অনুমোদিত ক্যাটালগের নির্দিষ্ট মূল্য। AI ক্রেডিট প্রিপেইড, স্বয়ংক্রিয় মাসিক চার্জ নয়।")}</p>
   </div></div>
   {available.length>1&&<div className="sop-selector" role="group" aria-label={t("Product","পণ্য")}>
    {available.map(g=><button key={g.id} type="button" aria-pressed={g.id===active} onClick={()=>setProduct(g.id)}>{g[locale]}</button>)}

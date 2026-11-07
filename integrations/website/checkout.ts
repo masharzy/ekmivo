@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {EkmivoClient, type Environment} from '../../sdk/typescript';
+import {BriofoldClient, type Environment} from '../../sdk/typescript';
 import type {MerchantDatabase} from '../../examples/webhook-receiver/consumer';
 
 /** Call after your server has authenticated the buyer and authorized this order.
@@ -20,7 +20,7 @@ export async function checkoutForAuthorizedOrder(reference:string, database:Merc
   return amount;
  });
  const key=createHash('sha256').update(`checkout|${config.workspace}|${config.environment}|${reference}`).digest('hex');
- const client=new EkmivoClient(config.apiOrigin,config.apiKey,config.environment);
+ const client=new BriofoldClient(config.apiOrigin,config.apiKey,config.environment);
  const result=await client.request('createPaymentIntent',{path:{workspaceID:config.workspace},
   idempotencyKey:key,body:{merchant_reference:reference,amount_minor:order,currency:'BDT',expires_in_minutes:30}}) as {id:string;checkout_token:string};
  if(!result.id||!/^[A-Za-z0-9_-]{43}$/.test(result.checkout_token))throw Error('Checkout result unconfirmed');

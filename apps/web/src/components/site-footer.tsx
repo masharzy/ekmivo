@@ -18,7 +18,7 @@ export function SiteFooter({locale}:{locale:Locale}){
    <Link href="/privacy">{locale==="bn"?"গোপনীয়তা":"Privacy"}</Link>
    <Link href="/data-deletion">{locale==="bn"?"তথ্য মুছে ফেলা":"Data Deletion"}</Link>
   </nav>
-  <span>© {new Date().getFullYear()} Ekmivo</span>
+  <span>© {new Date().getFullYear()} Briofold</span>
  </div></footer>;
  const t=siteCopy[locale];
  return <footer className="site-footer ek-public-footer">
@@ -34,7 +34,7 @@ export function SiteFooter({locale}:{locale:Locale}){
     <Link href="/login">{t.login}</Link>
     <Link href="/register">{t.register}</Link>
    </nav>
-   <div className="footer-bottom"><span>© {new Date().getFullYear()} Ekmivo. {t.rights}</span><Link href="/status">{locale==="bn"?"সেবার অবস্থা":"Service status"}</Link></div>
+   <div className="footer-bottom"><span>© {new Date().getFullYear()} Briofold. {t.rights}</span><Link href="/status">{locale==="bn"?"সেবার অবস্থা":"Service status"}</Link></div>
   </div>
  </footer>;
 }

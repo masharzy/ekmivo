@@ -17,7 +17,7 @@ export function RecoveryForm({locale}:{locale:Locale}){
    <div className="ek-auth-card ek-recovery-card">
     <span className="ek-auth-card-kicker">{bn?"পাসওয়ার্ড রিসেট":"RECOVER ACCOUNT"}</span>
     <h1>{bn?"পাসওয়ার্ড ভুলে গেছেন?":"Reset your password"}</h1>
-    <p className="ek-auth-subtitle">{bn?"অ্যাকাউন্টের ইমেইল দিন। পাসওয়ার্ড বদলানোর জন্য একটি কোড পাঠানো হবে।":"Enter the address connected to your Ekmivo account."}</p>
+    <p className="ek-auth-subtitle">{bn?"অ্যাকাউন্টের ইমেইল দিন। পাসওয়ার্ড বদলানোর জন্য একটি কোড পাঠানো হবে।":"Enter the address connected to your Briofold account."}</p>
     <form action={requestAction}>
      <label>{bn?"ইমেইল":"Email address"}<input type="email" name="email" autoComplete="email" placeholder="you@company.com" value={email} onChange={e=>setEmail(e.target.value)} required maxLength={254}/></label>
      <button className="ek-auth-primary" disabled={requestPending} type="submit">{requestPending?(bn?"পাঠানো হচ্ছে…":"Please wait…"):sent?(bn?"নতুন কোড পাঠান":"Send another code"):(bn?"কোড পাঠান":"Send recovery code")} <span aria-hidden="true">↗</span></button>

@@ -83,7 +83,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 </span>
 </h1>
 <p className="s">
-{t("Ekmivo's AI answers your customers and takes their orders. Every payment is matched from your phone's SMS, so there are no screenshots and no transaction IDs.")}
+{t("Briofold's AI answers your customers and takes their orders. Every payment is matched from your phone's SMS, so there are no screenshots and no transaction IDs.")}
 </p>
 <div className="cta">
 <a className="btn" href="#together">
@@ -199,7 +199,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("Customers pay. Orders confirm themselves.")}
 </h2>
 <p>
-{t("Install the Ekmivo app on the seller's phone. It reads incoming payment SMS and matches each one to an order.")}
+{t("Install the Briofold app on the seller's phone. It reads incoming payment SMS and matches each one to an order.")}
 </p>
 </div>
 <div className="ba">
@@ -245,7 +245,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 <use href="#shield">
 </use>
 </svg>
-{t("With Ekmivo")}
+{t("With Briofold")}
 </h3>
 <div className="pg">
 <ol>
@@ -253,20 +253,20 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("Customer taps Pay on your website")}
 </li>
 <li>
-{t("Ekmivo creates the payment and opens its page")}
+{t("Briofold creates the payment and opens its page")}
 </li>
 <li>
 {t("Customer pays from their mobile wallet")}
 </li>
 <li>
-{t("Ekmivo verifies it from the SMS and sends them back to your site")}
+{t("Briofold verifies it from the SMS and sends them back to your site")}
 </li>
 </ol>
 <div className="phone" aria-hidden="true">
 <div>
 <div className="ph">
 <b>
-{t("Ekmivo")}
+{t("Briofold")}
 </b>
 <em>
 {t("Connected · listening for SMS")}
@@ -648,7 +648,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("Only payment SMS")}
 </h3>
 <p>
-{t("Only payment SMS from your wallet is sent to Ekmivo. Everything else stays on your phone.")}
+{t("Only payment SMS from your wallet is sent to Briofold. Everything else stays on your phone.")}
 </p>
 </div>
 </div>
@@ -676,7 +676,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("Money stays with you")}
 </h3>
 <p>
-{t("Payments go straight to your wallet. Ekmivo does not hold your money or take a cut.")}
+{t("Payments go straight to your wallet. Briofold does not hold your money or take a cut.")}
 </p>
 </div>
 </div>
@@ -713,15 +713,15 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("How does it know a payment arrived?")}
 </summary>
 <p>
-{t("The Ekmivo app on the seller's phone reads payment SMS. Each one is matched to a payment by wallet, amount, sender number and time.")}
+{t("The Briofold app on the seller's phone reads payment SMS. Each one is matched to a payment by wallet, amount, sender number and time.")}
 </p>
 </details>
 <details>
 <summary>
-{t("Is Ekmivo a payment gateway?")}
+{t("Is Briofold a payment gateway?")}
 </summary>
 <p>
-{t("No. Customers pay your own wallet directly. Ekmivo doesn't hold or move money and takes no share of your sales. It only verifies that the payment arrived.")}
+{t("No. Customers pay your own wallet directly. Briofold doesn't hold or move money and takes no share of your sales. It only verifies that the payment arrived.")}
 </p>
 </details>
 <details>
@@ -729,7 +729,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("What does the app read?")}
 </summary>
 <p>
-{t("Only payment SMS from your wallet are sent to Ekmivo, and you can see every field that is sent.")}
+{t("Only payment SMS from your wallet are sent to Briofold, and you can see every field that is sent.")}
 </p>
 </details>
 <details>
@@ -745,7 +745,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("How do I install the app?")}
 </summary>
 <p>
-{t("Download the Ekmivo app (APK) from your business and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.")}
+{t("Download the Briofold app (APK) from your business and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.")}
 </p>
 </details>
 <details>
@@ -753,7 +753,7 @@ export function MarketingExperience({locale,pricing,aiPricing,bundlePricing}:{lo
 {t("Do customers need to install anything?")}
 </summary>
 <p>
-{t("No. They tap Pay, use the Ekmivo payment page and return to your site.")}
+{t("No. They tap Pay, use the Briofold payment page and return to your site.")}
 </p>
 </details>
 <details>

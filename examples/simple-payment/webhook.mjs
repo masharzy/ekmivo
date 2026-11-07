@@ -1,22 +1,22 @@
 // Node.js 22+; npm install postgres
-// Set DATABASE_URL, EKMIVO_API_ORIGIN, EKMIVO_API_KEY,
-// EKMIVO_WEBHOOK_SECRET (API Keys → automatic webhook signing).
+// Set DATABASE_URL, BRIOFOLD_API_ORIGIN, BRIOFOLD_API_KEY,
+// BRIOFOLD_WEBHOOK_SECRET (Dashboard → API Keys → automatic webhook signing; one secret per workspace and environment).
 // Your order-creation code stores the returned invoice_id against its order.
 // PostgreSQL schema (run once in YOUR merchant database):
 // CREATE TABLE orders(id text PRIMARY KEY, invoice_id uuid UNIQUE NOT NULL,
 //   amount_minor bigint NOT NULL, currency text NOT NULL DEFAULT 'BDT',
 //   status text NOT NULL DEFAULT 'pending');
-// CREATE TABLE ekmivo_events(id uuid PRIMARY KEY, received_at timestamptz DEFAULT now());
+// CREATE TABLE briofold_events(id uuid PRIMARY KEY, received_at timestamptz DEFAULT now());
 // CREATE TABLE fulfilment_outbox(order_id text PRIMARY KEY REFERENCES orders(id),
 //   created_at timestamptz DEFAULT now());
 import {createServer} from "node:http";
 import {createHmac, timingSafeEqual} from "node:crypto";
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL, {max: 4});
-const api = new URL(process.env.EKMIVO_API_ORIGIN);
+const api = new URL(process.env.BRIOFOLD_API_ORIGIN);
 if (api.protocol !== "https:") throw new Error("HTTPS API origin required");
-const apiKey = process.env.EKMIVO_API_KEY;
-const secret = process.env.EKMIVO_WEBHOOK_SECRET;
+const apiKey = process.env.BRIOFOLD_API_KEY;
+const secret = process.env.BRIOFOLD_WEBHOOK_SECRET;
 if (!apiKey || !secret) throw new Error("Server credentials missing");
 
 async function confirmOrder(invoiceId, eventId) {
@@ -35,7 +35,7 @@ async function confirmOrder(invoiceId, eventId) {
       WHERE invoice_id=${invoiceId}::uuid FOR UPDATE`;
     if (!order || String(order.amount_minor) !== String(payment.amount_minor) ||
         order.currency !== payment.currency) throw new Error("Order mismatch");
-    if (eventId) await tx`INSERT INTO ekmivo_events(id) VALUES(${eventId}::uuid)
+    if (eventId) await tx`INSERT INTO briofold_events(id) VALUES(${eventId}::uuid)
       ON CONFLICT DO NOTHING`;
     if (order.status === "paid") return;
     if (order.status !== "pending") throw new Error("Order needs review");
@@ -50,7 +50,7 @@ async function confirmOrder(invoiceId, eventId) {
 // your authenticated return handler. Ignore browser-supplied payment status.
 
 createServer(async (req, res) => {
-  if (req.method !== "POST" || req.url !== "/api/ekmivo/webhook") {
+  if (req.method !== "POST" || req.url !== "/api/briofold/webhook") {
     res.writeHead(404).end(); return;
   }
   try {
@@ -61,8 +61,8 @@ createServer(async (req, res) => {
       chunks.push(chunk);
     }
     const raw = Buffer.concat(chunks);
-    const timestamp = String(req.headers["x-ekmivo-timestamp"] || "");
-    const signature = String(req.headers["x-ekmivo-signature"] || "");
+    const timestamp = String((req.headers["x-briofold-timestamp"] || req.headers["x-ekmivo-timestamp"]) || "");
+    const signature = String((req.headers["x-briofold-signature"] || req.headers["x-ekmivo-signature"]) || "");
     const expected = createHmac("sha256", secret)
       .update(timestamp + ".").update(raw).digest();
     const fresh = /^[0-9]+$/.test(timestamp) &&
@@ -72,12 +72,13 @@ createServer(async (req, res) => {
       res.writeHead(401).end(); return;
     }
     const event = JSON.parse(raw.toString("utf8"));
-    if (event.id !== req.headers["x-ekmivo-event-id"] ||
+    if (event.id !== (req.headers["x-briofold-event-id"] || req.headers["x-ekmivo-event-id"]) ||
         !/^[a-f0-9-]{36}$/i.test(event.id || "")) {
       res.writeHead(400).end(); return;
     }
     if (event.type !== "payment.verified") {res.writeHead(200).end(); return;}
-    const invoiceId = event.invoice_id || event.data?.payment_intent_id;
+    // payment.verified carries the payment request id as data.payment_intent_id (the same id create returns as invoice_id).
+    const invoiceId = event.data?.payment_intent_id;
     if (!/^[a-f0-9-]{36}$/i.test(invoiceId || "")) {
       res.writeHead(400).end(); return;
     }

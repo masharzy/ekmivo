@@ -1,5 +1,5 @@
 {
-  "_note": "Source of truth for EN/BN copy on the Ekmivo landing page. Matching is whole-string. Taka amounts keep Latin digits in both languages.",
+  "_note": "Source of truth for EN/BN copy on the Briofold landing page. Matching is whole-string. Taka amounts keep Latin digits in both languages.",
   "pairs": [
     {
       "en": "Customer's photo",
@@ -122,8 +122,8 @@
       "bn": "শুধু পেমেন্টের এসএমএস"
     },
     {
-      "en": "Only payment SMS from your wallet is sent to Ekmivo. Everything else stays on your phone.",
-      "bn": "শুধু আপনার ওয়ালেটের পেমেন্ট এসএমএস Ekmivo-তে যায়। বাকি সব আপনার ফোনেই থাকে।"
+      "en": "Only payment SMS from your wallet is sent to Briofold. Everything else stays on your phone.",
+      "bn": "শুধু আপনার ওয়ালেটের পেমেন্ট এসএমএস Briofold-তে যায়। বাকি সব আপনার ফোনেই থাকে।"
     },
     {
       "en": "See what is sent",
@@ -138,8 +138,8 @@
       "bn": "টাকা থাকে আপনার কাছেই"
     },
     {
-      "en": "Payments go straight to your wallet. Ekmivo does not hold your money or take a cut.",
-      "bn": "পেমেন্ট সরাসরি আপনার ওয়ালেটে যায়। Ekmivo টাকা ধরে রাখে না, কোনো ভাগও নেয় না।"
+      "en": "Payments go straight to your wallet. Briofold does not hold your money or take a cut.",
+      "bn": "পেমেন্ট সরাসরি আপনার ওয়ালেটে যায়। Briofold টাকা ধরে রাখে না, কোনো ভাগও নেয় না।"
     },
     {
       "en": "Works with bKash and Nagad",
@@ -206,20 +206,20 @@
       "bn": "আপনার বিক্রি থেকে কোনো ভাগ নেই"
     },
     {
-      "en": "Is Ekmivo a payment gateway?",
-      "bn": "Ekmivo কি পেমেন্ট গেটওয়ে?"
+      "en": "Is Briofold a payment gateway?",
+      "bn": "Briofold কি পেমেন্ট গেটওয়ে?"
     },
     {
-      "en": "No. Customers pay your own wallet directly. Ekmivo doesn't hold or move money and takes no share of your sales. It only verifies that the payment arrived.",
-      "bn": "না। কাস্টমার সরাসরি আপনার নিজের ওয়ালেটে টাকা পাঠায়। Ekmivo টাকা ধরে রাখে না, সরায়ও না, আপনার বিক্রির কোনো ভাগও নেয় না। শুধু যাচাই করে যে পেমেন্ট এসেছে কি না।"
+      "en": "No. Customers pay your own wallet directly. Briofold doesn't hold or move money and takes no share of your sales. It only verifies that the payment arrived.",
+      "bn": "না। কাস্টমার সরাসরি আপনার নিজের ওয়ালেটে টাকা পাঠায়। Briofold টাকা ধরে রাখে না, সরায়ও না, আপনার বিক্রির কোনো ভাগও নেয় না। শুধু যাচাই করে যে পেমেন্ট এসেছে কি না।"
     },
     {
       "en": "What does the app read?",
       "bn": "অ্যাপ কী কী পড়ে?"
     },
     {
-      "en": "Only payment SMS from your wallet are sent to Ekmivo, and you can see every field that is sent.",
-      "bn": "শুধু আপনার ওয়ালেটের পেমেন্ট এসএমএস Ekmivo-তে যায়, আর কোন তথ্য যাচ্ছে তার সবটাই আপনি দেখতে পারেন।"
+      "en": "Only payment SMS from your wallet are sent to Briofold, and you can see every field that is sent.",
+      "bn": "শুধু আপনার ওয়ালেটের পেমেন্ট এসএমএস Briofold-তে যায়, আর কোন তথ্য যাচ্ছে তার সবটাই আপনি দেখতে পারেন।"
     },
     {
       "en": "Which phones does it work on?",
@@ -234,8 +234,8 @@
       "bn": "অ্যাপ কীভাবে ইনস্টল করব?"
     },
     {
-      "en": "Download the Ekmivo app (APK) from your workspace and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.",
-      "bn": "ওয়ার্কস্পেস থেকে Ekmivo অ্যাপ (APK) ডাউনলোড করে এসএমএস অ্যাক্সেস দিন। নতুন অ্যান্ড্রয়েড ভার্সনে অ্যাপের জন্য restricted settings-ও চালু করতে হতে পারে।"
+      "en": "Download the Briofold app (APK) from your workspace and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.",
+      "bn": "ওয়ার্কস্পেস থেকে Briofold অ্যাপ (APK) ডাউনলোড করে এসএমএস অ্যাক্সেস দিন। নতুন অ্যান্ড্রয়েড ভার্সনে অ্যাপের জন্য restricted settings-ও চালু করতে হতে পারে।"
     },
     {
       "en": "Payments",
@@ -294,8 +294,8 @@
       "bn": "পেমেন্ট মিলে যায় নিজে নিজেই।"
     },
     {
-      "en": "Ekmivo's AI answers your customers and takes their orders. Every payment is matched from your phone's SMS, so there are no screenshots and no transaction IDs.",
-      "bn": "Ekmivo-র এআই কাস্টমারের মেসেজের উত্তর দেয়, অর্ডার নেয়। আর আপনার ফোনের এসএমএস দেখে পেমেন্ট মিলিয়ে নেয়, তাই স্ক্রিনশট বা ট্রানজেকশন আইডি চাইতে হয় না।"
+      "en": "Briofold's AI answers your customers and takes their orders. Every payment is matched from your phone's SMS, so there are no screenshots and no transaction IDs.",
+      "bn": "Briofold-র এআই কাস্টমারের মেসেজের উত্তর দেয়, অর্ডার নেয়। আর আপনার ফোনের এসএমএস দেখে পেমেন্ট মিলিয়ে নেয়, তাই স্ক্রিনশট বা ট্রানজেকশন আইডি চাইতে হয় না।"
     },
     {
       "en": "See how it works",
@@ -378,16 +378,16 @@
       "bn": "কাস্টমার পেমেন্ট করলেই অর্ডার কনফার্ম।"
     },
     {
-      "en": "Install the Ekmivo app on the seller's phone. It reads incoming payment SMS and matches each one to an order.",
-      "bn": "বিক্রেতার ফোনে Ekmivo অ্যাপ থাকবে। পেমেন্টের এসএমএস এলেই অ্যাপ সেটা পড়ে সঠিক অর্ডারের সাথে মিলিয়ে দেয়।"
+      "en": "Install the Briofold app on the seller's phone. It reads incoming payment SMS and matches each one to an order.",
+      "bn": "বিক্রেতার ফোনে Briofold অ্যাপ থাকবে। পেমেন্টের এসএমএস এলেই অ্যাপ সেটা পড়ে সঠিক অর্ডারের সাথে মিলিয়ে দেয়।"
     },
     {
       "en": "Before",
       "bn": "আগে"
     },
     {
-      "en": "With Ekmivo",
-      "bn": "Ekmivo-র সাথে"
+      "en": "With Briofold",
+      "bn": "Briofold-র সাথে"
     },
     {
       "en": "Customer orders on your website",
@@ -410,12 +410,12 @@
       "bn": "কাস্টমার আপনার সাইটে Pay-তে ক্লিক করে"
     },
     {
-      "en": "Ekmivo creates the payment and opens its page",
-      "bn": "Ekmivo পেমেন্ট তৈরি করে তার পেজ খোলে"
+      "en": "Briofold creates the payment and opens its page",
+      "bn": "Briofold পেমেন্ট তৈরি করে তার পেজ খোলে"
     },
     {
-      "en": "Ekmivo verifies it from the SMS and sends them back to your site",
-      "bn": "এসএমএস দেখে Ekmivo নিজেই ভেরিফাই করে, কাস্টমার আপনার সাইটে ফিরে যায়"
+      "en": "Briofold verifies it from the SMS and sends them back to your site",
+      "bn": "এসএমএস দেখে Briofold নিজেই ভেরিফাই করে, কাস্টমার আপনার সাইটে ফিরে যায়"
     },
     {
       "en": "Connected · listening for SMS",
@@ -722,16 +722,16 @@
       "bn": "পেমেন্ট যে এসেছে, সেটা কীভাবে বোঝা যায়?"
     },
     {
-      "en": "The Ekmivo app on the seller's phone reads payment SMS. Each one is matched to a payment by wallet, amount, sender number and time.",
-      "bn": "বিক্রেতার ফোনে থাকা Ekmivo অ্যাপ পেমেন্টের এসএমএস পড়ে। ওয়ালেট, টাকার পরিমাণ, প্রেরকের নম্বর ও সময় দেখে সেটা সঠিক পেমেন্টের সাথে মেলানো হয়।"
+      "en": "The Briofold app on the seller's phone reads payment SMS. Each one is matched to a payment by wallet, amount, sender number and time.",
+      "bn": "বিক্রেতার ফোনে থাকা Briofold অ্যাপ পেমেন্টের এসএমএস পড়ে। ওয়ালেট, টাকার পরিমাণ, প্রেরকের নম্বর ও সময় দেখে সেটা সঠিক পেমেন্টের সাথে মেলানো হয়।"
     },
     {
       "en": "Do customers need to install anything?",
       "bn": "কাস্টমারকে কি কিছু ইনস্টল করতে হবে?"
     },
     {
-      "en": "No. They tap Pay, use the Ekmivo payment page and return to your site.",
-      "bn": "না। Pay-তে ক্লিক করলে Ekmivo-র পেমেন্ট পেজ খোলে, সেখানে পেমেন্ট করে কাস্টমার আপনার সাইটে ফিরে আসে।"
+      "en": "No. They tap Pay, use the Briofold payment page and return to your site.",
+      "bn": "না। Pay-তে ক্লিক করলে Briofold-র পেমেন্ট পেজ খোলে, সেখানে পেমেন্ট করে কাস্টমার আপনার সাইটে ফিরে আসে।"
     },
     {
       "en": "Can I use the payments without the AI bot?",

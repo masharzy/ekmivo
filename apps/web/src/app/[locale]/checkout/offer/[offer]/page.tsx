@@ -9,7 +9,7 @@ import {priceInBdt,publishedPriceComparison,type SubscriptionTerm} from "../../.
 import "../../../../../components/subscription-order-summary.css";
 
 export const dynamic="force-dynamic";
-export const metadata:Metadata={title:"Published price review · Ekmivo",robots:{index:false,follow:false},referrer:"no-referrer"};
+export const metadata:Metadata={title:"Published price review · Briofold",robots:{index:false,follow:false},referrer:"no-referrer"};
 
 export default async function PublishedOfferReview({params,searchParams}:{
  params:Promise<{locale:string;offer:string}>;
@@ -68,7 +68,7 @@ export default async function PublishedOfferReview({params,searchParams}:{
       <div><input id="ek-offer-coupon" disabled placeholder={t("Available at secure checkout","নিরাপদ চেকআউটে পাওয়া যাবে")} aria-describedby="ek-offer-coupon-help"/><button type="button" disabled>{t("Apply","প্রয়োগ")}</button></div>
       <small id="ek-offer-coupon-help">{t("Coupon validation is not enabled on this read-only price preview.","শুধু মূল্য দেখার এই পেজে কুপন প্রয়োগ এখনো চালু হয়নি।")}</small></div>
      <div className="ek-order-paywith"><p>{t("Payment provider","পেমেন্ট প্রোভাইডার")}</p>
-      <label><input type="radio" checked readOnly name="provider" value="ekmivo"/><span className="ek-order-provider-name"><b>Pay with Ekmivo</b><small>{t("Wallet choices belong to the next payment page, not this summary.","ওয়ালেট পরের পেমেন্ট পেজে দেখানো হবে, এখানে নয়।")}</small></span></label></div>
+      <label><input type="radio" checked readOnly name="provider" value="ekmivo"/><span className="ek-order-provider-name"><b>Pay with Briofold</b><small>{t("Wallet choices belong to the next payment page, not this summary.","ওয়ালেট পরের পেমেন্ট পেজে দেখানো হবে, এখানে নয়।")}</small></span></label></div>
      <fieldset className="ek-order-legal"><legend>{t("Legal agreements","নীতিমালায় সম্মতি")}</legend>
       {legal.map(item=><label className="ek-order-consent" key={item.key}>
        <input type="checkbox" disabled/>

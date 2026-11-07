@@ -27,10 +27,10 @@ const paymentSteps=[
  {title:pair("Evidence is verified","SMS প্রমাণ যাচাই হবে"),body:pair("The backend checks eligible evidence and keeps uncertain payments pending.","সার্ভার প্রাসঙ্গিক প্রমাণ যাচাই করবে; অনিশ্চিত পেমেন্ট Pending থাকবে।")}
 ];
 const paymentFaq=[
- {q:pair("Does the customer install Ekmivo?","কাস্টমারকে কি Ekmivo অ্যাপ ইনস্টল করতে হবে?"),a:pair("No. Customers use web checkout and their normal wallet. The Ekmivo Android receipt device belongs to the merchant.","না। কাস্টমার ওয়েব চেকআউট ও নিজের ওয়ালেট ব্যবহার করবেন। Ekmivo Android SMS ডিভাইসটি মার্চেন্টের।")},
+ {q:pair("Does the customer install Briofold?","কাস্টমারকে কি Briofold অ্যাপ ইনস্টল করতে হবে?"),a:pair("No. Customers use web checkout and their normal wallet. The Briofold Android receipt device belongs to the merchant.","না। কাস্টমার ওয়েব চেকআউট ও নিজের ওয়ালেট ব্যবহার করবেন। Briofold Android SMS ডিভাইসটি মার্চেন্টের।")},
  {q:pair("Does every payment verify instantly?","সব পেমেন্ট কি সঙ্গে সঙ্গে যাচাই হবে?"),a:pair("No. Valid unique evidence must arrive and be checked. Missing or ambiguous evidence keeps the payment pending, never falsely successful.","না। সঠিক ও অনন্য প্রমাণ পেয়ে যাচাই করতে হবে। প্রমাণ অনিশ্চিত হলে পেমেন্ট Pending থাকবে, ভুল করে Success নয়।")},
  {q:pair("What happens if the receipt phone is offline?","SMS পাওয়া ফোন অফলাইনে থাকলে কী হবে?"),a:pair("Captured receipts can queue securely and retry when connected. A powered-off or force-stopped phone cannot capture new SMS during that period.","ইতিমধ্যে পাওয়া SMS নিরাপদে জমা রেখে পরে পাঠানো যাবে। কিন্তু ফোন বন্ধ বা অ্যাপ force-stop থাকলে নতুন SMS ধরা সম্ভব নয়।")},
- {q:pair("Can Ekmivo send an automatic refund?","Ekmivo কি নিজে থেকে টাকা ফেরত পাঠাবে?"),a:pair("No. Refund cases are reviewed and handled by the merchant. Ekmivo does not send money back automatically.","না। মার্চেন্ট রিফান্ডের অনুরোধ দেখে নিজেই টাকা ফেরতের ব্যবস্থা করবেন।")}
+ {q:pair("Can Briofold send an automatic refund?","Briofold কি নিজে থেকে টাকা ফেরত পাঠাবে?"),a:pair("No. Refund cases are reviewed and handled by the merchant. Briofold does not send money back automatically.","না। মার্চেন্ট রিফান্ডের অনুরোধ দেখে নিজেই টাকা ফেরতের ব্যবস্থা করবেন।")}
 ];
 
 export function MarketingPaymentPage({locale}:{locale:Locale}){
@@ -39,7 +39,7 @@ export function MarketingPaymentPage({locale}:{locale:Locale}){
   <div className="ekm-product-wrap"><section className="ekm-product-hero">
    <span className="ekm-pill"><i/>{bn?"পেমেন্ট নেওয়ার আরও সহজ উপায়":"A simpler way to accept payments"}</span>
    <h1>{bn?"কাস্টমার পেমেন্ট করবেন।":"Customers pay."}<span>{bn?"যাচাইয়ের কাজ হবে নিজে থেকেই।":"The proof takes care of itself."}</span></h1>
-   <p>{bn?"পেমেন্ট লিংক বা চেকআউট তৈরি করুন। Ekmivo প্রাসঙ্গিক ওয়ালেট SMS যাচাই করে পেমেন্টের অবস্থা জানাবে—স্ক্রিনশট আর TrxID নিয়ে বারবার জিজ্ঞাসা নয়।":"Create payment links or checkout. Ekmivo matches eligible wallet SMS evidence so your team can stop chasing screenshots and transaction IDs."}</p>
+   <p>{bn?"পেমেন্ট লিংক বা চেকআউট তৈরি করুন। Briofold প্রাসঙ্গিক ওয়ালেট SMS যাচাই করে পেমেন্টের অবস্থা জানাবে—স্ক্রিনশট আর TrxID নিয়ে বারবার জিজ্ঞাসা নয়।":"Create payment links or checkout. Briofold matches eligible wallet SMS evidence so your team can stop chasing screenshots and transaction IDs."}</p>
    <div className="ekm-hero-actions"><ArrowLink href="/pricing?product=payments">{bn?"প্ল্যান দেখুন":"Explore pricing"}</ArrowLink><a className="ekm-button ekm-button-outline" href="#payment-flow">{bn?"যেভাবে কাজ করে":"See the payment flow"}<span aria-hidden="true">↓</span></a></div>
    <small className="ekm-product-footnote">✓ {bn?"পেমেন্ট আপনার ওয়ালেটেই যাবে · মার্চেন্টের ফোন সংযুক্ত থাকতে হবে":"Your receiving wallet stays yours · Merchant device required"}</small>
   </section>

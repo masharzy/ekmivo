@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Ekmivo Payment API
+  title: Briofold Payment API
   version: 0.9.0-draft
   description: |
     PG03 implemented contract: process liveness, financial readiness, and
@@ -778,21 +778,14 @@ paths:
       operationId: getPaymentIntentKey
       tags: [Merchant]
       summary: Read original issued terms, linked lines and immutable history
+      description: Workspace and environment come from the API key, so this route takes only intentID. The workspace-scoped route below takes them in the path and query.
       security:
         - MerchantBearer: []
       parameters:
-        - name: workspaceID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
         - name: intentID
           in: path
           required: true
           schema: { type: string, format: uuid }
-        - name: environment
-          in: query
-          required: true
-          schema: { type: string, enum: [sandbox, live] }
       responses:
         '200':
           description: Masked payer, issued source lines and append-only events

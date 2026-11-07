@@ -138,13 +138,17 @@ func sendWithNetwork(ctx context.Context, raw string, secret, body []byte, event
 	}
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("User-Agent", "Ekmivo-Webhooks/1")
-	request.Header.Set("X-Ekmivo-Timestamp", timestamp)
-	request.Header.Set("X-Ekmivo-Event-ID", eventID)
-	request.Header.Set("X-Ekmivo-Delivery-ID", deliveryID)
-	request.Header.Set("X-Ekmivo-Signature", "v1="+Sign(secret, body, timestamp, eventID))
+	request.Header.Set("User-Agent", "Briofold-Webhooks/1")
 	keyID := sha256.Sum256(secret)
-	request.Header.Set("X-Ekmivo-Key-ID", hex.EncodeToString(keyID[:8]))
+	signature := "v1=" + Sign(secret, body, timestamp, eventID)
+	// Briofold-* is the product name. X-Ekmivo-* is still sent with identical values so existing receivers keep working.
+	for _, prefix := range []string{"X-Briofold-", "X-Ekmivo-"} {
+		request.Header.Set(prefix+"Timestamp", timestamp)
+		request.Header.Set(prefix+"Event-ID", eventID)
+		request.Header.Set(prefix+"Delivery-ID", deliveryID)
+		request.Header.Set(prefix+"Signature", signature)
+		request.Header.Set(prefix+"Key-ID", hex.EncodeToString(keyID[:8]))
+	}
 	response, e := client.Do(request)
 	if e != nil {
 		return 0, "transport_unknown"
