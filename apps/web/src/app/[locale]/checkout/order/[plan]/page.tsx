@@ -9,7 +9,7 @@ import {FreePurchaseClaim} from "../../../../../components/free-purchase-claim";
 import "../../../../../components/subscription-order-summary.css";
 
 export const dynamic="force-dynamic";
-export const metadata:Metadata={title:"Review your order · Ekmivo",robots:{index:false,follow:false},referrer:"no-referrer"};
+export const metadata:Metadata={title:"Review your order · Briofold",robots:{index:false,follow:false},referrer:"no-referrer"};
 
 function SelectionUnavailable({locale,code}:{locale:"bn"|"en";code:string}){
  const bn=locale==="bn";
@@ -21,7 +21,7 @@ function SelectionUnavailable({locale,code}:{locale:"bn"|"en";code:string}){
  };
  const message=messages[code]||["This purchase cannot be resumed. No payment has been started.","এই কেনাকাটা আবার চালু করা যাচ্ছে না। কোনো পেমেন্ট শুরু হয়নি।"];
  return <main className="ek-order" lang={locale}><div className="ek-order-shell">
-  <nav className="ek-order-nav"><Link className="ek-order-brand" href="/">ekmivo<span>.</span></Link></nav>
+  <nav className="ek-order-nav"><Link className="ek-order-brand" href="/">briofold<span>.</span></Link></nav>
   <section className="ek-order-card"><h1>{bn?"নির্বাচনটি যাচাই করুন":"Review your selection"}</h1>
    <p role="alert">{message[bn?1:0]}</p><Link href="/pricing">{bn?"বর্তমান অফার দেখুন":"See current offers"}</Link>
   </section></div></main>;
@@ -30,7 +30,7 @@ function SelectionUnavailable({locale,code}:{locale:"bn"|"en";code:string}){
 function FreeOfferSummary({locale,intent,storeName,token}:{locale:"bn"|"en";intent:Intent;storeName:string;token:string}){
  const bn=locale==="bn";
  return <main className="ek-order" lang={locale}><div className="ek-order-shell">
-  <nav className="ek-order-nav"><Link className="ek-order-brand" href="/">ekmivo<span>.</span></Link>
+  <nav className="ek-order-nav"><Link className="ek-order-brand" href="/">briofold<span>.</span></Link>
    <span className="ek-order-secure">{bn?"নিরাপদ অর্ডার রিভিউ":"Secure order review"}</span></nav>
   <div className="ek-order-head"><p>{bn?"বিনামূল্যের প্ল্যান":"Free plan"}</p>
    <h1>{bn?"আপনার নির্বাচিত অফার":"Your selected offer"}</h1></div>

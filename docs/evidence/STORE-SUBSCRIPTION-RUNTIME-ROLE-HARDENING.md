@@ -23,6 +23,6 @@ Migration `0155_platform_subscription_safe_runtime_grants.sql` grants only named
 3. Re-run the read-only 0155 acceptance SQL and check production control ledger, API health and logs. This does not itself activate checkout.
 4. The current Vercel web `DATABASE_URL` uses the owner-privileged `ekmivo_owner` role. Rotate to an audited least-privilege web runtime only after existing auth/onboarding/dashboard operations pass against that role on an isolated clone. The web credential is **not** changed by 0155. Do not enable checkout traffic while this known privilege gate is open.
 5. Vercel web production was still serving an older source SHA (`17eef22`) while Render API served merged Phase 3–7 source (`63a5839`); a Vercel deployments/day quota response `402` blocked a fresh web deployment. Do not claim production rollout or bypass that limit through preview promotion. Require a successful current-source deployment before product E2E validation.
-6. Keep `EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED`, `EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED`, and `EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED` disabled until staged rollout checks pass. Human/provider-money evidence is separately owned by the user.
+6. Keep `BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED`, `BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED`, and `BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED` disabled until staged rollout checks pass. Human/provider-money evidence is separately owned by the user.
 
 The control-schema migration by itself is not a claim that customer payments are enabled or verified.

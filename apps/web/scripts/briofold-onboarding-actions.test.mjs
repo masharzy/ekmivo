@@ -57,7 +57,7 @@ function fixture(options={}){
   "../lib/server/purchase-intents":{activePurchase:async()=>options.purchaseToken||null},
   "../lib/dashboard-navigation":{dashboardHref:(_locale,id,service,section)=>`/w/${id}/${service}/${section}`},
  };
- runInNewContext(compiled,{exports,require:name=>modules[name]??realRequire(name),console:{error:()=>{}},process:{env:{EKMIVO_SUBSCRIPTION_ORDER_PREVIEW:options.preview?"1":"0"}}});
+ runInNewContext(compiled,{exports,require:name=>modules[name]??realRequire(name),console:{error:()=>{}},process:{env:{BRIOFOLD_SUBSCRIPTION_ORDER_PREVIEW:options.preview?"1":"0"}}});
  return {state:()=>state,submit:async fields=>{
   const form=new FormData();
   for(const [key,value] of Object.entries({business_id:workspace.id,step:state.step,...fields}))form.set(key,value);

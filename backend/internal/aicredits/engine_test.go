@@ -3,8 +3,8 @@ package aicredits
 import (
 	"context"
 	"errors"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"sync"
 	"sync/atomic"
 	"testing"

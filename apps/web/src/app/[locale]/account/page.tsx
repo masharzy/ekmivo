@@ -10,7 +10,7 @@ export default async function AccountPage({params,searchParams}:{params:Promise<
  const {locale:raw}=await params,locale=raw==="en"?"en":"bn";
  const user=await requireUser(locale);
  const cookieJar=await cookies();
- const token=cookieJar.get("ekmivo-session")?.value;
+ const token=cookieJar.get("briofold-session")?.value;
  const currentHash=token?hashToken(token):"";
  const [sessions,mfa]=await Promise.all([
   database()`SELECT id,created_at,expires_at,(token_hash=${currentHash}) AS is_current
@@ -19,7 +19,7 @@ export default async function AccountPage({params,searchParams}:{params:Promise<
   database()`SELECT confirmed_at IS NOT NULL AS enabled
    FROM platform_admin_mfa WHERE user_id=${user.id}::uuid LIMIT 1`
  ]);
- const themeValue=cookieJar.get("ekmivo-theme")?.value;
+ const themeValue=cookieJar.get("briofold-theme")?.value;
  const theme=themeValue==="light"||themeValue==="dark"?themeValue:"system";
  const googleReady=!!googleConfiguration();
  const linked=googleReady?await database()`SELECT 1 FROM auth_google_identities WHERE user_id=${user.id}::uuid LIMIT 1`:[];

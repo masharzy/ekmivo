@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/aicredits"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/aicredits"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 )
 
 var errStudioMedia = errors.New("AI media unavailable")
@@ -193,7 +193,7 @@ func prepareStudioMedia(ctx context.Context, kind string, data []byte) (aicredit
 		return out, errStudioMedia
 	}
 
-	dir, err := os.MkdirTemp("", "ekmivo-ai-media-")
+	dir, err := os.MkdirTemp("", "briofold-ai-media-")
 	if err != nil {
 		return out, errStudioMedia
 	}

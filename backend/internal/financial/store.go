@@ -1,4 +1,4 @@
-// Package financial is Ekmivo's PG04 durable financial transaction boundary.
+// Package financial is Briofold's PG04 durable financial transaction boundary.
 // PG04 does not expose a public mutation route or assert customer money is paid.
 package financial
 

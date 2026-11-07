@@ -10,8 +10,8 @@ test("web phone status thresholds respect background heartbeat fallback",()=>{
  assert.match(src,/if\(!p\.permission_ok\)return "permission"/);
 });
 test("foreground notification is accompanied by a signed heartbeat loop",()=>{
- const service=file("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/ReceiptForwardingService.kt");
- const heartbeat=file("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/DeviceHeartbeat.kt");
+ const service=file("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/ReceiptForwardingService.kt");
+ const heartbeat=file("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/DeviceHeartbeat.kt");
  assert.match(service,/while\(isActive\)/);
  assert.match(service,/DeviceHeartbeat\.check\(applicationContext\)/);
  assert.match(service,/heartbeatScope\.cancel\(\)/);
@@ -21,19 +21,19 @@ test("foreground notification is accompanied by a signed heartbeat loop",()=>{
  assert.match(heartbeat,/last_success/);
 });
 test("active UI checks authorization so server revoke is visible without app restart",()=>{
- const app=file("apps/mobile/app/src/main/java/com/ekmivo/mobile/ui/EkmivoApp.kt");
+ const app=file("apps/mobile/app/src/main/java/com/briofold/mobile/ui/BriofoldApp.kt");
  assert.match(app,/repeatOnLifecycle\(Lifecycle\.State\.STARTED\)/);
  assert.match(app,/DeviceHeartbeat\.check\(appContext\)/);
  assert.match(app,/ConnectionState\.Revoked/);
 });
 test("phase 4 empty local forwarded history shows numeric zero",()=>{
- const home=file("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/LiveHome.kt");
+ const home=file("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/LiveHome.kt");
  assert.match(home,/current\.acknowledged==0 && !current\.unavailable\)"0"/);
 });
 test("settings uses real health, local disconnect queue guard, and safe diagnostics",()=>{
- const settings=file("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/EkmivoSettings.kt");
- const diagnostics=file("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/EkmivoDiagnostics.kt");
- const store=file("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/ReceiptStore.kt");
+ const settings=file("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/BriofoldSettings.kt");
+ const diagnostics=file("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/BriofoldDiagnostics.kt");
+ const store=file("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/ReceiptStore.kt");
  assert.match(settings,/SetupHealth\(app\)\.refresh\(\)/);
  assert.match(settings,/DeviceHeartbeat\.lastSuccess\(app\)/);
  assert.match(settings,/store\.disconnect|it\.disconnect\(\)/);

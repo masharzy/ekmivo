@@ -1,4 +1,4 @@
-/* Ekmivo marketing aliases. Canonical Light/Dark/System values live in
+/* Briofold marketing aliases. Canonical Light/Dark/System values live in
  * docs/design/tokens.css. Dashboard/admin component palettes stay separate. */
 :where(.ek-brand, .em, .ekm-landing, body:has(main.em), body:has(main.ekm-landing)) {
   --brand-bg: var(--color-canvas);

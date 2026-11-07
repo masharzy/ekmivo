@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
-  title: Ekmivo Store-first Subscription Payment Handoff API (Phase 6 staged)
+  title: Briofold Store-first Subscription Payment Handoff API (Phase 6 staged)
   version: 0.1.0-draft
   description: Draft owner-session authenticated SaaS purchase APIs; merge into generated master only after Phase 2-5 prerequisite contracts are integrated.
 servers:
-  - url: https://ekmivo-go-api.onrender.com
+  - url: https://api.briofold.tech
     description: Go API; not evidence of Live financial availability
 paths:
   /v1/workspaces/{workspaceID}/subscription-purchases/{intentID}/payment:

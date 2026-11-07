@@ -1,4 +1,4 @@
-/* Customer-hosted checkout: isolated from Ekmivo marketing/dashboard and theme tokens.
+/* Customer-hosted checkout: isolated from Briofold marketing/dashboard and theme tokens.
    Provider identities follow reference pink/red layouts regardless of user light/dark setting. */
 .customer-pay-screen,.provider-checkout.pg05-checkout.pg05-standalone{font-family:var(--font-ui,"Hind Siliguri",sans-serif);font-size:15px;line-height:1.48;color:#172236;color-scheme:light}
 .customer-pay-screen *,.provider-checkout *{box-sizing:border-box}

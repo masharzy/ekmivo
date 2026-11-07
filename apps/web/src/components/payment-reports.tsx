@@ -89,7 +89,7 @@ function exportReport(report:Report,period:Filters,scope:"all"|"summary"="all"){
  const exportRows=scope==="summary"?rows.filter((row,index)=>index===0||row[0]==="summary"):rows;
  const csv="\uFEFF"+exportRows.map(row=>row.map(escapeCSV).join(",")).join("\r\n")+"\r\n";
  const uri=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
- const a=document.createElement("a");a.href=uri;a.download="ekmivo-report-"+period.from+"-"+period.to+".csv";document.body.append(a);a.click();a.remove();
+ const a=document.createElement("a");a.href=uri;a.download="briofold-report-"+period.from+"-"+period.to+".csv";document.body.append(a);a.click();a.remove();
  window.setTimeout(()=>URL.revokeObjectURL(uri),2000);
 }
 export function PaymentReports({locale,workspaceId,environment,canReveal,canExport}:{locale:Locale;workspaceId:string;environment:string;canReveal:boolean;canExport?:boolean}){

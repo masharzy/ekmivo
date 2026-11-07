@@ -1,4 +1,4 @@
-/* Ekmivo public products: deliberately aligned with the v3 homepage visual tokens. */
+/* Briofold public products: deliberately aligned with the v3 homepage visual tokens. */
 .ekm-product,.ekm-price-page{
  --ep-bg:var(--color-canvas);--ep-card:var(--color-card);--ep-soft:var(--color-surface-subtle);
  --ep-ink:var(--color-text);--ep-muted:var(--color-text-secondary);--ep-line:var(--color-border);

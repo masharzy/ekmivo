@@ -1,19 +1,19 @@
-# PipraPay core diagnosis — Ekmivo reference
+# PipraPay core diagnosis — Briofold reference
 
 Reviewed: 2026-10-11. Repository: https://github.com/PipraPay/PipraPay
 Pinned commit: `021ecd302a0dc3316383933ef3aa405be9271404`.
 
-এটি public source-এর static review। কোনো PHP, installer, plugin বা Android APK চালানো হয়নি; production account বা transaction-এ পরীক্ষা করা হয়নি। GitHub tree ও নিচে উল্লিখিত core files পড়া হয়েছে। প্রতিটি gateway plugin, bundled dependency ও Android app-এর পূর্ণ audit নয়। Local reference files `tmp/piprapay-source`-এ আছে; এগুলো Ekmivo runtime-এর অংশ নয়।
+এটি public source-এর static review। কোনো PHP, installer, plugin বা Android APK চালানো হয়নি; production account বা transaction-এ পরীক্ষা করা হয়নি। GitHub tree ও নিচে উল্লিখিত core files পড়া হয়েছে। প্রতিটি gateway plugin, bundled dependency ও Android app-এর পূর্ণ audit নয়। Local reference files `tmp/piprapay-source`-এ আছে; এগুলো Briofold runtime-এর অংশ নয়।
 
 ## সিদ্ধান্ত
 
 PipraPay একটি কার্যকর payment-automation reference: receiving methods, Android receipt ingestion, SMS parsing, checkout, invoices, links, API, staff permissions ও webhook retry-এর বাস্তব implementation আছে। এটি AI bot বা complete AI automation platform নয়। অন্য সব AI automation platform এই repo থেকে তৈরি হয়েছে—এমন provenance এই source থেকে প্রমাণ হয় না।
 
-Ekmivo-এর backend-এর সরাসরি base হিসেবে বর্তমান core নেওয়া উচিত নয়। বর্তমান PHP/MySQL core এবং আমাদের Go/PostgreSQL architecture ভিন্ন। আরও গুরুত্বপূর্ণ: এর reviewed automation checkout customer TrxID-নির্ভর; আমাদের সময় + প্রকৃত sender + amount + receiving account + method অনুযায়ী unique automatic match প্রয়োজন। Concepts ও operational information layout নেওয়া যাবে; verification engine স্বাধীনভাবে implement করতে হবে।
+Briofold-এর backend-এর সরাসরি base হিসেবে বর্তমান core নেওয়া উচিত নয়। বর্তমান PHP/MySQL core এবং আমাদের Go/PostgreSQL architecture ভিন্ন। আরও গুরুত্বপূর্ণ: এর reviewed automation checkout customer TrxID-নির্ভর; আমাদের সময় + প্রকৃত sender + amount + receiving account + method অনুযায়ী unique automatic match প্রয়োজন। Concepts ও operational information layout নেওয়া যাবে; verification engine স্বাধীনভাবে implement করতে হবে।
 
 ## Architecture ও inventory
 
-| অংশ | source-এ পাওয়া implementation | Ekmivo-তে শিক্ষা |
+| অংশ | source-এ পাওয়া implementation | Briofold-তে শিক্ষা |
 |---|---|---|
 | Entry/router | `index.php`: login/2FA, IPN, API, checkout, invoice, payment-link, admin, cron | HTTP adapter আলাদা রাখব |
 | Data access | `pp-functions.php`: PDO MySQL, CRUD helpers; monetary arithmetic BCMath | PostgreSQL typed repositories ও minor units |
@@ -45,7 +45,7 @@ Admin source: [pinned admin shell](https://github.com/PipraPay/PipraPay/blob/021
 
 ## Source findings
 
-Severity এখানে Ekmivo-তে code গ্রহণের ঝুঁকি বোঝায়। এগুলো upstream-এ exploit প্রমাণ বা CVE নয়।
+Severity এখানে Briofold-তে code গ্রহণের ঝুঁকি বোঝায়। এগুলো upstream-এ exploit প্রমাণ বা CVE নয়।
 
 | ID / priority | Finding ও evidence | প্রভাব / প্রয়োজনীয় পরিবর্তন |
 |---|---|---|
@@ -60,13 +60,13 @@ Severity এখানে Ekmivo-তে code গ্রহণের ঝুঁক�
 | PP-09 / P1 | API webhook URL domain whitelist validation আছে (`index.php:467–500`), কিন্তু delivery helper-এ private/link-local IP, resolved address, allowed protocol/port checks দেখা যায়নি (`pp-functions.php:675–749`) | Domain approval alone complete SSRF protection নয়। Save-time এবং send-time destination/IP checks দরকার; live SSRF test করা হয়নি |
 | PP-10 / P1 | App request HMAC একটি source-embedded shared constant দিয়ে app ID + timestamp hash করে; reviewed gate-এ timestamp age/nonce check নেই। `pp-adapter.php:420–432` | এই HMAC-কে device identity বা replay prevention-এর যথেষ্ট প্রমাণ ধরা যাবে না। Device-scoped credential/signing key, bounded timestamp ও replay IDs প্রয়োজন। Device token আলাদা gate—সম্পূর্ণ auth bypass দাবি করছি না |
 | PP-11 / P1 | API keys generated random, কিন্তু DB-তে raw `api_key`, list response-এ raw value। `pp-adapter.php:5030–5036`, `5118`; `index.php:339–341` | Read-only DB/key-list exposure credential disclosure ঘটায়। Hash scoped API tokens; একবার reveal; rotation/revocation |
-| PP-12 / P1 | Device ও SMS admin paths-এ global records ব্যবহৃত; current brand filters সব জায়গায় নেই। `pp-adapter.php:5505`, `5586`, `6129`, `6229` | Self-hosted shared device administration-এর design হতে পারে; hostile multi-tenant SaaS isolation প্রমাণ নয়। Ekmivo tenant FK/RLS/runtime-role tests ছাড়া এই model নেওয়া যাবে না |
+| PP-12 / P1 | Device ও SMS admin paths-এ global records ব্যবহৃত; current brand filters সব জায়গায় নেই। `pp-adapter.php:5505`, `5586`, `6129`, `6229` | Self-hosted shared device administration-এর design হতে পারে; hostile multi-tenant SaaS isolation প্রমাণ নয়। Briofold tenant FK/RLS/runtime-role tests ছাড়া এই model নেওয়া যাবে না |
 
 Completion transaction অন্য helper-এ আছে (`pp-functions.php:1620`); finding PP-03 পুরো codebase-এ কখনো transaction নেই বলে দাবি নয়—reviewed financial completion path-এর কথা।
 
 ভালো দিক: parser priority ordering; amount normalization; BCMath-based calculation; some native bound SQL; password verification; HttpOnly/SameSite session cookies; CSRF gate; method-specific plugin metadata; retries recorded separately। এগুলো রেখে উপরের correctness gaps ঠিক করতে হবে।
 
-## Ekmivo implementation mapping
+## Briofold implementation mapping
 
 - UI: Payments / Receiving sources / Commerce / Integrations / Workspace groups। AI product-এর navigation এবং metrics আলাদা। Brand/workspace switch একই service ধরে; product switch একই business ধরে।
 - Checkout: payer number + method নির্বাচন, amount/receiving account server-derived; customer টাকা পাঠাবেন, page স্বয়ংক্রিয় status refresh করবে। TrxID input, screenshot ও routine approval থাকবে না।

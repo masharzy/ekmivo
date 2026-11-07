@@ -1,6 +1,6 @@
-# Ekmivo
+# Briofold
 
-Ekmivo is a dual-service SaaS under active development. The first public release is defined by the [canonical plan](docs/DUAL-SAAS-MVP-PLAN.bn.md) and [46-item feature scope](docs/MVP-FEATURE-SCOPE.md). The current source contains public web, auth/workspace and partial separate-dashboard foundation; financial workflows are not live. Latest order: complete payment gateway with sandbox/testing/developer docs, then full Android/inbox, then remaining full MVP. Start at [agent handoff](docs/AGENT-HANDOFF.md); exact sequence is in the [backlog](docs/IMPLEMENTATION-BACKLOG.md) and evidence in [status](docs/IMPLEMENTATION-STATUS.md).
+Briofold is a dual-service SaaS under active development. The first public release is defined by the [canonical plan](docs/DUAL-SAAS-MVP-PLAN.bn.md) and [46-item feature scope](docs/MVP-FEATURE-SCOPE.md). The current source contains public web, auth/workspace and partial separate-dashboard foundation; financial workflows are not live. Latest order: complete payment gateway with sandbox/testing/developer docs, then full Android/inbox, then remaining full MVP. Start at [agent handoff](docs/AGENT-HANDOFF.md); exact sequence is in the [backlog](docs/IMPLEMENTATION-BACKLOG.md) and evidence in [status](docs/IMPLEMENTATION-STATUS.md).
 
 ## Repository
 

@@ -16,7 +16,7 @@ await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch({headless:true,channel:process.env.SMOKE_BROWSER_CHANNEL});
 try{
  const context=await browser.newContext({viewport:{width:1440,height:1000}});
- await context.addCookies([{name:"ekmivo-locale",value:"en",url:base},{name:"ekmivo-theme",value:"light",url:base}]);
+ await context.addCookies([{name:"briofold-locale",value:"en",url:base},{name:"briofold-theme",value:"light",url:base}]);
  const page=await context.newPage();let submissions=0;
  page.on("request",r=>{if(r.method()==="POST"&&new URL(r.url()).pathname==="/register")submissions++;});
  await page.goto(base+"/register",{timeout:180000});
@@ -52,7 +52,7 @@ try{
  await page.screenshot({path:evidence+"payment-gateway-light.png"});
  console.log("PASS: two-step signup, eight-character checks, preserved inputs, shared header, SPA hero navigation and single homepage CTA");
  for(const locale of ["en","bn"]){
-  await context.addCookies([{name:"ekmivo-locale",value:locale,url:base},{name:"ekmivo-theme",value:"dark",url:base}]);
+  await context.addCookies([{name:"briofold-locale",value:locale,url:base},{name:"briofold-theme",value:"dark",url:base}]);
   await page.setViewportSize({width:320,height:900});
   await page.goto(base+"/login",{timeout:180000});
   await expect(page.locator(".site-header")).toBeVisible();

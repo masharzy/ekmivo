@@ -27,7 +27,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   assert.ok(ready,"Next server did not start: "+logs);
   browser=await chromium.launch({headless:true});
   const context=await browser.newContext({viewport:{width:1280,height:900},permissions:["clipboard-read","clipboard-write"]});
-  await context.addCookies([{name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},{name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
+  await context.addCookies([{name:"briofold-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},{name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}]);
   const page=await context.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   // Capture only public URL paths/statuses; never log session headers/tokens.
   const redirectTrace=[];
@@ -91,7 +91,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   // The public checkout is explicitly bilingual, themed and responsive.
   for(const width of [320,768,1440])for(const locale of ["en","bn"])for(const theme of ["light","dark"]){
    const c=await browser.newContext({viewport:{width,height:900}});
-   await c.addCookies([{name:"ekmivo-theme",value:theme,url:origin},{name:"ekmivo-locale",value:locale,url:origin}]);
+   await c.addCookies([{name:"briofold-theme",value:theme,url:origin},{name:"briofold-locale",value:locale,url:origin}]);
    const p=await c.newPage();
    try{
     const [checkResponse]=await Promise.all([
@@ -129,7 +129,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   await context.close();
   const viewer=await browser.newContext();
   try{
-   await viewer.addCookies([{name:"ekmivo-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"},{name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
+   await viewer.addCookies([{name:"briofold-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"},{name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}]);
    const viewerPage=await viewer.newPage();
    await viewerPage.goto(origin+merchantPath);
    await viewerPage.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|One-time requests)$/}).waitFor();

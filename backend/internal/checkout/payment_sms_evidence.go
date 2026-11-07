@@ -7,8 +7,8 @@ import (
     "strings"
 
     "github.com/jackc/pgx/v5"
-    "github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-    "github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+    "github.com/masharzy/briofold/backend/internal/deviceevidence"
+    "github.com/masharzy/briofold/backend/internal/merchantwebhook"
 )
 
 // supplementAuthorizedPaymentEvidence adds real full payer phones, the original

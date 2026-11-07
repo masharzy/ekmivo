@@ -11,7 +11,7 @@ export async function runFeedbackAcceptance({origin,browser,control,sessions}){
   const viewer=(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(sessions.viewer).digest('hex')}`)[0].user_id;
   const store=randomUUID();await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},'Fictional feedback store','both',${owner})`;
   await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner'),(${store},${viewer},'viewer')`;
-  context=await browser.newContext();await context.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);
+  context=await browser.newContext();await context.addCookies([{name:'briofold-session',value:sessions.owner,url:origin},{name:'briofold-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);
   const endpoint=origin+`/api/go/workspaces/${store}/workspace-tools/help?environment=live`;
   const input={topic:'bug',subject:'Fictional screenshot issue',message:'Fictional reproduction details for support.',screenshot:{data:screenshot,consent:true}};
   const key=randomUUID();let response=await context.request.post(endpoint,{headers:{Origin:origin,'Idempotency-Key':key},data:input});assert.equal(response.status(),200,await response.text());

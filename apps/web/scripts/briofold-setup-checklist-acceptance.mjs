@@ -12,7 +12,7 @@ export async function runSetupChecklist({origin,browser,control,sessions}){
    const store=randomUUID(),foreign=randomUUID();
    await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},${'Fictional checklist '+mode},${mode},${owner}),(${foreign},'Foreign checklist store',${mode},${owner})`;
    await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner')`;
-   const c=await browser.newContext();contexts.push(c);await c.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);
+   const c=await browser.newContext();contexts.push(c);await c.addCookies([{name:'briofold-session',value:sessions.owner,url:origin,httpOnly:true},{name:'briofold-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);
    const p=await c.newPage();p.setDefaultNavigationTimeout(90000);
    if(mode!=='commerce')await db`SELECT inbox_connection(${foreign},'live','ms',${'foreign-checklist-'+store},decode('abcd','hex'))`;
    await db`INSERT INTO commerce_products(workspace_id,environment,name) VALUES(${foreign},'live','Foreign product')`;
@@ -45,7 +45,7 @@ export async function runSetupChecklist({origin,browser,control,sessions}){
    await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${store} AND user_id=${owner}`;
    await p.reload();await p.getByRole('alert').filter({hasText:'Only an owner or permitted administrator'}).waitFor();
    await db`UPDATE workspace_members SET role='owner' WHERE workspace_id=${store} AND user_id=${owner}`;
-   for(const language of ['en','bn']){await c.addCookies([{name:'ekmivo-locale',value:language,url:origin}]);for(const theme of ['light','dark']){await c.addCookies([{name:'ekmivo-theme',value:theme,url:origin}]);await p.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await p.setViewportSize({width,height:900});await p.goto(origin+'/setup/checklist');await p.getByRole('heading',{name:language==='bn'?'ব্যবসা সেটআপ গাইড':'Business setup guide',exact:true}).waitFor();assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
+   for(const language of ['en','bn']){await c.addCookies([{name:'briofold-locale',value:language,url:origin}]);for(const theme of ['light','dark']){await c.addCookies([{name:'briofold-theme',value:theme,url:origin}]);await p.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await p.setViewportSize({width,height:900});await p.goto(origin+'/setup/checklist');await p.getByRole('heading',{name:language==='bn'?'ব্যবসা সেটআপ গাইড':'Business setup guide',exact:true}).waitFor();assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
    await c.close();
   }
   console.log('STORE SETUP GUIDE SQL/Next/browser PASS: active source-backed configuration, foreign/sandbox isolation, current role/settings restrictions, product-mode sections, real settings/dashboard links and responsive cases:',cases);

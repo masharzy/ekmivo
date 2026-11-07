@@ -9,7 +9,7 @@ import (
 )
 
 func TestKeyBoundMerchantRouteRejectsUntrustedScope(t *testing.T) {
-	token := "ek_test_1234567890abcdef_" + base64.RawURLEncoding.EncodeToString([]byte(strings.Repeat("z", 32)))
+	token := "bf_test_1234567890abcdef_" + base64.RawURLEncoding.EncodeToString([]byte(strings.Repeat("z", 32)))
 	cases := []struct {
 		name, method, path, authorization string
 		status                            int

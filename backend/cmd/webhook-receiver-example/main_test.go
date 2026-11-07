@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 )
 
 // Called from PG04/PG08's separate disposable merchant PostgreSQL database.
-// The authoritative Ekmivo query is simulated over REAL local TLS.
+// The authoritative Briofold query is simulated over REAL local TLS.
 func TestReceiverScopedTLSQueryAndTransactionalDedup(t *testing.T) {
 	dsn := os.Getenv("PG08_TEST_MERCHANT_DSN")
 	if dsn == "" {
@@ -68,13 +68,13 @@ func TestReceiverScopedTLSQueryAndTransactionalDedup(t *testing.T) {
 	makeRequest:=func(h http.Handler, payload map[string]any, signing []byte, timestamp string, headerEvent string) int {
 		t.Helper()
 		raw,err:=json.Marshal(payload);if err!=nil{t.Fatal(err)}
-		req:=httptest.NewRequest("POST","https://merchant.example.com/webhooks/ekmivo",strings.NewReader(string(raw)))
-		req.Header.Set("X-Ekmivo-Event-ID",headerEvent)
-		req.Header.Set("X-Ekmivo-Delivery-ID",payload["delivery_id"].(string))
-		req.Header.Set("X-Ekmivo-Timestamp",timestamp)
-		req.Header.Set("X-Ekmivo-Signature","v1="+merchantwebhook.Sign(signing,raw,timestamp,headerEvent))
+		req:=httptest.NewRequest("POST","https://merchant.example.com/webhooks/briofold",strings.NewReader(string(raw)))
+		req.Header.Set("X-Briofold-Event-ID",headerEvent)
+		req.Header.Set("X-Briofold-Delivery-ID",payload["delivery_id"].(string))
+		req.Header.Set("X-Briofold-Timestamp",timestamp)
+		req.Header.Set("X-Briofold-Signature","v1="+merchantwebhook.Sign(signing,raw,timestamp,headerEvent))
 		id:=sha256.Sum256(signing)
-		req.Header.Set("X-Ekmivo-Key-ID",hex.EncodeToString(id[:8]))
+		req.Header.Set("X-Briofold-Key-ID",hex.EncodeToString(id[:8]))
 		rec:=httptest.NewRecorder()
 		h.ServeHTTP(rec,req)
 		return rec.Code

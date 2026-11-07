@@ -5,11 +5,11 @@ import "testing"
 func TestCheckoutURLIsCanonicalAndIndependentOfDashboardAlias(t *testing.T) {
 	previous, allowed := publicCheckoutOrigin, getAllowedOrigin()
 	defer func() { publicCheckoutOrigin = previous; SetAllowedOrigin(allowed) }()
-	SetAllowedOrigin("https://ekmivo-web-masharzys-projects.vercel.app")
+	SetAllowedOrigin("https://briofold.tech")
 	if err := SetPublicCheckoutOrigin(""); err != nil {
 		t.Fatal(err)
 	}
-	if got := publicCheckoutURL("opaque-token"); got != "https://ekmivo-web.vercel.app/checkout/opaque-token" {
+	if got := publicCheckoutURL("opaque-token"); got != "https://briofold.tech/checkout/opaque-token" {
 		t.Fatal(got)
 	}
 	if err := SetPublicCheckoutOrigin("https://pay.example.com/"); err != nil {

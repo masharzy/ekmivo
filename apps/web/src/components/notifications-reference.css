@@ -1,4 +1,4 @@
-/* Exact CSS from ekmivo-notifications(2).html; selectors isolated to this surface. */
+/* Exact CSS from briofold-notifications(2).html; selectors isolated to this surface. */
 .ref-notifications{--bg:#090a0e;--p:#0f1116;--p2:#151720;--l:rgba(255,255,255,.07);--l2:rgba(255,255,255,.13);--t:#eceef4;--m:#8c92a3;--d:#5e6474;--a:#9a9aff;--a2:#6d6df5;--g:#3ecf8e;--am:#f5b544;--r:#f27070;--bt:#eceef4;--bx:#0b0c10;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:light){html:not([data-theme=light]):not([data-theme=dark]) .ref-notifications{--bg:#f5f6fa;--p:#fff;--p2:#f3f4f8;--l:rgba(16,24,40,.08);--l2:rgba(16,24,40,.15);--t:#12141b;--m:#667085;--d:#98a2b3;--a:#4f46e5;--a2:#4f46e5;--bt:#12141b;--bx:#fff;color-scheme:light}}
 [data-theme=light] .ref-notifications{--bg:#f5f6fa;--p:#fff;--p2:#f3f4f8;--l:rgba(16,24,40,.08);--l2:rgba(16,24,40,.15);--t:#12141b;--m:#667085;--d:#98a2b3;--a:#4f46e5;--a2:#4f46e5;--bt:#12141b;--bx:#fff;color-scheme:light}

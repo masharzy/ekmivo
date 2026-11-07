@@ -13,7 +13,7 @@ func (s *Service) HandleAdminWorkspaceOperations(w http.ResponseWriter,r *http.R
  if s==nil || s.Auth==nil || !s.pipelineReady(){fail(w,503,"PLATFORM_OPERATIONS_UNAVAILABLE");return}
  ws,realm,resource:=r.PathValue("workspaceID"),explicitRealm(r),r.PathValue("resource")
  if !uuidPattern.MatchString(ws)||(realm!="sandbox"&&realm!="live")||(resource!="payments"&&resource!="devices"&&resource!="overview"){fail(w,400,"INVALID_SCOPE");return}
- cookie,err:=r.Cookie("ekmivo-session")
+ cookie,err:=r.Cookie("briofold-session")
  if err!=nil{fail(w,401,"UNAUTHENTICATED");return}
  actor,err:=s.Auth.Authenticate(r.Context(),cookie.Value)
  if err!=nil{authError(w,err);return}

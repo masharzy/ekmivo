@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
-	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/receiptnotice"
 	"github.com/riverqueue/river"
 )
 
@@ -85,9 +85,9 @@ func (w *PipelineWorker) drainNotice(ctx context.Context) error {
 		if p.Realm == "sandbox" {
 			text = "SANDBOX — NO REAL MONEY\n" + text
 		}
-		subject := "Ekmivo payment receipt"
+		subject := "Briofold payment receipt"
 		if claim.Locale == "bn" {
-			subject = "Ekmivo পেমেন্টের রসিদ"
+			subject = "Briofold পেমেন্টের রসিদ"
 			text = fmt.Sprintf("আপনার পেমেন্ট যাচাই হয়েছে।\nপরিমাণ: %d.%02d %s\nরেফারেন্স: %s\nযাচাইয়ের পদ্ধতি: %s\n", claim.Event.Data.Amount/100, claim.Event.Data.Amount%100, claim.Event.Data.Currency, claim.Event.Data.Reference, claim.Event.Data.Method)
 			if p.Realm == "sandbox" {
 				text = "পরীক্ষামূলক — আসল টাকা নয়\n" + text

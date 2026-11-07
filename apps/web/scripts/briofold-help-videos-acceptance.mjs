@@ -18,7 +18,7 @@ export async function runHelpVideos({origin,browser,control,sessions}){
   await assert.rejects(()=>db`SELECT briofold_help_videos_read(${randomUUID()},${owner},'')`,e=>e.code==='42501');
   await assert.rejects(()=>db`SELECT briofold_help_video_progress(${store},${owner},${db.json({id:unpublished,position_seconds:2})})`,e=>e.code==='42501');
   await assert.rejects(()=>db`SELECT briofold_help_video_progress(${store},${owner},${db.json({id:video,position_seconds:3})})`,e=>e.code==='22023');
-  context=await browser.newContext();await context.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);
+  context=await browser.newContext();await context.addCookies([{name:'briofold-session',value:sessions.owner,url:origin},{name:'briofold-default-workspace',value:owner+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);
   await context.route('**/help-videos/fixture.webm',route=>route.fulfill({status:200,contentType:'video/webm',body:Buffer.from(videoBase64,'base64')}));
   await context.route('**/help-videos/*.vtt',route=>route.fulfill({status:200,contentType:'text/vtt',body:'WEBVTT\n\n00:00.000 --> 00:02.000\nFictional caption\n'}));
   const page=await context.newPage();await page.goto(origin+'/settings/help/videos');await page.getByRole('button',{name:'Fictional Inbox tutorial',exact:true}).click();
@@ -27,10 +27,10 @@ export async function runHelpVideos({origin,browser,control,sessions}){
   await page.reload();await page.getByRole('button',{name:'Fictional Inbox tutorial',exact:true}).waitFor();assert.match(await page.getByRole('listitem').filter({hasText:'Fictional Inbox tutorial'}).innerText(),/Watched/);
   assert.equal((await read(viewer)).items.find(x=>x.id===video).watched,false,'Another account inherited watch state');
   const endpoint=origin+`/api/go/workspaces/${store}/workspace-tools/help-videos?environment=live`;
-  viewerContext=await browser.newContext();await viewerContext.addCookies([{name:'ekmivo-session',value:sessions.viewer,url:origin},{name:'ekmivo-default-workspace',value:viewer+':'+store,url:origin,httpOnly:true}]);
+  viewerContext=await browser.newContext();await viewerContext.addCookies([{name:'briofold-session',value:sessions.viewer,url:origin},{name:'briofold-default-workspace',value:viewer+':'+store,url:origin,httpOnly:true}]);
   const update=await viewerContext.request.post(endpoint,{headers:{Origin:origin},data:{id:video,user_id:owner,position_seconds:1}});assert.equal(update.status(),200);assert.equal((await read(viewer)).items.find(x=>x.id===video).position_seconds,1);assert.equal((await read()).items.find(x=>x.id===video).watched,true);
   await page.getByRole('button',{name:'Fictional Inbox tutorial',exact:true}).click();await page.getByRole('button',{name:'Mark unwatched',exact:true}).click();await page.getByText('Watch progress saved.',{exact:true}).waitFor();assert.equal((await read()).items.find(x=>x.id===video).watched,false);
-  await context.addCookies([{name:'ekmivo-locale',value:'bn',url:origin}]);await page.setViewportSize({width:320,height:800});await page.goto(origin+'/settings/help/videos');await page.getByRole('button',{name:'কাল্পনিক ইনবক্স নির্দেশিকা',exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await context.addCookies([{name:'briofold-locale',value:'bn',url:origin}]);await page.setViewportSize({width:320,height:800});await page.goto(origin+'/settings/help/videos');await page.getByRole('button',{name:'কাল্পনিক ইনবক্স নির্দেশিকা',exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   console.log('HELP VIDEO SQL/Go/Next/native browser playback PASS: published module index, EN/BN captions, private progress, completion/reload/reset, actor/Store denial and 320px');
  }finally{await context?.close();await viewerContext?.close();await db.end({timeout:3});}
 }

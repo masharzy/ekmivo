@@ -14,7 +14,7 @@ const phases=[{name:'sustained',rate:50,seconds:900},{name:'burst',rate:200,seco
 if(mode==='plan'){
  await writeFile(output,JSON.stringify({mode:'plan',executed:false,simulation:true,workspace_count:25,phases,targets:{durable_ack_p95_ms:1000,non_provider_api_p95_ms:500,worker_verification_p95_ms:5000},limitations:'ACK does not prove matching. Verification latency requires the SQL/worker observer.'},null,2)+'\n',{flag:'wx'});
 }else{
- if(process.env.EKMIVO_ALLOW_SANDBOX_LOAD!=='true'||process.env.EKMIVO_LOAD_SANDBOX_ORIGIN!==origin.origin)throw Error('Explicit sandbox load destination authorization required');
+ if(process.env.BRIOFOLD_ALLOW_SANDBOX_LOAD!=='true'||process.env.BRIOFOLD_LOAD_SANDBOX_ORIGIN!==origin.origin)throw Error('Explicit sandbox load destination authorization required');
  const keys=f.devices.map(d=>{const key=createPrivateKey(d.private_key_pem);if(key.asymmetricKeyType!=='ec'||key.asymmetricKeyDetails?.namedCurve!=='prime256v1')throw Error('P-256 fixture key required');return key});
  const sequences=f.devices.map(d=>d.sequence_start),pending=new Set(),samples=[],phasesObserved=[];
  const timeFormatter=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
@@ -26,7 +26,7 @@ if(mode==='plan'){
   const canonical=`POST\n${path}\n${stamp}\n${event}\n${createHash('sha256').update(raw).digest('hex')}`;
   const signature=sign('sha256',Buffer.from(canonical),keys[index]).toString('base64'),start=performance.now();
   let status=null,ack=false,observation=null;
-  try{const r=await fetch(new URL(path,origin),{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','X-Ekmivo-Device-ID':d.enrollment_id,'X-Ekmivo-Timestamp':stamp,'X-Ekmivo-Event-ID':event,'X-Ekmivo-Signature':signature},body:raw});status=r.status;const data=await r.json();ack=r.status===202&&data.ack==='durable';observation=uuid.test(data.observation_id||'')?data.observation_id:null}
+  try{const r=await fetch(new URL(path,origin),{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','X-Briofold-Device-ID':d.enrollment_id,'X-Briofold-Timestamp':stamp,'X-Briofold-Event-ID':event,'X-Briofold-Signature':signature},body:raw});status=r.status;const data=await r.json();ack=r.status===202&&data.ack==='durable';observation=uuid.test(data.observation_id||'')?data.observation_id:null}
   catch{}
   samples.push({event_id:event,workspace_index:index,status,ack,observation_id:observation,duration_ms:performance.now()-start});
  }

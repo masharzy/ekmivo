@@ -49,7 +49,7 @@ export async function GET(request:Request){
   if(!report||typeof report!=="object")throw Error("MISSING_EXPORT");
   const csv=csvFromVerifiedReport(report as Record<string,unknown>);
   return new Response(csv,{headers:{"Content-Type":"text/csv; charset=utf-8",
-   "Content-Disposition":"attachment; filename=ekmivo-growth-metrics.csv",
+   "Content-Disposition":"attachment; filename=briofold-growth-metrics.csv",
    "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
  }catch(error){
   console.error("BRIOFOLD_GROWTH_EXPORT_UNAVAILABLE",error instanceof Error?error.name:"unknown");

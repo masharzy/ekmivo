@@ -6,14 +6,30 @@
 
 2026-10-11 · **Proposed contract, not deployed endpoints.** Current [OpenAPI](../contracts/openapi.yaml) documents health only. This file defines what the agent must implement, generate and test before phase 1 can be marked complete. Architecture: [payment design](PAYMENT-SYSTEM-DESIGN.bn.md); sequence: [backlog](IMPLEMENTATION-BACKLOG.md).
 
+## Briofold simple payment API: what the code does today (read this first)
+
+Source of truth: `backend/cmd/api/main.go`, `backend/internal/checkout/simple_payment.go`, `backend/internal/merchantwebhook/delivery.go`. Routes below are registered in code and unit-tested; a deployed environment must still be checked with a sandbox payment before anyone relies on them. The long sections that follow describe the wider design.
+
+| Step | Call | Notes |
+|---|---|---|
+| Create | `POST /v1/payment/create` (same body as `POST /v1/payment-intents`) | `Authorization: Bearer <key>`. Send `amount` in BDT, `reference`, `redirect_url`, `cancel_url`, `webhook_url`, `customer_email`, `expires_in_minutes` (5-60). Send `Idempotency-Key` (16-128 chars). Returns `invoice_id`, `payment_url`, `checkout_url`, `checkout_token`, `status` (`PENDING`...). `invoice_id` is the payment request id. |
+| Verify | `POST /v1/payment/verify` with `{"invoice_id": "<uuid>"}` | Returns `status` = `COMPLETED`, `PENDING`, `CANCELLED`, `EXPIRED`, `FAILED` or `REFUNDED`, plus `amount_minor`, `currency`, `reference`. Check all of them against your own order before fulfilling. |
+| Read | `GET /v1/payment-intents/{intentID}` | Key-scoped: workspace and environment come from the key, so no `workspaceID` or `environment` parameter. Returns `{data:{state,...}}`; `state` is `completed` when paid. |
+
+- **Checkout link.** `checkout_url` is `<GO_PUBLIC_WEB_ORIGIN>/checkout/<token>`. The API host must set `GO_PUBLIC_WEB_ORIGIN` (HTTPS origin, no path). If unset it defaults to `https://briofold.tech`. There is no locale segment.
+- **Webhook headers.** Deliveries send `X-Briofold-Timestamp`, `-Event-ID`, `-Delivery-ID`, `-Key-ID` and `-Signature`. Device-ingress headers use the same prefix (`X-Briofold-Device-ID` and friends) and are a separate protocol.
+- **Webhook body for `payment.verified`.** `data` holds `payment_id`, `payment_intent_id` (equals the `invoice_id` returned by create), `merchant_reference` (your `reference`), `amount_minor`, `currency`, `verification_status`, `verification_method`, `verified_at`. There is no top-level `invoice_id`. Treat the event as a signal, then call verify or read before fulfilling.
+- **Which secret signs a per-payment `webhook_url`.** The automatic signing secret of the workspace and environment that owns the API key. It is the same for every payment in that workspace and environment, and the dashboard shows it under API Keys. A secret registered on a dashboard webhook endpoint signs deliveries to that endpoint only. Sandbox and live secrets differ.
+- **Signature.** `v1=` + hex(HMAC-SHA256(secret, timestamp + "." + raw body)). Reject timestamps more than 300 seconds old. Key id is the first 8 bytes of SHA-256(secret), hex.
+
 ## 1. Boundary and conventions
 
-One versioned Go API; merchant API uses /v1, locale-independent stable codes. Deployed base URL comes from environment config and developer dashboard; examples below use a placeholder, not a working Ekmivo domain.
+One versioned Go API; merchant API uses /v1, locale-independent stable codes. Deployed base URL comes from environment config and developer dashboard; examples below use a placeholder, not a working Briofold domain.
 
 | Concern | Required contract |
 |---|---|
 | Merchant authentication | Authorization: Bearer with hashed scoped key; key binds workspace + sandbox/live. No browser-exposed merchant key. |
-| Key format | ek_test_<publicId>_<secret> / ek_live_<publicId>_<secret>; strong random secret, hash-only DB, displayed once, constant-time check, revocation/expiry. Prefix alone does not decide authorization. |
+| Key format | bf_test_<publicId>_<secret> / bf_live_<publicId>_<secret>; strong random secret, hash-only DB, displayed once, constant-time check, revocation/expiry. Prefix alone does not decide authorization. |
 | Key scopes | payments:read, payments:write, customers:read/write, invoices:read/write, refunds:read/write, webhooks:manage; documented least-privilege examples. Device enrollment/privileged account changes use authenticated user capability, not general merchant key. |
 | Session API | Current user membership/capability + authenticated web proxy or mobile token. Session, merchant key, public checkout capability and device routes are separate authorization schemes. |
 | Idempotency | Required for payment/invoice/refund creation and external-effect commands. Scope workspace + environment + operation + key; request hash mismatch 409. Concurrent replay returns original outcome/pending status, not duplicate mutation. Retain at least 30 days initially; document expiration behavior. |
@@ -104,7 +120,7 @@ Events initially: payment.verified, payment.exception, payment.expired, payment.
 }
 ~~~
 
-Headers: X-Ekmivo-Event-Id, X-Ekmivo-Delivery-Id, X-Ekmivo-Timestamp, X-Ekmivo-Key-Id, X-Ekmivo-Signature. Signature **v1=hex(HMAC-SHA256(secret, timestamp + "." + raw_body_bytes))**. Header IDs must agree with signed payload. JSON reserialize before signature validation is invalid.
+Headers: X-Briofold-Event-Id, X-Briofold-Delivery-Id, X-Briofold-Timestamp, X-Briofold-Key-Id, X-Briofold-Signature (the same values are also sent as X-Briofold-* for older receivers). Signature **v1=hex(HMAC-SHA256(secret, timestamp + "." + raw_body_bytes))**. Header IDs must agree with signed payload. JSON reserialize before signature validation is invalid.
 
 Consumer: read raw bytes → verify known signing key, signature with constant-time equal and timestamp within ±300 seconds → validate environment/schema/IDs → durably dedup event id → atomic own mutation → quick 2xx. Out-of-order resource_version doesn't undo later state; query current resource if needed. In-memory duplicate cache alone not correctness.
 
@@ -193,6 +209,6 @@ The canonical contracts/openapi.yaml now includes operational and signed-device 
 
 ## Owner dashboard/API refinement — 2026-10-15
 
-The latest owner instruction refines the payment dashboard: Payments replaces Transactions in navigation; Payment Links includes the existing one-time requests flow; SMS Data replaces Incoming Receipts. Workspace Billing, Team and Settings are accessed through the workspace gear, and Help through the header. Developers contains API Keys and external API Docs. Legacy deep links and integrations remain compatible. The operational dashboard uses the semantic payment tokens and an original visual direction documented in `docs/design/ekmivo-dashboard/SKILL.md`.
+The latest owner instruction refines the payment dashboard: Payments replaces Transactions in navigation; Payment Links includes the existing one-time requests flow; SMS Data replaces Incoming Receipts. Workspace Billing, Team and Settings are accessed through the workspace gear, and Help through the header. Developers contains API Keys and external API Docs. Legacy deep links and integrations remain compatible. The operational dashboard uses the semantic payment tokens and an original visual direction documented in `docs/design/briofold-dashboard/SKILL.md`.
 
 Create Payment may accept an optional per-payment `webhook_url` without dashboard registration. Reuse signed delivery, retries and tenant isolation; callbacks are notifications and merchants must verify server-side before fulfillment. Existing default registered endpoints remain supported. Additive migrations 0063/0064 (financial) and 0065 (control) are implemented and tested on an isolated Neon branch only; production rollout and end-to-end acceptance remain pending. Do not use Docker: the owner requires Neon for database work. See `docs/evidence/DASHBOARD-REFINEMENT-20261015/README.md` and the consolidated manual ledger.

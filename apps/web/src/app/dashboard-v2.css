@@ -1,4 +1,4 @@
-/* Ekmivo Pay v2 — user-approved Overview HTML is the visual specification.
+/* Briofold Pay v2 — user-approved Overview HTML is the visual specification.
    Presentation only: keep existing roles, forms, APIs and data models unchanged. */
 .ds-app[data-service="payments"]{
  --color-canvas:#fafafa;--color-surface:#fff;--color-surface-raised:#fff;

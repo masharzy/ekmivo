@@ -7,11 +7,11 @@ import assert from 'node:assert/strict';
 import {randomUUID,createHash} from 'node:crypto';
 const require=createRequire(path.resolve('apps/web/package.json'));
 const postgres=require('postgres');
-const url=new URL(fs.readFileSync(path.join(os.tmpdir(),'ekmivo-plans-neon-url.txt'),'utf8'));
+const url=new URL(fs.readFileSync(path.join(os.tmpdir(),'briofold-plans-neon-url.txt'),'utf8'));
 if(!process.env.PLAN_TEST_BRANCH_HOST||url.hostname!==process.env.PLAN_TEST_BRANCH_HOST)throw Error('Explicit isolated Neon branch host required');
-const connection=db=>{let u=new URL(url);u.pathname='/'+db;const realm=db.includes('live')?'live':db.includes('sandbox')?'sandbox':null;if(realm)u=new URL(fs.readFileSync(path.join(os.tmpdir(),`ekmivo-plans-${realm}-url.txt`),'utf8'));if(u.hostname!==url.hostname)throw Error('Cross-branch connection denied');return postgres(u.href,{ssl:'require',prepare:false,max:16,onnotice:()=>{}})};
-const control=connection('ekmivo'),live=connection('ekmivo_live_financial'),sandbox=connection('ekmivo_sandbox_financial');
-const readerUrl=new URL(fs.readFileSync(path.join(os.tmpdir(),'ekmivo-plans-reader-url.txt'),'utf8'));if(readerUrl.hostname!==url.hostname)throw Error('Reader must use the same isolated branch');
+const connection=db=>{let u=new URL(url);u.pathname='/'+db;const realm=db.includes('live')?'live':db.includes('sandbox')?'sandbox':null;if(realm)u=new URL(fs.readFileSync(path.join(os.tmpdir(),`briofold-plans-${realm}-url.txt`),'utf8'));if(u.hostname!==url.hostname)throw Error('Cross-branch connection denied');return postgres(u.href,{ssl:'require',prepare:false,max:16,onnotice:()=>{}})};
+const control=connection('briofold'),live=connection('ekmivo_live_financial'),sandbox=connection('ekmivo_sandbox_financial');
+const readerUrl=new URL(fs.readFileSync(path.join(os.tmpdir(),'briofold-plans-reader-url.txt'),'utf8'));if(readerUrl.hostname!==url.hostname)throw Error('Reader must use the same isolated branch');
 const reader=postgres(readerUrl.href,{ssl:'require',prepare:false,max:16,onnotice:()=>{}});
 try{
  if(process.argv.includes('--inspect')){for(const [name,sql] of [['control',control],['live',live],['sandbox',sandbox]])console.log(name,await sql.unsafe("SELECT rolname FROM pg_roles WHERE rolcanlogin AND pg_has_role(oid,'ekmivo_finance_reader','member')"));}

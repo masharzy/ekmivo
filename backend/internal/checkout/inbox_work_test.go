@@ -2,7 +2,7 @@ package checkout
 
 import (
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 	"math"
 	"net/http/httptest"
 	"strings"

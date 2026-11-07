@@ -14,12 +14,12 @@ cd apps/mobile
 gradle :app:assembleDebug :app:testDebugUnitTest
 ```
 
-The Gradle build **reuses existing Hind Siliguri TTF files from apps/web/src/fonts** using a declared resource generation task; it does not commit font copies or fetch proprietary assets. Debug builds are unsigned for store distribution and CI exposes an `ekmivo-kotlin-debug` artifact when the native job passes.
+The Gradle build **reuses existing Hind Siliguri TTF files from apps/web/src/fonts** using a declared resource generation task; it does not commit font copies or fetch proprietary assets. Debug builds are unsigned for store distribution and CI exposes an `briofold-kotlin-debug` artifact when the native job passes.
 
 To check an actual running Go API (no login/payment APIs wired yet), pass a public HTTPS **origin only** to the build:
 
 ```sh
-gradle :app:assembleDebug -PekmivoApiBaseUrl=https://api.example.com
+gradle :app:assembleDebug -PbriofoldApiBaseUrl=https://api.example.com
 ```
 
 Never put service credentials in Gradle properties or the APK. The app only checks `GET /healthz` and `GET /readyz`, never guesses a successful payment from a 200 response. A configured origin is not a merchant session. Android receipts/SMS/notifications are **not read** by this foundation; PG06 adds scoped, consented collection to this same app after real source evidence and Go endpoints are accepted.

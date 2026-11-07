@@ -1,5 +1,5 @@
 /* Admin-only production component adapter.
-   Exact measurements/colors from Ekmivo_Admin.html; no public token dependency.
+   Exact measurements/colors from Briofold_Admin.html; no public token dependency.
    Existing .pa-* JSX/Go/SQL behavior remains untouched. */
 .pa-root.pa-admin-design{display:grid;grid-template-columns:212px minmax(0,1fr);grid-template-rows:48px minmax(0,1fr);min-width:0;align-items:stretch}
 .pa-root.pa-admin-design .pa-layout{display:contents}

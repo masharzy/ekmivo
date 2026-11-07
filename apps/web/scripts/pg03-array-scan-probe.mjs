@@ -3,7 +3,7 @@ import {mkdtemp,writeFile,rm,rmdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
-const dir=await mkdtemp(join(tmpdir(),'ekmivo-pg03-scan-'));
+const dir=await mkdtemp(join(tmpdir(),'briofold-pg03-scan-'));
 const file=join(dir,'main.go');
 try{
  await writeFile(file,`package main

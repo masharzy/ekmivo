@@ -38,7 +38,7 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   await assert.rejects(()=>readMedia(other),e=>e.code==='42501','other visitor accessed attachment');
   const publicHistory=(await publicCall({action:'read',secret})).body.items;assert.equal(publicHistory.at(-1).media_id,media);assert.equal(JSON.stringify(publicHistory).includes('fixture/'),false);
   await db`UPDATE briofold_website_visitors SET expires_at=now()-interval '1 second' WHERE site_id=${site} AND secret_hash=${createHash('sha256').update(other).digest('hex')}`;assert.equal((await publicCall({action:'read',secret:other})).status,403);
-  context=await browser.newContext();await context.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+  context=await browser.newContext();await context.addCookies([{name:'briofold-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'briofold-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},{name:'briofold-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const p=await context.newPage();p.setDefaultTimeout(30000);p.setDefaultNavigationTimeout(90000);
   await p.goto(origin+'/settings/website');await p.getByLabel('Website origin',{exact:true}).waitFor();assert.equal(await p.getByLabel('Website origin',{exact:true}).inputValue(),shop);
   await p.getByLabel('Website origin',{exact:true}).fill('https://replacement-shop.example');await p.getByRole('button',{name:'Save',exact:true}).click();await p.getByText('Settings saved.',{exact:true}).waitFor();await p.reload();assert.equal(await p.getByLabel('Website origin',{exact:true}).inputValue(),'https://replacement-shop.example');
@@ -93,7 +93,7 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_ai_credit_journal WHERE workspace_id=${workspace}`)[0].n),0,'fixed reply debited credits');
   // Run the actual Go worker against the actual isolated control database. No
   // provider delivery or paid model is enabled; fixed policy is genuinely run.
-  worker=spawn(apiBin,[],{env:{...apiEnv,PORT:'17914',GO_WEB_ORIGIN:apiOrigin,EKMIVO_REQUIRE_AUTHZ:'true',PG10_EXTENSIONS_ENABLED:'true',INBOX_SENDER_ENABLED:'false',BRIOFOLD_COMMENTS_ENABLED:'true',BRIOFOLD_COMMENT_DELIVERY_ENABLED:'false',BRIOFOLD_AI_RUNTIME_ENABLED:'false',BRIOFOLD_AI_TOPUPS_ENABLED:'false'},stdio:['ignore','pipe','pipe']});
+  worker=spawn(apiBin,[],{env:{...apiEnv,PORT:'17914',GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_REQUIRE_AUTHZ:'true',PG10_EXTENSIONS_ENABLED:'true',INBOX_SENDER_ENABLED:'false',BRIOFOLD_COMMENTS_ENABLED:'true',BRIOFOLD_COMMENT_DELIVERY_ENABLED:'false',BRIOFOLD_AI_RUNTIME_ENABLED:'false',BRIOFOLD_AI_TOPUPS_ENABLED:'false'},stdio:['ignore','pipe','pipe']});
   worker.stdout.resume();worker.stderr.resume();
   await db`SELECT briofold_comment_ingest('ms',${account},'comment_2','post_1','fixture-customer','price please',false)`;
   await db`SELECT briofold_comment_ingest('ms',${account},'comment_3','post_1','fixture-customer','price ০১৭১২৩৪৫৬৭৮',false)`;

@@ -1,6 +1,6 @@
-# Ekmivo Admin — Locked Design System
+# Briofold Admin — Locked Design System
 
-**Status: approved / locked** · Source of truth: `docs/design/ekmivo-admin-reference.html`. This is **not** the public homepage, merchant dashboard, checkout, or Developers portal theme.
+**Status: approved / locked** · Source of truth: `docs/design/briofold-admin-reference.html`. This is **not** the public homepage, merchant dashboard, checkout, or Developers portal theme.
 
 ## Ownership / CSS load order
 - `apps/web/src/styles/admin/admin-tokens.css`: exact reference light/dark palette; aliases only for *existing admin components*.
@@ -8,7 +8,7 @@
 - `apps/web/src/styles/admin/admin-components.css`: Admin UI adapter for existing `.pa-*` and `.mp-admin` components.
 - `apps/web/src/styles/admin/admin-reference.css`: unchanged standalone HTML styles. **Never import this unscoped CSS into the production web app.**
 - These three production stylesheets are imported at the **end** of `apps/web/src/app/globals.css`. Their selectors only target `.pa-root.pa-admin-design` (or Admin MFA screen).
-- The full original approved working HTML is checked in as `docs/design/ekmivo-admin-reference.html` and is the comparison target.
+- The full original approved working HTML is checked in as `docs/design/briofold-admin-reference.html` and is the comparison target.
 
 ## Exact source tokens — Light / Dark
 | Token | Light | Dark |
@@ -42,13 +42,13 @@
 - Reference uses no emoji and no oversized cards/marketing fonts.
 
 ## Light / dark separation
-- Admin preference is `ekmivo-admin-theme`, **not** `ekmivo-theme`.
+- Admin preference is `briofold-admin-theme`, **not** `briofold-theme`.
 - `data-admin-theme="light|dark|system"` lives on the Admin component root. `system` tracks `prefers-color-scheme`.
 - The existing marketing `html[data-theme]` and public cookie must not control the Admin palette. Conversely, changing the Admin theme must not change marketing theme.
 - No `html`, `:root` or `body` token definitions in production Admin-only files. Theme selectors must be Admin-scoped.
 
 ## Building a new Admin page
-1. Read `docs/design/ekmivo-admin-reference.html` (HTML/CSS/JS) before editing.
+1. Read `docs/design/briofold-admin-reference.html` (HTML/CSS/JS) before editing.
 2. Read all 3 Admin stylesheets. Use existing `.pa-*` classes/components before making new ones.
 3. Preserve Next.js server-rendered routes, Go financial authority, RBAC/MFA, subscriptions and real data. Demo values **must never** replace actual API/database responses.
 4. Compare new page and dialogs against original HTML in light and dark at desktop and mobile widths; do not claim pixel parity without screenshots.

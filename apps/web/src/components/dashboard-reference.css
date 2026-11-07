@@ -1,4 +1,4 @@
-/* Exact CSS from Ekmivo_Dashboard_Premium(1).html; selectors isolated to this surface. */
+/* Exact CSS from Briofold_Dashboard_Premium(1).html; selectors isolated to this surface. */
 
 .ref-dashboard{--bg:#fafafa;--panel:#fff;--hover:#f3f3f5;--line:#e9e9ed;--txt:#15161a;--mut:#74767f;--acc:#4f46e5;--accb:#eeedfd;--ok:#16a34a;--warn:#d97706;--gry:#9a9ca6;color-scheme:light}
 [data-theme="dark"] .ref-dashboard{--bg:#0a0b0e;--panel:#131418;--hover:#1a1b21;--line:#24262d;--txt:#ececf0;--mut:#8b8d97;--acc:#8b87ff;--accb:#1f2040;--ok:#4ade80;--warn:#fbbf24;--gry:#6b6d77;color-scheme:dark}
@@ -88,7 +88,7 @@
 .ref-dashboard .notice{display:flex;gap:10px;align-items:center;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:13.5px;color:var(--mut)}
 .ref-dashboard .stat2{color:var(--mut)}
 
-/* Ekmivo Pay UI handoff — reference-compatible refinement layer */
+/* Briofold Pay UI handoff — reference-compatible refinement layer */
 .ref-dashboard{--radius:10px;--focus:var(--acc)}
 .ref-dashboard{letter-spacing:-.006em;-webkit-font-smoothing:antialiased}
 .ref-dashboard .logo{display:flex;align-items:center;gap:6px;height:32px;padding:0 9px;letter-spacing:-.045em}
@@ -192,7 +192,7 @@
 @media(max-width:600px){.ref-dashboard header{gap:6px}.ref-dashboard header .prod span:not(.prod-dot){display:none!important}.ref-dashboard header .prod{padding:0 5px}.ref-dashboard header .prod .prod-dot{display:grid!important}.ref-dashboard .wrap{min-width:0}.ref-dashboard main{min-width:0}}
 
 
-/* ===== Ekmivo premium layer ===== */
+/* ===== Briofold premium layer ===== */
 .ref-dashboard{--ring:color-mix(in srgb,var(--acc) 26%,transparent);--sh1:0 1px 2px rgba(16,18,27,.05);--sh2:0 2px 6px rgba(16,18,27,.06),0 18px 48px -12px rgba(16,18,27,.22);--ease:cubic-bezier(.22,1,.36,1)}
 [data-theme="dark"] .ref-dashboard{--sh1:0 1px 0 rgba(255,255,255,.03) inset;--sh2:0 2px 6px rgba(0,0,0,.4),0 24px 64px -12px rgba(0,0,0,.7)}
 .ref-dashboard{font-family:"Geist Variable",var(--font-hind-siliguri),system-ui,-apple-system,"Segoe UI",sans-serif;text-rendering:optimizeLegibility}

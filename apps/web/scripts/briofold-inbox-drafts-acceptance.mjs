@@ -11,9 +11,9 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   const connections=[];for(const provider of ['ms','ig','wa'])connections.push((await db`SELECT inbox_connection(${workspace},'live',${provider},${'draft-'+provider+'-'+workspace},decode('abcd','hex')) AS id`)[0].id);
   for(let n=0;n<8;n++)await db`SELECT inbox_ingest(${connections[n%3]},'draft-fixture-'||${n}::text||'-'||i::text,${'customer-'+n},${'Draft fixture customer '+n},'Fictional long conversation '||i::text,'text',now()-interval '1 hour'+i*interval '1 second') FROM generate_series(1,65) i`;
   context=await browser.newContext();await context.addCookies([
-   {name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},
-   {name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
-   {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+   {name:'briofold-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'briofold-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'briofold-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultNavigationTimeout(90000);page.setDefaultTimeout(30000);
   await page.goto(origin+'/inbox');
   const choose=async n=>{await page.getByRole('button',{name:new RegExp('Draft fixture customer '+n)}).click();await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();};

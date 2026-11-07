@@ -138,13 +138,14 @@ func sendWithNetwork(ctx context.Context, raw string, secret, body []byte, event
 	}
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("User-Agent", "Ekmivo-Webhooks/1")
-	request.Header.Set("X-Ekmivo-Timestamp", timestamp)
-	request.Header.Set("X-Ekmivo-Event-ID", eventID)
-	request.Header.Set("X-Ekmivo-Delivery-ID", deliveryID)
-	request.Header.Set("X-Ekmivo-Signature", "v1="+Sign(secret, body, timestamp, eventID))
+	request.Header.Set("User-Agent", "Briofold-Webhooks/1")
 	keyID := sha256.Sum256(secret)
-	request.Header.Set("X-Ekmivo-Key-ID", hex.EncodeToString(keyID[:8]))
+	signature := "v1=" + Sign(secret, body, timestamp, eventID)
+	request.Header.Set("X-Briofold-Timestamp", timestamp)
+	request.Header.Set("X-Briofold-Event-ID", eventID)
+	request.Header.Set("X-Briofold-Delivery-ID", deliveryID)
+	request.Header.Set("X-Briofold-Signature", signature)
+	request.Header.Set("X-Briofold-Key-ID", hex.EncodeToString(keyID[:8]))
 	response, e := client.Do(request)
 	if e != nil {
 		return 0, "transport_unknown"

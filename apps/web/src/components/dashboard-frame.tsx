@@ -20,9 +20,9 @@ type Space = { id: string; name: string; mode: "ai" | "commerce" | "both" | "off
 type PaymentContext = { environment: PaymentEnvironment; status: "active" | "suspended"; availableEnvironments: PaymentEnvironment[]; liveOperational: false };
 
 type Props = { unified?:boolean; planFeatures?:PlanTerms["features"]|null; locale: Locale; service: Service; section: SectionKey; workspace: Space; spaces: Space[]; userName: string; platformAdmin: boolean; theme: "light" | "dark" | "system"; paymentContext?: PaymentContext; children: React.ReactNode; logout: React.ReactNode };
-const memoryKey=(workspaceId:string,service:Service)=>`ekmivo-last:${workspaceId}:${service}`;
+const memoryKey=(workspaceId:string,service:Service)=>`briofold-last:${workspaceId}:${service}`;
 // Paused: Sandbox/Live preference in merchant UI.
-// const environmentKey=(workspaceId:string)=>`ekmivo-last-env:${workspaceId}`;
+// const environmentKey=(workspaceId:string)=>`briofold-last-env:${workspaceId}`;
 // Paused until sandbox UI is restored.
 // function rememberedEnvironment(workspaceId:string):PaymentEnvironment{
 //  try{return window.localStorage.getItem(environmentKey(workspaceId))==="live"?"live":"sandbox";}catch{return "sandbox";}
@@ -192,11 +192,11 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    setDraftError("");setBlockedRoute(destination);
   };
   window.addEventListener("beforeunload",beforeLeave);
-  window.addEventListener("ekmivo:guarded-navigation",guardedNavigation);
+  window.addEventListener("briofold:guarded-navigation",guardedNavigation);
   document.addEventListener("click",guardedAnchor,true);
   return ()=>{
    window.removeEventListener("beforeunload",beforeLeave);
-   window.removeEventListener("ekmivo:guarded-navigation",guardedNavigation);
+   window.removeEventListener("briofold:guarded-navigation",guardedNavigation);
    document.removeEventListener("click",guardedAnchor,true);
   };
  },[]);
@@ -299,7 +299,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  };
  const sidebar=(mobile=false)=><>
   <div className="ds-brand-row">
-   <Link href={unified?"/dashboard":"/"} className="ek-wordmark">ekmivo{!unified&&<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small>}</Link>
+   <Link href={unified?"/dashboard":"/"} className="ek-wordmark">briofold{!unified&&<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small>}</Link>
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
   <div className="ds-business-block">{spaces.length<=1?

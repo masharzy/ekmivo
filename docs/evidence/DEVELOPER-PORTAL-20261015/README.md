@@ -20,7 +20,7 @@ The test console opens in a modal, retains a pasted test key in component memory
 
 ## Facts and remaining work
 
-1. Configure `NEXT_PUBLIC_DEVELOPER_API_ORIGIN` with the actual provisioned custom HTTPS API origin. Until then the chip honestly shows unpublished and cannot be copied; examples use EKMIVO_API_ORIGIN. Do not invent api.ekmivo.com or display a third-party hosting URL as a custom domain. `NEXT_PUBLIC_DEVELOPER_ORIGIN` can set a separate public portal host.
+1. Configure `NEXT_PUBLIC_DEVELOPER_API_ORIGIN` with the actual provisioned custom HTTPS API origin. Until then the chip honestly shows unpublished and cannot be copied; examples use BRIOFOLD_API_ORIGIN. Do not invent api.ekmivo.com or display a third-party hosting URL as a custom domain. `NEXT_PUBLIC_DEVELOPER_ORIGIN` can set a separate public portal host.
 2. Publish a guaranteed idempotency retention period; current source specifies 16–128-character syntax but no promised expiry. This is marked TODO in API reference.
 3. Requests use `amount` in taka. The pulled Verify API contract/backend still return `amount_minor`; this is documented once in API reference and not silently changed by a UI release. New request examples never use legacy minor-unit fields.
 4. Current version is taken from OpenAPI (0.9.0-draft). Status enum, signature tolerance, 120/minute per-process merchant limit and eight-attempt retry schedule are grounded in existing source; no new operational promises.

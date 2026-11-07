@@ -1,4 +1,4 @@
-/* Ekmivo V3 marketing experience. Ink & Bone baseline: restrained grayscale product UI and spacious editorial narrative.
+/* Briofold V3 marketing experience. Ink & Bone baseline: restrained grayscale product UI and spacious editorial narrative.
    Visual-only samples. No backend data is represented as live. */
 .v3{--v3-ink:#161616;--v3-deep:#131313;--v3-navy:#1d1d1d;--v3-cyan:#d8d8d4;--v3-lime:#ebebe7;--v3-mist:#f4f4f0;--v3-paper:#fffffb;--v3-slate:#70706e;--v3-line:#e1e1dd;--v3-strong:#1f1f1f;--v3-muted:#6d6d6b;overflow:clip;background:var(--v3-paper);color:var(--v3-ink);font-family:var(--font-ui)}
 .v3 *{box-sizing:border-box}

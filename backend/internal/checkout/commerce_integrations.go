@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 )
 
 type commerceCredentials struct {

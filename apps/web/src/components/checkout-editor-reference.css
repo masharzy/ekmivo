@@ -1,4 +1,4 @@
-/* Exact CSS from Ekmivo — Checkout themes(1).html; selectors isolated to this surface. */
+/* Exact CSS from Briofold — Checkout themes(1).html; selectors isolated to this surface. */
 
 .ref-checkout-editor{--bg:#fafafa;--panel:#fff;--hover:#f3f3f5;--line:#e9e9ed;--txt:#15161a;--mut:#74767f;--acc:#4f46e5;--accb:#eeedfd;color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 [data-theme="dark"] .ref-checkout-editor{--bg:#0a0b0e;--panel:#131418;--hover:#1a1b21;--line:#24262d;--txt:#ececf0;--mut:#8b8d97;--acc:#8b87ff;--accb:#1f2040;color-scheme:dark}

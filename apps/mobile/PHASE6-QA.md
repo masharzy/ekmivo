@@ -3,7 +3,7 @@
 # Phase 6 QA checklist — Android
 
 ## Implementation scope
-- Shared top bar for Live and Settings: one 34dp logo, brand `ekmivo`, EN/BN switch. Settings has one plain heading, no second logo.
+- Shared top bar for Live and Settings: one 34dp logo, brand `briofold`, EN/BN switch. Settings has one plain heading, no second logo.
 - Live status badge is positioned at the top-right of the 136dp pulse ring, inside a 166dp overlay. Forwarded-in-history label is two lines.
 - Inbox groundwork only: data classes, repository contract, disabled route, notification channel and FCM token callback bound to current phone enrollment. `InboxFeatureFlag.inboxEnabled` stays `false`; no third tab or fake messages.
 - Firebase project registration, server token endpoint, actual inbox push delivery and chat API do not exist in this phase. They must be provided before enabling the flag.
@@ -23,12 +23,12 @@ For **each of** Home, Pairing, Permission wizard, Disconnected and Settings:
 
 | Element | Spec/reference | Phase 6 implementation | Screenshot match |
 |---|---|---|---|
-| Header logo | 34dp, 10dp radius | Shared EkmivoBrandHeader | **Not verified** |
+| Header logo | 34dp, 10dp radius | Shared BriofoldBrandHeader | **Not verified** |
 | Settings page title | one title, no duplicated logo | Plain SettingsHeading | **Not verified** |
 | Ring/core | 136dp/112dp | Existing ring unchanged | **Not verified** |
 | Status badge | User requested upper-right overlap | Stable top-right badge on overlay | **Not verified** |
 | Hero copy | two lines within 112dp core | Forced line break EN/BN | **Not verified** |
-| Colours | Web-derived dark/light palette | Existing EkmivoTokens | **Not verified** |
+| Colours | Web-derived dark/light palette | Existing BriofoldTokens | **Not verified** |
 | Language | EN/BN switch in both tabs | Shared header | **Not verified** |
 | Bottom tabs | Live and Settings only | Existing two-tab bar | **Not verified** |
 

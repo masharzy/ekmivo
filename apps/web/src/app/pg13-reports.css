@@ -1,4 +1,4 @@
-/* Ekmivo payment reporting workbench. Scope everything to this page. */
+/* Briofold payment reporting workbench. Scope everything to this page. */
 .er-reports{display:grid;gap:12px;min-width:0;color:var(--color-text)}
 .er-reports :is(button,input,select){font:inherit}
 .er-reports :is(a,button,input,select,.er-table-scroll):focus-visible{outline:2px solid var(--color-focus);outline-offset:3px}

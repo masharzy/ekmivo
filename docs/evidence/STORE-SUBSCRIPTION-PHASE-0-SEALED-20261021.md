@@ -9,7 +9,7 @@
 ## Authoritative route/ownership diagram
 
 1. Public pricing `/` and `/pricing` → `/subscribe/{plan}`; auth cookie and selected plan must survive login, Google OAuth, verification and new Store setup.
-2. Purchase summary `/checkout/order/{plan}` is currently **preview-only**, guarded by `EKMIVO_SUBSCRIPTION_ORDER_PREVIEW`; the checkout component also has `purchaseEnabled={false}`. The summary **must not** show bKash/Nagad/Rocket or issue an invoice before secured server confirmation.
+2. Purchase summary `/checkout/order/{plan}` is currently **preview-only**, guarded by `BRIOFOLD_SUBSCRIPTION_ORDER_PREVIEW`; the checkout component also has `purchaseEnabled={false}`. The summary **must not** show bKash/Nagad/Rocket or issue an invoice before secured server confirmation.
 3. Future SaaS payment route `/pay/subscription/{opaque-token}` uses `CheckoutExperience`. This is separate from seller document `/pay/{document-token}` using `PublicDocument`, and from the seller-customer checkout `/checkout/{token}`.
 4. Existing subscription billing quote/invoice and independently verified activation live in Go `backend/internal/checkout/billing.go` and the control Postgres `pg13_platform_invoices`/subscription tables. Do not duplicate authority in Next.js or activate on browser redirect.
 5. System/platform receiving account configuration, NOT a buyer Store receiving account, is the only permitted source for SaaS subscription wallet methods.
@@ -41,7 +41,7 @@ Control database schema already has applied, checksum-ledgered migrations `0133`
 - Coupon admin is platform-only with MFA, limits/eligibility and audit; seller order coupons are different entities. Final redemption happens only after verified paid invoice.
 - Three distinct versioned HTTPS policies (Terms, Privacy, Refund) require explicit consent. Missing owner-approved legal text means no live purchase activation.
 - Unpaid/pending/failed/duplicate SMS evidence cannot activate an entitlement. Unknown request results must re-use idempotency keys.
-- `EKMIVO_SUBSCRIPTION_ORDER_PREVIEW=0` by default. Existing billing purchase path remains available until a subsequent phase passes gates.
+- `BRIOFOLD_SUBSCRIPTION_ORDER_PREVIEW=0` by default. Existing billing purchase path remains available until a subsequent phase passes gates.
 - Public locale URLs must remain canonical without visible `/bn` or `/en` prefixes. Preserve Hind Siliguri for Bengali and separately scoped landing/dashboard/admin CSS.
 
 ## Phase 0 acceptance checklist

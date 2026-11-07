@@ -5,7 +5,7 @@ import {useEffect,useRef,useState} from "react";
 import styles from "./browser-device-preferences.module.css";
 
 type InstallEvent=Event&{prompt:()=>Promise<void>;userChoice:Promise<{outcome:"accepted"|"dismissed"}>};
-const soundKey="ekmivo:device:notification-sound:v1";
+const soundKey="briofold:device:notification-sound:v1";
 
 export function BrowserDevicePreferences({bn}:{bn:boolean}){
  const t=(en:string,be:string)=>bn?be:en;
@@ -23,7 +23,7 @@ export function BrowserDevicePreferences({bn}:{bn:boolean}){
    setInstalled(window.matchMedia("(display-mode: standalone)").matches||("standalone" in navigator&&Boolean((navigator as Navigator&{standalone?:boolean}).standalone)));
   });
   if(window.isSecureContext&&"serviceWorker" in navigator){
-   void navigator.serviceWorker.register("/ekmivo-pwa-sw.js",{scope:"/"}).catch(()=>{
+   void navigator.serviceWorker.register("/briofold-pwa-sw.js",{scope:"/"}).catch(()=>{
     setInstallStatus(bn?"এই ব্রাউজারে ইনস্টল সাপোর্ট প্রস্তুত করা যায়নি।":"Installation support could not be prepared in this browser.");
    });
   }

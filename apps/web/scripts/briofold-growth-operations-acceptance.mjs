@@ -104,7 +104,7 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_growth_provider_opt_out(uuid,text)','EXECUTE') ok`)[0].ok,true,
     'signed inbound processing uses the restricted CONTROL projection role');
   }
-  ctx=await browser.newContext();await ctx.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:owner+':'+store,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+  ctx=await browser.newContext();await ctx.addCookies([{name:'briofold-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'briofold-default-workspace',value:owner+':'+store,url:origin,httpOnly:true,sameSite:'Lax'},{name:'briofold-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await ctx.newPage();page.setDefaultNavigationTimeout(90000);
   assert.equal((await page.goto(origin+'/notifications')).status(),200);
   await page.getByRole('region',{name:'Due CRM reminders'}).getByText('Fictional opted-in person',{exact:true}).waitFor();
@@ -153,12 +153,12 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   await page.getByText('Bookings confirmed internally').first().waitFor();
   const csvResponse=await ctx.request.get(origin+'/api/reports/growth-export');
   assert.equal(csvResponse.status(),200);
-  assert.match(csvResponse.headers()['content-disposition'],/attachment; filename=ekmivo-growth-metrics\.csv/);
+  assert.match(csvResponse.headers()['content-disposition'],/attachment; filename=briofold-growth-metrics\.csv/);
   const csv=await csvResponse.text();
   assert.match(csv,/campaigns,broadcast_planned,1/);
   assert.match(csv,/bookings,booking_requested,1/);
   assert.ok(!csv.includes('Fictional consultation room'),'aggregate-only CSV contains no resource identifiers or PII');
-  viewerCtx=await browser.newContext();await viewerCtx.addCookies([{name:'ekmivo-session',value:sessions.viewer,url:origin,httpOnly:true,sameSite:'Lax'},{name:'ekmivo-default-workspace',value:viewer+':'+store,url:origin,httpOnly:true,sameSite:'Lax'}]);
+  viewerCtx=await browser.newContext();await viewerCtx.addCookies([{name:'briofold-session',value:sessions.viewer,url:origin,httpOnly:true,sameSite:'Lax'},{name:'briofold-default-workspace',value:viewer+':'+store,url:origin,httpOnly:true,sameSite:'Lax'}]);
   const denied=await viewerCtx.request.post(origin+`/api/go/workspaces/${store}/growth?environment=live`,{headers:{Origin:origin},data:{action:'resource-create',operation_key:randomUUID(),body:{title:'Denied'}}});
   assert.equal(denied.status(),403);
   assert.equal((await viewerCtx.request.get(origin+'/api/reports/growth-export')).status(),403);
@@ -208,7 +208,7 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   await page.goto(origin+'/customers/broadcasts');
   await page.getByRole('button',{name:'Review consent evidence'}).click();
   await page.getByText('Channel proof missing:').first().waitFor();
-  let count=0;for(const lang of ['en','bn']){await ctx.addCookies([{name:'ekmivo-locale',value:lang,url:origin,sameSite:'Lax'}]);for(const theme of ['light','dark']){await ctx.addCookies([{name:'ekmivo-theme',value:theme,url:origin,sameSite:'Lax'}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});for(const [path,heading] of [['broadcasts',lang==='bn'?'ব্রডকাস্ট':'Broadcasts'],['campaigns/posts',lang==='bn'?'ক্যাম্পেইন পোস্ট':'Campaign posts'],['bookings',lang==='bn'?'বুকিং ও সময়সূচি':'Bookings & availability']]){await page.goto(origin+'/customers/'+path);await page.getByRole('heading',{name:heading,exact:true}).waitFor();assert.equal(await page.locator('html').getAttribute('data-theme'),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`growth overflow ${lang}/${theme}/${width}/${path}`);count++;}}}}
+  let count=0;for(const lang of ['en','bn']){await ctx.addCookies([{name:'briofold-locale',value:lang,url:origin,sameSite:'Lax'}]);for(const theme of ['light','dark']){await ctx.addCookies([{name:'briofold-theme',value:theme,url:origin,sameSite:'Lax'}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});for(const [path,heading] of [['broadcasts',lang==='bn'?'ব্রডকাস্ট':'Broadcasts'],['campaigns/posts',lang==='bn'?'ক্যাম্পেইন পোস্ট':'Campaign posts'],['bookings',lang==='bn'?'বুকিং ও সময়সূচি':'Bookings & availability']]){await page.goto(origin+'/customers/'+path);await page.getByRole('heading',{name:heading,exact:true}).waitFor();assert.equal(await page.locator('html').getAttribute('data-theme'),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`growth overflow ${lang}/${theme}/${width}/${path}`);count++;}}}}
   console.log('Phase10 growth operations responsive cases PASS:',count);
   console.log('Phase10 growth operations PASS: CONTROL tenant/realm/RBAC, idempotency, consent-safe no-send drafts, editorial plan, booking slot conflicts and review, operational aggregates, role-safe CSV export, real Go/Next/browser and viewer denial. No provider delivery claimed.');
  }finally{if(ctx)await ctx.close();if(viewerCtx)await viewerCtx.close();await db.end({timeout:3});}

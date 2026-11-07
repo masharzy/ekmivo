@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/masharzy/ekmivo/backend/internal/aicredits"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/aicredits"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"net/http"
 	"os"
 )
@@ -106,7 +106,7 @@ func (s *Service) HandleAITest(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

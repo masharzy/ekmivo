@@ -26,7 +26,7 @@ for(const action of ["purchase",`${topup}/reconcile`])test(`POST ${action} forwa
  assert.equal(response.status,201);assert.equal(f.calls.length,1);
  assert.equal(f.calls[0].url,`https://api.example/v1/workspaces/${workspace}/ai-credits/${action}`);
  assert.equal(f.calls[0].headers["Idempotency-Key"],"fixture-key-00000001");
- assert.equal(f.calls[0].headers.Cookie,"ekmivo-session=fixture-session");
+ assert.equal(f.calls[0].headers.Cookie,"briofold-session=fixture-session");
  assert.equal(f.calls[0].body,'{"amount_minor":1000}');
 });
 test("metered AI test has its own bounded authenticated POST route",async()=>{

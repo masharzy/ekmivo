@@ -3,12 +3,12 @@ import {createRequire} from 'node:module';
 import {readFile,writeFile} from 'node:fs/promises';
 const require=createRequire(new URL('../../apps/web/package.json',import.meta.url)),postgres=require('postgres');
 const [input,output]=process.argv.slice(2);
-if(!input||!output||!process.env.EKMIVO_LOAD_OBSERVER_DATABASE_URL)throw Error('Observed load report, new output and isolated sandbox observer URL required');
+if(!input||!output||!process.env.BRIOFOLD_LOAD_OBSERVER_DATABASE_URL)throw Error('Observed load report, new output and isolated sandbox observer URL required');
 const report=JSON.parse(await readFile(input,'utf8'));
 if(report.mode!=='executed-synthetic-sandbox'||report.simulation!==true||!Array.isArray(report.samples)||report.samples.length===0||report.samples.length>60000)throw Error('Actual synthetic sandbox load report required');
 const ids=[...new Set(report.samples.map(s=>s.observation_id).filter(Boolean))];
 if(ids.some(id=>!/^[0-9a-f-]{36}$/.test(id)))throw Error('Invalid observation reference');
-const db=postgres(process.env.EKMIVO_LOAD_OBSERVER_DATABASE_URL,{max:1,prepare:false,connect_timeout:10,onnotice:()=>{}});
+const db=postgres(process.env.BRIOFOLD_LOAD_OBSERVER_DATABASE_URL,{max:1,prepare:false,connect_timeout:10,onnotice:()=>{}});
 let rows=[];
 try{
  rows=await db.begin('read only',async tx=>{

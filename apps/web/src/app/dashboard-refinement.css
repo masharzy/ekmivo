@@ -1,4 +1,4 @@
-/* Ekmivo merchant workspace. Tokens are shared with docs/design/tokens.css. */
+/* Briofold merchant workspace. Tokens are shared with docs/design/tokens.css. */
 .ds-app[data-service="payments"]{
  --color-canvas:var(--dashboard-canvas);--color-surface:var(--dashboard-surface);
  --color-surface-raised:var(--dashboard-raised);--color-surface-subtle:var(--dashboard-subtle);

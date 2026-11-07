@@ -4,7 +4,7 @@ Implemented by `backend/internal/checkout/mobile_devices.go`, `mobile_inbox.go`,
 
 ## Scope and authentication
 
-Mobile POSTs use the existing P-256 signed transport and bounded body. Headers: `X-Ekmivo-Device-ID`, `X-Ekmivo-Event-ID`, `X-Ekmivo-Timestamp`, `X-Ekmivo-Signature`. The signature covers method, exact route, timestamp, event ID and raw body using the existing canonicalizer. Server loads device workspace/environment/key and verifies current authorization; caller-supplied scope never routes messages. Web routes require the existing session, active workspace membership/settings permission and explicit `environment=live|sandbox`; mutating browser requests pass existing origin/proxy protection.
+Mobile POSTs use the existing P-256 signed transport and bounded body. Headers: `X-Briofold-Device-ID`, `X-Briofold-Event-ID`, `X-Briofold-Timestamp`, `X-Briofold-Signature`. The signature covers method, exact route, timestamp, event ID and raw body using the existing canonicalizer. Server loads device workspace/environment/key and verifies current authorization; caller-supplied scope never routes messages. Web routes require the existing session, active workspace membership/settings permission and explicit `environment=live|sandbox`; mutating browser requests pass existing origin/proxy protection.
 
 | Route | Behavior |
 |---|---|

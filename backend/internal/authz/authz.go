@@ -1,4 +1,4 @@
-// Package authz enforces Ekmivo's PostgreSQL opaque sessions, workspace
+// Package authz enforces Briofold's PostgreSQL opaque sessions, workspace
 // membership/capabilities, platform MFA and transaction-local RLS context.
 package authz
 

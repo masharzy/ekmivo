@@ -12,5 +12,5 @@ dependencyResolutionManagement {
   mavenCentral()
  }
 }
-rootProject.name = "EkmivoAndroid"
+rootProject.name = "BriofoldAndroid"
 include(":app")

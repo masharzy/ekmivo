@@ -2,9 +2,9 @@
 import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import {createRequire} from 'node:module';
 const require=createRequire(path.resolve('apps/web/package.json')),postgres=require('postgres');
 const report={at:new Date().toISOString(),phase:process.argv.includes('--after')?'after':'before',targets:{}};
-const test=new URL(fs.readFileSync(path.join(os.tmpdir(),'ekmivo-plans-neon-url.txt'),'utf8'));
+const test=new URL(fs.readFileSync(path.join(os.tmpdir(),'briofold-plans-neon-url.txt'),'utf8'));
 for(const realm of ['control','sandbox','live']){
- const u=new URL(fs.readFileSync(path.join(os.tmpdir(),`ekmivo-plans-production-${realm}-url.txt`),'utf8'));
+ const u=new URL(fs.readFileSync(path.join(os.tmpdir(),`briofold-plans-production-${realm}-url.txt`),'utf8'));
  if(u.hostname===test.hostname.replace('-pooler.','.')||u.hostname!==process.env.PLAN_ROLLOUT_PRODUCTION_HOST||u.hostname.includes('-pooler.'))throw Error('Explicit distinct direct production host required');
  const sql=postgres(u.href,{ssl:'require',prepare:false,max:1,onnotice:()=>{}});
  try{

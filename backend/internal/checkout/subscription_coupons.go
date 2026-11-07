@@ -44,7 +44,7 @@ func (s *Service) HandleSubscriptionCouponQuote(w http.ResponseWriter, r *http.R
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return
@@ -104,7 +104,7 @@ func (s *Service) HandleSubscriptionCouponsAdmin(w http.ResponseWriter, r *http.
 		fail(w, 503, "COUPON_UNAVAILABLE")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

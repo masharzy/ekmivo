@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 )
 
 func (s *Service) metaConfig(ctx context.Context) (string, string, string, string, error) {
@@ -92,7 +92,7 @@ func (s *Service) HandleInboxOAuthBegin(w http.ResponseWriter, r *http.Request) 
 		fail(w, 503, "CHANNEL_NOT_CONFIGURED")
 		return
 	}
-	cookie, _ := r.Cookie("ekmivo-session")
+	cookie, _ := r.Cookie("briofold-session")
 	actor, err := s.Auth.Authenticate(r.Context(), cookie.Value)
 	if err != nil {
 		authError(w, err)
@@ -140,7 +140,7 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

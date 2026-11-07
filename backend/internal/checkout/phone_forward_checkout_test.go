@@ -1,7 +1,7 @@
 package checkout
 import (
  "testing"
- "github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+ "github.com/masharzy/briofold/backend/internal/deviceevidence"
 )
 func TestLiveMethodsPhysicalForwarderRequiresApprovedProviderParser(t *testing.T){
  valid:=deviceevidence.ParserRule{ID:"v1",Source:"bKash",Method:"bkash",Approved:true,Pattern:"^(?P<payer>.+) (?P<receiving>.+) (?P<amount>.+) (?P<time>.+) (?P<reference>.+)$"}

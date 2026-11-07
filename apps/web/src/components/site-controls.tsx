@@ -6,11 +6,11 @@ type Theme="system"|"light"|"dark";
 function persistThemePreference(next:Theme){
  if(next==="system")document.documentElement.removeAttribute("data-theme");
  else document.documentElement.dataset.theme=next;
- document.cookie=`ekmivo-theme=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
- try{localStorage.setItem("ekmivo-theme-preference",next)}catch{/* Cookie remains authoritative. */}
+ document.cookie=`briofold-theme=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+ try{localStorage.setItem("briofold-theme-preference",next)}catch{/* Cookie remains authoritative. */}
 }
 function persistLocalePreference(next:"bn"|"en"){
- document.cookie=`ekmivo-locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+ document.cookie=`briofold-locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
 }
 const landingLinks=[
  {href:"/",en:"Home",bn:"হোম"},
@@ -36,12 +36,12 @@ export function SiteControls({locale,initialTheme,compactThemeToggle=false,marke
  },[menuOpen]);
  useEffect(()=>{
   const onStorage=(event:StorageEvent)=>{
-   if(event.key!=="ekmivo-theme-preference")return;
+   if(event.key!=="briofold-theme-preference")return;
    const next=event.newValue==="light"||event.newValue==="dark"?event.newValue:"system";
    setTheme(next);
    if(next==="system")document.documentElement.removeAttribute("data-theme");
    else document.documentElement.dataset.theme=next;
-   document.cookie=`ekmivo-theme=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+   document.cookie=`briofold-theme=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
   };
   window.addEventListener("storage",onStorage);
   return ()=>window.removeEventListener("storage",onStorage);
@@ -64,7 +64,7 @@ export function SiteControls({locale,initialTheme,compactThemeToggle=false,marke
  function selectLocale(next:"bn"|"en"){
   if(next===locale)return;
   const href=(pathname.replace(/^\/(bn|en)(?=\/|$)/,"")||"/")+window.location.search+window.location.hash;
-  const guard=new CustomEvent("ekmivo:guarded-navigation",{cancelable:true,detail:{href}});
+  const guard=new CustomEvent("briofold:guarded-navigation",{cancelable:true,detail:{href}});
   if(!window.dispatchEvent(guard))return;
   persistLocalePreference(next);
   // A reload is intentional: the server chooses the new locale from the cookie

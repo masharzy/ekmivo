@@ -2,7 +2,7 @@ package checkout
 
 import (
 	"encoding/json"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"net/http"
 	"net/mail"
 	"os"
@@ -15,7 +15,7 @@ func (s *Service) HandleWorkspaceTools(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "WORKSPACE_UNAVAILABLE")
 		return
 	}
-	cookie, e := r.Cookie("ekmivo-session")
+	cookie, e := r.Cookie("briofold-session")
 	if e != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

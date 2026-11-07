@@ -2,7 +2,7 @@
 // Connection values remain in temporary operator files, never in the report.
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {createRequire} from 'node:module';import assert from 'node:assert/strict';
 const require=createRequire(path.resolve('apps/web/package.json')),postgres=require('postgres');
-const pools={};for(const realm of ['sandbox','live']){const u=new URL(fs.readFileSync(path.join(os.tmpdir(),`ekmivo-plans-production-${realm}-url.txt`),'utf8'));if(u.hostname!==process.env.PLAN_ROLLOUT_PRODUCTION_HOST)throw Error('Explicit production host required');pools[realm]=postgres(u.href,{ssl:'require',prepare:false,max:1,onnotice:()=>{}})}
+const pools={};for(const realm of ['sandbox','live']){const u=new URL(fs.readFileSync(path.join(os.tmpdir(),`briofold-plans-production-${realm}-url.txt`),'utf8'));if(u.hostname!==process.env.PLAN_ROLLOUT_PRODUCTION_HOST)throw Error('Explicit production host required');pools[realm]=postgres(u.href,{ssl:'require',prepare:false,max:1,onnotice:()=>{}})}
 const report={started:new Date().toISOString(),samples:[]};
 try{
  for(let i=0;i<5;i++){
@@ -13,7 +13,7 @@ try{
    const runs=await sql`SELECT kind,count(*)::int AS completed,max(finalized_at) AS latest FROM river_job WHERE state='completed' AND kind IN ('receipt_pipeline','private_document_export','payment_retention_billing') GROUP BY kind ORDER BY kind`;
    sample.realms[realm]={...health,beats,runs};assert(health.health.critical_ready&&health.health.export_ready&&health.health.maintenance_ready,realm+' stale/unhealthy worker');
   }
-  const response=await fetch('https://ekmivo-go-api.onrender.com/readyz');sample.httpStatus=response.status;sample.readiness=await response.json();assert.equal(response.status,200);
+  const response=await fetch('https://api.briofold.tech/readyz');sample.httpStatus=response.status;sample.readiness=await response.json();assert.equal(response.status,200);
   report.samples.push(sample);console.log('PASS sample',i+1,sample.at,'both realms and HTTP readiness');
   if(i<4)await new Promise(resolve=>setTimeout(resolve,35000));
  }

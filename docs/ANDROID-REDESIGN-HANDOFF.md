@@ -1,4 +1,4 @@
-# Ekmivo Native Kotlin Android — সম্পূর্ণ ডিজাইন ও ডেভেলপমেন্ট হ্যান্ডঅফ
+# Briofold Native Kotlin Android — সম্পূর্ণ ডিজাইন ও ডেভেলপমেন্ট হ্যান্ডঅফ
 
 সংস্করণ: 2.0 · আপডেট: ১৯ অক্টোবর ২০২৬ · নিচের checkpoint বর্তমান implementation-এর authoritative অবস্থা; মূল design extraction-এর পুরোনো status বাক্যগুলো ঐতিহাসিক।
 
@@ -30,11 +30,11 @@ Normalized channel connections/threads/messages/read cursors, tenant+realm scope
 
 Use the EXISTING financial migration operator with `MOBILE_PREVIEW_ALLOW_MIGRATION=true`, explicit `MOBILE_PREVIEW_CONTROL_MIGRATION_FILE` (0114), `MOBILE_PREVIEW_FINANCIAL_MIGRATION_FILE` (0115), `MOBILE_FOUNDATION_ALLOW_MIGRATION=true`, `MOBILE_FOUNDATION_MIGRATION_DIRECTORY`, and the existing three `PG04_*_MIGRATION_DATABASE_URL` values. Migration owner/independent-realm checks remain. No automatic API-startup migrations; deploy migrations before new runtime/client.
 
-Server provider configuration: inspect `inbox_oauth.go`/`inbox_provider.go` for META variables, approved scopes, redirect/webhook URLs and API version. Enable `INBOX_SENDER_ENABLED=true` only on the configured sender runtime. Push optionally requires `INBOX_FCM_CREDENTIALS_FILE` pointing to server-only service-account JSON. Android public Firebase identifiers use `EKMIVO_FIREBASE_APPLICATION_ID`, `EKMIVO_FIREBASE_API_KEY`, `EKMIVO_FIREBASE_PROJECT_ID`, `EKMIVO_FIREBASE_SENDER_ID`; without configuration no mock token/notification is generated.
+Server provider configuration: inspect `inbox_oauth.go`/`inbox_provider.go` for META variables, approved scopes, redirect/webhook URLs and API version. Enable `INBOX_SENDER_ENABLED=true` only on the configured sender runtime. Push optionally requires `INBOX_FCM_CREDENTIALS_FILE` pointing to server-only service-account JSON. Android public Firebase identifiers use `BRIOFOLD_FIREBASE_APPLICATION_ID`, `BRIOFOLD_FIREBASE_API_KEY`, `BRIOFOLD_FIREBASE_PROJECT_ID`, `BRIOFOLD_FIREBASE_SENDER_ID`; without configuration no mock token/notification is generated.
 
 ## Verification
 
-Local Go all-package tests passed. TypeScript passed. Neon isolated branch `br-cold-paper-b3pks3sr`, database `ekmivo`: rolled-back migrations and functional tests passed product switching, AI-only pairing, both-off access, cross-realm/tenant denial, incoming deduplication, outgoing idempotency conflicts, handover, durable reads, early provider seen event replay, 24h denial, revocation and push-job fanout. No production migration or rollout performed. Combined remote CI results must be appended below after completion.
+Local Go all-package tests passed. TypeScript passed. Neon isolated branch `br-cold-paper-b3pks3sr`, database `briofold`: rolled-back migrations and functional tests passed product switching, AI-only pairing, both-off access, cross-realm/tenant denial, incoming deduplication, outgoing idempotency conflicts, handover, durable reads, early provider seen event replay, 24h denial, revocation and push-job fanout. No production migration or rollout performed. Combined remote CI results must be appended below after completion.
 
 ## Next agent / remaining gates
 
@@ -58,7 +58,7 @@ Implemented by `backend/internal/checkout/mobile_devices.go`, `mobile_inbox.go`,
 
 ## Scope and authentication
 
-Mobile POSTs use the existing P-256 signed transport and bounded body. Headers: `X-Ekmivo-Device-ID`, `X-Ekmivo-Event-ID`, `X-Ekmivo-Timestamp`, `X-Ekmivo-Signature`. The signature covers method, exact route, timestamp, event ID and raw body using the existing canonicalizer. Server loads device workspace/environment/key and verifies current authorization; caller-supplied scope never routes messages. Web routes require the existing session, active workspace membership/settings permission and explicit `environment=live|sandbox`; mutating browser requests pass existing origin/proxy protection.
+Mobile POSTs use the existing P-256 signed transport and bounded body. Headers: `X-Briofold-Device-ID`, `X-Briofold-Event-ID`, `X-Briofold-Timestamp`, `X-Briofold-Signature`. The signature covers method, exact route, timestamp, event ID and raw body using the existing canonicalizer. Server loads device workspace/environment/key and verifies current authorization; caller-supplied scope never routes messages. Web routes require the existing session, active workspace membership/settings permission and explicit `environment=live|sandbox`; mutating browser requests pass existing origin/proxy protection.
 
 | Route | Behavior |
 |---|---|
@@ -193,7 +193,7 @@ Channels: WA #25D366, IG #C13584, Messenger #0A7CFF; white badge glyph। Image 
 
 | State | Screen/content | Action / next / special rule |
 |---|---|---|
-| welcome | Ekmivo logo; “আপনার ওয়ার্কস্পেসের সঙ্গে এই ফোন সংযুক্ত করুন”; QR instructions three rows | QR CTA → camera permission/scan; manual CTA → code। Product unknown: SMS/Payment explanation নয় |
+| welcome | Briofold logo; “আপনার ওয়ার্কস্পেসের সঙ্গে এই ফোন সংযুক্ত করুন”; QR instructions three rows | QR CTA → camera permission/scan; manual CTA → code। Product unknown: SMS/Payment explanation নয় |
 | cam | Generic ফোন যুক্ত করুন header; camera icon, “ক্যামেরা চালু করুন”; no stored-photo copy | Request camera on action; granted → scan; code alternative usable |
 | scan | Black camera area radius20, margin10/16; frame150, corner26 stroke2.5; torch top-right | Decode once → load; avoid duplicate requests; no guessed workspace name |
 | code | “পেয়ারিং কোড লিখুন”; eight26×38 radius8 cells, gap6, separator after4; focus border | Accept contract-valid raw code; verify → same load/confirmation; QR back action |
@@ -212,7 +212,7 @@ Channels: WA #25D366, IG #C13584, Messenger #0A7CFF; white badge glyph। Image 
 | doneA | “রহিম ফ্যাশনের কাস্টমার মেসেজ এখন থেকে এই ফোনে নোটিফিকেশন হয়ে আসবে।” fixture | Real workspace name; begin → Inbox |
 | off | Error chip/icon/title “এই ফোন ড্যাশবোর্ড থেকে বিচ্ছিন্ন” | One reconnect CTA; do not wipe queued evidence or create duplicate pairing |
 
-Confirmation sheet: surface s2, radius24 top, padding18/18/22, top border1; workspace tile34 in sample brand colour #D12053; store name14, subtitle11; product rows padding9/12 icon17 label13 green enabled pill। SMS disclosure exact text in A: “SMS ফরওয়ার্ডিং: পেমেন্টের SMS পাঠাতে এই ফোনের SMS অনুমতি লাগবে। Ekmivo এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।” Production pipeline must uphold that privacy promise; audit collector before retaining copy।
+Confirmation sheet: surface s2, radius24 top, padding18/18/22, top border1; workspace tile34 in sample brand colour #D12053; store name14, subtitle11; product rows padding9/12 icon17 label13 green enabled pill। SMS disclosure exact text in A: “SMS ফরওয়ার্ডিং: পেমেন্টের SMS পাঠাতে এই ফোনের SMS অনুমতি লাগবে। Briofold এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।” Production pipeline must uphold that privacy promise; audit collector before retaining copy।
 
 Permission denied/permanently denied is not a successful step. Same screen structure রাখবে, existing app recovery/settings affordance reuse করবে; exact denial copy/layout reference-এ নেই বলে deviation record করবে। Returning to app, activity recreation, rotation, process restart-এ permission/pairing state বাস্তব status থেকে পুনর্গঠন করবে। No automatic permission prompt before user consent/product lookup।
 
@@ -346,7 +346,7 @@ Secrets: not included
 
 ## 11. Copy-and-send instruction for the next agent
 
-এই MD পুরো পড়ো। Appendix A/B/C থেকে reference extract করো, latest override ও conflict decisions মেনে চলবে। আমার existing native Kotlin Ekmivo app-এ Phase0 audit দিয়ে শুরু করে Phase1–7 ক্রমে সম্পূর্ণ implement করবে। প্রতি phase শেষে checkpoint/coverage/deviations update করবে এবং actual checks ছাড়া verified বলবে না। Generic redesign, demo WebView, fake data/timers দিয়ে production complete নয়। Backend gap থাকলে স্পষ্ট লিখে implementable কাজ চালাও। Limit শেষ হওয়ার আগে current phase, exact files, verified results এবং next action persist করবে। শুধু এই MD-তে থাকা screenshot count বা demo state দেখে repository already complete ধরে নিও না।
+এই MD পুরো পড়ো। Appendix A/B/C থেকে reference extract করো, latest override ও conflict decisions মেনে চলবে। আমার existing native Kotlin Briofold app-এ Phase0 audit দিয়ে শুরু করে Phase1–7 ক্রমে সম্পূর্ণ implement করবে। প্রতি phase শেষে checkpoint/coverage/deviations update করবে এবং actual checks ছাড়া verified বলবে না। Generic redesign, demo WebView, fake data/timers দিয়ে production complete নয়। Backend gap থাকলে স্পষ্ট লিখে implementable কাজ চালাও। Limit শেষ হওয়ার আগে current phase, exact files, verified results এবং next action persist করবে। শুধু এই MD-তে থাকা screenshot count বা demo state দেখে repository already complete ধরে নিও না।
 
 ## 12. সম্পূর্ণ reference state index
 
@@ -410,20 +410,20 @@ Secrets: not included
 
 | Original file | UTF-8 bytes | SHA-256 |
 |---|---|---|
-| `ekmivo-app-design.html` | 155951 | `f48b4942199621a6cadbd4857577f02ca2c9c9b67d78fd3bf560d6515c55b684` |
-| `ekmivo-inbox.html` | 92900 | `70f389cd111b69557c3db7a936cc5c1c32a6305684fe815b1d707435b60d33f6` |
-| `ekmivo-design-spec.md` | 132646 | `ec3ebeb1c9cd5332729d4edda790337e7d59996f617f28802998394d0bc8e8d9` |
+| `briofold-app-design.html` | 155951 | `f48b4942199621a6cadbd4857577f02ca2c9c9b67d78fd3bf560d6515c55b684` |
+| `briofold-inbox.html` | 92900 | `70f389cd111b69557c3db7a936cc5c1c32a6305684fe815b1d707435b60d33f6` |
+| `briofold-design-spec.md` | 132646 | `ec3ebeb1c9cd5332729d4edda790337e7d59996f617f28802998394d0bc8e8d9` |
 
-## Appendix A — ekmivo-app-design.html (হুবহু)
+## Appendix A — briofold-app-design.html (হুবহু)
 
-<!-- BEGIN SOURCE: ekmivo-app-design.html -->
+<!-- BEGIN SOURCE: briofold-app-design.html -->
 `````html
 <!DOCTYPE html>
 <html lang="bn">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ekmivo Android app: design reference</title>
+<title>Briofold Android app: design reference</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -556,7 +556,7 @@ button:focus-visible{outline:2px solid #3DDC97;outline-offset:2px}
 <symbol id="wal" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14h2"/></symbol>
 </svg>
 
-<h1>Ekmivo Android app</h1>
+<h1>Briofold Android app</h1>
 <p class="lead">ডিজাইন রেফারেন্স</p>
 <div class="row2" id="modes"></div>
 <div id="cap"></div>
@@ -577,8 +577,8 @@ const W=(k,ic,t,p,tags,btn,lnk)=>`<div class="dots">${[1,2,3,4].map(i=>`<b class
 <div class="ctr"><div class="ic">${I(ic)}</div><h3>${t}</h3><p>${p}</p><div style="display:flex;gap:8px;margin-top:18px">${tags}</div></div>
 <div class="bot"><div class="btn">${btn}</div><div class="lnk">${lnk}</div></div>`;
 const S={
-welcome:`<div class="top"><div class="logo">e.</div><div class="shop">Ekmivo</div></div>
-<div class="ctr"><div class="ic">${I('phn')}</div><h3>ফোনটি Ekmivo-র সাথে যুক্ত করুন</h3><p>bKash ও Nagad-এর পেমেন্ট SMS নিজে থেকে যাচাই হবে। আপনাকে কিছু মেলাতে হবে না।</p>
+welcome:`<div class="top"><div class="logo">e.</div><div class="shop">Briofold</div></div>
+<div class="ctr"><div class="ic">${I('phn')}</div><h3>ফোনটি Briofold-র সাথে যুক্ত করুন</h3><p>bKash ও Nagad-এর পেমেন্ট SMS নিজে থেকে যাচাই হবে। আপনাকে কিছু মেলাতে হবে না।</p>
 <div class="card" style="margin:20px 0 0;width:100%"><div class="stp"><span class="n">১</span>ড্যাশবোর্ডে ‘ফোন যুক্ত করুন’ খুলুন</div><div class="stp"><span class="n">২</span>এই ফোনে QR স্ক্যান করুন</div><div class="stp"><span class="n">৩</span>প্রয়োজনীয় অনুমতিগুলো দিন</div></div></div>
 <div class="bot"><div class="btn">QR স্ক্যান করুন</div><div class="lnk">কোড দিয়ে যুক্ত করুন</div></div>`,
 cam:`${hdrG}<div class="scan"><div class="ic" style="margin:0">${I('cam')}</div><div style="text-align:center;padding:0 22px"><h3 style="margin-bottom:6px">ক্যামেরা চালু করুন</h3><p>QR কোড স্ক্যান করতে ক্যামেরা লাগবে। কোনো ছবি তোলা বা রাখা হবে না।</p></div></div>
@@ -587,13 +587,13 @@ scan:`${hdrG}<div class="scan"><span class="torch">টর্চ</span>${frame}<d
 <div class="bot"><div class="lnk">কোড দিয়ে যুক্ত করুন</div></div>`,
 confirm:`${hdrG}<div class="scan dim">${frame}</div>
 <div class="sheet"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="logo" style="background:#D12053;color:#fff;font-size:13px">রি</div><div><div class="shop">রহিম ফ্যাশন</div><div class="sub">স্ক্যান সফল হয়েছে</div></div></div>
-<p style="margin-bottom:14px">Ekmivo এই ফোনের bKash ও Nagad পেমেন্ট SMS পড়ে <b style="font-weight:500;color:var(--tx)">রহিম ফ্যাশন</b>-এ পাঠাবে। অন্য কোনো SMS পড়া হবে না।</p>
+<p style="margin-bottom:14px">Briofold এই ফোনের bKash ও Nagad পেমেন্ট SMS পড়ে <b style="font-weight:500;color:var(--tx)">রহিম ফ্যাশন</b>-এ পাঠাবে। অন্য কোনো SMS পড়া হবে না।</p>
 <div class="btn">নিশ্চিত করে যুক্ত করুন</div><div class="lnk" style="padding:10px 0 0">বাতিল</div></div>`,
 conn:`${hdrG}<div class="ctr"><div class="ic"><div class="spin"></div></div><h3>যুক্ত হচ্ছে…</h3><p>রহিম ফ্যাশন-এর সাথে নিরাপদ সংযোগ তৈরি হচ্ছে।</p></div>`,
 p1:W(1,'msg','পেমেন্ট SMS পড়তে দিন','bKash ও Nagad-এর পেমেন্ট SMS ধরার জন্য এই অনুমতি দরকার। অন্য কোনো SMS পাঠানো হবে না।',tg('SMS',1)+tg('নোটিফিকেশন',1)+tg('ব্যাটারি',1),'অনুমতি দিন','কেন দরকার?'),
 p2:W(2,'bel','নোটিফিকেশন চালু করুন','ফরওয়ার্ডিং চালু আছে কি না, আর কোনো SMS ব্যর্থ হলে সেটা জানাতে নোটিফিকেশন দরকার।',tg('SMS',2)+tg('নোটিফিকেশন',1)+tg('ব্যাটারি',1),'অনুমতি দিন','কেন দরকার?'),
-p3:W(3,'bat','ব্যাকগ্রাউন্ডে চালু রাখুন','স্ক্রিন বন্ধ থাকলেও যেন কোনো পেমেন্ট SMS মিস না হয়, তাই ব্যাটারি সীমাবদ্ধতা থেকে Ekmivo-কে ছাড় দিন।',tg('SMS',2)+tg('নোটিফিকেশন',2)+tg('ব্যাটারি',1),'অনুমতি দিন','কেন দরকার?'),
-p4:W(4,'phn','স্লিপিং অ্যাপ তালিকা থেকে সরান','Samsung ফোনের ব্যাটারি সেটিংসে Ekmivo-কে ‘স্লিপিং অ্যাপ’ ও ‘ডিপ স্লিপিং অ্যাপ’ তালিকা থেকে সরিয়ে রাখুন। নইলে স্ক্রিন বন্ধ থাকলে SMS থেমে যেতে পারে।',tg('SMS',2)+tg('নোটিফিকেশন',2)+tg('ব্যাটারি',2),'সেটিংস খুলুন','করেছি, এগিয়ে যান'),
+p3:W(3,'bat','ব্যাকগ্রাউন্ডে চালু রাখুন','স্ক্রিন বন্ধ থাকলেও যেন কোনো পেমেন্ট SMS মিস না হয়, তাই ব্যাটারি সীমাবদ্ধতা থেকে Briofold-কে ছাড় দিন।',tg('SMS',2)+tg('নোটিফিকেশন',2)+tg('ব্যাটারি',1),'অনুমতি দিন','কেন দরকার?'),
+p4:W(4,'phn','স্লিপিং অ্যাপ তালিকা থেকে সরান','Samsung ফোনের ব্যাটারি সেটিংসে Briofold-কে ‘স্লিপিং অ্যাপ’ ও ‘ডিপ স্লিপিং অ্যাপ’ তালিকা থেকে সরিয়ে রাখুন। নইলে স্ক্রিন বন্ধ থাকলে SMS থেমে যেতে পারে।',tg('SMS',2)+tg('নোটিফিকেশন',2)+tg('ব্যাটারি',2),'সেটিংস খুলুন','করেছি, এগিয়ে যান'),
 done:`<div class="top"><div class="logo">e.</div><div class="shop">রহিম ফ্যাশন</div></div><div class="ctr"><div class="ic" style="color:var(--ok)">${I('chk')}</div><h3>সব ঠিক আছে</h3><p>রহিম ফ্যাশনের পেমেন্ট SMS এখন থেকে নিজে থেকে যাচাই হবে।</p></div>
 <div class="bot"><div class="btn">শুরু করুন</div></div>`,
 home:`${hdr}<div class="chip"><i class="dot"></i>লাইভ</div></div>
@@ -607,7 +607,7 @@ ${nav(0)}`,
 code:`${hdrG.replace('ড্যাশবোর্ডের QR স্ক্যান করুন','কোড দিয়ে')}<div class="ctr" style="justify-content:flex-start;padding-top:36px"><h3>পেয়ারিং কোড লিখুন</h3><p>ড্যাশবোর্ডের ‘ফোন যুক্ত করুন’ পেজে কোডটি দেখাবে।</p>
 <div class="cells"><span class="cell">K</span><span class="cell">7</span><span class="cell">M</span><span class="cell">2</span><span class="hint">-</span><span class="cell">9</span><span class="cell">Q</span><span class="cell on"></span><span class="cell"></span></div></div>
 <div class="bot"><div class="btn">কোড যাচাই করুন</div><div class="lnk">QR স্ক্যান করুন</div></div>`,
-off:`<div class="top"><div class="logo">e.</div><div class="shop">Ekmivo</div><div class="chip" style="color:var(--er)">বিচ্ছিন্ন</div></div>
+off:`<div class="top"><div class="logo">e.</div><div class="shop">Briofold</div><div class="chip" style="color:var(--er)">বিচ্ছিন্ন</div></div>
 <div class="ctr"><div class="ic" style="color:var(--er)">${I('off')}</div><h3>এই ফোন ড্যাশবোর্ড থেকে বিচ্ছিন্ন</h3><p>ওয়েব থেকে ডিভাইসটি সরানো হয়েছে। আবার যুক্ত করলেই SMS পাঠানো শুরু হবে।</p></div>
 <div class="bot"><div class="btn">আবার যুক্ত করুন</div><div class="lnk">২টি অপ্রেরিত SMS দেখুন</div></div>`,
 set:`<div class="top"><div class="logo">e.</div><div class="shop" style="font-size:17px">সেটিংস</div></div>
@@ -656,11 +656,11 @@ const badge=t=>{const m={wa:['#25D366','wa'],ig:['#C13584','ig'],ms:['#0A7CFF','
 const cv=(ini,name,msg,time,ch,un)=>`<div class="cv"><div class="av">${ini}${badge(ch)}</div><div class="cm"><b>${name}</b><span>${msg}</span></div><div class="cr"><span>${time}</span>${un?`<span class="un">${un}</span>`:''}</div></div>`;
 const bub=(side,who,t)=>{const l=side=='l';return `<div style="align-self:${l?'flex-start':'flex-end'};display:flex;flex-direction:column;align-items:${l?'flex-start':'flex-end'};max-width:78%">${who?`<div class="who">${who}</div>`:''}<div class="bub ${l?'bl':side=='a'?'br':'bs'}">${t}</div></div>`};
 const prodRow=(ic,n)=>`<div class="pr">${I(ic)}${n}<span class="tag t-ok" style="margin-left:auto">চালু</span></div>`;
-const smsNeed=`<div class="pr" style="background:var(--s1);border-radius:12px;margin-bottom:10px;align-items:flex-start;border:0">${I('msg')}<span style="line-height:1.6;font-size:12.5px">SMS ফরওয়ার্ডিং: পেমেন্টের SMS পাঠাতে এই ফোনের SMS অনুমতি লাগবে। Ekmivo এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।</span></div>`;
+const smsNeed=`<div class="pr" style="background:var(--s1);border-radius:12px;margin-bottom:10px;align-items:flex-start;border:0">${I('msg')}<span style="line-height:1.6;font-size:12.5px">SMS ফরওয়ার্ডিং: পেমেন্টের SMS পাঠাতে এই ফোনের SMS অনুমতি লাগবে। Briofold এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।</span></div>`;
 const conf=(prods,extra,para)=>`${hdrG}<div class="scan dim">${frame}</div><div class="sheet"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="logo" style="background:#D12053;color:#fff;font-size:13px">র</div><div><div class="shop">রহিম ফ্যাশন</div><div class="sub">ওয়ার্কস্পেস</div></div></div><div class="card" style="margin:0 0 10px">${prods}</div>${extra}${para?`<p style="margin-bottom:14px">${para}</p>`:''}<div class="btn">সংযুক্ত করুন</div><div class="lnk" style="padding:10px 0 0">আবার স্ক্যান করুন</div></div>`;
 const sr=(s,t,c,l)=>`<div class="row"><div class="pv" style="background:var(--s2);color:var(--mu)">${I('msg')}</div><div class="rm"><b>${s}</b><span>${t}</span></div><span class="tag ${c}">${l}</span></div>`;
 
-S.welcome=`<div class="top"><div class="logo">e.</div><div class="shop">Ekmivo</div></div>
+S.welcome=`<div class="top"><div class="logo">e.</div><div class="shop">Briofold</div></div>
 <div class="ctr"><div class="ic">${I('phn')}</div><h3>আপনার ওয়ার্কস্পেসের সঙ্গে এই ফোন সংযুক্ত করুন</h3><p>ড্যাশবোর্ডের QR কোড স্ক্যান করলেই ফোন যুক্ত হয়ে যাবে।</p>
 <div class="card" style="margin:20px 0 0;width:100%"><div class="stp"><span class="n">১</span>ওয়েবের মেনুতে Devices খুলুন</div><div class="stp"><span class="n">২</span>এই ফোনে QR স্ক্যান করুন</div><div class="stp"><span class="n">৩</span>দরকারি অনুমতিগুলো দিন</div></div></div>
 <div class="bot"><div class="btn">QR স্ক্যান করুন</div><div class="lnk">কোড দিয়ে যুক্ত করুন</div></div>`;
@@ -670,7 +670,7 @@ S.confB=conf(prodRow('bot','AI Bot')+prodRow('wal','Payment'),smsNeed,'');
 S.confP=conf(prodRow('wal','Payment'),smsNeed,'');
 S.confA=conf(prodRow('bot','AI Bot'),'','কাস্টমার রিপ্লাই দিলে এই ফোনে নোটিফিকেশন আসবে।');
 S.fail=`${hdrG}<div class="ctr"><div class="ic" style="color:var(--er)">${I('alt')}</div><h3>ওয়ার্কস্পেস লোড করা যায়নি</h3><p>কারণ: ইন্টারনেট সংযোগ নেই। সংযোগ ঠিক হলে আবার চেষ্টা করুন।</p></div><div class="bot"><div class="btn">আবার চেষ্টা</div><div class="lnk">আবার স্ক্যান করুন</div></div>`;
-S.p1=S.p1.replace('bKash ও Nagad-এর পেমেন্ট SMS ধরার জন্য এই অনুমতি দরকার। অন্য কোনো SMS পাঠানো হবে না।','এই ফোনে আসা পেমেন্টের SMS চিনে Ekmivo-তে পাঠাতে এই অনুমতি দরকার। বাকি SMS পাঠানো হবে না।');
+S.p1=S.p1.replace('bKash ও Nagad-এর পেমেন্ট SMS ধরার জন্য এই অনুমতি দরকার। অন্য কোনো SMS পাঠানো হবে না।','এই ফোনে আসা পেমেন্টের SMS চিনে Briofold-তে পাঠাতে এই অনুমতি দরকার। বাকি SMS পাঠানো হবে না।');
 S.nA=`<div class="dots"><b class="on"></b></div><div class="ctr"><div class="ic">${I('bel')}</div><h3>নোটিফিকেশন চালু করুন</h3><p>কাস্টমার রিপ্লাই দিলে সাথে সাথে জানাতে নোটিফিকেশন দরকার।</p></div><div class="bot"><div class="btn">অনুমতি দিন</div><div class="lnk">কেন দরকার?</div></div>`;
 S.done=`<div class="top"><div class="logo">e.</div><div class="shop">রহিম ফ্যাশন</div></div><div class="ctr"><div class="ic" style="color:var(--ok)">${I('chk')}</div><h3>সব ঠিক আছে</h3><p>ফোনটি ওয়ার্কস্পেসের সাথে যুক্ত। কাস্টমার মেসেজের নোটিফিকেশন আসবে, আর পেমেন্টের SMS নিজে থেকে পাঠানো হবে।</p></div><div class="bot"><div class="btn">শুরু করুন</div></div>`;
 S.doneA=`<div class="top"><div class="logo">e.</div><div class="shop">রহিম ফ্যাশন</div></div><div class="ctr"><div class="ic" style="color:var(--ok)">${I('chk')}</div><h3>সব ঠিক আছে</h3><p>রহিম ফ্যাশনের কাস্টমার মেসেজ এখন থেকে এই ফোনে নোটিফিকেশন হয়ে আসবে।</p></div><div class="bot"><div class="btn">শুরু করুন</div></div>`;
@@ -725,7 +725,7 @@ draw();
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ekmivo ইনবক্স</title>
+<title>Briofold ইনবক্স</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -1423,7 +1423,7 @@ $('#cImgM').onclick=()=>{if(!cur)return toast('আগে একটি চ্য�
 $('#cImgCM').onclick=()=>{const c=cur||convs[0];if(!net)return toast('ইন্টারনেট নেই');setTimeout(()=>{incoming(c,mk('c','',0,{type:'imgs',srcs:[1,2,3,4,5].map(demoImg),ts:Date.now()}));if(c.ai)aiReply(c,'')},400)};
 $('#cImgC').onclick=()=>{const c=cur||convs[0];if(!net)return toast('ইন্টারনেট নেই');setTimeout(()=>{incoming(c,mk('c','',0,{type:'img',src:demoImg(),ts:Date.now()}));if(c.ai)aiReply(c,'')},400)};
 
-/* design-page hook: puts the prototype into a named, frozen state (used by ekmivo-app-design.html) */
+/* design-page hook: puts the prototype into a named, frozen state (used by briofold-app-design.html) */
 window.__step=function(k){
  const later=(f,t)=>setTimeout(f,t),lastOf=f=>[...cur.msgs].reverse().find(f),
   cust=()=>lastOf(m=>m.from==='c'&&m.type==='text'),own=()=>lastOf(m=>m.from!=='c'&&m.type==='text'),
@@ -1505,18 +1505,18 @@ setInterval(()=>{if(!$('#ph').classList.contains('chat'))renderList()},60000);
 </html>
 
 `````
-<!-- END SOURCE: ekmivo-app-design.html -->
+<!-- END SOURCE: briofold-app-design.html -->
 
-## Appendix B — ekmivo-inbox.html (হুবহু)
+## Appendix B — briofold-inbox.html (হুবহু)
 
-<!-- BEGIN SOURCE: ekmivo-inbox.html -->
+<!-- BEGIN SOURCE: briofold-inbox.html -->
 `````html
 <!DOCTYPE html>
 <html lang="bn">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ekmivo ইনবক্স</title>
+<title>Briofold ইনবক্স</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -2214,7 +2214,7 @@ $('#cImgM').onclick=()=>{if(!cur)return toast('আগে একটি চ্য�
 $('#cImgCM').onclick=()=>{const c=cur||convs[0];if(!net)return toast('ইন্টারনেট নেই');setTimeout(()=>{incoming(c,mk('c','',0,{type:'imgs',srcs:[1,2,3,4,5].map(demoImg),ts:Date.now()}));if(c.ai)aiReply(c,'')},400)};
 $('#cImgC').onclick=()=>{const c=cur||convs[0];if(!net)return toast('ইন্টারনেট নেই');setTimeout(()=>{incoming(c,mk('c','',0,{type:'img',src:demoImg(),ts:Date.now()}));if(c.ai)aiReply(c,'')},400)};
 
-/* design-page hook: puts the prototype into a named, frozen state (used by ekmivo-app-design.html) */
+/* design-page hook: puts the prototype into a named, frozen state (used by briofold-app-design.html) */
 window.__step=function(k){
  const later=(f,t)=>setTimeout(f,t),lastOf=f=>[...cur.msgs].reverse().find(f),
   cust=()=>lastOf(m=>m.from==='c'&&m.type==='text'),own=()=>lastOf(m=>m.from!=='c'&&m.type==='text'),
@@ -2280,13 +2280,13 @@ setInterval(()=>{if(!$('#ph').classList.contains('chat'))renderList()},60000);
 </html>
 
 `````
-<!-- END SOURCE: ekmivo-inbox.html -->
+<!-- END SOURCE: briofold-inbox.html -->
 
-## Appendix C — ekmivo-design-spec.md (হুবহু)
+## Appendix C — briofold-design-spec.md (হুবহু)
 
-<!-- BEGIN SOURCE: ekmivo-design-spec.md -->
+<!-- BEGIN SOURCE: briofold-design-spec.md -->
 `````markdown
-# Ekmivo Seller App — Inbox, Chat & Customer Profile: Strict Design Specification
+# Briofold Seller App — Inbox, Chat & Customer Profile: Strict Design Specification
 
 Version 1.0 · Language of UI: Bengali (bn) · Platform: Android seller app (prototype built as one HTML file, 360 × 720 phone frame)
 
@@ -2296,7 +2296,7 @@ Version 1.0 · Language of UI: Bengali (bn) · Platform: Android seller app (pro
 
 You are given this specification. **It is the only source of truth.** Reproduce the design exactly: every colour, size, spacing, radius, font weight, animation, timing, string and behaviour must match. "Close" or "in the same spirit" is a failure.
 
-1. **Appendix A contains the complete reference source** (`ekmivo-inbox.html`) verbatim. If you build for the web, copy its CSS, markup and JS **unchanged**. If you port to another stack (React Native, Compose, Flutter, React), every numeric value in Appendix A's CSS must be carried over 1:1 (px → dp), and every string in the JS must be copied character for character.
+1. **Appendix A contains the complete reference source** (`briofold-inbox.html`) verbatim. If you build for the web, copy its CSS, markup and JS **unchanged**. If you port to another stack (React Native, Compose, Flutter, React), every numeric value in Appendix A's CSS must be carried over 1:1 (px → dp), and every string in the JS must be copied character for character.
 2. Where this document and Appendix A ever appear to disagree, **Appendix A wins**. Do not "fix" it, do not modernise it, do not refactor it.
 3. Do not add, remove, rename, reorder or restyle anything. Do not add features, screens, buttons, icons, animations, libraries or fonts that are not in this spec.
 4. Do not replace any Bengali text with English or with your own wording. Do not "improve" copy.
@@ -2320,7 +2320,7 @@ You are given this specification. **It is the only source of truth.** Reproduce 
 
 ## 2. Deliverable shape
 
-- One HTML file, `lang="bn"`, `<meta viewport content="width=device-width, initial-scale=1, viewport-fit=cover">`, title `Ekmivo ইনবক্স`.
+- One HTML file, `lang="bn"`, `<meta viewport content="width=device-width, initial-scale=1, viewport-fit=cover">`, title `Briofold ইনবক্স`.
 - Phone frame `.ph`: width 360px, max-width 100%, height 720px, `max-height: calc(100vh − 90px)`, min-height 560px, border-radius 34px, border 6px solid `#2C2C29`, overflow hidden, base font-size 14px. At viewport ≤ 480px the frame becomes full-bleed (100vw × 100vh, no border, no radius, no padding on body).
 - Page body background `#121211`, text `#F1F0EA`, font `"Hind Siliguri", system-ui, sans-serif`.
 - Below the frame there is a row of **demo controls** (`.ctl`) — they exist only for the prototype. In a production build they are removed; in the prototype they must stay exactly as in Appendix A.
@@ -2597,7 +2597,7 @@ Every state below can be reached with `window.__step('<name>')`; use it to verif
 
 ---
 
-## Appendix A — Complete reference source (`ekmivo-inbox.html`, verbatim)
+## Appendix A — Complete reference source (`briofold-inbox.html`, verbatim)
 
 Copy this file unchanged for a web build. For other stacks, treat every value in it as binding.
 
@@ -2607,7 +2607,7 @@ Copy this file unchanged for a web build. For other stacks, treat every value in
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ekmivo ইনবক্স</title>
+<title>Briofold ইনবক্স</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -3305,7 +3305,7 @@ $('#cImgM').onclick=()=>{if(!cur)return toast('আগে একটি চ্য�
 $('#cImgCM').onclick=()=>{const c=cur||convs[0];if(!net)return toast('ইন্টারনেট নেই');setTimeout(()=>{incoming(c,mk('c','',0,{type:'imgs',srcs:[1,2,3,4,5].map(demoImg),ts:Date.now()}));if(c.ai)aiReply(c,'')},400)};
 $('#cImgC').onclick=()=>{const c=cur||convs[0];if(!net)return toast('ইন্টারনেট নেই');setTimeout(()=>{incoming(c,mk('c','',0,{type:'img',src:demoImg(),ts:Date.now()}));if(c.ai)aiReply(c,'')},400)};
 
-/* design-page hook: puts the prototype into a named, frozen state (used by ekmivo-app-design.html) */
+/* design-page hook: puts the prototype into a named, frozen state (used by briofold-app-design.html) */
 window.__step=function(k){
  const later=(f,t)=>setTimeout(f,t),lastOf=f=>[...cur.msgs].reverse().find(f),
   cust=()=>lastOf(m=>m.from==='c'&&m.type==='text'),own=()=>lastOf(m=>m.from!=='c'&&m.type==='text'),
@@ -3373,7 +3373,7 @@ setInterval(()=>{if(!$('#ph').classList.contains('chat'))renderList()},60000);
 ~~~~
 
 `````
-<!-- END SOURCE: ekmivo-design-spec.md -->
+<!-- END SOURCE: briofold-design-spec.md -->
 
 ## Verified combined CI checkpoint — 2026-10-19
 

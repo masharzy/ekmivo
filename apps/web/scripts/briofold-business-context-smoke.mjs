@@ -25,7 +25,7 @@ try{
     await tx.unsafe("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'owner')",[id,owner]);
    }
    await tx.unsafe("INSERT INTO auth_sessions(user_id,token_hash,expires_at) VALUES($1,$2,now()+interval '1 hour')",[actor,hash]);
-   const values=new Map([["ekmivo-session",token]]);
+   const values=new Map([["briofold-session",token]]);
    const jar={get:key=>values.has(key)?{value:values.get(key)}:undefined,set:(key,value)=>values.set(key,value),delete:key=>values.delete(key)};
    const exports={};
    const redirect=href=>{const error=new Error("TEST_REDIRECT");error.href=href;throw error;};
@@ -41,15 +41,15 @@ try{
    }},{timeout:5000});
    const redirected=async(fn,href)=>{await assert.rejects(fn,e=>e.message==="TEST_REDIRECT"&&e.href===href);assertions++;};
    eq((await exports.preferredWorkspaceFor(actor)).id,first);
-   values.set("ekmivo-default-workspace",actor+":"+second);
+   values.set("briofold-default-workspace",actor+":"+second);
    eq((await exports.preferredWorkspaceFor(actor)).id,second);
-   values.set("ekmivo-default-workspace",stranger+":"+second);
+   values.set("briofold-default-workspace",stranger+":"+second);
    eq((await exports.preferredWorkspaceFor(actor)).id,first);
-   values.set("ekmivo-default-workspace",actor+":"+outside);
+   values.set("briofold-default-workspace",actor+":"+outside);
    eq((await exports.preferredWorkspaceFor(actor)).id,first);
    eq(await exports.selectDefaultWorkspace(actor,outside),false);
    eq(await exports.selectDefaultWorkspace(actor,second),true);
-   eq(values.get("ekmivo-default-workspace"),actor+":"+second);
+   eq(values.get("briofold-default-workspace"),actor+":"+second);
    await redirected(()=>exports.requireWorkspace("en",outside),"/workspaces");
    for(const role of ["owner","admin","editor","viewer"]){
     await tx.unsafe("UPDATE workspace_members SET role=$1 WHERE workspace_id=$2 AND user_id=$3",[role,second,actor]);

@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/aicredits"
+	"github.com/masharzy/briofold/backend/internal/aicredits"
 )
 
 // Operator-selected, owner-requested diagnostic. No customer messages are

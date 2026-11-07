@@ -6,6 +6,6 @@ import "@fontsource-variable/geist-mono";
 import "./portal.css";
 export default async function DeveloperLayout({params,children}:{params:Promise<{locale:string}>;children:React.ReactNode}){
  const {locale}=await params;if(locale!=="en"&&locale!=="bn")notFound();
- const theme=(await cookies()).get("ekmivo-theme")?.value;
+ const theme=(await cookies()).get("briofold-theme")?.value;
  return <PortalShell locale={locale} initialTheme={theme==="light"||theme==="dark"?theme:"system"}>{children}</PortalShell>;
 }

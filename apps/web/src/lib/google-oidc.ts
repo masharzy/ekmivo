@@ -2,7 +2,7 @@ import {createHash,randomBytes,timingSafeEqual} from "node:crypto";
 import {createRemoteJWKSet,EncryptJWT,jwtDecrypt,jwtVerify,type JWTVerifyGetKey} from "jose";
 
 export type GoogleFlow={state:string;nonce:string;verifier:string;locale:"en"|"bn";mode:"signin"|"link";userId?:string;sessionHash?:string};
-const issuer="ekmivo:google-login";
+const issuer="briofold:google-login";
 const keys=createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"),{timeoutDuration:8000});
 export function googleConfiguration(){
  const clientId=process.env.GOOGLE_CLIENT_ID?.trim(),clientSecret=process.env.GOOGLE_CLIENT_SECRET?.trim(),secret=process.env.GOOGLE_STATE_SECRET;

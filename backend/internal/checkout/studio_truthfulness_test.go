@@ -9,7 +9,7 @@ func TestStudioReplyRejectsObservedFalsePromises(t *testing.T) {
 	var c studioContext
 	c.Config.Language = "auto"
 	c.Question = "Link pathaw"
-	c.Config.Instructions = "Business: Ekmivo. Payment Gateway costs BDT 50/month."
+	c.Config.Instructions = "Business: Briofold. Payment Gateway costs BDT 50/month."
 	for _, reply := range []string{
 		"Ami immediate link generate kore dite parbo.",
 		"Ami apnar jonno bKash payment link generate korchi. Ekto opekkhon korun.",
@@ -33,7 +33,7 @@ func TestStudioReplyRejectsObservedFalsePromises(t *testing.T) {
 func TestStudioReplyKeepsGroundedAnswersAndHonestLimits(t *testing.T) {
 	var c studioContext
 	c.Question = "payment?"
-	c.Config.Instructions = "Business: Ekmivo. Website https://example.com/help?a=1&b=2. Support 01912345678."
+	c.Config.Instructions = "Business: Briofold. Website https://example.com/help?a=1&b=2. Support 01912345678."
 	for _, reply := range []string{
 		"The payment gateway costs BDT 50/month.",
 		"I cannot generate a payment link in this chat.",

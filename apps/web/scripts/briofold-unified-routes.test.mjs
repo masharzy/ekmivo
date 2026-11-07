@@ -218,7 +218,7 @@ test("local device settings have a dedicated Store route and never masquerade as
  assert.match(route,/kind==="account-devices"/);
  assert.match(route,/<BrowserDevicePreferences/);
  const client=source("components/browser-device-preferences.tsx");
- assert.match(client,/ekmivo:device:notification-sound:v1/);
+ assert.match(client,/briofold:device:notification-sound:v1/);
  assert.match(client,/No push subscription or remote notification sender/);
  assert.match(client,/session|Account sessions/);
 });

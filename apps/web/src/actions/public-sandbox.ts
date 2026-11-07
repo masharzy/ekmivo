@@ -14,7 +14,7 @@ export async function configurePublicSandbox(form:FormData){
   const rows=await tx`SELECT * FROM public_sandbox_config WHERE singleton FOR UPDATE`;if(!rows.length)throw new Error("SANDBOX_NOT_PROVISIONED");
   const c=rows[0];
   if(action==="rotate"){
-   const publicId=randomBytes(8).toString("hex"),token=`ek_test_${publicId}_${randomBytes(32).toString("base64url")}`,hash=createHash("sha256").update(token).digest("hex");
+   const publicId=randomBytes(8).toString("hex"),token=`bf_test_${publicId}_${randomBytes(32).toString("base64url")}`,hash=createHash("sha256").update(token).digest("hex");
    await tx`UPDATE merchant_api_keys SET revoked_at=now() WHERE id=${c.key_id}::uuid AND environment='sandbox'`;
    const inserted=await tx`INSERT INTO merchant_api_keys(workspace_id,environment,public_id,secret_digest,name,scopes,created_by,expires_at)
    SELECT workspace_id,'sandbox',${publicId},${hash},'Universal public sandbox',scopes,${admin.user.id}::uuid,now()+interval '1 year' FROM merchant_api_keys WHERE id=${c.key_id}::uuid AND environment='sandbox' RETURNING id`;

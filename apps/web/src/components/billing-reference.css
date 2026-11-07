@@ -1,4 +1,4 @@
-/* Exact CSS from Ekmivo_Billing_Standalone(2).html; selectors isolated to this surface. */
+/* Exact CSS from Briofold_Billing_Standalone(2).html; selectors isolated to this surface. */
 .ref-billing{--bg:#fafafa;--panel:#fff;--hover:#f3f3f5;--line:#e9e9ed;--txt:#15161a;--mut:#74767f;--acc:#4f46e5;--accb:#eeedfd;--ok:#16a34a;--warn:#d97706;--gry:#9a9ca6;color-scheme:light}
 [data-theme=dark] .ref-billing{--bg:#0a0b0e;--panel:#131418;--hover:#1a1b21;--line:#24262d;--txt:#ececf0;--mut:#8b8d97;--acc:#8b87ff;--accb:#1f2040;--ok:#4ade80;--warn:#fbbf24;--gry:#6b6d77;color-scheme:dark}
 .ref-billing *{box-sizing:border-box;margin:0}.ref-billing{background:var(--bg);color:var(--txt);font:14px/1.5 "Geist Variable",var(--font-hind-siliguri),system-ui,sans-serif}.ref-billing button,.ref-billing input,.ref-billing select{font:inherit;color:inherit}.ref-billing button{background:none;border:0;cursor:pointer}.ref-billing :focus-visible{outline:2px solid var(--acc);outline-offset:2px}

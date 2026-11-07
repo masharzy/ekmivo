@@ -25,10 +25,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
-	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/receiptnotice"
 )
 
 var (
@@ -445,7 +445,7 @@ func (s *Service) merchant(r *http.Request, ws, realm, scope string) error {
 		}
 		return nil
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		return authz.ErrUnauthorized
 	}
@@ -610,7 +610,7 @@ func (s *Service) HandleMerchant(w http.ResponseWriter, r *http.Request) {
 				fail(w, 503, "KEY_GENERATION_UNAVAILABLE")
 				return
 			}
-			key = "ekmivo-" + hex.EncodeToString(fresh[:])
+			key = "briofold-" + hex.EncodeToString(fresh[:])
 		}
 		if !keyPattern.MatchString(key) {
 			fail(w, 422, "INVALID_IDEMPOTENCY_KEY")

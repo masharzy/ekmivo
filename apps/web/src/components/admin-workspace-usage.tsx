@@ -7,8 +7,8 @@ export async function AdminWorkspaceUsage({locale,workspaceId,payments,ai}:{loca
  const bn=locale==="bn",t=(en:string,bd:string)=>bn?bd:en;
  const n=(v:number|null|undefined)=>v===null?t("Unlimited","সীমাহীন"):v===undefined?"—":v.toLocaleString(bn?"bn-BD":"en-BD");
  const paymentRead=async():Promise<PaymentUsage|null>=>{if(!payments)return null;try{
-  const origin=goOrigin(),token=(await cookies()).get("ekmivo-session")?.value;if(!origin||!token)return null;
-  const r=await fetch(new URL(`/v1/platform/workspaces/${workspaceId}/payment-usage`,origin),{headers:{Cookie:`ekmivo-session=${token}`},cache:"no-store",redirect:"error",signal:AbortSignal.timeout(12000)});
+  const origin=goOrigin(),token=(await cookies()).get("briofold-session")?.value;if(!origin||!token)return null;
+  const r=await fetch(new URL(`/v1/platform/workspaces/${workspaceId}/payment-usage`,origin),{headers:{Cookie:`briofold-session=${token}`},cache:"no-store",redirect:"error",signal:AbortSignal.timeout(12000)});
   if(!r.ok)return null;return await r.json() as PaymentUsage;
  }catch{return null}};
  const [payment,credit]=await Promise.all([paymentRead(),ai?database()`SELECT balance,updated_at FROM platform_ai_credit_balances WHERE workspace_id=${workspaceId}::uuid LIMIT 1`.catch(()=>null):Promise.resolve(null)]);

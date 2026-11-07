@@ -1,4 +1,4 @@
-# Ekmivo shared messaging foundation — owner direction, 2026-10-19
+# Briofold shared messaging foundation — owner direction, 2026-10-19
 
 This is the binding integration architecture for Android phases 4–6 and the web channel connection flow. Implementation evidence is maintained in `ANDROID-REDESIGN-STATUS.md`; architecture requirements below also cover later media/profile phases. The existing Go/Postgres application remains authoritative; use its auth, workspace access, encryption and job infrastructure. Do not introduce a parallel backend or enable a demo Inbox.
 

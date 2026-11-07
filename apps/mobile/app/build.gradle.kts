@@ -6,10 +6,10 @@ plugins {
 }
 
 android {
- namespace = "com.ekmivo.mobile"
+ namespace = "com.briofold.mobile"
  compileSdk = 35
  defaultConfig {
-  applicationId = "com.ekmivo.mobile"
+  applicationId = "com.briofold.mobile"
   minSdk = 26
   targetSdk = 35
   versionCode = 6
@@ -17,29 +17,29 @@ android {
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   // Firebase client identifiers are public configuration, never service-account secrets.
   for (key in listOf("APPLICATION_ID", "API_KEY", "PROJECT_ID", "SENDER_ID")) {
-   val value = providers.environmentVariable("EKMIVO_FIREBASE_" + key).orElse("").get()
+   val value = providers.environmentVariable("BRIOFOLD_FIREBASE_" + key).orElse("").get()
    buildConfigField("String", "FIREBASE_" + key, "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
   }
   // Public origin only: never embed credentials or a payment authority in a mobile binary.
   buildConfigField("String", "API_BASE_URL",
-    "\"" + (providers.gradleProperty("ekmivoApiBaseUrl").orElse("https://ekmivo-go-api.onrender.com").get().trimEnd('/')) + "\"")
+    "\"" + (providers.gradleProperty("briofoldApiBaseUrl").orElse("https://api.briofold.tech").get().trimEnd('/')) + "\"")
  }
  // The production key comes ONLY from environment variables at build time.
  // No keystore, key password, or private key is committed to this repo.
- val releaseKeyStorePath = providers.environmentVariable("EKMIVO_ANDROID_KEYSTORE_FILE").orNull
+ val releaseKeyStorePath = providers.environmentVariable("BRIOFOLD_ANDROID_KEYSTORE_FILE").orNull
  signingConfigs {
-  create("ekmivoProduction") {
+  create("briofoldProduction") {
    if (releaseKeyStorePath != null) storeFile = file(releaseKeyStorePath)
-   storePassword = providers.environmentVariable("EKMIVO_ANDROID_KEYSTORE_PASSWORD").orNull
-   keyAlias = "ekmivo-production"
-   keyPassword = providers.environmentVariable("EKMIVO_ANDROID_KEYSTORE_PASSWORD").orNull
+   storePassword = providers.environmentVariable("BRIOFOLD_ANDROID_KEYSTORE_PASSWORD").orNull
+   keyAlias = "briofold-production"
+   keyPassword = providers.environmentVariable("BRIOFOLD_ANDROID_KEYSTORE_PASSWORD").orNull
    storeType = "pkcs12"
   }
  }
  buildTypes {
   release {
    if (releaseKeyStorePath != null) {
-    signingConfig = signingConfigs.getByName("ekmivoProduction")
+    signingConfig = signingConfigs.getByName("briofoldProduction")
    }
    isMinifyEnabled = true
    isShrinkResources = true

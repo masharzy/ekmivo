@@ -20,7 +20,7 @@ func (s *Service) HandleGrowth(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

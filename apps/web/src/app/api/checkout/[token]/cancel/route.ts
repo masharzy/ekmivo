@@ -10,7 +10,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{token:s
  if(!go)return Response.json({error:{code:"CHECKOUT_SERVICE_UNAVAILABLE"}},{status:503});
  try{
   const upstream=await fetch(new URL("/v1/public/checkout/"+token+"/cancel",go),{
-   method:"POST",headers:{Origin:process.env.GO_WEB_ORIGIN||"https://ekmivo-web-masharzys-projects.vercel.app"},
+   method:"POST",headers:{Origin:process.env.GO_WEB_ORIGIN||"https://briofold.tech"},
    cache:"no-store",signal:AbortSignal.timeout(12000)
   });
   return new Response(await upstream.text(),{status:upstream.status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"}});

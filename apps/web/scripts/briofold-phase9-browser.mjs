@@ -80,9 +80,9 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   const authenticated=async(token,actor)=>{
    const c=await browser.newContext();
    await c.addCookies([
-    {name:"ekmivo-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-default-workspace",value:actor+":"+workspaceId,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}
+    {name:"briofold-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-default-workspace",value:actor+":"+workspaceId,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}
    ]);
    return c;
   };
@@ -490,7 +490,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   // click() waits for actual actionability; an immediate isEnabled() races
   // that valid stale-data protection. The CSV below must still match finance.
   const [ownerDownload]=await Promise.all([page.waitForEvent("download"),exportButton.click()]);
-  assert.match(ownerDownload.suggestedFilename(),/^ekmivo-report-\d{4}-\d\d-\d\d-\d{4}-\d\d-\d\d\.csv$/);
+  assert.match(ownerDownload.suggestedFilename(),/^briofold-report-\d{4}-\d\d-\d\d-\d{4}-\d\d-\d\d\.csv$/);
   const ownerCsv=await readFile(await ownerDownload.path(),"utf8");
   assert.ok(ownerCsv.startsWith("\uFEFF\"section\",\"reference\",\"label\""),"financial export must be UTF-8 BOM CSV with a stable header");
   const ownerVerifiedRow=ownerCsv.split("\r\n").find(row=>row.startsWith('"summary","","verified",'));
@@ -626,9 +626,9 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   let cases=0;
   const routes=["/payments",`/payments/transactions/${payment.id}`,"/sms-data",`/sms-data/${transport.id}`,"/settings/payment-methods","/settings/webhooks","/settings/checkout","/settings/api-keys","/settings/activity","/payments/refunds","/reports/payments","/payments/reconciliation","/invoices"];
   for(const locale of ["en","bn"]){
-   await context.addCookies([{name:"ekmivo-locale",value:locale,url:origin,sameSite:"Lax"}]);
+   await context.addCookies([{name:"briofold-locale",value:locale,url:origin,sameSite:"Lax"}]);
    for(const theme of ["light","dark"]){
-    await context.addCookies([{name:"ekmivo-theme",value:theme,url:origin,sameSite:"Lax"}]);
+    await context.addCookies([{name:"briofold-theme",value:theme,url:origin,sameSite:"Lax"}]);
     await page.emulateMedia({colorScheme:theme});
     for(const width of [320,360,768,1440]){
      await page.setViewportSize({width,height:900});

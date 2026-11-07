@@ -61,10 +61,10 @@ cloned from production, database `ekmivo`:
    capability, redeploy exact main SHA, inspect live auth/dashboard errors.
 5. After consent/confirm, quote/coupon and configured wallet readiness tests,
    enable backend flags in this order on the confirmed Render API service:
-   `EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED`,
-   `EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED`,
-   `EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED`,
-   `EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED`.
+   `BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED`,
+   `BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED`,
+   `BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED`,
+   `BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED`.
    The last flag must also be enabled on Vercel production web because the
    separate subscription payment and status pages enforce it server-side.
    Verify API health and actual responses. Provider/real-money acceptance

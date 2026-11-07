@@ -18,8 +18,8 @@ const bytes=await readFile(file);if(containsCredentials(bytes.toString('utf8')))
 const hash=createHash('sha256').update(bytes).digest('hex');
 let recorded=false;
 if(mode==='record'){
- if(process.env.EKMIVO_PRIVACY_RECORD_ENABLED!=='true'||!process.env.EKMIVO_PRIVACY_CONTROL_DATABASE_URL)throw Error('Explicit operator recording configuration required');
- const db=postgres(process.env.EKMIVO_PRIVACY_CONTROL_DATABASE_URL,{max:1,prepare:false,connect_timeout:10,onnotice:()=>{}});
+ if(process.env.BRIOFOLD_PRIVACY_RECORD_ENABLED!=='true'||!process.env.BRIOFOLD_PRIVACY_CONTROL_DATABASE_URL)throw Error('Explicit operator recording configuration required');
+ const db=postgres(process.env.BRIOFOLD_PRIVACY_CONTROL_DATABASE_URL,{max:1,prepare:false,connect_timeout:10,onnotice:()=>{}});
  try{
   await db.begin(async tx=>{
    const [boundary]=await tx.unsafe("SELECT current_user=pg_get_userbyid(c.relowner) AS owner,to_regclass('financial_realm') IS NULL AS control FROM pg_class c WHERE c.oid='workspaces'::regclass");

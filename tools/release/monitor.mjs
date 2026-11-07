@@ -3,7 +3,7 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {mkdir,readFile,rename,writeFile} from 'node:fs/promises';
 import path from 'node:path';
-const directory=process.argv[2],origin=new URL(process.env.EKMIVO_MONITOR_API_URL||'');
+const directory=process.argv[2],origin=new URL(process.env.BRIOFOLD_MONITOR_API_URL||'');
 if(!directory||origin.protocol!=='https:'||origin.username||origin.password)throw Error('Persistent state directory and configured HTTPS API required');
 await mkdir(directory,{recursive:true});const filename=path.join(directory,'monitor-state.json');
 let prior={failures:0,state:'unknown',incident:null,delivery:null};try{prior=JSON.parse(await readFile(filename,'utf8'))}catch{}
@@ -15,13 +15,13 @@ if(state==='operational'&&prior.state==='incident')next={...next,incident:random
 const persist=async()=>{const temporary=filename+'.'+randomUUID()+'.tmp';await writeFile(temporary,JSON.stringify(next,null,2)+'\n',{mode:0o600});await rename(temporary,filename)};
 await persist();
 if(next.delivery==='pending'){
- const endpoint=process.env.EKMIVO_MONITOR_ALERT_URL;if(!endpoint){console.log(JSON.stringify({state,alert:'not_configured'}));process.exitCode=1}else{
+ const endpoint=process.env.BRIOFOLD_MONITOR_ALERT_URL;if(!endpoint){console.log(JSON.stringify({state,alert:'not_configured'}));process.exitCode=1}else{
   const target=new URL(endpoint);if(target.protocol!=='https:'||target.username||target.password)throw Error('Operator HTTPS alert destination required');
   const payload=JSON.stringify({id:next.incident,type:'payment_readiness',state,observed_at:next.observed_at});
   // Persist unknown BEFORE the external send. Crash or timeout must not claim
   // delivery and must not silently create repeated notifications.
   next.delivery='unknown';await persist();
-  try{const r=await fetch(target,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','Idempotency-Key':next.incident,'X-Ekmivo-Alert-Digest':createHash('sha256').update(payload).digest('hex'),...(process.env.EKMIVO_MONITOR_ALERT_TOKEN?{Authorization:`Bearer ${process.env.EKMIVO_MONITOR_ALERT_TOKEN}`}:{})},body:payload});if(r.ok)next.delivery='accepted';else next.delivery='rejected'}catch{}
+  try{const r=await fetch(target,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','Idempotency-Key':next.incident,'X-Briofold-Alert-Digest':createHash('sha256').update(payload).digest('hex'),...(process.env.BRIOFOLD_MONITOR_ALERT_TOKEN?{Authorization:`Bearer ${process.env.BRIOFOLD_MONITOR_ALERT_TOKEN}`}:{})},body:payload});if(r.ok)next.delivery='accepted';else next.delivery='rejected'}catch{}
   await persist();console.log(JSON.stringify({state,alert:next.delivery}));if(next.delivery!=='accepted')process.exitCode=1;
  }
 }else console.log(JSON.stringify({state,alert:next.delivery}));

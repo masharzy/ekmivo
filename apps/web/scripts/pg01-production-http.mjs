@@ -9,8 +9,8 @@ import { writeFile } from 'node:fs/promises';
 import { encodeBase32, totpAt } from '../src/lib/mfa-core.js';
 
 if(process.env.PG01_ALLOW_PRODUCTION_FIXTURES!=='true') { console.error('Explicit PG01_ALLOW_PRODUCTION_FIXTURES=true required; no operation performed.'); process.exit(1); }
-const api = 'https://ekmivo-go-api.onrender.com';
-const web = 'https://ekmivo-web-masharzys-projects.vercel.app';
+const api = 'https://api.briofold.tech';
+const web = 'https://briofold.tech';
 const sql = postgres(process.env.DATABASE_URL,{ssl:'require',max:1,prepare:false,connect_timeout:15});
 const users = Array.from({length:4},()=>randomUUID());
 const workspaces = Array.from({length:3},()=>randomUUID());
@@ -28,7 +28,7 @@ function seal(value){
  return ['v1',iv.toString('base64url'),cipher.getAuthTag().toString('base64url'),ciphertext.toString('base64url')].join(':');
 }
 async function request(path,index,expected,name,role,dbAssertion='Read-only endpoint; no mutation contract.'){
- const response=await fetch(api+path,{headers:index===null?{}:{Cookie:'ekmivo-session='+tokens[index]},signal:AbortSignal.timeout(90000),redirect:'manual'});
+ const response=await fetch(api+path,{headers:index===null?{}:{Cookie:'briofold-session='+tokens[index]},signal:AbortSignal.timeout(90000),redirect:'manual'});
  let body;try{body=await response.json();}catch{body={};}
  const safe=body.code?{code:body.code,message:body.message}:Object.fromEntries(Object.entries(body).filter(([key])=>['role','capability','environment','status','reason','email_verified'].includes(key)));
  const result={name,endpoint:'GET '+path.replaceAll(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/g,'<test-workspace>'),role,expected_status:expected,actual_status:response.status,safe_response:safe,pass:response.status===expected,db_assertion:dbAssertion};
@@ -40,7 +40,7 @@ let confirmActionId=null,issuedCode=null;
 const decode=value=>value.replaceAll('&quot;','"').replaceAll('&#x27;',"'").replaceAll('&amp;','&').replaceAll('&lt;','<').replaceAll('&gt;','>');
 async function formRequest(index,code,name,expectedMessage){
  if(!confirmActionId){
- const page=await fetch(web+'/en/admin/mfa',{headers:{Cookie:'ekmivo-session='+tokens[index]},redirect:'manual',signal:AbortSignal.timeout(90000)});
+ const page=await fetch(web+'/en/admin/mfa',{headers:{Cookie:'briofold-session='+tokens[index]},redirect:'manual',signal:AbortSignal.timeout(90000)});
  const html=await page.text();
  const form=([...html.matchAll(/<form\b[^>]*>([\s\S]*?)<\/form>/g)].map(m=>m[1])).find(value=>/name="code"/.test(value));
  if(!form){results.push({name,endpoint:'GET /en/admin/mfa',actual_status:page.status,pass:false,safe_response:'MFA form unavailable; no secret response captured.'});return false;}
@@ -59,7 +59,7 @@ async function formRequest(index,code,name,expectedMessage){
  if(expectedMessage==='redirect')issuedCode=totpAt(secret,Math.floor(Date.now()/30000));
  fields.append('code',expectedMessage==='redirect'?issuedCode:(name.includes('replay')?issuedCode:code));
  const payload=await encodeReply(['en',{status:'idle',message:''},fields]);
- const response=await fetch(web+'/en/admin/mfa',{method:'POST',headers:{Cookie:'ekmivo-session='+tokens[index],Origin:web,'Next-Action':confirmActionId},body:payload,redirect:'manual',signal:AbortSignal.timeout(90000)});
+ const response=await fetch(web+'/en/admin/mfa',{method:'POST',headers:{Cookie:'briofold-session='+tokens[index],Origin:web,'Next-Action':confirmActionId},body:payload,redirect:'manual',signal:AbortSignal.timeout(90000)});
  const text=await response.text();
  const location=response.headers.get('x-action-redirect')||response.headers.get('location');
  const matched=expectedMessage==='redirect'?[200,303].includes(response.status)&&(location?.includes('/en/admin')||(text.includes('NEXT_REDIRECT')&&text.includes('/en/admin'))):text.includes(expectedMessage);
@@ -97,7 +97,7 @@ try{
  for(const capability of ['payments:manage','workspace:settings','members:manage'])await request(access(workspaces[0],capability),3,403,'Viewer denied '+capability,'viewer');
  const after=await sql`SELECT checkout_expiry_minutes,updated_at FROM workspace_environment_settings WHERE workspace_id=${workspaces[0]} ORDER BY environment`;
  results.push({name:'Viewer denials preserve database settings',pass:JSON.stringify(before)===JSON.stringify(after),db_assertion:'Two environment settings unchanged.'});
- const unsupported=await fetch(api+'/v1/workspaces/'+workspaces[0]+'/access',{method:'POST',headers:{Cookie:'ekmivo-session='+tokens[3]},signal:AbortSignal.timeout(90000)});
+ const unsupported=await fetch(api+'/v1/workspaces/'+workspaces[0]+'/access',{method:'POST',headers:{Cookie:'briofold-session='+tokens[3]},signal:AbortSignal.timeout(90000)});
  results.push({name:'Actual viewer write endpoint coverage',endpoint:'POST /v1/workspaces/<test-workspace>/access',actual_status:unsupported.status,pass:false,status:'NOT_IMPLEMENTED',safe_response:'No deployed workspace write endpoint; 405 does not prove write authorization.'});
  await sql`DELETE FROM workspace_members WHERE workspace_id=${workspaces[0]} AND user_id=${users[3]}`;
  await request(access(),3,403,'Removed member same-session denial','former viewer','Membership row absent; existing session still active.');

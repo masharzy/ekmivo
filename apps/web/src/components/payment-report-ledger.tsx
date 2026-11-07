@@ -20,7 +20,7 @@ function downloadCsv(rows:LedgerRow[],period:Filters){
  const header=["Payment ID","Reference","Payer number","Method","Amount (BDT minor)","Transaction time (ISO)","Verified time (ISO)"];
  const csv="\uFEFF"+[header,...rows.map(r=>[r.id,r.merchant_reference,r.payer_number||"unavailable",r.method,r.verified_amount_minor,r.original_transaction_at||"",r.verified_at])].map(line=>line.map(quote).join(",")).join("\r\n")+"\r\n";
  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
- const link=document.createElement("a");link.href=url;link.download="ekmivo-verified-ledger-"+period.from+"-"+period.to+"-loaded.csv";document.body.appendChild(link);link.click();link.remove();
+ const link=document.createElement("a");link.href=url;link.download="briofold-verified-ledger-"+period.from+"-"+period.to+"-loaded.csv";document.body.appendChild(link);link.click();link.remove();
  window.setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 export function PaymentReportLedger(props:Parameters<typeof ScopedLedger>[0]){

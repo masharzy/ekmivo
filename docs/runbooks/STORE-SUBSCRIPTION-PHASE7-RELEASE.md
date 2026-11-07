@@ -1,4 +1,4 @@
-# Ekmivo Store-first SaaS checkout — Phase 7 controlled release runbook
+# Briofold Store-first SaaS checkout — Phase 7 controlled release runbook
 
 Scope: the Store-first subscription purchase flow (Phases 0–7). **Phase 7 is the last phase.** Briofold seller checkout, Android and merchant coupon work are separate.
 
@@ -17,17 +17,17 @@ All listed purchase flags must stay **false** until dependencies, migrations, ro
 
 | Order | Flag | Safe gate |
 | --- | --- | --- |
-| 1 | `EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED` | Selected internal accounts can request authoritative, expiring quote snapshots |
-| 2 | `EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED` | Three unchecked, versioned consents are independently enforced before confirmed invoice |
-| 3 | `EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED` | Existing confirmed invoice is bound once to the scoped payment capability |
-| 4 | `EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED` | Live provider accounts have been filtered, approved and verified in **both** API and worker paths |
+| 1 | `BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED` | Selected internal accounts can request authoritative, expiring quote snapshots |
+| 2 | `BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED` | Three unchecked, versioned consents are independently enforced before confirmed invoice |
+| 3 | `BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED` | Existing confirmed invoice is bound once to the scoped payment capability |
+| 4 | `BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED` | Live provider accounts have been filtered, approved and verified in **both** API and worker paths |
 
 Keep all flags off for preview. Admin coupon catalog and legal publication are separate controlled capabilities; enabling them does not allow checkout until the order/handoff gates are explicitly approved. Order Summary is `/checkout/order/{opaqueIntent}`; the distinct Pay screen is `/pay/subscription/{opaquePaymentToken}`. No generic merchant `/pay/{token}` fallback is permitted for this flow.
 
 ## 3. Emergency response / safe rollback
 
-- To stop *new purchase issuance* immediately: disable `EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED`, `EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED` and `EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED`, block new UI starts, and verify 403/404/controlled unavailable responses. Keep prior invoice snapshots.
-- **Do not turn off `EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED` as a generic emergency action** if verified payments may be in flight. The current worker uses this same flag for asynchronous reconciliation. Continue approved, isolated settlement while new confirmations are blocked; diagnose financial worker state and only disable the payment worker on an explicit incident-authorized stop, with manual reconciliation queued.
+- To stop *new purchase issuance* immediately: disable `BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED`, `BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED` and `BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED`, block new UI starts, and verify 403/404/controlled unavailable responses. Keep prior invoice snapshots.
+- **Do not turn off `BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED` as a generic emergency action** if verified payments may be in flight. The current worker uses this same flag for asynchronous reconciliation. Continue approved, isolated settlement while new confirmations are blocked; diagnose financial worker state and only disable the payment worker on an explicit incident-authorized stop, with manual reconciliation queued.
 - Do not delete pending invoice/coupon reservations as a rollback shortcut. Never re-run a new payment with a fresh token after an unknown provider response without checking the immutable financial intent. Late verified money on expired/cancelled handoffs must create exactly one recovery case; refund requires operator finance verification and audit.
 - Database rollback: use verified pre-cutover restore point in a *test* clone. New additive migrations can remain unapplied in production until cutover; never `DROP` subscription ledgers while invoices exist. For a production incident, follow the DB owner's approved PITR and change-control procedure, recording exact SHA and timing.
 

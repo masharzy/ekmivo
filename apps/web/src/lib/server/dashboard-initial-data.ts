@@ -31,11 +31,11 @@ export async function dashboardInitialData(workspaceId:string,environment:string
  }
  if(features?.payment_links!==true)delete paths.links;
  if(section==="requests"&&environment==="live"&&features?.invoices!==true)delete paths.sources;
- const token=(await cookies()).get("ekmivo-session")?.value,origin=goOrigin();
+ const token=(await cookies()).get("briofold-session")?.value,origin=goOrigin();
  return Object.fromEntries(await Promise.all(Object.entries(paths).map(async([key,path])=>{
   try{
    if(!token||!origin)throw Error("SOURCE_UNAVAILABLE");
-   const response=await fetch(new URL("/v1/"+path,origin),{headers:{Cookie:"ekmivo-session="+token},cache:"no-store",redirect:"error",signal:AbortSignal.timeout(20000)});
+   const response=await fetch(new URL("/v1/"+path,origin),{headers:{Cookie:"briofold-session="+token},cache:"no-store",redirect:"error",signal:AbortSignal.timeout(20000)});
    if(!response.ok)throw Error(String(response.status));
    return [key,{data:await response.json(),error:"",at:Date.now()}];
   }catch(error){return [key,{data:null,error:error instanceof Error?error.message:"SOURCE_UNAVAILABLE",at:Date.now()}]}

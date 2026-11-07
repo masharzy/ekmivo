@@ -1,4 +1,4 @@
-# ADR-0001: Kotlin + Jetpack Compose for Ekmivo Android
+# ADR-0001: Kotlin + Jetpack Compose for Briofold Android
 Status: Accepted by product owner (2026-10-11).
 
 ## Decision

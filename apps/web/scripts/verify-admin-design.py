@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Guard approved Ekmivo Admin design values against accidental changes."""
+"""Guard approved Briofold Admin design values against accidental changes."""
 from pathlib import Path
 import re
 import sys
 
 root = Path(__file__).resolve().parents[3]  # repository root
-html = (root / "docs/design/ekmivo-admin-reference.html").read_text(encoding="utf-8")
+html = (root / "docs/design/briofold-admin-reference.html").read_text(encoding="utf-8")
 css = (root / "apps/web/src/styles/admin/admin-tokens.css").read_text(encoding="utf-8")
 adapter = (root / "apps/web/src/styles/admin/admin-components.css").read_text(encoding="utf-8")
 theme = (root / "apps/web/src/styles/admin/admin-theme.css").read_text(encoding="utf-8")
@@ -26,7 +26,7 @@ for block, theme_name in [(light, "light"), (dark, "dark")]:
 if 'font:13px/1.45 Inter' not in theme: errors.append("Admin typography drift")
 for needle in ["grid-template-columns:212px", "grid-template-rows:48px", "max-width:1180px", "height:28px", "width:min(480px"]:
     if needle not in adapter: errors.append("Admin component drift: "+needle)
-if "data-admin-theme={mode}" not in shell or 'ekmivo-admin-theme=' not in shell:
+if "data-admin-theme={mode}" not in shell or 'briofold-admin-theme=' not in shell:
     errors.append("Admin root/cookie isolation missing")
 if 'document.documentElement.dataset.theme=mode' in shell:
     errors.append("Admin theme still changes public document theme")

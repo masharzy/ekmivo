@@ -5,7 +5,7 @@ export default function AppError({error,reset}:{error:Error & {digest?:string};r
  const bn=useInterfaceLocale()==="bn";
  useEffect(()=>{console.error("An application route failed",error.digest??"server_error");},[error]);
  return <main className="ek-app-shell ek-error-page"><div className="ek-error-box">
- <span>EKMIVO / ERROR</span>
+ <span>BRIOFOLD / ERROR</span>
  <h1>{bn?"পেজটি লোড করা যায়নি":"Something went wrong."}</h1><p>{bn?"সার্ভারের সমস্যায় পেজটি লোড হয়নি। আবার চেষ্টা করুন। সমস্যা থাকলে নিচের রেফারেন্স নম্বরসহ সাপোর্টে জানান।":"The server could not complete this request. Please retry. If the problem continues, contact support with the reference below."}</p>
  {error.digest&&<small>Reference: {error.digest}</small>}
  <button type="button" className="ek-action" onClick={reset}>{bn?"আবার চেষ্টা করুন":"Try again"} ↗</button>

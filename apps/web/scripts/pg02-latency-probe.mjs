@@ -5,7 +5,7 @@ import {writeFile} from "node:fs/promises";
 if(process.env.PG23_ALLOW_PRODUCTION_FIXTURES!=="true")throw Error("Explicit fixture guard required");
 const sql=postgres(process.env.DATABASE_URL,{ssl:"require",max:1,prepare:false});
 const uid=randomUUID(),wid=randomUUID(),token=randomBytes(32).toString("base64url");
-const web="https://ekmivo-web-masharzys-projects.vercel.app",results=[];
+const web="https://briofold.tech",results=[];
 try{
  await sql.begin(async tx=>{
   await tx`INSERT INTO app_users(id,email,display_name,password_hash,email_verified_at) VALUES(${uid},${uid+"@example.invalid"},'Latency fixture','not-a-login-password',now())`;
@@ -15,7 +15,7 @@ try{
  });
  for(let round=0;round<3;round++)for(const route of ["overview","developers"]){
   const start=performance.now();
-  const response=await fetch(`${web}/en/w/${wid}/payments/${route}?env=sandbox`,{headers:{Cookie:"ekmivo-session="+token},signal:AbortSignal.timeout(60000)});
+  const response=await fetch(`${web}/en/w/${wid}/payments/${route}?env=sandbox`,{headers:{Cookie:"briofold-session="+token},signal:AbortSignal.timeout(60000)});
   const headersMs=Math.round(performance.now()-start);await response.text();
   const result={round,route,status:response.status,headers_ms:headersMs,complete_ms:Math.round(performance.now()-start),vercel_region_chain:response.headers.get("x-vercel-id")?.split("::").slice(0,-1).join("::")};
   results.push(result);console.log(JSON.stringify(result));

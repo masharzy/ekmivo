@@ -14,7 +14,7 @@ export default async function BriofoldSetup({params}:{params:Promise<{locale:str
  if(!workspace)redirect("/workspaces");
  const step=await onboardingState(workspace,user.id);
  if(!step||step==="complete")redirect("/workspaces/open");
- const selected=(await cookies()).get("ekmivo-selected-plan")?.value||"";
+ const selected=(await cookies()).get("briofold-selected-plan")?.value||"";
  const catalogue=step==="billing"&&workspace.mode!=="ai"?await publicPaymentPlans():{plans:[],unavailable:false};
  const plans=catalogue.plans.filter(p=>p.terms.kind!=="custom").map(p=>({
   id:p.id,name:locale==="bn"&&p.terms.name_bn?p.terms.name_bn:p.terms.name,

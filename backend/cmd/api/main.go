@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "github.com/masharzy/briofold/backend/internal/envcompat"
 	"context"
 	"crypto/rand"
 	"database/sql"
@@ -15,10 +16,10 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/checkout"
-	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
-	"github.com/masharzy/ekmivo/backend/internal/workerruntime"
+	"github.com/masharzy/briofold/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/checkout"
+	"github.com/masharzy/briofold/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/workerruntime"
 )
 
 type responseError struct {
@@ -269,7 +270,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/public/checkout/{token}/{action}", pay.HandlePublic)
 	mux.HandleFunc("GET /v1/mobile/releases/latest", handleAndroidRelease)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "ekmivo-api"})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "briofold-api"})
 	})
 	// The financial API, workers and jobs are intentionally not ready before PG03/PG04.
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
@@ -283,7 +284,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		if repo == nil {
 			return authz.Principal{}, authz.ErrUnavailable
 		}
-		cookie, err := r.Cookie("ekmivo-session")
+		cookie, err := r.Cookie("briofold-session")
 		if err != nil {
 			return authz.Principal{}, authz.ErrUnauthorized
 		}
@@ -363,7 +364,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		writeJSON(w, http.StatusOK, map[string]string{"role": role})
 	})
 	mux.HandleFunc("PATCH /v1/workspaces/{workspaceID}/settings", func(w http.ResponseWriter, r *http.Request) {
-		if origin := r.Header.Get("Origin"); origin != "" && origin != "https://ekmivo-web-masharzys-projects.vercel.app" && origin != os.Getenv("WEB_ORIGIN") {
+		if origin := r.Header.Get("Origin"); origin != "" && origin != "https://briofold.tech" && origin != os.Getenv("WEB_ORIGIN") {
 			writeJSON(w, http.StatusForbidden, responseError{Code: "ORIGIN_DENIED", Message: "Request origin denied"})
 			return
 		}
@@ -392,7 +393,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 func main() {
 	var repo *authz.Repository
 	connection := os.Getenv("AUTHZ_DATABASE_URL")
-	if os.Getenv("EKMIVO_REQUIRE_AUTHZ") == "true" && connection == "" {
+	if os.Getenv("BRIOFOLD_REQUIRE_AUTHZ") == "true" && connection == "" {
 		log.Fatal("authorization database is mandatory for deployed Go API")
 	}
 	if connection != "" {
@@ -421,7 +422,7 @@ func main() {
 	}
 	checkout.SetAllowedOrigin(os.Getenv("GO_WEB_ORIGIN"))
 	if os.Getenv("GO_WEB_ORIGIN") == "" {
-		checkout.SetAllowedOrigin("https://ekmivo-web-masharzys-projects.vercel.app")
+		checkout.SetAllowedOrigin("https://briofold.tech")
 	}
 	var pg05 *checkout.Service
 	if dsn := os.Getenv("PG05_SANDBOX_DATABASE_URL"); dsn != "" {
@@ -475,7 +476,7 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	log.Printf("ekmivo-api listening on :%s", port)
+	log.Printf("briofold-api listening on :%s", port)
 	runtimeContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if pg05 != nil && pg05.Pipeline != nil && os.Getenv("INBOX_SENDER_ENABLED") == "true" {

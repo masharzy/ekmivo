@@ -14,7 +14,7 @@ func TestHealthIsLiveButFinancialReadinessIsNot(t *testing.T){
  if health.Code!=http.StatusOK {t.Fatalf("health HTTP %d; expected 200",health.Code)}
  var live map[string]string
  if err:=json.Unmarshal(health.Body.Bytes(),&live);err!=nil{t.Fatal(err)}
- if live["status"]!="ok"||live["service"]!="ekmivo-api"{t.Fatalf("invalid health response: %#v",live)}
+ if live["status"]!="ok"||live["service"]!="briofold-api"{t.Fatalf("invalid health response: %#v",live)}
  ready:=httptest.NewRecorder()
  handler.ServeHTTP(ready,httptest.NewRequest(http.MethodGet,"/readyz",nil))
  if ready.Code!=http.StatusServiceUnavailable{t.Fatalf("readiness HTTP %d; expected 503 until financial release verification passes",ready.Code)}
@@ -57,7 +57,7 @@ func TestKeyBoundMerchantRouteFailsClosedWithoutCredentialsOrRuntime(t *testing.
   {http.MethodGet,"/v1/payment-intents/9a6f551e-e081-4b74-bcf8-73a5836ab3f4","",401,"INVALID_API_KEY"},
   {http.MethodPost,"/v1/payment-intents/9a6f551e-e081-4b74-bcf8-73a5836ab3f4/verify-transaction","",401,"INVALID_API_KEY"},
   {http.MethodPost,"/v1/payment-intents/9a6f551e-e081-4b74-bcf8-73a5836ab3f4/unknown","",404,"NOT_FOUND"},
-  {http.MethodPost,"/v1/payment-intents","Bearer ek_test_0123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",503,"AUTH_SERVICE_UNAVAILABLE"},
+  {http.MethodPost,"/v1/payment-intents","Bearer bf_test_0123456789abcdef_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",503,"AUTH_SERVICE_UNAVAILABLE"},
  }
  for _,tc:=range cases {
   t.Run(tc.method+" "+tc.path,func(t *testing.T){

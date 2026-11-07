@@ -7,9 +7,9 @@ export function AdminSignInForm({locale}:{locale:"en"|"bn"}){
  const bn=locale==="bn";
  const [state,action,pending]=useActionState(loginAction.bind(null,locale),emptyState);
  return <main className="pa-mfa-screen pa-admin-design"><div className="pa-mfa-card">
- <div className="pa-mfa-logo">ekmivo <small>Admin</small></div>
+ <div className="pa-mfa-logo">briofold <small>Admin</small></div>
  <h1>{bn?"অ্যাডমিন সাইন ইন":"Admin sign in"}</h1>
- <p style={{textAlign:"center"}}>{bn?"আপনার Ekmivo অ্যাকাউন্ট ব্যবহার করুন।":"Use your Ekmivo account."}</p>
+ <p style={{textAlign:"center"}}>{bn?"আপনার Briofold অ্যাকাউন্ট ব্যবহার করুন।":"Use your Briofold account."}</p>
  <form action={action}><input type="hidden" name="admin" value="1"/>
  <label>{bn?"ইমেইল":"Email"}<input type="email" name="email" required autoComplete="email" maxLength={254} autoFocus/></label>
  <label>{bn?"পাসওয়ার্ড":"Password"}<input type="password" name="password" required autoComplete="current-password" maxLength={256}/></label>

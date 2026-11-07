@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -95,7 +95,7 @@ func TestSubscriptionOrderHTTPIsolatedPostgres(t *testing.T) {
 		req.SetPathValue("intentID", intent)
 		req.SetPathValue("orderAction", action)
 		if token != "" {
-			req.AddCookie(&http.Cookie{Name: "ekmivo-session", Value: token})
+			req.AddCookie(&http.Cookie{Name: "briofold-session", Value: token})
 		}
 		if allowOrigin {
 			req.Header.Set("Origin", "https://phase5-ci.example.invalid")
@@ -118,7 +118,7 @@ func TestSubscriptionOrderHTTPIsolatedPostgres(t *testing.T) {
 	expect("owner read", call("GET", "", ownerToken, nil, false, ""), 200)
 	expect("POST without Origin", call("POST", "quote", ownerToken, map[string]any{}, false, ""), 403)
 	expect("flag-off quote", call("POST", "quote", ownerToken, map[string]any{}, true, ""), 503)
-	t.Setenv("EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED", "true")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED", "true")
 	expect("owner quote", call("POST", "quote", ownerToken, map[string]any{}, true, ""), 200)
 	quoted := call("GET", "", ownerToken, nil, false, "")
 	expect("reloaded quote", quoted, 200)
@@ -139,9 +139,9 @@ func TestSubscriptionOrderHTTPIsolatedPostgres(t *testing.T) {
 	payload := map[string]any{"quote_id": snapshot.Quote.ID, "consents": consents}
 	key := "phase5_http_confirm_0001"
 	expect("flags-off confirm", call("POST", "confirm", ownerToken, payload, true, key), 503)
-	t.Setenv("EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED", "true")
-	t.Setenv("EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED", "true")
-	t.Setenv("EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED", "true")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED", "true")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED", "true")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED", "true")
 	expect("three consents required", call("POST", "confirm", ownerToken, map[string]any{"quote_id": snapshot.Quote.ID}, true, key), 422)
 	first := call("POST", "confirm", ownerToken, payload, true, key)
 	expect("one confirmed invoice", first, 200)

@@ -48,11 +48,11 @@ function PaymentOperationsScoped({locale,workspaceId,userId,environment,resource
  const loadSequence=useRef(0);
  const [queryFilters,setQueryFilters]=useState({status:"",account:"",method:"",from:"",to:""});
  const [loadedFilterKey,setLoadedFilterKey]=useState(""),[searchTerm,setSearchTerm]=useState("");
- const filterKey=`ekmivo:pg09:filters:${userId}:${workspaceId}:${environment}:${resource}`;
+ const filterKey=`briofold:pg09:filters:${userId}:${workspaceId}:${environment}:${resource}`;
  const draftRef=useRef({draft,saved});useEffect(()=>{draftRef.current={draft,saved}},[draft,saved]);
  const confirmDialog=useRef<HTMLDialogElement>(null);
  useEffect(()=>{const dialog=confirmDialog.current;if(!dialog)return;if(confirm&&!dialog.open){dialog.showModal();dialog.querySelector<HTMLButtonElement>("button:last-of-type")?.focus()}else if(!confirm&&dialog.open)dialog.close()},[confirm]);
- const draftKey=`ekmivo:operations:${userId}:${workspaceId}:${environment}:${resource}`;
+ const draftKey=`briofold:operations:${userId}:${workspaceId}:${environment}:${resource}`;
  // A unique React key remounts all state on workspace, user, realm and route
  // switch. No synchronous effect reset; one-time secrets cannot cross scope.
  useEffect(()=>{let current=true;void Promise.resolve().then(()=>{if(!current)return;try{const raw=sessionStorage.getItem(filterKey);let restored={status:"",account:"",method:"",from:"",to:""};if(raw){const parsed=JSON.parse(raw);if(parsed&&["status","account","method","from","to"].every(k=>typeof parsed[k]==="string"))restored=parsed}setQueryFilters(restored);setFilter(sessionStorage.getItem(filterKey+":q")||"");setSearchTerm("")}catch{/* private storage */}setLoadedFilterKey(filterKey)});return()=>{current=false}},[filterKey]);

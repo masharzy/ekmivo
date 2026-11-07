@@ -101,7 +101,7 @@ func (s *Service) HandleSimpleVerify(w http.ResponseWriter, r *http.Request) {
 
 // Domain separation keeps callback signing independent of public checkout tokens.
 func (s *Service) automaticSigningSecret(ws, realm string) string {
-	return base64.RawURLEncoding.EncodeToString(mac(s.TokenKey, "ekmivo:auto-webhook:v1|"+ws+"|"+realm))
+	return base64.RawURLEncoding.EncodeToString(mac(s.TokenKey, "briofold:auto-webhook:v1|"+ws+"|"+realm))
 }
 func (s *Service) HandleSigningSecret(w http.ResponseWriter, r *http.Request) {
 	if !s.pipelineReady() {

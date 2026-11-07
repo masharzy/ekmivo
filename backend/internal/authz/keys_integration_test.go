@@ -47,7 +47,7 @@ func TestPostgresMerchantCredentials(t *testing.T) {
 	if _, err = rand.Read(entropy); err != nil {
 		t.Fatal(err)
 	}
-	token := "ek_test_" + hex.EncodeToString(entropy[:8]) + "_" + base64.RawURLEncoding.EncodeToString(entropy)
+	token := "bf_test_" + hex.EncodeToString(entropy[:8]) + "_" + base64.RawURLEncoding.EncodeToString(entropy)
 	publicID, _, digest, _ := ParseMerchantToken(token)
 	if _, err = tx.ExecContext(ctx, `INSERT INTO merchant_api_keys(workspace_id,environment,name,public_id,secret_digest,scopes,expires_at,created_by) VALUES ($1::uuid,'sandbox','Go scan regression',$2,$3,ARRAY['payments:read','refunds:read'],now()+interval '1 hour',$4::uuid)`, wid, publicID, digest, uid); err != nil {
 		t.Fatal(err)
@@ -87,7 +87,7 @@ func TestPostgresMerchantCredentials(t *testing.T) {
 		t.Fatalf("wrong environment: %v", err)
 	}
 	entropy[31] ^= 1
-	wrong := "ek_test_" + publicID + "_" + base64.RawURLEncoding.EncodeToString(entropy)
+	wrong := "bf_test_" + publicID + "_" + base64.RawURLEncoding.EncodeToString(entropy)
 	if _, err = repo.AuthenticateMerchant(ctx, "Bearer "+wrong, Sandbox, "payments:read"); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("tampered secret: %v", err)
 	}

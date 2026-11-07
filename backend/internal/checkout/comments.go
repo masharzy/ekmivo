@@ -6,9 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/masharzy/ekmivo/backend/internal/aicredits"
-	policy "github.com/masharzy/ekmivo/backend/internal/comments"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/aicredits"
+	policy "github.com/masharzy/briofold/backend/internal/comments"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"io"
 	"net/http"
 	"net/url"
@@ -49,7 +49,7 @@ func (s *Service) HandleComments(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	cookie, e := r.Cookie("ekmivo-session")
+	cookie, e := r.Cookie("briofold-session")
 	if e != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

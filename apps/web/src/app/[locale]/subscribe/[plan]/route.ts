@@ -51,11 +51,11 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  if(!legacy)return NextResponse.redirect(new URL("/pricing",request.url),303);
  const jar=await cookies(),user=await currentUser();
  if(!user){
-  jar.set("ekmivo-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
+  jar.set("briofold-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
   return NextResponse.redirect(new URL("/login",request.url),303);
  }
  if(!user.verified&&await verificationEnabled()){
-  jar.set("ekmivo-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
+  jar.set("briofold-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
   return NextResponse.redirect(new URL("/verify-email",request.url),303);
  }
  const requested=q.get("workspace");
@@ -63,16 +63,16 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  if(requested&&primary&&requested!==primary)return NextResponse.redirect(new URL("/pricing?purchase=STORE_NOT_AUTHORIZED",request.url),303);
  const workspace=requested?(await workspacesFor(user.id)).find(w=>w.id===requested):await preferredWorkspaceFor(user.id);
  if(!workspace){
-  jar.set("ekmivo-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
+  jar.set("briofold-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
   return NextResponse.redirect(new URL("/workspaces",request.url),303);
  }
  const setup=await onboardingState(workspace,user.id);
  if(setup&&setup!=="complete"){
-  jar.set("ekmivo-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
+  jar.set("briofold-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
   return NextResponse.redirect(new URL("/setup",request.url),303);
  }
  if(!["commerce","both"].includes(workspace.mode))return NextResponse.redirect(new URL("/pricing?status=store-payments-disabled",request.url),303);
- jar.delete("ekmivo-selected-plan");
+ jar.delete("briofold-selected-plan");
  // Keep the existing verified billing path active until coupon, legal-consent
  // enforcement and the new order confirmation contract have passed release gates.
  return NextResponse.redirect(new URL(dashboardHref(locale,workspace.id,"payments","billing")+"?tab=plans&plan="+encodeURIComponent(plan),request.url),303);

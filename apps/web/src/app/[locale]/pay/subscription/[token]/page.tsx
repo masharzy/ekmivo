@@ -5,15 +5,15 @@ import {database} from "../../../../../lib/server/db";
 import {CheckoutExperience} from "../../../../../components/checkout-experience";
 
 export const dynamic="force-dynamic";
-export const metadata:Metadata={title:"Pay Ekmivo subscription · Secure checkout",robots:{index:false,follow:false},referrer:"no-referrer"};
+export const metadata:Metadata={title:"Pay Briofold subscription · Secure checkout",robots:{index:false,follow:false},referrer:"no-referrer"};
 
-// A seller /pay/{documentToken} is never accepted as an Ekmivo subscription.
+// A seller /pay/{documentToken} is never accepted as an Briofold subscription.
 // The URL token alone does not authorize a Store Billing lookup: require the
 // current verified session, exact primary Store and issued capability digest.
 export default async function SubscriptionPaymentPage({params}:{params:Promise<{locale:string;token:string}>}){
  const {locale,token}=await params;
  if((locale!=="bn"&&locale!=="en")||!/^[A-Za-z0-9_-]{43}$/.test(token)||
-   process.env.EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED!=="true")notFound();
+   process.env.BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED!=="true")notFound();
  const user=await requireUser(locale);
  let purchase:{intent_id:string;workspace_id:string}|null=null;
  try{

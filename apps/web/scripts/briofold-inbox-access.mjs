@@ -16,9 +16,9 @@ export async function runBriofoldInboxAccess({origin,browser,control,sessions}){
   const thread=(await db`SELECT id FROM inbox_threads WHERE connection_id=${connection.id}`)[0].id;
   context=await browser.newContext();
   await context.addCookies([
-   {name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
-   {name:"ekmivo-default-workspace",value:actor+":"+workspace,url:origin,httpOnly:true,sameSite:"Lax"},
-   {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}
+   {name:"briofold-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
+   {name:"briofold-default-workspace",value:actor+":"+workspace,url:origin,httpOnly:true,sameSite:"Lax"},
+   {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}
   ]);
   const endpoint=origin+"/api/go/workspaces/"+workspace+"/inbox?environment=live";
   const request=(action,body={},target=endpoint)=>context.request.post(target,{headers:{Origin:origin},data:{action,thread_id:thread,body}});

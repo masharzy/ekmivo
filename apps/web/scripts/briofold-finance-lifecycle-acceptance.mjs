@@ -3,7 +3,7 @@ import {createDecipheriv,createHash,randomUUID} from 'node:crypto';
 // Called only inside the already-guarded disposable live-realm finance suite.
 export async function runFinanceLifecycle({origin,context,viewerContext,page,finance,workspaceId,payment,webhook,owner}){
  const base=origin+`/api/go/workspaces/${workspaceId}`,post=(path,data,key=randomUUID(),who=context)=>who.request.post(base+path+(path.includes('?')?'&':'?')+'environment=live',{headers:{Origin:origin,'Idempotency-Key':key},data});
- await context.addCookies([{name:'ekmivo-locale',value:'en',url:origin}]);
+ await context.addCookies([{name:'briofold-locale',value:'en',url:origin}]);
  const amount=(await finance`SELECT count(*)::integer n FROM financial_payments WHERE workspace_id=${workspaceId}`)[0].n;
  const notice=(await finance`INSERT INTO pg13_notifications(workspace_id,environment,type,resource_id,body) VALUES(${workspaceId},'live','payment.verified',${payment.id},${finance.json({amount_minor:23456,reference:'Fictional unified notice'})}) RETURNING id`)[0];
  await page.goto(origin+'/notifications');await page.getByRole('navigation',{name:'Notification source filter',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();

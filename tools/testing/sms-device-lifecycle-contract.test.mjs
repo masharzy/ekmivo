@@ -54,7 +54,7 @@ test("Go must validate requested phone ID matches the targeted route before muta
 });
 test("real 8-character pairing format renders a square QR and refuses unsupported characters",()=>{
  const token="ABCD2345";
- assert.equal(pairingPayload(token),"ekmivo://pair?token=ABCD2345");
+ assert.equal(pairingPayload(token),"briofold://pair?token=ABCD2345");
  const svg=pairingSvg(token);
  assert.match(svg,/<svg\b/);
  assert.match(svg,/fill="white"/);

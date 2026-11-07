@@ -7,27 +7,27 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 )
 
 const subscriptionIntentTestID = "a3f1e65b-21be-4f5e-9c1f-00914557df65"
 
 func TestSubscriptionOrderGatesFailClosed(t *testing.T) {
-	t.Setenv("EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED", "false")
-	t.Setenv("EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED", "false")
-	t.Setenv("EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED", "false")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED", "false")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED", "false")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED", "false")
 	if subscriptionMutationEnabled("quote") || subscriptionMutationEnabled("confirm") || subscriptionMutationEnabled("other") {
 		t.Fatal("checkout flags must default to closed")
 	}
-	t.Setenv("EKMIVO_SUBSCRIPTION_ORDER_QUOTE_ENABLED", "true")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_ORDER_QUOTE_ENABLED", "true")
 	if !subscriptionMutationEnabled("quote") || subscriptionMutationEnabled("confirm") {
 		t.Fatal("quote must not unlock payment confirmation")
 	}
-	t.Setenv("EKMIVO_SUBSCRIPTION_ORDER_CONFIRM_ENABLED", "true")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_ORDER_CONFIRM_ENABLED", "true")
 	if subscriptionMutationEnabled("confirm") {
 		t.Fatal("confirmation must require the Phase 6 handoff gate")
 	}
-	t.Setenv("EKMIVO_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED", "true")
+	t.Setenv("BRIOFOLD_SUBSCRIPTION_PHASE6_HANDOFF_ENABLED", "true")
 	if !subscriptionMutationEnabled("confirm") {
 		t.Fatal("all three independent flags should enable confirmation")
 	}
@@ -40,7 +40,7 @@ func TestSubscriptionOrderRejectsUnauthenticatedMutationsBeforeDB(t *testing.T) 
 		want                         int
 	}{
 		{http.MethodGet, "plan-slug", "", "", http.StatusNotFound},
-		{http.MethodPost, subscriptionIntentTestID, "wallet", "https://ekmivo.example", http.StatusNotFound},
+		{http.MethodPost, subscriptionIntentTestID, "wallet", "https://briofold.example", http.StatusNotFound},
 		{http.MethodPost, subscriptionIntentTestID, "quote", "", http.StatusForbidden},
 		{http.MethodPost, subscriptionIntentTestID, "confirm", "", http.StatusForbidden},
 	} {

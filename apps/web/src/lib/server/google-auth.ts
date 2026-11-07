@@ -5,9 +5,9 @@ import {hashToken,passwordHash} from "./auth";
 import {randomBytes} from "node:crypto";
 import type {GoogleFlow,verifyGoogleIdToken} from "../google-oidc";
 
-export const googleFlowCookie=process.env.NODE_ENV==="production"?"__Host-ekmivo-google-flow":"ekmivo-google-flow";
+export const googleFlowCookie=process.env.NODE_ENV==="production"?"__Host-briofold-google-flow":"briofold-google-flow";
 export async function googleAccount(flow:GoogleFlow,identity:Awaited<ReturnType<typeof verifyGoogleIdToken>>){
- const token=(await cookies()).get("ekmivo-session")?.value;
+ const token=(await cookies()).get("briofold-session")?.value;
  const sessionHash=token?hashToken(token):"";
  if(flow.mode==="link"&&sessionHash!==flow.sessionHash)throw Error("GOOGLE_REAUTH_REQUIRED");
  // OAuth-only accounts get an unguessable password; recovery can explicitly set one.

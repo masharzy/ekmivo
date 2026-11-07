@@ -13,6 +13,6 @@ export function billingPaymentMessage(status:string,bn:boolean){
 export function billingPaymentError(code:string,bn:boolean){
  if(code==='VERIFIED_PLATFORM_PAYMENT_REQUIRED')return billingPaymentMessage('awaiting_payment',bn);
  if(code==='BILLING_STATE_CHANGED')return billingPaymentMessage('exception',bn);
- if(code==='PLATFORM_RECEIVING_UNAVAILABLE')return bn?'Ekmivo-র পেমেন্ট সেবা এখন প্রস্তুত নয়। কিছুক্ষণ পর আবার চেষ্টা করুন।':'Ekmivo payment service is unavailable. Try again shortly.';
+ if(code==='PLATFORM_RECEIVING_UNAVAILABLE')return bn?'Briofold-র পেমেন্ট সেবা এখন প্রস্তুত নয়। কিছুক্ষণ পর আবার চেষ্টা করুন।':'Briofold payment service is unavailable. Try again shortly.';
  return billingPaymentMessage('unavailable',bn);
 }

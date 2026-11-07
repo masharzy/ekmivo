@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 )
 
 // Historical pg64 payer groups use a 64-prefixed MD5 UUID without forcing

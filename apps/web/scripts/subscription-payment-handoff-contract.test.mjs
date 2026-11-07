@@ -26,7 +26,7 @@ test("subscription wallet requires exact current owner-bound capability; seller 
  const generic=read("apps/web/src/app/[locale]/checkout/[token]/page.tsx");
  assert.match(wallet,/platform_subscription_payment_capability/);
  assert.match(wallet,/requireUser/);
- assert.match(wallet,/EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED/);
+ assert.match(wallet,/BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED/);
  assert.match(wallet,/hashToken\(token\)/);
  assert.match(wallet,/subscriptionReturnPath/);
  assert.match(seller,/PublicDocument/);
@@ -55,7 +55,7 @@ test("Go payment issue/reconciliation is default-off and never trusts client pai
  const go=read("backend/internal/checkout/subscription_payment.go");
  const worker=read("backend/internal/checkout/subscription_payment_recovery.go");
  const legacy=read("backend/internal/checkout/maintenance_worker.go");
- assert.match(go,/EKMIVO_SUBSCRIPTION_PAYMENT_ENABLED/);
+ assert.match(go,/BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED/);
  assert.match(go,/platform_subscription_payment_bind/);
  assert.match(go,/pg10_public_payment_sources/);
  assert.match(go,/approvedSubscriptionSources/);

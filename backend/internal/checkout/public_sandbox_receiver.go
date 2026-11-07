@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/jackc/pgx/v5"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"io"
 	"net/http"
 	"os"
@@ -72,7 +72,7 @@ func (s *Service) HandlePublicSandboxReceiver(w http.ResponseWriter, r *http.Req
 			continue
 		}
 		keyID := sha256.Sum256(secret)
-		if strings.HasPrefix(r.Header.Get("X-Ekmivo-Signature"), "v1=") && r.Header.Get("X-Ekmivo-Key-ID") == hex.EncodeToString(keyID[:8]) && merchantwebhook.Verify(secret, body, r.Header.Get("X-Ekmivo-Timestamp"), r.Header.Get("X-Ekmivo-Event-ID"), strings.TrimPrefix(r.Header.Get("X-Ekmivo-Signature"), "v1="), time.Now()) {
+		if strings.HasPrefix(r.Header.Get("X-Briofold-Signature"), "v1=") && r.Header.Get("X-Briofold-Key-ID") == hex.EncodeToString(keyID[:8]) && merchantwebhook.Verify(secret, body, r.Header.Get("X-Briofold-Timestamp"), r.Header.Get("X-Briofold-Event-ID"), strings.TrimPrefix(r.Header.Get("X-Briofold-Signature"), "v1="), time.Now()) {
 			valid = true
 			break
 		}
@@ -84,7 +84,7 @@ func (s *Service) HandlePublicSandboxReceiver(w http.ResponseWriter, r *http.Req
 		Environment string `json:"environment"`
 		Type        string `json:"type"`
 	}
-	if !valid || json.Unmarshal(body, &event) != nil || event.Workspace != workspace || event.Environment != "sandbox" || !uuidPattern.MatchString(event.ID) || !uuidPattern.MatchString(event.Delivery) || event.Delivery != r.Header.Get("X-Ekmivo-Delivery-ID") {
+	if !valid || json.Unmarshal(body, &event) != nil || event.Workspace != workspace || event.Environment != "sandbox" || !uuidPattern.MatchString(event.ID) || !uuidPattern.MatchString(event.Delivery) || event.Delivery != r.Header.Get("X-Briofold-Delivery-ID") {
 		fail(w, 401, "INVALID_SIGNATURE")
 		return
 	}

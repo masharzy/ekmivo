@@ -3,7 +3,7 @@ function publicOrigin(value:string|undefined){try{if(!value)return null;const u=
 // One place for public origins. Transport credentials and the private Go origin
 // never enter this object. Do not claim a custom API domain before provisioning.
 export const developerConfig={
- siteOrigin:publicOrigin(process.env.NEXT_PUBLIC_SITE_URL)||"https://ekmivo-web.vercel.app",
+ siteOrigin:publicOrigin(process.env.NEXT_PUBLIC_SITE_URL)||"https://briofold.tech",
  portalOrigin:publicOrigin(process.env.NEXT_PUBLIC_DEVELOPER_ORIGIN),
  apiOrigin:publicOrigin(process.env.NEXT_PUBLIC_DEVELOPER_API_ORIGIN),
  dashboard:"/workspaces/open",keys:"/workspaces/open",status:"/status",contract:"/api/payment-contract",

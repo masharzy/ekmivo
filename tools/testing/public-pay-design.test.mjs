@@ -56,7 +56,7 @@ test("provider colors and no marketing header in standalone routes",()=>{
  // A public prefixed URL must redirect, but the internal locale rewrite must
  // bypass that redirect to avoid a /dashboard -> /bn/dashboard -> /dashboard loop.
  assert.match(proxy,/NextResponse.redirect\(destination,307\)/);
- assert.match(proxy,/headers.set\("x-ekmivo-internal-rewrite","1"\)/);
+ assert.match(proxy,/headers.set\("x-briofold-internal-rewrite","1"\)/);
  const nextConfig=source("apps/web/next.config.ts");
  assert.doesNotMatch(nextConfig,/source: "\/:locale\(bn\|en\)/);
  assert.match(proxy,/if\(\/\^\\\/\(\?:setup\|dashboard\|inbox\|orders\|payments\|sms-data\|invoices\|customers\|reports\|settings\|workspaces\|w\|account\|admin\)/);

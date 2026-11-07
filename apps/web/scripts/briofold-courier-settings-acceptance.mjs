@@ -9,7 +9,7 @@ export async function runCourierSettings({origin,browser,control,sessions}){
   const owner=await actor(sessions.owner),viewer=await actor(sessions.viewer),store=randomUUID();
   await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},'Fictional courier settings business','both',${owner})`;
   await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner'),(${store},${viewer},'viewer')`;
-  const authenticated=async(token,user)=>{const c=await browser.newContext();await c.addCookies([{name:'ekmivo-session',value:token,url:origin,httpOnly:true},{name:'ekmivo-default-workspace',value:user+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);return c;};
+  const authenticated=async(token,user)=>{const c=await browser.newContext();await c.addCookies([{name:'briofold-session',value:token,url:origin,httpOnly:true},{name:'briofold-default-workspace',value:user+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);return c;};
   context=await authenticated(sessions.owner,owner);viewerContext=await authenticated(sessions.viewer,viewer);
   const endpoint=origin+`/api/go/workspaces/${store}/commerce?environment=live`;
   const apiKey='fictional-courier-key-'+randomUUID(),secret='fictional-courier-secret-'+randomUUID();
@@ -44,7 +44,7 @@ export async function runCourierSettings({origin,browser,control,sessions}){
   await page.goto(origin+'/orders/courier');await page.getByRole('button',{name:'Book with Pathao',exact:true}).click();await page.getByRole('button',{name:'Load Pathao locations',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Confirm Pathao booking',exact:true}).isDisabled(),true,'unreviewed parcel could be booked');
   assert.equal((await db`SELECT status FROM commerce_deliveries WHERE id=${did}`)[0].status,'ready','opening a parcel form dispatched a booking');
-  let cases=0;for(const lang of ['en','bn']){await context.addCookies([{name:'ekmivo-locale',value:lang,url:origin}]);for(const theme of ['light','dark']){await context.addCookies([{name:'ekmivo-theme',value:theme,url:origin}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});await page.goto(origin+'/settings/integrations/courier');await page.getByRole('heading',{name:lang==='bn'?'কুরিয়ার সংযোগ':'Courier integrations',exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
+  let cases=0;for(const lang of ['en','bn']){await context.addCookies([{name:'briofold-locale',value:lang,url:origin}]);for(const theme of ['light','dark']){await context.addCookies([{name:'briofold-theme',value:theme,url:origin}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});await page.goto(origin+'/settings/integrations/courier');await page.getByRole('heading',{name:lang==='bn'?'কুরিয়ার সংযোগ':'Courier integrations',exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
   assert.deepEqual(errors,[]);console.log('COURIER SETTINGS SQL/Go/Next/browser PASS: authenticated encrypted save/read/reload/disable, key confidentiality, role/realm denial, Pathao encrypted credentials and explicit parcel/location confirmation and responsive cases:',cases);
  }finally{await context?.close();await viewerContext?.close();await db.end({timeout:3});}
 }

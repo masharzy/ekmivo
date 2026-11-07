@@ -13,9 +13,9 @@ export async function runBriofoldOnboardingBrowser({origin,browser,control,sessi
   const context=async workspace=>{
    const c=await browser.newContext();contexts.push(c);
    await c.addCookies([
-    {name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-default-workspace",value:actor+":"+workspace,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}
+    {name:"briofold-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-default-workspace",value:actor+":"+workspace,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}
    ]);return c;
   };
   for(const mode of ["ai","commerce","both"]){

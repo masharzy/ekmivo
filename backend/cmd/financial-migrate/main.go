@@ -1,8 +1,9 @@
-// Command financial-migrate runs upstream River and Ekmivo domain migrations
+// Command financial-migrate runs upstream River and Briofold domain migrations
 // under ONE reviewed infrastructure migration procedure, never HTTP startup.
 package main
 
 import (
+	_ "github.com/masharzy/briofold/backend/internal/envcompat"
 	"context"
 	"errors"
 	"fmt"
@@ -344,7 +345,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	// Explicit release-only mode never runs River, PG04 or unrelated migrations.
-	if os.Getenv("EKMIVO_DASHBOARD_UPGRADE_ONLY") == "true" {
+	if os.Getenv("BRIOFOLD_DASHBOARD_UPGRADE_ONLY") == "true" {
 		if os.Getenv("PG63_AUTO_WEBHOOK_ALLOW_MIGRATION") != "true" || os.Getenv("PG64_DASHBOARD_READ_MODELS_ALLOW_MIGRATION") != "true" || os.Getenv("PG65_WORKSPACE_TEAM_ALLOW_MIGRATION") != "true" {
 			log.Fatal("dashboard-only release requires explicit 0063, 0064 and 0065 authorization flags")
 		}

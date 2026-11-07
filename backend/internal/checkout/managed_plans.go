@@ -132,7 +132,7 @@ func (s *Service) HandleAdminPlanUsage(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "PLAN_USAGE_UNAVAILABLE")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

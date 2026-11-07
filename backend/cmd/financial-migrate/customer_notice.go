@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/receiptnotice"
 	"os"
 	"path/filepath"
 )

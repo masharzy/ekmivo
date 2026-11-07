@@ -14,7 +14,7 @@ func (s *Service) HandleSupportReply(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
-	cookie, e := r.Cookie("ekmivo-session")
+	cookie, e := r.Cookie("briofold-session")
 	if e != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

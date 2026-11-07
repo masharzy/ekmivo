@@ -1,4 +1,4 @@
-# Ekmivo agent entry point
+# Briofold agent entry point
 
 ## Latest owner execution correction — 2026-10-15
 Do not start Docker or run local Docker database tests without explicit owner permission. Database work and verification for this task must use Neon. Use an isolated Neon test branch for migration/fixture checks; do not treat a test-branch pass as production rollout evidence.

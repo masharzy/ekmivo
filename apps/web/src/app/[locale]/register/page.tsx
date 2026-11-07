@@ -7,7 +7,7 @@ import {googleConfiguration} from "../../../lib/google-oidc";
 import {googleMessage} from "../../../lib/google-message";
 export const dynamic="force-dynamic";
 
-export const metadata: Metadata = { title: "Create account | Ekmivo" };
+export const metadata: Metadata = { title: "Create account | Briofold" };
 
 export default async function RegisterPage({ params,searchParams }: { params: Promise<{ locale: string }>;searchParams:Promise<{google?:string}> }) {
   const { locale } = await params;

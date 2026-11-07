@@ -14,8 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 )
 
 type DocumentItem struct {
@@ -177,7 +177,7 @@ func (s *Service) documentActor(r *http.Request, ws, realm, res string, mutation
 		}
 		return "", "merchant_key", nil
 	}
-	cookie, e := r.Cookie("ekmivo-session")
+	cookie, e := r.Cookie("briofold-session")
 	if e != nil {
 		return "", "", authz.ErrUnauthorized
 	}

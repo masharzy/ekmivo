@@ -1,6 +1,6 @@
 # Briofold — Unified dashboard implementation roadmap
 
-**Owner decision:** 2026-10-20; updated 2026-10-22. **State:** Historical execution baseline; consult per-phase evidence for actual implementation status. Ekmivo is the current repository identity; Briofold is the owner's confirmed future brand spelling. This is a staged migration, not a replacement of the finance engine.
+**Owner decision:** 2026-10-20; updated 2026-10-22. **State:** Historical execution baseline; consult per-phase evidence for actual implementation status. Briofold is the current repository identity; Briofold is the owner's confirmed future brand spelling. This is a staged migration, not a replacement of the finance engine.
 
 **2026-10-22 owner supersession:** **Phase 1 CSS isolation is cancelled/WAIVED**. The merchant dashboard will intentionally share the public homepage's CSS/design direction during a subsequent owner-directed redesign. Do not split `globals.css`, add CSS isolation as a release blocker, or regress existing designs to satisfy the superseded requirement. Keep tested route/component styles and the independently approved Admin design stable until that redesign. The account model is **one user-facing Store**, not multiple switchable workspaces; internal `workspace_id` remains for tenant/financial compatibility and exceptional historic access, not a license to reintroduce workspace-switch UX. See `docs/STORE-FIRST-SUBSCRIPTION-CHECKOUT-EXECUTION.bn.md`.
 
@@ -9,7 +9,7 @@
 1. One customer-facing business dashboard; **no AI vs Payment dashboard switch**. Only relevant features are exposed per business entitlement. One business can enable AI, Payments or Both.
 2. The **current approved Payment Gateway dashboard** (Overview and the merchant dashboard reference family) is the ONLY visual standard for the unified dashboard. Homepage/marketing and checkout are separate design surfaces. Preserve payment dashboard spacing, radii, typography, table patterns, drawers, dialogs, statuses, responsive behavior and light/dark theme.
 3. **Superseded CSS-isolation mandate.** The owner cancelled Phase 1 on 2026-10-22 and plans to adopt homepage CSS/design in the merchant dashboard. Preserve current production UI, accessibility and independently locked Admin styling until separately approved changes. Do not require a physical `globals.css` split or report it as incomplete work.
-4. **No feature removal:** route/name changes are allowed, but every existing Ekmivo capability and the audited AiPraktor-visible capability must have a documented, discoverable destination and a tested functionality/permission contract. No dead menu, mock save, source-unavailable presented as zero, or misleading "connected".
+4. **No feature removal:** route/name changes are allowed, but every existing Briofold capability and the audited AiPraktor-visible capability must have a documented, discoverable destination and a tested functionality/permission contract. No dead menu, mock save, source-unavailable presented as zero, or misleading "connected".
 5. **No `/bn` or `/en` in visible links** and no workspace UUID or AI/payment service slug for normal merchant navigation. New primary paths are `/dashboard`, `/inbox`, `/orders`, `/payments`, `/customers`, `/reports`, `/settings`. Locale is user preference, not a URL segment. Legacy links redirect without internal proxy loops. Internal business IDs persist for authorization.
 6. **Payment truth remains authoritative:** original wallet SMS/notification evidence matching, financial realm isolation, transaction idempotency, webhook delivery, device pairing, plan limits, refund and reconciliation semantics do not move into AI authority. No invented verified payments.
 7. The user sees **one Dashboard and one Billing page**, but **two billing products**: Payment Gateway subscription/quotas, AI prepaid metered credits. Both means a chosen gateway tier PLUS AI credit wallet. Do not bundle unbounded AI calls. AI credit exhausted must not disable permitted manual Inbox or payment operations.
@@ -85,10 +85,10 @@ Use accordion navigation for categories, **not** an entire settings form in one 
 | Team + Groups | Settings → Team/Permissions | Roles, granular permissions, sensitive operations audited |
 | Setup | Onboarding + Settings → Setup | Business, Facebook, product, notification, courier, team, live readiness |
 | Video guide/Feedback/This device | Settings → Help/Feedback/Devices | Tutorials, voice/dictation where valid, app install/push permissions |
-| Ekmivo receiving methods/SMS phones | Payments + Settings → Payment Setup | Preserve authorized receipt verification and phone pairing |
-| Ekmivo payment links/requests/docs | Payments → Links; Settings → Developers | All original fields and error/confirmation semantics |
-| Ekmivo invoices/refunds/reports | Payments + Reports | Preserve finance source-of-truth and refund authorization |
-| Ekmivo admin workspaces/plans | Separate Admin | Remains isolated; new Briofold merchant UI must not adopt admin.css |
+| Briofold receiving methods/SMS phones | Payments + Settings → Payment Setup | Preserve authorized receipt verification and phone pairing |
+| Briofold payment links/requests/docs | Payments → Links; Settings → Developers | All original fields and error/confirmation semantics |
+| Briofold invoices/refunds/reports | Payments + Reports | Preserve finance source-of-truth and refund authorization |
+| Briofold admin workspaces/plans | Separate Admin | Remains isolated; new Briofold merchant UI must not adopt admin.css |
 
 This is a **routing/capability matrix**. Individual internal fields, controls, read/write permissions and API contracts must be expanded into implementation tickets with tests using the full UI inventory. Audited capability != implemented capability.
 
@@ -97,7 +97,7 @@ This is a **routing/capability matrix**. Individual internal fields, controls, r
 All dates are **sequence estimates**, not automatic background execution or a promise of a live deployment without CI/approval. A phase is not complete until code, data, accessibility and regression evidence exist; no % fabricated. The assistant owns preparation, implementation, tests and PRs on subsequent working turns, rather than handing off a design-only document.
 
 ### Phase 0 — Audit, preserve baseline, lock specifications (NOW; 1–2 focused working days)
-- Inventory every current Ekmivo route and API contract, compare all AiPraktor 32 inspected routes/157 snapshots, create granular parity checklist: Existing / Partial / Missing / Untested / Not-available-provider.
+- Inventory every current Briofold route and API contract, compare all AiPraktor 32 inspected routes/157 snapshots, create granular parity checklist: Existing / Partial / Missing / Untested / Not-available-provider.
 - Freeze design screenshots (light/dark, Bengali/English, 360/768/1440), payment gateway component taxonomy, current token computed values. Record feature gates, DB ownership and CI acceptance.
 - Deliver: `docs/BRIOFOLD-UNIFIED-IMPLEMENTATION-ROADMAP.bn.md`, completed traceability tracker and failing guard tests for style leak/legacy navigation. This document itself is the initial Phase 0 artifact, **not a completed audit of every route**.
 

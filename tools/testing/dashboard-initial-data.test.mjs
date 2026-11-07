@@ -22,7 +22,7 @@ test('navigation data waits for all required sources, including empty results',a
 test('cookie authorization is server-only and requests never share cache',async()=>{
  const h=harness();await h.load('one','live','customers');await h.load('two','sandbox','customers');
  assert.equal(h.calls.length,2);assert.match(h.calls[0].url.pathname,/one\/documents\/customers$/);assert.equal(h.calls[1].url.searchParams.get('environment'),'sandbox');
- for(const {options} of h.calls){assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');assert.equal(options.headers.Cookie,'ekmivo-session=session-test');}
+ for(const {options} of h.calls){assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');assert.equal(options.headers.Cookie,'briofold-session=session-test');}
 });
 test('missing session never reaches financial API',async()=>{const h=harness({token:''});const d=await h.load('one','live','customers');assert.equal(h.calls.length,0);assert.equal(d.documents.data,null);assert.ok(d.documents.error)});
 test('API permission and unavailable failures remain errors, never zero records',async()=>{

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 )
 
 type snapshotConnector struct {

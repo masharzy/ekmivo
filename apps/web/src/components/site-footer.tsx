@@ -9,7 +9,7 @@ export function SiteFooter({locale}:{locale:Locale}){
  const path=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
  if(["setup","dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin|login|register|forgot-password|verify-email|pay|checkout|receipt|invoice)(?:\/|$)/.test(path))return null;
  if(["/","/payment-gateway","/ai-bot","/pricing","/privacy","/data-deletion"].includes(path))return <footer className="ekm-footer" lang={locale}><div className="ekm-footer-inner">
-  <Link className="ekm-footer-logo" href="/">ekmivo<b>.</b></Link>
+  <Link className="ekm-footer-logo" href="/">briofold<b>.</b></Link>
   <nav aria-label={locale==="bn"?"ফুটার নেভিগেশন":"Footer navigation"}>
    <Link href="/payment-gateway">{locale==="bn"?"পেমেন্টস":"Payments"}</Link>
    <Link href="/ai-bot">{locale==="bn"?"এআই বট":"AI Bot"}</Link>
@@ -18,12 +18,12 @@ export function SiteFooter({locale}:{locale:Locale}){
    <Link href="/privacy">{locale==="bn"?"গোপনীয়তা":"Privacy"}</Link>
    <Link href="/data-deletion">{locale==="bn"?"তথ্য মুছে ফেলা":"Data Deletion"}</Link>
   </nav>
-  <span>© {new Date().getFullYear()} Ekmivo</span>
+  <span>© {new Date().getFullYear()} Briofold</span>
  </div></footer>;
  const t=siteCopy[locale];
  return <footer className="site-footer ek-public-footer">
   <div className="footer-inner">
-   <div className="footer-main"><Link className="footer-brand" href="/">ekmivo<span>.</span></Link><p>{t.footerLine}</p></div>
+   <div className="footer-main"><Link className="footer-brand" href="/">briofold<span>.</span></Link><p>{t.footerLine}</p></div>
    <nav aria-label={locale==="bn"?"ফুটার মেনু":"Footer navigation"}>
     <Link href="/payment-gateway">Payment Gateway</Link>
     <Link href="/ai-bot">AI Bot</Link>
@@ -34,7 +34,7 @@ export function SiteFooter({locale}:{locale:Locale}){
     <Link href="/login">{t.login}</Link>
     <Link href="/register">{t.register}</Link>
    </nav>
-   <div className="footer-bottom"><span>© {new Date().getFullYear()} Ekmivo. {t.rights}</span><Link href="/status">{locale==="bn"?"সেবার অবস্থা":"Service status"}</Link></div>
+   <div className="footer-bottom"><span>© {new Date().getFullYear()} Briofold. {t.rights}</span><Link href="/status">{locale==="bn"?"সেবার অবস্থা":"Service status"}</Link></div>
   </div>
  </footer>;
 }

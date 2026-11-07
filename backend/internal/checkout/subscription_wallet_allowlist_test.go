@@ -3,7 +3,7 @@ package checkout
 import (
 	"testing"
 
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 )
 
 func TestSaaSWalletAccountAllowlistIsStrictAndMerchantIndependent(t *testing.T) {

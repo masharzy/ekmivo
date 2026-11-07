@@ -3,7 +3,7 @@ package checkout
 import (
 	"encoding/base64"
 	"errors"
-	"github.com/masharzy/ekmivo/backend/internal/knowledge"
+	"github.com/masharzy/briofold/backend/internal/knowledge"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -20,7 +20,7 @@ func (s *Service) HandleKnowledgeImport(w http.ResponseWriter, r *http.Request) 
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

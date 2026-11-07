@@ -60,7 +60,7 @@ export async function runSavedReplySequences({control,sessions,origin,browser,pr
   await assert.rejects(()=>send({...payload,revision:4}),e=>e.code==='22023');
   assert.equal(Number((await db`SELECT count(*) n FROM inbox_messages WHERE thread_id=${destination}`)[0].n),before,'Rejected batch partially queued');
   await db`UPDATE inbox_threads SET last_customer_at=now() WHERE id=${destination}`;
-  context=await browser.newContext();await context.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin},{name:'ekmivo-locale',value:'en',url:origin},{name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'}]);
+  context=await browser.newContext();await context.addCookies([{name:'briofold-session',value:sessions.owner,url:origin},{name:'briofold-locale',value:'en',url:origin},{name:'briofold-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'}]);
   const page=await context.newPage();await page.goto(origin+'/inbox/saved-replies');
   await page.getByText('Fictional sequence',{exact:true}).waitFor();await page.getByRole('button',{name:'Edit',exact:true}).click();
   await page.getByRole('textbox',{name:'Reply shortcut',exact:true}).fill('voice-help-updated');

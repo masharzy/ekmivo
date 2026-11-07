@@ -9,7 +9,7 @@ function module(path){let src=ts.transpileModule(readFileSync(new URL('src/'+pat
 const g=await module('lib/google-oidc.ts');
 const mail=await module('lib/security-email.ts');
 const key=crypto.getRandomValues(new Uint8Array(32));
-const origin='https://ekmivo-web.vercel.app';
+const origin='https://briofold.tech';
 const {privateKey,publicKey}=await generateKeyPair('RS256');
 const jwk=await exportJWK(publicKey);jwk.kid='test';const jwks=createLocalJWKSet({keys:[jwk]});
 const base={sub:'google-123',email:'owner@gmail.com',email_verified:true,nonce:'expected-nonce',name:'Owner'};

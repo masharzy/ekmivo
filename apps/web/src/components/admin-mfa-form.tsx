@@ -14,7 +14,7 @@ export function AdminMfaForm({locale,ready,enrolled=false}:{locale:Locale;ready:
  const [recovered,recover,recovering]=useActionState(recoverAdminMfaAction.bind(null,locale),recoveryInitial);
  const verifyRef=useRef<HTMLFormElement>(null);
  return <div className="pa-mfa-card">
-  <div className="pa-mfa-logo">ekmivo <small>Admin</small></div>
+  <div className="pa-mfa-logo">briofold <small>Admin</small></div>
   <h1>{view==="recovery"?(bn?"অ্যাকাউন্ট পুনরুদ্ধার":"Recover your account"):view==="setup"?(bn?"অথেন্টিকেটর সেটআপ":"Set up authenticator"):(bn?"নিরাপত্তা যাচাই":"Security verification")}</h1>
   <p style={{textAlign:"center"}}>{view==="setup"?(bn?"অ্যাডমিন অ্যাক্সেসের জন্য অথেন্টিকেটর চালু করুন।":"Protect admin access with an authenticator."):view==="recovery"?(bn?"একটি অব্যবহৃত রিকভারি কোড ব্যবহার করুন।":"Use an unused recovery code."):(bn?"অথেন্টিকেটরের ৬ সংখ্যার কোড দিন।":"Enter your six-digit authenticator code.")}</p>
   {!ready&&<p className="pa-mfa-errors" role="alert">{bn?"সার্ভারে MFA কনফিগার করা হয়নি।":"Administrator MFA is not configured on the server."}</p>}

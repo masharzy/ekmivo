@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/aicredits"
+	"github.com/masharzy/briofold/backend/internal/aicredits"
 )
 
 type studioTextCase struct{ ID, Question, Customer, Previous string }

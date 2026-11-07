@@ -1,13 +1,13 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Ekmivo Payment API",
+    "title": "Briofold Payment API",
     "version": "0.9.0-draft",
     "description": "PG03 implemented contract: process liveness, financial readiness, and\nreal server-side merchant credential verification. Credential issue/rotate/\nrevoke currently use authenticated owner/admin Next.js server actions.\nPG05 provides SANDBOX-ONLY standalone and server-priced linked order/invoice\nsnapshots, immutable payment intents, opaque hosted checkout, payer+route lock,\nstatus refresh and cancellation. Full commerce/invoice operations, live\nreceiving instructions are\nNOT released. PG06–PG09 source contracts are unverified and not deployed. No money verification\ncan be inferred from return URLs, payer confirmation or sandbox responses.\n"
   },
   "servers": [
     {
-      "url": "https://ekmivo-go-api.onrender.com",
+      "url": "https://api.briofold.tech",
       "description": "Deployed Go API (does NOT imply financial readiness)"
     }
   ],
@@ -59580,7 +59580,7 @@
           }
         },
         {
-          "name": "X-Ekmivo-Device-ID",
+          "name": "X-Briofold-Device-ID",
           "in": "header",
           "schema": {
             "type": "string",
@@ -59588,7 +59588,7 @@
           }
         },
         {
-          "name": "X-Ekmivo-Event-ID",
+          "name": "X-Briofold-Event-ID",
           "in": "header",
           "required": true,
           "schema": {
@@ -59597,7 +59597,7 @@
           }
         },
         {
-          "name": "X-Ekmivo-Timestamp",
+          "name": "X-Briofold-Timestamp",
           "in": "header",
           "required": true,
           "schema": {
@@ -59605,7 +59605,7 @@
           }
         },
         {
-          "name": "X-Ekmivo-Signature",
+          "name": "X-Briofold-Signature",
           "in": "header",
           "required": true,
           "schema": {
@@ -59862,7 +59862,7 @@
                     },
                     "service": {
                       "type": "string",
-                      "const": "ekmivo-api"
+                      "const": "briofold-api"
                     }
                   }
                 }
@@ -61124,6 +61124,7 @@
           "Merchant"
         ],
         "summary": "Read original issued terms, linked lines and immutable history",
+        "description": "Workspace and environment come from the API key, so this route takes only intentID. The workspace-scoped route below takes them in the path and query.",
         "security": [
           {
             "MerchantBearer": []
@@ -61131,33 +61132,12 @@
         ],
         "parameters": [
           {
-            "name": "workspaceID",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
             "name": "intentID",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "environment",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "sandbox",
-                "live"
-              ]
             }
           }
         ],
@@ -62764,12 +62744,12 @@
       "SessionCookie": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "ekmivo-session"
+        "name": "briofold-session"
       },
       "MerchantBearer": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "ek_test_<publicId>_<random32> or ek_live_<publicId>_<random32>",
+        "bearerFormat": "bf_test_<publicId>_<random32> or bf_live_<publicId>_<random32>",
         "description": "256-bit random server-side bearer secret, never put into browser JavaScript,\nquery strings or client SDK bundles; store in a server-side secret manager.\n"
       }
     },

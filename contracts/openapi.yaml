@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Ekmivo Payment API
+  title: Briofold Payment API
   version: 0.9.0-draft
   description: |
     PG03 implemented contract: process liveness, financial readiness, and
@@ -13,7 +13,7 @@ info:
     NOT released. PG06–PG09 source contracts are unverified and not deployed. No money verification
     can be inferred from return URLs, payer confirmation or sandbox responses.
 servers:
-  - url: https://ekmivo-go-api.onrender.com
+  - url: https://api.briofold.tech
     description: Deployed Go API (does NOT imply financial readiness)
 tags:
   - name: Operations
@@ -412,10 +412,10 @@ paths:
   /v1/device/{action}:
     parameters:
       - {name: action, in: path, required: true, schema: {type: string, enum: [claim, heartbeat, events, history]}}
-      - {name: X-Ekmivo-Device-ID, in: header, schema: {type: string, format: uuid}}
-      - {name: X-Ekmivo-Event-ID, in: header, required: true, schema: {type: string, pattern: '^[a-zA-Z0-9_-]{1,128}$'}}
-      - {name: X-Ekmivo-Timestamp, in: header, required: true, schema: {type: string}}
-      - {name: X-Ekmivo-Signature, in: header, required: true, schema: {type: string, contentEncoding: base64}}
+      - {name: X-Briofold-Device-ID, in: header, schema: {type: string, format: uuid}}
+      - {name: X-Briofold-Event-ID, in: header, required: true, schema: {type: string, pattern: '^[a-zA-Z0-9_-]{1,128}$'}}
+      - {name: X-Briofold-Timestamp, in: header, required: true, schema: {type: string}}
+      - {name: X-Briofold-Signature, in: header, required: true, schema: {type: string, contentEncoding: base64}}
     post:
       operationId: signedDeviceRequest
       description: |
@@ -465,7 +465,7 @@ paths:
                     const: ok
                   service:
                     type: string
-                    const: ekmivo-api
+                    const: briofold-api
   /readyz:
     get:
       operationId: getReadiness
@@ -778,21 +778,14 @@ paths:
       operationId: getPaymentIntentKey
       tags: [Merchant]
       summary: Read original issued terms, linked lines and immutable history
+      description: Workspace and environment come from the API key, so this route takes only intentID. The workspace-scoped route below takes them in the path and query.
       security:
         - MerchantBearer: []
       parameters:
-        - name: workspaceID
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
         - name: intentID
           in: path
           required: true
           schema: { type: string, format: uuid }
-        - name: environment
-          in: query
-          required: true
-          schema: { type: string, enum: [sandbox, live] }
       responses:
         '200':
           description: Masked payer, issued source lines and append-only events
@@ -1167,11 +1160,11 @@ components:
     SessionCookie:
       type: apiKey
       in: cookie
-      name: ekmivo-session
+      name: briofold-session
     MerchantBearer:
       type: http
       scheme: bearer
-      bearerFormat: ek_test_<publicId>_<random32> or ek_live_<publicId>_<random32>
+      bearerFormat: bf_test_<publicId>_<random32> or bf_live_<publicId>_<random32>
       description: |
         256-bit random server-side bearer secret, never put into browser JavaScript,
         query strings or client SDK bundles; store in a server-side secret manager.

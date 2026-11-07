@@ -16,9 +16,9 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   const createContext=async(token,actor)=>{
    const c=await browser.newContext({viewport:{width:1280,height:900}});
    await c.addCookies([
-    {name:"ekmivo-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-default-workspace",value:actor+":"+workspace,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}
+    {name:"briofold-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-default-workspace",value:actor+":"+workspace,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}
    ]);return c;
   };
   context=await createContext(sessions.owner,owner);
@@ -89,12 +89,12 @@ export async function runBriofoldSettingsBrowser({origin,browser,control,session
   const sound=page.getByRole("checkbox",{name:/Allow a sound in this browser/});
   await expect(sound).toBeEnabled();await expect(sound).not.toBeChecked();
   await sound.check();assert.equal(await sound.isChecked(),true);
-  assert.equal(await page.evaluate(()=>localStorage.getItem("ekmivo:device:notification-sound:v1")),"on");
+  assert.equal(await page.evaluate(()=>localStorage.getItem("briofold:device:notification-sound:v1")),"on");
   await page.reload();await expect(sound).toBeEnabled();await expect(sound).toBeChecked();
   assert.match(await page.getByRole("region",{name:"Browser permission"}).innerText(),/No push subscription or remote notification sender/);
   const manifest=await context.request.get(origin+"/manifest.webmanifest");
   assert.equal(manifest.status(),200);assert.equal((await manifest.json()).start_url,"/dashboard");
-  const worker=await context.request.get(origin+"/ekmivo-pwa-sw.js");
+  const worker=await context.request.get(origin+"/briofold-pwa-sw.js");
   assert.equal(worker.status(),200);assert.doesNotMatch(await worker.text(),/caches\.open|fetch\(/,"PWA worker must not cache sensitive data");
   await page.setViewportSize({width:320,height:740});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,"Device preferences overflow 320px");
