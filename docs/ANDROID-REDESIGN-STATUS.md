@@ -22,7 +22,7 @@ Server provider configuration: inspect `inbox_oauth.go`/`inbox_provider.go` for 
 
 ## Verification
 
-Local Go all-package tests passed. TypeScript passed. Neon isolated branch `br-cold-paper-b3pks3sr`, database `ekmivo`: rolled-back migrations and functional tests passed product switching, AI-only pairing, both-off access, cross-realm/tenant denial, incoming deduplication, outgoing idempotency conflicts, handover, durable reads, early provider seen event replay, 24h denial, revocation and push-job fanout. No production migration or rollout performed. Combined remote CI results must be appended below after completion.
+Local Go all-package tests passed. TypeScript passed. Neon isolated branch `br-cold-paper-b3pks3sr`, database `briofold`: rolled-back migrations and functional tests passed product switching, AI-only pairing, both-off access, cross-realm/tenant denial, incoming deduplication, outgoing idempotency conflicts, handover, durable reads, early provider seen event replay, 24h denial, revocation and push-job fanout. No production migration or rollout performed. Combined remote CI results must be appended below after completion.
 
 ## Next agent / remaining gates
 

@@ -10,7 +10,7 @@ import(
  "syscall"
  "time"
  "github.com/jackc/pgx/v5/pgxpool"
- "github.com/masharzy/ekmivo/backend/internal/financial"
+ "github.com/masharzy/briofold/backend/internal/financial"
 )
 func main(){
  control:=os.Getenv("PG04_PROJECTION_CONTROL_URL")

@@ -41,15 +41,15 @@ const sandbox={
 };
 vm.runInNewContext(compiled,sandbox,{timeout:3000});
 sandbox.exports.WorkspaceOnboarding({locale:"bn",userId:"test-account"});
-assert.ok(listeners.has("ekmivo:guarded-navigation"),"Unsaved onboarding must intercept locale switch");
+assert.ok(listeners.has("briofold:guarded-navigation"),"Unsaved onboarding must intercept locale switch");
 const attempt={detail:{href:"/en/workspaces?env=sandbox#draft"},cancelable:true,defaultPrevented:false,
  preventDefault(){this.defaultPrevented=true;}};
-listeners.get("ekmivo:guarded-navigation")(attempt);
+listeners.get("briofold:guarded-navigation")(attempt);
 assert.equal(attempt.defaultPrevented,true,"Locale route must remain unchanged until draft decision");
 assert.equal(dialogOpened,1,"Save/Discard/Stay dialog must open for route intent");
 assert.equal(redirected,false);
 const external={detail:{href:"https://other.test/"},defaultPrevented:false,preventDefault(){this.defaultPrevented=true;}};
-listeners.get("ekmivo:guarded-navigation")(external);
+listeners.get("briofold:guarded-navigation")(external);
 assert.equal(external.defaultPrevented,false,"External guard intent is not a local route");
 console.log("PG02 PASS: dirty onboarding blocks locale routing and opens Save/Discard/Stay");
 
@@ -87,7 +87,7 @@ assert.equal(dispatched.at(-1).detail.href,"/workspaces?env=sandbox#keys",
  "language action preserves query/hash while canonicalizing legacy prefix");
 block=false;languageButton.props.onClick();
 assert.equal(reloaded,1,"successful locale change must reload for server-chosen locale");
-assert.ok(documentState.cookie.startsWith("ekmivo-locale=bn;"));
+assert.ok(documentState.cookie.startsWith("briofold-locale=bn;"));
 assert.equal(documentState.documentElement.lang,"en","language only changes after server render");
 renderControls("bn");assert.equal(documentState.documentElement.lang,"bn");
 renderControls("en");assert.equal(documentState.documentElement.lang,"en");

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 )
 
 // Eight characters from a 32-symbol alphabet = 40 bits of OS randomness.
@@ -297,7 +297,7 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter, r *http.Request, r
 		Model        string `json:"model"`
 		AppVersion   string `json:"app_version"`
 	}
-	id := r.Header.Get("X-Ekmivo-Device-ID")
+	id := r.Header.Get("X-Briofold-Device-ID")
 	if json.Unmarshal(raw, &body) != nil || !uuidPattern.MatchString(id) || body.EnrollmentID != id || (body.Environment != "sandbox" && body.Environment != "live") {
 		fail(w, 403, "PHONE_AUTHORIZATION_REJECTED")
 		return
@@ -351,9 +351,9 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter, r *http.Request, r
 		fail(w, 503, "PHONE_PROJECTION_STALE")
 		return
 	}
-	canonical, e := deviceevidence.CanonicalRequest(r.Method, r.URL.Path, r.Header.Get("X-Ekmivo-Timestamp"), r.Header.Get("X-Ekmivo-Event-ID"), raw)
-	signature, se := base64.StdEncoding.DecodeString(r.Header.Get("X-Ekmivo-Signature"))
-	if e != nil || se != nil || !deviceevidence.TimestampWithinSkew(r.Header.Get("X-Ekmivo-Timestamp"), time.Now()) || !deviceevidence.VerifyP256DER(key, canonical, signature) {
+	canonical, e := deviceevidence.CanonicalRequest(r.Method, r.URL.Path, r.Header.Get("X-Briofold-Timestamp"), r.Header.Get("X-Briofold-Event-ID"), raw)
+	signature, se := base64.StdEncoding.DecodeString(r.Header.Get("X-Briofold-Signature"))
+	if e != nil || se != nil || !deviceevidence.TimestampWithinSkew(r.Header.Get("X-Briofold-Timestamp"), time.Now()) || !deviceevidence.VerifyP256DER(key, canonical, signature) {
 		fail(w, 403, "PHONE_SIGNATURE_REJECTED")
 		return
 	}

@@ -3,7 +3,7 @@ import(
  "context"
  "errors"
  "testing"
- "github.com/masharzy/ekmivo/backend/internal/financial"
+ "github.com/masharzy/briofold/backend/internal/financial"
  "github.com/riverqueue/river"
 )
 func TestPG04WorkerRoleIsolation(t *testing.T){

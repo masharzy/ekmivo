@@ -1,5 +1,5 @@
 // Code generated from contracts/openapi.yaml; DO NOT EDIT.
-package ekmivo
+package briofold
 import("bytes";"context";"encoding/json";"errors";"fmt";"io";"net/http";"net/url";"strings";"time")
 type Operation struct{Method,Path string;Public bool}
 var Operations=map[string]Operation{"listcustomers": {Method:"GET",Path:"/v1/workspaces/{workspaceID}/documents/customers",Public:false},

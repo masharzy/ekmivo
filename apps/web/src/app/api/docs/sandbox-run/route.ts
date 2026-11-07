@@ -2,7 +2,7 @@ import {goOrigin} from "../../../../lib/server/go-origin";
 import {boundedBody} from "../../../../lib/server/bounded-body";
 
 export const dynamic="force-dynamic";
-const TEST_KEY=/^ek_test_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/;
+const TEST_KEY=/^(?:bf|ek)_test_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/;
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 
 export async function POST(request:Request){

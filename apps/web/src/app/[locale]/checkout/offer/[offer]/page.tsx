@@ -42,7 +42,7 @@ export default async function PublishedOfferReview({params,searchParams}:{
  return <main className="ek-order" lang={locale}>
   <div className="ek-order-shell">
    <nav className="ek-order-nav" aria-label={t("Price review","মূল্য পর্যালোচনা")}>
-    <Link className="ek-order-brand" href="/">ekmivo<span>.</span></Link>
+    <Link className="ek-order-brand" href="/">briofold<span>.</span></Link>
     <span className="ek-order-secure">{t("Read-only approved price","অনুমোদিত মূল্য—শুধু পর্যালোচনা")}</span>
    </nav>
    <div className="ek-order-head"><p>{t("Subscription offer","সাবস্ক্রিপশন অফার")}</p>
@@ -68,7 +68,7 @@ export default async function PublishedOfferReview({params,searchParams}:{
       <div><input id="ek-offer-coupon" disabled placeholder={t("Available at secure checkout","নিরাপদ চেকআউটে পাওয়া যাবে")} aria-describedby="ek-offer-coupon-help"/><button type="button" disabled>{t("Apply","প্রয়োগ")}</button></div>
       <small id="ek-offer-coupon-help">{t("Coupon validation is not enabled on this read-only price preview.","শুধু মূল্য দেখার এই পেজে কুপন প্রয়োগ এখনো চালু হয়নি।")}</small></div>
      <div className="ek-order-paywith"><p>{t("Payment provider","পেমেন্ট প্রোভাইডার")}</p>
-      <label><input type="radio" checked readOnly name="provider" value="ekmivo"/><span className="ek-order-provider-name"><b>Pay with Briofold</b><small>{t("Wallet choices belong to the next payment page, not this summary.","ওয়ালেট পরের পেমেন্ট পেজে দেখানো হবে, এখানে নয়।")}</small></span></label></div>
+      <label><input type="radio" checked readOnly name="provider" value="briofold"/><span className="ek-order-provider-name"><b>Pay with Briofold</b><small>{t("Wallet choices belong to the next payment page, not this summary.","ওয়ালেট পরের পেমেন্ট পেজে দেখানো হবে, এখানে নয়।")}</small></span></label></div>
      <fieldset className="ek-order-legal"><legend>{t("Legal agreements","নীতিমালায় সম্মতি")}</legend>
       {legal.map(item=><label className="ek-order-consent" key={item.key}>
        <input type="checkbox" disabled/>

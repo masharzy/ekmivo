@@ -98,9 +98,9 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_unified_activity(uuid,text,uuid,text,text,integer)','EXECUTE') ok`)[0].ok,true);
   }
   const makeContext=async(token)=>{const ctx=await browser.newContext();await ctx.addCookies([
-   {name:"ekmivo-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
-   {name:"ekmivo-default-workspace",value:owner+":"+store,url:origin,httpOnly:true,sameSite:"Lax"},
-   {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}
+   {name:"briofold-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
+   {name:"briofold-default-workspace",value:owner+":"+store,url:origin,httpOnly:true,sameSite:"Lax"},
+   {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}
   ]);return ctx;};
   ownerContext=await makeContext(sessions.owner);
   viewerContext=await makeContext(sessions.viewer);
@@ -122,9 +122,9 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   const reference="ASSIGN-CI-"+order.slice(0,8);
   let responsive=0;
   for(const locale of ["en","bn"]){
-   await ownerContext.addCookies([{name:"ekmivo-locale",value:locale,url:origin,sameSite:"Lax"}]);
+   await ownerContext.addCookies([{name:"briofold-locale",value:locale,url:origin,sameSite:"Lax"}]);
    for(const theme of ["light","dark"]){
-    await ownerContext.addCookies([{name:"ekmivo-theme",value:theme,url:origin,sameSite:"Lax"}]);
+    await ownerContext.addCookies([{name:"briofold-theme",value:theme,url:origin,sameSite:"Lax"}]);
     for(const width of [320,360,768,1440]){
      await page.setViewportSize({width,height:900});
      const response=await page.goto(origin+"/orders");
@@ -153,7 +153,7 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
    }
   }
   assert.deepEqual(errors,[],"assignment UI hydration errors");
-  await ownerContext.addCookies([{name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
+  await ownerContext.addCookies([{name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}]);
   await page.goto(origin+"/orders");
   await page.getByText(reference,{exact:true}).first().waitFor();
   await page.locator("table tbody tr").filter({hasText:reference}).getByRole("button",{name:"Open"}).click();

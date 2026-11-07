@@ -354,7 +354,7 @@ try{
     [tenant,"sandbox","PG05-HTTP-"+httpKey,12345,15,httpKey,httpDigest,hmac()]))[0].value;
   });
   const goCwd=new URL("../../../backend/",import.meta.url);
-  const apiBin="/tmp/ekmivo-pg05-ci-api-"+process.pid;
+  const apiBin="/tmp/briofold-pg05-ci-api-"+process.pid;
   execFileSync("go",["build","-o",apiBin,"./cmd/api"],{cwd:goCwd,timeout:120000});
   const port=17885,origin="http://127.0.0.1:"+port;
   // The finance test tenant is also made into an actual control-plane workspace
@@ -421,7 +421,7 @@ try{
    same(liveDenied.status,503,"PG05 HTTP live intent incorrectly enabled");
    const merchantRoot=origin+"/v1/workspaces/"+tenant;
    const endpoint=merchantRoot+"/linked-sources?environment=sandbox";
-   const head=role=>({Cookie:"ekmivo-session="+sessions[role],"Content-Type":"application/json",Origin:origin});
+   const head=role=>({Cookie:"briofold-session="+sessions[role],"Content-Type":"application/json",Origin:origin});
    const ownerList=await fetch(merchantRoot+"/payment-intents?environment=sandbox",{headers:head("owner")});
    same(ownerList.status,200,"PG05 owner failed actual scoped HTTP list");
    const editorList=await fetch(endpoint,{headers:head("editor")});
@@ -473,7 +473,7 @@ try{
    const bearer={};
    for(const access of ["read","write"]){
     const publicId=randomBytes(8).toString("hex");
-    const secret="ek_test_"+publicId+"_"+randomBytes(32).toString("base64url");
+    const secret="bf_test_"+publicId+"_"+randomBytes(32).toString("base64url");
     await admin`INSERT INTO merchant_api_keys(workspace_id,environment,public_id,secret_digest,name,scopes,created_by,expires_at)
       VALUES(${tenant}::uuid,'sandbox',${publicId},${createHash("sha256").update(secret).digest("hex")},'PG05 ephemeral API client',${access==="read"?["payments:read"]:["payments:read","payments:write"]},${sessionUsers.owner}::uuid,now()+interval '1 hour')`;
     bearer[access]={Authorization:"Bearer "+secret,"Content-Type":"application/json"};
@@ -639,7 +639,7 @@ try{
   WHERE o.event_kind='pg04_audit' AND o.workspace_id<>${workspace}::uuid ORDER BY j.id DESC LIMIT 1`);
  ok(queued.length===1,"Go River test did not durably commit an audit job");
  const target=queued[0].id;
- const runner="/tmp/ekmivo-pg04-worker";
+ const runner="/tmp/briofold-pg04-worker";
  execFileSync("go",["build","-o",runner,"./cmd/worker"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",env,timeout:100000
  });
@@ -1432,7 +1432,7 @@ try{
  // against the disposable PG06-PG09 finance migration. NOT a provider test.
  ok(pg09Auth&&pg09Auth.sessions.owner&&pg09Auth.sessions.viewer,
   "PG09 genuine session precondition absent");
- const apiTestBin="/tmp/ekmivo-pg09-ci-api-"+process.pid;
+ const apiTestBin="/tmp/briofold-pg09-ci-api-"+process.pid;
  execFileSync("go",["build","-o",apiTestBin,"./cmd/api"],{
   cwd:new URL("../../../backend/",import.meta.url),stdio:"inherit",timeout:120000
  });
@@ -1458,7 +1458,7 @@ try{
   }
   ok(ready,"PG09 actual Go with pipeline failed startup: "+apiOutput);
   const route=apiTestOrigin+"/v1/workspaces/"+pg07WS+"/operations/";
-  const head=role=>({Cookie:"ekmivo-session="+pg09Auth.sessions[role],Origin:apiTestOrigin,"Content-Type":"application/json"});
+  const head=role=>({Cookie:"briofold-session="+pg09Auth.sessions[role],Origin:apiTestOrigin,"Content-Type":"application/json"});
   const none=await fetch(route+"payments?environment=sandbox");
   same(none.status,401,"PG09 real HTTP exposes finance without authentication");
   const owner=await fetch(route+"payments?environment=sandbox",{headers:head("owner")});
@@ -1532,7 +1532,7 @@ try{
    const path="/v1/device/"+action;const raw=JSON.stringify(body);
    const canonical=["POST",path,stamp,event,createHash("sha256").update(raw).digest("hex")].join("\n");
    const signature=sign("sha256",Buffer.from(canonical),fixtureKeys.privateKey).toString("base64");
-   return fetch(apiTestOrigin+path,{method:"POST",headers:{"Content-Type":"application/json","X-Ekmivo-Device-ID":fixtureDevice,"X-Ekmivo-Event-ID":event,"X-Ekmivo-Timestamp":stamp,"X-Ekmivo-Signature":signature},body:tamper?raw+" ":raw});
+   return fetch(apiTestOrigin+path,{method:"POST",headers:{"Content-Type":"application/json","X-Briofold-Device-ID":fixtureDevice,"X-Briofold-Event-ID":event,"X-Briofold-Timestamp":stamp,"X-Briofold-Signature":signature},body:tamper?raw+" ":raw});
   }
   const claim=await signedPost("claim",{pairing_token:pair.pairing_token,public_key:fixtureKeys.publicKey.export({type:"spki",format:"der"}).toString("base64")});
   same(claim.status,200,"signed HTTP enrollment proof rejected");

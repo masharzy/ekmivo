@@ -21,7 +21,7 @@ if(next.delivery==='pending'){
   // Persist unknown BEFORE the external send. Crash or timeout must not claim
   // delivery and must not silently create repeated notifications.
   next.delivery='unknown';await persist();
-  try{const r=await fetch(target,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','Idempotency-Key':next.incident,'X-Ekmivo-Alert-Digest':createHash('sha256').update(payload).digest('hex'),...(process.env.EKMIVO_MONITOR_ALERT_TOKEN?{Authorization:`Bearer ${process.env.EKMIVO_MONITOR_ALERT_TOKEN}`}:{})},body:payload});if(r.ok)next.delivery='accepted';else next.delivery='rejected'}catch{}
+  try{const r=await fetch(target,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','Idempotency-Key':next.incident,'X-Briofold-Alert-Digest':createHash('sha256').update(payload).digest('hex'),...(process.env.EKMIVO_MONITOR_ALERT_TOKEN?{Authorization:`Bearer ${process.env.EKMIVO_MONITOR_ALERT_TOKEN}`}:{})},body:payload});if(r.ok)next.delivery='accepted';else next.delivery='rejected'}catch{}
   await persist();console.log(JSON.stringify({state,alert:next.delivery}));if(next.delivery!=='accepted')process.exitCode=1;
  }
 }else console.log(JSON.stringify({state,alert:next.delivery}));

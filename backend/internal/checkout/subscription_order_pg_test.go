@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -95,7 +95,7 @@ func TestSubscriptionOrderHTTPIsolatedPostgres(t *testing.T) {
 		req.SetPathValue("intentID", intent)
 		req.SetPathValue("orderAction", action)
 		if token != "" {
-			req.AddCookie(&http.Cookie{Name: "ekmivo-session", Value: token})
+			req.AddCookie(&http.Cookie{Name: "briofold-session", Value: token})
 		}
 		if allowOrigin {
 			req.Header.Set("Origin", "https://phase5-ci.example.invalid")

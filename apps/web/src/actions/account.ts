@@ -15,7 +15,7 @@ const strings = {
 function fail(message:string,fields?:Record<string,string>):FormErrorState{return {status:"error",message,fields};}
 function report(label:string,error:unknown){
  // Keep database/driver errors entirely in server logs, never in response or toast.
- console.error("[ekmivo/server]",label, error instanceof Error?error.message:"unknown failure");
+ console.error("[briofold/server]",label, error instanceof Error?error.message:"unknown failure");
 }
 
 export async function registerAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -128,7 +128,7 @@ async function insertUserWorkspace(userId:string,name:string,mode:"ai"|"commerce
  return database().begin(async sql=>{
   // Keep the UUID-based financial model, but prohibit a second customer Store.
   // The per-user transaction lock makes simultaneous form/API retries safe.
-  await sql`SELECT pg_advisory_xact_lock(hashtextextended(${"ekmivo-primary-store:"+userId},0))`;
+  await sql`SELECT pg_advisory_xact_lock(hashtextextended(${"briofold-primary-store:"+userId},0))`;
   const existing=await sql`SELECT 1 FROM workspace_members WHERE user_id=${userId}::uuid LIMIT 1`;
   if(existing.length)throw new Error("STORE_ALREADY_EXISTS");
   const w=await sql`INSERT INTO workspaces (name,service_mode,created_by)
@@ -193,6 +193,6 @@ export async function setDefaultWorkspaceAction(_localeParam:string,workspaceId:
 }
 
 export async function logoutAction(_localeParam:string){
- try{await revokeSession();}catch(e){report("logout",e);(await cookies()).delete("ekmivo-session");}
+ try{await revokeSession();}catch(e){report("logout",e);(await cookies()).delete("briofold-session");}
  redirect("/login");
 }

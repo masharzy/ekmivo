@@ -14,7 +14,7 @@ function derive(password: string, salt: Buffer): Promise<Buffer> {
   });
  });
 }
-const COOKIE = "ekmivo-session";
+const COOKIE = "briofold-session";
 const THIRTY_DAYS = 30 * 24 * 3600 * 1000;
 export type User = { id: string; email: string; name: string; verified: boolean };
 export type Workspace = { id: string; name: string; mode: "ai"|"commerce"|"both"|"off"; role: "owner"|"admin"|"editor"|"viewer" };
@@ -84,7 +84,7 @@ export async function workspacesFor(userId:string):Promise<Workspace[]>{
  return rows.map(w=>({id:String(w.id),name:String(w.name),mode:w.service_mode as Workspace["mode"],role:w.role as Workspace["role"]}));
 }
 
-const DEFAULT_WORKSPACE_COOKIE="ekmivo-default-workspace";
+const DEFAULT_WORKSPACE_COOKIE="briofold-default-workspace";
 const YEAR=365*24*60*60;
 export async function primaryStoreFor(userId:string):Promise<string|null>{
  // Older CI/legacy databases may predate the additive 0133 migration. Do

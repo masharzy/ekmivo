@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/financial"
+	"github.com/masharzy/briofold/backend/internal/financial"
 )
 
 type ProjectionConfig struct{ Control, Sandbox, Live string }

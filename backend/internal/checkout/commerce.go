@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 )
 
 // Commerce owns operations only. Every financial reference is read from its
@@ -26,7 +26,7 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

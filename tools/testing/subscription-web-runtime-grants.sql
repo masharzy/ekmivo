@@ -6,7 +6,7 @@ DECLARE
   relation_name text;
   function_signature text;
 BEGIN
-  IF current_database()<>'ekmivo' OR to_regclass('public.financial_realm') IS NOT NULL
+  IF current_database()<>'briofold' OR to_regclass('public.financial_realm') IS NOT NULL
   THEN RAISE EXCEPTION 'Web role test must target the control database'; END IF;
 
   SELECT * INTO target_role FROM pg_roles WHERE rolname='ekmivo_web_app';

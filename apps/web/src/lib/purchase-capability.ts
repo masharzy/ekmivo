@@ -6,7 +6,7 @@ const idempotencyPattern=/^[A-Za-z0-9_-]{16,128}$/;
 export function newPurchaseSecret(){return randomBytes(32).toString("base64url")}
 export function derivePurchaseToken(guest:string,idempotencyKey:string){
  if(!tokenPattern.test(guest)||!idempotencyPattern.test(idempotencyKey))throw Error("INVALID_PURCHASE_SECRET");
- return createHmac("sha256",guest).update("ekmivo:purchase:"+idempotencyKey).digest("base64url");
+ return createHmac("sha256",guest).update("briofold:purchase:"+idempotencyKey).digest("base64url");
 }
 export function purchaseDigest(token:string){
  return createHash("sha256").update(token).digest("hex");

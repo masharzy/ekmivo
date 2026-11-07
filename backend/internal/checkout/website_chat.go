@@ -40,7 +40,7 @@ func (s *Service) HandleWebsiteSettings(w http.ResponseWriter, r *http.Request) 
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	cookie, e := r.Cookie("ekmivo-session")
+	cookie, e := r.Cookie("briofold-session")
 	if e != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

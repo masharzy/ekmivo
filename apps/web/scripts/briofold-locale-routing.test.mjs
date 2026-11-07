@@ -19,7 +19,7 @@ for(const path of ["/","/dashboard","/settings/billing?tab=plans","/inbox"]){
   const result=exports.proxy(request(path));
   assert.equal(result.kind,"rewrite");
   assert.equal(new URL(result.url).pathname,"/en"+(path.split("?")[0]==="/"?"":path.split("?")[0]));
-  assert.equal(result.options.request.headers.get("x-ekmivo-locale"),"en");
+  assert.equal(result.options.request.headers.get("x-briofold-locale"),"en");
   if(path.includes("?"))assert.equal(new URL(result.url).search,"?tab=plans");
  });
 }
@@ -33,18 +33,18 @@ for(const locale of ["en","bn"]){
   assert.equal(response.lastCookie[1],locale);
  });
  test(`internal ${locale} traversal does not redirect in a loop`,()=>{
-  assert.equal(exports.proxy(request(`/${locale}/dashboard`,locale,{"x-ekmivo-internal-rewrite":"1"})).kind,"next");
+  assert.equal(exports.proxy(request(`/${locale}/dashboard`,locale,{"x-briofold-internal-rewrite":"1"})).kind,"next");
  });
 }
 test("invalid preference falls back to English",()=>{
  assert.equal(new URL(exports.proxy(request("/dashboard","invalid")).url).pathname,"/en/dashboard");
 });
 test("API and static assets bypass locale rewrites",()=>{
- for(const path of ["/api/go/payments","/_next/static/app.js","/icon.svg","/robots.txt","/manifest.webmanifest","/ekmivo-pwa-sw.js"])
+ for(const path of ["/api/go/payments","/_next/static/app.js","/icon.svg","/robots.txt","/manifest.webmanifest","/briofold-pwa-sw.js"])
   assert.equal(exports.proxy(request(path)).kind,"next");
 });
 test("public spoofed shell headers cannot turn marketing pages into merchant pages",()=>{
- const result=exports.proxy(request("/pricing",undefined,{"x-ekmivo-application":"1","x-ekmivo-auth-page":"1"}));
- assert.equal(result.options.request.headers.get("x-ekmivo-application"),null);
- assert.equal(result.options.request.headers.get("x-ekmivo-auth-page"),null);
+ const result=exports.proxy(request("/pricing",undefined,{"x-briofold-application":"1","x-briofold-auth-page":"1"}));
+ assert.equal(result.options.request.headers.get("x-briofold-application"),null);
+ assert.equal(result.options.request.headers.get("x-briofold-auth-page"),null);
 });

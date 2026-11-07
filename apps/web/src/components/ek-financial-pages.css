@@ -1,5 +1,5 @@
 
-/* Reports / Refunds. Reference Ekmivo_Reports.html / Ekmivo_Refunds.html.
+/* Reports / Refunds. Reference Briofold_Reports.html / Briofold_Refunds.html.
    Every declaration is locally scoped; shell, nav and topbar are unchanged. */
 .ek-page-scope{--bg:#09090b;--side:#0c0c0f;--panel:#111114;--raise:#17171b;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);--tx:#f2f2f5;--mu:#a1a1ab;--mu2:#6f6f7a;--ac:#8b7cf6;--acb:rgba(139,124,246,.14);--btn:#f2f2f5;--btnt:#0b0b0d;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--r:12px;color-scheme:dark;font:14px/1.5 "Geist",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased;min-height:100%;padding:32px 24px 56px}
 :root[data-theme=light] .ek-page-scope{--bg:#f6f6f8;--side:#fff;--panel:#fff;--raise:#f1f1f4;--line:rgba(0,0,0,.08);--line2:rgba(0,0,0,.16);--tx:#16161a;--mu:#5d5d68;--mu2:#8a8a95;--ac:#5b4bd6;--acb:rgba(91,75,214,.1);--btn:#16161a;--btnt:#fff;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;color-scheme:light}

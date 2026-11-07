@@ -18,9 +18,9 @@ export async function runBriofoldRouteBrowser({origin,browser,control,tenant,ses
  const context=await browser.newContext({viewport:{width:1280,height:900}});
  try{
   await context.addCookies([
-   {name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
-   {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"},
-   {name:"ekmivo-default-workspace",value:actor+":"+tenant,url:origin,httpOnly:true,sameSite:"Lax"}
+   {name:"briofold-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
+   {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"},
+   {name:"briofold-default-workspace",value:actor+":"+tenant,url:origin,httpOnly:true,sameSite:"Lax"}
   ]);
   const page=await context.newPage();page.setDefaultNavigationTimeout(90000);page.setDefaultTimeout(30000);
   for(const path of ["/dashboard","/inbox","/orders","/payments","/sms-data","/invoices","/customers","/reports","/settings"]){

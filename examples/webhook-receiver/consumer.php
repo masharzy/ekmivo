@@ -3,8 +3,8 @@ declare(strict_types=1);
 require_once __DIR__.'/verify.php';
 // Invoke from the merchant server with the exact raw HTTP body. PDO targets
 // the merchant application database provisioned using schema.sql.
-function consumeEkmivo(string $raw,array $headers,array $config,PDO $db):array {
-    $event=verifyEkmivo($raw,$headers,$config['secret'],$config['workspace'],$config['environment']);
+function consumeBriofold(string $raw,array $headers,array $config,PDO $db):array {
+    $event=verifyBriofold($raw,$headers,$config['secret'],$config['workspace'],$config['environment']);
     $p=$event['data'];$origin=parse_url($config['api_origin']);
     if(($origin['scheme']??'')!=='https'||empty($origin['host'])||isset($origin['user'])||isset($origin['query'])||isset($origin['fragment']))throw new RuntimeException('HTTPS API origin required');
     $url='https://'.$origin['host'].(isset($origin['port'])?':'.$origin['port']:'').'/v1/workspaces/'.$config['workspace'].'/operations/payments/'.$p['payment_id'].'?environment='.$config['environment'];

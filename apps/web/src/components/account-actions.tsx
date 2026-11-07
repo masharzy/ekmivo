@@ -22,7 +22,7 @@ export function AccountActions({locale,name:initialName,accountId}:{locale:Local
  const bn=locale==="bn";
  const savedName=profile.status==="success" && profile.savedName!==undefined ? profile.savedName : initialName;
  const dirty=name!==savedName;
- const key=`ekmivo:account-name-draft:v1:${accountId}`;
+ const key=`briofold:account-name-draft:v1:${accountId}`;
 
  // A confirmed server save supersedes any stale tab-local name draft.
  useEffect(()=>{
@@ -78,11 +78,11 @@ export function AccountActions({locale,name:initialName,accountId}:{locale:Local
    if(typeof e.detail?.href==="string"&&intercept(e.detail.href))event.preventDefault();
   };
   window.addEventListener("beforeunload",beforeLeave);
-  window.addEventListener("ekmivo:guarded-navigation",guarded);
+  window.addEventListener("briofold:guarded-navigation",guarded);
   document.addEventListener("click",link,true);
   return ()=>{
    window.removeEventListener("beforeunload",beforeLeave);
-   window.removeEventListener("ekmivo:guarded-navigation",guarded);
+   window.removeEventListener("briofold:guarded-navigation",guarded);
    document.removeEventListener("click",link,true);
   };
  },[dirty,name,savedName,bn]);

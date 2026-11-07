@@ -87,7 +87,7 @@ export function PaymentRequests({locale,userId,workspaceId,environment,canWrite,
  useEffect(()=>{const dialog=sourceDialog.current;if(!dialog)return;if(sourceOpen&&!dialog.open)dialog.showModal();else if(!sourceOpen&&dialog.open)dialog.close()},[sourceOpen]);
 
  useEffect(()=>{if(!notice&&!copied)return;const timer=setTimeout(()=>{setNotice("");setCopied("")},2400);return()=>clearTimeout(timer)},[notice,copied]);
- const draftKey="ekmivo:pg05-request:v1:"+userId+":"+workspaceId+":"+environment;
+ const draftKey="briofold:pg05-request:v1:"+userId+":"+workspaceId+":"+environment;
  const api="/api/go/workspaces/"+workspaceId+"/payment-intents?environment="+environment;
  const sourcesApi="/api/go/workspaces/"+workspaceId+(environment==="live"?"/documents/invoices":"/linked-sources")+"?environment="+environment;
  const dirty=(JSON.stringify(fields)!==JSON.stringify(draftBase))||

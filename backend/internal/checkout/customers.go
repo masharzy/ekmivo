@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/receiptnotice"
 	"net/http"
 	"net/url"
 	"os"
@@ -27,7 +27,7 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

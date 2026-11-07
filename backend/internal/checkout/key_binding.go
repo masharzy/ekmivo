@@ -4,7 +4,7 @@ import (
  "context"
  "net/http"
 
- "github.com/masharzy/ekmivo/backend/internal/authz"
+ "github.com/masharzy/briofold/backend/internal/authz"
 )
 
 // Only a server handler which has already called AuthenticateMerchant may bind

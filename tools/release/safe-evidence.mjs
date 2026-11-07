@@ -1,6 +1,6 @@
 // Reject common credential formats in both JSON and plain operator notes.
 // Never return the matching value in an error or log.
-const credentialValue = /postgres(?:ql)?:\/\/|ek_(?:live|test)_[A-Za-z0-9_-]{24,}|(?:password|cookie|authorization|recovery_code|mfa_secret|access_token|refresh_token|api_key)\s*["']?\s*[:=]\s*["']?[^\s"'},]+/i;
+const credentialValue = /postgres(?:ql)?:\/\/|(?:bf|ek)_(?:live|test)_[A-Za-z0-9_-]{24,}|(?:password|cookie|authorization|recovery_code|mfa_secret|access_token|refresh_token|api_key)\s*["']?\s*[:=]\s*["']?[^\s"'},]+/i;
 const credentialKey = /^(?:password|current_password|cookie|cookies|authorization|recovery_codes?|mfa_secret|totp_secret|access_token|refresh_token|api_key|database_url|signing_secret|private_key)$/i;
 
 export function containsCredentials(value) {

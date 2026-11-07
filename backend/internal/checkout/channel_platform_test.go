@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 	"io"
 	"net/http"
 	"strings"

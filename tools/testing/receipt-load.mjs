@@ -26,7 +26,7 @@ if(mode==='plan'){
   const canonical=`POST\n${path}\n${stamp}\n${event}\n${createHash('sha256').update(raw).digest('hex')}`;
   const signature=sign('sha256',Buffer.from(canonical),keys[index]).toString('base64'),start=performance.now();
   let status=null,ack=false,observation=null;
-  try{const r=await fetch(new URL(path,origin),{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','X-Ekmivo-Device-ID':d.enrollment_id,'X-Ekmivo-Timestamp':stamp,'X-Ekmivo-Event-ID':event,'X-Ekmivo-Signature':signature},body:raw});status=r.status;const data=await r.json();ack=r.status===202&&data.ack==='durable';observation=uuid.test(data.observation_id||'')?data.observation_id:null}
+  try{const r=await fetch(new URL(path,origin),{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','X-Briofold-Device-ID':d.enrollment_id,'X-Briofold-Timestamp':stamp,'X-Briofold-Event-ID':event,'X-Briofold-Signature':signature},body:raw});status=r.status;const data=await r.json();ack=r.status===202&&data.ack==='durable';observation=uuid.test(data.observation_id||'')?data.observation_id:null}
   catch{}
   samples.push({event_id:event,workspace_index:index,status,ack,observation_id:observation,duration_ms:performance.now()-start});
  }

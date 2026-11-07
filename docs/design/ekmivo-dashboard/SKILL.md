@@ -1,6 +1,6 @@
 ---
-name: ekmivo-dashboard
-description: Refine Ekmivo merchant dashboard screens with its warm, compact visual system and existing real payment workflows.
+name: briofold-dashboard
+description: Refine Briofold merchant dashboard screens with its warm, compact visual system and existing real payment workflows.
 ---
 
 Use docs/DESIGN-SYSTEM.md and docs/design/tokens.css as the visual authority. The 2026-10-15 owner request supersedes the old expanded payment sidebar.

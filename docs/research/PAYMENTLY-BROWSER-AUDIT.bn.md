@@ -124,7 +124,7 @@ Magento, PrestaShop, Drupal Commerce ও Joomla “Coming soon”। Shopify Dow
 - Devices: device ID/name/model, Android Version, App Version, Status। Account-এ device নেই; last-sync/reboot/offline handling যাচাই হয়নি।
 - Balance Verification list: Device, method/type, current balance, Balance Verification, Smart Verification।
 - Create form: Device/method/type/current balance; unique device-method-type combinations; balance verification ও smart verification switches। Helper বলে cash-out/send-money-এর পর balance manual update।
-- “Smart Verification” AI-based delayed/missing SMS handling (3–5 transactions) দাবি করে। এটি UI claim; model, algorithm, confidence, false-positive behaviour বা five-field matcher পরীক্ষা হয়নি। Ekmivo-তে এসব switch/claim normal auto-verification opt-in হিসেবে যোগ হবে না।
+- “Smart Verification” AI-based delayed/missing SMS handling (3–5 transactions) দাবি করে। এটি UI claim; model, algorithm, confidence, false-positive behaviour বা five-field matcher পরীক্ষা হয়নি। Briofold-তে এসব switch/claim normal auto-verification opt-in হিসেবে যোগ হবে না।
 
 ### System Settings
 
@@ -140,20 +140,20 @@ Magento, PrestaShop, Drupal Commerce ও Joomla “Coming soon”। Shopify Dow
 
 ## Audit findings — কী গ্রহণ করব, কী সংশোধন করব
 
-| Priority | Finding | Ekmivo-তে সিদ্ধান্ত |
+| Priority | Finding | Briofold-তে সিদ্ধান্ত |
 |---|---|---|
 | P0 | Browser UI real matching algorithm বা live payment success প্রমাণ করে না | Device evidence + unique five-field matcher + transaction/outbox tests অপরিহার্য |
 | P0 | Manual receipt Approved ও invoice Paid inputs UI-তে আছে; actual permissions/accounting behaviour অজানা | Operator adjustments ও payment evidence আলাদা; no routine approval, no client-controlled paid truth |
 | P1 | Current account default-email warning এবং 2FA Disabled দেখায় | Account owner-এর credentials/MFA setup বাকি; audit থেকে password default বা compromise দাবি নয় |
-| P1 | Linked webhook example শুধু shared API-key check দেখায়; current implementation অজানা | Ekmivo signed payload + timestamp/event ID + replay-safe delivery অনুযায়ীই থাকবে |
+| P1 | Linked webhook example শুধু shared API-key check দেখায়; current implementation অজানা | Briofold signed payload + timestamp/event ID + replay-safe delivery অনুযায়ীই থাকবে |
 | P2 | 17 integrations-এর মধ্যে coming-soon cards এবং Shopify empty download href | Available/needs setup/unsupported status স্পষ্ট; connector listing থেকে live capability দাবি নয় |
 | P2 | “SMS Datas”, “Faqs”, “Shopifies” ইত্যাদি machine-style labels | Natural EN/BN language: SMS receipts, FAQs, Shopify connections; simple helper text |
 | P2 | Empty lists mostly শুধু “No …”; account setup blocker context সীমিত | Relevant setup CTA, source status এবং পরবর্তী কাজ explain করতে হবে |
-| P2 | Full admin EN/BN control দেখা যায়নি; checkout language আলাদা | Ekmivo public, AI, payment, admin—সব জায়গায় locale coverage required |
+| P2 | Full admin EN/BN control দেখা যায়নি; checkout language আলাদা | Briofold public, AI, payment, admin—সব জায়গায় locale coverage required |
 | Positive | Per-domain tabs/forms/columns; compact sidebar/header; readable light/dark layouts | AI এবং Payments-এর নিজস্ব grouped icon nav ও domain views |
 | Positive | Explicit scoped API abilities, expiry, quota and connection screens | Permissions/entitlements server-enforced এবং lifecycle visible রাখতে হবে |
 
-## Ekmivo dashboard direction
+## Briofold dashboard direction
 
 Payment overview-তে verified volume, pending requests, unmatched receipts, device health, webhook delivery failures ও setup progress থাকবে। AI overview-তে inbox, handover, leads, follow-ups ও usage। একই business/product switching থাকবে; এক product-এর operational menu অন্য product-এ মিশবে না।
 

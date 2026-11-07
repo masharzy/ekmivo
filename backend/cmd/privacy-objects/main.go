@@ -13,7 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/checkout"
+	"github.com/masharzy/briofold/backend/internal/checkout"
 	"io"
 	"os"
 	"strings"

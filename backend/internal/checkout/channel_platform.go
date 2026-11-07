@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"io"
 	"net/http"
 	"net/url"
@@ -106,7 +106,7 @@ func (s *Service) HandleChannelPlatform(w http.ResponseWriter, r *http.Request) 
 		fail(w, 503, "CHANNEL_SETUP_UNAVAILABLE")
 		return
 	}
-	cookie, e := r.Cookie("ekmivo-session")
+	cookie, e := r.Cookie("briofold-session")
 	if e != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

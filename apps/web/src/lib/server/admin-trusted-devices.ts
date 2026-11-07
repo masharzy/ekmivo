@@ -2,7 +2,7 @@ import "server-only";
 import {randomBytes,createHash} from "node:crypto";
 import {cookies,headers} from "next/headers";
 import {database} from "./db";
-const COOKIE="ekmivo-admin-device";
+const COOKIE="briofold-admin-device";
 const digest=(token:string)=>createHash("sha256").update(token).digest("hex");
 export async function trustAdminDevice(userId:string,sessionId:string){
  const jar=await cookies(),token=randomBytes(32).toString("base64url");

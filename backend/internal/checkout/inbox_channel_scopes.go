@@ -2,7 +2,7 @@ package checkout
 
 import (
 	"context"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 	"net/http"
 )
 
@@ -34,7 +34,7 @@ func (s *Service) inboxManageSession(r *http.Request, w, e string) error {
 	if err := s.mobileSession(r, w, e); err != nil {
 		return err
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		return authz.ErrUnauthorized
 	}

@@ -40,7 +40,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
  const origin = requestUrl.origin;
  if (!read && request.headers.get("origin") !== origin)
   return Response.json({ code: "ORIGIN_DENIED" }, { status: 403 });
- const token = (await cookies()).get("ekmivo-session")?.value;
+ const token = (await cookies()).get("briofold-session")?.value;
  if (!token) return Response.json({ code: "UNAUTHENTICATED" }, { status: 401 });
  // Paid Studio work is tied to the server-selected business, including stale tabs.
  if(path.endsWith("/inbox-telegram")||path.endsWith("/inbox-connect")||path.endsWith("/inbox-channel-status")||commercePath.test(path)||crmPath.test(path)||growthPath.test(path)||path.endsWith("/ai/studio-test")||path.endsWith("/ai/knowledge-import")){
@@ -69,9 +69,9 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
    method: request.method, body, cache: "no-store", redirect: "error",
    // Incoming mutation origin was validated above. Forward the configured
    // server origin; preview/local hostnames never become Go's trust policy.
-   headers: { Cookie: "ekmivo-session=" + token, "Content-Type": "application/json",
+   headers: { Cookie: "briofold-session=" + token, "Content-Type": "application/json",
     "Idempotency-Key": request.headers.get("Idempotency-Key") || "",
-    Origin: process.env.GO_WEB_ORIGIN || "https://ekmivo-web-masharzys-projects.vercel.app" },
+    Origin: process.env.GO_WEB_ORIGIN || "https://briofold.tech" },
    signal: AbortSignal.timeout(path.endsWith("/inbox-telegram")?50000:aiRuntimePath.test(path)||commercePath.test(path)?50000:15000),
   });
   return new Response(await upstream.text(), { status: upstream.status,

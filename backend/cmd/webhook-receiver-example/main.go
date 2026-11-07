@@ -1,5 +1,5 @@
 // Merchant-side example. Its database is the MERCHANT application's database,
-// never Ekmivo control/finance. Apply examples/webhook-receiver/schema.sql there.
+// never Briofold control/finance. Apply examples/webhook-receiver/schema.sql there.
 package main
 
 import (
@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"io"
 	"log"
 	"net/http"
@@ -74,21 +74,21 @@ func main() {
 func newReceiverHandler(db *sql.DB, client *http.Client, origin *url.URL, realm, workspace, key string, secrets [][]byte, previousUntil time.Time) http.Handler {
 	uuid := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /webhooks/ekmivo", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /webhooks/briofold", func(w http.ResponseWriter, r *http.Request) {
 		raw, e := io.ReadAll(http.MaxBytesReader(w, r.Body, 16384))
 		if e != nil {
 			http.Error(w, "invalid payload", 413)
 			return
 		}
-		eventID := r.Header.Get("X-Ekmivo-Event-ID")
-		signature := strings.TrimPrefix(r.Header.Get("X-Ekmivo-Signature"), "v1=")
+		eventID := r.Header.Get("X-Briofold-Event-ID")
+		signature := strings.TrimPrefix(r.Header.Get("X-Briofold-Signature"), "v1=")
 		valid := false
 		for index, secret := range secrets {
 			if index > 0 && !time.Now().Before(previousUntil) {
 				continue
 			}
 			keyID := sha256.Sum256(secret)
-			if hex.EncodeToString(keyID[:8]) == r.Header.Get("X-Ekmivo-Key-ID") && merchantwebhook.Verify(secret, raw, r.Header.Get("X-Ekmivo-Timestamp"), eventID, signature, time.Now()) {
+			if hex.EncodeToString(keyID[:8]) == r.Header.Get("X-Briofold-Key-ID") && merchantwebhook.Verify(secret, raw, r.Header.Get("X-Briofold-Timestamp"), eventID, signature, time.Now()) {
 				valid = true
 				break
 			}
@@ -98,7 +98,7 @@ func newReceiverHandler(db *sql.DB, client *http.Client, origin *url.URL, realm,
 			return
 		}
 		var payload event
-		if json.Unmarshal(raw, &payload) != nil || payload.ID != eventID || payload.DeliveryID != r.Header.Get("X-Ekmivo-Delivery-ID") || !uuid.MatchString(payload.ID) || !uuid.MatchString(payload.DeliveryID) || !uuid.MatchString(payload.Data.PaymentID) || len(payload.Data.Reference) < 1 || len(payload.Data.Reference) > 128 || payload.Data.Amount <= 0 || payload.Environment != realm || payload.Workspace != workspace || payload.Version != 1 || payload.Type != "payment.verified" || payload.Data.Status != "verified" || payload.Data.Currency != "BDT" {
+		if json.Unmarshal(raw, &payload) != nil || payload.ID != eventID || payload.DeliveryID != r.Header.Get("X-Briofold-Delivery-ID") || !uuid.MatchString(payload.ID) || !uuid.MatchString(payload.DeliveryID) || !uuid.MatchString(payload.Data.PaymentID) || len(payload.Data.Reference) < 1 || len(payload.Data.Reference) > 128 || payload.Data.Amount <= 0 || payload.Environment != realm || payload.Workspace != workspace || payload.Version != 1 || payload.Type != "payment.verified" || payload.Data.Status != "verified" || payload.Data.Currency != "BDT" {
 			http.Error(w, "event scope rejected", 400)
 			return
 		}

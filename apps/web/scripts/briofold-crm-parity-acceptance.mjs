@@ -68,7 +68,7 @@ export async function runBriofoldCRMParity({origin,browser,control,sessions}){
   await db`INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES(${store},'live',${browserLead},'api',${randomUUID()})`;
   const authenticated=async(token,user)=>{
    const c=await browser.newContext({timezoneId:"Asia/Dhaka",viewport:{width:1280,height:900}});
-   await c.addCookies([{name:"ekmivo-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},{name:"ekmivo-default-workspace",value:user+":"+store,url:origin,httpOnly:true,sameSite:"Lax"},{name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);return c;
+   await c.addCookies([{name:"briofold-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},{name:"briofold-default-workspace",value:user+":"+store,url:origin,httpOnly:true,sameSite:"Lax"},{name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}]);return c;
   };
   context=await authenticated(sessions.owner,owner);viewerContext=await authenticated(sessions.viewer,viewer);
   const endpoint=origin+`/api/go/workspaces/${store}/crm?environment=live`;
@@ -107,7 +107,7 @@ export async function runBriofoldCRMParity({origin,browser,control,sessions}){
   const viewerPage=await viewerContext.newPage();await viewerPage.goto(origin+"/customers/leads");
   assert.equal(await viewerPage.getByLabel("Assignee filter",{exact:true}).count(),0);
   let cases=0;
-  for(const locale of ["en","bn"]){await context.addCookies([{name:"ekmivo-locale",value:locale,url:origin,sameSite:"Lax"}]);for(const theme of ["light","dark"]){await context.addCookies([{name:"ekmivo-theme",value:theme,url:origin,sameSite:"Lax"}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,360,768,1440]){await page.setViewportSize({width,height:900});for(const route of ["/customers/leads","/customers/follow-ups"]){await page.goto(origin+route);await page.locator("h1").last().waitFor();assert.equal(await page.locator('main [role="alert"]').count(),0);assert.equal(await page.locator("html").getAttribute("data-theme"),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`CRM filter overflow ${locale}/${theme}/${width}/${route}`);cases++;}}}}
+  for(const locale of ["en","bn"]){await context.addCookies([{name:"briofold-locale",value:locale,url:origin,sameSite:"Lax"}]);for(const theme of ["light","dark"]){await context.addCookies([{name:"briofold-theme",value:theme,url:origin,sameSite:"Lax"}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,360,768,1440]){await page.setViewportSize({width,height:900});for(const route of ["/customers/leads","/customers/follow-ups"]){await page.goto(origin+route);await page.locator("h1").last().waitFor();assert.equal(await page.locator('main [role="alert"]').count(),0);assert.equal(await page.locator("html").getAttribute("data-theme"),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`CRM filter overflow ${locale}/${theme}/${width}/${route}`);cases++;}}}}
   assert.equal(cases,32);assert.deepEqual(errors,[]);
   for(const role of ["ekmivo_financial_runtime","ekmivo_financial_projection"]){
    assert.equal((await db`SELECT has_function_privilege(${role},'briofold_customers_search(uuid,text,uuid,integer,text,text,text,text,text)','EXECUTE') ok`)[0].ok,true);

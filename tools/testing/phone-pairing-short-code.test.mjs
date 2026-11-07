@@ -5,7 +5,7 @@ import {pairingPayload,pairingSvg} from "../../apps/web/src/lib/pairing-qr.mjs";
 
 test("physical phone code: 8 characters, QR and copy identical",()=>{
  const code="ABCDEFGH";
- assert.equal(pairingPayload(code),"ekmivo://pair?token=ABCDEFGH");
+ assert.equal(pairingPayload(code),"briofold://pair?token=ABCDEFGH");
  assert.match(pairingSvg(code),/<svg/);
  for(const invalid of ["A".repeat(43),"ABCD-123","O2345678","A".repeat(7)]){
   assert.throws(()=>pairingPayload(invalid),/INVALID_PAIRING_CODE/);
@@ -28,7 +28,7 @@ test("one-time claim, 5 minute expiration, digest remain in database",()=>{
  assert.match(handler,/digest\(token\)/);
 });
 test("Android eight-cell input never consumes before consent",()=>{
- const flow=readFileSync("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/PairingFlow.kt","utf8");
+ const flow=readFileSync("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/PairingFlow.kt","utf8");
  assert.match(flow,/repeat\(PairingToken\.LENGTH\)/);
  assert.match(flow,/R\.string\.pair_verify_code/);
  assert.match(flow,/PairingToken\.parse\(input\)/);
@@ -36,6 +36,6 @@ test("Android eight-cell input never consumes before consent",()=>{
  assert.doesNotMatch(flow,/entered\.length == PairingToken\.LENGTH/);
  assert.match(flow,/page=PairPage\.CONFIRM/);
  assert.match(flow,/PairTokenEntry\(/);
- const token=readFileSync("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/PairingToken.kt","utf8");
+ const token=readFileSync("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/PairingToken.kt","utf8");
  assert.match(token,/const val LENGTH = 8/);
 });

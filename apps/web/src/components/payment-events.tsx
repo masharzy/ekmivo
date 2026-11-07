@@ -65,7 +65,7 @@ function ActivityLogs(scope:IntegrationScope&{detailId?:string}){
    if(!response.ok)throw Error(response.status===410?t("This export expired.","এই এক্সপোর্টের মেয়াদ শেষ।"):t("Download failed. Try again.","ডাউনলোড হয়নি। আবার চেষ্টা করুন।"));
    if(!response.headers.get("content-type")?.startsWith("text/csv"))throw Error(t("Invalid export response.","এক্সপোর্টের উত্তর সঠিক নয়।"));
    const url=URL.createObjectURL(await response.blob()),a=document.createElement("a");
-   a.href=url;a.download="ekmivo-export.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+   a.href=url;a.download="briofold-export.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
    setNotice(t("Download started.","ডাউনলোড শুরু হয়েছে।"));
   }catch(cause){setError(cause instanceof Error?cause.message:t("Download failed.","ডাউনলোড হয়নি।"))}
   finally{setBusy(false)}
@@ -76,7 +76,7 @@ function ActivityLogs(scope:IntegrationScope&{detailId?:string}){
    tab==="audit"?{id:row.id,resource:row.resource,resource_id:row.resource_id,action:row.action,created_at:row.created_at}:
    {id:row.id,resource:row.resource,created_at:row.created_at,expires_at:row.expires_at});
   const blob=new Blob([JSON.stringify({workspace_id:scope.workspaceId,environment:scope.environment,view:tab,loaded_records_only:true,items},null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ekmivo-"+tab+"-"+scope.environment+".json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="briofold-"+tab+"-"+scope.environment+".json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   setNotice(t("Loaded records exported. This is not the full history.","লোড হওয়া রেকর্ড এক্সপোর্ট হয়েছে; এটি সম্পূর্ণ ইতিহাস নয়।"));
  }
  const title=detailId?t("Event details","ইভেন্টের বিস্তারিত"):t("Activity logs","কার্যক্রমের ইতিহাস");

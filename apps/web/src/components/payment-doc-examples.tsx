@@ -86,7 +86,7 @@ export function PaymentDocExamples({locale}:{locale:"en"|"bn"}){
  const [language,setLanguage]=useState("cURL"),[copied,setCopied]=useState(false),[key,setKey]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState(""),[intent,setIntent]=useState(""),[checkout,setCheckout]=useState(""),[idem,setIdem]=useState(""),[ref,setRef]=useState("");
  async function copy(){try{await navigator.clipboard.writeText(snippets[language]);setCopied(true)}catch{setCopied(false)}}
  async function run(action:"create"|"status"){
-  if(busy||!/^ek_test_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/.test(key))return;
+  if(busy||!/^(?:bf|ek)_test_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/.test(key))return;
   setBusy(true);setResult("");
   const nextIdem=idem||"docs-"+crypto.randomUUID(),nextRef=ref||"DOCS-"+crypto.randomUUID();
   if(action==="create"){setIdem(nextIdem);setRef(nextRef)}
@@ -101,9 +101,9 @@ export function PaymentDocExamples({locale}:{locale:"en"|"bn"}){
  return <div className="ek-doc-examples">
   <div className="ek-doc-example-controls"><div role="group" aria-label="Language">{Object.keys(snippets).map(name=><button type="button" key={name} aria-pressed={language===name} onClick={()=>{setLanguage(name);setCopied(false)}}>{name}</button>)}</div><button type="button" onClick={()=>void copy()}>{copied?(bn?"কপি হয়েছে":"Copied"):(bn?"কোড কপি":"Copy code")}</button></div>
   <div className="ek-vscode"><div className="ek-vscode-top"><span aria-hidden="true">● ● ●</span>create-payment · {language}</div><pre><code>{snippets[language]}</code></pre></div>
-  <div className="ek-doc-real-run"><h3><PublicIcon name="flask"/>{bn?"Real Sandbox test":"Test with your Sandbox key"}</h3><p>{bn?"নিজের ek_test_ API key দিয়ে test payment তৈরি করুন। আসল টাকা লাগবে না।":"Create a real test payment using your own ek_test_ key. No real funds move."}</p>
-   <label>{bn?"Sandbox API key":"Sandbox API key"}<input type="password" value={key} autoComplete="off" spellCheck={false} onChange={e=>setKey(e.target.value)} placeholder="ek_test_..." /></label>
-   <div className="ek-doc-real-actions"><button type="button" disabled={busy||!/^ek_test_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/.test(key)} onClick={()=>void run("create")}>{busy?(bn?"চলছে…":"Working…"):(bn?"Test payment তৈরি":"Create test payment")}</button><button type="button" disabled={busy||!intent} onClick={()=>void run("status")}>{bn?"Status দেখুন":"Get status"}</button></div>
+  <div className="ek-doc-real-run"><h3><PublicIcon name="flask"/>{bn?"Real Sandbox test":"Test with your Sandbox key"}</h3><p>{bn?"নিজের bf_test_ API key দিয়ে test payment তৈরি করুন। আসল টাকা লাগবে না।":"Create a real test payment using your own bf_test_ key. No real funds move."}</p>
+   <label>{bn?"Sandbox API key":"Sandbox API key"}<input type="password" value={key} autoComplete="off" spellCheck={false} onChange={e=>setKey(e.target.value)} placeholder="bf_test_..." /></label>
+   <div className="ek-doc-real-actions"><button type="button" disabled={busy||!/^(?:bf|ek)_test_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/.test(key)} onClick={()=>void run("create")}>{busy?(bn?"চলছে…":"Working…"):(bn?"Test payment তৈরি":"Create test payment")}</button><button type="button" disabled={busy||!intent} onClick={()=>void run("status")}>{bn?"Status দেখুন":"Get status"}</button></div>
    {checkout&&<a className="ek-sandbox-checkout-link" href={checkout} rel="noopener noreferrer" target="_blank">{bn?"Sandbox checkout খুলুন":"Open Sandbox checkout"} ↗</a>}
    {result&&<div className="ek-sim-result" role="status"><strong>{bn?"Sandbox API response":"Sandbox API response"}</strong><pre><code>{result}</code></pre></div>}
   </div>

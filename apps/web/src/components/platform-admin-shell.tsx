@@ -64,10 +64,10 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
   return ()=>{clearTimeout(timer);abort.abort()};
  },[search,role,term,locale]);
 
- useEffect(()=>{document.cookie="ekmivo-admin-theme="+mode+";path=/;max-age=31536000;samesite=lax";},[mode]);
+ useEffect(()=>{document.cookie="briofold-admin-theme="+mode+";path=/;max-age=31536000;samesite=lax";},[mode]);
  const goLocale=(next:AdminLocale)=>{
   if(next===locale)return;
-  document.cookie="ekmivo-locale="+next+";path=/;max-age=31536000;samesite=lax";
+  document.cookie="briofold-locale="+next+";path=/;max-age=31536000;samesite=lax";
   const prefixed=/^\/(en|bn)(?=\/|$)/.test(pathname);
   const nextPath=prefixed?pathname.replace(/^\/(en|bn)(?=\/|$)/,"/"+next):"/"+next+pathname;
   setMobile(false);setSearch(false);
@@ -78,7 +78,7 @@ export function AdminShell({locale,role,name,theme,children,production=false}:{l
   <div className={"pa-route-progress"+(pending?" is-visible":"")} aria-hidden="true"/>
   <header className="pa-topbar">
    <button type="button" className="pa-icon-button pa-mobile-toggle" aria-label={isBn?"মেনু খুলুন":"Open navigation"} onClick={()=>setMobile(true)}><AdminIcon name="grid"/></button>
-   <Link href={root} className="pa-brand" onClick={e=>{e.preventDefault();jump("");}}>ekmivo<span className="pa-admin-tag">Admin</span></Link>
+   <Link href={root} className="pa-brand" onClick={e=>{e.preventDefault();jump("");}}>briofold<span className="pa-admin-tag">Admin</span></Link>
    <button className="pa-search-launch" type="button" onClick={()=>setSearch(true)}><AdminIcon name="search"/><span>{isBn?"যেকোনো পেজে যান":"Search pages"}</span><kbd>⌘ K</kbd></button>
    <div className="pa-topbar-end">
     

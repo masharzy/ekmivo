@@ -10,8 +10,8 @@ export default async function WorkspacesPage({params}:{params:Promise<{locale:st
  // New one-Store accounts go straight to setup/dashboard; the old picker is
  // retained only for legacy multi-membership accounts until an approved migration.
  if(bound||spaces.length===1)redirect("/workspaces/open");
- const stored=jar.get("ekmivo-theme")?.value;
+ const stored=jar.get("briofold-theme")?.value;
  const theme=stored==="light"||stored==="dark"?stored:"system";
- const chosen=jar.get("ekmivo-selected-plan")?.value??"";
+ const chosen=jar.get("briofold-selected-plan")?.value??"";
  return <WorkspacesV2 locale={locale} user={{id:user.id,name:user.name}} initialWorkspaces={spaces} initialDefault={preferred?.id??null} initialTheme={theme} selectedPlan={/^[a-z][a-z0-9_-]{1,39}$/.test(chosen)?chosen:""}/>;
 }

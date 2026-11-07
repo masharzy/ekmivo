@@ -10,7 +10,7 @@ export default async function AdminMfaPage({params,searchParams}:{params:Promise
  if(!await currentUser())redirect("/"+locale+"/admin/sign-in");
  const user=await requireUser(locale);
  const role=await platformRole(user.id);
- if(!role)return <main className="pa-mfa-screen pa-admin-design"><div className="pa-mfa-card"><div className="pa-mfa-logo">ekmivo <small>Admin</small></div><h1>{locale==="bn"?"অ্যাডমিন অ্যাক্সেস নেই":"No admin access"}</h1><p style={{textAlign:"center"}}>{locale==="bn"?"এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।":"This account has no admin access."}</p><a className="pa-mfa-link" href={"/"+locale+"/workspaces"}>{locale==="bn"?"ড্যাশবোর্ডে ফিরুন":"Back to dashboard"}</a></div></main>;
+ if(!role)return <main className="pa-mfa-screen pa-admin-design"><div className="pa-mfa-card"><div className="pa-mfa-logo">briofold <small>Admin</small></div><h1>{locale==="bn"?"অ্যাডমিন অ্যাক্সেস নেই":"No admin access"}</h1><p style={{textAlign:"center"}}>{locale==="bn"?"এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।":"This account has no admin access."}</p><a className="pa-mfa-link" href={"/"+locale+"/workspaces"}>{locale==="bn"?"ড্যাশবোর্ডে ফিরুন":"Back to dashboard"}</a></div></main>;
  const {reauth}=await searchParams;
  if(reauth!=="1"&&await sessionMfaValid(user.id))redirect("/"+locale+"/admin");
  const rows=await database()`SELECT confirmed_at FROM platform_admin_mfa WHERE user_id=${user.id}::uuid LIMIT 1`;

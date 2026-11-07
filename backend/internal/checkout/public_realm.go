@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"net/http"
  "strings"
 )

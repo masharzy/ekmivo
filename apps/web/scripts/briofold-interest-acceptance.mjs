@@ -19,7 +19,7 @@ export async function runInterestAcceptance({origin,browser,control,sessions}){
   await assert.rejects(()=>read(actor,'live',foreign),e=>e.code==='42501');
   const reminder=randomUUID();await db`SELECT briofold_customers_write(${store},'live',${actor},${randomUUID()},'followup',${db.json({id:interested,revision:1,followup_id:reminder,due_at:new Date(Date.now()+3600000).toISOString(),time_zone:'Asia/Dhaka',body:'Fictional sales follow-up',kind:'reminder',quiet_start:'',quiet_end:''})})`;
   assert.equal((await db`SELECT status FROM briofold_customer_followups WHERE id=${reminder}`)[0].status,'scheduled');
-  context=await browser.newContext();await context.addCookies([{name:'ekmivo-session',value:sessions.owner,url:origin},{name:'ekmivo-default-workspace',value:actor+':'+store,url:origin,httpOnly:true},{name:'ekmivo-locale',value:'en',url:origin}]);
+  context=await browser.newContext();await context.addCookies([{name:'briofold-session',value:sessions.owner,url:origin},{name:'briofold-default-workspace',value:actor+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);
   const page=await context.newPage();await page.goto(origin+'/orders/to-chase');await page.getByRole('heading',{name:'Qualified interest without an order',exact:true}).waitFor();
   await page.getByRole('button',{name:'Fictional qualified interest',exact:true}).click();await page.getByText('Fictional sales follow-up',{exact:true}).waitFor();
   await page.getByLabel('Lead stage',{exact:true}).selectOption('won');await page.getByRole('button',{name:'Save profile',exact:true}).click();

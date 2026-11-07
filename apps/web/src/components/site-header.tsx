@@ -23,7 +23,7 @@ export function SiteHeader({locale,initialTheme,authenticated=false}:{locale:Loc
  const actionHref=authenticated?"/dashboard":visiblePath==="/login"?"/register":"/login";
  const actionLabel=authenticated?(locale==="bn"?"ড্যাশবোর্ড":"Dashboard"):visiblePath==="/login"?(locale==="bn"?"অ্যাকাউন্ট খুলুন":"Create account"):(locale==="bn"?"লগইন":"Sign in");
  return <header className="ekm-nav" lang={locale} aria-label={locale==="bn"?"প্রধান নেভিগেশন":"Main navigation"}>
-  <Link className="ekm-nav-logo" href="/" aria-label="Briofold home">ekmivo<b>.</b></Link>
+  <Link className="ekm-nav-logo" href="/" aria-label="Briofold home">briofold<b>.</b></Link>
   <nav className="ekm-nav-links" aria-label={locale==="bn"?"পাবলিক পেজ":"Public pages"}>
    {publicLinks.map(link=><Link key={link.href} href={link.href} aria-current={visiblePath===link.href?"page":undefined}>{link[locale]}</Link>)}
   </nav>

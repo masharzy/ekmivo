@@ -1,4 +1,4 @@
-module github.com/masharzy/ekmivo/backend
+module github.com/masharzy/briofold/backend
 
 go 1.27.0
 

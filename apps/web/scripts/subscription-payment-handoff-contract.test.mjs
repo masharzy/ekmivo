@@ -73,7 +73,7 @@ test("control payment schema has exactly-once coupon, three consent snapshots, r
  assert.doesNotMatch(sql,/policy.status='published'/);
  assert.match(sql,/last_reconciled_at=clock_timestamp\(\)/);
  assert.match(sql,/FOR UPDATE SKIP LOCKED/);
- assert.match(sql,/0153 requires isolated Ekmivo control database/);
+ assert.match(sql,/0153 requires isolated Briofold control database/);
  assert.match(sql,/UNIQUE\(intent_id,payment_id\)/);
  assert.match(sql,/reservation_id.*?invoice_id/s);
  assert.match(sql,/GRANT EXECUTE ON FUNCTION platform_subscription_payment_capability/);

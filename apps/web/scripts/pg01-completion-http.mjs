@@ -6,9 +6,9 @@ import {writeFile} from 'node:fs/promises';
 import {encodeBase32,totpAt,matchTotp} from '../src/lib/mfa-core.js';
 const {encodeReply}=createRequire(import.meta.url)('next/dist/compiled/react-server-dom-webpack/client.node');
 if(process.env.PG01_ALLOW_PRODUCTION_FIXTURES!=='true')throw Error('Explicit fixture authorization required');
-const web=process.env.PG01_WEB_BASE||'https://ekmivo-web-masharzys-projects.vercel.app';
-if(!['https://ekmivo-web-masharzys-projects.vercel.app','http://127.0.0.1:3001'].includes(web))throw Error('Unapproved web target');
-const api='https://ekmivo-go-api.onrender.com';
+const web=process.env.PG01_WEB_BASE||'https://briofold.tech';
+if(!['https://briofold.tech','http://127.0.0.1:3001'].includes(web))throw Error('Unapproved web target');
+const api='https://api.briofold.tech';
 const sql=postgres(process.env.DATABASE_URL,{ssl:'require',max:1,prepare:false});
 const user=randomUUID(),viewer=randomUUID(),foreign=randomUUID();
 const workspace=randomUUID(),otherWorkspace=randomUUID();
@@ -20,7 +20,7 @@ let secret=encodeBase32(randomBytes(20));
 function record(name,pass,detail){results.push({name,pass,...detail});console.log(name+': '+(pass?'PASS':'FAIL'));}
 function encrypted(value){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',Buffer.from(process.env.MFA_ENCRYPTION_KEY,'base64url'),iv);const bytes=Buffer.concat([cipher.update(value),cipher.final()]);return ['v1',iv.toString('base64url'),cipher.getAuthTag().toString('base64url'),bytes.toString('base64url')].join(':');}
 async function session(userId=user){const token=randomBytes(32).toString('base64url');tokens.push(token);roles.set(token,userId===viewer?'workspace viewer':'dedicated Super Admin / workspace owner');await sql`INSERT INTO auth_sessions(user_id,token_hash,expires_at) VALUES(${userId},${hash(token)},now()+interval '1 hour')`;return token;}
-const headers=token=>token?{Cookie:'ekmivo-session='+token}:{};
+const headers=token=>token?{Cookie:'briofold-session='+token}:{};
 async function http(base,path,token,expected,name,method='GET',body,extra={}){
  const response=await fetch(base+path,{method,headers:{...headers(token),...(body?{'Content-Type':'application/json'}:{}),...extra},body:body?JSON.stringify(body):undefined,redirect:'manual',signal:AbortSignal.timeout(30000)});
  let payload;try{payload=await response.json();}catch{payload={};}
@@ -97,7 +97,7 @@ try{
  const generationStamp=oldSession[0].mfa_verified_at;
  await http(api,'/v1/platform/access',ownerToken,200,'Verified MFA Go access');
  for(const locale of ['en','bn'])for(const theme of ['light','dark']){
-  const page=await fetch(web+'/'+locale+'/admin/security',{headers:{Cookie:'ekmivo-session='+ownerToken+'; ekmivo-theme='+theme},signal:AbortSignal.timeout(30000)});
+  const page=await fetch(web+'/'+locale+'/admin/security',{headers:{Cookie:'briofold-session='+ownerToken+'; briofold-theme='+theme},signal:AbortSignal.timeout(30000)});
   const html=await page.text();
   record('Security SSR '+locale+' '+theme,page.status===200&&html.includes('lang="'+locale+'"')&&html.includes('data-theme="'+theme+'"')&&html.includes(locale==='bn'?'প্রতিটি কোড একবার চলবে':'Each code works once'),{endpoint:'GET /'+locale+'/admin/security',actual_status:page.status,safe_response:'Locale/theme markup and localized security copy checked; no visual claim.'});
  }

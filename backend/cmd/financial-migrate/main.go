@@ -1,4 +1,4 @@
-// Command financial-migrate runs upstream River and Ekmivo domain migrations
+// Command financial-migrate runs upstream River and Briofold domain migrations
 // under ONE reviewed infrastructure migration procedure, never HTTP startup.
 package main
 

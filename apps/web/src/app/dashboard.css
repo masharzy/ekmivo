@@ -1,4 +1,4 @@
-/* Auth and RSC workspace shell, Ekmivo Ink & Bone */
+/* Auth and RSC workspace shell, Briofold Ink & Bone */
 .ek-auth-main .auth-orbit,.ek-auth-main .auth-atmosphere{display:none}
 .ek-auth-main{background:var(--color-canvas);min-height:100svh}
 .ek-auth-main .auth-shell{position:relative}
@@ -132,7 +132,7 @@
 @media(prefers-reduced-motion:reduce){.ek-mode-card,.ek-existing-card{transition:none}}
 
 
-/* Ekmivo authentication: six-cell OTP, password recovery and Super Admin. */
+/* Briofold authentication: six-cell OTP, password recovery and Super Admin. */
 .ek-verification-screen{min-height:100svh;display:grid;place-items:center;padding:84px 18px 35px;background:var(--color-canvas);color:var(--color-text)}
 .ek-verify-card{width:min(100%,520px);padding:clamp(23px,4.5vw,48px);border:1px solid var(--color-border);border-radius:18px;background:var(--color-surface);box-shadow:0 24px 85px rgb(0 0 0 / 5%);text-align:center}
 .ek-verify-mark{display:inline-grid;place-items:center;width:55px;height:55px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-primary);color:var(--color-on-primary);font-size:27px;font-weight:800;letter-spacing:-.08em;margin:0 auto 29px}
@@ -379,7 +379,7 @@
 .ds-record-search [role="alert"]{font-size:.8rem}
 @media(max-width:480px){.ds-record-search-result{align-items:flex-start;flex-direction:column;gap:.25rem}.ds-record-search-result span{text-align:start}}
 
-/* Dashboard theme toggle: match the approved Ekmivo Pay header icon control.
+/* Dashboard theme toggle: match the approved Briofold Pay header icon control.
    Keep the three-choice selector on public pages; the dashboard toggles the
    current effective light/dark palette while retaining existing preference storage. */
 .ds-topbar .ek-dashboard-theme-button{

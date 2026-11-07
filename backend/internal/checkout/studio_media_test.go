@@ -16,8 +16,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/masharzy/ekmivo/backend/internal/aicredits"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/aicredits"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 )
 
 func fixtureStudioImage(t *testing.T) []byte {

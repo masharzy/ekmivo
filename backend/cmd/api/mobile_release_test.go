@@ -21,7 +21,7 @@ func TestMobileReleaseManifestNotPublished(t *testing.T){
 func TestMobileReleaseManifestValidated(t *testing.T){
  t.Setenv("EKMIVO_ANDROID_VERSION_CODE","5")
  t.Setenv("EKMIVO_ANDROID_VERSION_NAME","0.2.3")
- t.Setenv("EKMIVO_ANDROID_APK_URL","https://updates.example.org/ekmivo-v5.apk")
+ t.Setenv("EKMIVO_ANDROID_APK_URL","https://updates.example.org/briofold-v5.apk")
  t.Setenv("EKMIVO_ANDROID_APK_SHA256",strings.Repeat("a",64))
  recorder:=httptest.NewRecorder()
  handleAndroidRelease(recorder,httptest.NewRequest(http.MethodGet,"/v1/mobile/releases/latest",nil))

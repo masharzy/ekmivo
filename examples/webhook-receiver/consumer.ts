@@ -1,11 +1,11 @@
-import {verifyEkmivo} from './verify';
+import {verifyBriofold} from './verify';
 type Event={id:string;data:{payment_id:string;merchant_reference:string;amount_minor:number;currency:string}};
 type Transaction={query<T>(sql:string,values:unknown[]):Promise<{rows:T[]}>};
 export type MerchantDatabase={transaction<T>(work:(tx:Transaction)=>Promise<T>):Promise<T>};
 // Adapt transaction/query to your merchant DB driver. The transaction must
 // commit both event dedup and fulfilment together; never acknowledge early.
 export async function consume(raw:Uint8Array,headers:Record<string,string>,config:{secret:string;workspace:string;environment:'sandbox'|'live';apiOrigin:string;apiKey:string},database:MerchantDatabase){
- const event=verifyEkmivo(Buffer.from(raw),new Headers(headers),config.secret,config.workspace,config.environment) as Event;
+ const event=verifyBriofold(Buffer.from(raw),new Headers(headers),config.secret,config.workspace,config.environment) as Event;
  const origin=new URL(config.apiOrigin);if(origin.protocol!=='https:'||origin.username||origin.password||origin.search||origin.hash)throw Error('HTTPS API origin required');
  const url=new URL(`/v1/workspaces/${config.workspace}/operations/payments/${event.data.payment_id}`,origin);url.searchParams.set('environment',config.environment);
  const response=await fetch(url,{headers:{Authorization:`Bearer ${config.apiKey}`},redirect:'error',signal:AbortSignal.timeout(5000)});

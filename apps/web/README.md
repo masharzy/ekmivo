@@ -1,4 +1,4 @@
-# Ekmivo web — Next.js RSC, Neon and self-hosted auth
+# Briofold web — Next.js RSC, Neon and self-hosted auth
 
 Next.js + TypeScript application. Public bilingual marketing website and server-rendered private application shell.
 
@@ -7,7 +7,7 @@ Next.js + TypeScript application. Public bilingual marketing website and server-
 - RSC protected merchant dashboard and workspace switcher; URL-scoped membership authorization on every request.
 - Server Action login/register, scrypt password hashing, opaque revocable HttpOnly session cookies and database-backed login attempt limits.
 - Workspace onboarding with AI Communication, Commerce & Payments and Both modes. These are configuration preferences, not active paid entitlements.
-- PipraPay-inspired commerce module navigation and Ekmivo AI module navigation; no fake business records.
+- PipraPay-inspired commerce module navigation and Briofold AI module navigation; no fake business records.
 - Restricted platform admin shell; no first administrator is seeded automatically.
 - Server error boundary and field-level validation and toast UX.
 - Ink & Bone Light/Dark/System, Bengali and English.

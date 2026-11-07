@@ -1,4 +1,4 @@
-/* Ported from Ekmivo.html; component-scoped. Reference values preserved. */
+/* Ported from Briofold.html; component-scoped. Reference values preserved. */
 .ekm-landing{--d:"Taka",var(--font-outfit),"Outfit",var(--font-hind-siliguri),sans-serif;--b:"Taka",var(--font-figtree),"Figtree",var(--font-hind-siliguri),sans-serif;}
 .ekm-landing:lang(bn){--d:var(--font-hind-siliguri),"Hind Siliguri",var(--font-outfit),sans-serif;--b:var(--font-hind-siliguri),"Hind Siliguri",var(--font-figtree),sans-serif;}
 

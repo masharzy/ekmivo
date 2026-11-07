@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/receiptnotice"
 )
 
 // Notice actions do not lock a payer, alter a payment or provide proof of funds.
@@ -101,9 +101,9 @@ func (s *Service) HandleNotice(w http.ResponseWriter, r *http.Request) {
 		}
 		now := time.Now()
 		text := "You requested payment receipt notices. Enter this verification code in the same checkout:\n" + verify + "\nWithdrawal code:\n" + withdraw + "\nVerification expires in 15 minutes. No payment is confirmed by this email. SANDBOX — NO REAL MONEY."
-		subject := "Confirm Ekmivo receipt notices"
+		subject := "Confirm Briofold receipt notices"
 		if body.Locale == "bn" {
-			subject = "Ekmivo রসিদের ইমেইল নিশ্চিত করুন"
+			subject = "Briofold রসিদের ইমেইল নিশ্চিত করুন"
 			text = "আপনি পেমেন্টের রসিদের ইমেইল চেয়েছেন। একই checkout-এ এই verification code দিন:\n" + verify + "\nইমেইল বন্ধ করার code:\n" + withdraw + "\nVerification code-এর মেয়াদ ১৫ মিনিট। এই ইমেইল পেমেন্ট নিশ্চিত করে না। পরীক্ষামূলক — আসল টাকা নয়।"
 		}
 		if checkout.Environment == "live" {

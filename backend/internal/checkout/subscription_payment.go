@@ -20,7 +20,7 @@ func (s *Service) HandleSubscriptionPayment(w http.ResponseWriter,r *http.Reques
 	if s==nil||s.Auth==nil||s.Auth.DB==nil||!s.pipelineReady()||s.Pipeline.Live==nil {
 		fail(w,503,"SUBSCRIPTION_PAYMENT_UNAVAILABLE");return
 	}
-	cookie,err:=r.Cookie("ekmivo-session")
+	cookie,err:=r.Cookie("briofold-session")
 	if err!=nil {fail(w,401,"UNAUTHENTICATED");return}
 	actor,err:=s.Auth.Authenticate(r.Context(),cookie.Value)
 	if err!=nil {authError(w,err);return}

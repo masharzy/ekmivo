@@ -10,7 +10,7 @@
 ## Release prerequisites and current deployment status
 1. Migration `infra/migrations/0083_phone_self_revoke.sql` was applied and verified in both Neon sandbox and live financial databases on 2026-10-18. Compatible Go API deployment still needs verification before the new APK is used for disconnect. An un-migrated server replies 503 and the app safely keeps enrollment.
 2. Deploy the web dashboard update and confirm the latest server state is returned in the phone list. Web view polls while visible at 10-second intervals; there is no claim of instantaneous push notification.
-3. Publish a **release-signed** APK (single persistent Android signing identity, package `com.ekmivo.mobile`, versionCode higher than installed) to an HTTPS-hosted release URL. Configure on Render:
+3. Publish a **release-signed** APK (single persistent Android signing identity, package `com.briofold.mobile`, versionCode higher than installed) to an HTTPS-hosted release URL. Configure on Render:
    - `EKMIVO_ANDROID_VERSION_CODE` (integer greater than installed version; this build uses 4)
    - `EKMIVO_ANDROID_VERSION_NAME`
    - `EKMIVO_ANDROID_APK_URL` (HTTPS, direct APK, no redirect)

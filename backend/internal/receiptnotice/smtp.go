@@ -56,7 +56,7 @@ func EncodeMessage(c SMTPConfig, m Message, now time.Time) ([]byte, error) {
 	text = strings.ReplaceAll(text, "\n", "\r\n")
 	domain := from[strings.LastIndexByte(from, '@')+1:]
 	if m.HTML != "" {
-		const boundary = "ekmivo-invoice-alternative"
+		const boundary = "briofold-invoice-alternative"
 		encoded := base64.StdEncoding.EncodeToString([]byte(m.HTML))
 		var wrapped strings.Builder
 		for len(encoded) > 76 {

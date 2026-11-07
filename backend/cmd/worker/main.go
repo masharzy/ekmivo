@@ -3,7 +3,7 @@ package main
 
 import (
 	"context"
-	"github.com/masharzy/ekmivo/backend/internal/workerruntime"
+	"github.com/masharzy/briofold/backend/internal/workerruntime"
 	"log"
 	"os"
 	"os/signal"

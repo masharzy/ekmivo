@@ -21,7 +21,7 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme,googleReady=
  const [name,setName]=useState(user.name),[message,setMessage]=useState(""),[busy,setBusy]=useState(""),[confirm,setConfirm]=useState(false);
  const [restored,setRestored]=useState(false);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
- const key="ekmivo:account-name-draft:v1:"+user.id;
+ const key="briofold:account-name-draft:v1:"+user.id;
  const savedName=profile.status==="success"?profile.savedName||user.name:user.name,dirty=name!==savedName;
  useEffect(()=>{if(!dirty)return;const leave=(e:BeforeUnloadEvent)=>{try{sessionStorage.setItem(key,name)}catch{}e.preventDefault()};window.addEventListener("beforeunload",leave);return()=>window.removeEventListener("beforeunload",leave)},[dirty,key,name]);
  useEffect(()=>{if(profile.status!=="success")return;let alive=true;void Promise.resolve().then(()=>{if(!alive)return;setName(profile.savedName||user.name);try{sessionStorage.removeItem(key)}catch{}});return()=>{alive=false}},[profile.status,profile.savedName,key,user.name]);
@@ -35,7 +35,7 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme,googleReady=
  const keepDraft=()=>{if(!dirty)return;try{sessionStorage.setItem(key,name)}catch{}};
  const restore=()=>{try{const value=sessionStorage.getItem(key);if(value===null||value.length>100)throw Error("NO_DRAFT");setName(value);setRestored(true);setMessage(t("Restored your draft in this tab.","এই ট্যাবের খসড়া ফিরিয়ে আনা হয়েছে।"))}catch{setMessage(t("No saved draft in this tab.","এই ট্যাবে কোনো খসড়া নেই।"))}};
  return <div className="account-page" lang={locale}>
-  <header className="ac-top"><Link href="/workspaces" onClick={keepDraft} className="ac-brand">ekmivo</Link><div className="ac-top-actions"><Link href="/workspaces" onClick={keepDraft} className="ac-back">{t("Businesses","ব্যবসা")}</Link><SiteControls locale={locale} initialTheme={theme} compactThemeToggle/><span className="ac-mini-avatar" aria-label={savedName}>{initials}</span></div></header>
+  <header className="ac-top"><Link href="/workspaces" onClick={keepDraft} className="ac-brand">briofold</Link><div className="ac-top-actions"><Link href="/workspaces" onClick={keepDraft} className="ac-back">{t("Businesses","ব্যবসা")}</Link><SiteControls locale={locale} initialTheme={theme} compactThemeToggle/><span className="ac-mini-avatar" aria-label={savedName}>{initials}</span></div></header>
   <main className="ac-main">
    <div className="ac-page-head"><h1>{t("Account settings","অ্যাকাউন্ট সেটিংস")}</h1><p>{t("Your profile, sign-in and active sessions.","আপনার প্রোফাইল, লগইন ও সক্রিয় সেশন।")}</p></div>
    <section className="ac-identity" aria-label={t("Account summary","অ্যাকাউন্ট পরিচিতি")}><span className="ac-avatar">{initials}</span><div className="ac-identify"><strong>{savedName}</strong><span>{user.email}</span></div><span className={"ac-status "+(user.verified?"ac-positive":"ac-warning")}>{user.verified?t("Email verified","ইমেইল যাচাইকৃত"):t("Verification needed","যাচাই প্রয়োজন")}</span></section>

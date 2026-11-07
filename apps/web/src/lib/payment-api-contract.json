@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://ekmivo-go-api.onrender.com",
+      "url": "https://api.briofold.tech",
       "description": "Deployed Go API (does NOT imply financial readiness)"
     }
   ],
@@ -59580,7 +59580,7 @@
           }
         },
         {
-          "name": "X-Ekmivo-Device-ID",
+          "name": "X-Briofold-Device-ID",
           "in": "header",
           "schema": {
             "type": "string",
@@ -59588,7 +59588,7 @@
           }
         },
         {
-          "name": "X-Ekmivo-Event-ID",
+          "name": "X-Briofold-Event-ID",
           "in": "header",
           "required": true,
           "schema": {
@@ -59597,7 +59597,7 @@
           }
         },
         {
-          "name": "X-Ekmivo-Timestamp",
+          "name": "X-Briofold-Timestamp",
           "in": "header",
           "required": true,
           "schema": {
@@ -59605,7 +59605,7 @@
           }
         },
         {
-          "name": "X-Ekmivo-Signature",
+          "name": "X-Briofold-Signature",
           "in": "header",
           "required": true,
           "schema": {
@@ -59862,7 +59862,7 @@
                     },
                     "service": {
                       "type": "string",
-                      "const": "ekmivo-api"
+                      "const": "briofold-api"
                     }
                   }
                 }
@@ -62744,12 +62744,12 @@
       "SessionCookie": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "ekmivo-session"
+        "name": "briofold-session"
       },
       "MerchantBearer": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "ek_test_<publicId>_<random32> or ek_live_<publicId>_<random32>",
+        "bearerFormat": "bf_test_<publicId>_<random32> or bf_live_<publicId>_<random32>",
         "description": "256-bit random server-side bearer secret, never put into browser JavaScript,\nquery strings or client SDK bundles; store in a server-side secret manager.\n"
       }
     },

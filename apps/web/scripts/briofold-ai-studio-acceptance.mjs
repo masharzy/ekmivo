@@ -81,16 +81,16 @@ export async function runBriofoldAiStudioAcceptance({control,sessions,origin,bro
   assert.equal(Number((await db`SELECT count(*) AS n FROM briofold_ai_credit_journal WHERE workspace_id IN (${workspace},${pages},${foreign})`)[0].n),0,'configuration and retrieval never debit credits');
   // Real Server Actions through the running Next application, using the saved owner session.
   context=await browser.newContext();await context.addCookies([
-   {name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},
-   {name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
-   {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+   {name:'briofold-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'briofold-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'briofold-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   await page.goto(origin+'/settings/ai');
   try{await page.getByLabel('Instructions',{exact:true}).waitFor({timeout:5000});}catch{throw Error('Studio editor unavailable at '+page.url()+'; browser errors: '+JSON.stringify(errors)+'; rendered fixture page: '+(await page.locator('body').innerText()).slice(-6000));}
-  await context.addCookies([{name:'ekmivo-default-workspace',value:actor+':'+foreign,url:origin,httpOnly:true,sameSite:'Lax'}]);
+  await context.addCookies([{name:'briofold-default-workspace',value:actor+':'+foreign,url:origin,httpOnly:true,sameSite:'Lax'}]);
   const stalePaid=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/ai/studio-test',{headers:{Origin:origin,'Idempotency-Key':'studio-test:'+randomUUID()},data:{revision:(await read()).revision,question:'Fictional stale tab'}});
   assert.equal(stalePaid.status(),409);assert.equal((await stalePaid.json()).code,'STALE_BUSINESS');
-  await context.addCookies([{name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'}]);
+  await context.addCookies([{name:'briofold-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'}]);
   // Only Next's UI flag is enabled in this isolated harness. Go remains paid-off.
   await page.getByLabel('Test question',{exact:true}).fill('Fictional practice question');
   await page.getByLabel('I agree to use AI credits for this test.',{exact:true}).check();

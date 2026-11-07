@@ -1,6 +1,6 @@
 package checkout
 
-import "github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+import "github.com/masharzy/briofold/backend/internal/deviceevidence"
 
 // Built-in, versioned receipt grammar for the owner-provided bKash/Nagad samples.
 // These formats are deliberately narrow: a new provider message is stored for

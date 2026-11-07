@@ -61,8 +61,8 @@ createServer(async (req, res) => {
       chunks.push(chunk);
     }
     const raw = Buffer.concat(chunks);
-    const timestamp = String((req.headers["x-briofold-timestamp"] || req.headers["x-ekmivo-timestamp"]) || "");
-    const signature = String((req.headers["x-briofold-signature"] || req.headers["x-ekmivo-signature"]) || "");
+    const timestamp = String(req.headers["x-briofold-timestamp"] || "");
+    const signature = String(req.headers["x-briofold-signature"] || "");
     const expected = createHmac("sha256", secret)
       .update(timestamp + ".").update(raw).digest();
     const fresh = /^[0-9]+$/.test(timestamp) &&
@@ -72,7 +72,7 @@ createServer(async (req, res) => {
       res.writeHead(401).end(); return;
     }
     const event = JSON.parse(raw.toString("utf8"));
-    if (event.id !== (req.headers["x-briofold-event-id"] || req.headers["x-ekmivo-event-id"]) ||
+    if (event.id !== req.headers["x-briofold-event-id"] ||
         !/^[a-f0-9-]{36}$/i.test(event.id || "")) {
       res.writeHead(400).end(); return;
     }

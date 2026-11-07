@@ -61,7 +61,7 @@ export async function recordVerifiedShopifyPayment(reference:string,database:Mer
   mutationStarted=true;
   const result=await graphql<{orderCreateManualPayment:{order:Order|null;userErrors:{message:string}[]}}>(config,
    `mutation($id:ID!,$amount:MoneyInput!,$name:String!){orderCreateManualPayment(id:$id,amount:$amount,paymentMethodName:$name){order{${selection}} userErrors{message}}}`,
-   {id:job.row.order_gid,amount:{amount:(amount/100).toFixed(2),currencyCode:'BDT'},name:'Ekmivo '+job.row.payment_id});
+   {id:job.row.order_gid,amount:{amount:(amount/100).toFixed(2),currencyCode:'BDT'},name:'Briofold '+job.row.payment_id});
   const record=result.orderCreateManualPayment;
   if(record.userErrors.length){await finish('failed');return {state:'failed'};}
   if(!record.order||record.order.id!==job.row.order_gid||record.order.totalOutstandingSet.shopMoney.amount!=='0.00'&&record.order.totalOutstandingSet.shopMoney.amount!=='0')throw Error('Recorded order outcome requires review');

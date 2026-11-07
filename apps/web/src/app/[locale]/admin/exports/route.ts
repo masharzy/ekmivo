@@ -70,5 +70,5 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  // Record the filter and size, never exported personal records, in the protected audit trail.
  await database()`INSERT INTO platform_admin_audit(actor_id,action,description)
   VALUES (${admin.user.id}::uuid,'admin.csv_export',${"Export "+kind+" | filter="+q.slice(0,80)+" | rows="+String(Math.max(0,rows.length-1))})`;
- return new NextResponse(csv(rows),{headers:{"Content-Type":"text/csv; charset=utf-8","Content-Disposition":'attachment; filename="ekmivo-admin-'+kind+'-'+new Date().toISOString().slice(0,10)+'.csv"',"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
+ return new NextResponse(csv(rows),{headers:{"Content-Type":"text/csv; charset=utf-8","Content-Disposition":'attachment; filename="briofold-admin-'+kind+'-'+new Date().toISOString().slice(0,10)+'.csv"',"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
 }

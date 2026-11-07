@@ -1,4 +1,4 @@
-/* Ekmivo unified semantic palette (2026-10-21). Light = white, forest ink and lime; dark = charcoal, sage ink and lime. Functional status colors stay semantic.
+/* Briofold unified semantic palette (2026-10-21). Light = white, forest ink and lime; dark = charcoal, sage ink and lime. Functional status colors stay semantic.
    This file is the semantic source of truth. The Next.js web build syncs it into apps/web/src/styles. */
 :root {
   color-scheme: light;

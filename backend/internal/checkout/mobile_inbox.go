@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 )
 
 func (s *Service) handleMobileInbox(w http.ResponseWriter, r *http.Request, raw []byte) {
@@ -43,7 +43,7 @@ func (s *Service) HandleWebInbox(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "INBOX_UNAVAILABLE")
 		return
 	}
-	c, err := r.Cookie("ekmivo-session")
+	c, err := r.Cookie("briofold-session")
 	if err != nil {
 		authError(w, authz.ErrUnauthorized)
 		return

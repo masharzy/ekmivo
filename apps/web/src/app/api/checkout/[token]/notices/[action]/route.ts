@@ -13,7 +13,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{token:s
  try{
   const response=await fetch(new URL(`/v1/public/checkout/${token}/notices/${action}`,base),{
    method:"POST",body,redirect:"error",cache:"no-store",signal:AbortSignal.timeout(14000),
-   headers:{"Content-Type":"application/json",Origin:process.env.GO_WEB_ORIGIN||"https://ekmivo-web-masharzys-projects.vercel.app"},
+   headers:{"Content-Type":"application/json",Origin:process.env.GO_WEB_ORIGIN||"https://briofold.tech"},
   });
   return new Response(await response.text(),{status:response.status,headers:{"Content-Type":"application/json","Cache-Control":"no-store","Referrer-Policy":"no-referrer"}});
  }catch{return reply(503,"NOTICE_SERVICE_UNAVAILABLE")}

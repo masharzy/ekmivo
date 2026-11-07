@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 )
 
 func TestReadEncryptedPayerPhone(t *testing.T) {

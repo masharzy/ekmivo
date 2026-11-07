@@ -48,7 +48,7 @@ type Source struct {
 
 // AvailableSources only accepts explicitly approved Live platform sources.
 // Offline phones, disabled receiver, unreviewed parsers and buyer Store
-// accounts are never presented as Ekmivo subscription destinations.
+// accounts are never presented as Briofold subscription destinations.
 func AvailableSources(s Snapshot, sources []Source) ([]Source,error) {
 	if err:=s.Validate();err!=nil{return nil,err}
 	var eligible []Source

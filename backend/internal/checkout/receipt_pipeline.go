@@ -12,9 +12,9 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"io"
 	"net/http"
 	"regexp"
@@ -158,7 +158,7 @@ func (s *Service) pipelineSession(r *http.Request, ws, realm string, manage bool
 	}
 	// Device and secret management require a session owner/admin capability,
 	// not merely an editor's payment issuance key.
-	cookie, e := r.Cookie("ekmivo-session")
+	cookie, e := r.Cookie("briofold-session")
 	if e != nil {
 		return authz.ErrUnauthorized
 	}
@@ -196,7 +196,7 @@ func (s *Service) HandleOperations(w http.ResponseWriter, r *http.Request) {
 	defer finishActivity()
 	actorID := ""
 	if r.Method != "GET" {
-		cookie, _ := r.Cookie("ekmivo-session")
+		cookie, _ := r.Cookie("briofold-session")
 		actor, e := s.Auth.Authenticate(r.Context(), cookie.Value)
 		if e != nil {
 			authError(w, e)
@@ -412,7 +412,7 @@ type deviceContext struct {
 
 func (s *Service) device(r *http.Request, raw []byte) (deviceContext, error) {
 	var d deviceContext
-	id := r.Header.Get("X-Ekmivo-Device-ID")
+	id := r.Header.Get("X-Briofold-Device-ID")
 	if !uuidPattern.MatchString(id) {
 		return d, errors.New("invalid device")
 	}
@@ -434,9 +434,9 @@ func (s *Service) device(r *http.Request, raw []byte) (deviceContext, error) {
 	if e != nil || !active || version != d.Version {
 		return d, errors.New("stale device authority")
 	}
-	timestamp, event := r.Header.Get("X-Ekmivo-Timestamp"), r.Header.Get("X-Ekmivo-Event-ID")
+	timestamp, event := r.Header.Get("X-Briofold-Timestamp"), r.Header.Get("X-Briofold-Event-ID")
 	canonical, e := deviceevidence.CanonicalRequest(r.Method, r.URL.Path, timestamp, event, raw)
-	signature, se := base64.StdEncoding.DecodeString(r.Header.Get("X-Ekmivo-Signature"))
+	signature, se := base64.StdEncoding.DecodeString(r.Header.Get("X-Briofold-Signature"))
 	if e != nil || se != nil || !deviceevidence.TimestampWithinSkew(timestamp, time.Now()) || !deviceevidence.VerifyP256DER(d.Key, canonical, signature) {
 		return d, errors.New("device signature rejected")
 	}
@@ -512,9 +512,9 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 		key, e := base64.StdEncoding.DecodeString(claim.PublicKey)
 		generic, ke := x509.ParsePKIXPublicKey(key)
 		public, ok := generic.(*ecdsa.PublicKey)
-		timestamp, event := r.Header.Get("X-Ekmivo-Timestamp"), r.Header.Get("X-Ekmivo-Event-ID")
+		timestamp, event := r.Header.Get("X-Briofold-Timestamp"), r.Header.Get("X-Briofold-Event-ID")
 		canonical, ce := deviceevidence.CanonicalRequest(r.Method, r.URL.Path, timestamp, event, raw)
-		signature, se := base64.StdEncoding.DecodeString(r.Header.Get("X-Ekmivo-Signature"))
+		signature, se := base64.StdEncoding.DecodeString(r.Header.Get("X-Briofold-Signature"))
 		if e != nil || ke != nil || !ok || public.Curve.Params().Name != "P-256" || ce != nil || se != nil || !deviceevidence.TimestampWithinSkew(timestamp, time.Now()) || !deviceevidence.VerifyP256DER(key, canonical, signature) {
 			fail(w, 403, "ENROLLMENT_PROOF_REJECTED")
 			return
@@ -573,13 +573,13 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "DEVICE_AUTHORIZATION_REJECTED")
 		return
 	}
-	if !s.budget(w, "device-authenticated-global", 12000) || !s.budget(w, "device-authenticated|"+r.Header.Get("X-Ekmivo-Device-ID"), 600) {
+	if !s.budget(w, "device-authenticated-global", 12000) || !s.budget(w, "device-authenticated|"+r.Header.Get("X-Briofold-Device-ID"), 600) {
 		return
 	}
 	switch r.PathValue("action") {
 	case "history":
 		var history []byte
-		err := d.Pool.QueryRow(r.Context(), "SELECT pg06_history($1::uuid)", r.Header.Get("X-Ekmivo-Device-ID")).Scan(&history)
+		err := d.Pool.QueryRow(r.Context(), "SELECT pg06_history($1::uuid)", r.Header.Get("X-Briofold-Device-ID")).Scan(&history)
 		if err != nil {
 			fail(w, 503, "RECEIPT_HISTORY_UNAVAILABLE")
 			return
@@ -599,7 +599,7 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var stored bool
-		e = d.Pool.QueryRow(r.Context(), "SELECT pg06_heartbeat($1::uuid,$2,$3,$4,$5,$6,$7)", r.Header.Get("X-Ekmivo-Device-ID"), body.Permission, body.Backlog, body.Model, body.Version, body.Overflow, body.QueueError).Scan(&stored)
+		e = d.Pool.QueryRow(r.Context(), "SELECT pg06_heartbeat($1::uuid,$2,$3,$4,$5,$6,$7)", r.Header.Get("X-Briofold-Device-ID"), body.Permission, body.Backlog, body.Model, body.Version, body.Overflow, body.QueueError).Scan(&stored)
 		if e != nil || !stored {
 			fail(w, 503, "HEALTH_UNAVAILABLE")
 			return
@@ -633,7 +633,7 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 		// originatingAddress as payer or a route authority.
 		if parseErr == nil && receipt.Receiving != "" {
 			var cipher []byte
-			if err := d.Pool.QueryRow(r.Context(), "SELECT pg06_device_receiving_cipher($1::uuid)", r.Header.Get("X-Ekmivo-Device-ID")).Scan(&cipher); err != nil || len(cipher) == 0 {
+			if err := d.Pool.QueryRow(r.Context(), "SELECT pg06_device_receiving_cipher($1::uuid)", r.Header.Get("X-Briofold-Device-ID")).Scan(&cipher); err != nil || len(cipher) == 0 {
 				fail(w, 503, "RECEIVING_ACCOUNT_UNAVAILABLE")
 				return
 			}
@@ -664,15 +664,15 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 			method = receipt.Method
 			version = receipt.Version
 		}
-		event := r.Header.Get("X-Ekmivo-Event-ID")
-		encrypted, ee := deviceevidence.Encrypt(s.Pipeline.Key, []byte(body.Evidence), r.Header.Get("X-Ekmivo-Device-ID")+"|"+event)
+		event := r.Header.Get("X-Briofold-Event-ID")
+		encrypted, ee := deviceevidence.Encrypt(s.Pipeline.Key, []byte(body.Evidence), r.Header.Get("X-Briofold-Device-ID")+"|"+event)
 		if ee != nil {
 			fail(w, 503, "EVIDENCE_ENCRYPTION_UNAVAILABLE")
 			return
 		}
 		hash := sha256.Sum256(raw)
 		var result []byte
-		e = d.Pool.QueryRow(r.Context(), "SELECT pg06_ingest($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)", r.Header.Get("X-Ekmivo-Device-ID"), event, hex.EncodeToString(hash[:]), encrypted, payer, amount, at, precision, ref, method, version, body.Kind, reason, body.ObservedAt, body.Sequence).Scan(&result)
+		e = d.Pool.QueryRow(r.Context(), "SELECT pg06_ingest($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)", r.Header.Get("X-Briofold-Device-ID"), event, hex.EncodeToString(hash[:]), encrypted, payer, amount, at, precision, ref, method, version, body.Kind, reason, body.ObservedAt, body.Sequence).Scan(&result)
 		if e != nil {
 			mapped(w, e)
 			return

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Ekmivo</string>
+    <string name="app_name">Briofold</string>
     <string name="pair_header">ফোন যুক্ত করুন</string>
     <string name="pair_header_scan">ড্যাশবোর্ডের QR স্ক্যান করুন</string>
     <string name="pair_header_code">কোড দিয়ে</string>
@@ -18,7 +18,7 @@
     <string name="pair_torch">টর্চ</string>
     <string name="pair_scan_ok">স্ক্যান সফল হয়েছে</string>
     <string name="pair_confirm_generic">ড্যাশবোর্ডের ফোন</string>
-    <string name="pair_consent">Ekmivo এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS আপনার সংযুক্ত ওয়ার্কস্পেসে পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।</string>
+    <string name="pair_consent">Briofold এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS আপনার সংযুক্ত ওয়ার্কস্পেসে পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।</string>
     <string name="pair_confirm_button">নিশ্চিত করে যুক্ত করুন</string>
     <string name="pair_cancel">বাতিল</string>
     <string name="pair_connecting">যুক্ত হচ্ছে…</string>
@@ -91,5 +91,5 @@
     <string name="pair_connect">সংযুক্ত করুন</string>
     <string name="pair_verify_code">কোড যাচাই করুন</string>
     <string name="pair_ai_notice">কাস্টমার রিপ্লাই দিলে এই ফোনে নোটিফিকেশন আসবে।</string>
-    <string name="pair_payment_notice">SMS ফরওয়ার্ডিং: পেমেন্টের SMS পাঠাতে এই ফোনের SMS অনুমতি লাগবে। Ekmivo এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।</string>
+    <string name="pair_payment_notice">SMS ফরওয়ার্ডিং: পেমেন্টের SMS পাঠাতে এই ফোনের SMS অনুমতি লাগবে। Briofold এই ফোনে আসা SMS দেখে শুধু পেমেন্টের SMS পাঠাবে। বাকি SMS পাঠানো বা সংরক্ষণ করা হবে না।</string>
 </resources>

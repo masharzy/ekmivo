@@ -1,4 +1,4 @@
-/* LOCKED: colors copied exactly from docs/design/ekmivo-admin-reference.html.
+/* LOCKED: colors copied exactly from docs/design/briofold-admin-reference.html.
    Admin-only. Do not import the marketing/dashboard theme to re-skin this scope. */
 :root body .pa-root.pa-admin-design,:root body .pa-mfa-screen.pa-admin-design{
 --bg:#fafafa;--sf:#fff;--s2:#f5f5f5;--s3:#ebebeb;--bd:#e6e6e6;--tx:#0a0a0a;--t2:#404040;--mu:#8a8a8a;--ac:#2f5bea;--ok:#12a150;--wa:#d98a00;--ba:#e5372b;--ink:#0a0a0a;--onink:#fff;--sh:0 16px 48px rgba(0,0,0,.14);color-scheme:light;

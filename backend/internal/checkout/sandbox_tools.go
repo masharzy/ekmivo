@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
-	"github.com/masharzy/ekmivo/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"net/http"
 	"os"
 	"strings"
@@ -61,7 +61,7 @@ func (s *Service) HandleSandboxTools(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != "GET" && !publicKey {
-		cookie, err := r.Cookie("ekmivo-session")
+		cookie, err := r.Cookie("briofold-session")
 		if err != nil {
 			authError(w, authz.ErrUnauthorized)
 			return
@@ -119,7 +119,7 @@ func (s *Service) HandleSandboxTools(w http.ResponseWriter, r *http.Request) {
 				fail(w, 422, "RESET_CONFIRMATION_REQUIRED")
 				return
 			}
-			cookie, _ := r.Cookie("ekmivo-session")
+			cookie, _ := r.Cookie("briofold-session")
 			if cookie == nil {
 				fail(w, 401, "UNAUTHENTICATED")
 				return

@@ -40,7 +40,7 @@
 @media(max-width:760px){.ek-payment-docs{display:block;padding:0 18px;margin:108px auto 48px}.ek-doc-topline{display:block;padding-bottom:26px}.ek-doc-topline h1{font-size:28px}.ek-doc-base-url{margin-top:22px}.ek-doc-top-actions{margin-top:20px}.ek-doc-sidebar{position:static;max-height:none;padding:0;margin:24px 0}.ek-payment-docs .ek-doc-menu{display:flex;width:100%;justify-content:space-between;min-height:44px}.ek-doc-sidebar nav{display:none;padding-top:14px}.ek-doc-sidebar.is-open nav{display:block}.ek-doc-content .ds-panel{padding:28px 0}.ek-doc-content h2{font-size:23px}.ek-doc-color-grid{gap:10px}.ek-cute-tile{display:flex;flex-direction:column;align-items:flex-start;padding:15px;gap:9px}.ek-guide-examples{padding:16px;margin-inline:0}.ek-doc-note{flex-direction:column;gap:10px}.ek-doc-flow{display:grid;grid-template-columns:1fr 1fr}.ek-doc-flow>b{display:none}.ek-payment-docs .ek-vscode pre,.ek-payment-docs .ek-sim-result pre{padding:18px;font-size:12px}.ek-endpoint>span:last-child{margin-left:0}.ek-docs-table th,.ek-docs-table td{padding:12px}.ek-vscode-top{gap:8px;font-size:11px;padding:12px}.ek-mini-run label{width:100%}}
 @media(prefers-reduced-motion:reduce){.ek-payment-docs a,.ek-payment-docs button{transition:none}.ek-cute-tile:hover{transform:none}}
 
-/* Spacious readable parameter tables and restrained Ekmivo accent surfaces. */
+/* Spacious readable parameter tables and restrained Briofold accent surfaces. */
 .ek-payment-docs .ek-docs-table th{font-size:14px;letter-spacing:.01em}
 .ek-payment-docs .ek-docs-table td{font-size:15px}
 .ek-payment-docs .ek-docs-table td strong{font-weight:650}

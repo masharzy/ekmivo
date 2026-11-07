@@ -5,10 +5,10 @@ No success redirect can call this handler to fulfil an order.
 import json
 import urllib.request
 import urllib.parse
-from verify import verify as verify_ekmivo
+from verify import verify as verify_briofold
 
 def consume(raw, headers, config, connection):
-    event = verify_ekmivo(raw, headers, config['secret'], config['workspace'], config['environment'])
+    event = verify_briofold(raw, headers, config['secret'], config['workspace'], config['environment'])
     origin = urllib.parse.urlsplit(config['api_origin'])
     if origin.scheme != 'https' or not origin.hostname or origin.username or origin.query or origin.fragment:
         raise ValueError('Configured HTTPS API origin required')

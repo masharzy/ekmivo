@@ -63,12 +63,12 @@ func TestPinnedSignedHTTPSDelivery(t *testing.T) {
   calls++
   raw,readErr:=io.ReadAll(r.Body);if readErr!=nil{t.Error(readErr)}
   if r.Method!="POST" || r.Host!="webhook.example.com" || r.URL.Path!="/receive" ||
-   r.Header.Get("X-Ekmivo-Event-ID")!=id || r.Header.Get("X-Briofold-Event-ID")!=id || r.Header.Get("X-Briofold-Signature")!=r.Header.Get("X-Ekmivo-Signature") ||r.Header.Get("X-Ekmivo-Delivery-ID")!=lease ||
+   r.Header.Get("X-Briofold-Event-ID")!=id ||r.Header.Get("X-Briofold-Delivery-ID")!=lease ||
    string(raw)!=string(body) {
    t.Errorf("altered signed request: %s %s %s",r.Method,r.Host,r.URL)
   }
-  signature:=r.Header.Get("X-Ekmivo-Signature")
-  if len(signature)<3 || signature[:3]!="v1=" || !Verify(secret,raw,r.Header.Get("X-Ekmivo-Timestamp"),id,signature[3:],time.Now()){
+  signature:=r.Header.Get("X-Briofold-Signature")
+  if len(signature)<3 || signature[:3]!="v1=" || !Verify(secret,raw,r.Header.Get("X-Briofold-Timestamp"),id,signature[3:],time.Now()){
    t.Error("signature did not cover exact sent bytes")
   }
   if code==302 {w.Header().Set("Location","http://127.0.0.1/unsafe")}

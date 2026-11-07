@@ -82,11 +82,11 @@ export function WorkspaceOnboarding({locale,userId}:{locale:Locale;userId:string
    if(typeof href==="string"&&confirmNavigation(href))event.preventDefault();
   };
   window.addEventListener("beforeunload",onUnload);
-  window.addEventListener("ekmivo:guarded-navigation",onGuardedNavigation);
+  window.addEventListener("briofold:guarded-navigation",onGuardedNavigation);
   document.addEventListener("click",onLink,true);
   return ()=>{
    window.removeEventListener("beforeunload",onUnload);
-   window.removeEventListener("ekmivo:guarded-navigation",onGuardedNavigation);
+   window.removeEventListener("briofold:guarded-navigation",onGuardedNavigation);
    document.removeEventListener("click",onLink,true);
   };
  },[dirty,name,mode,locale,draftKey]);

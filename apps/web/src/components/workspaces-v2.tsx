@@ -29,7 +29,7 @@ function WorkspaceHeaderControls({locale,initialTheme}:{locale:Locale;initialThe
   const update=()=>setSystemDark(preference.matches);
   update();preference.addEventListener("change",update);
   const sync=(e:StorageEvent)=>{
-   if(e.key!=="ekmivo-theme-preference")return;
+   if(e.key!=="briofold-theme-preference")return;
    const next=e.newValue==="light"||e.newValue==="dark"?e.newValue:"system";
    setTheme(next);if(next==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.dataset.theme=next;
   };
@@ -40,12 +40,12 @@ function WorkspaceHeaderControls({locale,initialTheme}:{locale:Locale;initialThe
  function toggleTheme(){
   const next:Theme=dark?"light":"dark";setTheme(next);
   document.documentElement.dataset.theme=next;
-  document.cookie=`ekmivo-theme=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
-  try{localStorage.setItem("ekmivo-theme-preference",next)}catch{/* cookie remains authoritative */}
+  document.cookie=`briofold-theme=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  try{localStorage.setItem("briofold-theme-preference",next)}catch{/* cookie remains authoritative */}
  }
  function toggleLocale(){
   const next=locale==="bn"?"en":"bn";
-  document.cookie=`ekmivo-locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  document.cookie=`briofold-locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
   window.location.reload();
  }
  return <div className="wk2-header-controls">
@@ -125,7 +125,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
  return <main className="wk2-root" lang={locale}>
   {navigating&&<div className="wk2-progress" role="progressbar" aria-label={locale==="bn"?"ব্যবসা খোলা হচ্ছে":"Opening business"}/>}
   <header className="wk2-header">
-   <Link href="/workspaces" className="wk2-logo">ekmivo</Link>
+   <Link href="/workspaces" className="wk2-logo">briofold</Link>
    <div className="wk2-header-right"><WorkspaceHeaderControls locale={locale} initialTheme={initialTheme}/><span className="wk2-user-name">{user.name}</span><span className="wk2-avatar">{user.name.trim().charAt(0).toUpperCase()}</span></div>
   </header>
   <div className="wk2-content">

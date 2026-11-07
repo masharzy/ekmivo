@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/financial"
+	"github.com/masharzy/briofold/backend/internal/financial"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"net/url"

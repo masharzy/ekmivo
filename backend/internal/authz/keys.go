@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-var merchantTokenRx = regexp.MustCompile(`^ek_(test|live)_([a-f0-9]{16})_([A-Za-z0-9_-]{43})$`)
+var merchantTokenRx = regexp.MustCompile(`^(?:bf|ek)_(test|live)_([a-f0-9]{16})_([A-Za-z0-9_-]{43})$`)
 
 // MerchantCredential deliberately contains no hash, token or account secrets.
 type MerchantCredential struct {

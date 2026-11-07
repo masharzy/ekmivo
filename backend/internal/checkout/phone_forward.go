@@ -11,7 +11,7 @@ import (
  "time"
 
  "github.com/jackc/pgx/v5/pgconn"
- "github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+ "github.com/masharzy/briofold/backend/internal/deviceevidence"
 )
 
 // Log only a fixed execution stage and SQLSTATE (never provider receipts,
@@ -121,7 +121,7 @@ func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw [
   }
  }
 
- eventID:=r.Header.Get("X-Ekmivo-Event-ID")
+ eventID:=r.Header.Get("X-Briofold-Event-ID")
  cipher,e:=deviceevidence.Encrypt(s.Pipeline.Key,[]byte(event.Evidence),phoneID+"|"+eventID)
  if e!=nil{logPhoneIngestFailure("receipt_encryption",e);fail(w,503,"EVIDENCE_ENCRYPTION_UNAVAILABLE");return}
  hash:=sha256.Sum256(raw)

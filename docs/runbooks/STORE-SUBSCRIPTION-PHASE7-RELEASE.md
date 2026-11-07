@@ -1,4 +1,4 @@
-# Ekmivo Store-first SaaS checkout — Phase 7 controlled release runbook
+# Briofold Store-first SaaS checkout — Phase 7 controlled release runbook
 
 Scope: the Store-first subscription purchase flow (Phases 0–7). **Phase 7 is the last phase.** Briofold seller checkout, Android and merchant coupon work are separate.
 

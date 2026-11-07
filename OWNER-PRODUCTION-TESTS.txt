@@ -6,10 +6,10 @@ EKMIVO — OWNER PRODUCTION TESTS (UTF-8 বাংলা)
 GitHub repo: https://github.com/masharzy/ekmivo
 PR #10: https://github.com/masharzy/ekmivo/pull/10
 CI + debug Android APK: https://github.com/masharzy/ekmivo/actions
-পরিচিত Web domain: https://ekmivo-web-masharzys-projects.vercel.app (Vercel production SHA ও host আগে যাচাই করুন; preview=production নয়)।
+পরিচিত Web domain: https://briofold.tech (Vercel production SHA ও host আগে যাচাই করুন; preview=production নয়)।
 প্রকৃত Backend URL মালিকের Render project থেকে নিন; অনুমান করবেন না। /healthz, /readyz পরীক্ষা করুন।
 Debug build (repo root থেকে): cd apps/mobile && gradle --no-daemon --console=plain :app:assembleDebug :app:testDebugUnitTest
-Debug APK local: apps/mobile/app/build/outputs/apk/debug/app-debug.apk ; CI artifact: ekmivo-kotlin-debug। এটি release-signed APK নয়।
+Debug APK local: apps/mobile/app/build/outputs/apk/debug/app-debug.apk ; CI artifact: briofold-kotlin-debug। এটি release-signed APK নয়।
 Web checks: cd apps/web && npm ci && npm run lint && npx tsc --noEmit && npm run build
 Go checks: cd backend && go test ./... && go test -race ./internal/checkout && go vet ./...
 0016–0044 migrations কেবল নির্দিষ্ট isolated PostgreSQL DB-তে যাচাই; production-এ আগে থেকে চালাবেন না।

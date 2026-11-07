@@ -14,7 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/masharzy/ekmivo/backend/internal/aicredits"
+	"github.com/masharzy/briofold/backend/internal/aicredits"
 )
 
 type studioContext struct {
@@ -226,7 +226,7 @@ func (s *Service) HandleStudioTest(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "ORIGIN_DENIED")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

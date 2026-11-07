@@ -36,8 +36,8 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const requestHeaders = await headers();
-  const cookieLocale = requestHeaders.get("cookie")?.match(/(?:^|;\s*)ekmivo-locale=(en|bn)(?:;|$)/)?.[1];
-  const locale = requestHeaders.get("x-ekmivo-locale") === "en" ? "en" : requestHeaders.get("x-ekmivo-locale") === "bn" ? "bn" : cookieLocale === "bn" ? "bn" : "en";
-  const theme = requestHeaders.get("cookie")?.match(/(?:^|;\s*)ekmivo-theme=(light|dark)(?:;|$)/)?.[1];
+  const cookieLocale = requestHeaders.get("cookie")?.match(/(?:^|;\s*)briofold-locale=(en|bn)(?:;|$)/)?.[1];
+  const locale = requestHeaders.get("x-briofold-locale") === "en" ? "en" : requestHeaders.get("x-briofold-locale") === "bn" ? "bn" : cookieLocale === "bn" ? "bn" : "en";
+  const theme = requestHeaders.get("cookie")?.match(/(?:^|;\s*)briofold-theme=(light|dark)(?:;|$)/)?.[1];
   return <html lang={locale} data-theme={theme} className={`${hindSiliguri.variable} ${outfit.variable} ${figtree.variable}`} suppressHydrationWarning><body><InterfaceLocaleProvider locale={locale}>{children}</InterfaceLocaleProvider></body></html>;
 }

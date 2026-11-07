@@ -98,9 +98,9 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   assert.equal(h1.history.length,50);assert.equal(h1.more_history,true);assert.ok(h2.history.length>0);assert.equal(h2.more_history,false);
   assert.equal(new Set([...h1.history,...h2.history].map(x=>x.operation_key)).size,h1.history.length+h2.history.length);
   context=await browser.newContext();await context.addCookies([
-   {name:'ekmivo-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},
-   {name:'ekmivo-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
-   {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+   {name:'briofold-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'briofold-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'briofold-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(90000);
   await page.goto(origin+'/dashboard');
   const businessAlerts=page.getByRole('region',{name:'Business alerts',exact:true});
@@ -178,9 +178,9 @@ export async function runBriofoldInboxWorkflow({control,sessions,origin,browser}
   await page.getByRole('heading',{name:'AI & conversations',exact:true}).waitFor();
   await db`INSERT INTO pg13_member_grants(workspace_id,user_id,capability,allowed) VALUES(${workspace},${colleague},'inbox:read',false) ON CONFLICT(workspace_id,user_id,capability) DO UPDATE SET allowed=false`;
   restrictedContext=await browser.newContext();await restrictedContext.addCookies([
-   {name:'ekmivo-session',value:sessions.viewer,url:origin,httpOnly:true,sameSite:'Lax'},
-   {name:'ekmivo-default-workspace',value:colleague+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
-   {name:'ekmivo-locale',value:'en',url:origin,sameSite:'Lax'}]);
+   {name:'briofold-session',value:sessions.viewer,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'briofold-default-workspace',value:colleague+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},
+   {name:'briofold-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const restrictedPage=await restrictedContext.newPage();await restrictedPage.goto(origin+'/dashboard');
   await restrictedPage.getByRole('alert').filter({hasText:'Inbox activity is temporarily unavailable'}).waitFor();
   assert.equal(await restrictedPage.getByText('Workflow fictional customer',{exact:true}).count(),0,'dashboard leaked a denied Inbox customer');

@@ -49,7 +49,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
   new Set(scopes).size!==scopes.length||scopes.some(scope=>!SCOPES.has(scope))
  ))return error(bn,"bad");
  try{
-  const cookie=(await cookies()).get("ekmivo-session")?.value;
+  const cookie=(await cookies()).get("briofold-session")?.value;
   if(!cookie||cookie.length>256)return error(bn,"reauth");
   const result=await database().begin(async tx=>{
    // Revalidate current session and membership INSIDE the write transaction.
@@ -110,7 +110,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
    // The database serializes the purchased plan cap across all admins/keys.
    // The separate hourly secret-minting throttle above is an abuse safeguard.
    const publicId=randomBytes(8).toString("hex");
-   const raw=`ek_${environment==="sandbox"?"test":"live"}_${publicId}_${randomBytes(32).toString("base64url")}`;
+   const raw=`bf_${environment==="sandbox"?"test":"live"}_${publicId}_${randomBytes(32).toString("base64url")}`;
    const digest=createHash("sha256").update(raw).digest("hex");
    if(operation==="rotate")await tx`SELECT set_config('ekmivo.key_rotation_id',${oldId},true)`;
    const rows=await tx`INSERT INTO merchant_api_keys

@@ -5,7 +5,7 @@ import { database } from "./db";
 import { hashToken } from "./auth";
 import { encodeBase32, matchTotp } from "../mfa-core.js";
 
-const COOKIE="ekmivo-session";
+const COOKIE="briofold-session";
 function encryptionKey():Buffer {
  const secret=process.env.MFA_ENCRYPTION_KEY;
  if(!secret)throw Error("MFA_KEY_NOT_CONFIGURED");

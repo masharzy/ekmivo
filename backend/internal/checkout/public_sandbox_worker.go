@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/financial"
+	"github.com/masharzy/briofold/backend/internal/financial"
 	"github.com/riverqueue/river"
 	"log"
 	"time"

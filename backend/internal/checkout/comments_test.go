@@ -3,7 +3,7 @@ package checkout
 import (
 	"context"
 	"errors"
-	policy "github.com/masharzy/ekmivo/backend/internal/comments"
+	policy "github.com/masharzy/briofold/backend/internal/comments"
 	"io"
 	"net/http"
 	"strings"

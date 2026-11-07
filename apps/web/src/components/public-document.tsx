@@ -26,7 +26,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
  // reloads. Never mint another payment intent merely because the UI remounted.
  useEffect(()=>{
   try{
-   const current=sessionStorage.getItem("ekmivo:document:"+token);
+   const current=sessionStorage.getItem("briofold:document:"+token);
    if(!current)return;
    const saved=JSON.parse(current) as {checkout?:string;key?:string;body?:string};
    if(saved.key&&/^[0-9a-f-]{36}$/.test(saved.key))key.current=saved.key;
@@ -68,7 +68,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
   // Single immutable submission and idempotency key for lost-response recovery.
   pendingBody.current??=JSON.stringify({fields:values,quantity,customer_details:customerDetails});
   key.current??=crypto.randomUUID();
-  try{sessionStorage.setItem("ekmivo:document:"+token,JSON.stringify({key:key.current,body:pendingBody.current,checkout:completedToken.current}))}catch{}
+  try{sessionStorage.setItem("briofold:document:"+token,JSON.stringify({key:key.current,body:pendingBody.current,checkout:completedToken.current}))}catch{}
   setBusy(true);setUnconfirmed(true);setError("");
   try{
    const r=await fetch("/api/documents/"+token,{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":key.current},body:pendingBody.current});
@@ -83,7 +83,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
    }
    if(typeof d.checkout_token!=="string"||!/^[A-Za-z0-9_-]{43}$/.test(d.checkout_token))throw Error("UNCONFIRMED");
    completedToken.current=d.checkout_token;
-   try{sessionStorage.setItem("ekmivo:document:"+token,JSON.stringify({key:key.current,body:pendingBody.current,checkout:d.checkout_token}))}catch{}
+   try{sessionStorage.setItem("briofold:document:"+token,JSON.stringify({key:key.current,body:pendingBody.current,checkout:d.checkout_token}))}catch{}
    router.push("/checkout/"+d.checkout_token+"?method="+selected.method+(selected.id?"&account="+selected.id:""));
   }catch(e){setError(checkoutError(e instanceof Error?e.message:"UNCONFIRMED"))}
   finally{setBusy(false)}
@@ -107,7 +107,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
  const logo=safeUrl(doc?.brand?.logo_url);
  const theme=doc?resolveCheckoutTheme(doc.brand?.checkout_theme,doc.merchant_name,logo):null;
  if(doc?.kind==="invoices"&&(doc.status==="cancelled"||doc.status==="draft"))return <main data-customer-checkout="true" className="customer-pay-screen" lang={locale}><div className="customer-pay-shell" style={{padding:32,textAlign:"center"}}><h1>{doc.status==="draft"?t("Invoice draft","ইনভয়েস খসড়া"):t("Invoice cancelled","ইনভয়েস বাতিল হয়েছে")}</h1><p>{doc.status==="draft"?t("This invoice has not been issued yet. Payment is unavailable.","ইনভয়েসটি এখনো ইস্যু হয়নি। পেমেন্ট করা যাবে না।"):t("This invoice is void. No payment can be made.","এই ইনভয়েসটি বাতিল। কোনো পেমেন্ট করা যাবে না।")}</p><a href={"/invoice/"+token}>{t("View invoice","ইনভয়েস দেখুন")}</a></div></main>;
- if(theme&&doc)return <ThemedCheckout config={theme} locale={locale} merchant={doc.brand} method={selected?.method||null} step="pay" amountMinor={payable} reference={doc.reference} onLanguage={()=>{document.cookie=`ekmivo-locale=${bn?'en':'bn'}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()}}>
+ if(theme&&doc)return <ThemedCheckout config={theme} locale={locale} merchant={doc.brand} method={selected?.method||null} step="pay" amountMinor={payable} reference={doc.reference} onLanguage={()=>{document.cookie=`briofold-locale=${bn?'en':'bn'}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()}}>
   <h2 className="tk-h">{t('How would you like to pay?','কীভাবে পরিশোধ করতে চান?')}</h2><form onSubmit={pay} className="tk-document-form"><div className="tk-ms">{tiles.map(tile=><button className="tk-m" key={tile.id||tile.method} type="button" disabled={locked} aria-pressed={selected?.id===tile.id&&selected.method===tile.method} onClick={()=>setSelected(tile)} aria-label={tile.method+" account "+tileIndex(tile)}><WalletToken method={tile.method}/><span className="tk-mt">{tile.method==='bkash'?'bKash':tile.method==='nagad'?'Nagad':'Rocket'}</span>{(tile.source_online===false||tile.ready===false||!readyMethods.includes(tile.method))&&<span className="tk-method-status">{t("Not ready","প্রস্তুত নয়")}</span>}{tileIndex(tile)>1&&<span className="tk-m-index">{tileIndex(tile)}</span>}<i className="tk-rd"/></button>)}</div>
   {theme.info&&([['name','Full name','পুরো নাম'],['email','Email','ইমেইল'],['addr','Address','ঠিকানা'],['note','Order note','অর্ডার নোট']] as const).filter(([key])=>theme.f[key]).map(([key,en,be])=><label className="tk-fl" key={key}>{t(en,be)}<input className="tk-in" type={key==='email'?'email':'text'} maxLength={key==='note'?1000:254} disabled={locked} value={customerDetails[key]||''} onChange={e=>setCustomerDetails(d=>({...d,[key]:e.target.value}))}/></label>)}
   {doc.kind==='payment-links'&&(doc.body.max_quantity||1)>1&&<label className="tk-fl">{t('Quantity','পরিমাণ')}<input className="tk-in" type="number" required min={1} max={doc.body.max_quantity} disabled={locked} value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label>}
@@ -121,7 +121,7 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
   <div className="customer-pay-shell">
    <div className="customer-pay-toolbar">
     <button type="button" onClick={back} aria-label={t("Go back","ফিরে যান")}>←</button>
-    <div className="customer-pay-toolbar-right"><button type="button" className="customer-pay-lang" onClick={()=>{document.cookie=`ekmivo-locale=${bn?"en":"bn"}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()}}>{bn?"EN":"বাং"}</button><button type="button" onClick={back} aria-label={t("Close checkout","চেকআউট বন্ধ করুন")}>×</button></div>
+    <div className="customer-pay-toolbar-right"><button type="button" className="customer-pay-lang" onClick={()=>{document.cookie=`briofold-locale=${bn?"en":"bn"}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()}}>{bn?"EN":"বাং"}</button><button type="button" onClick={back} aria-label={t("Close checkout","চেকআউট বন্ধ করুন")}>×</button></div>
    </div>
    {loading?<div className="customer-pay-loading" role="status">{t("Loading payment details…","পেমেন্টের তথ্য লোড হচ্ছে…")}</div>
     :doc?<>

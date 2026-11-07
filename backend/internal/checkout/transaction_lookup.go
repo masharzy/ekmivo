@@ -7,7 +7,7 @@ import (
  "strings"
 
  "github.com/jackc/pgx/v5"
- "github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+ "github.com/masharzy/briofold/backend/internal/deviceevidence"
 )
 
 // TrxID-assisted lookup never allocates or marks a receipt paid.

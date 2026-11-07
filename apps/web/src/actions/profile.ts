@@ -10,7 +10,7 @@ export type ProfileActionState={status:"idle"|"error"|"success";message:string;s
 
 export async function revokeAccountSession(localeRaw:string,id:string):Promise<ProfileActionState>{
  const locale=safeLocale(localeRaw),actor=await requireUser(locale);
- const token=(await cookies()).get("ekmivo-session")?.value;
+ const token=(await cookies()).get("briofold-session")?.value;
  if(!token||!/^[0-9a-f-]{36}$/i.test(id))return {status:"error",message:locale==="bn"?"সেশন পাওয়া যায়নি।":"Session unavailable."};
  try{
   const rows=await database()`UPDATE auth_sessions SET revoked_at=now() WHERE id=${id}::uuid AND user_id=${actor.id}::uuid AND token_hash<>${hashToken(token)} AND revoked_at IS NULL AND expires_at>now() RETURNING id`;
@@ -39,7 +39,7 @@ export async function saveDisplayName(localeRaw:string,_previous:ProfileActionSt
 
 export async function revokeOtherSessions(localeRaw:string,_previous:ProfileActionState,_form:FormData):Promise<ProfileActionState>{
  const locale=safeLocale(localeRaw),actor=await requireUser(locale);
- const token=(await cookies()).get("ekmivo-session")?.value;
+ const token=(await cookies()).get("briofold-session")?.value;
  if(!token||token.length>256)return {status:"error",message:locale==="bn"?"আবার লগ ইন করো।":"Sign in again."};
  try{
   const rows=await database()`UPDATE auth_sessions SET revoked_at=now()

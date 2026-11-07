@@ -5,14 +5,14 @@ import {createRequire} from 'node:module';
 import {writeFile,readFile} from 'node:fs/promises';
 const {encodeReply}=createRequire(import.meta.url)('next/dist/compiled/react-server-dom-webpack/client.node');
 if(process.env.PG23_ALLOW_PRODUCTION_FIXTURES!=='true')throw Error('Explicit fixture guard required');
-const web=process.env.PG23_WEB_BASE||'https://ekmivo-web-masharzys-projects.vercel.app',api='https://ekmivo-go-api.onrender.com';
-if(!['https://ekmivo-web-masharzys-projects.vercel.app','http://127.0.0.1:3001'].includes(web))throw Error('Unapproved web target');
+const web=process.env.PG23_WEB_BASE||'https://briofold.tech',api='https://api.briofold.tech';
+if(!['https://briofold.tech','http://127.0.0.1:3001'].includes(web))throw Error('Unapproved web target');
 const sql=postgres(process.env.DATABASE_URL,{ssl:'require',max:1,prepare:false});
 const ids=Array.from({length:5},()=>randomUUID()),workspaces=Array.from({length:3},()=>randomUUID());
 const [owner,admin,editor,viewer,foreign]=ids,[ws,second,other]=workspaces;
 const password=randomBytes(30).toString('base64url'),hash=v=>createHash('sha256').update(v).digest('hex');
 const records=[],actions=new Map(),roles=new Map(),path='/en/w/'+ws+'/payments/developers?env=sandbox';
-const headers=token=>({Cookie:'ekmivo-session='+token});
+const headers=token=>({Cookie:'briofold-session='+token});
 function record(pg,name,pass,details={}){records.push({pg,name,pass,...details});console.log(pg+' '+name+': '+(pass?'PASS':'FAIL'));}
 async function session(id){const token=randomBytes(32).toString('base64url');roles.set(token,['owner','admin','editor','viewer','foreign owner'][ids.indexOf(id)]);await sql`INSERT INTO auth_sessions(user_id,token_hash,expires_at) VALUES(${id},${hash(token)},now()+interval '1 hour')`;return token;}
 async function page(url,token,extra={}){const r=await fetch(web+url,{headers:{...headers(token),...extra},redirect:'manual',signal:AbortSignal.timeout(30000)});return {status:r.status,html:await r.text(),location:r.headers.get('location')};}
@@ -69,7 +69,7 @@ try{
  const permission=await sql`SELECT has_table_privilege('ekmivo_financial_runtime','merchant_api_keys','SELECT') AS readable,has_function_privilege('ekmivo_financial_runtime','resolve_merchant_api_key(text)','EXECUTE') AS resolver`;
  record('PG03','Restricted role table/resolver grants',!permission[0].readable&&permission[0].resolver);
  for(const locale of ['en','bn'])for(const theme of ['light','dark']){
-  const p=await page('/'+locale+path.slice(3),o,{Cookie:'ekmivo-session='+o+'; ekmivo-theme='+theme});
+  const p=await page('/'+locale+path.slice(3),o,{Cookie:'briofold-session='+o+'; briofold-theme='+theme});
   record('PG02','Authenticated shell '+locale+' '+theme,p.status===200&&p.html.includes('lang="'+locale+'"')&&p.html.includes('data-theme="'+theme+'"'),{endpoint:'GET locale/theme Developers',actual_status:p.status,safe_response:'SSR locale/theme only; not visual/browser claim.'});
  }
  const foreignPage=await page('/en/w/'+other+'/payments/developers?env=sandbox',o);

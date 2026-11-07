@@ -9,8 +9,8 @@ import {newPurchaseSecret,derivePurchaseToken,purchaseCreationKey} from "../purc
 
 // No raw table DML/SELECT is executed by the browser-facing Next runtime.
 // All privileged lifecycle transitions are atomic audited SECURITY DEFINER RPCs.
-const GUEST="ekmivo-purchase-session";
-const ACTIVE="ekmivo-purchase-current";
+const GUEST="briofold-purchase-session";
+const ACTIVE="briofold-purchase-current";
 const COOKIE={httpOnly:true,sameSite:"lax" as const,secure:process.env.NODE_ENV==="production",path:"/",maxAge:7*86400};
 const TOKEN=/^[A-Za-z0-9_-]{43}$/;
 const OFFER=/^[a-z][a-z0-9_-]{2,63}$/;

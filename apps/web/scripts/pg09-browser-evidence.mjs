@@ -30,8 +30,8 @@ export async function runPG09Browser({origin,browser,tenant,sessions}){
  try{
   const owner=await browser.newContext({viewport:{width:1280,height:900}});
   try{
-   await owner.addCookies([{name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
+   await owner.addCookies([{name:"briofold-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}]);
    await setup(owner);
    const p=await owner.newPage();p.setDefaultTimeout(30000);
    await p.goto(origin+root);
@@ -78,8 +78,8 @@ export async function runPG09Browser({origin,browser,tenant,sessions}){
   const viewer=await browser.newContext({viewport:{width:1024,height:900}});
   try{
    offlineSource=false;
-   await viewer.addCookies([{name:"ekmivo-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}]);
+   await viewer.addCookies([{name:"briofold-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}]);
    await setup(viewer);
    const p=await viewer.newPage();p.setDefaultTimeout(30000);
    await p.goto(origin+root);
@@ -93,8 +93,8 @@ export async function runPG09Browser({origin,browser,tenant,sessions}){
   for(const locale of ["en","bn"])for(const theme of ["light","dark"]){
    const c=await browser.newContext({viewport:{width:768,height:900}});
    try{
-    await c.addCookies([{name:"ekmivo-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
-     {name:"ekmivo-locale",value:locale,url:origin},{name:"ekmivo-theme",value:theme,url:origin}]);
+    await c.addCookies([{name:"briofold-session",value:sessions.owner,url:origin,httpOnly:true,sameSite:"Lax"},
+     {name:"briofold-locale",value:locale,url:origin},{name:"briofold-theme",value:theme,url:origin}]);
     await setup(c);
     const p=await c.newPage();p.setDefaultTimeout(30000);
     await p.goto(origin+"/"+locale+root);

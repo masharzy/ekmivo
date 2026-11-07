@@ -64,7 +64,7 @@ Local source/build/browser and sandbox rollback SQL evidence: docs/evidence/INTE
 
 ## SMS Devices / QR / standalone checkout — 2026-10-14
 
-- [ ] On a consented Android phone, create one real pairing QR in SMS Devices, scan it using Ekmivo and finish app permission prompts. Verify the correct workspace/realm, recent heartbeat, and code disappearing after claim.
+- [ ] On a consented Android phone, create one real pairing QR in SMS Devices, scan it using Briofold and finish app permission prompts. Verify the correct workspace/realm, recent heartbeat, and code disappearing after claim.
 - [ ] Verify expired-code rejection, copy/paste fallback, offline recovery and revoke blocking new receipt uploads. Web tests used mocked APIs and a synthetic QR; they are not real device/payment evidence.
 - [ ] Refresh and client-navigation checks on deployed /pay and /checkout: no site header/footer; provider branding and checkout controls remain. Local EN/BN checks passed.
 - [ ] Owner/admin device access and viewer denial, existing device detail deep links, rename, and controlled disconnect. No production device was modified by the local UI tests.
@@ -177,7 +177,7 @@ Full owner steps: USER-DEVICE-TESTS.txt. Source handoff: docs/evidence/PG06/PHON
 - [ ] Audit mobile 320dp/200% font, EN/BN, Light/Dark/System, screen reader, focus, error/offline/forbidden/empty and one card per physical phone.
 - [ ] QR camera scanner remains incomplete; manual one-time pairing code exists. Do not call this flow accepted from code or simulated SQL alone.
 
-# Ekmivo — consolidated manual verification register
+# Briofold — consolidated manual verification register
 
 ## PG10–PG17 combined verification — source still in progress
 
@@ -230,7 +230,7 @@ PG05 live issuance, PG10–PG13 lifecycle producers, PG14 generated SDK and late
 - [ ] **Owner/manual:** Log out on device A, use back button or old deep link — no protected data; sign in again; MFA step-up remains required.
 - [ ] **Owner/manual (test identities only):** Role downgrade/revoke or remove membership and confirm access stops immediately; another workspace's URL must be 403/404. Never modify last real owner or production admin just to simulate.
 - [ ] **Owner/manual:** Validate admin recovery path and no account lockout; review errors without exposing session, TOTP seed or database credentials.
-- **Automated/live observation:** CI real local 3-tenants × 2-env RLS, session disabled/revoked, role/MFA matrix passed; Render Singapore `ekmivo-go-api` launched and read-only restricted SQL role/no-context RLS startup probe PASS.
+- **Automated/live observation:** CI real local 3-tenants × 2-env RLS, session disabled/revoked, role/MFA matrix passed; Render Singapore `briofold-go-api` launched and read-only restricted SQL role/no-context RLS startup probe PASS.
 - **Implementation:** Protected Go settings write, authenticated same-origin Next-to-Go proxy, single-use hashed recovery codes, rotation, persistent lockout, audited MFA reset/session invalidation and password-confirmed re-enrollment are implemented. CI 38124238106 passed all three jobs. Exact deployed lifecycle evidence is in `evidence/PG01/completion-http-results.json`; earlier missing-code entries are historical.
 - **Owner/manual (dedicated administrator):** After a fresh MFA challenge, open `/en/admin/security` or `/bn/admin/security`, confirm password and generate recovery codes. Save privately; rotate and verify the old set fails. In a new signed-in session use one new code on `/admin/mfa`; its second use must fail. Recovery revokes other sessions. Reset authenticator from Security, then enroll a new authenticator with password; old OTP/session privileges must fail. Do not test on the sole real owner or publish codes.
 - **Remaining manual:** Physical authenticator/browser usability, keyboard, 320/768/1440px, 200% zoom, EN/BN and Light/Dark/System. Automated locale/theme SSR assertions are not visual QA. Confirm the published build before testing: Vercel `3cc4eeef` contains the core PG01 implementation; later localhost/preview proxy Origin fix `42fc75d` is still deployment-rate-limited. Do not claim latest-source web parity.
@@ -264,7 +264,7 @@ PG05 live issuance, PG10–PG13 lifecycle producers, PG14 generated SDK and late
 - [ ] **Real authorized business command search:** From a workspace dashboard press Ctrl/⌘K. Type the unique other-business name in EN and BN, use arrows/Enter; only workspace memberships for the logged-in test account appear. Escape returns focus. A removed membership disappears after a server refresh and cannot be loaded via deep link.
 - [ ] **Preference correctness with dirty editor:** When a real PG02 editable dashboard form exists, switch Sandbox→Live and choose Stay; reload and switch products and confirm no rejected environment preference leaked to storage or URL. Check suspended Live access as a negative case.
 - [ ] **Profile stale draft:** Save a test name to server, return to same tab and choose Restore draft; a prior draft must not overwrite the confirmed name. In a separate browser test revoked-session denial.
-- [ ] **Production parity:** Vercel project `ekmivo-web` production deployment `githubCommitSha` must equal the merged release SHA before owner QA. At investigation time production was `b2a7b0d` while main had reached `c31b653` — **not parity**. Review PG02 evidence for current SHA and CI.
+- [ ] **Production parity:** Vercel project `briofold-web` production deployment `githubCommitSha` must equal the merged release SHA before owner QA. At investigation time production was `b2a7b0d` while main had reached `c31b653` — **not parity**. Review PG02 evidence for current SHA and CI.
 - **Source fixes / tests (not manual passes):** business-membership-only search, command accessibility IDs, guarded language switch on onboarding, delayed environment preference write, current/business-off search closing, stale profile draft cleanup. Automated regression scripts added to CI in PG02 hardening branch; run ID and outcome required.
 
 ## PG03 — Contract and scoped API credentials
@@ -390,7 +390,7 @@ PG05 live issuance, PG10–PG13 lifecycle producers, PG14 generated SDK and late
 - [ ] While a future registered dashboard editor has a dirty draft, switch to another business where **both products are disabled**. It must still show Save/Discard/Stay before rendering the disabled-business information page.
 - [ ] Open Ctrl/⌘K search from a focused text field; Escape and Close must restore the original focused field. On 320px mobile open menu, Escape/Close must focus the menu trigger again, including when it closes through React cleanup.
 - [ ] Test a blocked unsaved-draft **language switch**: the locale preference cookie must remain unchanged until Save/Discard actually authorizes navigation. Switching Light/Dark/System must not discard the draft.
-- [ ] Before owner browser QA, verify Vercel deployment source SHA is **`3cc4eeef` or a newer code-equivalent SHA**. The Git-connected deployment `ekmivo-5yxe0dedp-masharzys-projects.vercel.app` was verified **READY** for merged PG02 code `3cc4eeef`; the previous manual deployment API request did encounter daily quota `HTTP 402`, but automatic Git deployment later succeeded. Never test older `356575bb` as the finished PG02 code.
+- [ ] Before owner browser QA, verify Vercel deployment source SHA is **`3cc4eeef` or a newer code-equivalent SHA**. The Git-connected deployment `briofold-5yxe0dedp-masharzys-projects.vercel.app` was verified **READY** for merged PG02 code `3cc4eeef`; the previous manual deployment API request did encounter daily quota `HTTP 402`, but automatic Git deployment later succeeded. Never test older `356575bb` as the finished PG02 code.
 
 ### Independent PG02/PG03 verification — 2026-10-11
 
@@ -522,7 +522,7 @@ Automated coverage is recorded separately in PG05 evidence. These checks remain 
 - [ ] While a future registered dashboard editor has a dirty draft, switch to another business where **both products are disabled**. It must still show Save/Discard/Stay before rendering the disabled-business information page.
 - [ ] Open Ctrl/⌘K search from a focused text field; Escape and Close must restore the original focused field. On 320px mobile open menu, Escape/Close must focus the menu trigger again, including when it closes through React cleanup.
 - [ ] Test a blocked unsaved-draft **language switch**: the locale preference cookie must remain unchanged until Save/Discard actually authorizes navigation. Switching Light/Dark/System must not discard the draft.
-- [ ] Before owner browser QA, verify Vercel deployment source SHA is **`3cc4eeef` or a newer code-equivalent SHA**. The Git-connected deployment `ekmivo-5yxe0dedp-masharzys-projects.vercel.app` was verified **READY** for merged PG02 code `3cc4eeef`; the previous manual deployment API request did encounter daily quota `HTTP 402`, but automatic Git deployment later succeeded. Never test older `356575bb` as the finished PG02 code.
+- [ ] Before owner browser QA, verify Vercel deployment source SHA is **`3cc4eeef` or a newer code-equivalent SHA**. The Git-connected deployment `briofold-5yxe0dedp-masharzys-projects.vercel.app` was verified **READY** for merged PG02 code `3cc4eeef`; the previous manual deployment API request did encounter daily quota `HTTP 402`, but automatic Git deployment later succeeded. Never test older `356575bb` as the finished PG02 code.
 
 ### Independent PG02/PG03 verification — 2026-10-11
 
@@ -659,7 +659,7 @@ All of the following are **MANUAL PENDING**, not passed: apply migration 0062 in
 
 ## Simple Payment API migration 0062 — operator update (2026-10-15)
 
-**DB SCHEMA APPLIED / VERIFIED** in both physical Neon finance databases `ekmivo_sandbox_financial` and `ekmivo_live_financial` (production branch); 13-statement atomic transaction each. Owner, realm, SQL objects, RLS and grants checked; existing payment rows untouched. Control database `ekmivo` unchanged. Prior ledger entries saying migration pending are superseded by this statement only. Still MANUAL PENDING: actual verified Sandbox/Live payment + provider device, signed webhook callback/retries, Go runtime smoke, checkout redirects and responsive EN/BN browser checks. See `docs/evidence/SIMPLE-PAYMENT-API-20261015.md`.
+**DB SCHEMA APPLIED / VERIFIED** in both physical Neon finance databases `ekmivo_sandbox_financial` and `ekmivo_live_financial` (production branch); 13-statement atomic transaction each. Owner, realm, SQL objects, RLS and grants checked; existing payment rows untouched. Control database `briofold` unchanged. Prior ledger entries saying migration pending are superseded by this statement only. Still MANUAL PENDING: actual verified Sandbox/Live payment + provider device, signed webhook callback/retries, Go runtime smoke, checkout redirects and responsive EN/BN browser checks. See `docs/evidence/SIMPLE-PAYMENT-API-20261015.md`.
 
 
 ## Dashboard/API refinement — 2026-10-15 — manual pending
@@ -813,7 +813,7 @@ Manual pending: with a non-system workspace on an active finite Starter term, ch
 - Automated checks and production read-only diagnosis: `docs/evidence/PLAN-LABELS-BILLING-STATUS-20261019/README.md`.
 
 ## 2026-10-19 — Canonical checkout URL and Official fallback
-- New API-created payment links must use `https://ekmivo-web.vercel.app/checkout/<token>`, independently of the dashboard CORS alias.
+- New API-created payment links must use `https://briofold.tech/checkout/<token>`, independently of the dashboard CORS alias.
 - With no saved theme, verify the Official merchant/method/payer/waiting/result flow; selected custom themes remain selected.
 - Changing checkout language keeps the public route locale-neutral; the webhook secret initially says it is hidden and reveals only after the authorized action.
 - Regression checks/evidence: `docs/evidence/CHECKOUT-CANONICAL-DEFAULT-20261019/README.md`. Actual money transfer is not claimed by code checks.

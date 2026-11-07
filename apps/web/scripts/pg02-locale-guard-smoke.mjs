@@ -51,12 +51,12 @@ assert.equal(events[0].detail.href,"/w/11111111-1111-4111-a111-111111111111/paym
 blocked=false;
 lang.props.onClick();
 assert.equal(reloads,1,"Successful language switch must reload for server-selected locale");
-assert.match(doc.cookie,/ekmivo-locale=en/);
+assert.match(doc.cookie,/briofold-locale=en/);
 assert.equal(doc.documentElement.lang,"bn","Language is unchanged until server commits the new render");
 theme.props.onChange({target:{value:"dark"}});
 assert.equal(doc.documentElement.dataset.theme,"dark");
-assert.ok(persisted.some(x=>x.startsWith("ekmivo-theme=dark;")), "Theme dark cookie was not persisted");
+assert.ok(persisted.some(x=>x.startsWith("briofold-theme=dark;")), "Theme dark cookie was not persisted");
 theme.props.onChange({target:{value:"system"}});
 assert.equal(doc.documentElement.dataset.theme,undefined);
-assert.ok(persisted.some(x=>x.startsWith("ekmivo-theme=system;")), "Theme system cookie was not persisted");
+assert.ok(persisted.some(x=>x.startsWith("briofold-theme=system;")), "Theme system cookie was not persisted");
 console.log("PG02 PASS: guarded locale reload preserves query/hash; theme/System cookies and render language");

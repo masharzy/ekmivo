@@ -11,7 +11,7 @@ export default async function OpenWorkspace({params}:{params:Promise<{locale:str
  // eventually navigate here. Keep the original opaque intent across them.
  const active=await activePurchase();
  if(active)redirect(`/subscribe/resume/${active}`);
- const plan=(await cookies()).get("ekmivo-selected-plan")?.value;
+ const plan=(await cookies()).get("briofold-selected-plan")?.value;
  if(plan&&/^[a-z][a-z0-9_-]{1,39}$/.test(plan))redirect(`/subscribe/${plan}`);
  const selected=await preferredWorkspaceFor(user.id);
  if(selected){const stage=await onboardingState(selected,user.id);redirect(stage&&stage!=="complete"?"/setup":"/dashboard");}

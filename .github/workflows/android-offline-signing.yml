@@ -52,7 +52,7 @@ jobs:
           sha256sum app-release-unsigned.apk apksigner.jar > SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: ekmivo-release-build
+          name: briofold-release-build
           path: offline-signing/
           if-no-files-found: error
           retention-days: 7

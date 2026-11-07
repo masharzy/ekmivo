@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Ekmivo</string>
+    <string name="app_name">Briofold</string>
     <string name="pair_header">Connect phone</string>
     <string name="pair_header_scan">Scan the dashboard QR</string>
     <string name="pair_header_code">Use a code</string>
@@ -18,7 +18,7 @@
     <string name="pair_torch">Torch</string>
     <string name="pair_scan_ok">Code scanned</string>
     <string name="pair_confirm_generic">Dashboard phone</string>
-    <string name="pair_consent">Ekmivo checks incoming SMS on this phone and forwards only payment SMS to your connected workspace. Other SMS are not sent or stored.</string>
+    <string name="pair_consent">Briofold checks incoming SMS on this phone and forwards only payment SMS to your connected workspace. Other SMS are not sent or stored.</string>
     <string name="pair_confirm_button">Confirm and connect</string>
     <string name="pair_cancel">Cancel</string>
     <string name="pair_connecting">Connecting…</string>
@@ -91,5 +91,5 @@
     <string name="pair_connect">Connect</string>
     <string name="pair_verify_code">Verify code</string>
     <string name="pair_ai_notice">You will receive a notification when a customer replies.</string>
-    <string name="pair_payment_notice">SMS forwarding: this phone needs SMS access to send payment receipts. Ekmivo sends only payment SMS. Other SMS are not sent or stored.</string>
+    <string name="pair_payment_notice">SMS forwarding: this phone needs SMS access to send payment receipts. Briofold sends only payment SMS. Other SMS are not sent or stored.</string>
 </resources>

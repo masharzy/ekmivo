@@ -20,7 +20,7 @@ The sidebar uses group headings and icons. The overview separates collected volu
 ## Inspected page details
 
 - Dashboard: balance, today's collected amount, 30-day completed volume, pending recovery, unused receipt count, monthly table, daily/status chart, transaction table, login history.
-- Pending Requests: manual approval/deletion queue, provider filters, invoice/customer/TrxID/amount/time. This normal manual flow is not Ekmivo's required auto-verification flow.
+- Pending Requests: manual approval/deletion queue, provider filters, invoice/customer/TrxID/amount/time. This normal manual flow is not Briofold's required auto-verification flow.
 - Invoices: filters by identifiers/customer/method/status/payment link; sender/brand/method/amount/date/actions. Create form: brand, amount, customer, return/cancel URLs and IPN URL; verified-domain rules.
 - Payment Links: product/brand/price/actions; create form product name, image URL/upload, any-amount option, redirect, brand, note, customizable customer fields.
 - Receiving methods: provider, account/type, brand, credentials, min/max, fees, status, ordering.
@@ -36,6 +36,6 @@ The sidebar uses group headings and icons. The overview separates collected volu
 
 Other sidebar destinations were inventoried, not all opened or exercised. Empty lists and disabled fields are visibility limits, not evidence their live actions work.
 
-## Ekmivo application
+## Briofold application
 
 Keep product switching separate from business switching. Payment overview concerns payment/receipt/device operations; AI overview concerns conversations, handover, leads and usage. Every route needs a proper domain view and acceptance evidence. Distinct tabs and columns only complete UI scaffolding, not the data service, mutations or provider integration.

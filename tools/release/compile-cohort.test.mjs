@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 
 test('fictional observation stays incomplete and tampered evidence is refused',async()=>{
- const root=await mkdtemp(path.join(tmpdir(),'ekmivo-cohort-'));
+ const root=await mkdtemp(path.join(tmpdir(),'briofold-cohort-'));
  try{
   const evidence=path.join(root,'evidence.txt'),record=path.join(root,'day.json');
   await writeFile(evidence,'fictional unit fixture\n');

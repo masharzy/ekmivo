@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
-	"github.com/masharzy/ekmivo/backend/internal/deviceevidence"
+	"github.com/masharzy/briofold/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 )
 
 type mobileIdentity struct {
@@ -25,7 +25,7 @@ func (s *Service) mobileSession(r *http.Request, w, e string) error {
 	if s == nil || s.Auth == nil || s.Pipeline == nil || s.Pipeline.Control == nil {
 		return authz.ErrUnavailable
 	}
-	c, err := r.Cookie("ekmivo-session")
+	c, err := r.Cookie("briofold-session")
 	if err != nil {
 		return authz.ErrUnauthorized
 	}
@@ -37,12 +37,12 @@ func (s *Service) mobileSession(r *http.Request, w, e string) error {
 	return err
 }
 func mobileSignature(r *http.Request, raw, key []byte) bool {
-	canonical, e := deviceevidence.CanonicalRequest(r.Method, r.URL.Path, r.Header.Get("X-Ekmivo-Timestamp"), r.Header.Get("X-Ekmivo-Event-ID"), raw)
-	sig, se := base64.StdEncoding.DecodeString(r.Header.Get("X-Ekmivo-Signature"))
-	return e == nil && se == nil && deviceevidence.TimestampWithinSkew(r.Header.Get("X-Ekmivo-Timestamp"), time.Now()) && deviceevidence.VerifyP256DER(key, canonical, sig)
+	canonical, e := deviceevidence.CanonicalRequest(r.Method, r.URL.Path, r.Header.Get("X-Briofold-Timestamp"), r.Header.Get("X-Briofold-Event-ID"), raw)
+	sig, se := base64.StdEncoding.DecodeString(r.Header.Get("X-Briofold-Signature"))
+	return e == nil && se == nil && deviceevidence.TimestampWithinSkew(r.Header.Get("X-Briofold-Timestamp"), time.Now()) && deviceevidence.VerifyP256DER(key, canonical, sig)
 }
 func (s *Service) mobileIdentity(r *http.Request, raw []byte) (mobileIdentity, error) {
-	d := mobileIdentity{ID: r.Header.Get("X-Ekmivo-Device-ID")}
+	d := mobileIdentity{ID: r.Header.Get("X-Briofold-Device-ID")}
 	if !uuidPattern.MatchString(d.ID) {
 		return d, authz.ErrForbidden
 	}

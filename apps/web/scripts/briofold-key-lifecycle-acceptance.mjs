@@ -55,9 +55,9 @@ export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,w
   const authenticated=async(token,user)=>{
    const c=await browser.newContext({viewport:{width:1280,height:900}});
    await c.addCookies([
-    {name:"ekmivo-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-default-workspace",value:user+":"+workspaceId,url:origin,httpOnly:true,sameSite:"Lax"},
-    {name:"ekmivo-locale",value:"en",url:origin,sameSite:"Lax"}
+    {name:"briofold-session",value:token,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-default-workspace",value:user+":"+workspaceId,url:origin,httpOnly:true,sameSite:"Lax"},
+    {name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}
    ]);return c;
   };
   context=await authenticated(sessions.owner,owner);
@@ -90,7 +90,7 @@ export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,w
   const copy=page.getByRole("dialog",{name:"Copy your key now",exact:true});
   await copy.waitFor();
   const firstSecret=(await copy.locator(".keyv .mono").innerText()).trim();
-  assert.ok(/^ek_test_[a-f0-9]{16}_[\w-]{43}$/.test(firstSecret),"invalid one-time key shape");
+  assert.ok(/^(?:bf|ek)_test_[a-f0-9]{16}_[\w-]{43}$/.test(firstSecret),"invalid one-time key shape");
   const first=(await rows())[0];assert.ok(first,"created key missing from database");
   assert.equal(first.secret_digest.trim(),createHash("sha256").update(firstSecret).digest("hex"),"key secret was not hash-only");
   assert.deepEqual(first.scopes,["payments:read","payments:write"]);
@@ -166,7 +166,7 @@ export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,w
   await create.getByRole("button",{name:"Create API key",exact:true}).click();
   await copy.waitFor();
   const liveSecret=(await copy.locator(".keyv .mono").innerText()).trim();
-  assert.ok(liveSecret.startsWith("ek_live_"),"entitled Live creation failed");
+  assert.ok(liveSecret.startsWith("bf_live_"),"entitled Live creation failed");
   const liveKeys=await db`SELECT id,secret_digest FROM merchant_api_keys WHERE workspace_id=${workspaceId}::uuid AND environment='live' AND name=${name+" Live"}`;
   assert.equal(liveKeys.length,1,"Live create duplicated credential");
   assert.equal(liveKeys[0].secret_digest.trim(),createHash("sha256").update(liveSecret).digest("hex"));

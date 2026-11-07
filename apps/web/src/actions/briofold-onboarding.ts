@@ -117,7 +117,7 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
    // in a route handler during the server-action redirect handoff.
    redirect(dashboardHref("bn",workspace.id,"payments","billing")+"?tab=plans&plan="+encodeURIComponent(plan));
   }
-  (await cookies()).delete("ekmivo-selected-plan");
+  (await cookies()).delete("briofold-selected-plan");
   redirect("/dashboard");
  }
  redirect("/setup");

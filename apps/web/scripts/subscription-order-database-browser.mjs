@@ -55,7 +55,7 @@ async function newIntent(){
  return id;
 }
 async function setup(page,locale,intent){
- await page.route("http://localhost:45679/",route=>route.fulfill({status:200,contentType:"text/html",body:"<!doctype html><title>SQL-backed Ekmivo</title>"}));
+ await page.route("http://localhost:45679/",route=>route.fulfill({status:200,contentType:"text/html",body:"<!doctype html><title>SQL-backed Briofold</title>"}));
  await page.goto("http://localhost:45679/",{waitUntil:"domcontentloaded"});
  page.setDefaultTimeout(9000);
  await page.route("**/api/go/platform/purchase-intents/*/quote",async route=>{

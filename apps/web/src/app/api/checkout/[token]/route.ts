@@ -20,7 +20,7 @@ async function forward(request:NextRequest,{params}:{params:Promise<{token:strin
  if(body===null)return result(413,"BODY_TOO_LARGE");
  try{
   const upstream=await fetch(target,{method:request.method,body,cache:"no-store",redirect:"error",
-   headers:post?{"Content-Type":"application/json",Origin:process.env.GO_WEB_ORIGIN||"https://ekmivo-web-masharzys-projects.vercel.app"}:undefined,
+   headers:post?{"Content-Type":"application/json",Origin:process.env.GO_WEB_ORIGIN||"https://briofold.tech"}:undefined,
    signal:AbortSignal.timeout(14000)});
   return new Response(await upstream.text(),{status:upstream.status,headers:{
    "Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store",

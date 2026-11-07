@@ -24,7 +24,7 @@
 ~~~text
 DESKTOP
 ┌─232px sidebar──────┬─sticky header, min 64px─────────────────────────────────┐
-│ ekmivo · PAY       │ [Payment gateway ▾] [Sandbox ▾] [Search CtrlK / ⌘K]       │
+│ briofold · PAY       │ [Payment gateway ▾] [Sandbox ▾] [Search CtrlK / ⌘K]       │
 │ [Business name ▾]  │                   [EN/বাংলা] [Theme ▾] [Bell] [Avatar ▾]│
 │ [Find a page…]     ├─Business / Payment gateway / Payments───────────────────┤
 │ GROUP TITLE       │ Payments                               [Create request]│
@@ -259,7 +259,7 @@ Finance investigation cannot quietly mutate source evidence. Emergency account/d
 
 ## Owner dashboard/API refinement — 2026-10-15
 
-The latest owner instruction refines the payment dashboard: Payments replaces Transactions in navigation; Payment Links includes the existing one-time requests flow; SMS Data replaces Incoming Receipts. Workspace Billing, Team and Settings are accessed through the workspace gear, and Help through the header. Developers contains API Keys and external API Docs. Legacy deep links and integrations remain compatible. The operational dashboard uses the semantic payment tokens and an original visual direction documented in `docs/design/ekmivo-dashboard/SKILL.md`.
+The latest owner instruction refines the payment dashboard: Payments replaces Transactions in navigation; Payment Links includes the existing one-time requests flow; SMS Data replaces Incoming Receipts. Workspace Billing, Team and Settings are accessed through the workspace gear, and Help through the header. Developers contains API Keys and external API Docs. Legacy deep links and integrations remain compatible. The operational dashboard uses the semantic payment tokens and an original visual direction documented in `docs/design/briofold-dashboard/SKILL.md`.
 
 Create Payment may accept an optional per-payment `webhook_url` without dashboard registration. Reuse signed delivery, retries and tenant isolation; callbacks are notifications and merchants must verify server-side before fulfillment. Existing default registered endpoints remain supported. Additive migrations 0063/0064 (financial) and 0065 (control) are implemented and tested on an isolated Neon branch only; production rollout and end-to-end acceptance remain pending. Do not use Docker: the owner requires Neon for database work. See `docs/evidence/DASHBOARD-REFINEMENT-20261015/README.md` and the consolidated manual ledger.
 

@@ -138,7 +138,7 @@ export function ComingSoonPage({locale,kind}:{locale:Locale;kind:ComingSlug}){
  const t=upcoming[kind][locale],bn=locale==="bn";
  if(kind==="ai-bot")return <main className="ek-product-page ek-public-interior ek-ai-interior" lang={locale}>
   <div className="ek-interior-wrap">
-   <div className="ek-interior-topline"><Link href="/">ekmivo</Link><span>/</span><strong>AI Bot</strong><span className="ek-interior-label">{bn?"তৈরি হচ্ছে":"IN DEVELOPMENT"}</span></div>
+   <div className="ek-interior-topline"><Link href="/">briofold</Link><span>/</span><strong>AI Bot</strong><span className="ek-interior-label">{bn?"তৈরি হচ্ছে":"IN DEVELOPMENT"}</span></div>
    <div className="ek-ai-layout">
     <aside className="ek-ai-aside" aria-label={bn?"বর্তমান অবস্থা":"Current status"}>
      <div className="ek-ai-aside-index">02 / EKMIVO</div>
@@ -161,7 +161,7 @@ export function ComingSoonPage({locale,kind}:{locale:Locale;kind:ComingSlug}){
  </main>;
  if(kind==="pricing")return <main className="ek-product-page ek-public-interior ek-price-interior" lang={locale}>
   <div className="ek-interior-wrap">
-   <div className="ek-interior-topline"><Link href="/">ekmivo</Link><span>/</span><strong>Pricing</strong></div>
+   <div className="ek-interior-topline"><Link href="/">briofold</Link><span>/</span><strong>Pricing</strong></div>
    <div className="ek-price-heading"><div><span className="ek-interior-overline">{bn?"মূল্য ও প্যাকেজ":"PLANS & BILLING"}</span><h1>{bn?"প্যাকেজের দাম এখনো চূড়ান্ত হয়নি":"Pricing is being prepared."}</h1><p>{t.body}</p></div><span className="ek-price-badge">{bn?"এখনো প্রকাশ করা হয়নি":"COMING LATER"}</span></div>
    <div className="ek-price-panel-grid">
     <section className="ek-price-plan"><div className="ek-price-plan-head"><span>01</span><strong>Payment Gateway</strong></div><div className="ek-price-unavailable">—<small>{bn?"দাম ঘোষণা হয়নি":"NOT ANNOUNCED"}</small></div><p>{bn?"পেমেন্ট লিংক, ইনভয়েস ও চেকআউটের দাম এবং প্যাকেজ পরে জানানো হবে।":"Pricing for checkout, payment requests and integrations will be announced here."}</p><span className="ek-price-plan-foot">{bn?"দাম পরে জানানো হবে":"PRICES & LIMITS PENDING"}</span></section>
@@ -174,7 +174,7 @@ export function ComingSoonPage({locale,kind}:{locale:Locale;kind:ComingSlug}){
  return <main className="ek-product-page ek-public-interior ek-dev-interior" lang={locale}>
   <div className="ek-dev-layout">
    <aside className="ek-dev-sidebar">
-    <Link className="ek-dev-home" href="/">← ekmivo</Link>
+    <Link className="ek-dev-home" href="/">← briofold</Link>
     <div className="ek-dev-sidebar-title">DEVELOPERS <span>↗</span></div>
     <nav aria-label={bn?"ডেভেলপার পোর্টাল":"Developer navigation"}>
      <span>{bn?"শুরু করুন":"GETTING STARTED"}</span>

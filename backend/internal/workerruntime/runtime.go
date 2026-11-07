@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/masharzy/ekmivo/backend/internal/checkout"
-	"github.com/masharzy/ekmivo/backend/internal/financial"
-	"github.com/masharzy/ekmivo/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/checkout"
+	"github.com/masharzy/briofold/backend/internal/financial"
+	"github.com/masharzy/briofold/backend/internal/receiptnotice"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 )

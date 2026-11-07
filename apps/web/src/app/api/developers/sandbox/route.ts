@@ -1,7 +1,7 @@
 import {goOrigin} from "../../../../lib/server/go-origin";
 import {boundedBody} from "../../../../lib/server/bounded-body";
 export const dynamic="force-dynamic";
-const KEY=/^ek_test_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/;
+const KEY=/^(?:bf|ek)_test_[a-f0-9]{16}_[A-Za-z0-9_-]{43}$/;
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 const privateHeaders={"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"};
 function failure(code:string,status:number){return Response.json({error:{code}},{status,headers:privateHeaders})}
@@ -29,7 +29,7 @@ export async function POST(request:Request){
   const response=await fetch(new URL("/v1/payment/"+input.action,target),{method:"POST",headers,body:JSON.stringify(input.action==="create"?{amount:input.amount,redirect_url:input.redirect_url}:{invoice_id:input.invoice_id}),cache:"no-store",redirect:"error",signal:AbortSignal.timeout(15000)});
   const body=await boundedBody(response,65536);if(body===null)return failure("SANDBOX_RESPONSE_TOO_LARGE",502);
   // Never echo a credential, including an unexpected upstream error body.
-  if(body.includes(input.testKey)||/ek_(?:live|test)_[a-f0-9]{16}_/.test(body))return failure("SANDBOX_RESPONSE_REDACTED",502);
+  if(body.includes(input.testKey)||/(?:bf|ek)_(?:live|test)_[a-f0-9]{16}_/.test(body))return failure("SANDBOX_RESPONSE_REDACTED",502);
   let result:unknown;try{result=JSON.parse(body)}catch{return failure("SANDBOX_RESPONSE_INVALID",502)}
   return Response.json({sandbox:true,simulation:false,httpStatus:response.status,result},{status:response.ok?200:response.status,headers:privateHeaders});
  }catch{return failure("SANDBOX_REQUEST_UNRESOLVED",503)}

@@ -9,6 +9,6 @@ export default function manifest():MetadataRoute.Manifest{
   display:"standalone",
   background_color:"#0b1020",
   theme_color:"#0b1020",
-  icons:[{src:"/ekmivo-app-icon.svg",sizes:"any",type:"image/svg+xml",purpose:"any"}],
+  icons:[{src:"/briofold-app-icon.svg",sizes:"any",type:"image/svg+xml",purpose:"any"}],
  };
 }

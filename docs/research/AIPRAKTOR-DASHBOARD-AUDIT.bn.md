@@ -1,6 +1,6 @@
 # AiPraktor dashboard audit
 
-তারিখ: ১১ অক্টোবর ২০২৬। Source: ব্যবহারকারীর Chrome-এ signed-in [AiPraktor dashboard](https://www.aipraktor.com/dashboard)। এটি competitor UI audit; Ekmivo-এর নতুন implementation plan নয়।
+তারিখ: ১১ অক্টোবর ২০২৬। Source: ব্যবহারকারীর Chrome-এ signed-in [AiPraktor dashboard](https://www.aipraktor.com/dashboard)। এটি competitor UI audit; Briofold-এর নতুন implementation plan নয়।
 
 ## কী দেখা হয়েছে, কী প্রমাণিত নয়
 
@@ -189,7 +189,7 @@ Go live checklist ০/৮; Facebook prerequisite, own Messenger test-code flow; 
 
 এগুলোকে “feature নেই” বলা হয়নি। এই account-এ দেখা যায়নি; সব record-dependent hidden actions সম্পর্কে ১০০% coverage দাবি করা সঠিক নয়। Inventory-র visible options সম্পূর্ণভাবে সংরক্ষণ করা হয়েছে, অদেখা অংশ এই তালিকায় খোলা আছে।
 
-## Ekmivo-তে কাজে লাগবে এমন সিদ্ধান্ত
+## Briofold-তে কাজে লাগবে এমন সিদ্ধান্ত
 
 এগুলো competitor observation থেকে recommendation; canonical scope বা user decision বদলানোর নির্দেশ নয়।
 
@@ -199,10 +199,10 @@ Go live checklist ০/৮; Facebook prerequisite, own Messenger test-code flow; 
 4. AI draft/test/publish/rollback আলাদা stages; instruction, knowledge, catalog ও exact payment truth আলাদা authority।
 5. Feature entitlement, channel connection, account-manager gating ও business mode আলাদা status; voice On + globally disabled ধরনের contradictory state এড়ানো।
 6. Credit warning, usage details, daily caps, per-visitor limit এবং exhausted-credit human flow স্পষ্ট করা।
-7. পূর্ণ EN/BN, Hind Siliguri, light/dark ও Ekmivo-এর selected tokens বজায় রাখা; competitor-এর mixed localization/design সরাসরি কপি নয়।
-8. আমাদের payment flow-তে actual sender + transaction time + amount + receiving account + method-এর unique match স্বয়ংক্রিয় confirm/webhook করবে। Competitor recharge TrxID UI এটি বদলায় না; এই audit থেকে Ekmivo phone bridge verified বলা যাবে না।
+7. পূর্ণ EN/BN, Hind Siliguri, light/dark ও Briofold-এর selected tokens বজায় রাখা; competitor-এর mixed localization/design সরাসরি কপি নয়।
+8. আমাদের payment flow-তে actual sender + transaction time + amount + receiving account + method-এর unique match স্বয়ংক্রিয় confirm/webhook করবে। Competitor recharge TrxID UI এটি বদলায় না; এই audit থেকে Briofold phone bridge verified বলা যাবে না।
 
-Implementation এখনও `docs/DUAL-SAAS-MVP-PLAN.bn.md` অনুসারে হবে। Audit-এ নতুন দৃশ্যমান capability পাওয়া মানে সেটি Ekmivo-তে implemented বা tested নয়।
+Implementation এখনও `docs/DUAL-SAAS-MVP-PLAN.bn.md` অনুসারে হবে। Audit-এ নতুন দৃশ্যমান capability পাওয়া মানে সেটি Briofold-তে implemented বা tested নয়।
 
 ## Repository sync evidence
 

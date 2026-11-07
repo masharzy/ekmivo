@@ -1,6 +1,6 @@
-# Ekmivo Android: working rules
+# Briofold Android: working rules
 
-Project: Kotlin + Jetpack Compose seller app for Ekmivo (SMS payment forwarder, later a chat inbox). Rebuild in progress.
+Project: Kotlin + Jetpack Compose seller app for Briofold (SMS payment forwarder, later a chat inbox). Rebuild in progress.
 
 Repo layout (fill in the real folder names):
 - Android app: apps/mobile   <- all work happens here
@@ -14,9 +14,9 @@ Repo layout (fill in the real folder names):
 4. Do not re-read files you already read in this session. Do not paste large files into your replies.
 
 ## Source of truth for design (read before any UI work)
-- docs/design/ekmivo-android-final-prompt.md  (behaviour, flow, copy rules)
-- docs/design/ekmivo-android-design-spec.md   (exact sizes, colours, copy, composables)
-- docs/design/ekmivo-app-design.html + docs/design/screenshots/  (visual reference)
+- docs/design/briofold-android-final-prompt.md  (behaviour, flow, copy rules)
+- docs/design/briofold-android-design-spec.md   (exact sizes, colours, copy, composables)
+- docs/design/briofold-app-design.html + docs/design/screenshots/  (visual reference)
 
 ## Non-negotiable rules
 1. The reference design is law. Do not redesign, simplify, reorder, rename, re-colour, or add elements.

@@ -14,17 +14,17 @@ def verify(raw: bytes, headers: dict[str, str], secret: str, workspace: str, env
     if len(raw) > 16384 or len(secret) < 32:
         raise ValueError("Invalid webhook bounds")
     fields = {key.lower(): value for key, value in headers.items()}
-    timestamp = (fields.get("x-briofold-timestamp") or fields.get("x-ekmivo-timestamp") or "")
-    signature = (fields.get("x-briofold-signature") or fields.get("x-ekmivo-signature") or "")
+    timestamp = fields.get("x-briofold-timestamp", "")
+    signature = fields.get("x-briofold-signature", "")
     if not timestamp.isdigit() or abs((int(time.time()) if now is None else now) - int(timestamp)) > 300:
         raise ValueError("Timestamp rejected")
     expected = hmac.new(secret.encode(), timestamp.encode() + b"." + raw, hashlib.sha256).hexdigest()
     key_id = hashlib.sha256(secret.encode()).hexdigest()[:16]
-    if not hmac.compare_digest(signature, "v1=" + expected) or not hmac.compare_digest((fields.get("x-briofold-key-id") or fields.get("x-ekmivo-key-id") or ""), key_id):
+    if not hmac.compare_digest(signature, "v1=" + expected) or not hmac.compare_digest(fields.get("x-briofold-key-id", ""), key_id):
         raise ValueError("Signature rejected")
     event = json.loads(raw)
     data = event.get("data", {})
-    if event.get("id") != (fields.get("x-briofold-event-id") or fields.get("x-ekmivo-event-id")) or event.get("delivery_id") != (fields.get("x-briofold-delivery-id") or fields.get("x-ekmivo-delivery-id")):
+    if event.get("id") != fields.get("x-briofold-event-id") or event.get("delivery_id") != fields.get("x-briofold-delivery-id"):
         raise ValueError("Header identity mismatch")
     if event.get("schema_version") != 1 or event.get("workspace_id") != workspace or event.get("environment") != environment or event.get("type") != "payment.verified":
         raise ValueError("Scope rejected")

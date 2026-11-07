@@ -78,7 +78,7 @@ Separate business/product/environment selectors; separate AI/payment navigation;
 Copy this with repository access:
 
 ~~~text
-Work in the current Ekmivo repository. Read AGENTS.md and the canonical
+Work in the current Briofold repository. Read AGENTS.md and the canonical
 docs/DUAL-SAAS-MVP-PLAN.bn.md, then the feature scope, design guide/tokens,
 IMPLEMENTATION-BACKLOG.md, PAYMENT-SYSTEM-DESIGN.bn.md,
 PRODUCT-UX-SPEC.bn.md, PAYMENT-API-AND-SANDBOX.md and
@@ -100,10 +100,10 @@ without inventing provider/device success or silently omitting features.
 
 ## PG01 handoff checkpoint
 
-Additive migrations `0003_pg01_admin_mfa.sql` and `0004_pg01_environment_rls.sql` have been applied to Ekmivo production Neon (existing 0001/0002 preserved). New `ekmivo_financial_runtime` role was created using restricted PostgreSQL SQL and verified **not** to be superuser, BYPASSRLS, CREATEROLE, CREATEDB, schema CREATE, table owner or `neon_superuser` member. The earlier Neon API-generated `ekmivo_runtime` is **elevated and unused**; never configure services with it. Removing that unused role requires explicit owner approval. No secret or connection string is in Git. MFA AES encryption key is stored in encrypted Vercel production env; user must enroll via `/bn/admin/mfa` or `/en/admin/mfa` with current password and authenticator. The real Go service is not yet hosted; `/readyz` stays 503. GitHub CI tests isolated 3-tenant/2-environment RLS, session revocation, disabled users, role changes, email-verification enforcement, TOTP vectors and Go integration. Live user MFA and production runtime-role query need acceptance before PG02.
+Additive migrations `0003_pg01_admin_mfa.sql` and `0004_pg01_environment_rls.sql` have been applied to Briofold production Neon (existing 0001/0002 preserved). New `ekmivo_financial_runtime` role was created using restricted PostgreSQL SQL and verified **not** to be superuser, BYPASSRLS, CREATEROLE, CREATEDB, schema CREATE, table owner or `neon_superuser` member. The earlier Neon API-generated `ekmivo_runtime` is **elevated and unused**; never configure services with it. Removing that unused role requires explicit owner approval. No secret or connection string is in Git. MFA AES encryption key is stored in encrypted Vercel production env; user must enroll via `/bn/admin/mfa` or `/en/admin/mfa` with current password and authenticator. The real Go service is not yet hosted; `/readyz` stays 503. GitHub CI tests isolated 3-tenant/2-environment RLS, session revocation, disabled users, role changes, email-verification enforcement, TOTP vectors and Go integration. Live user MFA and production runtime-role query need acceptance before PG02.
 
 ### Render handoff, PG01 (2026-10-11)
-Go service is **live** at `https://ekmivo-go-api.onrender.com`, Render id `srv-db5j532d0e5s73fli4h0`, Singapore Free. Render has `AUTHZ_DATABASE_URL` bound to the restricted Neon runtime role and `EKMIVO_REQUIRE_AUTHZ=true`; startup log on deploy `dep-db5j7e8473hc73bcd8j0` confirms least-privileged DB identity and missing-context RLS isolation. Owner's real TOTP MFA enrollment and active MFA-verified session confirmed. However PG01 remains open for real authenticated HTTP authorization/tenant denials, admin MFA replay/logout/role checks and recovery evidence; these cannot be relabeled as completed based on isolated tests. Financial readiness 503 by design. Do not start PG02 until PG01 accepted.
+Go service is **live** at `https://api.briofold.tech`, Render id `srv-db5j532d0e5s73fli4h0`, Singapore Free. Render has `AUTHZ_DATABASE_URL` bound to the restricted Neon runtime role and `EKMIVO_REQUIRE_AUTHZ=true`; startup log on deploy `dep-db5j7e8473hc73bcd8j0` confirms least-privileged DB identity and missing-context RLS isolation. Owner's real TOTP MFA enrollment and active MFA-verified session confirmed. However PG01 remains open for real authenticated HTTP authorization/tenant denials, admin MFA replay/logout/role checks and recovery evidence; these cannot be relabeled as completed based on isolated tests. Financial readiness 503 by design. Do not start PG02 until PG01 accepted.
 
 ### Independent PG01 HTTP audit — acceptance OPEN
 
@@ -212,7 +212,7 @@ Owner narrowed execution: finish all remaining PG06–PG09 code and available ve
 
 ## Owner dashboard/API refinement — 2026-10-15
 
-The latest owner instruction refines the payment dashboard: Payments replaces Transactions in navigation; Payment Links includes the existing one-time requests flow; SMS Data replaces Incoming Receipts. Workspace Billing, Team and Settings are accessed through the workspace gear, and Help through the header. Developers contains API Keys and external API Docs. Legacy deep links and integrations remain compatible. The operational dashboard uses the semantic payment tokens and an original visual direction documented in `docs/design/ekmivo-dashboard/SKILL.md`.
+The latest owner instruction refines the payment dashboard: Payments replaces Transactions in navigation; Payment Links includes the existing one-time requests flow; SMS Data replaces Incoming Receipts. Workspace Billing, Team and Settings are accessed through the workspace gear, and Help through the header. Developers contains API Keys and external API Docs. Legacy deep links and integrations remain compatible. The operational dashboard uses the semantic payment tokens and an original visual direction documented in `docs/design/briofold-dashboard/SKILL.md`.
 
 Create Payment may accept an optional per-payment `webhook_url` without dashboard registration. Reuse signed delivery, retries and tenant isolation; callbacks are notifications and merchants must verify server-side before fulfillment. Existing default registered endpoints remain supported. Additive migrations 0063/0064 (financial) and 0065 (control) are implemented and tested on an isolated Neon branch only; production rollout and end-to-end acceptance remain pending. Do not use Docker: the owner requires Neon for database work. See `docs/evidence/DASHBOARD-REFINEMENT-20261015/README.md` and the consolidated manual ledger.
 

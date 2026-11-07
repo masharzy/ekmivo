@@ -17,7 +17,7 @@ let browser;
 try{
  browser=await chromium.launch({headless:true,channel:process.env.SMOKE_BROWSER_CHANNEL});
  const context=await browser.newContext({viewport:{width:1440,height:1100}});
- await context.addCookies([{name:"ekmivo-locale",value:"en",url:base},{name:"ekmivo-theme",value:"light",url:base}]);
+ await context.addCookies([{name:"briofold-locale",value:"en",url:base},{name:"briofold-theme",value:"light",url:base}]);
  const page=await context.newPage();page.on("dialog",d=>d.accept());
  let phones=[],failure=false;
  await page.route(`**/api/go/workspaces/${workspace}/phones**`,async r=>{
@@ -40,7 +40,7 @@ try{
  assert.equal(await page.getByText("Approved source",{exact:true}).count(),0);
  assert.equal(await page.getByText("Exact SIM/source binding",{exact:true}).count(),0);
  await page.setViewportSize({width:320,height:1100});
- await context.addCookies([{name:"ekmivo-theme",value:"dark",url:base}]);
+ await context.addCookies([{name:"briofold-theme",value:"dark",url:base}]);
  await page.evaluate(()=>document.documentElement.dataset.theme="dark");
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,"Mobile overflow");
  await page.screenshot({path:evidence+"pairing-dark-mobile.png"});
@@ -64,7 +64,7 @@ try{
  await page.waitForURL(base+"/pay/"+payToken,{timeout:180000});await page.locator("[data-customer-checkout]").waitFor();
  assert.equal(await page.locator(".site-header").count(),0,"Client navigation to pay must remove marketing chrome");
  for(const locale of ["en","bn"]){
-  await context.addCookies([{name:"ekmivo-locale",value:locale,url:base}]);
+  await context.addCookies([{name:"briofold-locale",value:locale,url:base}]);
   for(const path of ["/pay/","/checkout/"]){
    await page.goto(base+path+payToken,{timeout:180000});await page.locator("[data-customer-checkout]").waitFor();
    assert.equal(await page.locator(".site-header").count(),0,path+" must not render marketing header");

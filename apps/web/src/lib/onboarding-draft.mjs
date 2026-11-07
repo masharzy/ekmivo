@@ -3,7 +3,7 @@
 const validUuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 export function draftStorageKey(userId){
  if(typeof userId!=="string"||!validUuid.test(userId))throw Error("Invalid account-scoped draft identity");
- return "ekmivo:onboarding-draft:v1:"+userId.toLowerCase();
+ return "briofold:onboarding-draft:v1:"+userId.toLowerCase();
 }
 function valid(value){
  if(!value||typeof value!=="object"||Array.isArray(value))return null;

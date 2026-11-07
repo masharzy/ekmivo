@@ -23,7 +23,7 @@ try{
  assert.ok(rls.every(row=>row.relrowsecurity&&row.relforcerowsecurity),"Both key/audit tables must FORCE RLS");
  const [u1,u2]=[randomUUID(),randomUUID()],[w1,w2]=[randomUUID(),randomUUID()];
  const publicId=randomBytes(8).toString("hex");
- const secret=`ek_test_${publicId}_${randomBytes(32).toString("base64url")}`;
+ const secret=`bf_test_${publicId}_${randomBytes(32).toString("base64url")}`;
  const digest=createHash("sha256").update(secret).digest("hex");
  try{
   await sql.begin(async tx=>{

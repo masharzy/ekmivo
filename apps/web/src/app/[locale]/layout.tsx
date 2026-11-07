@@ -20,15 +20,15 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const { locale } = await params;
   if (locale !== "bn" && locale !== "en") notFound();
   const jar=await cookies();
-  const storedTheme = jar.get("ekmivo-theme")?.value;
+  const storedTheme = jar.get("briofold-theme")?.value;
   const initialTheme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "system";
   // Always retain the chrome components. They decide visibility from the current
   // client pathname; a retained layout must not omit the header after navigation.
   // A temporary auth-store outage must not take down the public marketing site.
   let user:Awaited<ReturnType<typeof currentUser>>=null;
-  if(jar.has("ekmivo-session")){
+  if(jar.has("briofold-session")){
    try{user=await currentUser();}catch(error){
-    console.error("[ekmivo/public] session lookup unavailable",error instanceof Error?error.message:"unknown error");
+    console.error("[briofold/public] session lookup unavailable",error instanceof Error?error.message:"unknown error");
    }
   }
   return <><SiteHeader locale={locale} initialTheme={initialTheme} authenticated={!!user} />{children}<SiteFooter locale={locale} /></>;

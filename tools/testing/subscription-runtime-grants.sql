@@ -7,7 +7,7 @@ DECLARE
  worker_only text;
  safe_role pg_roles;
 BEGIN
- IF current_database()<>'ekmivo' OR to_regclass('public.financial_realm') IS NOT NULL
+ IF current_database()<>'briofold' OR to_regclass('public.financial_realm') IS NOT NULL
  THEN RAISE EXCEPTION 'subscription runtime check requires control database'; END IF;
  SELECT * INTO safe_role FROM pg_roles WHERE rolname='ekmivo_financial_runtime';
  IF NOT FOUND OR NOT safe_role.rolcanlogin OR safe_role.rolbypassrls

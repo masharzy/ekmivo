@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 )
 
 const subscriptionIntentTestID = "a3f1e65b-21be-4f5e-9c1f-00914557df65"

@@ -81,7 +81,7 @@ func (s *Service) HandleSubscriptionOrder(w http.ResponseWriter, r *http.Request
 		fail(w, 405, "METHOD_NOT_ALLOWED")
 		return
 	}
-	cookie, err := r.Cookie("ekmivo-session")
+	cookie, err := r.Cookie("briofold-session")
 	if err != nil {
 		fail(w, 401, "UNAUTHENTICATED")
 		return

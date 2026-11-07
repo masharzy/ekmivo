@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/masharzy/ekmivo/backend/internal/authz"
+	"github.com/masharzy/briofold/backend/internal/authz"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -97,7 +97,7 @@ func TestSubscriptionCouponHTTPIsolatedPostgres(t *testing.T) {
 		t.Helper()
 		req := httptest.NewRequest(method, "https://phase3-ci.example.invalid"+path, strings.NewReader(body))
 		if token != "" {
-			req.AddCookie(&http.Cookie{Name: "ekmivo-session", Value: token})
+			req.AddCookie(&http.Cookie{Name: "briofold-session", Value: token})
 		}
 		if validOrigin {
 			req.Header.Set("Origin", "https://phase3-ci.example.invalid")

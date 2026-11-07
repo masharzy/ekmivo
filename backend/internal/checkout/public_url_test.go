@@ -5,7 +5,7 @@ import "testing"
 func TestCheckoutURLIsCanonicalAndIndependentOfDashboardAlias(t *testing.T) {
 	previous, allowed := publicCheckoutOrigin, getAllowedOrigin()
 	defer func() { publicCheckoutOrigin = previous; SetAllowedOrigin(allowed) }()
-	SetAllowedOrigin("https://ekmivo-web-masharzys-projects.vercel.app")
+	SetAllowedOrigin("https://briofold.tech")
 	if err := SetPublicCheckoutOrigin(""); err != nil {
 		t.Fatal(err)
 	}

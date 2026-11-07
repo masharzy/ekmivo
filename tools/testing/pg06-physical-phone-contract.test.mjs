@@ -32,14 +32,14 @@ test("checkout displays canonical server destination in full with accessible cop
  assert.doesNotMatch(checkout,/destination\.slice\(-4\)/);
 });
 test("signed receipt events cannot be rerouted to a new account while queued",async()=>{
- const android=await source("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/ReceiptSyncWorker.kt");
+ const android=await source("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/ReceiptSyncWorker.kt");
  assert.match(android,/val boundID=queued.optString\("enrollment_id"\)/);
  assert.match(android,/ReceiptTransport\.post\(applicationContext,action,boundID,next\.first,next\.second\)/);
  assert.match(android,/store\.nextEligible\(\)/);
  assert.match(android,/store\.ownsEnrollment\(boundID\)/);
  assert.match(android,/queued\.optBoolean\("physical_forward"\)/);
  assert.match(android,/QUEUED_ASSOCIATION_REVOKED/);
- const store=await source("apps/mobile/app/src/main/java/com/ekmivo/mobile/receipt/ReceiptStore.kt");
+ const store=await source("apps/mobile/app/src/main/java/com/briofold/mobile/receipt/ReceiptStore.kt");
  assert.match(store,/if\(count\(\)>0\s*\|\|\s*stagingCount>0\)/);
  assert.match(store,/PENDING_RECEIPTS_BLOCK_DISCONNECT/);
  assert.match(store,/fun revokeCredentials\(id:String\)/);

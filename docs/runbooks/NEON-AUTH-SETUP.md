@@ -1,4 +1,4 @@
-# Ekmivo — Neon authentication / workspace setup
+# Briofold — Neon authentication / workspace setup
 
 ## Status and security boundaries
 
@@ -53,12 +53,12 @@ Service mode controls navigation, **not paid entitlements**. Provider integratio
 
 ## Verification, recovery and platform roles (migration 0002)
 
-Migration `infra/migrations/0002_account_recovery_admin.sql` is applied to Ekmivo's Neon production database. It adds `platform_auth_settings`, `auth_one_time_codes`, `platform_admin_audit`, and an enumerated platform admin `role`.
+Migration `infra/migrations/0002_account_recovery_admin.sql` is applied to Briofold's Neon production database. It adds `platform_auth_settings`, `auth_one_time_codes`, `platform_admin_audit`, and an enumerated platform admin `role`.
 
 - **Default OFF:** `email_verification_enabled=false`. Registration proceeds normally without email verification. Existing users are not implicitly treated as verified.
 - **When ON:** Server-side registration issues a six-digit OTP, expiry 10 minutes, HMAC-hashed in Neon; the /verify-email route has six separate accessible inputs with automatic focus, full-code paste distribution and auto-submit. Access to protected workspaces requires verified email.
 - **Recovery:** /forgot-password issues a reset OTP only when email delivery is configured; requests don't reveal whether an address is registered. A valid code changes the hash and revokes existing sessions.
-- **Provider:** Resend is the initial integration; set `RESEND_API_KEY`, `EMAIL_FROM` (verified sender such as `Ekmivo <security@yourdomain.tld>`) and `OTP_PEPPER` (at least 32 random characters) as server-only secrets in Vercel. Without these, the admin toggle refuses to enable verification. Password recovery explicitly reports that delivery is not configured. No emails are sent when verification is OFF.
+- **Provider:** Resend is the initial integration; set `RESEND_API_KEY`, `EMAIL_FROM` (verified sender such as `Briofold <security@yourdomain.tld>`) and `OTP_PEPPER` (at least 32 random characters) as server-only secrets in Vercel. Without these, the admin toggle refuses to enable verification. Password recovery explicitly reports that delivery is not configured. No emails are sent when verification is OFF.
 - **Roles:** `super_admin` may edit verification settings and assign `super_admin`, `admin`, `support`, or `analyst` to verified users. It cannot self-demote; actions are recorded in `platform_admin_audit`. Other platform roles have read-only access to the existing administration overview until granular operational modules are built.
 - **No demo credentials:** the production admin requires a real registered, identity-confirmed account. No public admin access, bypass URL or predetermined password is created. To bootstrap the first admin, verify account ownership out of band and follow the secure SQL provisioning instructions above; do not assume that the only registered account belongs to the operator.
 
