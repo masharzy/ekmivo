@@ -131,7 +131,9 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
  }catch(e){
   if(e&&typeof e==="object"&&"code" in e&&e.code==="P6802")return error(bn,"plan");
   if(e&&typeof e==="object"&&"code" in e&&e.code==="P6806")return error(bn,"planLimit");
-  console.error("[pg03 key mutation]",e instanceof Error?e.name:"unknown");
+  const d=(e&&typeof e==="object"?e:{}) as Record<string,unknown>;
+  // Non-secret diagnostics only: SQLSTATE and the database object involved. Never the message, which can echo values.
+  console.error("[pg03 key mutation]",JSON.stringify({code:d.code,constraint:d.constraint_name,table:d.table_name,column:d.column_name,routine:d.routine,severity:d.severity_local}));
   return error(bn,"offline");
  }
 }
