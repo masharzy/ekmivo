@@ -61,3 +61,11 @@
  .root :global(.cm-list) td:last-child{white-space:normal}
  .root :global(.cm-list) td:last-child :global(.ib){display:block;margin:0 0 4px auto;padding:4px 10px;min-height:28px;font-size:12px}
 }
+.root :global(.cm-filters){display:contents}
+@media(max-width:560px){
+ .root :global(.cm-filters){display:flex;flex:1 1 100%;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+ .root :global(.cm-filters)::-webkit-scrollbar{display:none}
+ .root :global(.cm-filters)>*{flex:none}
+ .root :global(.cm-filters) :global(.sp){display:none}
+ .root :global(.cm-filters) :global(.cm-select){flex:none;min-width:0;width:auto}
+}
