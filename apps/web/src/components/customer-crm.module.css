@@ -10,3 +10,5 @@
 .root .toolbar{margin-bottom:12px;align-items:flex-end;justify-content:flex-start}.root .toolbar label{margin:0;flex:1 1 160px}.root .toolbar:not(:has(label)){justify-content:space-between}
 .table td:first-child button{border:0;background:transparent;padding:0;min-height:0;font-weight:600;text-align:start;text-decoration:underline;text-decoration-color:transparent}.table td:first-child button:hover{text-decoration-color:currentColor}
 .drawer label{margin:0 0 14px}.drawer .fields{gap:0}.drawer textarea{min-height:76px}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.root .chips button{min-height:32px;padding:4px 12px;border-radius:999px;font-size:13px;color:var(--color-text-secondary)}.root .chips button[aria-pressed=true]{background:var(--color-primary-soft,var(--color-hover));border-color:var(--color-primary);color:var(--color-text);font-weight:600}
