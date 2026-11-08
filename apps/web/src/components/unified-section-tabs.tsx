@@ -9,15 +9,17 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
   {en:"Comments",bn:"কমেন্ট",href:"/inbox/comments",service:"ai"},
   {en:"Saved replies",bn:"সেভ করা উত্তর",href:"/inbox/saved-replies",service:"ai"},
  ],
+ catalog:[
+  {en:"Products",bn:"পণ্য",href:"/catalog/products",service:"fulfilment"},
+  {en:"Inventory",bn:"স্টক",href:"/catalog/inventory",service:"fulfilment"},
+  {en:"Coupons",bn:"কুপন",href:"/catalog/coupons",service:"fulfilment"},
+ ],
  orders:[
   {en:"Orders",bn:"অর্ডার",href:"/orders",service:"fulfilment"},
   {en:"To follow up",bn:"ফলোআপের অর্ডার",href:"/orders/to-chase",service:"fulfilment"},
   {en:"Scan & pack",bn:"স্ক্যান ও প্যাক",href:"/orders/scan",service:"fulfilment"},
-  {en:"Products",bn:"পণ্য",href:"/orders/products",service:"fulfilment"},
-  {en:"Inventory",bn:"স্টক",href:"/orders/inventory",service:"fulfilment"},
   {en:"Delivery",bn:"ডেলিভারি",href:"/orders/delivery",service:"fulfilment"},
   {en:"Returns",bn:"রিটার্ন",href:"/orders/returns",service:"fulfilment"},
-  {en:"Coupons",bn:"কুপন",href:"/orders/coupons",service:"fulfilment"},
  ],
  payments:[
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},

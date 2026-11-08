@@ -200,7 +200,7 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   await page.getByRole('button',{name:'Scan with camera'}).click();
   await page.getByRole('alert').filter({hasText:'Camera permission or preview unavailable. Manual barcode search remains available.'}).waitFor();
   await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
-  assert.equal((await page.goto(origin+'/orders/products/sync')).status(),200);
+  assert.equal((await page.goto(origin+'/catalog/products/sync')).status(),200);
   const importView=page.locator('details').filter({has:page.getByText('Import / sync catalog',{exact:true})});
   await importView.waitFor();
   assert.equal(await importView.getAttribute('open'),'','catalog import deep link must open a real preview workflow');

@@ -2,7 +2,7 @@ import type {SectionKey} from "./dashboard-sections";
 import type {Service} from "./dashboard-navigation";
 
 export type BusinessMode="ai"|"commerce"|"both"|"off";
-export type UnifiedRoot="dashboard"|"inbox"|"orders"|"payments"|"sms-data"|"invoices"|"customers"|"reports"|"settings";
+export type UnifiedRoot="dashboard"|"inbox"|"orders"|"catalog"|"payments"|"sms-data"|"invoices"|"customers"|"reports"|"settings";
 export type UnifiedNavGroup="main"|"money"|"manage";
 export type UnifiedNavItem={key:UnifiedRoot|"devices";en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common"|"fulfilment";group:UnifiedNavGroup};
 export const unifiedNavGroupLabels:Record<UnifiedNavGroup,{en:string;bn:string}>={
@@ -12,6 +12,7 @@ export const unifiedNavigation:readonly UnifiedNavItem[]=[
  {key:"dashboard",en:"Overview",bn:"ওভারভিউ",icon:"overview",href:"/dashboard",service:"common",group:"main"},
  {key:"inbox",en:"Inbox",bn:"ইনবক্স",icon:"inbox",href:"/inbox",service:"ai",group:"main"},
  {key:"orders",en:"Orders",bn:"অর্ডার",icon:"orders",href:"/orders",service:"fulfilment",group:"main"},
+ {key:"catalog",en:"Catalog",bn:"ক্যাটালগ",icon:"products",href:"/catalog",service:"fulfilment",group:"main"},
  {key:"customers",en:"Customers",bn:"গ্রাহক",icon:"customers",href:"/customers",service:"common",group:"main"},
  {key:"payments",en:"Payments",bn:"পেমেন্ট",icon:"transactions",href:"/payments",service:"payments",group:"money"},
  {key:"invoices",en:"Invoices",bn:"ইনভয়েস",icon:"invoices",href:"/invoices",service:"payments",group:"money"},
@@ -95,7 +96,7 @@ function financialDetail(root:UnifiedRoot,view:readonly string[]):UnifiedDestina
 }
 export const unifiedSectionPaths:Partial<Record<SectionKey,string>>={
  overview:"/dashboard",inbox:"/inbox",comments:"/inbox/comments","saved-replies":"/inbox/saved-replies",tickets:"/inbox/tickets",
- orders:"/orders",products:"/orders/products",inventory:"/orders/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/orders/coupons",
+ orders:"/orders",products:"/catalog/products",inventory:"/catalog/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/catalog/coupons",
  transactions:"/payments", "payment-links":"/payments/links",requests:"/payments/links",invoices:"/invoices",refunds:"/payments/refunds",incoming:"/sms-data",reconciliation:"/payments/reconciliation",
  customers:"/customers",contacts:"/customers",leads:"/customers/leads","follow-ups":"/customers/follow-ups",broadcasts:"/customers/broadcasts",bookings:"/customers/bookings",posts:"/customers/campaigns/posts",
  reports:"/reports",settings:"/settings",gateways:"/settings/payment-methods",devices:"/settings/devices",
@@ -120,7 +121,7 @@ export function enabledUnifiedService(mode:BusinessMode,service:"ai"|"payments"|
 }
 export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:readonly string[]):UnifiedDestination|null{
  if(mode==="off")return null;
- if(mode==="commerce"&&(root==="orders"||(root==="settings"&&view.join("/")==="integrations/courier")||(root==="reports"&&view[0]==="orders")))return null;
+ if(mode==="commerce"&&(root==="orders"||root==="catalog"||(root==="settings"&&view.join("/")==="integrations/courier")||(root==="reports"&&view[0]==="orders")))return null;
  // The website channel is part of the canonical Channels tree, not a
  // financial UUID detail or a second Store. Keep the former one-level link
  // working while merchant bookmarks move to /settings/channels/website.
@@ -147,9 +148,9 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  if(root==="customers"&&view.length===2&&view[0]==="campaigns"&&view[1]==="posts")
   return mode==="commerce"?null:{section:"posts",service:"ai"};
  // Catalog sync is a real subview, not an arbitrary two-part financial record.
- if(root==="orders"&&view.length===2&&view[0]==="products"&&view[1]==="sync")
+ if(root==="catalog"&&view.length===2&&view[0]==="products"&&view[1]==="sync")
   return {section:"products",service:mode==="ai"?"ai":"payments"};
- if(root==="orders"&&view.length===2&&view[0]==="products"&&view[1]==="photos")
+ if(root==="catalog"&&view.length===2&&view[0]==="products"&&view[1]==="photos")
   return {section:"products",service:mode==="ai"?"ai":"payments",kind:"product-photos"};
  // Only explicitly mapped, UUID-shaped finance details may have two segments.
  // The selected business and financial realm are still resolved by the server.
@@ -163,7 +164,8 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  const main:Record<Exclude<UnifiedRoot,"settings">,Record<string,UnifiedDestination>>={
   dashboard:{"":{section:"overview",service:defaultService}},
   inbox:{"":{section:"inbox",service:"ai",kind:"inbox"},comments:{section:"comments",service:"ai"},"saved-replies":{section:"saved-replies",service:"ai"},tickets:{section:"tickets",service:"ai"},"agent-desk":{section:"ai-agent",service:"ai"}},
-  orders:{"":{section:"orders",service:payments?"payments":"ai"},scan:{section:"orders",service:payments?"payments":"ai"},"to-chase":{section:"orders",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:defaultService},delivery:{section:"shipping",service:defaultService},courier:{section:"shipping",service:defaultService},returns:{section:"returns",service:defaultService},coupons:{section:"coupons",service:defaultService}},
+  orders:{"":{section:"orders",service:payments?"payments":"ai"},scan:{section:"orders",service:payments?"payments":"ai"},"to-chase":{section:"orders",service:payments?"payments":"ai"},delivery:{section:"shipping",service:defaultService},courier:{section:"shipping",service:defaultService},returns:{section:"returns",service:defaultService}},
+  catalog:{"":{section:"products",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:defaultService},coupons:{section:"coupons",service:defaultService}},
   payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},refunds:{section:"refunds",service:"payments"},reconciliation:{section:"reconciliation",service:"payments"}},
   "sms-data":{"":{section:"incoming",service:"payments"}},
   invoices:{"":{section:"invoices",service:"payments"}},

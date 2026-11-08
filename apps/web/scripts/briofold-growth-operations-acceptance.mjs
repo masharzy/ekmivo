@@ -126,7 +126,7 @@ export async function runBriofoldGrowthOperations({origin,browser,control,sessio
   await page.getByRole('heading',{name:'Campaign posts',exact:true}).waitFor();
   await page.getByText('Fictional social post',{exact:true}).waitFor();
   await page.getByRole('link',{name:'Review post/photo → product mappings and corrections',exact:true}).click();
-  await page.waitForURL('**/orders/products/sync');
+  await page.waitForURL('**/catalog/products/sync');
   await page.getByText('Import / sync catalog',{exact:true}).waitFor();
   assert.equal((await page.goto(origin+'/customers/posts')).status(),200,'earlier post bookmark broke');
   await page.getByText('Fictional social post',{exact:true}).waitFor();

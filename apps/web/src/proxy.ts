@@ -53,7 +53,7 @@ export function proxy(request:NextRequest){
  headers.delete("x-briofold-application");
  headers.delete("x-briofold-auth-page");
  headers.set("x-briofold-locale",locale);
- if(/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|businesses|account|admin)(?:\/|$)/.test(path))headers.set("x-briofold-application","1");
+ if(/^\/(?:setup|dashboard|inbox|orders|catalog|payments|sms-data|invoices|customers|reports|settings|businesses|account|admin)(?:\/|$)/.test(path))headers.set("x-briofold-application","1");
  if(/^\/(?:login|register|forgot-password|verify-email)(?:\/|$)/.test(path))headers.set("x-briofold-auth-page","1");
  return withApiSession(request,NextResponse.rewrite(target,{request:{headers}}));
 }
