@@ -113,9 +113,9 @@ export async function createWorkspaceAction(localeParam:string,_previous:FormErr
  if(!["ai","commerce","both"].includes(mode))return fail(t.mode,{mode:t.mode});
  let workspaceId:string;
  try{workspaceId=await insertUserWorkspace(user.id,name,mode as "ai"|"commerce"|"both")}
- catch(e){if(e instanceof Error&&e.message==="STORE_ALREADY_EXISTS")return fail(t.storeExists);report("createWorkspace",e);return fail(t.generic);}
+ catch(e){if(e instanceof Error&&e.message==="STORE_LIMIT")return fail(locale==="bn"?"একটি অ্যাকাউন্টে সর্বোচ্চ ৫টি স্টোর তৈরি করা যায়।":"An account can have up to 5 stores.");report("createWorkspace",e);return fail(t.generic);}
  // First created workspace is automatically the default, as before.
- try{if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,workspaceId);}
+ try{await selectDefaultWorkspace(user.id,workspaceId);}
  catch(e){report("set initial workspace default",e);}
  redirect("/dashboard");
 }
@@ -124,20 +124,23 @@ export async function createWorkspaceAction(localeParam:string,_previous:FormErr
 type WorkspaceListCreateState={
  status:"idle"|"error"|"success";message:string;workspace?:{id:string;name:string;mode:"ai"|"commerce"|"both"};
 };
+const MAX_OWNED_STORES=5;
 async function insertUserWorkspace(userId:string,name:string,mode:"ai"|"commerce"|"both"):Promise<string>{
  return database().begin(async sql=>{
-  // Keep the UUID-based financial model, but prohibit a second customer Store.
-  // The per-user transaction lock makes simultaneous form/API retries safe.
+  // Multi-store: a user may own several stores, capped to limit abuse. The
+  // per-user transaction lock keeps simultaneous retries from exceeding it.
   await sql`SELECT pg_advisory_xact_lock(hashtextextended(${"briofold-primary-store:"+userId},0))`;
-  const existing=await sql`SELECT 1 FROM workspace_members WHERE user_id=${userId}::uuid LIMIT 1`;
-  if(existing.length)throw new Error("STORE_ALREADY_EXISTS");
+  const [owned]=await sql`SELECT count(*)::int AS n FROM workspace_members WHERE user_id=${userId}::uuid AND role='owner'`;
+  if(Number(owned?.n??0)>=MAX_OWNED_STORES)throw new Error("STORE_LIMIT");
   const w=await sql`INSERT INTO workspaces (name,service_mode,created_by)
    VALUES (${name},${mode},${userId}::uuid) RETURNING id`;
   await sql`INSERT INTO workspace_members (workspace_id,user_id,role)
    VALUES (${w[0].id}::uuid,${userId}::uuid,'owner')`;
+  // The first store stays the account's primary (fallback) store; extra stores
+  // are not bound.
   const [feature]=await sql`SELECT to_regclass('public.platform_primary_stores') AS primary_ready`;
   if(feature?.primary_ready)await sql`INSERT INTO platform_primary_stores(user_id,workspace_id,bound_by)
-   VALUES(${userId}::uuid,${w[0].id}::uuid,${userId}::uuid)`;
+   VALUES(${userId}::uuid,${w[0].id}::uuid,${userId}::uuid) ON CONFLICT (user_id) DO NOTHING`;
   return String(w[0].id);
  });
 }
@@ -152,10 +155,10 @@ export async function createWorkspaceOnListAction(localeParam:string,nameRaw:str
  if(mode!=="ai"&&mode!=="commerce"&&mode!=="both")return {status:"error",message:t.mode};
  try{
   const id=await insertUserWorkspace(user.id,name,mode);
-  try{if((await workspacesFor(user.id)).length===1)await selectDefaultWorkspace(user.id,id);}catch(e){report("set initial workspace default",e);}
+  try{await selectDefaultWorkspace(user.id,id);}catch(e){report("set initial workspace default",e);}
   revalidatePath(`/${locale}/workspaces`);
   return {status:"success",message:"",workspace:{id,name,mode}};
- }catch(e){if(e instanceof Error&&e.message==="STORE_ALREADY_EXISTS")return {status:"error",message:t.storeExists};report("createWorkspaceOnList",e);return {status:"error",message:t.generic};}
+ }catch(e){if(e instanceof Error&&e.message==="STORE_LIMIT")return {status:"error",message:locale==="bn"?"একটি অ্যাকাউন্টে সর্বোচ্চ ৫টি স্টোর তৈরি করা যায়।":"An account can have up to 5 stores."};report("createWorkspaceOnList",e);return {status:"error",message:t.generic};}
 }
 export async function renameWorkspaceOnListAction(localeParam:string,id:string,nameRaw:string):Promise<{status:"success"|"error";message:string;name?:string}>{
  const locale=safeLocale(localeParam),user=await currentUser();

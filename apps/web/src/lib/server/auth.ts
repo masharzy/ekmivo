@@ -96,8 +96,9 @@ export async function primaryStoreFor(userId:string):Promise<string|null>{
  return rows.length?String(rows[0].workspace_id):null;
 }
 export async function selectDefaultWorkspace(userId:string,workspaceId:string){
- const bound=await primaryStoreFor(userId);
- if(bound && workspaceId!==bound)return false;
+ // Multi-store: any store the user is a member of may be selected. The
+ // membership row below is the only authority; the old primary binding is
+ // now just the account's first store.
  const rows=await database()`SELECT 1 FROM workspace_members WHERE user_id=${userId}::uuid AND workspace_id=${workspaceId}::uuid LIMIT 1`;
  if(!rows.length)return false;
  (await cookies()).set(DEFAULT_WORKSPACE_COOKIE,userId+":"+workspaceId,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:YEAR});
@@ -106,20 +107,16 @@ export async function selectDefaultWorkspace(userId:string,workspaceId:string){
 export async function preferredWorkspaceFor(userId:string){
  const spaces=await workspacesFor(userId);
  if(!spaces.length)return null;
- // The primary Store always wins over an old default-workspace cookie. Legacy
- // multi-workspace accounts without a binding retain their compatibility path.
- const bound=await primaryStoreFor(userId);
- if(bound)return spaces.find(space=>space.id===bound)??null;
+ // The selected-store cookie wins, but only among stores the user belongs to.
+ // Fallback: the account's first (primary) store, then the newest membership.
  const encoded=(await cookies()).get(DEFAULT_WORKSPACE_COOKIE)?.value||"";
  const chosen=encoded.startsWith(userId+":")?encoded.slice(userId.length+1):"";
- return spaces.find(w=>w.id===chosen)??spaces[0];
+ const bound=await primaryStoreFor(userId);
+ return spaces.find(w=>w.id===chosen)??spaces.find(w=>w.id===bound)??spaces[0];
 }
 export const requireWorkspace=cache(async function requireWorkspace(locale:"bn"|"en",id:string){
  const user=await requireUser(locale);
  if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))redirect("/workspaces");
- // Direct /w/UUID links must obey the same one-Store binding as the sidebar.
- const bound=await primaryStoreFor(user.id);
- if(bound&&bound!==id)redirect("/dashboard");
  const rows=await database()`
  SELECT w.id,w.name,CASE WHEN COALESCE(ai.enabled,false) AND COALESCE(pay.enabled,false) THEN 'both'
  WHEN COALESCE(ai.enabled,false) THEN 'ai'

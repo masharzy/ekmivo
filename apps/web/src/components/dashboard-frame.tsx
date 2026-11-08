@@ -302,20 +302,15 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    <Link href={unified?"/dashboard":"/"} className="ek-wordmark">briofold{!unified&&<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small>}</Link>
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
-  <div className="ds-business-block">{spaces.length<=1?
-   <div className="ds-business-static" role="group" aria-label={bn?"আপনার ব্যবসা":"Your Business"}>
-    <span className="ds-business-avatar" aria-hidden="true">{workspace.name.slice(0,1).toUpperCase()}</span>
-    <strong className="ds-business-current-name">{workspace.name}</strong>
-   </div>:
-   <details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
-   <summary aria-label={bn?"ব্যবসা পরিবর্তন":"Switch business"} title={workspace.name}><span className="ds-business-avatar">{workspace.name.slice(0,1).toUpperCase()}</span><strong className="ds-business-current-name">{workspace.name}</strong><Icon name="chevron"/></summary>
-   <div className="ds-business-menu" role="group" aria-label={bn?"ব্যবসা":"Businesses"}>
-    <label className="ds-switch-search"><span className="sr-only">{bn?"ব্যবসা খুঁজুন":"Find business"}</span><input value={businessQuery} onChange={event=>setBusinessQuery(event.target.value)} placeholder={bn?"ব্যবসা খুঁজুন…":"Search businesses…"} /></label>
+  <div className="ds-business-block"><details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
+   <summary aria-label={bn?"স্টোর পরিবর্তন":"Switch store"} title={workspace.name}><span className="ds-business-avatar">{workspace.name.slice(0,1).toUpperCase()}</span><strong className="ds-business-current-name">{workspace.name}</strong><Icon name="chevron"/></summary>
+   <div className="ds-business-menu" role="group" aria-label={bn?"স্টোর":"Stores"}>
+    <label className="ds-switch-search"><span className="sr-only">{bn?"স্টোর খুঁজুন":"Find store"}</span><input value={businessQuery} onChange={event=>setBusinessQuery(event.target.value)} placeholder={bn?"স্টোর খুঁজুন…":"Search stores…"} /></label>
     {visibleBusinesses.map(space=><button key={space.id} type="button" aria-current={space.id===workspace.id?"true":undefined} onClick={()=>switchBusiness(space)}><span className="ds-business-avatar">{space.name.slice(0,1).toUpperCase()}</span><span><strong>{space.name}</strong><small>{roleNames[space.role][locale]}</small></span>{space.id===workspace.id&&<Icon name="check"/>}</button>)}
-    {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No businesses match"}</p>}
-    <div className="ds-business-actions"><Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"ব্যবসা পরিচালনা":"Manage businesses"}</Link><Link href="/workspaces?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন ব্যবসা":"New business"}</Link></div>
+    {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No stores match"}</p>}
+    <div className="ds-business-actions"><Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"স্টোর পরিচালনা":"Manage stores"}</Link><Link href="/workspaces?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন স্টোর":"Create new store"}</Link></div>
    </div>
-  </details>}
+  </details>
   </div>
   <nav ref={mobile?undefined:scrollableNav} className={"ds-navigation"+(navHasMore&&!mobile?" has-more":"")} aria-label={bn?`${serviceNames[service].bn} নেভিগেশন`:`${serviceNames[service].en} navigation`}>
    {unified?<section className="ds-nav-section"><h2>{bn?"ব্যবসা":"Business"}</h2>{unifiedItems.map(item=><Link key={item.key} href={item.href} className={pathname===item.href||pathname.startsWith(item.href+"/")?"is-current":undefined} aria-current={pathname===item.href?"page":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute(item.href);setDraftError("");return;}startTransition(()=>router.push(item.href));}}><Icon name={item.icon}/><span>{item[locale]}</span>{(pathname===item.href||pathname.startsWith(item.href+"/"))&&<span className="ds-active-mark"/>}</Link>)}</section>:groups.filter(group=>!(service==="payments"&&group.items.length===1&&group.items[0]==="billing")).map(group=><section className="ds-nav-section" key={group.label.en}>

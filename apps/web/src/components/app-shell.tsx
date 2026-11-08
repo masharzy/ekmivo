@@ -1,7 +1,7 @@
 import {workspacePlanFeatures} from "../lib/server/plan-access";
 import { cookies } from "next/headers";
 import { logoutAction } from "../actions/account";
-import { type User, type Workspace, workspacesFor, primaryStoreFor, isPlatformAdmin } from "../lib/server/auth";
+import { type User, type Workspace, workspacesFor, isPlatformAdmin } from "../lib/server/auth";
 import { type SectionKey } from "../lib/dashboard-sections";
 import { type Locale, type Service, defaultService } from "../lib/dashboard-navigation";
 import type { WorkspacePaymentContext } from "../lib/server/workspace-context";
@@ -9,13 +9,13 @@ import { verificationEnabled } from "../lib/server/email";
 import { DashboardFrame } from "./dashboard-frame";
 import { DashboardIcon } from "./dashboard-icon";
 export async function AppShell({locale,user,workspace,section,service=defaultService(workspace.mode),paymentContext,unified=false,children}:{locale:Locale;user:User;workspace:Workspace;section:SectionKey;service?:Service;paymentContext?:WorkspacePaymentContext;unified?:boolean;children:React.ReactNode}){
- const [memberships,primaryStoreId,adminRole,verification,jar]=await Promise.all([
-  workspacesFor(user.id),primaryStoreFor(user.id),isPlatformAdmin(user.id),
+ const [memberships,adminRole,verification,jar]=await Promise.all([
+  workspacesFor(user.id),isPlatformAdmin(user.id),
   user.verified?Promise.resolve(false):verificationEnabled(),cookies()
  ]);
- // Never pass other membership-derived Store choices into a primary-bound
- // user's dashboard, including the global command-search shortcuts.
- const spaces=primaryStoreId?memberships.filter(space=>space.id===primaryStoreId):memberships;
+ // Every store the user belongs to is switchable (membership is revalidated
+ // server-side on every switch).
+ const spaces=memberships;
  const platformAdmin=(user.verified || !verification) && adminRole;
  const value=jar.get("briofold-theme")?.value;
  const theme=value==="light"||value==="dark"?value:"system";

@@ -1,7 +1,7 @@
 import type {Metadata} from "next";
 import Link from "next/link";
 import {notFound,redirect} from "next/navigation";
-import {requireUser,preferredWorkspaceFor,primaryStoreFor} from "../../../../../lib/server/auth";
+import {requireUser,preferredWorkspaceFor} from "../../../../../lib/server/auth";
 import {publicPaymentPlans} from "../../../../../lib/server/payment-plans";
 import {resumePurchase,readPurchase,validPurchaseToken,IntentError,type Intent} from "../../../../../lib/server/purchase-intents";
 import {SubscriptionOrderSummary} from "../../../../../components/subscription-order-summary";
@@ -70,8 +70,7 @@ export default async function SubscriptionOrderPage({params}:{params:Promise<{lo
  const workspace=await preferredWorkspaceFor(user.id);
  if(!workspace)redirect("/workspaces/open");
  if(workspace.role!=="owner"&&workspace.role!=="admin")notFound();
- const primary=await primaryStoreFor(user.id);
- if(primary!==workspace.id||intent.actorId!==user.id||intent.storeId!==workspace.id)notFound();
+ if(intent.actorId!==user.id||intent.storeId!==workspace.id)notFound();
  // The free entitlement is Phase 4's distinct claim flow, not a zero-due paid invoice.
  if(intent.product==="payments"&&intent.quantity===1&&intent.amountMinor===0&&
   !intent.couponCode&&intent.status==="selected"){
