@@ -239,7 +239,7 @@ func (s *Service) HandleInboxMedia(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": f.Name}))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "sandbox")
-	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("Cache-Control", "private, max-age=480")
 	// ServeContent adds Range support so <video> can seek and stream.
 	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
 }
