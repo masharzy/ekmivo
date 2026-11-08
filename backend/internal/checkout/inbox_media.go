@@ -48,6 +48,17 @@ func validateInboxMedia(data []byte, declared string) (string, error) {
 	return typ, nil
 }
 
+// inboxMediaFailureCode exposes only fixed, non-sensitive failure reasons so the inbox can tell the
+// seller why an attachment is unavailable. Anything else stays the generic MEDIA_UNAVAILABLE.
+func inboxMediaFailureCode(err error) string {
+	switch c := err.Error(); c {
+	case "MEDIA_HOST_DENIED", "MEDIA_EXPIRED_OR_UNAVAILABLE", "FILE_SCAN_UNCONFIRMED", "CHANNEL_NOT_CONFIGURED",
+		"UNSUPPORTED_FILE_TYPE", "FILE_LIMIT_EXCEEDED", "INVALID_IMAGE":
+		return c
+	}
+	return "MEDIA_UNAVAILABLE"
+}
+
 func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mobileIdentity, thread, action string, b map[string]any) {
 	id, _ := b["media_id"].(string)
 	if !uuidPattern.MatchString(id) {
@@ -109,7 +120,7 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 	}
 	if json.Unmarshal(raw, &f) != nil || f.Key == "" {
 		if err := s.hydrateInboxMedia(r.Context(), d, thread, id); err != nil {
-			fail(w, 503, "MEDIA_UNAVAILABLE")
+			fail(w, 503, inboxMediaFailureCode(err))
 			return
 		}
 		if err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_media_access($1::uuid,$2,$3::uuid,$4::uuid)", d.Workspace, d.Environment, thread, id).Scan(&raw); err != nil {
