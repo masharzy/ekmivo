@@ -246,6 +246,10 @@ func (s *Service) HandleInboxMedia(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// The dashboard may inspect audio bytes to determine durations that metadata
+	// alone does not expose. The signed URL remains the access capability.
+	w.Header().Set("Access-Control-Allow-Origin", "https://briofold.tech")
+	w.Header().Add("Vary", "Origin")
 	w.Header().Set("Content-Type", f.Mime)
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": f.Name}))
 	w.Header().Set("X-Content-Type-Options", "nosniff")

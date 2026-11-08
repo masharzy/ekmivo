@@ -40,13 +40,30 @@ function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:st
  const dur=(m.content?.duration_ms??0)/1000,h=bars(m.content?.media_id??m.id);
  useEffect(()=>()=>{el.current?.pause();},[]);
  const toggle=()=>{const a=el.current;if(!a)return;if(a.paused){document.querySelectorAll("audio").forEach(x=>{if(x!==a)x.pause();});void a.play();}else a.pause();};
+ useEffect(()=>{
+  if(!media||dur>0)return;
+  const controller=new AbortController();
+  let context:AudioContext|null=null;
+  void (async()=>{
+   try{
+    const response=await fetch(media.url,{signal:controller.signal});
+    if(!response.ok)return;
+    const blob=await response.blob();
+    if(blob.size>16*1024*1024||controller.signal.aborted)return;
+    context=new AudioContext();
+    const decoded=await context.decodeAudioData(await blob.arrayBuffer());
+    if(!controller.signal.aborted&&Number.isFinite(decoded.duration)&&decoded.duration>0)setLen(decoded.duration);
+   }catch{}finally{if(context)await context.close();}
+  })();
+  return()=>{controller.abort();};
+ },[media,dur]);
  const total=len>0?len:dur;
  const frac=total?Math.min(1,pos/total):0;
  return <div className={s.vn}>
   <button type="button" className={s.pl} onClick={e=>{e.stopPropagation();toggle();}} disabled={!media} aria-label={playing?(bn?"থামান":"Pause"):(bn?"চালান":"Play")}>{playing?<I n="pause" size={14} fill/>:<I n="play" size={14} fill/>}</button>
   <div className={s.wf} onClick={e=>{e.stopPropagation();const a=el.current;if(!a||!total)return;const r=e.currentTarget.getBoundingClientRect();a.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*total;setPos(a.currentTime);}}>{h.map((v,i)=><i key={i} className={i/h.length<frac?s.f:undefined} style={{height:v}}/>)}</div>
-  {failed?<button type="button" className={s.vd} title={reasonText(reason,bn)} onClick={e=>{e.stopPropagation();retry();}}>{bn?"আবার চেষ্টা":"Retry"}</button>:<><span className={s.vd}>{mmss(playing||pos>0?pos:total,bn)}</span>{(playing||pos>0)&&<button type="button" className={s.spd} aria-label="Speed" onClick={e=>{e.stopPropagation();const n=rate===1?1.5:rate===1.5?2:1;setRate(n);if(el.current)el.current.playbackRate=n;}}>{rate}x</button>}</>}
-  {media&&<audio ref={el} src={media.url} preload="metadata" onLoadedMetadata={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onPlay={e=>{e.currentTarget.playbackRate=rate;setPlaying(true);}} onError={()=>{if(!tried){setTried(true);retry();}}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);}} onTimeUpdate={e=>setPos(e.currentTarget.currentTime)}/>}
+  {failed?<button type="button" className={s.vd} title={reasonText(reason,bn)} onClick={e=>{e.stopPropagation();retry();}}>{bn?"আবার চেষ্টা":"Retry"}</button>:<><span className={s.vd}>{(total>0?mmss(playing||pos>0?pos:total,bn):"--:--")}</span>{(playing||pos>0)&&<button type="button" className={s.spd} aria-label="Speed" onClick={e=>{e.stopPropagation();const n=rate===1?1.5:rate===1.5?2:1;setRate(n);if(el.current)el.current.playbackRate=n;}}>{rate}x</button>}</>}
+  {media&&<audio ref={el} src={media.url} preload="metadata" onLoadedMetadata={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onDurationChange={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onPlay={e=>{e.currentTarget.playbackRate=rate;setPlaying(true);}} onError={()=>{if(!tried){setTried(true);retry();}}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);}} onTimeUpdate={e=>setPos(e.currentTarget.currentTime)}/>}
  </div>;
 }
 

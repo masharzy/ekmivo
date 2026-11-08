@@ -262,6 +262,9 @@ func (s *Service) HandleInboxOAuthCallback(w http.ResponseWriter, r *http.Reques
 		fields := ""
 		if target.Provider != "wa" {
 			fields = "messages,messaging_postbacks,message_deliveries,message_reads"
+			if target.Provider == "ms" {
+				fields += ",message_reactions"
+			}
 		}
 		if target.Comments && target.Provider == "ms" {
 			fields += ",feed"
