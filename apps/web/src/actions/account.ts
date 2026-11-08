@@ -167,8 +167,15 @@ export async function renameWorkspaceOnListAction(localeParam:string,id:string,n
  if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)||name.length<2||name.length>60||/[\u0000-\u001f]/.test(name))
   return {status:"error",message:locale==="bn"?"নাম ২–৬০ অক্ষরের হতে হবে।":"Use 2–60 characters."};
  try{
-  const rows=await database()`SELECT dashboard_workspace_rename(${id}::uuid,${user.id}::uuid,${name}) AS name`;
+  const db=database();
+  const rows=await db`SELECT dashboard_workspace_rename(${id}::uuid,${user.id}::uuid,${name}) AS name`;
+  // Keep the saved Business profile (used on checkout and invoices) in step with the new name.
+  try{
+   const current=(await db`SELECT dashboard_store_read(${id}::uuid,${user.id}::uuid) AS v`)[0]?.v as {body?:Record<string,unknown>;version?:number}|null;
+   if(current?.body&&Number.isInteger(current.version))await db`SELECT dashboard_store_write(${id}::uuid,${user.id}::uuid,${db.json({...current.body,name:String(rows[0].name)} as never)},${current.version as number},${null},${null}) AS value`;
+  }catch(e){report("syncStoreProfileName",e);}
   revalidatePath(`/${locale}/businesses`);
+  revalidatePath(`/${locale}`,"layout");
   return {status:"success",message:"",name:String(rows[0].name)};
  }catch(e){report("renameWorkspace",e);return {status:"error",message:locale==="bn"?"নাম পরিবর্তন করা যায়নি।":"Could not rename business."};}
 }

@@ -56,7 +56,7 @@ function WorkspaceHeaderControls({locale,initialTheme}:{locale:Locale;initialThe
   </button>
  </div>;
 }
-export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initialTheme,selectedPlan=""}:{locale:Locale;user:{id:string;name:string};initialWorkspaces:Workspace[];initialDefault:string|null;initialTheme:Theme;selectedPlan?:string}){
+export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initialTheme,selectedPlan="",embedded=false}:{embedded?:boolean;locale:Locale;user:{id:string;name:string};initialWorkspaces:Workspace[];initialDefault:string|null;initialTheme:Theme;selectedPlan?:string}){
  const t=copy[locale];const router=useRouter();
  const [rows,setRows]=useState(initialWorkspaces),[defaultId,setDefaultId]=useState(initialDefault);
  const [createOpen,setCreateOpen]=useState(false),[selected,setSelected]=useState<string|null>(null);
@@ -123,12 +123,12 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
  function toggle(product:Product){if(!active||!canManage||busy)return;const isOn=product==="payments"?(active.mode==="both"||active.mode==="commerce"):(active.mode==="both"||active.mode==="ai");if(isOn)setConfirmProduct(product);else applyToggle(product)}
  function clickAway(event:React.MouseEvent<HTMLDialogElement>,close:()=>void){if(event.target===event.currentTarget)close()}
  const serviceModes=[{id:"ai" as const,title:t.ai,desc:t.aiHint},{id:"commerce" as const,title:t.pay,desc:t.payHint},{id:"both" as const,title:t.both,desc:t.bothHint}];
- return <main className="wk2-root" lang={locale}>
+ return <main className={embedded?"wk2-root wk2-embedded":"wk2-root"} lang={locale}>
   {navigating&&<div className="wk2-progress" role="progressbar" aria-label={locale==="bn"?"ব্যবসা খোলা হচ্ছে":"Opening business"}/>}
-  <header className="wk2-header">
+  {!embedded&&<header className="wk2-header">
    <Link href="/businesses" className="wk2-logo">briofold</Link>
    <div className="wk2-header-right"><WorkspaceHeaderControls locale={locale} initialTheme={initialTheme}/><span className="wk2-user-name">{user.name}</span><span className="wk2-avatar">{user.name.trim().charAt(0).toUpperCase()}</span></div>
-  </header>
+  </header>}
   <div className="wk2-content">
    <div className="wk2-titlebar"><h1>{t.title}</h1>{rows.length===0&&<button type="button" className="wk2-button wk2-primary" onClick={openCreate}><Icon name="plus"/>{t.new}</button>}<p>{t.subtitle}</p></div>
    <section className="wk2-list" aria-label={t.title}>

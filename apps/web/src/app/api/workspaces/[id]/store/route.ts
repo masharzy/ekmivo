@@ -1,4 +1,5 @@
 import {createHash} from "node:crypto";
+import {revalidatePath} from "next/cache";
 import {currentUser} from "../../../../../lib/server/auth";
 import {database} from "../../../../../lib/server/db";
 import {boundedBody} from "../../../../../lib/server/bounded-body";
@@ -13,7 +14,11 @@ async function handle(request:Request,{params}:{params:Promise<{id:string}>}){
   const db=database();
   if(request.method==="GET"){
    const rows=await db`SELECT dashboard_store_read(${id}::uuid,${user.id}::uuid) AS value`;
-   return reply(rows[0].value);
+   // The business name has one source of truth: workspaces.name (sidebar, switcher, /businesses).
+   const named=await db`SELECT name FROM workspaces WHERE id=${id}::uuid`;
+   const value=rows[0].value as {body?:Record<string,unknown>}|null;
+   if(value?.body&&named[0])value.body={...value.body,name:String(named[0].name)};
+   return reply(value);
   }
   const url=new URL(request.url);url.host=request.headers.get("host")||url.host;
   if(request.headers.get("origin")!==url.origin)return reply({code:"ORIGIN_DENIED"},403);
@@ -30,11 +35,10 @@ async function handle(request:Request,{params}:{params:Promise<{id:string}>}){
    digest=createHash("sha256").update(png).digest("hex");
    body.logo="/api/checkout-logos/"+digest;
   }
+  // Rename the business first and let a failure surface; never report a save that left the sidebar name behind.
+  await db`SELECT dashboard_workspace_rename(${id}::uuid,${user.id}::uuid,${body.name}) AS name`;
   const rows=await db`SELECT dashboard_store_write(${id}::uuid,${user.id}::uuid,${db.json(body)},${value.version as number},${digest},${png}) AS value`;
-  // One business name everywhere: the sidebar, switcher and header read the
-  // workspace name, so keep it in step with the saved Business profile name.
-  // The profile is already saved; a rename failure must not undo or fail it.
-  try{await db`SELECT dashboard_workspace_rename(${id}::uuid,${user.id}::uuid,${body.name}) AS name`;}catch{/* profile saved; name sync is best effort */}
+  revalidatePath("/","layout");
   return reply(rows[0].value);
  }catch(e){
   const code=e&&typeof e==="object"&&"code" in e?e.code:"";

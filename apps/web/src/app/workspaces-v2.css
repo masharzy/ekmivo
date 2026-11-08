@@ -127,3 +127,8 @@
 .wk2-skeleton-theme{width:36px}
 
 .wk2-rename{padding:14px 0;border-bottom:1px solid var(--wk-border);margin-bottom:10px}.wk2-rename-row{display:flex;align-items:center;gap:8px}.wk2-rename-row .wk2-input{flex:1;min-width:0}.wk2-rename-row .wk2-button{flex:none}
+
+/* Inside the dashboard frame: the dashboard topbar is the only header. */
+.wk2-root.wk2-embedded{background:transparent;min-height:0}
+.wk2-embedded .wk2-content{padding:8px 0 48px;max-width:760px;margin:0}
+@media(max-width:520px){.wk2-embedded .wk2-content{padding:4px 0 40px}}
