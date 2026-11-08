@@ -75,3 +75,7 @@
 .chip.st_review,.chip.st_pending,.chip.st_queued,.chip.st_uncertain{background:var(--color-warning-bg);color:var(--color-warning)}
 .chip.st_failed{background:var(--color-danger-bg,var(--color-warning-bg));color:var(--color-danger,var(--color-warning))}
 .help{margin:0;color:var(--mm);font-size:12.5px;line-height:1.55}
+
+.setup{display:grid;gap:12px;padding:20px;border:1px dashed var(--mb);border-radius:14px;background:var(--ms)}
+.setup h2{margin:0;font-size:15px;font-weight:600}
+.setup ol{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--mm);font-size:13px;line-height:1.55}
