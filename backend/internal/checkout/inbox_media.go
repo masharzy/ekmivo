@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"image"
-	"io"
 	"mime"
 	"net/http"
 	"net/url"
@@ -20,6 +19,21 @@ import (
 )
 
 const inboxMediaLimit = 5 * 1024 * 1024
+const inboxVideoLimit = 16 * 1024 * 1024
+
+// validateInboundVideo accepts MP4/MOV/3GP (ISO base media) and WebM by magic bytes.
+func validateInboundVideo(data []byte) (string, error) {
+	if len(data) == 0 || len(data) > inboxVideoLimit {
+		return "", errors.New("FILE_LIMIT_EXCEEDED")
+	}
+	if len(data) > 12 && string(data[4:8]) == "ftyp" {
+		return "video/mp4", nil
+	}
+	if len(data) > 4 && data[0] == 0x1a && data[1] == 0x45 && data[2] == 0xdf && data[3] == 0xa3 {
+		return "video/webm", nil
+	}
+	return "", errors.New("UNSUPPORTED_FILE_TYPE")
+}
 
 func validateInboxMedia(data []byte, declared string) (string, error) {
 	if len(data) == 0 || len(data) > inboxMediaLimit {
@@ -56,7 +70,7 @@ func validateInboxMedia(data []byte, declared string) (string, error) {
 // seller why an attachment is unavailable. Anything else stays the generic MEDIA_UNAVAILABLE.
 func inboxMediaFailureCode(err error) string {
 	switch c := err.Error(); c {
-	case "MEDIA_HOST_DENIED", "MEDIA_EXPIRED_OR_UNAVAILABLE", "FILE_SCAN_UNCONFIRMED", "CHANNEL_NOT_CONFIGURED",
+	case "MEDIA_HOST_DENIED", "MEDIA_EXPIRED_OR_UNAVAILABLE", "CHANNEL_NOT_CONFIGURED", "MEDIA_ORIGIN_NOT_CONFIGURED",
 		"UNSUPPORTED_FILE_TYPE", "FILE_LIMIT_EXCEEDED", "INVALID_IMAGE":
 		return c
 	}
@@ -138,6 +152,16 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		fail(w, 404, "NOT_FOUND")
 		return
 	}
+	if wantURL, _ := b["url"].(bool); wantURL {
+		// Large media (video) is fetched by the browser directly through a short-lived signed URL.
+		link, linkErr := s.mediaCapability(d.Workspace, d.Environment, thread, id)
+		if linkErr != nil {
+			fail(w, 503, "MEDIA_ORIGIN_NOT_CONFIGURED")
+			return
+		}
+		write(w, 200, map[string]any{"url": link, "mime": f.Mime, "name": f.Name})
+		return
+	}
 	data, err := objectRequest(r.Context(), "GET", f.Key, nil)
 	if err != nil {
 		fail(w, 503, "PRIVATE_STORAGE_UNAVAILABLE")
@@ -201,5 +225,6 @@ func (s *Service) HandleInboxMedia(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "sandbox")
 	w.Header().Set("Cache-Control", "private, no-store")
-	_, _ = io.Copy(w, bytes.NewReader(data))
+	// ServeContent adds Range support so <video> can seek and stream.
+	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
 }

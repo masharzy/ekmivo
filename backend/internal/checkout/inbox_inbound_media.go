@@ -247,7 +247,11 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	if res.StatusCode != 200 {
 		return errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
 	}
-	data, err = io.ReadAll(io.LimitReader(res.Body, inboxMediaLimit+1))
+	limit := int64(inboxMediaLimit)
+	if str(src, "kind") == "video" {
+		limit = inboxVideoLimit
+	}
+	data, err = io.ReadAll(io.LimitReader(res.Body, limit+1))
 	if err != nil {
 		return err
 	}
@@ -255,7 +259,12 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	if declared == "" && str(src, "kind") == "audio" {
 		declared = strings.Split(res.Header.Get("Content-Type"), ";")[0]
 	}
-	typ, err := validateInboxMedia(data, declared)
+	var typ string
+	if str(src, "kind") == "video" {
+		typ, err = validateInboundVideo(data)
+	} else {
+		typ, err = validateInboxMedia(data, declared)
+	}
 	if err != nil && err.Error() == "UNSUPPORTED_FILE_TYPE" && str(src, "kind") == "document" && len(data) > 0 && len(data) <= inboxMediaLimit {
 		// Unknown document formats are stored as opaque bytes; the owner downloads them at their own risk.
 		typ, err = "application/octet-stream", nil

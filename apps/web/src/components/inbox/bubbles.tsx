@@ -4,7 +4,7 @@ import {memo,useEffect,useRef,useState} from "react";
 import type {PointerEvent as RPE} from "react";
 import {I} from "./icons";
 import {Sheet} from "./sheets";
-import {clock,isSticker,loadMedia,mediaReasons,mmss,money,num,type Msg} from "./lib";
+import {clock,isSticker,loadMedia,loadVideoUrl,mediaReasons,mmss,money,num,type Msg} from "./lib";
 import s from "./inbox.module.css";
 
 export function useMedia(workspaceId:string,threadId:string,mediaId?:string|null){
@@ -56,9 +56,13 @@ export function Img({m,workspaceId,threadId,bn,className,onOpen}:{m:Msg;workspac
 }
 
 function VideoBox({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){
- const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id);
- if(media&&media.mime.startsWith("video/"))return <video className={s.vid} src={media.url} controls playsInline preload="metadata" onClick={e=>e.stopPropagation()}/>;
- return <div className={s.imgph}>{failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(reason,bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
+ const mediaId=m.content?.media_id;
+ const [st,setSt]=useState<{id:string;v:{url:string;mime:string}|null}|null>(null),[tick,setTick]=useState(0);
+ useEffect(()=>{if(!mediaId)return;let live=true;void loadVideoUrl(workspaceId,threadId,mediaId).then(v=>{if(live)setSt({id:mediaId,v});});return()=>{live=false;};},[workspaceId,threadId,mediaId,tick]);
+ const ready=!!mediaId&&st?.id===mediaId,v=ready?st.v:null,failed=ready&&!st.v;
+ const retry=()=>{setSt(null);setTick(x=>x+1);};
+ if(v)return <video className={s.vid} src={v.url} controls playsInline preload="metadata" onClick={e=>e.stopPropagation()} onError={()=>{if(tick<2)retry();}}/>;
+ return <div className={s.imgph}>{failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(mediaReasons.get(workspaceId+mediaId)??"",bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
 }
 
 function Product({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){

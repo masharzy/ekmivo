@@ -85,3 +85,15 @@ export function sendReason(e:unknown,bn:boolean){
  if(/WINDOW|CLOSED/i.test(code))return bn?"উত্তরের সময় শেষ":"Reply window closed";
  return code?code:st&&/^\d+$/.test(st)?`HTTP ${st}`:"";
 }
+
+/** Videos are too large for the JSON proxy; the API hands back a short-lived signed URL the browser streams from. */
+export async function loadVideoUrl(workspaceId:string,threadId:string,mediaId:string):Promise<{url:string;mime:string}|null>{
+ const key=workspaceId+mediaId;
+ try{
+  const r=await fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"media-get",thread_id:threadId,body:{media_id:mediaId,url:true}})});
+  if(!r.ok){const e=await r.json().catch(()=>null) as {code?:unknown}|null;mediaReasons.set(key,typeof e?.code==="string"?e.code:String(r.status));return null;}
+  const j=await r.json() as {url?:unknown;mime?:unknown};mediaReasons.delete(key);
+  if(typeof j.url!=="string"||!/^https:\/\//.test(j.url)||typeof j.mime!=="string")return null;
+  return {url:j.url,mime:j.mime.split(";")[0]};
+ }catch{return null;}
+}
