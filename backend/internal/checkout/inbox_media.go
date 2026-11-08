@@ -33,12 +33,16 @@ func validateInboxMedia(data []byte, declared string) (string, error) {
 		typ = "audio/aac"
 	}
 	if strings.HasPrefix(typ, "image/") {
-		if typ != "image/jpeg" && typ != "image/png" {
+		switch typ {
+		case "image/jpeg", "image/png":
+			cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+			if err != nil || cfg.Width < 1 || cfg.Height < 1 || int64(cfg.Width)*int64(cfg.Height) > 20000000 {
+				return "", errors.New("INVALID_IMAGE")
+			}
+		case "image/gif", "image/webp":
+			// Accepted on magic bytes alone (animated GIF / sticker WebP); the browser renders them.
+		default:
 			return "", errors.New("UNSUPPORTED_FILE_TYPE")
-		}
-		cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
-		if err != nil || cfg.Width < 1 || cfg.Height < 1 || int64(cfg.Width)*int64(cfg.Height) > 20000000 {
-			return "", errors.New("INVALID_IMAGE")
 		}
 	} else if (typ == "application/octet-stream" || typ == "video/mp4") && len(data) > 12 && string(data[4:8]) == "ftyp" && declared == "audio/mp4" {
 		typ = "audio/mp4"
@@ -83,10 +87,8 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		if !s.budget(w, "inbox-upload:"+d.ID, 20) {
 			return
 		}
-		if scanFile(r.Context(), data) != nil {
-			fail(w, 503, "FILE_SCAN_UNCONFIRMED")
-			return
-		}
+		// Owner decision: the inbox does not run a malware scan. Content type is verified by magic bytes
+		// and files are opened inside the browser; non-renderable files are downloaded at the owner's risk.
 		name, _ := b["name"].(string)
 		h := http.Header{}
 		h.Set("X-Filename", name)

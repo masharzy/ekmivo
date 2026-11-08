@@ -61,10 +61,13 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 			for _, message := range rows(v["messages"]) {
 				m := obj(message)
 				kind := str(m, "type")
-				if kind != "image" && kind != "audio" && kind != "video" && kind != "document" {
+				if kind != "image" && kind != "audio" && kind != "video" && kind != "document" && kind != "sticker" {
 					continue
 				}
 				media := obj(m[kind])
+				if kind == "sticker" {
+					kind = "image" // WhatsApp stickers are WebP images
+				}
 				sec, err := strconv.ParseInt(str(m, "timestamp"), 10, 64)
 				if err != nil {
 					continue
@@ -170,7 +173,7 @@ func safeMetaMediaURL(raw string) bool {
 		return false
 	}
 	h := strings.ToLower(u.Hostname())
-	for _, suffix := range []string{"fbcdn.net", "fbsbx.com"} {
+	for _, suffix := range []string{"fbcdn.net", "fbsbx.com", "cdninstagram.com"} {
 		if h == suffix || strings.HasSuffix(h, "."+suffix) {
 			return true
 		}
@@ -255,9 +258,6 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	typ, err := validateInboxMedia(data, declared)
 	if err != nil {
 		return err
-	}
-	if scanFile(ctx, data) != nil {
-		return errors.New("FILE_SCAN_UNCONFIRMED")
 	}
 	hash := sha256.Sum256(data)
 	key := "inbox/" + d.Environment + "/" + d.Workspace + "/" + id + "/" + hex.EncodeToString(hash[:])
