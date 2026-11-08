@@ -943,8 +943,12 @@ html:lang(bn) .ds-app[data-service="payments"]{
  .ds-app[data-service="payments"] :is(.ekv3-page-error,.ekv3-drawer-list strong){overflow-wrap:anywhere}
 }
 @media(max-width:520px){
- .ds-app[data-service="payments"] .ds-topbar-leading{flex-basis:100%;justify-content:flex-start}
- .ds-app[data-service="payments"] .ds-topbar-tools{flex-basis:100%;justify-content:flex-end}
+ .ds-app[data-service="payments"] .ds-topbar{flex-wrap:nowrap;gap:8px}
+ .ds-app[data-service="payments"] .ds-topbar-leading{flex:0 0 auto;justify-content:flex-start}
+ .ds-app[data-service="payments"] .ds-topbar-tools{flex:1 1 auto;flex-wrap:nowrap;justify-content:flex-end;gap:6px}
+ .ds-app[data-service="payments"] .ds-topbar-tools .ds-global-search-button{padding:0 9px;min-width:34px}
+ .ds-app[data-service="payments"] .ds-topbar-tools .ds-global-search-button>span:not(.sr-only){display:none}
+ .ds-app[data-service="payments"] .ds-topbar .ek-language-switch{padding:0 8px;min-width:34px}
  .ds-app[data-service="payments"] .ds-service-picker summary strong{max-width:180px}
  .ds-app[data-service="payments"] .ek-ref-account{flex-wrap:wrap;gap:12px}
  .ds-app[data-service="payments"] .ek-ref-account .ek-ref-account-identity{flex:1 1 140px}

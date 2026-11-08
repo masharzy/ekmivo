@@ -31,6 +31,10 @@ async function handle(request:Request,{params}:{params:Promise<{id:string}>}){
    body.logo="/api/checkout-logos/"+digest;
   }
   const rows=await db`SELECT dashboard_store_write(${id}::uuid,${user.id}::uuid,${db.json(body)},${value.version as number},${digest},${png}) AS value`;
+  // One business name everywhere: the sidebar, switcher and header read the
+  // workspace name, so keep it in step with the saved Business profile name.
+  // The profile is already saved; a rename failure must not undo or fail it.
+  try{await db`SELECT dashboard_workspace_rename(${id}::uuid,${user.id}::uuid,${body.name}) AS name`;}catch{/* profile saved; name sync is best effort */}
   return reply(rows[0].value);
  }catch(e){
   const code=e&&typeof e==="object"&&"code" in e?e.code:"";

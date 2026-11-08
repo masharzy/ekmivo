@@ -334,7 +334,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    <header className="ds-topbar">
     <div className="ds-topbar-leading">
      <button type="button" className="ds-icon-button ds-mobile-trigger" ref={menuTrigger} aria-label={bn?"মেনু খুলুন":"Open menu"} aria-haspopup="dialog" aria-expanded={mobileOpen} onClick={()=>setMobileOpen(true)}><Icon name="menu"/></button>
-     {unified?<div className="ds-service-picker"><strong>{workspace.name}</strong></div>:<details className="ds-service-picker" ref={serviceMenu}>
+     {unified?null:<details className="ds-service-picker" ref={serviceMenu}>
       <summary><span className="ds-service-icon"><Icon name={service==="ai"?"ai-agent":"payments"}/></span><span><small>{bn?"সেবা নির্বাচন":"Product"}</small><strong>{serviceNames[service][locale]}</strong></span><Icon name="chevron"/></summary>
       <div className="ds-service-menu">
        <p>{bn?"সেবা পরিবর্তন করুন":"Switch product"}</p>
