@@ -187,3 +187,14 @@
 }
 @media(max-width:480px){.quickFilters button{font-size:10px}.messages{padding:15px 11px}.chatHeader{padding:10px 12px}.composerPanel{padding:8px}.composeHint{display:none}.root .compose .sendButton{padding:8px 10px}.attachmentComposer{flex-basis:120px}.inspector{max-height:75px}}
 @media(prefers-reduced-motion:reduce){.root *{scroll-behavior:auto!important;transition:none!important}}
+
+/* Settings forms (comment automation etc.): even rhythm, no raw fieldsets. */
+.root.sf .workflow{display:grid;gap:12px;padding:16px;border:1px solid var(--mb);border-radius:12px;background:var(--ms);margin-top:14px;min-width:0}
+.root.sf .workflow form,.root.sf .workflow fieldset{display:grid;gap:12px;border:0;padding:0;margin:0;min-width:0}
+.root.sf legend{font-weight:600;font-size:14px;padding:0;margin-bottom:8px}
+.root.sf .workflow summary{cursor:pointer;font-weight:600;font-size:14px}
+.root.sf details.workflow>*+*{margin-top:12px}
+.root.sf .workflow p{margin:0;color:var(--mm);font-size:12.5px;line-height:1.5}
+.root.sf>p{color:var(--mm);font-size:13px;line-height:1.5;margin:0 0 14px}
+.root.sf input[type=checkbox]{width:auto;margin-right:8px}
+.root.sf label:has(>input[type=checkbox]){display:flex;align-items:center;color:var(--mt);font-size:13px}

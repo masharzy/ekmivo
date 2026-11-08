@@ -2,6 +2,8 @@ import "server-only";
 import Link from "next/link";
 import {database} from "../lib/server/db";
 import {UnifiedActivityExport} from "./briofold-unified-activity-export";
+import "./dashboard-reference.css";
+import "./reference-adapters.css";
 import styles from "./briofold-order-report.module.css";
 
 type Activity={source:string;action:string;actor_name:string;created_at:string;scope:string};
@@ -42,17 +44,15 @@ export async function BriofoldUnifiedActivity({workspaceId,actorId,locale,enviro
   if(next)params.set("cursor",String(next));return "/settings/activity"+(params.size?"?"+params.toString():"");
  };
  const sourceLabel=(source:string)=>({orders:t("Orders","অর্ডার"),customers:t("Customers","গ্রাহক"),comments:t("Comments","কমেন্ট"),settings:t("Settings","সেটিংস")} as Record<string,string>)[source]??source;
- return <section className={styles.root} aria-label={t("Business operational activity","ব্যবসার পরিচালনাগত ইতিহাস")}>
-  <header className={styles.heading}><div><Heading>{t("Activity log","কার্যক্রমের ইতিহাস")}</Heading>
-   <p>{t("Read-only activity from orders, customers, comments and Business settings. Sensitive details are omitted.","অর্ডার, গ্রাহক, কমেন্ট ও ব্যবসা সেটিংসের শুধু-পড়ার ইতিহাস। সংবেদনশীল তথ্য রাখা হয়নি।")}</p></div>
-   <span className={styles.realm}>{environment==="live"?"Live":"Sandbox"}</span>
-  </header>
-  <form action="/settings/activity" method="GET" className={styles.filters}>
+ return <div className="ref-dashboard"><section className={`ref-page ${styles.root}`} aria-label={t("Business operational activity","ব্যবসার পরিচালনাগত ইতিহাস")}>
+  <div className="top"><Heading>{t("Activity log","কার্যক্রমের ইতিহাস")}</Heading><div className="acts"><span className="pill">{environment==="live"?"Live":"Sandbox"}</span></div>
+   <p>{t("Who changed what in orders, customers, comments and settings. Sensitive details are left out.","অর্ডার, গ্রাহক, কমেন্ট ও সেটিংসে কে কী বদলেছে। সংবেদনশীল তথ্য বাদ।")}</p></div>
+  <form action="/settings/activity" method="GET" className={`card ${styles.filters}`}>
    <label>{t("Source","উৎস")}<select name="category" defaultValue={category}><option value="">{t("All","সব")}</option>
     {categories.map(c=><option key={c} value={c}>{sourceLabel(c)}</option>)}
    </select></label>
    <label>{t("Action search","কাজ খুঁজুন")}<input type="search" name="q" maxLength={100} defaultValue={query} placeholder={t("e.g. order-state","যেমন order-state")}/></label>
-   <button type="submit">{t("Apply","দেখুন")}</button>
+   <button type="submit" className="ib pri">{t("Apply","দেখুন")}</button>
   </form>
   {!snapshot&&<p role="alert" className={styles.alert}>{invalid?t("Invalid activity filter.","কার্যক্রমের ফিল্টার সঠিক নয়।"):
    t("The activity source is unavailable; no empty history has been assumed.","কার্যক্রমের উৎস পাওয়া যাচ্ছে না; অনুমান করে খালি ইতিহাস দেখানো হয়নি।")}</p>}
@@ -60,7 +60,7 @@ export async function BriofoldUnifiedActivity({workspaceId,actorId,locale,enviro
    <div className={styles.listTitle}><h2>{t("Recent events","সাম্প্রতিক কাজ")}</h2>
     {snapshot.can_export&&<UnifiedActivityExport bn={bn} rows={events} environment={environment}/>}
    </div>
-   <div className={styles.tableScroll}><table><thead><tr>
+   <div className="card tw"><table><thead><tr>
     <th>{t("Time","সময়")}</th><th>{t("Source","উৎস")}</th>
     <th>{t("Action","কাজ")}</th><th>{t("Actor","কে করেছেন")}</th><th>{t("Scope","পরিসর")}</th>
    </tr></thead><tbody>
@@ -77,5 +77,5 @@ export async function BriofoldUnifiedActivity({workspaceId,actorId,locale,enviro
    </div>
    <p className={styles.note}>{t("The source records are immutable where supported. This is not a financial audit ledger: payment events remain in the authoritative payment operations log below.","সমর্থিত জায়গায় মূল ঘটনার রেকর্ড অপরিবর্তনীয়। এটি আর্থিক লেজার নয়; পেমেন্টের সঠিক ইতিহাস নিচের মূল পেমেন্ট লগেই থাকবে।")}</p>
   </>}
- </section>;
+ </section></div>;
 }
