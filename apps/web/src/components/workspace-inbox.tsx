@@ -37,7 +37,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  const [workflowBusy,setWorkflowBusy]=useState(false),[composeBusy,setComposeBusy]=useState(false);
  const [caps,setCaps]=useState<Cap>({}),[selectedName,setSelectedName]=useState("");
  const [sendAllowed,setSendAllowed]=useState(false),[manageAllowed,setManageAllowed]=useState(false),[draftError,setDraftError]=useState(false),[forbidden,setForbidden]=useState(false);
- const [online,setOnline]=useState(true),[syncing,setSyncing]=useState(false);
+ const [online,setOnline]=useState(true),[syncing,setSyncing]=useState(false),[loginRequired,setLoginRequired]=useState(false);
  const [divider,setDivider]=useState<{seq:number;count:number}|null>(null),[fresh,setFresh]=useState<Set<string>>(new Set()),[flash,setFlash]=useState("");
  const [sel,setSel]=useState<{id:string;left:number;top:number}|null>(null),[replyTo,setReplyTo]=useState<Msg|null>(null),[toastText,setToastText]=useState(""),[toastOn,setToastOn]=useState(false);
  const [sheet,setSheet]=useState<""|"filter"|"forward"|"info"|"tools">(""),[info,setInfo]=useState<(Msg&{channel?:string})|null>(null),[infoBusy,setInfoBusy]=useState(false);
@@ -104,8 +104,8 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},cache:"no-store",
    body:JSON.stringify({action,thread_id:thread,body,before:cursor,filters:{q:f.query,offset:f.offset,queue:f.queue,channel:f.channel,from_date:f.range?dayStr(Number(f.range)):"",through_date:"",label:f.label}})
   });
-  if(!response.ok){if(response.status===401||response.status===403){setForbidden(true);setThreads([]);setLatest([]);setSelected(null);setView("list");setLoaded(false);cached.current.clear();}const code=await response.json().then((j:{code?:unknown;error?:{code?:unknown}|string})=>String(j?.code??(typeof j?.error==="object"?j.error?.code:j?.error)??"")).catch(()=>"");throw Object.assign(Error(String(response.status)),{code});}
-  setForbidden(false);return response.json() as Promise<T>;
+  if(!response.ok){if(response.status===401||response.status===403){setLoginRequired(response.status===401);setForbidden(response.status===403);setThreads([]);setLatest([]);setSelected(null);setView("list");setLoaded(false);cached.current.clear();}const code=await response.json().then((j:{code?:unknown;error?:{code?:unknown}|string})=>String(j?.code??(typeof j?.error==="object"?j.error?.code:j?.error)??"")).catch(()=>"");throw Object.assign(Error(String(response.status)),{code});}
+  setForbidden(false);setLoginRequired(false);return response.json() as Promise<T>;
  },[workspaceId]);
  const call=useCallback(async <T,>(action:string,body?:object):Promise<T>=>{if(!selected)throw Error("no thread");return api<T>(action,selected,body);},[api,selected]);
 
@@ -259,6 +259,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  useEffect(()=>{if(!full)return;const k=(e:KeyboardEvent)=>{if(e.key==="Escape"&&!document.querySelector('[role="dialog"]'))exitFull();};window.addEventListener("keydown",k);return()=>window.removeEventListener("keydown",k);},[full,exitFull]);
  return <div ref={wrapRef} style={full?{minHeight:fullH}:undefined}><section ref={pageRef} className={`${s.page} ${full?s.full:""}`} style={full?{"--fl":`${fullGap}px`} as React.CSSProperties:undefined}>
   <div ref={shell} className={s.shell} data-view={view} data-open={selected?"1":"0"}>
+   {loginRequired&&<p className={s.alert} role="alert">{t("Your API session needs refreshing. Refresh this page; if it persists, sign in again.","API সেশন আপডেট প্রয়োজন। পেজ রিফ্রেশ করুন; সমস্যা থাকলে আবার লগইন করুন।")}</p>}
    {forbidden&&<p className={s.alert} role="alert">{t("You no longer have access to this Inbox. Retrying when access is restored.","এই ইনবক্স দেখার অনুমতি নেই। অনুমতি ফিরলে আবার চেষ্টা হবে।")}</p>}
    {/* ============ list ============ */}
    <div className={`${s.scr} ${s.sInbox}`}>

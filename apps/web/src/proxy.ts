@@ -3,6 +3,16 @@ import {NextRequest,NextResponse} from "next/server";
 // Public URLs remain language-neutral. Next continues to use the existing
 // [locale] route modules internally, selected only by a low-trust UI cookie.
 // Authorization and financial access remain server-side and cookie independent.
+function withApiSession(request:NextRequest,response:NextResponse){
+ const host=request.nextUrl.hostname;
+ const token=request.cookies.get("briofold-session")?.value;
+ if(request.nextUrl.protocol!=="https:"||!(host==="briofold.tech"||host==="www.briofold.tech")||!token||! /^[A-Za-z0-9_-]{32,256}$/.test(token))return response;
+ // Copy only the existing opaque session into an HttpOnly API-path cookie.
+ // The VPS still authenticates expiry/revocation and authorizes every request.
+ response.cookies.set("__Secure-briofold-api-session",token,{httpOnly:true,secure:true,sameSite:"strict",domain:"briofold.tech",path:"/v1/",maxAge:30*24*3600,priority:"high"});
+ response.headers.set("Cache-Control","private, no-store");
+ return response;
+}
 export function proxy(request:NextRequest){
  const path=request.nextUrl.pathname;
  if(path.startsWith("/api/")||path==="/api"||path.startsWith("/_next/")||
@@ -21,17 +31,17 @@ export function proxy(request:NextRequest){
    destination.pathname=path.slice(legacy[0].length)||"/";
    const response=NextResponse.redirect(destination,307);
    response.cookies.set("briofold-locale",legacy[1],{path:"/",maxAge:31536000,sameSite:"lax"});
-   return response;
+   return withApiSession(request,response);
   }
   const response=NextResponse.next();
   if(preference!=="en"&&preference!=="bn")
    response.cookies.set("briofold-locale",locale,{path:"/",maxAge:31536000,sameSite:"lax"});
-  return response;
+  return withApiSession(request,response);
  }
  // Old bookmarks and emails: /workspaces is now /businesses.
  if(/^\/workspaces(?=\/|$)/.test(path)){
   const moved=request.nextUrl.clone();moved.pathname=path.replace(/^\/workspaces/,"/businesses");
-  return NextResponse.redirect(moved,308);
+  return withApiSession(request,NextResponse.redirect(moved,308));
  }
  const target=request.nextUrl.clone();
  target.pathname="/"+locale+path;
@@ -45,7 +55,7 @@ export function proxy(request:NextRequest){
  headers.set("x-briofold-locale",locale);
  if(/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|businesses|account|admin)(?:\/|$)/.test(path))headers.set("x-briofold-application","1");
  if(/^\/(?:login|register|forgot-password|verify-email)(?:\/|$)/.test(path))headers.set("x-briofold-auth-page","1");
- return NextResponse.rewrite(target,{request:{headers}});
+ return withApiSession(request,NextResponse.rewrite(target,{request:{headers}}));
 }
 
 export const config={matcher:["/((?!_next/static|_next/image).*)"]};
