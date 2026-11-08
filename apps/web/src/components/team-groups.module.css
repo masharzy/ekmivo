@@ -21,3 +21,11 @@
 @media(max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}.panel{padding:14px}}
 
 .scopeForm{min-width:0;box-sizing:border-box}.scopeForm label{display:grid;gap:7px;min-width:0;overflow-wrap:anywhere}.scopeForm label:has(input[type=checkbox]){display:flex;align-items:flex-start;gap:9px}.scopeForm select,.scopeForm input:not([type=checkbox]){box-sizing:border-box;width:100%;max-width:100%;min-width:0;padding:12px;border:1px solid var(--color-control-border);border-radius:8px;background:var(--color-surface);color:inherit;font:inherit}.scopeForm input[type=checkbox]{flex:0 0 18px;width:18px;height:18px;accent-color:var(--color-focus)}
+
+.root>a:first-child{justify-self:start;border:0;padding:0;min-height:0;color:var(--color-text-muted);font-size:.88rem;text-decoration:underline;text-underline-offset:3px}
+.root header>a,.root header>button{font-size:.9rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{padding:3px 10px;border-radius:99px;background:var(--color-hover,rgba(0,0,0,.06));font-size:.78rem;line-height:1.5}
+.actions button:first-child:not([type=button]){background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary,#fff);font-weight:600}
+.group h3{font-weight:600}.group p:first-of-type{font-size:.85rem}
+.panel h2{font-size:1.05rem}

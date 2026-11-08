@@ -46,6 +46,9 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  // const selectedEnvironment=requestedEnvironment.length===1?requestedEnvironment[0]:undefined;
  const environment:PaymentEnvironment=paymentContext?.environment??"live";
  const [mobileOpen,setMobileOpen]=useState(false);
+ const [sbCollapsed,setSbCollapsed]=useState(false);
+ useEffect(()=>{const tm=setTimeout(()=>{try{if(localStorage.getItem("briofold-sidebar-collapsed")==="1")setSbCollapsed(true);}catch{}},0);return()=>clearTimeout(tm);},[]);
+ const toggleSidebar=()=>setSbCollapsed(v=>{const n=!v;try{localStorage.setItem("briofold-sidebar-collapsed",n?"1":"0");}catch{}return n;});
  const [businessQuery,setBusinessQuery]=useState("");
  const [globalQuery,setGlobalQuery]=useState("");
  const [activeResult,setActiveResult]=useState(0);
@@ -292,6 +295,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  const sidebar=(mobile=false)=><>
   <div className="ds-brand-row">
    <Link href={unified?"/dashboard":"/"} className="ek-wordmark">briofold{!unified&&<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small>}</Link>
+   {!mobile&&<button type="button" className="ds-icon-button ds-sb-toggle" aria-label={sbCollapsed?(bn?"সাইডবার খুলুন":"Expand sidebar"):(bn?"সাইডবার ছোট করুন":"Collapse sidebar")} aria-expanded={!sbCollapsed} title={sbCollapsed?(bn?"সাইডবার খুলুন":"Expand sidebar"):(bn?"সাইডবার ছোট করুন":"Collapse sidebar")} onClick={toggleSidebar}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button>}
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
   <div className="ds-business-block"><details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
@@ -320,7 +324,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
   {unified&&(()=>{const on=pathname==="/settings/billing"||pathname.startsWith("/settings/billing/");return <div className="ds-nav-fixed-bottom"><Link href="/settings/billing" className={on?"is-current":undefined} aria-current={on?"page":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute("/settings/billing");setDraftError("");return;}startTransition(()=>router.push("/settings/billing"));}}><Icon name="billing"/><span>{bn?"বিলিং ও ব্যবহার":"Billing & usage"}</span></Link></div>;})()}
   {!unified&&service==="payments"&&<div className="ds-nav-fixed-bottom"><Link href={contextHref("billing")} className={section==="billing"?"is-current":undefined} aria-current={section==="billing"?"page":undefined} onClick={event=>{event.preventDefault();nav("billing")}}><Icon name="billing"/><span>{sections.billing[locale]}</span></Link></div>}
  </>;
- return <div className="ds-app" data-service={unified?"payments":service} data-unified={unified?"true":undefined} data-environment={environment}><DashboardFeedback locale={locale}/>
+ return <div className="ds-app" data-service={unified?"payments":service} data-unified={unified?"true":undefined} data-environment={environment} data-sb={sbCollapsed?"collapsed":undefined}><DashboardFeedback locale={locale}/>
   <a className="ds-skip" href="#dashboard-content">{bn?"মূল অংশে যান":"Skip to content"}</a>
   <aside className="ds-sidebar">{sidebar()}</aside>
   <dialog ref={drawer} className="ds-mobile-dialog" aria-label={bn?"ব্যবসা মেনু":"Business menu"} onCancel={()=>setMobileOpen(false)} onClose={()=>setMobileOpen(false)}>{sidebar(true)}</dialog>
