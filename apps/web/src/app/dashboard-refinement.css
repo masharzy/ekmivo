@@ -77,3 +77,18 @@
 .ds-app .ds-nav-badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#E5484D;color:#fff;font-size:11px;font-weight:700;line-height:20px;text-align:center;font-variant-numeric:tabular-nums;box-shadow:0 0 0 2px var(--color-surface,transparent);animation:ds-badge-pop .25s cubic-bezier(.34,1.56,.64,1)}
 @keyframes ds-badge-pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.ds-app .ds-nav-badge{animation:none}}
+
+/* Collapsible sidebar (desktop): icon rail */
+.ds-sb-toggle{margin-left:auto;flex:none}
+.ds-mobile-dialog .ds-sb-toggle{display:none}
+@media(min-width:801px){
+ .ds-app .ds-sidebar{transition:width .22s cubic-bezier(.2,.8,.2,1),max-width .22s cubic-bezier(.2,.8,.2,1)}
+ .ds-app[data-sb="collapsed"] .ds-sidebar{width:68px!important;max-width:68px!important;padding-inline:10px!important;overflow:hidden}
+ .ds-app[data-sb="collapsed"] .ds-brand-row{flex-direction:column;align-items:center;justify-content:center;gap:6px;padding-inline:0}
+ .ds-app[data-sb="collapsed"] .ds-brand-row .ek-wordmark,.ds-app[data-sb="collapsed"] .ds-business-block,.ds-app[data-sb="collapsed"] .ds-nav-section h2{display:none!important}
+ .ds-app[data-sb="collapsed"] .ds-sb-toggle{margin-left:0}
+ .ds-app[data-sb="collapsed"] .ds-navigation a,.ds-app[data-sb="collapsed"] .ds-nav-fixed-bottom a{position:relative;justify-content:center;padding-inline:0}
+ .ds-app[data-sb="collapsed"] .ds-navigation a>span:not(.ds-nav-badge):not(.ds-active-mark),.ds-app[data-sb="collapsed"] .ds-nav-fixed-bottom a>span:not(.ds-nav-badge):not(.ds-active-mark){display:none}
+ .ds-app[data-sb="collapsed"] .ds-navigation .ds-nav-badge{position:absolute;top:2px;right:4px;margin:0}
+}
+@media(max-width:800px){.ds-sb-toggle{display:none}}
