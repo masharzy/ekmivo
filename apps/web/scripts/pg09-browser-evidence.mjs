@@ -7,7 +7,7 @@ import {mkdir,writeFile} from "node:fs/promises";
 export async function runPG09Browser({origin,browser,tenant,sessions}){
  const uuid="1d7c6c81-987e-4a44-a7a0-51b5a4c81234";
  const paymentId="1d7c6c81-987e-4a44-a7a0-51b5a4c81235";
- const root="/w/"+tenant+"/payments/transactions";
+ const root="/payments";
  const calls=[],results=[];
  let offlineSource=false;
  const example={id:paymentId,merchant_reference:"PG09-FAKE-UI-REFERENCE",

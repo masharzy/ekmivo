@@ -52,8 +52,8 @@ export async function runBriofoldRouteBrowser({origin,browser,control,tenant,ses
   for(const path of ["/payments/constructor","/orders/__proto__","/reports/toString","/settings/not-a-setting"]){
    assert.equal((await page.goto(origin+path)).status(),404,"Unknown/inherited route was accepted: "+path);
   }
-  assert.equal((await page.goto(origin+"/w/"+tenant+"/payments/requests")).status(),200,"Authorized legacy bookmark failed");
-  console.log("Phase2 REAL NEXT BROWSER PASS: nine canonical roots, product gate, client navigation, back/forward, reload, locale-neutral redirects/query, unknown 404 and authorized legacy bookmark");
+  assert.equal((await page.goto(origin+"/w/"+tenant+"/payments/requests")).status(),404,"Removed legacy route must stay unavailable");
+  console.log("Phase2 REAL NEXT BROWSER PASS: nine canonical roots, product gate, client navigation, back/forward, reload, locale-neutral redirects/query, unknown 404 and removed legacy route 404");
  }finally{await context.close();}
  const guest=await browser.newContext();
  try{

@@ -43,7 +43,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   // The merchant dashboard is intentionally live-only. The historical
   // sandbox invoice creation form no longer exists here; PG04's real SQL and
   // Go HTTP tests above still validate invoice line pricing and linked intents.
-  const merchantPath="/w/"+tenant+"/payments/requests";
+  const merchantPath="/payments/links?view=requests";
   await page.goto(origin+merchantPath);
   await page.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|One-time requests)$/}).waitFor();
   const newRequest=page.getByRole("button",{name:"New request",exact:true});
