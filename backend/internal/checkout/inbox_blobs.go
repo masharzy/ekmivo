@@ -4,45 +4,77 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 )
 
-// Seller-sent attachments are held only briefly in the control database (not in object storage) so the
-// channel can fetch them, retries can re-send them, and the chat can still show them for a short while.
+// Seller-sent attachments are NOT stored in object storage or the database. They are kept only in this
+// process's memory for a few minutes so the sender loop can upload them to the channel (and retry a
+// failed send). After the TTL, or a restart, the bytes are gone; the seller still has the original in
+// the browser and can send again.
 const inboxBlobPrefix = "blob/"
-const inboxBlobTTL = "48 hours"
+const inboxMemTTL = 15 * time.Minute
+const inboxMemCap = 256 << 20
 
-var inboxBlobLastPurge atomic.Int64
-
-func (s *Service) inboxBlobPut(ctx context.Context, workspace, key string, data []byte) error {
-	_, err := s.Pipeline.Control.Exec(ctx, "SELECT inbox_blob_put($1,$2::uuid,$3)", key, workspace, data)
-	return err
+type inboxMemBlob struct {
+	data []byte
+	at   time.Time
 }
 
-func (s *Service) inboxBlobHas(ctx context.Context, key string) bool {
-	var ok bool
-	return s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_blob_has($1)", key).Scan(&ok) == nil && ok
+var inboxMem = struct {
+	sync.Mutex
+	items map[string]inboxMemBlob
+	bytes int
+}{items: map[string]inboxMemBlob{}}
+
+func inboxMemSweepLocked() {
+	cutoff := time.Now().Add(-inboxMemTTL)
+	for k, v := range inboxMem.items {
+		if v.at.Before(cutoff) {
+			inboxMem.bytes -= len(v.data)
+			delete(inboxMem.items, k)
+		}
+	}
 }
 
-// inboxObjectGet reads a stored attachment: transient database blob, or legacy object-storage key.
+func (s *Service) inboxBlobPut(_ context.Context, _ string, key string, data []byte) error {
+	inboxMem.Lock()
+	defer inboxMem.Unlock()
+	inboxMemSweepLocked()
+	if old, ok := inboxMem.items[key]; ok {
+		inboxMem.bytes -= len(old.data)
+	}
+	if inboxMem.bytes+len(data) > inboxMemCap {
+		return errors.New("MEDIA_STORE_FULL")
+	}
+	inboxMem.items[key] = inboxMemBlob{data: data, at: time.Now()}
+	inboxMem.bytes += len(data)
+	return nil
+}
+
+func (s *Service) inboxBlobHas(_ context.Context, key string) bool {
+	inboxMem.Lock()
+	defer inboxMem.Unlock()
+	v, ok := inboxMem.items[key]
+	return ok && time.Since(v.at) <= inboxMemTTL
+}
+
+// inboxObjectGet reads a held attachment (memory) or a legacy object-storage key.
 func (s *Service) inboxObjectGet(ctx context.Context, key string) ([]byte, error) {
 	if !strings.HasPrefix(key, inboxBlobPrefix) {
 		return objectRequest(ctx, "GET", key, nil)
 	}
-	var data []byte
-	if err := s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_blob_get($1)", key).Scan(&data); err != nil || len(data) == 0 {
+	inboxMem.Lock()
+	defer inboxMem.Unlock()
+	v, ok := inboxMem.items[key]
+	if !ok || time.Since(v.at) > inboxMemTTL {
 		return nil, errors.New("MEDIA_EXPIRED")
 	}
-	return data, nil
+	return v.data, nil
 }
 
-// inboxBlobPurge deletes expired blobs at most once every ten minutes per process.
-func (s *Service) inboxBlobPurge(ctx context.Context) {
-	now := time.Now().Unix()
-	last := inboxBlobLastPurge.Load()
-	if now-last < 600 || !inboxBlobLastPurge.CompareAndSwap(last, now) {
-		return
-	}
-	_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_blob_purge($1::interval)", inboxBlobTTL)
+func (s *Service) inboxBlobPurge(_ context.Context) {
+	inboxMem.Lock()
+	defer inboxMem.Unlock()
+	inboxMemSweepLocked()
 }
