@@ -11,7 +11,7 @@ CREATE FUNCTION inbox_window_free(connection uuid) RETURNS boolean
 $$SELECT coalesce((SELECT provider='tg' FROM inbox_connections WHERE id=connection),false)$$;
 REVOKE ALL ON FUNCTION inbox_window_free(uuid) FROM PUBLIC;
 DO $$DECLARE g text;BEGIN
- FOREACH g IN ARRAY ARRAY['ekmivo_runtime','ekmivo_web_app'] LOOP
+ FOREACH g IN ARRAY ARRAY['ekmivo_owner','ekmivo_financial_runtime','ekmivo_financial_projection','ekmivo_runtime','ekmivo_web_app'] LOOP
   IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname=g) THEN EXECUTE format('GRANT EXECUTE ON FUNCTION inbox_window_free(uuid) TO %I',g);END IF;
  END LOOP;
 END $$;
