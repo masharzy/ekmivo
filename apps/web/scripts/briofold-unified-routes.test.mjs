@@ -11,11 +11,11 @@ test("all ten canonical merchant entry routes exist independently of /w workspac
  for(const root of ["inbox","orders","catalog","payments","sms-data","invoices","customers","reports","settings"])
   assert.ok(existsSync(at(`app/[locale]/${root}/[[...view]]/page.tsx`)),`Missing canonical route: ${root}`);
 });
-test("navigation has exactly ten clean, prefixed-free merchant entries",()=>{
+test("navigation has exactly eleven clean, prefixed-free merchant entries",()=>{
  const src=source("lib/unified-navigation.ts");
- for(const path of ["/dashboard","/inbox","/orders","/catalog","/payments","/sms-data","/invoices","/customers","/reports","/settings"])
+ for(const path of ["/dashboard","/inbox","/orders","/catalog/products","/catalog/coupons","/payments","/sms-data","/invoices","/customers","/reports","/settings"])
   assert.ok(src.includes(`href:"${path}"`),`Missing nav href ${path}`);
- assert.equal((src.match(/href:"\/(dashboard|inbox|orders|catalog|payments|sms-data|invoices|customers|reports|settings)"/g)||[]).length,10);
+ assert.equal((src.match(/href:"\/(dashboard|inbox|orders|catalog\/products|catalog\/coupons|payments|sms-data|invoices|customers|reports|settings)"/g)||[]).length,11);
  assert.doesNotMatch(src,/href:"\/(?:bn|en|w)\//);
  assert.match(src,/view\.length>1/);
  assert.match(src,/mode==="off"/);

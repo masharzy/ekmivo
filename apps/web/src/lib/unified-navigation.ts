@@ -4,7 +4,7 @@ import type {Service} from "./dashboard-navigation";
 export type BusinessMode="ai"|"commerce"|"both"|"off";
 export type UnifiedRoot="dashboard"|"inbox"|"orders"|"catalog"|"payments"|"sms-data"|"invoices"|"customers"|"reports"|"settings";
 export type UnifiedNavGroup="main"|"money"|"manage";
-export type UnifiedNavItem={key:UnifiedRoot|"devices";en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common"|"fulfilment";group:UnifiedNavGroup};
+export type UnifiedNavItem={key:UnifiedRoot|"devices"|"products"|"coupons";en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common"|"fulfilment";group:UnifiedNavGroup};
 export const unifiedNavGroupLabels:Record<UnifiedNavGroup,{en:string;bn:string}>={
  main:{en:"Work",bn:"কাজ"},money:{en:"Money",bn:"টাকা-পয়সা"},manage:{en:"Manage",bn:"পরিচালনা"},
 };
@@ -12,7 +12,8 @@ export const unifiedNavigation:readonly UnifiedNavItem[]=[
  {key:"dashboard",en:"Overview",bn:"ওভারভিউ",icon:"overview",href:"/dashboard",service:"common",group:"main"},
  {key:"inbox",en:"Inbox",bn:"ইনবক্স",icon:"inbox",href:"/inbox",service:"ai",group:"main"},
  {key:"orders",en:"Orders",bn:"অর্ডার",icon:"orders",href:"/orders",service:"fulfilment",group:"main"},
- {key:"catalog",en:"Catalog",bn:"ক্যাটালগ",icon:"products",href:"/catalog",service:"fulfilment",group:"main"},
+ {key:"products",en:"Products",bn:"পণ্য",icon:"products",href:"/catalog/products",service:"fulfilment",group:"main"},
+ {key:"coupons",en:"Coupons",bn:"কুপন",icon:"coupons",href:"/catalog/coupons",service:"fulfilment",group:"main"},
  {key:"customers",en:"Customers",bn:"গ্রাহক",icon:"customers",href:"/customers",service:"common",group:"main"},
  {key:"payments",en:"Payments",bn:"পেমেন্ট",icon:"transactions",href:"/payments",service:"payments",group:"money"},
  {key:"invoices",en:"Invoices",bn:"ইনভয়েস",icon:"invoices",href:"/invoices",service:"payments",group:"money"},
