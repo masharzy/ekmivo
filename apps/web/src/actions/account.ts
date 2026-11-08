@@ -113,7 +113,7 @@ export async function createWorkspaceAction(localeParam:string,_previous:FormErr
  if(!["ai","commerce","both"].includes(mode))return fail(t.mode,{mode:t.mode});
  let workspaceId:string;
  try{workspaceId=await insertUserWorkspace(user.id,name,mode as "ai"|"commerce"|"both")}
- catch(e){if(e instanceof Error&&e.message==="STORE_LIMIT")return fail(locale==="bn"?"একটি অ্যাকাউন্টে সর্বোচ্চ ৫টি স্টোর তৈরি করা যায়।":"An account can have up to 5 stores.");report("createWorkspace",e);return fail(t.generic);}
+ catch(e){if(e instanceof Error&&e.message==="STORE_LIMIT")return fail(locale==="bn"?"একটি অ্যাকাউন্টে সর্বোচ্চ ৫টি ব্যবসা তৈরি করা যায়।":"An account can have up to 5 businesses.");report("createWorkspace",e);return fail(t.generic);}
  // First created workspace is automatically the default, as before.
  try{await selectDefaultWorkspace(user.id,workspaceId);}
  catch(e){report("set initial workspace default",e);}
@@ -158,7 +158,7 @@ export async function createWorkspaceOnListAction(localeParam:string,nameRaw:str
   try{await selectDefaultWorkspace(user.id,id);}catch(e){report("set initial workspace default",e);}
   revalidatePath(`/${locale}/workspaces`);
   return {status:"success",message:"",workspace:{id,name,mode}};
- }catch(e){if(e instanceof Error&&e.message==="STORE_LIMIT")return {status:"error",message:locale==="bn"?"একটি অ্যাকাউন্টে সর্বোচ্চ ৫টি স্টোর তৈরি করা যায়।":"An account can have up to 5 stores."};report("createWorkspaceOnList",e);return {status:"error",message:t.generic};}
+ }catch(e){if(e instanceof Error&&e.message==="STORE_LIMIT")return {status:"error",message:locale==="bn"?"একটি অ্যাকাউন্টে সর্বোচ্চ ৫টি ব্যবসা তৈরি করা যায়।":"An account can have up to 5 businesses."};report("createWorkspaceOnList",e);return {status:"error",message:t.generic};}
 }
 export async function renameWorkspaceOnListAction(localeParam:string,id:string,nameRaw:string):Promise<{status:"success"|"error";message:string;name?:string}>{
  const locale=safeLocale(localeParam),user=await currentUser();
