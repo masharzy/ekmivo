@@ -26,3 +26,15 @@
  .table td:last-child{text-align:start;margin-top:8px}
  .table td button{margin:0 6px 6px 0}
 }
+
+/* Reference-style form fields inside RefModal drawers */
+.root :global(.cm-form){display:grid;gap:12px;padding:0;border:0;background:none}
+.root :global(.cm-form) fieldset{display:grid;gap:12px;border:0;margin:0;padding:0;min-width:0}
+.root :global(.cm-form) label{display:grid;gap:4px;font-size:12px;font-weight:600;color:var(--ref-muted,#667085)}
+.root :global(.cm-form) input,.root :global(.cm-form) select,.root :global(.cm-form) textarea{width:100%;min-height:36px;padding:7px 10px;border:1px solid var(--ref-line,#e4e7ec);border-radius:8px;font:inherit;font-weight:400;color:inherit;background:#fff}
+.root :global(.cm-form) button{min-height:34px}
+.root :global(.cm-select){width:auto;min-width:130px}
+.root :global(.cm-bulk){border-top:1px solid var(--ref-line,#e4e7ec)}
+.root :global(.cm-check){width:16px;height:16px;margin-right:8px}
+.root :global(.cm-note){padding:10px 12px;margin-bottom:10px}
+@media(max-width:520px){.root :global(.toolbar){flex-wrap:wrap}.root :global(.ref-sms-search){flex:1 1 100%}}
