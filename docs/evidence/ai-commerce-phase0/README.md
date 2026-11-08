@@ -10,7 +10,7 @@ The pending navigation route lived in React state while the destination Store li
 - Focused/full web ESLint: PASS. TypeScript: PASS.
 - 51 existing navigation/settings/inbox-draft/responsive/Store contract tests: PASS (no skips).
 - Existing main CI 42504982825 Go compile/unit tests: PASS. This is baseline evidence, not this PR's CI.
-- Local production build and this PR CI: pending. Local full Go run was stopped after a denied shared cache and slow isolated-cache rebuild; no local Go pass claimed.
+- Local production build: PASS (webpack compile, TypeScript, prerender and route generation). This PR CI: pending. Local full Go run was stopped after a denied shared cache and slow isolated-cache rebuild; no local Go pass claimed.
 
 ## Database audit
 
