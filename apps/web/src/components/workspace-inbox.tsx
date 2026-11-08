@@ -35,7 +35,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  const [error,setError]=useState(false),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[chatLoading,setChatLoading]=useState(!!initialThread);
  const [ai,setAi]=useState(true),[winRaw,setWindowOpen]=useState(false),[query,setQuery]=useState(""),[searchOpen,setSearchOpen]=useState(false);
  const [queue,setQueue]=useState("all"),[channel,setChannel]=useState(""),[range,setRange]=useState(""),[label,setLabel]=useState(""),[offset,setOffset]=useState(0);
- const [workflowBusy,setWorkflowBusy]=useState(false),[composeBusy,setComposeBusy]=useState(false);
+ const [fromDate,setFromDate]=useState(""),[throughDate,setThroughDate]=useState(""),[workflowBusy,setWorkflowBusy]=useState(false),[composeBusy,setComposeBusy]=useState(false);
  const [caps,setCaps]=useState<Cap>({}),[selectedName,setSelectedName]=useState("");
  const [sendAllowed,setSendAllowed]=useState(false),[manageAllowed,setManageAllowed]=useState(false),[draftError,setDraftError]=useState(false),[forbidden,setForbidden]=useState(false);
  const [online,setOnline]=useState(true),[syncing,setSyncing]=useState(false),[loginRequired,setLoginRequired]=useState(false);
@@ -71,7 +71,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
   const timer=setTimeout(()=>setOnline(navigator.onLine),0);window.addEventListener("online",up);window.addEventListener("offline",down);
   return()=>{clearTimeout(timer);window.removeEventListener("online",up);window.removeEventListener("offline",down);};
  },[]);
- useEffect(()=>{if(loaded&&!query&&queue==="all"&&!channel&&!range&&!label&&offset===0)announceInboxUnread(threads.reduce((n,x)=>n+(Number(x.unread)||0),0));},[threads,loaded,query,queue,channel,range,label,offset]);
+ useEffect(()=>{if(loaded&&!query&&queue==="all"&&!channel&&!range&&!label&&!fromDate&&!throughDate&&offset===0)announceInboxUnread(threads.reduce((n,x)=>n+(Number(x.unread)||0),0));},[threads,loaded,query,queue,channel,range,label,fromDate,throughDate,offset]);
  const windowOpen=winRaw||threads.find(x=>x.id===selected)?.channel==="tg";
  const offline=!online;
 
@@ -97,13 +97,13 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  function backToList(){if(busy||workflowBusy||composeBusy)return;if(!workGuard())return;invalidate();setSel(null);setView("list");}
  function changeText(value:string){if(!selected)return;const d=drafts.current.get(selected);const key=value===d?.saved?d.savedKey:crypto.randomUUID();drafts.current.set(selected,{text:value,saved:d?.saved??"",sendKey:key,savedKey:d?.savedKey??""});setText(value);pending.current=key;}
 
- const filterRef=useRef({query,offset,queue,channel,range,label});
- useEffect(()=>{filterRef.current={query,offset,queue,channel,range,label};});
+ const filterRef=useRef({query,offset,queue,channel,range,label,fromDate,throughDate});
+ useEffect(()=>{filterRef.current={query,offset,queue,channel,range,label,fromDate,throughDate};});
  const api=useCallback(async <T,>(action:string,thread?:string,body?:object,cursor?:number|null):Promise<T>=>{
   const f=filterRef.current;
-  const response=await fetch(`https://api.briofold.tech/v1/workspaces/${workspaceId}/inbox?environment=live`,{
+  const response=await fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{
    method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},cache:"no-store",
-   body:JSON.stringify({action,thread_id:thread,body,before:cursor,filters:{q:f.query,offset:f.offset,queue:f.queue,channel:f.channel,from_date:f.range?dayStr(Number(f.range)):"",through_date:"",label:f.label}})
+   body:JSON.stringify({action,thread_id:thread,body,before:cursor,filters:{q:f.query,offset:f.offset,queue:f.queue,channel:f.channel,from_date:f.fromDate||(f.range?dayStr(Number(f.range)):""),through_date:f.throughDate,label:f.label}})
   });
   if(!response.ok){if(response.status===401||response.status===403){setLoginRequired(response.status===401);setForbidden(response.status===403);setThreads([]);setLatest([]);setSelected(null);setView("list");setLoaded(false);cached.current.clear();}const code=await response.json().then((j:{code?:unknown;error?:{code?:unknown}|string})=>String(j?.code??(typeof j?.error==="object"?j.error?.code:j?.error)??"")).catch(()=>"");throw Object.assign(Error(String(response.status)),{code});}
   setForbidden(false);setLoginRequired(false);return response.json() as Promise<T>;
@@ -166,7 +166,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    finally{if(alive)timer=setTimeout(()=>void run(),realtimeReady.current?30000:3000);}}
   timer=setTimeout(()=>void run(),query?250:0);
   return()=>{alive=false;invalidate();clearTimeout(timer);};
- },[invalidate,query,queue,channel,range,label,offset,refresh]);
+ },[invalidate,query,queue,channel,range,label,fromDate,throughDate,offset,refresh]);
  useEffect(()=>{if(!notice)return;const x=setTimeout(()=>setNotice(null),4200);return()=>clearTimeout(x);},[notice]);
 
  /* divider for first load of a conversation */
@@ -273,14 +273,14 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
     <div className={s.list} onTouchStart={e=>{const el=e.currentTarget;swipeY.current=el.scrollTop<=0?{y:e.touches[0].clientY,t:Date.now()}:null;}} onTouchMove={e=>{if(!swipeY.current)return;const d=e.touches[0].clientY-swipeY.current.y;if(d>0)setPtr(Math.min(60,d*.5));}} onTouchEnd={()=>{if(swipeY.current&&ptr>40){setPtr(40);void refresh().catch(()=>{}).finally(()=>setTimeout(()=>setPtr(0),500));}else setPtr(0);swipeY.current=null;}}>
      <div className={s.ptr} style={{height:ptr}}><div className={s.spin}/></div>
      {threads.map(item=>{const sender=item.preview_sender;const pv=(sender==="seller"?t("You: ","আপনি: "):sender==="ai"?"AI: ":"")+(item.preview||t("Attachment","সংযুক্তি"));
-      return <div key={item.id} ref={el=>{if(el)rowRefs.current.set(item.id,el);else rowRefs.current.delete(item.id);}} role="button" tabIndex={0} data-thread-id={item.id} aria-current={selected===item.id} className={`${s.cv} ${selected===item.id?s.cur:""} ${newRows.has(item.id)?s.rowin:""}`}
-       onClick={()=>selectThread(item.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectThread(item.id);}else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();(e.currentTarget[e.key==="ArrowDown"?"nextElementSibling":"previousElementSibling"] as HTMLElement|null)?.focus();}}}>
+      return <div key={item.id} ref={el=>{if(el)rowRefs.current.set(item.id,el);else rowRefs.current.delete(item.id);}} role="button" tabIndex={0} data-thread-id={item.id} aria-current={selected===item.id} aria-pressed={selected===item.id} className={`${s.cv} ${selected===item.id?s.cur:""} ${newRows.has(item.id)?s.rowin:""}`}
+       onClick={()=>selectThread(item.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectThread(item.id);}else if(["ArrowDown","ArrowUp","Home","End"].includes(e.key)){e.preventDefault();const index=threads.findIndex(x=>x.id===item.id),target=threads[e.key==="Home"?0:e.key==="End"?threads.length-1:Math.max(0,Math.min(threads.length-1,index+(e.key==="ArrowDown"?1:-1)))];if(target){rowRefs.current.get(target.id)?.focus();selectThread(target.id);}}}}>
        <div className={s.av}>{<AvatarPhoto workspaceId={workspaceId} threadId={item.id} name={item.name}/>}<ChannelBadge channel={item.channel} size={18}/></div>
        <div className={s.cm}><b>{item.name}</b><span className={item.unread>0?s.strong:undefined}>{pv}</span></div>
        <div className={s.cr}><span>{listTime(item.last_activity_at,bn)}</span>{item.unread>0?<span className={s.un} aria-label={t(`${item.unread} unread`,`${item.unread}টি অপঠিত`)}>{item.unread>99?"99+":num(item.unread,bn)}</span>:item.overdue?<span className={s.od}>{t("Overdue","দেরি")}</span>:null}</div>
       </div>;})}
      {!loaded&&!error&&<p className={s.empty} role="status">{t("Loading conversations…","কথোপকথন আসছে…")}</p>}
-     {loaded&&!threads.length&&<div className={s.empty}>{t("No conversations match these filters.","এই ফিল্টারে কোনো কথোপকথন নেই।")}{(queue!=="all"||channel||range||label||query)&&<div><button type="button" onClick={()=>{invalidate();setQueue("all");setChannel("");setRange("");setLabel("");setQuery("");setOffset(0);}}>{t("Clear filters","ফিল্টার মুছুন")}</button></div>}</div>}
+     {loaded&&!threads.length&&<div className={s.empty}>{t("No conversations match these filters.","এই ফিল্টারে কোনো কথোপকথন নেই।")}{(queue!=="all"||channel||range||label||query||fromDate||throughDate)&&<div><button type="button" onClick={()=>{invalidate();setQueue("all");setChannel("");setRange("");setLabel("");setFromDate("");setThroughDate("");setQuery("");setOffset(0);}}>{t("Clear filters","ফিল্টার মুছুন")}</button></div>}</div>}
      {loaded&&(offset>0||threads.length>=50)&&<div className={s.pager}><button type="button" disabled={offset===0} onClick={()=>{invalidate();setOffset(Math.max(0,offset-50));}}>{t("Previous","আগের")}</button><span>{num(offset+1,bn)}–{num(offset+threads.length,bn)}</span><button type="button" disabled={threads.length<50||offset>=10000} onClick={()=>{invalidate();setOffset(offset+50);}}>{t("Next","পরের")}</button></div>}
     </div>
     <nav className={s.foot} aria-label={t("Inbox settings","ইনবক্স সেটিংস")}><Link href="/settings/channels"><I n="set" size={16}/>{t("Channels","চ্যানেল")}</Link><Link href="/settings/devices"><I n="act" size={16}/>{t("Devices","ডিভাইস")}</Link></nav>
@@ -318,7 +318,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
      </div>
      <button type="button" className={`${s.fab} ${!atBottom?s.show:""} ${missed?s.has:""}`} onClick={toBottom} aria-label={t("Scroll to latest","নিচে যান")}><I n="back"/>{missed>0&&<u>{num(missed,bn)}</u>}</button>
     </div>
-    <Composer key={selected} workspaceId={workspaceId} threadId={selected} bn={bn} call={call} caps={caps} channel={chosen?.channel??""} canSend={canSend} windowOpen={windowOpen} offline={offline} busy={busy}
+    <Composer key={selected} actorId={actorId} workspaceId={workspaceId} threadId={selected} bn={bn} call={call} caps={caps} channel={chosen?.channel??""} canSend={canSend} windowOpen={windowOpen} offline={offline} busy={busy}
      text={text} onText={changeText} onSendText={()=>void sendText()} replyTo={replyTo} replyWho={replyWho} onCancelReply={()=>setReplyTo(null)} onSent={async()=>{stick.current=true;await refresh();}} toast={toast} onBusy={setComposeBusy} productsEnabled={productsEnabled}/>
     </>}
    </div>
@@ -337,11 +337,12 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    {viewer&&<Viewer list={viewer.list} start={viewer.i} bn={bn} workspaceId={workspaceId} threadId={selected??""} who={customerName} onClose={()=>setViewer(null)}/>}
 
    <Sheet open={sheet==="filter"} onClose={()=>setSheet("")} label={t("Filters","ফিল্টার")}>
-    <h4>{t("Filters","ফিল্টার")}<button type="button" onClick={()=>{invalidate();setQueue("all");setChannel("");setRange("");setLabel("");setOffset(0);}}>{t("Reset","রিসেট")}</button></h4>
+    <h4>{t("Filters","ফিল্টার")}<button type="button" onClick={()=>{invalidate();setQueue("all");setChannel("");setRange("");setLabel("");setFromDate("");setThroughDate("");setOffset(0);}}>{t("Reset","রিসেট")}</button></h4>
     <div className={s.sl}>{t("Channel","চ্যানেল")}</div><div className={s.pills}>{channels.map(c=><button key={c.id} type="button" className={channel===c.id?s.on:undefined} onClick={()=>{invalidate();setChannel(c.id);setOffset(0);}}>{bn?c.bn:c.en}</button>)}</div>
     <div className={s.sl}>{t("Status","অবস্থা")}</div><div className={s.pills}>{queues.map(c=><button key={c.id} type="button" className={queue===c.id?s.on:undefined} onClick={()=>{invalidate();setQueue(c.id);setOffset(0);}}>{bn?c.bn:c.en}</button>)}</div>
     <div className={s.sl}>{t("Time","সময়")}</div><div className={s.pills}>{times.map(c=><button key={c.id} type="button" className={range===c.id?s.on:undefined} onClick={()=>{invalidate();setRange(c.id);setOffset(0);}}>{bn?c.bn:c.en}</button>)}</div>
-    <div className={s.sl}>{t("Exact label","নির্দিষ্ট লেবেল")}</div><input className={s.field} data-gramm="false" data-enable-grammarly="false" autoComplete="off" value={label} maxLength={40} placeholder={t("e.g. vip","যেমন: vip")} onChange={e=>{invalidate();setLabel(e.target.value);setOffset(0);}}/>
+    <div className={s.sl}>{t("Exact label","নির্দিষ্ট লেবেল")}</div><input className={s.field} data-gramm="false" data-enable-grammarly="false" autoComplete="off" aria-label={t("Exact label","নির্দিষ্ট লেবেল")} value={label} maxLength={40} placeholder={t("e.g. vip","যেমন: vip")} onChange={e=>{invalidate();setLabel(e.target.value);setOffset(0);}}/>
+    <label>{t("From (UTC)","শুরু (UTC)")}<input className={s.field} type="date" value={fromDate} onChange={e=>{invalidate();setFromDate(e.target.value);setOffset(0);}}/></label><label>{t("Through (UTC)","শেষ (UTC)")}<input className={s.field} type="date" value={throughDate} onChange={e=>{invalidate();setThroughDate(e.target.value);setOffset(0);}}/></label>
     <button type="button" className={s.btn} onClick={()=>setSheet("")}>{t("Show conversations","কথোপকথন দেখুন")}</button>
    </Sheet>
    <Sheet open={sheet==="forward"} onClose={()=>setSheet("")} label={t("Forward","ফরওয়ার্ড")}>
@@ -361,7 +362,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    </Sheet>
    <Sheet open={sheet==="tools"} onClose={()=>setSheet("")} label={t("Conversation tools","কথোপকথনের কাজ")}>
     <h4>{t("Conversation tools","কথোপকথনের কাজ")}<button type="button" onClick={()=>setSheet("")}>{t("Close","বন্ধ")}</button></h4>
-    {selected&&<div className={`${legacy.root} ${s.tools}`} inert={composeBusy}><InboxWorkflow key={selected} workspaceId={workspaceId} actorId={actorId} threadId={selected} customerName={customerName} bn={bn} onInsert={v=>{changeText(v);setSheet("");}} onChange={refresh} onBusy={setWorkflowBusy}/></div>}
+    {selected&&<div className={`${legacy.root} ${s.tools}`} inert={composeBusy}><InboxWorkflow key={selected} initialOpen workspaceId={workspaceId} actorId={actorId} threadId={selected} customerName={customerName} bn={bn} onInsert={v=>{changeText(v);setSheet("");}} onChange={refresh} onBusy={setWorkflowBusy}/></div>}
    </Sheet>
    {draftError&&<p className={s.alert} role="alert">{t("Could not save your draft. Keep your text and retry.","খসড়া সংরক্ষণ করা যায়নি। লেখা রেখে আবার চেষ্টা করুন।")}</p>}
   </div>

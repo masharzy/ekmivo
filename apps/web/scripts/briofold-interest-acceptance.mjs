@@ -20,11 +20,11 @@ export async function runInterestAcceptance({origin,browser,control,sessions}){
   const reminder=randomUUID();await db`SELECT briofold_customers_write(${store},'live',${actor},${randomUUID()},'followup',${db.json({id:interested,revision:1,followup_id:reminder,due_at:new Date(Date.now()+3600000).toISOString(),time_zone:'Asia/Dhaka',body:'Fictional sales follow-up',kind:'reminder',quiet_start:'',quiet_end:''})})`;
   assert.equal((await db`SELECT status FROM briofold_customer_followups WHERE id=${reminder}`)[0].status,'scheduled');
   context=await browser.newContext();await context.addCookies([{name:'briofold-session',value:sessions.owner,url:origin},{name:'briofold-default-workspace',value:actor+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);
-  const page=await context.newPage();await page.goto(origin+'/orders/to-chase');await page.getByRole('heading',{name:'Qualified interest without an order',exact:true}).waitFor();
-  await page.getByRole('button',{name:'Fictional qualified interest',exact:true}).click();await page.getByText('Fictional sales follow-up',{exact:true}).waitFor();
-  await page.getByLabel('Lead stage',{exact:true}).selectOption('won');await page.getByRole('button',{name:'Save profile',exact:true}).click();
-  await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();await page.reload();await page.getByRole('heading',{name:'Qualified interest without an order',exact:true}).waitFor();
-  assert.equal(await page.getByRole('button',{name:'Fictional qualified interest',exact:true}).count(),0,'Won lead stayed in not-converted interest');
+  const page=await context.newPage();await page.goto(origin+'/orders/to-chase');await page.getByRole('region',{name:'Interested, no order yet',exact:true}).waitFor();
+  await page.getByRole('row').filter({has:page.getByText('Fictional qualified interest',{exact:true})}).click();await page.getByRole('tab',{name:/^Follow-ups/}).click();await page.getByText('Fictional sales follow-up',{exact:true}).waitFor();
+  await page.getByRole('tab',{name:'Profile',exact:true}).click();await page.getByRole('dialog').getByLabel('Stage',{exact:true}).selectOption('won');await page.getByRole('button',{name:'Save',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'Saved.'}).waitFor();await page.reload();await page.getByRole('region',{name:'Interested, no order yet',exact:true}).waitFor();
+  assert.equal(await page.getByRole('row').filter({has:page.getByText('Fictional qualified interest',{exact:true})}).count(),0,'Won lead stayed in not-converted interest');
   const response=await context.request.get(origin+`/api/go/workspaces/${store}/crm?environment=live&filter=unconverted`);assert.equal(response.status(),200);assert.deepEqual(new Set((await response.json()).items.map(x=>x.id)),new Set([proposal,cancelled]));
   console.log('UNCONVERTED INTEREST SQL/Go/Next/browser PASS: no draft order required, stage/order/realm filter, viewer masking, internal follow-up and won transition after reload');
  }finally{await context?.close();await db.end({timeout:3});}

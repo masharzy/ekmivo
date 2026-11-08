@@ -48,7 +48,7 @@ export async function runChannelPolicies({origin,browser,control,sessions}){
   response=await viewerContext.request.post(endpoint,{headers:{Origin:origin},data:{...initial,revision:3,operation_key:randomUUID()}});assert.equal(response.status(),403);
   response=await context.request.post(origin+`/api/go/workspaces/${store}/inbox?environment=live`,{headers:{Origin:origin},data:{action:'send',thread_id:thread,body:{text:'Manual reply while automatic work is disabled',idempotency_key:randomUUID()}}});assert.equal(response.status(),200,'human-only channel blocked a manual reply');
   const page=await context.newPage();page.setDefaultTimeout(30000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(origin+'/settings/channels');await page.getByRole('link',{name:'Channel settings',exact:true}).first().waitFor();
+  await page.goto(origin+'/settings/channels');await page.getByRole('link',{name:'Settings',exact:true}).first().waitFor();
   await page.goto(origin+'/settings/channels/'+connection);await page.getByLabel('Response mode',{exact:true}).selectOption('ai');
   await page.getByLabel('Reply SLA (minutes)',{exact:true}).fill('10');
   await page.getByRole('button',{name:'Save channel settings',exact:true}).click();await page.getByText('Channel settings saved.',{exact:true}).waitFor();

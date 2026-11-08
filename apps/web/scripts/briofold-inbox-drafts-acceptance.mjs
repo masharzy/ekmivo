@@ -18,8 +18,8 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   await page.goto(origin+'/inbox');
   const choose=async n=>{await page.getByRole('button',{name:new RegExp('Draft fixture customer '+n)}).click();await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();};
   await choose(0);
-  await page.getByRole('button',{name:'Older messages',exact:true}).click();await page.getByText('Fictional long conversation 1',{exact:true}).waitFor();
-  await page.getByRole('button',{name:'Latest messages',exact:true}).click();await page.getByText('Fictional long conversation 65',{exact:true}).last().waitFor();
+  await page.getByRole('button',{name:'Load older messages',exact:true}).click();await page.getByText('Fictional long conversation 1',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Scroll to latest',exact:true}).click();await page.getByText('Fictional long conversation 65',{exact:true}).last().waitFor();
   await page.getByRole('textbox',{name:'Message',exact:true}).fill('Unsent first conversation');
   await choose(1);await page.getByRole('textbox',{name:'Message',exact:true}).fill('Unsent second conversation');
   await choose(0);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Unsent first conversation');
@@ -29,8 +29,7 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   // Commit a real send, lose only the response, then reload and retry the saved intent.
   let dropped=false;const endpoint='**/api/go/workspaces/'+workspace+'/inbox?*';
   await page.route(endpoint,async route=>{const body=route.request().postDataJSON();if(body?.action==='send'&&!dropped){await route.fetch();dropped=true;await route.abort('failed');}else await route.continue();});
-  const failed=page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send';}catch{return false;}}});
-  await page.getByRole('button',{name:'Send',exact:true}).click();await failed;
+  await Promise.all([page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send';}catch{return false;}}}),page.getByRole('button',{name:'Send',exact:true}).click()]);
   await page.getByRole('button',{name:'Send',exact:true}).waitFor();await page.waitForFunction(()=>!document.querySelector('textarea[aria-label="Message"]')?.disabled);
   await page.reload();await choose(0);assert.equal(await page.getByRole('textbox',{name:'Message',exact:true}).inputValue(),'Unsent first conversation');
   await page.getByRole('button',{name:'Send',exact:true}).click();await page.waitForFunction(()=>document.querySelector('textarea[aria-label="Message"]')?.value==='');
@@ -41,27 +40,42 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   let mediaId='',lostMedia=false;
   // The browser fixture replaces private file storage/scanning only. Queueing and
   // authorization still run through the real Next proxy, Go API and PostgreSQL.
+  let uploadIntent;
+  const vpsEndpoint='https://api.briofold.tech/v1/workspaces/'+workspace+'/inbox?environment=live';
+  const cors={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Credentials':'true','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
+  await page.route(vpsEndpoint,async route=>{
+   if(route.request().method()==='OPTIONS'){await route.fulfill({status:204,headers:cors});return;}
+   const body=route.request().postDataJSON();
+   if(body?.action==='media-upload-ticket'){
+    uploadIntent=body;mediaId=body.body.media_id;
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({url:'https://api.briofold.tech/v1/channels/upload/'+mediaId,ticket:'fictional-private-storage-ticket'}),headers:cors});
+   }else if(body?.action==='send-media'){
+    const response=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live',{headers:{Origin:origin},data:body});
+    assert.equal(response.status(),200,await response.text());
+    if(!lostMedia){lostMedia=true;await route.abort('failed');}else await route.fulfill({response,headers:{...response.headers(),...cors}});
+   }else await route.continue();
+  });
+  await page.route('https://api.briofold.tech/v1/channels/upload/*',async route=>{
+   if(route.request().method()==='OPTIONS'){await route.fulfill({status:204,headers:cors});return;}
+   assert.equal(route.request().headers().authorization,'Bearer fictional-private-storage-ticket');
+   const raw=route.request().postDataBuffer(),body=uploadIntent.body;
+   assert.equal(createHash('sha256').update(raw).digest('hex'),body.sha256);
+   await db`SELECT inbox_media_save(${workspace},'live',${uploadIntent.thread_id},${mediaId},${'fictional-ci/'+mediaId},${body.name},'image/png',${raw.length},${body.sha256},0)`;
+   await route.fulfill({status:200,contentType:'application/json',body:'{"ok":true}',headers:cors});
+  });
   await page.route(endpoint,async route=>{
    const body=route.request().postDataJSON();
-   if(body?.action==='media-upload'){
-    mediaId=body.body.media_id;
-    const raw=Buffer.from(body.body.data,'base64');
-    const result=(await db`SELECT inbox_media_save(${workspace},'live',${body.thread_id},${mediaId},${'fictional-ci/'+mediaId},${body.body.name},'image/png',${raw.length},${createHash('sha256').update(raw).digest('hex')},0) AS data`)[0].data;
-    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
-   }else if(body?.action==='media-get'){
-    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({data:png.toString('base64'),mime:'image/png',name:'Fictional attachment.png'})});
-   }else if(body?.action==='send-media'&&!lostMedia){await route.fetch();lostMedia=true;await route.abort('failed');}
+   if(body?.action==='media-get')await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({data:png.toString('base64'),mime:'image/png',name:'Fictional attachment.png'})});
    else await route.fallback();
   });
   await page.getByLabel('Attach file',{exact:true}).setInputFiles({name:'Fictional attachment.png',mimeType:'image/png',buffer:png});
-  await page.getByText('Fictional attachment.png · 1 KB',{exact:true}).waitFor();
-  const attachmentFailed=page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send-media';}catch{return false;}}});
-  await page.getByRole('button',{name:'Send attachment',exact:true}).click();await attachmentFailed;
+  await page.getByRole('dialog',{name:'Photo preview',exact:true}).getByRole('img',{name:'Fictional attachment.png',exact:true}).first().waitFor();
+  await Promise.all([page.waitForEvent('requestfailed',{predicate:r=>{try{return r.postDataJSON()?.action==='send-media';}catch{return false;}}}),page.getByRole('button',{name:'Send attachment',exact:true}).click()]);
   await page.getByRole('alert').filter({hasText:'Could not confirm the attachment.'}).waitFor();
   await page.reload();await choose(0);await page.getByRole('button',{name:'Send attachment',exact:true}).click();
   await page.getByRole('button',{name:'Discard attachment',exact:true}).waitFor({state:'detached'});
   assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller' AND content->>'media_id'=${mediaId}`)[0].n),1,'lost attachment response queued twice');
-  await page.getByRole('button',{name:/Open attachment/}).last().click();await page.getByRole('img',{name:'Fictional attachment.png',exact:true}).waitFor();
+  await page.getByRole('img',{name:'Fictional attachment.png',exact:true}).last().click();await page.getByRole('dialog',{name:'Photo',exact:true}).getByRole('img',{name:'Fictional attachment.png',exact:true}).waitFor();
   // A payload over the former 32-KB proxy cap must reach the real Go scanner.
   const scan=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live',{headers:{Origin:origin},data:{action:'media-upload',thread_id:(await db`SELECT id FROM inbox_threads WHERE workspace_id=${workspace} AND customer_name='Draft fixture customer 0'`)[0].id,body:{media_id:randomUUID(),data:Buffer.alloc(100000,65).toString('base64'),mime:'text/plain',name:'Fictional scanner probe.txt'}}});
   assert.equal(scan.status(),503);assert.equal((await scan.json()).error?.code,'FILE_SCAN_UNCONFIRMED','proxy blocked before secure scanner or scanner was bypassed');

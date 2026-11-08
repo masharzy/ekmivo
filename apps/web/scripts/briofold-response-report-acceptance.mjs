@@ -51,7 +51,8 @@ export async function runBriofoldResponseReport({control,sessions,origin,browser
   const conversion=page.getByRole('region',{name:'Lead stage conversion',exact:true});
   await conversion.getByText('25%',{exact:false}).waitFor();
   await conversion.getByText('2 / 8',{exact:true}).waitFor();
-  await conversion.getByText('A current CRM stage ratio, not attributed marketing conversions or verified payment revenue.',{exact:true}).waitFor();
+  await conversion.getByText('Won among all leads',{exact:true}).waitFor();
+  await page.getByText('Counts for your selected business. Orders here are workflow counts, not revenue — see Payment reports for verified money.',{exact:true}).waitFor();
   assert.equal(await region.getByRole('alert').count(),0);
   assert.equal(await region.locator('dl div').filter({has:page.getByText('Average first response (seconds)',{exact:true})}).locator('dd').innerText(),'360');
   await region.getByRole('heading',{name:'Current team workload (up to 50 members)',exact:true}).waitFor();

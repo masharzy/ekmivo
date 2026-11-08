@@ -23,7 +23,7 @@ export async function runWalletBrowser({origin,browser,control,sessions}){
   assert.equal((await context.request.get(origin+'/api/ai-credits/statement?workspace_id='+randomUUID())).status(),409);
   assert.equal((await viewerContext.request.get(endpoint)).status(),403);
   const page=await context.newPage();page.setDefaultTimeout(30000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(origin+'/settings/billing');await page.getByRole('heading',{name:'AI prepaid credits',exact:true}).waitFor();
+  await page.goto(origin+'/settings/billing');await page.getByRole('heading',{name:'Billing & usage',exact:true}).waitFor();
   await page.getByText('Awaiting verification',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Continue to payment',exact:true}).count(),0,'paused top-up offered a live purchase');
   await page.getByText('AI credit statement',{exact:true}).click();
@@ -32,14 +32,14 @@ export async function runWalletBrowser({origin,browser,control,sessions}){
   await page.getByRole('button',{name:'Load older activity',exact:true}).click();await statement.locator('tbody tr').nth(64).waitFor();assert.equal(await statement.locator('tbody tr').count(),65);
   assert.equal(await page.getByRole('button',{name:'Load older activity',exact:true}).count(),0);
   await db`UPDATE briofold_ai_wallets SET available_minor=0 WHERE workspace_id=${store}`;
-  await page.reload();await page.getByRole('status').filter({hasText:/No spendable AI credits remain|No published AI model rate/}).waitFor();
-  const privatePage=await viewerContext.newPage();await privatePage.goto(origin+'/settings/billing');await privatePage.getByRole('alert').filter({hasText:'AI credit balance is currently unavailable'}).waitFor();
+  await page.reload();await page.getByRole('status').filter({hasText:/No credits left|AI pricing is not published yet/}).waitFor();
+  const privatePage=await viewerContext.newPage();await privatePage.goto(origin+'/settings/billing');await privatePage.getByRole('alert').filter({hasText:'AI credit balance is unavailable right now'}).waitFor();
   assert.equal(await privatePage.getByText('AI credit statement',{exact:true}).count(),0);
   await db`UPDATE workspace_members SET role='admin' WHERE workspace_id=${store} AND user_id=${viewer}`;
   await db`INSERT INTO pg13_member_grants(workspace_id,user_id,capability,allowed) VALUES(${store},${viewer},'product:ai',false)`;
   assert.equal((await viewerContext.request.get(endpoint)).status(),403,'AI product denial exposed prepaid activity');
-  await privatePage.reload();await privatePage.getByRole('alert').filter({hasText:'AI credit balance is currently unavailable'}).waitFor();
-  let cases=0;for(const lang of ['en','bn']){await context.addCookies([{name:'briofold-locale',value:lang,url:origin}]);for(const theme of ['light','dark']){await context.addCookies([{name:'briofold-theme',value:theme,url:origin}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});await page.goto(origin+'/settings/billing');await page.getByRole('heading',{name:lang==='bn'?'AI প্রিপেইড ক্রেডিট':'AI prepaid credits',exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
+  await privatePage.reload();await privatePage.getByRole('alert').filter({hasText:'AI credit balance is unavailable right now'}).waitFor();
+  let cases=0;for(const lang of ['en','bn']){await context.addCookies([{name:'briofold-locale',value:lang,url:origin}]);for(const theme of ['light','dark']){await context.addCookies([{name:'briofold-theme',value:theme,url:origin}]);await page.emulateMedia({colorScheme:theme});for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});await page.goto(origin+'/settings/billing');await page.getByRole('heading',{name:lang==='bn'?'বিলিং ও ব্যবহার':'Billing & usage',exact:true}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));cases++;}}}
   assert.deepEqual(errors,[]);console.log('AI WALLET CANONICAL BROWSER PASS: authoritative balance/low credit/pending top-up, 65-row keyset statement, server Store binding, current role/product denial, paused funding and responsive cases:',cases);
  }finally{await context?.close();await viewerContext?.close();await db.end({timeout:3});}
 }

@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable @next/next/no-img-element -- previews are in-memory blob URLs */
+/* eslint-disable @next/next/no-img-element -- previews are private blob URLs */
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {PointerEvent as RPE} from "react";
 import {I} from "./icons";
@@ -8,10 +8,17 @@ import {maxImages,sendReason,mmss,money,num,type Cap,type Msg,type Product} from
 import {chooseRecorder,finishRecording,type RecorderChoice} from "./voice";
 import {useMedia} from "./bubbles";
 import s from "./inbox.module.css";
+import {mediaDraftKey,readMediaDrafts,saveMediaDrafts,type PendingMedia} from "../../lib/client/inbox-media-drafts";
+import {registerDraft} from "../../lib/client/draft-navigation";
 
 export type Call=<T=unknown>(action:string,body?:object)=>Promise<T>;
-type Item={id:string;mediaId:string;key:string;blob:Blob;url:string;name:string;mime:string};
+type Item={id:string;mediaId:string;key:string;blob:Blob|null;url:string;name:string;mime:string;pending?:PendingMedia};
 const MAX_BYTES=5*1024*1024;
+
+function MediaPreview({item,workspaceId,threadId,className}:{item:Item;workspaceId:string;threadId:string;className?:string}){
+ const {media}=useMedia(workspaceId,threadId,item.url?undefined:item.mediaId);
+ return item.mime.startsWith("image/")?<img className={className} src={item.url||media?.url} alt={item.name}/>:<span className={className}>{item.name}</span>;
+}
 
 async function normalizeImage(file:File):Promise<{blob:Blob;mime:string;name:string}|null>{
  if(!file.type.startsWith("image/")||file.size>MAX_BYTES)return null;
@@ -23,14 +30,20 @@ function ProductRow({p,workspaceId,threadId,bn,onPick}:{p:Product;workspaceId:st
  return <button type="button" className={s.lr} onClick={()=>onPick(p)}><span className={s.lth}>{media?.mime.startsWith("image/")?<img src={media.url} alt=""/>:<I n="bag" size={20}/>}</span><span className={s.lbody}><b>{p.name}</b><small>{p.sizes||""}</small></span><span className={s.lprice}>{money(p.price_minor,bn,p.currency)}</span></button>;
 }
 
-export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:Call;caps:Cap;channel:string;canSend:boolean;windowOpen:boolean;offline:boolean;busy:boolean;
+export function Composer(p:{actorId:string;workspaceId:string;threadId:string;bn:boolean;call:Call;caps:Cap;channel:string;canSend:boolean;windowOpen:boolean;offline:boolean;busy:boolean;
  text:string;onText:(v:string)=>void;onSendText:()=>void;replyTo:Msg|null;replyWho:string;onCancelReply:()=>void;onSent:()=>Promise<void>|void;toast:(t:string)=>void;onBusy:(b:boolean)=>void;productsEnabled:boolean}){
  const {bn,call,caps,toast}=p,t=(en:string,be:string)=>bn?be:en;
  const ta=useRef<HTMLTextAreaElement>(null),galRef=useRef<HTMLInputElement>(null),camRef=useRef<HTMLInputElement>(null),docRef=useRef<HTMLInputElement>(null);
  const [attach,setAttach]=useState(false),[items,setItems]=useState<Item[]>([]),[cur,setCur]=useState(0),[pvOpen,setPvOpen]=useState(false),[sending,setSending]=useState(false);
  const [prodOpen,setProdOpen]=useState(false),[products,setProducts]=useState<Product[]|null>(null);
  const has=p.text.trim().length>0,disabled=p.offline||sending;
- const itemsRef=useRef(items);itemsRef.current=items;
+ const itemsRef=useRef(items);useEffect(()=>{itemsRef.current=items;},[items]);
+ const draftKey=mediaDraftKey(p.actorId,p.workspaceId,p.threadId),persisted=useRef<PendingMedia[]>([]);
+ const [mediaError,setMediaError]=useState("");
+ function persist(next:PendingMedia[]){saveMediaDrafts(window.sessionStorage,draftKey,next);persisted.current=next;}
+ useEffect(()=>{let live=true;queueMicrotask(()=>{if(!live)return;try{const restored=readMediaDrafts(window.sessionStorage,draftKey);persisted.current=restored;if(restored.length){setItems(restored.map(d=>({id:d.mediaId,mediaId:d.mediaId,key:d.sendKey,blob:null,url:"",name:d.name,mime:d.mime,pending:d})));setPvOpen(true);}}catch{setMediaError(t("Could not restore the attachment draft.","সংযুক্তির খসড়া ফেরত আনা যায়নি।"));}});return()=>{live=false;};},[draftKey]);// eslint-disable-line react-hooks/exhaustive-deps
+
+ useEffect(()=>{const leave=(e:BeforeUnloadEvent)=>{if(itemsRef.current.some(x=>!x.pending)){e.preventDefault();e.returnValue="";}};window.addEventListener("beforeunload",leave);return()=>window.removeEventListener("beforeunload",leave);},[]);
  useEffect(()=>{const el=ta.current;if(!el)return;el.style.height="38px";el.style.height=Math.min(96,Math.max(38,el.scrollHeight))+"px";},[p.text]);
  useEffect(()=>()=>{itemsRef.current.forEach(x=>URL.revokeObjectURL(x.url));},[]);
  useEffect(()=>{if(p.replyTo)ta.current?.focus();},[p.replyTo]);
@@ -40,18 +53,20 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   if(!files||!files.length)return;const room=maxImages-itemsRef.current.length;const list=Array.from(files).slice(0,Math.max(0,room));
   if(files.length>room)toast(t(`Up to ${maxImages} photos at a time`,`একসাথে সর্বোচ্চ ${num(maxImages,true)}টি ছবি`));
   const next:Item[]=[];
-  for(const f of list){const n=await normalizeImage(f);if(!n){toast(t("This image can't be sent (max 5 MB)","এই ছবি পাঠানো যাবে না (সর্বোচ্চ ৫ MB)"));continue;}next.push({id:crypto.randomUUID(),mediaId:crypto.randomUUID(),key:crypto.randomUUID(),blob:n.blob,url:URL.createObjectURL(n.blob),name:n.name,mime:n.mime});}
+  for(const f of list){const n=await normalizeImage(f);if(!n){toast(t("This image can't be sent (max 5 MB)","এই ছবি পাঠানো যাবে না (সর্বোচ্চ ৫ MB)"));continue;}next.push({id:crypto.randomUUID(),mediaId:crypto.randomUUID(),key:crypto.randomUUID(),blob:n.blob,url:URL.createObjectURL(n.blob),name:n.name.slice(0,200),mime:n.mime});}
   if(!next.length)return;setItems(prev=>{const all=[...prev,...next];setCur(prev.length);return all;});setPvOpen(true);
  },[toast,bn]);// eslint-disable-line react-hooks/exhaustive-deps
- function removeItem(i:number){setItems(prev=>{const x=prev[i];if(x)URL.revokeObjectURL(x.url);const n=prev.filter((_,j)=>j!==i);if(!n.length)setPvOpen(false);setCur(c=>Math.max(0,Math.min(c,n.length-1)));return n;});}
- function closePreview(){items.forEach(x=>URL.revokeObjectURL(x.url));setItems([]);setPvOpen(false);}
+ function removeItem(i:number){persist(persisted.current.filter(d=>d.mediaId!==items[i]?.mediaId));setItems(prev=>{const x=prev[i];if(x)URL.revokeObjectURL(x.url);const n=prev.filter((_,j)=>j!==i);if(!n.length)setPvOpen(false);setCur(c=>Math.max(0,Math.min(c,n.length-1)));return n;});}
+ function closePreview(){persist([]);itemsRef.current.forEach(x=>URL.revokeObjectURL(x.url));setItems([]);setPvOpen(false);}
  const rs=(e:unknown)=>{const r=sendReason(e,bn);return r?" — "+r:"";};
  async function vpsCall<T>(action:string,body:object):Promise<T>{
   const response=await fetch(`https://api.briofold.tech/v1/workspaces/${p.workspaceId}/inbox?environment=live`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,thread_id:p.threadId,body})});
   if(!response.ok){const error=await response.json().catch(()=>null);throw Object.assign(Error(String(response.status)),{code:response.status===401?"VPS_LOGIN_REQUIRED":error?.code??error?.error?.code??"UPLOAD_FAILED"});}
   return response.json() as Promise<T>;
  }
- async function uploadAndSend(item:Item,extra:object,mime=item.mime,duration?:number){
+ async function prepareUpload(item:Item,mime=item.mime,duration?:number):Promise<PendingMedia>{
+  if(item.pending)return item.pending;
+  if(!item.blob)throw Error("MISSING_ATTACHMENT");
   const bytes=await item.blob.arrayBuffer();
   const sha256=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("");
   const permit=await vpsCall<{url:string;ticket:string}>("media-upload-ticket",{media_id:item.mediaId,size:item.blob.size,sha256,mime,name:item.name,...(duration?{duration_ms:duration}:{})});
@@ -59,15 +74,27 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   if(target.origin!=="https://api.briofold.tech"||target.pathname!==`/v1/channels/upload/${item.mediaId}`)throw Error("INVALID_UPLOAD_TARGET");
   const response=await fetch(target,{method:"POST",credentials:"omit",headers:{"Authorization":`Bearer ${permit.ticket}`,"Content-Type":"application/octet-stream"},body:item.blob});
   if(!response.ok){const error=await response.json().catch(()=>null);throw Object.assign(Error(String(response.status)),{code:error?.code??error?.error?.code??"UPLOAD_FAILED"});}
-  await vpsCall("send-media",{media_id:item.mediaId,idempotency_key:item.key,...extra});
+  const draft:PendingMedia={mediaId:item.mediaId,sendKey:item.key,fingerprint:sha256,name:item.name,size:item.blob.size,uploaded:true,expires:Date.now()+86400000,mime,...(duration?{durationMs:duration}:{})}; // eslint-disable-line react-hooks/purity -- event/recording callback, never render
+  persist([...persisted.current.filter(d=>d.mediaId!==item.mediaId),draft]);item.pending=draft;return draft;
+ }
+ async function uploadAndSend(item:Item,extra:{batch_id?:string;reply_to?:string},mime=item.mime,duration?:number){
+  let draft=await prepareUpload(item,mime,duration);
+  if(!draft.batchId&&!draft.replyTo){draft={...draft,batchId:extra.batch_id,replyTo:extra.reply_to};persist(persisted.current.map(d=>d.mediaId===item.mediaId?draft:d));item.pending=draft;}
+  await vpsCall("send-media",{media_id:item.mediaId,idempotency_key:draft.sendKey,...(draft.batchId?{batch_id:draft.batchId}:{}),...(draft.replyTo?{reply_to:draft.replyTo}:{})});
+  persist(persisted.current.filter(d=>d.mediaId!==item.mediaId));
  }
  async function sendImages(){
   if(sending||!items.length)return;setSending(true);p.onBusy(true);const batch=items.length>1?crypto.randomUUID():undefined;let done=0;
   try{
+   // Persist the complete batch before dispatching its first message.
+   for(const item of items)await prepareUpload(item);
+   const frozen=items.map((item,i)=>({...item.pending!,batchId:item.pending?.batchId??batch,replyTo:item.pending?.replyTo??(i===0?p.replyTo?.id:undefined)}));
+   persist(frozen);items.forEach((item,i)=>{item.pending=frozen[i];});
    for(let i=0;i<items.length;i++){await uploadAndSend(items[i],{...(batch?{batch_id:batch}:{}),...(i===0&&p.replyTo?{reply_to:p.replyTo.id}:{})});done++;}
-   if(p.replyTo)p.onCancelReply();closePreview();await p.onSent();
+   setMediaError("");if(p.replyTo)p.onCancelReply();closePreview();await p.onSent();
   }catch(e){
    setItems(prev=>{prev.slice(0,done).forEach(x=>URL.revokeObjectURL(x.url));return prev.slice(done);});
+   setMediaError(t("Could not confirm the attachment. It is kept for retry.","সংযুক্তি নিশ্চিত হয়নি। আবার পাঠানোর জন্য রাখা আছে।"));
    toast((items.length===1?t("Couldn't send this photo. It is kept for retry.","ছবিটি পাঠানো যায়নি। আবার পাঠানোর জন্য রাখা আছে।"):t("Couldn't send all photos. Remaining ones are kept.","সব ছবি যায়নি। বাকিগুলো রাখা আছে।"))+rs(e));
   }finally{setSending(false);p.onBusy(false);}
  }
@@ -76,8 +103,9 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
  async function sendDoc(file:File|undefined){
   if(!file||sending)return;if(file.size>MAX_BYTES||!["application/pdf","text/plain"].includes(file.type)){toast(t("Only PDF or text up to 5 MB","শুধু ৫ MB পর্যন্ত PDF বা টেক্সট"));return;}
   setSending(true);p.onBusy(true);
-  try{await uploadAndSend({id:"",mediaId:crypto.randomUUID(),key:crypto.randomUUID(),blob:file,url:"",name:file.name.slice(0,200),mime:file.type},p.replyTo?{reply_to:p.replyTo.id}:{});if(p.replyTo)p.onCancelReply();await p.onSent();}
-  catch(e){toast(t("Couldn't send the file","ফাইল পাঠানো যায়নি")+rs(e));}finally{setSending(false);p.onBusy(false);}
+  const item:Item={id:crypto.randomUUID(),mediaId:crypto.randomUUID(),key:crypto.randomUUID(),blob:file,url:"",name:file.name.slice(0,200),mime:file.type};setItems([item]);setPvOpen(true);
+  try{await uploadAndSend(item,p.replyTo?{reply_to:p.replyTo.id}:{});if(p.replyTo)p.onCancelReply();closePreview();await p.onSent();}
+  catch(e){setMediaError(t("Could not confirm the attachment. It is kept for retry.","সংযুক্তি নিশ্চিত হয়নি। আবার পাঠানোর জন্য রাখা আছে।"));toast(t("Couldn't send the file","ফাইল পাঠানো যায়নি")+rs(e));}finally{setSending(false);p.onBusy(false);}
  }
  async function openProducts(){setAttach(false);setProdOpen(true);if(products)return;try{const r=await call<{items:Product[]}>("products");setProducts(r.items);}catch{setProducts([]);toast(t("Couldn't load products","পণ্য আনা যায়নি"));}}
  async function sendProduct(prod:Product){
@@ -91,24 +119,24 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
  const rec=useRef<Rec|null>(null),starting=useRef(false),holdAt=useRef(0),released=useRef(false);
  const [phase,setPhase]=useState<"idle"|"holding"|"locked">("idle"),[elapsed,setElapsed]=useState(0),[levels,setLevels]=useState<number[]>([]),[dx,setDx]=useState(0),[lockP,setLockP]=useState(0),[armed,setArmed]=useState(false),[paused,setPaused]=useState(false),[cancelling,setCancelling]=useState(false);
  const micOk=useMemo(()=>typeof window!=="undefined"&&!!navigator.mediaDevices?.getUserMedia&&!!chooseRecorder(),[]);
- const elapsedMs=(r:Rec)=>r.acc+(r.paused?0:Date.now()-r.seg);
+ const elapsedMs=(r:Rec)=>r.acc+(r.paused?0:Date.now()-r.seg); // eslint-disable-line react-hooks/purity -- event/recording callback, never render
  const cleanup=useCallback((r:Rec)=>{if(r.timer)clearInterval(r.timer);if(r.raf)cancelAnimationFrame(r.raf);r.stream.getTracks().forEach(x=>x.stop());void r.ctx?.close().catch(()=>{});},[]);
  async function startRec(e:RPE){
   if(!micOk||starting.current||rec.current||disabled||!p.canSend){if(!micOk)toast(t("Voice recording isn't supported in this browser","এই ব্রাউজারে ভয়েস রেকর্ড চলবে না"));return;}
-  starting.current=true;released.current=false;holdAt.current=Date.now();const pid=e.pointerId,x=e.clientX,y=e.clientY;(e.currentTarget as HTMLElement).setPointerCapture?.(pid);
+  starting.current=true;released.current=false;holdAt.current=Date.now();const pid=e.pointerId,x=e.clientX,y=e.clientY;(e.currentTarget as HTMLElement).setPointerCapture?.(pid); // eslint-disable-line react-hooks/purity -- event/recording callback, never render
   /* AudioContext must be created inside the gesture or Chrome keeps it suspended (flat waveform) */
   let ctx:AudioContext|undefined;try{ctx=new AudioContext();void ctx.resume();}catch{}
   setPhase("holding");setElapsed(0);setLevels([]);setDx(0);setLockP(0);setArmed(false);setPaused(false);setCancelling(false);
   try{
    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
    const choice=chooseRecorder()!;const mr=new MediaRecorder(stream,{mimeType:choice.mime});
-   const r:Rec={stream,mr,parts:[],choice,acc:0,seg:Date.now(),paused:false,locked:false,x,y,pointer:pid,cancelled:false,stopped:false};
+   const r:Rec={stream,mr,parts:[],choice,acc:0,seg:Date.now(),paused:false,locked:false,x,y,pointer:pid,cancelled:false,stopped:false}; // eslint-disable-line react-hooks/purity -- event/recording callback, never render
    mr.ondataavailable=ev=>{if(ev.data.size)r.parts.push(ev.data);};
    try{if(ctx){void ctx.resume();const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();an.fftSize=512;an.smoothingTimeConstant=.4;src.connect(an);r.ctx=ctx;r.an=an;}}catch{}
    rec.current=r;
    if(r.stopped){cleanup(r);rec.current=null;return;}
    if(released.current){/* finger lifted while the mic permission/start was pending */
-    if(Date.now()-holdAt.current<350){cleanup(r);rec.current=null;setPhase("idle");toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;}
+    if(Date.now()-holdAt.current<350){cleanup(r);rec.current=null;setPhase("idle");toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;} // eslint-disable-line react-hooks/purity -- event/recording callback, never render
     r.locked=true;setPhase("locked");}
    mr.start(250);navigator.vibrate?.(10);
    r.timer=setInterval(()=>setElapsed(elapsedMs(r)),200);
@@ -137,22 +165,25 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   setSending(true);p.onBusy(true);
   try{
    const ext=out.mime==="audio/ogg"?"ogg":out.mime==="audio/mp4"?"m4a":"audio";
-   await uploadAndSend({id:"",mediaId:crypto.randomUUID(),key:crypto.randomUUID(),blob:out.blob,url:"",name:`voice-${Date.now()}.${ext}`,mime:out.mime},p.replyTo?{reply_to:p.replyTo.id}:{},out.mime,Math.max(1000,out.durationMs));
-   if(p.replyTo)p.onCancelReply();await p.onSent();
-  }catch(e){toast(t("Voice note couldn't be sent","ভয়েস পাঠানো যায়নি")+rs(e));}finally{setSending(false);p.onBusy(false);}
+   const item:Item={id:crypto.randomUUID(),mediaId:crypto.randomUUID(),key:crypto.randomUUID(),blob:out.blob,url:"",name:`voice-${Date.now()}.${ext}`,mime:out.mime};setItems([item]);setPvOpen(true); // eslint-disable-line react-hooks/purity -- event/recording callback, never render
+   await uploadAndSend(item,p.replyTo?{reply_to:p.replyTo.id}:{},out.mime,Math.max(1000,out.durationMs));
+   if(p.replyTo)p.onCancelReply();closePreview();await p.onSent();
+  }catch(e){setMediaError(t("Could not confirm the attachment. It is kept for retry.","সংযুক্তি নিশ্চিত হয়নি। আবার পাঠানোর জন্য রাখা আছে।"));toast(t("Voice note couldn't be sent","ভয়েস পাঠানো যায়নি")+rs(e));}finally{setSending(false);p.onBusy(false);}
  }
  function upRec(){released.current=true;const r=rec.current;if(!r){return;}
-  if(r.locked||phase==="locked")return;if(Date.now()-holdAt.current<350){void endRec(false);toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;}void endRec(true);}
+  if(r.locked||phase==="locked")return;if(Date.now()-holdAt.current<350){void endRec(false);toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;}void endRec(true);} // eslint-disable-line react-hooks/purity -- event/recording callback, never render
  function togglePause(){const r=rec.current;if(!r)return;if(r.paused){r.mr.resume();r.seg=Date.now();r.paused=false;setPaused(false);}else{r.mr.pause();r.acc+=Date.now()-r.seg;r.paused=true;setPaused(true);}}
  useEffect(()=>()=>{const r=rec.current;if(r){r.stopped=true;try{if(r.mr.state!=="inactive")r.mr.stop();}catch{}cleanup(r);rec.current=null;}},[cleanup]);
  useEffect(()=>{if(!p.windowOpen&&rec.current)void endRec(false);},[p.windowOpen]);// eslint-disable-line react-hooks/exhaustive-deps
 
+ useEffect(()=>registerDraft({id:`inbox-attachment:${p.actorId}:${p.workspaceId}:${p.threadId}`,isDirty:()=>itemsRef.current.some(x=>!x.pending),save:async()=>{try{for(const item of itemsRef.current)await prepareUpload(item);return true;}catch{setMediaError(t("Could not save the attachment draft. Keep this page open and retry.","সংযুক্তির খসড়া সংরক্ষণ হয়নি। পৃষ্ঠা খোলা রেখে আবার চেষ্টা করুন।"));return false;}},discard:()=>closePreview()}),[draftKey]);// eslint-disable-line react-hooks/exhaustive-deps
  if(!p.canSend)return <div className={`${s.comp} ${s.closed}`}><div className={s.wcl}><I n="info" size={20}/><div><b>{t("View only","শুধু দেখা যাবে")}</b><span>{t("You have read-only access to this conversation.","এই কথোপকথনে আপনার শুধু দেখার অনুমতি আছে।")}</span></div></div></div>;
  if(!p.windowOpen)return <div className={`${s.comp} ${s.closed}`}><div className={s.wcl}><I n="clk" size={20}/><div><b>{t("24 hours have passed","২৪ ঘণ্টা পার হয়ে গেছে")}</b><span>{t("You can reply again after the customer sends a new message.","কাস্টমার নতুন মেসেজ দিলে আবার উত্তর দেওয়া যাবে।")}</span></div></div></div>;
 
  const cls=`${s.comp} ${disabled?s.dis:""} ${phase==="holding"?`${s.holding} ${s.recing}`:""} ${phase==="locked"?s.locked:""} ${cancelling?s.cancelling:""}`;
  const canImg=caps.image!==false,canDoc=caps.document!==false&&p.channel!=="ig",canProd=p.productsEnabled&&caps.product!==false;
  return <>
+  {mediaError&&<p role="alert">{mediaError}</p>}
   <div className={`${s.rbar} ${p.replyTo?s.show:""}`}><div><b>{p.replyWho}</b><span>{p.replyTo?(p.replyTo.body||(p.replyTo.type==="image"?t("Photo","ছবি"):p.replyTo.type==="audio"?t("Voice","ভয়েস"):t("Message","মেসেজ"))):""}</span></div><button type="button" className={s.ib} onClick={p.onCancelReply} aria-label={t("Cancel reply","রিপ্লাই বাতিল")}><I n="x"/></button></div>
   <div className={cls}>
    <div className={s.inw}>
@@ -175,7 +206,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
      <button type="button" className={s.lks} aria-label={t("Send","পাঠান")} onClick={()=>void endRec(true)}><I n="snd"/></button></div>
    </div>
   </div>
-  <input ref={galRef} type="file" accept="image/*" multiple hidden onChange={e=>{void addFiles(e.target.files);e.currentTarget.value="";}}/>
+  <input ref={galRef} aria-label={t("Attach file","ফাইল সংযুক্ত করুন")} type="file" accept="image/*" multiple hidden onChange={e=>{void addFiles(e.target.files);e.currentTarget.value="";}}/>
   <input ref={camRef} type="file" accept="image/*" capture="environment" hidden onChange={e=>{void addFiles(e.target.files);e.currentTarget.value="";}}/>
   <input ref={docRef} type="file" accept="application/pdf,text/plain" hidden onChange={e=>{void sendDoc(e.target.files?.[0]);e.currentTarget.value="";}}/>
 
@@ -194,12 +225,12 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   </Sheet>
 
   {pvOpen&&<div className={`${s.pvw} ${s.pvshow}`} role="dialog" aria-modal="true" aria-label={t("Photo preview","ছবির প্রিভিউ")}>
-   <div className={s.vt}><button type="button" className={s.ib} style={{color:"#fff"}} onClick={closePreview} aria-label={t("Close","বন্ধ")}><I n="x"/></button><b className={s.pc2}>{num(cur+1,bn)}/{num(items.length,bn)}</b></div>
+   <div className={s.vt}><button type="button" className={s.ib} style={{color:"#fff"}} onClick={closePreview} aria-label={t("Discard attachment","সংযুক্তি বাতিল")}><I n="x"/></button><b className={s.pc2}>{num(cur+1,bn)}/{num(items.length,bn)}</b></div>
    {}
-   {items[cur]&&<img className={s.pimg2} src={items[cur].url} alt=""/>}
-   <div className={s.pth}>{items.map((x,i)=><button type="button" key={x.id} className={i===cur?s.on:undefined} onClick={()=>setCur(i)}>{}<img src={x.url} alt=""/><span className={s.rm} onClick={e=>{e.stopPropagation();removeItem(i);}}>×</span></button>)}
+   {items[cur]&&<MediaPreview className={s.pimg2} item={items[cur]} workspaceId={p.workspaceId} threadId={p.threadId}/>}
+   <div className={s.pth}>{items.map((x,i)=><button type="button" key={x.id} className={i===cur?s.on:undefined} onClick={()=>setCur(i)}>{}<MediaPreview item={x} workspaceId={p.workspaceId} threadId={p.threadId}/><span className={s.rm} onClick={e=>{e.stopPropagation();removeItem(i);}}>×</span></button>)}
     {items.length<maxImages&&<button type="button" className={s.add} aria-label={t("Add more","আরও যোগ")} onClick={()=>galRef.current?.click()}>+</button>}</div>
-   <div className={s.pvb}><button type="button" className={`${s.sendb} ${s.has}`} onClick={()=>void sendImages()} disabled={sending} aria-label={t("Send","পাঠান")}><I n="snd" className={s.s_snd}/>{items.length>1&&<span className={s.cnt}>{num(items.length,bn)}</span>}</button></div>
+   <div className={s.pvb}><button type="button" className={`${s.sendb} ${s.has}`} onClick={()=>void sendImages()} disabled={sending} aria-label={t("Send attachment","সংযুক্তি পাঠান")}><I n="snd" className={s.s_snd}/>{items.length>1&&<span className={s.cnt}>{num(items.length,bn)}</span>}</button></div>
   </div>}
  </>;
 }
