@@ -391,6 +391,9 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			if job.Channel == "tg" {
 				state, id, safe := s.sendTelegram(ctx, job)
 				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,$2,$3,$4)", job.ID, id, state, safe)
+				if state == "sent" {
+					_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_telegram_delivered($1::uuid)", job.ID)
+				}
 				continue
 			}
 			if job.Channel == "site" {
