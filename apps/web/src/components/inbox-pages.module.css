@@ -54,3 +54,24 @@
 .card :is(ol,ul){margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:13px;line-height:1.55;color:var(--mt)}
 .card :is(ol,ul) li{margin:0;padding:8px 10px;background:var(--mh);border-radius:9px;overflow-wrap:anywhere}
 .card :is(ol,ul) li:only-child{padding:0;background:none}
+
+/* Comments page additions */
+.ok{padding:10px 14px;border-radius:10px;background:var(--color-success-bg,var(--mh));color:var(--color-success,var(--mt));font-size:12.5px}
+.banner{display:flex;align-items:center;gap:10px;margin:0;padding:10px 14px;border:1px solid var(--mb);border-radius:12px;background:var(--ms);color:var(--mm);font-size:12.5px;line-height:1.5}
+.banner i{width:8px;height:8px;flex:none;border-radius:50%;background:var(--color-warning)}
+.banner.on i{background:var(--color-success,#14935C)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--mb);overflow-x:auto}
+.page .tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:10px 14px;min-height:42px;color:var(--mm);font-size:13px;display:inline-flex;gap:7px;align-items:center;margin-bottom:-1px}
+.page .tabs button[aria-current="page"]{color:var(--mt);border-bottom-color:var(--color-primary);font-weight:600}
+.tabs button span{min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--mh);font-size:11px;display:grid;place-items:center}
+.scroll{overflow-x:auto;max-width:100%}
+.quote{margin:0;padding:9px 12px;border-left:3px solid var(--color-primary);background:var(--mh);border-radius:0 9px 9px 0;font-size:13px;line-height:1.55;overflow-wrap:anywhere}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.check{display:flex!important;align-items:center;gap:9px;color:var(--mt)!important;font-size:13px!important}
+.page .check input{width:18px;min-height:18px;accent-color:var(--color-primary)}
+.sub{margin:10px 0 0;padding-top:14px;border-top:1px solid var(--mb);font-size:13px;font-weight:600}
+.pre{margin:0;padding:10px 12px;border-radius:10px;background:var(--mh);font-size:12px;overflow:auto;white-space:pre-wrap}
+.chip.st_sent{background:var(--color-success-bg,var(--mh));color:var(--color-success,var(--mt))}
+.chip.st_review,.chip.st_pending,.chip.st_queued,.chip.st_uncertain{background:var(--color-warning-bg);color:var(--color-warning)}
+.chip.st_failed{background:var(--color-danger-bg,var(--color-warning-bg));color:var(--color-danger,var(--color-warning))}
+.help{margin:0;color:var(--mm);font-size:12.5px;line-height:1.55}
