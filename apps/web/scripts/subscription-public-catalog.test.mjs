@@ -59,7 +59,7 @@ test("catalog projection is SECURITY DEFINER, current-version-only and never ret
  assert.match(migration,/GRANT EXECUTE ON FUNCTION public\.platform_subscription_offers_public\(\) TO ekmivo_runtime/);
  assert.doesNotMatch(reader,/platform_subscription_offer_admin|SELECT \*/);
  const coordinator=readFileSync(new URL("../../../backend/cmd/financial-migrate/dashboard_reference.go",import.meta.url),"utf8");
- assert.match(coordinator,/"0143_platform_subscription_offer_admin\.sql", "0144_platform_subscription_public_catalog\.sql"/);
+ assert.match(coordinator,/"0143_platform_subscription_offer_admin\.sql",\s+"0144_platform_subscription_public_catalog\.sql"/);
 });
 test("home and pricing use the same catalog data; unpublished offers keep existing Gateway fallback",()=>{
  const pricing=read("components/public-pricing.tsx"),home=read("app/[locale]/page.tsx");

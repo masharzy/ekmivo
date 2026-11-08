@@ -1,70 +1,42 @@
 # AI Commerce Core — Phase 0
 
-Status: OPEN (2026-11-08). Baseline a3df78814c66e87af201ba7cc07605a7d0973670.
+Status: implementation and isolated catch-up complete; latest PR CI pending. 2026-11-09 (Asia/Dhaka).
+Baseline: a3df78814c66e87af201ba7cc07605a7d0973670. PR: https://github.com/masharzy/ekmivo/pull/162.
 
-## Fix and validation
+## Fixes
 
-The pending navigation route lived in React state while the destination Store lived in a ref. Keeping both in one atomic state object removes the React refs render failure without changing the sidebar helper, either DOM mount point, styling, or navigation inventory. Hook dependencies now include the stable setter.
+- Pending draft navigation route and destination Store now share one atomic React state object. This removes the sidebar render ref error without changing its helper, DOM mount points, navigation or CSS.
+- Existing dashboard-reference migration coordinator now includes the 43 missing CONTROL migrations in dependency order. Its owner/schema/independent-realm checks, advisory lock, transaction, immutable checksum ledger and financial migration lists are preserved. A Go test guards order, duplicate/missing files, critical dependencies and financial/CONTROL separation.
+- Signup transaction smoke now expects the current /businesses/open route. Public-catalog migration-order assertion tolerates Go whitespace while retaining its adjacent ordering requirement.
+- Qwen remains on the existing OpenRouter path. No new selling behavior, production flag, model, merge or deployment changes.
 
-- Reproduced baseline errors at dashboard-frame.tsx:329–330.
-- Focused/full web ESLint: PASS. TypeScript: PASS.
-- 51 existing navigation/settings/inbox-draft/responsive/Store contract tests: PASS (no skips).
-- Existing main CI 42504982825 Go compile/unit tests: PASS. This is baseline evidence, not this PR's CI.
-- Local production build: PASS (webpack compile, TypeScript, prerender and route generation). This PR CI: pending. Local full Go run was stopped after a denied shared cache and slow isolated-cache rebuild; no local Go pass claimed.
+## Validation
 
-## Database audit
+- Reproduced baseline react-hooks/refs errors at dashboard-frame.tsx:329–330.
+- Full web ESLint and TypeScript PASS. Production Next build PASS: webpack compilation, TypeScript, prerender and route generation.
+- 208 CI non-browser contract tests PASS, zero skips, including the corrected signup regression. Existing PG02 dirty/save/failure/discard smoke PASS.
+- Go go test ./cmd/financial-migrate PASS, including TestDashboardControlCatchupIsOrderedAndComplete.
+- Earlier PR CI 42509411121: Go compile/unit tests, containers and Android PASS. Web passed lint and failed the stale signup assertion, now fixed. Latest new CI must pass before seal.
 
-Neon Ekmivo production, CONTROL database ekmivo: commerce_orders and briofold_customers_search absent. 32 dashboard_reference_migrations checksums match repository LF bytes. The ledger covers only part of deployment history. migration-audit.json inventories all 209 files, ledger checksums, and CREATE TABLE/FUNCTION anchors. Presence is not proof of latest function/ALTER version. Financial objects absent from CONTROL are expected; inbox_blobs was intentionally removed by 0223.
+## Production audit (read only)
 
-## Isolated SQL evidence
+migration-audit.json inventories 209 repository SQL files, recorded checksums and missing CREATE TABLE/FUNCTION anchors. All 32 production dashboard_reference_migrations checksums match repository LF bytes. commerce_orders and briofold_customers_search were absent. The ledger covers only part of historical deployment: object presence does not prove latest ALTER/function version, and absent financial-realm objects in CONTROL are expected. inbox_blobs was intentionally removed by 0223.
 
-Existing test-customer-orders-20261108, br-frosty-mountain-b39lqauo, database ekmivo only. First atomic DO rehearsal executed 29 missing-anchor migrations through 0211, checked orders/search, then raised PHASE0_ROLLBACK_VERIFIED. Expanded rehearsal executed 35 through 0227, checked briofold_customer_orders, then raised PHASE0_FULL_ROLLBACK_VERIFIED. Both intentional exceptions rolled everything back. Top-level BEGIN/COMMIT boundaries were removed; SQL otherwise unchanged. Post-rehearsal query confirmed orders/search stayed absent. Production was read-only.
+## Backed-up isolated catch-up
 
-- 0141_briofold_commerce.sql
-- 0142_briofold_growth_reporting.sql
-- 0180_briofold_growth_operations.sql
-- 0181_briofold_growth_analytics_exports.sql
-- 0182_briofold_growth_consent_safety.sql
-- 0183_briofold_signed_channel_optouts.sql
-- 0184_briofold_order_assignment.sql
-- 0185_briofold_order_barcode_search.sql
-- 0186_briofold_order_reporting.sql
-- 0187_briofold_assignment_viewer_privacy.sql
-- 0188_briofold_unified_activity.sql
-- 0191_briofold_crm_search.sql
-- 0192_briofold_followup_scheduling.sql
-- 0194_briofold_response_reporting.sql
-- 0195_briofold_product_operational_analytics.sql
-- 0196_briofold_team_groups.sql
-- 0197_briofold_saved_reply_sequences.sql
-- 0198_briofold_feedback_screenshots.sql
-- 0199_briofold_unconverted_interest.sql
-- 0200_briofold_help_videos.sql
-- 0202_briofold_channel_policies.sql
-- 0203_briofold_linked_order_conversion.sql
-- 0204_briofold_product_photo_search.sql
-- 0205_briofold_pathao_courier.sql
-- 0206_briofold_woo_webhook_sources.sql
-- 0207_briofold_broadcast_dispatch.sql
-- 0208_briofold_member_channel_scopes.sql
-- 0209_briofold_broadcast_optin_offers.sql
-- 0211_briofold_consent_scope_runtime.sql
-- 0219_inbox_telegram_no_reply_window.sql
-- 0221_inbox_media_refresh_metadata.sql
-- 0224_inbox_telegram_delivered_on_send.sql
-- 0225_inbox_delivered_watermark.sql
-- 0226_inbox_realtime_avatars.sql
-- 0227_briofold_customer_orders_link.sql
+The owner authorized deleting the archived test-managed-plans-20261016 branch. Deleted only br-lucky-mode-b3hkfaxa, then created the ready no-compute checkpoint ai-commerce-phase0-checkpoint-20261109 (br-wild-dust-b33asj42) from test-customer-orders-20261108 (br-frosty-mountain-b39lqauo). Neon rejects snapshots of non-root branches, so this checkpoint preserves the equivalent pre-catch-up baseline without modifying production. No backup/test branch has been reset or removed.
 
-## Open gates and rollback
+After rollback rehearsals, applied 43 CONTROL SQL files atomically to the authorized test branch's ekmivo database using the existing coordinator advisory lock and checksum ledger. First execution: 43 new ledger entries, total 75, latest applied_at 2026-11-08T18:22:23.337Z. Second execution: all files checksum-checked/skipped, still 75 entries and identical latest applied_at. All 75 recorded hashes match repository LF bytes. Schema smoke finds all 19 commerce tables, customer order/search functions and the intentional absence of inbox_blobs. Exact filenames/checksums and checkpoint metadata: test-catchup.json.
 
-Neon rejects snapshots of non-root branches (HTTP 400); creating a no-compute checkpoint child also failed, branch quota exceeded (HTTP 422). No branch was reset/deleted. The required pre-migration backup is therefore unavailable and permanent catch-up was not applied. The rollback rehearsals do NOT prove durable application or a checksum-protected idempotent second run.
+0212–0218 are already installed on this baseline and are documented prerequisites; they were not blindly replayed or falsely adopted into the ledger. A preliminary all-file rollback rehearsal correctly rejected the already-present 0212 table without persisting changes. The 43-file ordered catch-up includes 0189/0190/0193/0201/0210/0220 and the temporary 0222→0223 lifecycle, rather than relying only on missing CREATE anchors.
 
-- [ ] This PR CI green: Go, web lint/build, isolated PostgreSQL smoke.
-- [x] Production inventory and recorded checksum evidence.
-- [x] Authorized isolated SQL rollback rehearsal.
-- [ ] Complete ALTER/function-version reconciliation, backed-up durable catch-up, coordinator second run.
+## Rollback and remaining acceptance
 
-0227 has non-idempotent ADD COLUMN/CREATE FUNCTION statements. Use the existing checksummed migration coordinator for durable execution; raw SQL must not be replayed twice. Rehearsal rollback is automatic. Future committed rollout needs a reviewed backup/checkpoint and restore plan, never dropping commerce tables as rollback. New customer/payment function authorization/PII behavior remains unaccepted.
+For these atomic test applications, any statement error rolls back the entire batch. The retained checkpoint is the recovery source after commit: create a new child with a compute from the checkpoint, compare schema/data and only then redirect a test connection. Never delete commerce tables or reset either existing branch automatically. The original test branch and checkpoint remain available for subsequent phases.
 
-Keep qwen/qwen3.8-omni-flash on the existing OpenRouter route; no direct-provider allowlist/model setting changes. No production writes, merge/deploy, feature activation, or Phase 1 implementation. Foundation fix introduces no selling behavior and requires no selling feature flag. Phase 0 stays OPEN.
+- [x] Sidebar fix, web lint/TypeScript/build and available regression tests.
+- [x] Production migration inventory and checksums delivered in PR.
+- [x] Backed-up authorized test catch-up, second checksum-protected no-op and schema smoke.
+- [ ] Latest PR CI green, including complete isolated PostgreSQL smoke; until then Phase 0 is NOT SEALED.
+
+The connector applied the same reviewed ledger/transaction semantics as the Go coordinator; the three-realm Go CLI was not run against production. This is CONTROL schema verification, not real customer/provider/media/payment acceptance. Customer authorization/PII tests and all AI selling features remain dependent-phase work. Production migrations, merge and deployment require separate owner authorization.

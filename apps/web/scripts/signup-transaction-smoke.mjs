@@ -35,7 +35,7 @@ for(const scenario of ["success","legacy-success","duplicate","workspace-failure
  const actionModule={exports:{}};
  runInNewContext(code,{module:actionModule,exports:actionModule.exports,require:name=>{assert.ok(mocks[name],"Unexpected import "+name);return mocks[name]},console:{error:()=>{}}});
  const form=new FormData();for(const [k,v] of Object.entries({email:"unit@example.invalid",password:scenario==="invalid-password"?"12345678":"hello123",confirm:scenario==="invalid-password"?"12345678":"hello123",name:"Unit Test",workspace_name:"Test Business"}))form.set(k,v);
- let result;try{result=await actionModule.exports.registerAction("en",{status:"idle",message:""},form)}catch(e){assert.ok(["success","legacy-success"].includes(scenario));assert.equal(e.path,"/workspaces/open")}
+ let result;try{result=await actionModule.exports.registerAction("en",{status:"idle",message:""},form)}catch(e){assert.ok(["success","legacy-success"].includes(scenario));assert.equal(e.path,"/businesses/open")}
  if(["success","legacy-success"].includes(scenario)){assert.deepEqual(writes,["user","workspace","owner-membership",...(scenario==="success"?["primary-store","onboarding"]:[])]);assert.deepEqual(authEvents,["session","default-workspace"])}
  else{assert.deepEqual(writes,[]);assert.deepEqual(authEvents,[]);assert.equal(result.status,"error")}
  console.log("PASS (simulation): signup "+scenario);

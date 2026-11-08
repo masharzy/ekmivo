@@ -1,0 +1,390 @@
+{
+  "date": "2026-11-09 Asia/Dhaka",
+  "source_commit": "a3df78814c66e87af201ba7cc07605a7d0973670",
+  "project": "sparkling-mountain-38618629",
+  "test_branch": "br-frosty-mountain-b39lqauo",
+  "database": "ekmivo",
+  "backup": {
+    "name": "ai-commerce-phase0-checkpoint-20261109",
+    "id": "br-wild-dust-b33asj42",
+    "parent_id": "br-frosty-mountain-b39lqauo",
+    "parent_lsn": "1/4FEC08B0",
+    "ready": true,
+    "no_compute": true
+  },
+  "authorized_deleted_branch": {
+    "name": "test-managed-plans-20261016",
+    "id": "br-lucky-mode-b3hkfaxa"
+  },
+  "applied_files": [
+    "0141_briofold_commerce.sql",
+    "0142_briofold_growth_reporting.sql",
+    "0180_briofold_growth_operations.sql",
+    "0181_briofold_growth_analytics_exports.sql",
+    "0182_briofold_growth_consent_safety.sql",
+    "0183_briofold_signed_channel_optouts.sql",
+    "0184_briofold_order_assignment.sql",
+    "0185_briofold_order_barcode_search.sql",
+    "0186_briofold_order_reporting.sql",
+    "0187_briofold_assignment_viewer_privacy.sql",
+    "0188_briofold_unified_activity.sql",
+    "0189_briofold_crm_viewer_privacy.sql",
+    "0190_briofold_feedback_topics.sql",
+    "0191_briofold_crm_search.sql",
+    "0192_briofold_followup_scheduling.sql",
+    "0193_briofold_inbox_filters.sql",
+    "0194_briofold_response_reporting.sql",
+    "0195_briofold_product_operational_analytics.sql",
+    "0196_briofold_team_groups.sql",
+    "0197_briofold_saved_reply_sequences.sql",
+    "0198_briofold_feedback_screenshots.sql",
+    "0199_briofold_unconverted_interest.sql",
+    "0200_briofold_help_videos.sql",
+    "0201_briofold_waiting_reply_truth.sql",
+    "0202_briofold_channel_policies.sql",
+    "0203_briofold_linked_order_conversion.sql",
+    "0204_briofold_product_photo_search.sql",
+    "0205_briofold_pathao_courier.sql",
+    "0206_briofold_woo_webhook_sources.sql",
+    "0207_briofold_broadcast_dispatch.sql",
+    "0208_briofold_member_channel_scopes.sql",
+    "0209_briofold_broadcast_optin_offers.sql",
+    "0210_briofold_sender_guard_precedence.sql",
+    "0211_briofold_consent_scope_runtime.sql",
+    "0219_inbox_telegram_no_reply_window.sql",
+    "0220_inbox_window_execution_grants.sql",
+    "0221_inbox_media_refresh_metadata.sql",
+    "0222_inbox_transient_blobs.sql",
+    "0223_inbox_blobs_drop.sql",
+    "0224_inbox_telegram_delivered_on_send.sql",
+    "0225_inbox_delivered_watermark.sql",
+    "0226_inbox_realtime_avatars.sql",
+    "0227_briofold_customer_orders_link.sql"
+  ],
+  "first_run": {
+    "ledger_count": 75,
+    "new_entries": 43,
+    "newest_applied_at_utc": "2026-11-08T18:22:23.337Z",
+    "orders_ready": true,
+    "customer_orders_ready": true,
+    "customer_search_ready": true
+  },
+  "second_run": {
+    "ledger_count": 75,
+    "newest_applied_at_utc": "2026-11-08T18:22:23.337Z",
+    "new_entries": 0,
+    "checksum_mismatches": 0
+  },
+  "schema_smoke": {
+    "commerce_tables": 19,
+    "inbox_blobs_present": false
+  },
+  "ledger": [
+    {
+      "filename": "0069_dashboard_preferences.sql",
+      "sha256": "cf9b821067b219c47d9401934119a2d9042ff6c3c6b35ea31908def34791ac28"
+    },
+    {
+      "filename": "0073_dashboard_support_topic.sql",
+      "sha256": "2458fdd761d6cec20a3c7b278dc0eecaaf971d4d96d0b15f2c05fd976c0df3d7"
+    },
+    {
+      "filename": "0074_checkout_themes.sql",
+      "sha256": "7764270091910571d205b32d8d2e552560340bf0b35d04903e90134877332796"
+    },
+    {
+      "filename": "0076_dashboard_billing.sql",
+      "sha256": "b8cc8db5b0a52563c7baf0c2ce829ae71ecb23f1f9e49b5f29b9fe32d7be1f5e"
+    },
+    {
+      "filename": "0089_admin_trusted_devices.sql",
+      "sha256": "59eddd6cfef75071dca834fa9a032b53a099e08dcca55e774261260b32a2d68e"
+    },
+    {
+      "filename": "0090_admin_support_roles.sql",
+      "sha256": "1cf40315efd39a8677da2dd52d7ec3a1d3d118563d3070f8ce7b168ede557063"
+    },
+    {
+      "filename": "0094_admin_control_resource_usage.sql",
+      "sha256": "d69bfbb0dc2944ebabee46216a33a2a4e87399be825aef2b8a37675913ad641f"
+    },
+    {
+      "filename": "0096_platform_receiving_workspace.sql",
+      "sha256": "93a4585cbb61a10b02b367471d5e8d86263fcc4ca186c6cd8fd4b667d9662e19"
+    },
+    {
+      "filename": "0101_dashboard_control_plan_limits.sql",
+      "sha256": "d9492b25409ebb64a00ff7d7ce3e91d25b47facc6a85ef1a5e4a2b032ec3c812"
+    },
+    {
+      "filename": "0103_system_workspace_unlimited.sql",
+      "sha256": "cc3b9ed1924821fc68b6d8f59675e184dfbe1a8f001559104b0a8efccabb9568"
+    },
+    {
+      "filename": "0104_system_workspace_subscription_cleanup.sql",
+      "sha256": "6f5058e03d697e0d533ba0a3e24cab6a42e5d6830bead006ea667b450a884c10"
+    },
+    {
+      "filename": "0105_buyer_upgrade_timing.sql",
+      "sha256": "8f72e53abc81d3ddffa17211f366e8df972136013f1414a08d0bdb82e40dcb02"
+    },
+    {
+      "filename": "0106_google_login.sql",
+      "sha256": "eaa86e11a4508c4d1f6de4da4148fa38b989f8637da4eecad0d09c5d48ce6c43"
+    },
+    {
+      "filename": "0133_platform_subscription_checkout_foundation.sql",
+      "sha256": "430d1cd8cb0576926fea10bcd4ccdf78ecc3776cd2b5921f46ae0acc74f6c6ff"
+    },
+    {
+      "filename": "0134_platform_subscription_coupon_admin.sql",
+      "sha256": "0d9572ac2d173eb6e1fe2963d9dd44f3f31b13202338a853e139b0f44aa469a6"
+    },
+    {
+      "filename": "0135_subscription_coupon_admin_audit_subject_fix.sql",
+      "sha256": "3493b89bfcc65f532a9d9c9ee2f6530cf6452e625a7c46105556961974d59350"
+    },
+    {
+      "filename": "0140_platform_subscription_policy_catalog.sql",
+      "sha256": "e10275c24db4246a9b83e38ef04edc3f7e4ccbfb9da91e8482971a0d5e275c97"
+    },
+    {
+      "filename": "0141_briofold_commerce.sql",
+      "sha256": "daa136acc79875bb226831ad82c548bc6eaccddb3c15ca7d92e64e6ac40114ff"
+    },
+    {
+      "filename": "0141_platform_subscription_policy_lock_concat_fix.sql",
+      "sha256": "5ee0301e073fef6d8c68cb10be31e90976e4d3d815d3b6544fad5e8aeb94c8e5"
+    },
+    {
+      "filename": "0142_briofold_growth_reporting.sql",
+      "sha256": "76180779eb1cfe5d554182ca3b2f236bee9c0aacd4979884e69a3521a8611cc9"
+    },
+    {
+      "filename": "0142_platform_subscription_policy_kind_qualification.sql",
+      "sha256": "bcbf205232d49d99b09e0e41da6b36c8aac5c3052d458d842bd9369fc8e13130"
+    },
+    {
+      "filename": "0143_platform_subscription_offer_admin.sql",
+      "sha256": "347ba59969a3c4fca3702a3f09f082cf13d846acdb8a2efbd7f353b4a5afaa98"
+    },
+    {
+      "filename": "0144_platform_subscription_public_catalog.sql",
+      "sha256": "6bfc80ba71d10a9f739383d9360656660b71cd0a2884b91114808e022f123ad4"
+    },
+    {
+      "filename": "0145_platform_subscription_coupon_versions.sql",
+      "sha256": "78123a374cbc771e7138fdc813f3650b9877ee96cefa545aac64f5535d79ce1f"
+    },
+    {
+      "filename": "0146_platform_subscription_coupon_lifecycle.sql",
+      "sha256": "12d42b88b3384d52de95d62a1d75f0b7efd17d543c5736193e61fbae7ad9265b"
+    },
+    {
+      "filename": "0147_platform_subscription_coupon_restrictions.sql",
+      "sha256": "3aba98cd94fa058549e530122742cd280104e03fba04b0152a2470566651372d"
+    },
+    {
+      "filename": "0148_platform_subscription_coupon_tax_requote.sql",
+      "sha256": "6e9fb502b5bed2e2fb5b855987823cdde862e4e3d7b7d929c5c595d9fc422f1b"
+    },
+    {
+      "filename": "0149_platform_subscription_coupon_quote_read.sql",
+      "sha256": "b654806725a811e774b70614c3d7e45743f9bc31386f40f4d654600fc7a1a5af"
+    },
+    {
+      "filename": "0151_phase4_durable_purchase_intents.sql",
+      "sha256": "e9041ba6c393ce0c1554557d02abc2177b51ce9353b363d23234043cfe560df2"
+    },
+    {
+      "filename": "0152_platform_subscription_order_summary.sql",
+      "sha256": "32e2e7fa3a0d0c4d5637939f687f2fbddfcd75f8b875da3258547ce9521cf1c5"
+    },
+    {
+      "filename": "0153_platform_subscription_payment_handoff.sql",
+      "sha256": "d9a7ed3c961002f8e122498ac18af34d7ab666dc790209f7716ce6455d958dd6"
+    },
+    {
+      "filename": "0154_platform_subscription_release_operations.sql",
+      "sha256": "2ea99211dddc836fe2c70d3f475a8b797224702c9f27bbb46580d12ffd3833ee"
+    },
+    {
+      "filename": "0155_platform_subscription_safe_runtime_grants.sql",
+      "sha256": "67dd090dbd7c04d675eca56136efb4fd5f5278d601ecef4f75203825333d97ee"
+    },
+    {
+      "filename": "0156_web_runtime_least_privilege.sql",
+      "sha256": "4b2440e36388407047185e2b78198ef9ff1062f80ebd67b59f8751bbb811ee31"
+    },
+    {
+      "filename": "0180_briofold_growth_operations.sql",
+      "sha256": "4c2189753c56d13d3c800376520d865c694a2c2ea0b02f39ea8925203707ab48"
+    },
+    {
+      "filename": "0181_briofold_growth_analytics_exports.sql",
+      "sha256": "1522e08ccb488d8eae3275f9925b24df03bb47bcad3334b4b57c6d6128fac82c"
+    },
+    {
+      "filename": "0182_briofold_growth_consent_safety.sql",
+      "sha256": "e24010c157ecfc6b6add2c16ca4197d9a8dd542ebc43b0e146ec049da3278aaa"
+    },
+    {
+      "filename": "0183_briofold_signed_channel_optouts.sql",
+      "sha256": "8d20cc9ffa6b70e3d48e742a1d707c950a76bdc5e8b64e4f8b46e1c8fca93f2d"
+    },
+    {
+      "filename": "0184_briofold_order_assignment.sql",
+      "sha256": "1108217857ce21fe5e0e91d3348016da6657456818565e5b610da9cecc7b2689"
+    },
+    {
+      "filename": "0185_briofold_order_barcode_search.sql",
+      "sha256": "773d9bbf11cc52bcc87c7c725edc4955ee03fe49650708428ab0ed9cc5ba95e7"
+    },
+    {
+      "filename": "0186_briofold_order_reporting.sql",
+      "sha256": "d6d3cfa8b60b551f4b70d2adfabde12157cc3de27c3fcd8a3b8b0db00c90c519"
+    },
+    {
+      "filename": "0187_briofold_assignment_viewer_privacy.sql",
+      "sha256": "c0b1879e6e47f27dbd0776fc55eb7a816749cc37c4f9a935459d4fc7b400e1ea"
+    },
+    {
+      "filename": "0188_briofold_unified_activity.sql",
+      "sha256": "83a412597847d2d8977bb368947c187d8afee26f6be8f0d8d99d0a7e8c8cd63e"
+    },
+    {
+      "filename": "0189_briofold_crm_viewer_privacy.sql",
+      "sha256": "6efecc54f0f7f3a87b5b3f8727d4858f30e4d9f36cbd897a752a8af39325ac2f"
+    },
+    {
+      "filename": "0190_briofold_feedback_topics.sql",
+      "sha256": "ad044809d123eac4fbbc718033b109c21e6eda66171df04f0baaf06742ed5a24"
+    },
+    {
+      "filename": "0191_briofold_crm_search.sql",
+      "sha256": "49a2ccfcdfecbf40ff1f6efa95355ae76dfcc0bd913d13160c6e47546c846074"
+    },
+    {
+      "filename": "0192_briofold_followup_scheduling.sql",
+      "sha256": "7ef6e7da8d9d249baa72f0c81836be94b0099bc09da191d7a6b60e5146d701a9"
+    },
+    {
+      "filename": "0193_briofold_inbox_filters.sql",
+      "sha256": "f99e26722bc154ae171542b5443f4edfa9851180ad5c64b49868118f67594d3c"
+    },
+    {
+      "filename": "0194_briofold_response_reporting.sql",
+      "sha256": "feb34940919e4684c8a4f34417ebb15874c36d9cd214280aacd8ee397aff0c20"
+    },
+    {
+      "filename": "0195_briofold_product_operational_analytics.sql",
+      "sha256": "64d7e59f8a5e2295274629f8ad810fe96ce0d76d02d91ad8f15d835b598758f1"
+    },
+    {
+      "filename": "0196_briofold_team_groups.sql",
+      "sha256": "111f87cf6f9c73303ad7afbeeb23327079b5fd563f02eabd968133f26d94fee9"
+    },
+    {
+      "filename": "0197_briofold_saved_reply_sequences.sql",
+      "sha256": "428cbf83e0c04511880bafcc96436994d9fa15edd9efe32eade798d02b235314"
+    },
+    {
+      "filename": "0198_briofold_feedback_screenshots.sql",
+      "sha256": "9ed729504c8c3a1e36982d48126095c7793783090c6c3ae0b30ebaea1a30d767"
+    },
+    {
+      "filename": "0199_briofold_unconverted_interest.sql",
+      "sha256": "1158acbdbf25d0c66630431cc71299391c1f91850c8c3aaf806bf70701c5b435"
+    },
+    {
+      "filename": "0200_briofold_help_videos.sql",
+      "sha256": "5bc43f3ae6dc77a1ef2f73687429ac7fc842067897d305ada1d02190723a5abc"
+    },
+    {
+      "filename": "0201_briofold_waiting_reply_truth.sql",
+      "sha256": "3064995b6bc0323ee9ca3cd94e7e6f31eb0cc83b6bad4a449a02d266b93a6995"
+    },
+    {
+      "filename": "0202_briofold_channel_policies.sql",
+      "sha256": "c5322de467f80fc9387303980497d99df8e5cdcc5606d2335ab8834637ac7235"
+    },
+    {
+      "filename": "0203_briofold_linked_order_conversion.sql",
+      "sha256": "53fabe5eefc51ca75f02b5161d404c3193d9f168862f11b791a631a92cb6453e"
+    },
+    {
+      "filename": "0204_briofold_product_photo_search.sql",
+      "sha256": "7d1013ca18db82b424c41932aa0424b68c91f356299746b3fdbe9d5881d2413b"
+    },
+    {
+      "filename": "0205_briofold_pathao_courier.sql",
+      "sha256": "36f4bf225939f4bf0efb02bca8b22744d84204ffa9d0e9dcb811f27682bd1ef6"
+    },
+    {
+      "filename": "0206_briofold_woo_webhook_sources.sql",
+      "sha256": "a867a0c6b845a1c4b059badcdee22e4a4b57ffcbbfe674bf1241e2ee6c9d0042"
+    },
+    {
+      "filename": "0207_briofold_broadcast_dispatch.sql",
+      "sha256": "a219db793da647fa2b9f32e5cb14f1700b50bee20f812fb3519cbe79daea8717"
+    },
+    {
+      "filename": "0208_briofold_member_channel_scopes.sql",
+      "sha256": "1bcd32be40df20a9a6cc3978c42fdad395043de45792d72f2f44a4eeab9c9d16"
+    },
+    {
+      "filename": "0209_briofold_broadcast_optin_offers.sql",
+      "sha256": "55df46c7057c01fa9fe2b54358390743182771711ed719ad19c696c1b4b56ef1"
+    },
+    {
+      "filename": "0210_briofold_sender_guard_precedence.sql",
+      "sha256": "ae2a8cf6dc0566bc4be1531131d097055a6cbe1e9aae100e173eb2f5d79ec8d4"
+    },
+    {
+      "filename": "0211_briofold_consent_scope_runtime.sql",
+      "sha256": "023b99a075869f42b1478f6f0215b77cc44833508f35d8c222ad7bd9268a0579"
+    },
+    {
+      "filename": "0219_inbox_telegram_no_reply_window.sql",
+      "sha256": "fe02abb2760378ac390e1553ed28fef19caeb2a1e8d959bd3b16e3e3865458ef"
+    },
+    {
+      "filename": "0220_inbox_window_execution_grants.sql",
+      "sha256": "2e8441e9330ae3e3c1bc233ccb4fb094ea8f493f6508922d6a72c3b75bbf703a"
+    },
+    {
+      "filename": "0221_inbox_media_refresh_metadata.sql",
+      "sha256": "35d6007e32ce5361f07653652de61bacd1da4bbeee69e7e3289c1d8220b52300"
+    },
+    {
+      "filename": "0222_inbox_transient_blobs.sql",
+      "sha256": "c65491caaf6951a55033bc581a1f92114adf8474925b7a24140cbf511412eea9"
+    },
+    {
+      "filename": "0223_inbox_blobs_drop.sql",
+      "sha256": "88bfb8da350d564b009f64cab56a22bbdc4ba27bcd3c0aaea45a1d80f64250b8"
+    },
+    {
+      "filename": "0224_inbox_telegram_delivered_on_send.sql",
+      "sha256": "8b0b2519aff89b2afb7ca5ed511f7d610c149915f4867deb084aa62a8b0fb073"
+    },
+    {
+      "filename": "0225_inbox_delivered_watermark.sql",
+      "sha256": "7067fc6bb7a476e701da14123d57b52d8adcc09dc35bcdfdcb6f323dae22991c"
+    },
+    {
+      "filename": "0226_inbox_realtime_avatars.sql",
+      "sha256": "fef7d86ec348c842e35ed42dd2ccd39b3ac86e5db42c5a9fc60d59fc6482de87"
+    },
+    {
+      "filename": "0227_briofold_customer_orders_link.sql",
+      "sha256": "677b30dea27ba9568fa14d1b62694bcd1295969a19a427d8f0709a7ae38f634c"
+    }
+  ],
+  "limitations": [
+    "Neon does not snapshot non-root branches; a no-compute branch checkpoint preserves the baseline instead.",
+    "Executed under the existing coordinator's advisory lock and checksum ledger via a single atomic DO statement; did not invoke the three-realm Go CLI against production.",
+    "0212-0218 already installed on this baseline, not blindly replayed or adopted into the ledger.",
+    "Production rollout requires separate explicit owner authorization."
+  ]
+}
