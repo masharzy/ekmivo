@@ -60,11 +60,6 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
      AND s.revoked_at IS NULL AND s.expires_at>now() AND u.disabled_at IS NULL
     LIMIT 1`;
    if(session.length!==1)return {code:"reauth" as const};
-   const [bindingSchema]=await tx`SELECT to_regclass('public.platform_primary_stores') AS ready`;
-   if(bindingSchema?.ready){
-    const binding=await tx`SELECT workspace_id FROM platform_primary_stores WHERE user_id=${actor.id}::uuid`;
-    if(binding.length&&String(binding[0].workspace_id)!==workspace)return {code:"denied" as const};
-   }
    const member=await tx`SELECT role FROM workspace_members
     WHERE workspace_id=${workspace}::uuid AND user_id=${actor.id}::uuid FOR UPDATE`;
    if(member.length!==1||!["owner","admin"].includes(String(member[0].role)))return {code:"denied" as const};

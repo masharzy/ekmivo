@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { sections, type SectionKey } from "../lib/dashboard-sections";
 import { dashboardHref, navigation, searchableNavigation, searchableBusinesses, serviceEnabled, serviceNames, sectionInService, type Locale, type Service, type PaymentEnvironment } from "../lib/dashboard-navigation";
 import { DashboardIcon as Icon } from "./dashboard-icon";
-import {unifiedNavigation,enabledUnifiedService,unifiedSectionHref,isUnifiedFinancialDetailPath} from "../lib/unified-navigation";
+import {unifiedNavigation,unifiedNavGroupLabels,currentUnifiedItem,enabledUnifiedService,unifiedSectionHref,isUnifiedFinancialDetailPath} from "../lib/unified-navigation";
 import {chooseUnifiedBusiness} from "../actions/unified-business";
 import { SiteControls } from "./site-controls";
 import { DashboardFeedback } from "./dashboard-feedback";
@@ -302,23 +302,23 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    <Link href={unified?"/dashboard":"/"} className="ek-wordmark">briofold{!unified&&<small className="ds-product-tag">{service==="ai"?"AI":"Pay"}</small>}</Link>
    {mobile&&<button type="button" className="ds-icon-button" aria-label={bn?"মেনু বন্ধ করুন":"Close menu"} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button>}
   </div>
-  <div className="ds-business-block">{spaces.length<=1?
-   <div className="ds-business-static" role="group" aria-label={bn?"আপনার ব্যবসা":"Your Business"}>
-    <span className="ds-business-avatar" aria-hidden="true">{workspace.name.slice(0,1).toUpperCase()}</span>
-    <strong className="ds-business-current-name">{workspace.name}</strong>
-   </div>:
-   <details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
+  <div className="ds-business-block"><details className="ds-business-picker" ref={mobile?undefined:businessMenu}>
    <summary aria-label={bn?"ব্যবসা পরিবর্তন":"Switch business"} title={workspace.name}><span className="ds-business-avatar">{workspace.name.slice(0,1).toUpperCase()}</span><strong className="ds-business-current-name">{workspace.name}</strong><Icon name="chevron"/></summary>
    <div className="ds-business-menu" role="group" aria-label={bn?"ব্যবসা":"Businesses"}>
     <label className="ds-switch-search"><span className="sr-only">{bn?"ব্যবসা খুঁজুন":"Find business"}</span><input value={businessQuery} onChange={event=>setBusinessQuery(event.target.value)} placeholder={bn?"ব্যবসা খুঁজুন…":"Search businesses…"} /></label>
     {visibleBusinesses.map(space=><button key={space.id} type="button" aria-current={space.id===workspace.id?"true":undefined} onClick={()=>switchBusiness(space)}><span className="ds-business-avatar">{space.name.slice(0,1).toUpperCase()}</span><span><strong>{space.name}</strong><small>{roleNames[space.role][locale]}</small></span>{space.id===workspace.id&&<Icon name="check"/>}</button>)}
-    {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No businesses match"}</p>}
+    {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No stores match"}</p>}
     <div className="ds-business-actions"><Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"ব্যবসা পরিচালনা":"Manage businesses"}</Link><Link href="/workspaces?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন ব্যবসা":"New business"}</Link></div>
    </div>
-  </details>}
+  </details>
   </div>
   <nav ref={mobile?undefined:scrollableNav} className={"ds-navigation"+(navHasMore&&!mobile?" has-more":"")} aria-label={bn?`${serviceNames[service].bn} নেভিগেশন`:`${serviceNames[service].en} navigation`}>
-   {unified?<section className="ds-nav-section"><h2>{bn?"ব্যবসা":"Business"}</h2>{unifiedItems.map(item=><Link key={item.key} href={item.href} className={pathname===item.href||pathname.startsWith(item.href+"/")?"is-current":undefined} aria-current={pathname===item.href?"page":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute(item.href);setDraftError("");return;}startTransition(()=>router.push(item.href));}}><Icon name={item.icon}/><span>{item[locale]}</span>{(pathname===item.href||pathname.startsWith(item.href+"/"))&&<span className="ds-active-mark"/>}</Link>)}</section>:groups.filter(group=>!(service==="payments"&&group.items.length===1&&group.items[0]==="billing")).map(group=><section className="ds-nav-section" key={group.label.en}>
+   {unified?(["main","money","manage"] as const).map(g=>{
+    const items=unifiedItems.filter(item=>item.group===g);
+    if(!items.length)return null;
+    const current=currentUnifiedItem(unifiedItems,pathname);
+    return <section className="ds-nav-section" key={g}><h2>{unifiedNavGroupLabels[g][locale]}</h2>{items.map(item=>{const on=current?.key===item.key;return <Link key={item.key} href={item.href} className={on?"is-current":undefined} aria-current={pathname===item.href?"page":on?"true":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute(item.href);setDraftError("");return;}startTransition(()=>router.push(item.href));}}><Icon name={item.icon}/><span>{item[locale]}</span>{on&&<span className="ds-active-mark"/>}</Link>})}</section>;
+   }):groups.filter(group=>!(service==="payments"&&group.items.length===1&&group.items[0]==="billing")).map(group=><section className="ds-nav-section" key={group.label.en}>
     {service==="payments"&&group.label.en==="Commerce"?<details className="ds-unreleased-nav"><summary>{group.label[locale]} <small>{bn?"নির্মাণাধীন":"In development"}</small></summary><p>{bn?"কমার্সের এই কাজগুলো Payment phase-এর পরে চালু হবে।":"Commerce operations will follow the verified payment phase."}</p></details>:<h2>{group.label[locale]}</h2>}
     {!(service==="payments"&&group.label.en==="Commerce")&&group.items.filter(key=>!(service==="payments"&&key==="requests")).map(key=><Link key={key} href={key==="api-docs"?"/developers":contextHref(key)} target={key==="api-docs"?"_blank":undefined} rel={key==="api-docs"?"noopener noreferrer":undefined} className={section===key?"is-current":undefined} aria-current={section===key?"page":undefined} prefetch={key!=="api-docs"} onMouseEnter={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onFocus={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onClick={event=>{if(key!=="api-docs"){event.preventDefault();nav(key);}}}>
      <Icon name={key}/><span>{sections[key][locale]}</span>{key==="api-docs"&&<span aria-hidden="true">↗</span>}{section===key&&<span className="ds-active-mark"/>}</Link>)}

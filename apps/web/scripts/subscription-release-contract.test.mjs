@@ -14,7 +14,8 @@ test("last phase is isolated from legacy seller pay, with safe default-off purch
  assert.match(phase6,/== "true"/);
  assert.match(worker,/reconcileSubscriptionPayments/);
  assert.match(route,/validPurchaseToken\(plan\)/);
- assert.match(route,/primaryStoreFor\(user\.id\)/);
+ assert.doesNotMatch(route,/primaryStoreFor\(user\.id\)/);
+ assert.match(route,/intent\.storeId!==workspace\.id/);
  assert.ok(existsSync(new URL("apps/web/src/app/[locale]/pay/subscription/[token]/page.tsx",root)));
  assert.ok(existsSync(new URL("apps/web/src/app/api/checkout/[token]/route.ts",root)));
 });

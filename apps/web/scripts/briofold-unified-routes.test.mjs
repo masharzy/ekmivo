@@ -44,14 +44,14 @@ test("legacy API documentation settings paths resolve to the existing public dev
   "Public documentation should not depend on a Store session/database read");
  assert.ok(existsSync(at("app/(developer-portal)/[locale]/developers/[[...slug]]/page.tsx")));
 });
-test("single-Store account binding supersedes legacy selection without deleting historic memberships",()=>{
+test("multi-store: selected-store cookie wins, primary store is only the fallback, historic memberships kept",()=>{
  const auth=source("lib/server/auth.ts"),shell=source("components/app-shell.tsx");
  const workspaces=source("app/[locale]/workspaces/page.tsx"),proxy=source("app/api/go/[...path]/route.ts");
  assert.match(auth,/primaryStoreFor\(userId\)/);
- assert.match(auth,/if\(bound\)return spaces\.find\(space=>space\.id===bound\)\?\?null/);
- assert.match(auth,/if\(bound && workspaceId!==bound\)return false/);
- assert.match(shell,/primaryStoreId\?memberships\.filter\(space=>space\.id===primaryStoreId\):memberships/);
- assert.match(workspaces,/if\(bound\|\|spaces\.length===1\)redirect\("\/workspaces\/open"\)/);
+ assert.match(auth,/spaces\.find\(w=>w\.id===chosen\)\?\?spaces\.find\(w=>w\.id===bound\)\?\?spaces\[0\]/);
+ assert.doesNotMatch(auth,/if\(bound && workspaceId!==bound\)return false/);
+ assert.match(shell,/const spaces=memberships/);
+ assert.doesNotMatch(workspaces,/redirect\("\/workspaces\/open"\)/);
  assert.match(proxy,/STALE_BUSINESS/);
 });
 test("global marketing header and footer do not render on unified application routes",()=>{
@@ -236,7 +236,9 @@ test("unified operational activity preserves the financial event source",()=>{
 test("canonical product gates cover all roots, settings and valid subroutes",()=>{
  for(const mode of ["ai","commerce","both","off"]){
   for(const item of navigation.unifiedNavigation){
-   const result=navigation.unifiedDestination(mode,item.key,[]);
+   // Menu entries resolve by href, so shortcuts such as Devices (/settings/devices) are gated too.
+   const [root,...view]=item.href.split("/").filter(Boolean);
+   const result=navigation.unifiedDestination(mode,root,view);
    assert.equal(Boolean(result),navigation.enabledUnifiedService(mode,item.service),mode+"/"+item.key);
    if(result){assert.equal(typeof result.section,"string");assert.ok(["ai","payments"].includes(result.service));}
   }

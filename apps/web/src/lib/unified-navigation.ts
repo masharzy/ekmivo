@@ -3,25 +3,38 @@ import type {Service} from "./dashboard-navigation";
 
 export type BusinessMode="ai"|"commerce"|"both"|"off";
 export type UnifiedRoot="dashboard"|"inbox"|"orders"|"payments"|"sms-data"|"invoices"|"customers"|"reports"|"settings";
-export type UnifiedNavItem={key:UnifiedRoot;en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common"};
+export type UnifiedNavGroup="main"|"money"|"manage";
+export type UnifiedNavItem={key:UnifiedRoot|"devices";en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common";group:UnifiedNavGroup};
+export const unifiedNavGroupLabels:Record<UnifiedNavGroup,{en:string;bn:string}>={
+ main:{en:"Work",bn:"কাজ"},money:{en:"Money",bn:"টাকা-পয়সা"},manage:{en:"Manage",bn:"পরিচালনা"},
+};
 export const unifiedNavigation:readonly UnifiedNavItem[]=[
- {key:"dashboard",en:"Overview",bn:"ওভারভিউ",icon:"overview",href:"/dashboard",service:"common"},
- {key:"inbox",en:"Inbox",bn:"ইনবক্স",icon:"inbox",href:"/inbox",service:"ai"},
- {key:"orders",en:"Orders",bn:"অর্ডার",icon:"orders",href:"/orders",service:"common"},
- {key:"payments",en:"Payments",bn:"পেমেন্ট",icon:"transactions",href:"/payments",service:"payments"},
- {key:"sms-data",en:"SMS Data",bn:"SMS ডাটা",icon:"incoming",href:"/sms-data",service:"payments"},
- {key:"invoices",en:"Invoices",bn:"ইনভয়েস",icon:"invoices",href:"/invoices",service:"payments"},
- {key:"customers",en:"Customers",bn:"গ্রাহক",icon:"customers",href:"/customers",service:"common"},
- {key:"reports",en:"Reports",bn:"রিপোর্ট",icon:"reports",href:"/reports",service:"common"},
- {key:"settings",en:"Settings",bn:"সেটিংস",icon:"settings",href:"/settings",service:"common"},
+ {key:"dashboard",en:"Overview",bn:"ওভারভিউ",icon:"overview",href:"/dashboard",service:"common",group:"main"},
+ {key:"inbox",en:"Inbox",bn:"ইনবক্স",icon:"inbox",href:"/inbox",service:"ai",group:"main"},
+ {key:"orders",en:"Orders",bn:"অর্ডার",icon:"orders",href:"/orders",service:"common",group:"main"},
+ {key:"customers",en:"Customers",bn:"গ্রাহক",icon:"customers",href:"/customers",service:"common",group:"main"},
+ {key:"payments",en:"Payments",bn:"পেমেন্ট",icon:"transactions",href:"/payments",service:"payments",group:"money"},
+ {key:"invoices",en:"Invoices",bn:"ইনভয়েস",icon:"invoices",href:"/invoices",service:"payments",group:"money"},
+ {key:"sms-data",en:"SMS Data",bn:"SMS ডাটা",icon:"incoming",href:"/sms-data",service:"payments",group:"money"},
+ {key:"devices",en:"Devices",bn:"ডিভাইস",icon:"devices",href:"/settings/devices",service:"common",group:"manage"},
+ {key:"reports",en:"Reports",bn:"রিপোর্ট",icon:"reports",href:"/reports",service:"common",group:"manage"},
+ {key:"settings",en:"Settings",bn:"সেটিংস",icon:"settings",href:"/settings",service:"common",group:"manage"},
 ];
+/** Longest matching href wins, so /settings/devices highlights Devices, not Settings. */
+export function currentUnifiedItem(items:readonly UnifiedNavItem[],pathname:string):UnifiedNavItem|undefined{
+ return items.filter(i=>pathname===i.href||pathname.startsWith(i.href+"/")).sort((x,y)=>y.href.length-x.href.length)[0];
+}
 export type UnifiedSetting={slug:string;en:string;bn:string;section:SectionKey;service:"ai"|"payments"|"common";external?:boolean};
 export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:readonly UnifiedSetting[]}[]=[
- {slug:"business",en:"Business & verification",bn:"ব্যবসা ও যাচাই",items:[
+ {slug:"business",en:"Business",bn:"ব্যবসা",items:[
   {slug:"business",en:"Business profile",bn:"ব্যবসার পরিচিতি",section:"store",service:"common"},
+  {slug:"preferences",en:"Business preferences",bn:"ব্যবসার পছন্দ",section:"settings",service:"common"},
   {slug:"account",en:"Account & security",bn:"অ্যাকাউন্ট ও নিরাপত্তা",section:"settings",service:"common"},
   {slug:"account/devices",en:"This browser & notifications",bn:"এই ব্রাউজার ও নোটিফিকেশন",section:"settings",service:"common"},
-  {slug:"preferences",en:"Business preferences",bn:"ব্যবসার পছন্দ",section:"settings",service:"common"},
+ ]},
+ {slug:"payment",en:"Payments",bn:"পেমেন্ট",items:[
+  {slug:"payment-methods",en:"Payment methods",bn:"পেমেন্ট মাধ্যম",section:"gateways",service:"payments"},
+  {slug:"devices",en:"Devices",bn:"ডিভাইস",section:"devices",service:"common"},
   {slug:"checkout",en:"Checkout appearance",bn:"চেকআউট ডিজাইন",section:"checkout-themes",service:"payments"},
  ]},
  {slug:"ai",en:"AI & channels",bn:"AI ও চ্যানেল",items:[
@@ -31,26 +44,22 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"website",en:"Website chat",bn:"ওয়েবসাইট চ্যাট",section:"website",service:"ai"},
   {slug:"comment-automation",en:"Comment automation",bn:"কমেন্ট অটোমেশন",section:"comments",service:"ai"},
  ]},
- {slug:"payment",en:"Payment setup",bn:"পেমেন্ট সেটআপ",items:[
-  {slug:"payment-methods",en:"Payment methods",bn:"পেমেন্ট মাধ্যম",section:"gateways",service:"payments"},
-  {slug:"devices",en:"Devices",bn:"ডিভাইস",section:"devices",service:"common"},
- ]},
- {slug:"developers",en:"Developers & integrations",bn:"ডেভেলপার ও ইন্টিগ্রেশন",items:[
-  {slug:"api-keys",en:"API keys",bn:"API Keys",section:"developers",service:"payments"},
-  {slug:"webhooks",en:"Webhooks & alerts",bn:"ওয়েবহুক ও অ্যালার্ট",section:"webhooks",service:"payments"},
-  {slug:"integrations/courier",en:"Courier credentials",bn:"কুরিয়ারের সংযোগ",section:"integrations",service:"common"},
-  {slug:"integrations",en:"Integrations",bn:"ইন্টিগ্রেশন",section:"integrations",service:"payments"},
-  {slug:"api-docs",en:"API documentation",bn:"API নির্দেশনা",section:"api-docs",service:"payments",external:true},
-  {slug:"activity",en:"Activity logs",bn:"কার্যক্রমের ইতিহাস",section:"events",service:"common"},
- ]},
- {slug:"team",en:"Team & permissions",bn:"টিম ও অনুমতি",items:[
+ {slug:"team",en:"Team",bn:"টিম",items:[
   {slug:"team",en:"Team management",bn:"টিম পরিচালনা",section:"team",service:"common"},
   {slug:"team/groups",en:"Permission groups",bn:"অনুমতি গ্রুপ",section:"team",service:"common"},
+ ]},
+ {slug:"developers",en:"Developers",bn:"ডেভেলপার",items:[
+  {slug:"api-keys",en:"API keys",bn:"API Keys",section:"developers",service:"payments"},
+  {slug:"webhooks",en:"Webhooks & alerts",bn:"ওয়েবহুক ও অ্যালার্ট",section:"webhooks",service:"payments"},
+  {slug:"integrations",en:"Integrations",bn:"ইন্টিগ্রেশন",section:"integrations",service:"payments"},
+  {slug:"integrations/courier",en:"Courier credentials",bn:"কুরিয়ারের সংযোগ",section:"integrations",service:"common"},
+  {slug:"activity",en:"Activity logs",bn:"কার্যক্রমের ইতিহাস",section:"events",service:"common"},
+  {slug:"api-docs",en:"API documentation",bn:"API নির্দেশনা",section:"api-docs",service:"payments",external:true},
  ]},
  {slug:"billing",en:"Billing & help",bn:"বিলিং ও সহায়তা",items:[
   {slug:"billing",en:"Billing & usage",bn:"বিলিং ও ব্যবহার",section:"billing",service:"common"},
   {slug:"help",en:"Help & feedback",bn:"সহায়তা ও মতামত",section:"help",service:"common"},
-  {slug:"help/videos",en:"Video tutorials",bn:"ভিডিও টিউটোরিয়াল",section:"help",service:"common"},
+  {slug:"help/videos",en:"Video tutorials",bn:"ভিডিও টিউটোরিয়াল",section:"help",service:"common"},
   {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
