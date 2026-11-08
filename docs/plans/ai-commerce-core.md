@@ -246,10 +246,30 @@ Raw result সেভ থাকবে, যাচাই ফেল করলেও�
 
 ## Phase 7: Model
 
-বর্তমানে admin setting `AI_DEFAULT_MODEL` (OpenRouter বা Qwen) থেকে model আসে, hardcode নেই।
+এখন যা চলছে: `qwen/qwen3.8-omni-flash` (OpenRouter দিয়ে)। Code-এ এটাই default (`studio_media_probe.go`, `studio_text_evaluation.go`, `aicredits/openrouter.go`, `aicredits/media.go`)। Admin setting `AI_DEFAULT_MODEL` দিয়ে বদলানো যায়।
 
-| Model (OpenRouter ID) | Input | Tool use | দাম /1M (in/out) | মন্তব্য |
-|---|---|---|---|---|
+**সিদ্ধান্ত: Qwen3.8 Omni Flash-ই থাকবে।** এটা ইতিমধ্যে wired, text/image/audio/video নেয়, OpenRouter-এ `tools`/`tool_choice` (function calling) আর JSON schema structured output সাপোর্ট করে। দাম প্রায় $0.15 input / $0.47 output প্রতি 1M token (Alibaba/Vercel তালিকা; OpenRouter-এর দাম setup-এর সময় মিলিয়ে নাও)।
+
+খেয়াল রাখো: direct Qwen provider (`aicredits/qwen_omni.go`) শুধু `qwen3.5-omni-flash` নেয়। 3.8 চালাতে হলে হয় OpenRouter দিয়ে চালাও, নয়তো direct provider-এর allowlist-এ `qwen3.8-omni-flash` যোগ করো।
+
+তুলনার জন্য (Phase 6 eval-এ একই script দিয়ে):
+
+| Model | কেন |
+|---|---|
+| `xiaomi/mimo-v2.6-flash` | text/image/audio/video, tool use, সস্তা (~$0.10-0.14 / $0.28) |
+| `qwen/qwen3.8-flash` | text/image/video, audio নেই, তাই voice-এর জন্য না, শুধু text-এর তুলনায় |
+
+`xiaomi/mimo-v2-flash` বাদ, কারণ শুধু text নেয়।
+
+যা যাচাই করতে হবে:
+- Tool calling-এর সঙ্গে ছবি/voice একই request-এ ঠিকঠাক কাজ করে কি না।
+- বাংলা voice note বোঝে কি না।
+- Messenger voice (m4a) → wav রূপান্তর ঠিক আছে কি না।
+- প্রতি কথোপকথনে খরচ BDT-তে।
+
+Model বদলানোর নিয়ম: eval-এ ভুল approve ০, সঠিক tool ≥৯৫%, দরদামে সীমা ভাঙা ০। এই শর্তে Qwen3.8 Omni Flash পাস করলে বদলানোর দরকার নেই।
+
+---|---|---|---|---|
 | `xiaomi/mimo-v2.6-flash` | text, image, audio, video | ✓ | ~$0.10-0.14 / $0.28 | **প্রথম পছন্দ**, ২১ সেপ্টেম্বর ২০২৬-এ এসেছে |
 | `xiaomi/mimo-v2-omni` | text, image, audio, video | ✓ | $0.40 / $2.00 | পুরোনো, দাম বেশি, তুলনার জন্য |
 | `xiaomi/mimo-v2-flash` | **শুধু text** | ✓ | ~$0.10 / $0.30 | **বাদ**: ছবি, voice, video পড়ে না |
