@@ -26,7 +26,7 @@ func webInboxCapability(action string) (authz.Capability, bool) {
 	switch action {
 	case "ai-review-read", "work-read", "list", "messages", "profile", "products", "info", "media-get", "read":
 		return authz.InboxRead, true
-	case "send-saved-reply", "ai-review-done", "work", "takeover", "release", "ticket", "duty", "work-note", "send", "retry", "media-upload", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
+	case "send-saved-reply", "ai-review-done", "work", "takeover", "release", "ticket", "duty", "work-note", "send", "retry", "media-upload", "media-upload-ticket", "send-media", "send-product", "forward", "react", "note", "contact", "orders-save":
 		return authz.InboxSend, true
 	case "saved-reply", "archive-reply", "ai", "product-save":
 		return authz.InboxManage, true
@@ -35,6 +35,17 @@ func webInboxCapability(action string) (authz.Capability, bool) {
 	}
 }
 func (s *Service) HandleWebInbox(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Origin") != "" && originAllowed(r) {
+		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Add("Vary", "Origin")
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.WriteHeader(204)
+			return
+		}
+	}
 	if r.Method != http.MethodPost || !originAllowed(r) {
 		fail(w, 403, "ORIGIN_DENIED")
 		return
@@ -43,7 +54,10 @@ func (s *Service) HandleWebInbox(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "INBOX_UNAVAILABLE")
 		return
 	}
-	c, err := r.Cookie("briofold-session")
+	c, err := r.Cookie("__Secure-briofold-api-session")
+	if err != nil {
+		c, err = r.Cookie("briofold-session")
+	}
 	if err != nil {
 		authError(w, authz.ErrUnauthorized)
 		return
@@ -198,6 +212,10 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 			return
 		}
 		write(w, 200, json.RawMessage(result))
+		return
+	}
+	if b.Action == "media-upload-ticket" {
+		s.inboxUploadTicket(w, r, d, b.Thread, b.Body)
 		return
 	}
 	if b.Action == "media-upload" || b.Action == "media-get" {

@@ -359,7 +359,11 @@ func (s *Service) sendTelegramMedia(ctx context.Context, j inboxSendJob, token s
 	var result struct {
 		ID int64 `json:"message_id"`
 	}
-	if telegramUpload(ctx, token, method, field, safeUploadName(f.Name), f.Mime, fields, data, &result) != nil || result.ID <= 0 {
+	err = telegramUpload(ctx, token, method, field, safeUploadName(f.Name), f.Mime, fields, data, &result)
+	if err != nil && err.Error() == "provider rejected request" {
+		return "failed", "", "PROVIDER_SEND_REJECTED"
+	}
+	if err != nil || result.ID <= 0 {
 		return "uncertain", "", "PROVIDER_OUTCOME_UNKNOWN"
 	}
 	return "sent", strconv.FormatInt(result.ID, 10), ""
@@ -389,7 +393,9 @@ func telegramUpload(ctx context.Context, token, method, field, filename, mime st
 		return errors.New("provider unavailable")
 	}
 	req.Header.Set("Content-Type", form.FormDataContentType())
-	res, err := inboxHTTP.Do(req)
+	uploadHTTP := *inboxHTTP
+	uploadHTTP.Timeout = 45 * time.Second
+	res, err := uploadHTTP.Do(req)
 	if err != nil {
 		return errors.New("provider outcome unknown")
 	}
@@ -398,7 +404,13 @@ func telegramUpload(ctx context.Context, token, method, field, filename, mime st
 		OK     bool            `json:"ok"`
 		Result json.RawMessage `json:"result"`
 	}
-	if res.StatusCode != 200 || json.NewDecoder(io.LimitReader(res.Body, 65536)).Decode(&envelope) != nil || !envelope.OK {
+	if res.StatusCode >= 500 {
+		return errors.New("provider outcome unknown")
+	}
+	if json.NewDecoder(io.LimitReader(res.Body, 65536)).Decode(&envelope) != nil {
+		return errors.New("invalid provider response")
+	}
+	if res.StatusCode != 200 || !envelope.OK {
 		return errors.New("provider rejected request")
 	}
 	if out != nil && json.Unmarshal(envelope.Result, out) != nil {

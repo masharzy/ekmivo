@@ -1,13 +1,13 @@
 package main
 
 import (
-	_ "github.com/masharzy/briofold/backend/internal/envcompat"
 	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	_ "github.com/masharzy/briofold/backend/internal/envcompat"
 	"log"
 	"net/http"
 	"os"
@@ -67,6 +67,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/inbox-connections", pay.HandleInboxConnection)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connections/{connectionID}/disconnect", pay.HandleInboxConnection)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
+	mux.HandleFunc("OPTIONS /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/comments", pay.HandleComments)
@@ -95,6 +96,8 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/channels/telegram/{botID}/webhook", pay.HandleTelegramWebhook)
 	mux.HandleFunc("GET /v1/channels/meta/callback", pay.HandleInboxOAuthCallback)
 	mux.HandleFunc("GET /v1/channels/media/{mediaID}", pay.HandleInboxMedia)
+	mux.HandleFunc("POST /v1/channels/upload/{mediaID}", pay.HandleInboxUpload)
+	mux.HandleFunc("OPTIONS /v1/channels/upload/{mediaID}", pay.HandleInboxUpload)
 	mux.HandleFunc("POST /v1/channels/woocommerce/{sourceID}", pay.HandleWooWebhook)
 	mux.HandleFunc("GET /v1/channels/meta/webhook", pay.HandleInboxWebhook)
 	mux.HandleFunc("POST /v1/channels/meta/webhook", pay.HandleInboxWebhook)

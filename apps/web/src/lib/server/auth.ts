@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes, createHash, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { database } from "./db";
@@ -34,6 +34,12 @@ export async function passwordMatches(password: string, stored: string) {
  const calculated = await derive(password,Buffer.from(salt,"hex"));
  return timingSafeEqual(calculated,expected) && salt!=="0".repeat(48);
 }
+// A separate HttpOnly cookie is sent only to /v1 API paths; JS never receives the session.
+async function apiSessionCookie(token:string,expires:Date){
+ const hostname=(await headers()).get("host")?.split(":")[0];
+ if(process.env.NODE_ENV!=="production"||!(hostname==="briofold.tech"||hostname==="www.briofold.tech"))return;
+ (await cookies()).set("__Secure-briofold-api-session",token,{httpOnly:true,secure:true,sameSite:"strict",domain:"briofold.tech",path:"/v1/",expires,priority:"high"});
+}
 export async function createSession(userId: string) {
  const token = randomBytes(32).toString("base64url");
  const expiresAt = new Date(Date.now()+THIRTY_DAYS);
@@ -47,12 +53,14 @@ export async function createSession(userId: string) {
  FOR UPDATE OF d,m,a RETURNING id`:[];
  if(!remembered.length)await database()`INSERT INTO auth_sessions (user_id,token_hash,expires_at) VALUES (${userId},${hashToken(token)},${expiresAt})`;
  (await cookies()).set(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",expires:expiresAt,priority:"high"});
+ await apiSessionCookie(token,expiresAt);
 }
 export async function revokeSession() {
  const jar=await cookies();
  const token=jar.get(COOKIE)?.value;
  if(token && token.length<=256) await database()`UPDATE auth_sessions SET revoked_at=now() WHERE token_hash=${hashToken(token)} AND revoked_at IS NULL`;
  jar.delete(COOKIE);
+ await apiSessionCookie("",new Date(0));
 }
 export const currentUser=cache(async function currentUser():Promise<User|null> {
  const token=(await cookies()).get(COOKIE)?.value;

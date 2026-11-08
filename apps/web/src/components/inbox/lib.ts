@@ -90,6 +90,7 @@ export function fileToBase64(file:Blob){return new Promise<string>((resolve,reje
 
 export function sendReason(e:unknown,bn:boolean){
  const x=e as {message?:string;code?:string}|null;const code=x?.code??"",st=x?.message??"";
+ if(code==="VPS_LOGIN_REQUIRED")return bn?"সরাসরি VPS upload চালু করতে একবার সাইন আউট করে আবার লগইন করুন":"Sign out and sign in once to enable direct VPS uploads";
  if(/FILE_LIMIT|TOO_LARGE/i.test(code))return bn?"ফাইল ৫ MB-এর বেশি":"File is over 5 MB";
  if(/UNSUPPORTED|INVALID_MEDIA|INVALID_IMAGE/i.test(code))return bn?"ফাইলটি সাপোর্টেড নয়":"File type not supported";
  if(st==="429")return bn?"একটু পরে আবার চেষ্টা করুন":"Too many uploads, try again shortly";

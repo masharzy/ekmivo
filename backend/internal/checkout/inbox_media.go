@@ -100,37 +100,7 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 			fail(w, 422, "INVALID_MEDIA")
 			return
 		}
-		// Authorize before malware scanning/storage or consuming upload resources.
-		var authorized []byte
-		if err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_profile($1::uuid,$2,$3::uuid)", d.Workspace, d.Environment, thread).Scan(&authorized); err != nil {
-			mapped(w, err)
-			return
-		}
-		if !s.budget(w, "inbox-upload:"+d.ID, 20) {
-			return
-		}
-		// Owner decision: the inbox does not run a malware scan. Content type is verified by magic bytes
-		// and files are opened inside the browser; non-renderable files are downloaded at the owner's risk.
-		name, _ := b["name"].(string)
-		h := http.Header{}
-		h.Set("X-Filename", name)
-		name = uploadFilename(h)
-		duration, _ := b["duration_ms"].(float64)
-		hash := sha256.Sum256(data)
-		// Content-addressed suffix prevents a conflicting retry from overwriting accepted bytes.
-		key := inboxBlobPrefix + d.Environment + "/" + d.Workspace + "/" + id + "/" + hex.EncodeToString(hash[:])
-		s.inboxBlobPurge(r.Context())
-		if err = s.inboxBlobPut(r.Context(), d.Workspace, key, data); err != nil {
-			fail(w, 503, "MEDIA_STORE_UNAVAILABLE")
-			return
-		}
-		var result []byte
-		err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_media_save($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10)", d.Workspace, d.Environment, thread, id, key, name, typ, len(data), hex.EncodeToString(hash[:]), int(duration)).Scan(&result)
-		if err != nil {
-			mapped(w, err)
-			return
-		}
-		write(w, 200, json.RawMessage(result))
+		s.saveInboxUpload(w, r, d, thread, id, data, typ, b)
 		return
 	}
 	var raw []byte
@@ -266,4 +236,39 @@ func (s *Service) HandleInboxMedia(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, max-age=480")
 	// ServeContent adds Range support so <video> can seek and stream.
 	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
+}
+
+func (s *Service) saveInboxUpload(w http.ResponseWriter, r *http.Request, d mobileIdentity, thread, id string, data []byte, typ string, b map[string]any) {
+	// Authorize before malware scanning/storage or consuming upload resources.
+	var authorized []byte
+	if err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_profile($1::uuid,$2,$3::uuid)", d.Workspace, d.Environment, thread).Scan(&authorized); err != nil {
+		mapped(w, err)
+		return
+	}
+	if !s.budget(w, "inbox-upload:"+d.ID, 20) {
+		return
+	}
+	// Owner decision: the inbox does not run a malware scan. Content type is verified by magic bytes
+	// and files are opened inside the browser; non-renderable files are downloaded at the owner's risk.
+	name, _ := b["name"].(string)
+	h := http.Header{}
+	h.Set("X-Filename", name)
+	name = uploadFilename(h)
+	duration, _ := b["duration_ms"].(float64)
+	hash := sha256.Sum256(data)
+	// Content-addressed suffix prevents a conflicting retry from overwriting accepted bytes.
+	key := inboxBlobPrefix + d.Environment + "/" + d.Workspace + "/" + id + "/" + hex.EncodeToString(hash[:])
+	s.inboxBlobPurge(r.Context())
+	if err := s.inboxBlobPut(r.Context(), d.Workspace, key, data); err != nil {
+		fail(w, 503, "MEDIA_STORE_UNAVAILABLE")
+		return
+	}
+	var result []byte
+	err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_media_save($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10)", d.Workspace, d.Environment, thread, id, key, name, typ, len(data), hex.EncodeToString(hash[:]), int(duration)).Scan(&result)
+	if err != nil {
+		mapped(w, err)
+		return
+	}
+	write(w, 200, json.RawMessage(result))
+	return
 }

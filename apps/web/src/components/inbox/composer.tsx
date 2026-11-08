@@ -4,7 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {PointerEvent as RPE} from "react";
 import {I} from "./icons";
 import {Sheet} from "./sheets";
-import {fileToBase64,maxImages,sendReason,mmss,money,num,type Cap,type Msg,type Product} from "./lib";
+import {maxImages,sendReason,mmss,money,num,type Cap,type Msg,type Product} from "./lib";
 import {chooseRecorder,finishRecording,type RecorderChoice} from "./voice";
 import {useMedia} from "./bubbles";
 import s from "./inbox.module.css";
@@ -13,29 +13,9 @@ export type Call=<T=unknown>(action:string,body?:object)=>Promise<T>;
 type Item={id:string;mediaId:string;key:string;blob:Blob;url:string;name:string;mime:string};
 const MAX_BYTES=5*1024*1024;
 
-// Base64 travels through the web proxy: keep a photo well below its payload limit.
-const PHOTO_BYTES=2*1024*1024;
 async function normalizeImage(file:File):Promise<{blob:Blob;mime:string;name:string}|null>{
- if(!file.type.startsWith("image/"))return null;
- let source:CanvasImageSource|null=null,release=()=>{};
- try{
-  try{const bmp=await createImageBitmap(file);source=bmp;release=()=>bmp.close();}
-  catch{
-   // Some mobile browsers cannot decode camera photos with createImageBitmap.
-   const url=URL.createObjectURL(file);release=()=>URL.revokeObjectURL(url);
-   const img=new Image();await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(Error("IMAGE_DECODE_FAILED"));img.src=url;});source=img;
-  }
-  const width=source instanceof HTMLImageElement?source.naturalWidth:(source as ImageBitmap).width;
-  const height=source instanceof HTMLImageElement?source.naturalHeight:(source as ImageBitmap).height;
-  if(!width||!height)return null;
-  if((file.type==="image/jpeg"||file.type==="image/png")&&file.size<=PHOTO_BYTES&&Math.max(width,height)<=2560)return {blob:file,mime:file.type,name:file.name||"photo"};
-  const scale=Math.min(1,2560/Math.max(width,height));
-  const c=document.createElement("canvas");c.width=Math.max(1,Math.round(width*scale));c.height=Math.max(1,Math.round(height*scale));
-  const ctx=c.getContext("2d");if(!ctx)return null;ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(source,0,0,c.width,c.height);
-  for(const q of [.88,.74,.6,.45]){const blob=await new Promise<Blob|null>(r=>c.toBlob(r,"image/jpeg",q));if(blob&&blob.size<=PHOTO_BYTES)return {blob,mime:"image/jpeg",name:(file.name||"photo").replace(/\.[^.]+$/,"")+".jpg"};}
- }catch{}
- finally{release();}
- return null;
+ if(!file.type.startsWith("image/")||file.size>MAX_BYTES)return null;
+ return {blob:file,mime:file.type,name:file.name||"photo"};
 }
 
 function ProductRow({p,workspaceId,threadId,bn,onPick}:{p:Product;workspaceId:string;threadId:string;bn:boolean;onPick:(p:Product)=>void}){
@@ -66,10 +46,20 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
  function removeItem(i:number){setItems(prev=>{const x=prev[i];if(x)URL.revokeObjectURL(x.url);const n=prev.filter((_,j)=>j!==i);if(!n.length)setPvOpen(false);setCur(c=>Math.max(0,Math.min(c,n.length-1)));return n;});}
  function closePreview(){items.forEach(x=>URL.revokeObjectURL(x.url));setItems([]);setPvOpen(false);}
  const rs=(e:unknown)=>{const r=sendReason(e,bn);return r?" — "+r:"";};
+ async function vpsCall<T>(action:string,body:object):Promise<T>{
+  const response=await fetch(`https://api.briofold.tech/v1/workspaces/${p.workspaceId}/inbox?environment=live`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,thread_id:p.threadId,body})});
+  if(!response.ok){const error=await response.json().catch(()=>null);throw Object.assign(Error(String(response.status)),{code:response.status===401?"VPS_LOGIN_REQUIRED":error?.code??error?.error?.code??"UPLOAD_FAILED"});}
+  return response.json() as Promise<T>;
+ }
  async function uploadAndSend(item:Item,extra:object,mime=item.mime,duration?:number){
-  const data=await fileToBase64(item.blob);
-  await call("media-upload",{media_id:item.mediaId,data,mime,name:item.name,...(duration?{duration_ms:duration}:{})});
-  await call("send-media",{media_id:item.mediaId,idempotency_key:item.key,...extra});
+  const bytes=await item.blob.arrayBuffer();
+  const sha256=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("");
+  const permit=await vpsCall<{url:string;ticket:string}>("media-upload-ticket",{media_id:item.mediaId,size:item.blob.size,sha256,mime,name:item.name,...(duration?{duration_ms:duration}:{})});
+  const target=new URL(permit.url);
+  if(target.origin!=="https://api.briofold.tech"||target.pathname!==`/v1/channels/upload/${item.mediaId}`)throw Error("INVALID_UPLOAD_TARGET");
+  const response=await fetch(target,{method:"POST",credentials:"omit",headers:{"Authorization":`Bearer ${permit.ticket}`,"Content-Type":"application/octet-stream"},body:item.blob});
+  if(!response.ok){const error=await response.json().catch(()=>null);throw Object.assign(Error(String(response.status)),{code:error?.code??error?.error?.code??"UPLOAD_FAILED"});}
+  await vpsCall("send-media",{media_id:item.mediaId,idempotency_key:item.key,...extra});
  }
  async function sendImages(){
   if(sending||!items.length)return;setSending(true);p.onBusy(true);const batch=items.length>1?crypto.randomUUID():undefined;let done=0;
