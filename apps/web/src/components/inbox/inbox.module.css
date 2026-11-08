@@ -333,3 +333,5 @@
 .shell .tools :global(p){margin:0 0 10px;font-size:13px;color:var(--mu)}
 .shell .tools :global(p[role="alert"]){color:var(--er);background:var(--erbg);padding:10px 12px;border-radius:12px}
 .shell .tools :global(p[role="status"]){background:var(--s2);padding:10px 12px;border-radius:12px}
+
+.avPhoto{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;object-fit:cover}

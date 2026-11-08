@@ -144,10 +144,6 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		return
 	}
 	if wantURL, _ := b["url"].(bool); wantURL {
-		if strings.HasPrefix(f.Key, inboxBlobPrefix) && !s.inboxBlobHas(r.Context(), f.Key) {
-			fail(w, 404, "MEDIA_EXPIRED")
-			return
-		}
 		// Large media (video) is fetched by the browser directly through a short-lived signed URL.
 		link, linkErr := s.mediaCapability(d.Workspace, d.Environment, thread, id)
 		if linkErr != nil {
@@ -159,8 +155,14 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 	}
 	data, err := s.inboxObjectGet(r.Context(), f.Key)
 	if err != nil {
-		fail(w, 404, "MEDIA_EXPIRED")
-		return
+		media, e := s.fetchInboundMedia(r.Context(), d, thread, id)
+		if e != nil {
+			fail(w, 404, "MEDIA_EXPIRED")
+			return
+		}
+		data = media.Data
+		f.Mime = media.MIME
+		f.Name = media.Name
 	}
 	write(w, 200, map[string]any{"data": base64.StdEncoding.EncodeToString(data), "mime": f.Mime, "name": f.Name})
 }
@@ -217,8 +219,14 @@ func (s *Service) HandleInboxMedia(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data, err = s.inboxObjectGet(r.Context(), f.Key)
 		if err != nil {
-			fail(w, 404, "MEDIA_EXPIRED")
-			return
+			media, e := s.fetchInboundMedia(r.Context(), mobileIdentity{Workspace: ws, Environment: e}, t, id)
+			if e != nil {
+				fail(w, 404, "MEDIA_EXPIRED")
+				return
+			}
+			data = media.Data
+			f.Mime = media.MIME
+			f.Name = media.Name
 		}
 	}
 	// The dashboard may inspect audio bytes to determine durations that metadata

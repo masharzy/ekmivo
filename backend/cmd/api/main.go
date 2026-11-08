@@ -68,6 +68,8 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connections/{connectionID}/disconnect", pay.HandleInboxConnection)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
 	mux.HandleFunc("OPTIONS /v1/workspaces/{workspaceID}/inbox", pay.HandleWebInbox)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/inbox/realtime", pay.HandleInboxRealtime)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/inbox/avatar/{threadID}", pay.HandleInboxAvatar)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/comments", pay.HandleComments)
@@ -482,6 +484,9 @@ func main() {
 	log.Printf("briofold-api listening on :%s", port)
 	runtimeContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if pg05 != nil && pg05.Pipeline != nil {
+		go pg05.RunInboxRealtime(runtimeContext)
+	}
 	if pg05 != nil && pg05.Pipeline != nil && os.Getenv("INBOX_SENDER_ENABLED") == "true" {
 		go pg05.RunInboxSender(runtimeContext)
 	}

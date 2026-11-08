@@ -356,15 +356,24 @@ func (s *Service) sendTelegramMedia(ctx context.Context, j inboxSendJob, token s
 	if caption := []rune(j.Text); len(caption) > 0 && len(caption) <= 1024 {
 		fields["caption"] = j.Text
 	}
-	var result struct {
-		ID int64 `json:"message_id"`
-	}
+	var result telegramSentMedia
 	err = telegramUpload(ctx, token, method, field, safeUploadName(f.Name), f.Mime, fields, data, &result)
 	if err != nil && err.Error() == "provider rejected request" {
 		return "failed", "", "PROVIDER_SEND_REJECTED"
 	}
 	if err != nil || result.ID <= 0 {
 		return "uncertain", "", "PROVIDER_OUTCOME_UNKNOWN"
+	}
+	if fileID := result.fileID(); fileID != "" {
+		ref, _ := json.Marshal(map[string]string{"provider_id": fileID, "mime": f.Mime, "name": f.Name})
+		cipher, e := deviceevidence.Encrypt(s.Pipeline.Key, ref, j.Workspace+"|inbox-source")
+		if e == nil {
+			_, e = s.Pipeline.Control.Exec(ctx, "SELECT inbox_outgoing_media_reference($1::uuid,$2)", j.ID, cipher)
+		}
+		// Delivery already succeeded: a metadata write failure must never cause duplicate sending.
+		if e != nil {
+			return "sent", strconv.FormatInt(result.ID, 10), "MEDIA_REFERENCE_UNAVAILABLE"
+		}
 	}
 	return "sent", strconv.FormatInt(result.ID, 10), ""
 }
@@ -417,4 +426,24 @@ func telegramUpload(ctx context.Context, token, method, field, filename, mime st
 		return errors.New("invalid provider response")
 	}
 	return nil
+}
+
+type telegramSentMedia struct {
+	ID       int64               `json:"message_id"`
+	Photos   []telegramMediaFile `json:"photo"`
+	Voice    *telegramMediaFile  `json:"voice"`
+	Audio    *telegramMediaFile  `json:"audio"`
+	Document *telegramMediaFile  `json:"document"`
+}
+
+func (r telegramSentMedia) fileID() string {
+	if len(r.Photos) > 0 {
+		return r.Photos[len(r.Photos)-1].ID
+	}
+	for _, f := range []*telegramMediaFile{r.Voice, r.Audio, r.Document} {
+		if f != nil {
+			return f.ID
+		}
+	}
+	return ""
 }

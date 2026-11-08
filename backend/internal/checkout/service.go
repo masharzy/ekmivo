@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -39,7 +40,9 @@ var (
 )
 
 type Service struct {
-	wooRequest func(context.Context, *http.Request) (*http.Response, error)
+	realtimeOnce sync.Once
+	realtimeHub  *inboxRealtimeHub
+	wooRequest   func(context.Context, *http.Request) (*http.Response, error)
 	// Injectable only by package tests; production uses pinned HTTPS transport.
 	pathaoRequest       func(context.Context, *http.Request) (*http.Response, error)
 	SyncProjection      func(context.Context, string, string) error

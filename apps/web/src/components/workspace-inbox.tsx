@@ -7,11 +7,12 @@ import {activeDrafts,registerDraft} from "../lib/client/draft-navigation";
 import {inboxDraftKey,readInboxDraft,writeInboxDraft} from "../lib/client/inbox-drafts";
 import {ChannelBadge,I} from "./inbox/icons";
 import {MessageRow,Img,useMedia} from "./inbox/bubbles";
+import {AvatarPhoto} from "./inbox/avatar";
 import {Composer} from "./inbox/composer";
 import {ProfileView} from "./inbox/profile";
 import {Sheet} from "./inbox/sheets";
 import {announceInboxUnread} from "./inbox-unread";
-import {buildRows,channelMeta,clock,fullDate,inferSeen,initials,listTime,num,type Cap,type Conversation,type Msg,type Profile,type Thread} from "./inbox/lib";
+import {buildRows,channelMeta,clock,fullDate,listTime,num,type Cap,type Conversation,type Msg,type Profile,type Thread} from "./inbox/lib";
 import legacy from "./workspace-messaging.module.css";
 import s from "./inbox/inbox.module.css";
 
@@ -99,8 +100,8 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  useEffect(()=>{filterRef.current={query,offset,queue,channel,range,label};});
  const api=useCallback(async <T,>(action:string,thread?:string,body?:object,cursor?:number|null):Promise<T>=>{
   const f=filterRef.current;
-  const response=await fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{
-   method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",
+  const response=await fetch(`https://api.briofold.tech/v1/workspaces/${workspaceId}/inbox?environment=live`,{
+   method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},cache:"no-store",
    body:JSON.stringify({action,thread_id:thread,body,before:cursor,filters:{q:f.query,offset:f.offset,queue:f.queue,channel:f.channel,from_date:f.range?dayStr(Number(f.range)):"",through_date:"",label:f.label}})
   });
   if(!response.ok){if(response.status===401||response.status===403){setForbidden(true);setThreads([]);setLatest([]);setSelected(null);setView("list");setLoaded(false);cached.current.clear();}const code=await response.json().then((j:{code?:unknown;error?:{code?:unknown}|string})=>String(j?.code??(typeof j?.error==="object"?j.error?.code:j?.error)??"")).catch(()=>"");throw Object.assign(Error(String(response.status)),{code});}
@@ -123,7 +124,6 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    setThreads(items);setLoaded(true);});
   const messageRequest=selected?api<Conversation>("messages",selected,undefined,null).then(chat=>{
    if(version!==generation.current)return;
-   chat.items=inferSeen(chat.items);
    setSendAllowed(chat.thread.send_allowed!==false);setManageAllowed(chat.thread.manage_allowed!==false);
    setLatest(previous=>{
     const prevMap=new Map(previous.map(m=>[m.id,m]));let same=previous.length===chat.items.length;
@@ -140,10 +140,30 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
   await Promise.all([listRequest,messageRequest]);
   if(version===generation.current){setError(false);setOnline(true);}
  },[api,selected]);
+ const [realtime,setRealtime]=useState(false);
+ const refreshRef=useRef(refresh);useLayoutEffect(()=>{refreshRef.current=refresh;},[refresh]);
+ const realtimeReady=useRef(false);
+ useEffect(()=>{
+  let stopped=false,socket:WebSocket|null=null,attempt=0;
+  let reconnect:ReturnType<typeof setTimeout>|undefined,flush:ReturnType<typeof setTimeout>|undefined;
+  let running=false,pending=false;
+  const sync=async()=>{if(stopped)return;if(document.visibilityState==="hidden"){pending=true;return;}if(running){pending=true;return;}running=true;try{await refreshRef.current();}catch{}finally{running=false;if(pending&&!stopped&&!document.hidden){pending=false;flush=setTimeout(()=>void sync(),150);}}};
+  const connect=()=>{
+   if(stopped)return;
+   socket=new WebSocket(`wss://api.briofold.tech/v1/workspaces/${workspaceId}/inbox/realtime?environment=live`);
+   socket.onopen=()=>{attempt=0;realtimeReady.current=true;setRealtime(true);void sync();};
+   socket.onmessage=event=>{try{if(JSON.parse(event.data)?.type!=="inbox.changed")return;}catch{return;}if(!flush)flush=setTimeout(()=>{flush=undefined;void sync();},100);};
+   socket.onerror=()=>socket?.close();
+   socket.onclose=()=>{realtimeReady.current=false;setRealtime(false);if(!stopped)reconnect=setTimeout(connect,Math.min(15000,1000*2**Math.min(attempt++,4))+Math.random()*500);};
+  };
+  const visible=()=>{if(document.visibilityState==="visible")void sync();};
+  document.addEventListener("visibilitychange",visible);connect();
+  return()=>{stopped=true;realtimeReady.current=false;clearTimeout(reconnect);clearTimeout(flush);socket?.close();document.removeEventListener("visibilitychange",visible);};
+ },[workspaceId]);
  useEffect(()=>{
   let alive=true;let timer:ReturnType<typeof setTimeout>;
-  async function run(){try{if(document.visibilityState!=="hidden")await refresh();}catch(e){if(alive){setError(true);}}
-   finally{if(alive)timer=setTimeout(()=>void run(),2000);}}
+  async function run(){try{if(document.visibilityState!=="hidden")await refresh();}catch{if(alive){setError(true);}}
+   finally{if(alive)timer=setTimeout(()=>void run(),realtimeReady.current?30000:3000);}}
   timer=setTimeout(()=>void run(),query?250:0);
   return()=>{alive=false;invalidate();clearTimeout(timer);};
  },[invalidate,query,queue,channel,range,label,offset,refresh]);
@@ -241,7 +261,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    {/* ============ list ============ */}
    <div className={`${s.scr} ${s.sInbox}`}>
     <div className={s.top}><div className={s.ttl}>{t("Inbox","ইনবক্স")}</div>
-     <div className={`${s.chip} ${offline?s.off:syncing||error?s.sync:""}`} role="status" style={{marginLeft:"auto"}}><i className={s.dot}/>{offline?t("Offline","অফলাইন"):error?t("Reconnecting","আবার সংযোগ হচ্ছে"):syncing?t("Syncing","সিঙ্ক হচ্ছে"):t("Live","লাইভ")}</div>
+     <div className={`${s.chip} ${offline?s.off:syncing||error?s.sync:""}`} role="status" style={{marginLeft:"auto"}}><i className={s.dot}/>{offline?t("Offline","অফলাইন"):error?t("Reconnecting","আবার সংযোগ হচ্ছে"):syncing?t("Syncing","সিঙ্ক হচ্ছে"):realtime?t("Live","লাইভ"):t("Auto sync","অটো সিঙ্ক")}</div>
      <button type="button" className={s.fb} aria-label={t("Search","খুঁজুন")} onClick={()=>setSearchOpen(v=>!v)}><I n="search"/></button>
      <button type="button" className={s.fb} aria-label={t("Filters","ফিল্টার")} onClick={()=>setSheet("filter")}><I n="flt"/>{filterCount>0&&<u>{num(filterCount,bn)}</u>}</button>{full&&<button type="button" className={`${s.fb} ${s.fsOnly}`} aria-label={full==="wide"?t("Show sidebar","সাইডবার দেখান"):t("Hide sidebar","সাইডবার লুকান")} aria-pressed={full==="wide"} onClick={()=>setFull(v=>v==="wide"?"side":"wide")}><I n="side"/></button>}<button type="button" className={`${s.fb} ${s.fsOnly}`} aria-label={full?t("Exit full screen","ফুল স্ক্রিন বন্ধ"):t("Full screen","ফুল স্ক্রিন")} onClick={()=>full?exitFull():enterFull()}><I n={full?"shrink":"full"}/></button></div>
     {searchOpen&&<div className={s.search}><I n="search" size={16}/><input autoFocus data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" autoComplete="off" value={query} maxLength={200} placeholder={t("Search name, phone or message","নাম, ফোন বা মেসেজ খুঁজুন")} aria-label={t("Search conversations","কথোপকথন খুঁজুন")} onChange={e=>{invalidate();setOffset(0);setQuery(e.target.value);}}/>{query&&<button type="button" className={s.ib} aria-label={t("Clear","মুছুন")} onClick={()=>{invalidate();setQuery("");}}><I n="x" size={16}/></button>}</div>}
@@ -252,7 +272,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
      {threads.map(item=>{const sender=item.preview_sender;const pv=(sender==="seller"?t("You: ","আপনি: "):sender==="ai"?"AI: ":"")+(item.preview||t("Attachment","সংযুক্তি"));
       return <div key={item.id} ref={el=>{if(el)rowRefs.current.set(item.id,el);else rowRefs.current.delete(item.id);}} role="button" tabIndex={0} data-thread-id={item.id} aria-current={selected===item.id} className={`${s.cv} ${selected===item.id?s.cur:""} ${newRows.has(item.id)?s.rowin:""}`}
        onClick={()=>selectThread(item.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectThread(item.id);}else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();(e.currentTarget[e.key==="ArrowDown"?"nextElementSibling":"previousElementSibling"] as HTMLElement|null)?.focus();}}}>
-       <div className={s.av}>{initials(item.name)}<ChannelBadge channel={item.channel} size={18}/></div>
+       <div className={s.av}>{<AvatarPhoto workspaceId={workspaceId} threadId={item.id} name={item.name}/>}<ChannelBadge channel={item.channel} size={18}/></div>
        <div className={s.cm}><b>{item.name}</b><span className={item.unread>0?s.strong:undefined}>{pv}</span></div>
        <div className={s.cr}><span>{listTime(item.last_activity_at,bn)}</span>{item.unread>0?<span className={s.un} aria-label={t(`${item.unread} unread`,`${item.unread}টি অপঠিত`)}>{item.unread>99?"99+":num(item.unread,bn)}</span>:item.overdue?<span className={s.od}>{t("Overdue","দেরি")}</span>:null}</div>
       </div>;})}
@@ -270,7 +290,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
     <div className={s.chh}>
      <button type="button" className={`${s.ib} ${s.backBtn}`} onClick={backToList} aria-label={t("Back to conversations","কথোপকথনের তালিকায় ফিরুন")}><I n="back"/></button>
      <button type="button" className={s.chi} onClick={()=>setView(v=>v==="profile"&&window.matchMedia("(min-width:900px)").matches?"chat":"profile")} aria-label={t("Customer details","কাস্টমারের তথ্য")}>
-      <div className={s.av} style={{width:34,height:34,fontSize:13}}>{initials(customerName)}{chosen&&<ChannelBadge channel={chosen.channel} size={16}/>}</div>
+      <div className={s.av} style={{width:34,height:34,fontSize:13}}>{<AvatarPhoto workspaceId={workspaceId} threadId={selected??""} name={customerName}/>}{chosen&&<ChannelBadge channel={chosen.channel} size={16}/>}</div>
       <div className={s.nm}><b>{customerName}</b><span>{channelMeta[chosen?.channel??""]?.name??""}{!windowOpen&&chosen?" · "+t("Reply window closed","উত্তরের সময় শেষ"):""}</span></div></button>
      {canManage?<button type="button" className={`${s.aic} ${ai?"":s.offai}`} aria-pressed={ai} disabled={busy} onClick={()=>void toggleAi()}><i/><span>{ai?t("AI on","AI চালু"):t("AI off","AI বন্ধ")}</span></button>:<span className={s.aic}><i style={{background:ai?"var(--ok)":"var(--mu)"}}/>{ai?t("AI on","AI চালু"):t("AI off","AI বন্ধ")}</span>}
      {canManage&&<button type="button" className={s.ib} onClick={()=>setSheet("tools")} aria-label={t("Conversation tools","কথোপকথনের কাজ")}><I n="more"/></button>}
@@ -302,14 +322,14 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
 
    {/* ============ customer profile ============ */}
    <div className={`${s.scr} ${s.sProf}`}>
-    {selected&&view==="profile"||profile?<ProfileView p={profile?.id===selected?profile:null} bn={bn} aiEnabled={ai} canManage={canManage} canNote={canSend} onBack={()=>setView("chat")} onClose={()=>setView("chat")} onChat={()=>setView("chat")} onToggleAi={()=>void toggleAi()} toast={toast}
+    {selected&&view==="profile"||profile?<ProfileView workspaceId={workspaceId} p={profile?.id===selected?profile:null} bn={bn} aiEnabled={ai} canManage={canManage} canNote={canSend} onBack={()=>setView("chat")} onClose={()=>setView("chat")} onChat={()=>setView("chat")} onToggleAi={()=>void toggleAi()} toast={toast}
      onSaveNote={async(v,version)=>{try{const r=await call<{version:number}>("note",{text:v,version});setProfile(p=>p?{...p,note:v,note_version:r.version}:p);return true;}catch{return false;}}}/>:null}
    </div>
 
    {/* ============ overlays ============ */}
    {sel&&canReact&&<div className={`${s.rxbar} ${s.show}`} style={{left:sel.left,top:sel.top}} role="toolbar" aria-label={t("React","রিঅ্যাকশন")}>{reactions.map((e,i)=><button key={e} type="button" style={{animationDelay:`${i*30}ms`}} className={selMsg?.reaction===e?s.rxon:undefined} onClick={()=>void react(e)}>{e}</button>)}</div>}
    <div className={`${s.toast} ${toastOn?s.show:""}`} role="status">{toastText}</div>
-   <div className={`${s.notif} ${notice?s.show:""}`} role="status" onClick={()=>{if(notice){selectThread(notice.id);setNotice(null);}}}>{notice&&<><div className={s.av} style={{width:34,height:34,fontSize:13}}>{initials(notice.name)}<ChannelBadge channel={notice.channel} size={16}/></div><div><b>{notice.name} · {channelMeta[notice.channel]?.name}</b><span>{notice.text}</span></div></>}</div>
+   <div className={`${s.notif} ${notice?s.show:""}`} role="status" onClick={()=>{if(notice){selectThread(notice.id);setNotice(null);}}}>{notice&&<><div className={s.av} style={{width:34,height:34,fontSize:13}}>{<AvatarPhoto workspaceId={workspaceId} threadId={notice.id} name={notice.name}/>}<ChannelBadge channel={notice.channel} size={16}/></div><div><b>{notice.name} · {channelMeta[notice.channel]?.name}</b><span>{notice.text}</span></div></>}</div>
 
    {viewer&&<Viewer list={viewer.list} start={viewer.i} bn={bn} workspaceId={workspaceId} threadId={selected??""} who={customerName} onClose={()=>setViewer(null)}/>}
 
@@ -324,7 +344,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    <Sheet open={sheet==="forward"} onClose={()=>setSheet("")} label={t("Forward","ফরওয়ার্ড")}>
     <h4>{t("Forward to","ফরওয়ার্ড করুন")}<button type="button" onClick={()=>setSheet("")}>{t("Close","বন্ধ")}</button></h4>
     <p className={s.sheetNote}>{t("A copy is sent as a new message. Only conversations with an open 24-hour window are available.","নতুন মেসেজ হিসেবে কপি যাবে। শুধু যেসব কথোপকথনে ২৪ ঘণ্টার সময় খোলা।")}</p>
-    {threads.filter(x=>x.id!==selected).map(x=>{const blocked=(x.window_open===false&&x.channel!=="tg")||(selMsg?.type==="document"&&x.channel==="ig");return <button key={x.id} type="button" className={s.lr} disabled={blocked} onClick={()=>void forwardTo(x)}><div className={s.av} style={{width:36,height:36,fontSize:13}}>{initials(x.name)}<ChannelBadge channel={x.channel} size={16}/></div><span className={s.lbody}><b>{x.name}</b><small>{blocked?(x.window_open===false?t("Reply window closed","২৪ ঘণ্টা পার"):t("Files aren't supported on Instagram","Instagram এ ফাইল যায় না")):channelMeta[x.channel]?.name}</small></span></button>;})}
+    {threads.filter(x=>x.id!==selected).map(x=>{const blocked=(x.window_open===false&&x.channel!=="tg")||(selMsg?.type==="document"&&x.channel==="ig");return <button key={x.id} type="button" className={s.lr} disabled={blocked} onClick={()=>void forwardTo(x)}><div className={s.av} style={{width:36,height:36,fontSize:13}}>{<AvatarPhoto workspaceId={workspaceId} threadId={x.id} name={x.name}/>}<ChannelBadge channel={x.channel} size={16}/></div><span className={s.lbody}><b>{x.name}</b><small>{blocked?(x.window_open===false?t("Reply window closed","২৪ ঘণ্টা পার"):t("Files aren't supported on Instagram","Instagram এ ফাইল যায় না")):channelMeta[x.channel]?.name}</small></span></button>;})}
    </Sheet>
    <Sheet open={sheet==="info"} onClose={()=>setSheet("")} label={t("Message info","মেসেজের তথ্য")}>
     <h4>{t("Message info","মেসেজের তথ্য")}<button type="button" onClick={()=>setSheet("")}>{t("Close","বন্ধ")}</button></h4>

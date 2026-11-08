@@ -1,7 +1,8 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
+import {AvatarPhoto} from "./avatar";
 import {I,ChannelBadge} from "./icons";
-import {channelMeta,fullDate,initials,money,num,type OrderRow,type Profile} from "./lib";
+import {channelMeta,fullDate,money,num,type OrderRow,type Profile} from "./lib";
 import s from "./inbox.module.css";
 
 type Tone="ok"|"wr"|"er"|"mu";
@@ -27,7 +28,7 @@ export function verdict(p:Profile,bn:boolean){
 const stLabel=(bn:boolean):Record<string,[string,Tone]>=>({ok:[bn?"সফল":"Delivered","ok"],cx:[bn?"বাতিল":"Cancelled","er"],rt:[bn?"ফেরত":"Returned","wr"],run:[bn?"চলমান":"In progress","mu"]});
 const tone2=(t:Tone,c:Record<string,string>)=>c[t];
 
-export function ProfileView({p,bn,aiEnabled,canManage,canNote,onBack,onChat,onToggleAi,onSaveNote,toast,onClose}:{p:Profile|null;bn:boolean;aiEnabled:boolean;canManage:boolean;canNote:boolean;onBack:()=>void;onChat:()=>void;onToggleAi:()=>void;onSaveNote:(text:string,version:number)=>Promise<boolean>;toast:(t:string)=>void;onClose?:()=>void}){
+export function ProfileView({workspaceId,p,bn,aiEnabled,canManage,canNote,onBack,onChat,onToggleAi,onSaveNote,toast,onClose}:{workspaceId:string;p:Profile|null;bn:boolean;aiEnabled:boolean;canManage:boolean;canNote:boolean;onBack:()=>void;onChat:()=>void;onToggleAi:()=>void;onSaveNote:(text:string,version:number)=>Promise<boolean>;toast:(t:string)=>void;onClose?:()=>void}){
  const t=(en:string,be:string)=>bn?be:en;
  const [note,setNote]=useState(""),[open,setOpen]=useState<Record<string,boolean>>({}),last=useRef({id:"",saved:""});
  useEffect(()=>{if(p&&last.current.id!==p.id){last.current={id:p.id,saved:p.note??""};setNote(p.note??"");}},[p]);
@@ -45,7 +46,7 @@ export function ProfileView({p,bn,aiEnabled,canManage,canNote,onBack,onChat,onTo
   const kv=(k:string,v:string)=><div className={s.kv} key={k}><span className={s.k}>{k}</span><span className={s.v}>{v}</span></div>;
   const sum=V.ok.reduce((a,x)=>a+x.amount_minor,0);
   return <>
-   <div className={s.hero}><div className={`${s.av} ${s.avBig}`}>{initials(p.name)}<ChannelBadge channel={p.channel} size={20}/></div><h2>{p.name}</h2><div className={s.sub}>{sub}</div><span className={`${s.tag} ${tone(V.tone)}`}>{V.label}</span></div>
+   <div className={s.hero}><div className={`${s.av} ${s.avBig}`}>{<AvatarPhoto workspaceId={workspaceId} threadId={p.id} name={p.name}/>}<ChannelBadge channel={p.channel} size={20}/></div><h2>{p.name}</h2><div className={s.sub}>{sub}</div><span className={`${s.tag} ${tone(V.tone)}`}>{V.label}</span></div>
    <div className={s.qa}><button type="button" onClick={onChat}><I n="msg"/>{t("Message","মেসেজ")}</button>
     {phone&&<button type="button" onClick={()=>{try{void navigator.clipboard.writeText(phone);}catch{}toast(t("Number copied","নম্বর কপি হয়েছে"));}}><I n="copy"/>{t("Copy number","নম্বর কপি")}</button>}
     {canManage&&<button type="button" onClick={onToggleAi}><I n="ms"/>{aiEnabled?t("Turn AI off","AI বন্ধ করুন"):t("Turn AI on","AI চালু করুন")}</button>}</div>
