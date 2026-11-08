@@ -245,5 +245,5 @@ Done (data layer only):
 Measured locally (10k synthetic products, PG16): normal search 23–41 ms; typo fallback ~105 ms in a worst case where 20% of products share the word.
 NOT done: manual product form, CSV import with image URLs (SSRF-safe), public REST API + Idempotency-Key, Woo full import/webhooks, feature flags, docs/curl examples, Go integration tests, CI run, Neon test-branch run.
 Not verified: Go tests (toolchain here is 1.24, repo needs 1.27); web lint/build.
-Blocker: Neon project hit "branches limit exceeded", so no Phase 1 branch could be created. Needs the owner to free a slot (delete an archived branch) or to allow applying 0228 on test-customer-orders-20261108.
+Neon: owner approved deleting archived branch test-dashboard-sms-evidence-20261015; created ai-commerce-phase1-test-20261109 and applied 0228 once (ledger 76 rows). Evidence: docs/evidence/ai-commerce-phase1/README.md. Neon second run not done.
 Known gap: inbox product images are in inbox_media and are not copied into commerce_media; owner must re-attach.
