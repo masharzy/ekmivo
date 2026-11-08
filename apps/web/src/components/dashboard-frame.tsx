@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { sections, type SectionKey } from "../lib/dashboard-sections";
 import { dashboardHref, navigation, searchableNavigation, searchableBusinesses, serviceEnabled, serviceNames, sectionInService, type Locale, type Service, type PaymentEnvironment } from "../lib/dashboard-navigation";
 import { DashboardIcon as Icon } from "./dashboard-icon";
-import {unifiedNavigation,unifiedNavGroupLabels,currentUnifiedItem,enabledUnifiedService,unifiedSectionHref,isUnifiedFinancialDetailPath} from "../lib/unified-navigation";
+import {unifiedNavigation,unifiedSettings,unifiedNavGroupLabels,currentUnifiedItem,enabledUnifiedService,unifiedSectionHref,isUnifiedFinancialDetailPath} from "../lib/unified-navigation";
 import {chooseUnifiedBusiness} from "../actions/unified-business";
 import { SiteControls } from "./site-controls";
 import { DashboardFeedback } from "./dashboard-feedback";
@@ -394,7 +394,12 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    </div>}
    */}
 
-   <nav className="ds-breadcrumb" aria-label={bn?"ব্রেডক্রাম্ব":"Breadcrumb"}>{unified?<><Link href="/dashboard">{workspace.name}</Link><Icon name="chevron"/><strong aria-current="page">{unifiedItems.find(item=>pathname===item.href||pathname.startsWith(item.href+"/"))?.[locale]??sections[section][locale]}</strong></>:<><Link href="/workspaces">{workspace.name}</Link><Icon name="chevron"/><Link href={contextHref("overview")}>{serviceNames[service][locale]}</Link><Icon name="chevron"/><strong aria-current="page">{sections[section][locale]}</strong></>}</nav>
+   <nav className="ds-breadcrumb" aria-label={bn?"ব্রেডক্রাম্ব":"Breadcrumb"}>{unified?<><Link href="/dashboard">{workspace.name}</Link><Icon name="chevron"/>{(()=>{
+     const top=currentUnifiedItem(unifiedItems,pathname);
+     const slug=pathname.startsWith("/settings/")&&top?.key==="settings"?pathname.slice("/settings/".length):"";
+     const leaf=slug?unifiedSettings.flatMap(g=>g.items).filter(i=>slug===i.slug||slug.startsWith(i.slug+"/")).sort((a,b)=>b.slug.length-a.slug.length)[0]:undefined;
+     return leaf&&top?<><Link href={top.href}>{top[locale]}</Link><Icon name="chevron"/><strong aria-current="page">{leaf[locale]}</strong></>:<strong aria-current="page">{top?.[locale]??sections[section][locale]}</strong>;
+    })()}</>:<><Link href="/workspaces">{workspace.name}</Link><Icon name="chevron"/><Link href={contextHref("overview")}>{serviceNames[service][locale]}</Link><Icon name="chevron"/><strong aria-current="page">{sections[section][locale]}</strong></>}</nav>
    {isNavigating&&<div className="ds-navigation-progress" role="status">{bn?"পৃষ্ঠা খুলছে…":"Opening page…"}</div>}
    <main id="dashboard-content" className="ds-content" tabIndex={-1} aria-busy={isNavigating}>{children}</main>
    <footer className="ds-footnote"><span>{unified?workspace.name:serviceNames[service][locale]+" · "+workspace.name}</span><span>Asia/Dhaka</span></footer>
