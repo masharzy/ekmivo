@@ -2,3 +2,28 @@
 .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.board article{border:1px solid var(--color-border);padding:12px;border-radius:10px;background:var(--color-surface)}.board article button{width:100%;text-align:start;margin-top:8px}.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}.summary>*{border:1px solid var(--color-border);background:var(--color-surface);border-radius:10px;padding:12px 14px}.root nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}.root small{display:block;color:var(--color-text-secondary);margin-top:6px}.images{display:flex;gap:12px;flex-wrap:wrap}.images figure{margin:0;width:120px}.images img{width:100%;height:100px;object-fit:contain}.line{display:grid;grid-template-columns:minmax(120px,1fr) 90px auto;align-items:end;gap:12px}.barcode{max-width:100%;height:64px}.printOnly{display:none}@media(max-width:640px){.board{grid-template-columns:1fr}.line{grid-template-columns:1fr}.summary{gap:12px}}@media print{.root .noPrint{display:none!important}}
 
 .printArea{min-width:0}
+
+.root header p{font-size:13px;margin:4px 0 0;max-width:640px;line-height:1.5;color:var(--color-text-muted)}
+.root nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.root nav>button:first-child,.root nav>a:first-child{background:var(--color-primary);color:var(--color-on-primary,#fff);border-color:transparent;font-weight:600}
+.table td small{display:block;margin-top:3px;font-size:12px;color:var(--color-text-muted);font-variant-numeric:tabular-nums}
+.table td strong{font-weight:600}
+.table td:first-child{min-width:160px}
+.table td:last-child,.table th:last-child{text-align:end}
+.table td button{min-height:30px;padding:3px 10px;font-size:12.5px;background:transparent;margin:0 0 4px 6px}
+.table td button:hover:not(:disabled){background:var(--color-hover)}
+.table td p{margin:0 0 2px}
+.table td input[type=checkbox]{margin-inline-end:10px;vertical-align:middle}
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;background:color-mix(in srgb,var(--color-text-muted) 14%,transparent);color:var(--color-text)}
+.badge[data-s=confirmed],.badge[data-s=delivered],.badge[data-s=approved],.badge[data-s=packed],.badge[data-s=shipped],.badge[data-s=booked],.badge[data-s=inspected]{background:color-mix(in srgb,#16a34a 14%,transparent);color:#15803d}
+.badge[data-s=draft],.badge[data-s=hold],.badge[data-s=requested],.badge[data-s=booking],.badge[data-s=unknown]{background:color-mix(in srgb,#d97706 15%,transparent);color:#b45309}
+.badge[data-s=cancelled],.badge[data-s=rejected],.badge[data-s=returned]{background:color-mix(in srgb,#dc2626 13%,transparent);color:#b3163d}
+@media(max-width:640px){
+ .table table,.table thead,.table tbody,.table tr,.table td{display:block}
+ .table thead{display:none}
+ .table tr{padding:12px 14px;border-bottom:1px solid var(--color-border)}
+ .table tr:last-child{border-bottom:0}
+ .table td{padding:2px 0;border:0}
+ .table td:last-child{text-align:start;margin-top:8px}
+ .table td button{margin:0 6px 6px 0}
+}
