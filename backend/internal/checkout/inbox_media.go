@@ -19,11 +19,13 @@ import (
 )
 
 const inboxMediaLimit = 5 * 1024 * 1024
-const inboxVideoLimit = 16 * 1024 * 1024
+
+// Inbound media is whatever the channel delivered (Messenger 25 MB, WhatsApp up to 100 MB); 128 MB is a memory guard only.
+const inboxInboundLimit = 128 * 1024 * 1024
 
 // validateInboundVideo accepts MP4/MOV/3GP (ISO base media) and WebM by magic bytes.
 func validateInboundVideo(data []byte) (string, error) {
-	if len(data) == 0 || len(data) > inboxVideoLimit {
+	if len(data) == 0 || len(data) > inboxInboundLimit {
 		return "", errors.New("FILE_LIMIT_EXCEEDED")
 	}
 	if len(data) > 12 && string(data[4:8]) == "ftyp" {
@@ -36,7 +38,11 @@ func validateInboundVideo(data []byte) (string, error) {
 }
 
 func validateInboxMedia(data []byte, declared string) (string, error) {
-	if len(data) == 0 || len(data) > inboxMediaLimit {
+	return validateInboxMediaMax(data, declared, inboxMediaLimit)
+}
+
+func validateInboxMediaMax(data []byte, declared string, max int) (string, error) {
+	if len(data) == 0 || len(data) > max {
 		return "", errors.New("FILE_LIMIT_EXCEEDED")
 	}
 	typ := http.DetectContentType(data)
@@ -58,8 +64,10 @@ func validateInboxMedia(data []byte, declared string) (string, error) {
 		default:
 			return "", errors.New("UNSUPPORTED_FILE_TYPE")
 		}
-	} else if (typ == "application/octet-stream" || typ == "video/mp4") && len(data) > 12 && string(data[4:8]) == "ftyp" && declared == "audio/mp4" {
+	} else if (typ == "application/octet-stream" || typ == "video/mp4") && len(data) > 12 && string(data[4:8]) == "ftyp" && strings.HasPrefix(declared, "audio/") {
 		typ = "audio/mp4"
+	} else if typ == "audio/wave" {
+		typ = "audio/wav"
 	} else if typ != "application/pdf" && typ != "audio/mpeg" && typ != "audio/ogg" && typ != "audio/aac" && typ != "audio/mp4" && !strings.HasPrefix(typ, "text/plain") {
 		return "", errors.New("UNSUPPORTED_FILE_TYPE")
 	}

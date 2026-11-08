@@ -61,19 +61,30 @@ export function buildRows(items:Msg[],unreadFrom:number|null,unreadCount:number,
 }
 
 /* ---- media (decoded once, shared by every bubble) ---- */
-const urls=new Map<string,Promise<{url:string;mime:string}|null>>();
+type Loaded={url:string;mime:string};
+const urls=new Map<string,{p:Promise<Loaded|null>;at:number}>();
 export const mediaReasons=new Map<string,string>();
+const SIGNED_TTL=8*60*1000;// signed links last 10 minutes server-side
 const safeMime=(m:string)=>/^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quicktime)|audio\/(mpeg|ogg|mp4|aac|webm|wav)|application\/pdf|text\/plain)$/.test(m.split(";")[0])?m.split(";")[0]:"application/octet-stream";
-export function loadMedia(workspaceId:string,threadId:string,mediaId:string){
- const key=workspaceId+mediaId;let hit=urls.get(key);if(hit)return hit;
- hit=fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"media-get",thread_id:threadId,body:{media_id:mediaId}})})
-  .then(async r=>{if(!r.ok){const e=await r.json().catch(()=>null) as {code?:unknown;error?:unknown}|null;const c=typeof e?.code==="string"?e.code:typeof e?.error==="string"?e.error:String(r.status);mediaReasons.set(key,c);throw Error(c);}mediaReasons.delete(key);const j=await r.json();if(typeof j.data!=="string"||j.data.length>7000000||typeof j.mime!=="string")throw Error();
+/** Media is streamed straight from the API through a short-lived signed URL (no size cap, Range-capable).
+ *  Older backends that still answer with base64 data are handled as a fallback. */
+export function loadMedia(workspaceId:string,threadId:string,mediaId:string,bust=false){
+ const key=workspaceId+mediaId;const cur=urls.get(key);
+ if(cur&&!bust&&Date.now()-cur.at<SIGNED_TTL)return cur.p;
+ const p=fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"media-get",thread_id:threadId,body:{media_id:mediaId,url:true}})})
+  .then(async(r):Promise<Loaded>=>{
+   if(!r.ok){const e=await r.json().catch(()=>null) as {code?:unknown;error?:unknown}|null;const c=typeof e?.code==="string"?e.code:typeof e?.error==="string"?e.error:String(r.status);mediaReasons.set(key,c);throw Error(c);}
+   mediaReasons.delete(key);const j=await r.json() as {url?:unknown;data?:unknown;mime?:unknown};
+   if(typeof j.mime!=="string")throw Error("BAD_RESPONSE");
+   const mime=safeMime(j.mime);
+   if(typeof j.url==="string"&&/^https:\/\//.test(j.url))return {url:j.url,mime};
+   if(typeof j.data!=="string"||j.data.length>7000000)throw Error("BAD_RESPONSE");
    const bin=atob(j.data),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-   const mime=safeMime(j.mime);return {url:URL.createObjectURL(new Blob([bytes],{type:mime})),mime};})
-  .catch(()=>{urls.delete(key);return null;});
- urls.set(key,hit);
- if(urls.size>80){const old=urls.keys().next().value;if(old){const p=urls.get(old);urls.delete(old);void p?.then(v=>v&&URL.revokeObjectURL(v.url));}}
- return hit;
+   return {url:URL.createObjectURL(new Blob([bytes],{type:mime})),mime};})
+  .catch(()=>{if(urls.get(key)?.p===p)urls.delete(key);return null;});
+ urls.set(key,{p,at:Date.now()});
+ if(urls.size>120){const old=urls.keys().next().value;if(old){const e=urls.get(old);urls.delete(old);void e?.p.then(v=>{if(v?.url.startsWith("blob:"))URL.revokeObjectURL(v.url);});}}
+ return p;
 }
 export function fileToBase64(file:Blob){return new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(",")[1]??"");r.onerror=()=>reject(Error());r.readAsDataURL(file);});}
 

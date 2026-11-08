@@ -9,7 +9,7 @@ import s from "./inbox.module.css";
 
 export function useMedia(workspaceId:string,threadId:string,mediaId?:string|null){
  const [st,setSt]=useState<{id:string;media:{url:string;mime:string}|null}|null>(null),[tick,setTick]=useState(0);
- useEffect(()=>{if(!mediaId)return;let live=true;void loadMedia(workspaceId,threadId,mediaId).then(r=>{if(live)setSt({id:mediaId,media:r});});return()=>{live=false;};},[workspaceId,threadId,mediaId,tick]);
+ useEffect(()=>{if(!mediaId)return;let live=true;void loadMedia(workspaceId,threadId,mediaId,tick>0).then(r=>{if(live)setSt({id:mediaId,media:r});});return()=>{live=false;};},[workspaceId,threadId,mediaId,tick]);
  const ready=!!mediaId&&st?.id===mediaId;
  const retry=()=>{setSt(null);setTick(x=>x+1);};
  return {media:ready?st.media:null,failed:ready&&!st.media,reason:ready&&!st.media?mediaReasons.get(workspaceId+mediaId)??"":"",retry};
@@ -35,7 +35,7 @@ const bars=(seed:string)=>{let h=2166136261;for(let i=0;i<seed.length;i++){h^=se
 
 function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){
  const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id);
- const el=useRef<HTMLAudioElement>(null),[playing,setPlaying]=useState(false),[pos,setPos]=useState(0),[len,setLen]=useState(0),[rate,setRate]=useState(1);
+ const el=useRef<HTMLAudioElement>(null),[playing,setPlaying]=useState(false),[pos,setPos]=useState(0),[len,setLen]=useState(0),[rate,setRate]=useState(1),[tried,setTried]=useState(false);
  const dur=(m.content?.duration_ms??0)/1000,h=bars(m.content?.media_id??m.id);
  useEffect(()=>()=>{el.current?.pause();},[]);
  const toggle=()=>{const a=el.current;if(!a)return;if(a.paused){document.querySelectorAll("audio").forEach(x=>{if(x!==a)x.pause();});void a.play();}else a.pause();};
@@ -45,13 +45,13 @@ function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:st
   <button type="button" className={s.pl} onClick={e=>{e.stopPropagation();toggle();}} disabled={!media} aria-label={playing?(bn?"থামান":"Pause"):(bn?"চালান":"Play")}>{playing?<I n="pause" size={14} fill/>:<I n="play" size={14} fill/>}</button>
   <div className={s.wf} onClick={e=>{e.stopPropagation();const a=el.current;if(!a||!total)return;const r=e.currentTarget.getBoundingClientRect();a.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*total;setPos(a.currentTime);}}>{h.map((v,i)=><i key={i} className={i/h.length<frac?s.f:undefined} style={{height:v}}/>)}</div>
   {failed?<button type="button" className={s.vd} title={reasonText(reason,bn)} onClick={e=>{e.stopPropagation();retry();}}>{bn?"আবার চেষ্টা":"Retry"}</button>:<><span className={s.vd}>{mmss(playing||pos>0?pos:dur,bn)}</span>{(playing||pos>0)&&<button type="button" className={s.spd} aria-label="Speed" onClick={e=>{e.stopPropagation();const n=rate===1?1.5:rate===1.5?2:1;setRate(n);if(el.current)el.current.playbackRate=n;}}>{rate}x</button>}</>}
-  {media&&<audio ref={el} src={media.url} preload="metadata" onLoadedMetadata={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onPlay={e=>{e.currentTarget.playbackRate=rate;setPlaying(true);}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);}} onTimeUpdate={e=>setPos(e.currentTarget.currentTime)}/>}
+  {media&&<audio ref={el} src={media.url} preload="metadata" onLoadedMetadata={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onPlay={e=>{e.currentTarget.playbackRate=rate;setPlaying(true);}} onError={()=>{if(!tried){setTried(true);retry();}}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);}} onTimeUpdate={e=>setPos(e.currentTarget.currentTime)}/>}
  </div>;
 }
 
 export function Img({m,workspaceId,threadId,bn,className,onOpen}:{m:Msg;workspaceId:string;threadId:string;bn:boolean;className?:string;onOpen?:()=>void}){
- const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id);
- if(media&&media.mime.startsWith("image/"))return <img className={className} src={media.url} alt={m.content?.name||(bn?"ছবি":"Photo")} onClick={onOpen} draggable={false}/>;
+ const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id),[tried,setTried]=useState(false);
+ if(media&&media.mime.startsWith("image/"))return <img className={className} src={media.url} alt={m.content?.name||(bn?"ছবি":"Photo")} onClick={onOpen} draggable={false} onError={()=>{if(!tried){setTried(true);retry();}}}/>;
  return <div className={`${s.imgph} ${className??""}`} >{failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(reason,bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
 }
 

@@ -145,6 +145,9 @@ type telegramUpdate struct {
 		Audio     *telegramMediaFile  `json:"audio"`
 		Video     *telegramMediaFile  `json:"video"`
 		VideoNote *telegramMediaFile  `json:"video_note"`
+		Animation *telegramMediaFile  `json:"animation"`
+		Document  *telegramMediaFile  `json:"document"`
+		Sticker   *telegramMediaFile  `json:"sticker"`
 		From      struct {
 			ID        int64  `json:"id"`
 			IsBot     bool   `json:"is_bot"`
@@ -162,6 +165,9 @@ type telegramMediaFile struct {
 	Size     int64  `json:"file_size"`
 	Duration int    `json:"duration"`
 	MIME     string `json:"mime_type"`
+	Name     string `json:"file_name"`
+	Animated bool   `json:"is_animated"`
+	Video    bool   `json:"is_video"`
 }
 
 func telegramMedia(u telegramUpdate) (string, *telegramMediaFile) {
@@ -183,6 +189,18 @@ func telegramMedia(u telegramUpdate) (string, *telegramMediaFile) {
 	}
 	if m.VideoNote != nil {
 		return "video", m.VideoNote
+	}
+	if m.Animation != nil { // Telegram delivers GIFs as silent MP4
+		return "video", m.Animation
+	}
+	if m.Sticker != nil && !m.Sticker.Animated { // static WebP, or WebM video sticker
+		if m.Sticker.Video {
+			return "video", m.Sticker
+		}
+		return "image", m.Sticker
+	}
+	if m.Document != nil {
+		return "document", m.Document
 	}
 	return "", nil
 }
@@ -257,7 +275,7 @@ func (s *Service) HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) 
 	if err = tx.QueryRow(r.Context(), "SELECT inbox_webhook_record($1,'tg',$2)", event, cipher).Scan(&fresh); err == nil && fresh {
 		kind, file := telegramMedia(u)
 		if file != nil && strings.TrimSpace(u.Message.Text) == "" {
-			ref, _ := json.Marshal(map[string]string{"provider_id": file.ID, "mime": file.MIME, "caption": u.Message.Caption})
+			ref, _ := json.Marshal(map[string]string{"provider_id": file.ID, "mime": file.MIME, "name": file.Name, "caption": u.Message.Caption})
 			source, encryptErr := deviceevidence.Encrypt(s.Pipeline.Key, ref, ws+"|inbox-source")
 			if encryptErr != nil {
 				err = encryptErr

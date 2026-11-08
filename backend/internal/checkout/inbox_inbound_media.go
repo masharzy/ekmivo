@@ -210,6 +210,15 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 		return err
 	}
 	mediaURL := ref["url"]
+	if str(src, "provider") == "tg" {
+		var file struct {
+			Path string `json:"file_path"`
+		}
+		if ref["provider_id"] == "" || telegramCall(ctx, string(token), "getFile", map[string]string{"file_id": ref["provider_id"]}, &file) != nil || !telegramFilePath.MatchString(file.Path) {
+			return errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
+		}
+		mediaURL = "https://api.telegram.org/file/bot" + string(token) + "/" + file.Path
+	}
 	if str(src, "provider") == "wa" {
 		cfg, _ := s.channelConfig(ctx)
 		version := cfg["META_GRAPH_VERSION"]
@@ -232,7 +241,7 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 		}
 		mediaURL = result.URL
 	}
-	if !safeMetaMediaURL(mediaURL) {
+	if str(src, "provider") != "tg" && !safeMetaMediaURL(mediaURL) {
 		return errors.New("MEDIA_HOST_DENIED")
 	}
 	req, _ := http.NewRequestWithContext(ctx, "GET", mediaURL, nil)
@@ -247,11 +256,7 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	if res.StatusCode != 200 {
 		return errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
 	}
-	limit := int64(inboxMediaLimit)
-	if str(src, "kind") == "video" {
-		limit = inboxVideoLimit
-	}
-	data, err = io.ReadAll(io.LimitReader(res.Body, limit+1))
+	data, err = io.ReadAll(io.LimitReader(res.Body, inboxInboundLimit+1))
 	if err != nil {
 		return err
 	}
@@ -263,9 +268,9 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	if str(src, "kind") == "video" {
 		typ, err = validateInboundVideo(data)
 	} else {
-		typ, err = validateInboxMedia(data, declared)
+		typ, err = validateInboxMediaMax(data, declared, inboxInboundLimit)
 	}
-	if err != nil && err.Error() == "UNSUPPORTED_FILE_TYPE" && str(src, "kind") == "document" && len(data) > 0 && len(data) <= inboxMediaLimit {
+	if err != nil && err.Error() == "UNSUPPORTED_FILE_TYPE" && str(src, "kind") == "document" && len(data) > 0 && len(data) <= inboxInboundLimit {
 		// Unknown document formats are stored as opaque bytes; the owner downloads them at their own risk.
 		typ, err = "application/octet-stream", nil
 	}
