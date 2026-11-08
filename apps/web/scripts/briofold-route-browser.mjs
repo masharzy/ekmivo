@@ -7,10 +7,12 @@ export async function runBriofoldRouteBrowser({origin,browser,control,tenant,ses
  const url=new URL(control);
  if(!["localhost","127.0.0.1","[::1]"].includes(url.hostname)||/prod/i.test(url.pathname))throw Error("Phase2 browser refuses shared DB");
  const db=postgres(control,{max:1,prepare:false});
- let actor,aiEnabled;
+ let actor,aiEnabled,mode;
  try{
   const rows=await db.unsafe("SELECT user_id FROM auth_sessions WHERE token_hash=$1",[createHash("sha256").update(sessions.owner).digest("hex")]);
   assert.equal(rows.length,1);actor=String(rows[0].user_id);
+  const [store]=await db.unsafe("SELECT service_mode FROM workspaces WHERE id=$1",[tenant]);
+  assert.ok(store,"Canonical fixture Store exists");mode=store.service_mode;
   const products=await db.unsafe("SELECT product,enabled FROM workspace_product_access WHERE workspace_id=$1",[tenant]);
   aiEnabled=products.some(row=>row.product==="ai"&&row.enabled===true);
   assert.ok(products.some(row=>row.product==="payments"&&row.enabled===true),"Canonical fixture requires active payment access");
@@ -29,7 +31,8 @@ export async function runBriofoldRouteBrowser({origin,browser,control,tenant,ses
    const probe=await context.newPage();probe.setDefaultNavigationTimeout(90000);
    try{
     const response=await probe.goto(origin+path);
-    assert.equal(response.status(),path==="/inbox"&&!aiEnabled?404:200,"Canonical route failed: "+path);
+    const expected=path==="/inbox"&&!aiEnabled||path==="/orders"&&mode==="commerce"?404:200;
+    assert.equal(response.status(),expected,"Canonical route failed: "+path);
     assert.equal(new URL(probe.url()).pathname,path,"Canonical URL changed: "+path);
     if(response.status()===200)await probe.locator('.ds-app[data-unified="true"]').waitFor();
    }catch(error){
