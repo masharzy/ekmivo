@@ -2,16 +2,19 @@
 import {RefIcon} from "../reference-ui";
 import {crmPageCsv} from "../../lib/crm-csv";
 import {CustomerDrawer,looksLikeId} from "./customer-drawer";
-import {stageText,STAGES,tempText,useCrm,type CRMList,type Profile} from "./use-crm";
+import {stageText,STAGES,useCrm,type CRMList,type Profile} from "./use-crm";
 
-type Props={workspaceId:string;actorId:string;bn:boolean;view:string;embedded?:boolean;financeEnabled:boolean;environment:"live"|"sandbox";initial:CRMList|null};
+type Props={workspaceId:string;actorId:string;bn:boolean;view:string;embedded?:boolean;financeEnabled:boolean;ordersEnabled?:boolean;environment:"live"|"sandbox";initial:CRMList|null};
 const LEAD_STAGES=["new","contacted","qualified","proposal"] as const;
 const pill=(s:string)=>`pill ${s==="won"?"green":s==="lost"?"red":s==="qualified"||s==="proposal"||s==="contacted"?"orange":""}`;
 
 export function CrmApp(p:Props){
  const leads=p.view==="leads",due=p.view==="follow-ups";
- const h=useCrm({workspaceId:p.workspaceId,actorId:p.actorId,environment:p.environment,initial:leads?null:p.initial,bn:p.bn,initialFilter:due?"due":p.view==="interest"?"unconverted":leads?"new":""});
- const {t,bn,data,f,set,loading}=h;
+ const h=useCrm({workspaceId:p.workspaceId,actorId:p.actorId,environment:p.environment,initial:leads?null:p.initial,bn:p.bn,ordersEnabled:p.ordersEnabled,initialFilter:due?"due":p.view==="interest"?"unconverted":leads?"new":""});
+ const {t,bn,data,f,set,loading,stats}=h;
+ const oe=Boolean(p.ordersEnabled);
+ const money=(m:number)=>"৳"+new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(Math.round(m/100));
+ const day=(v?:string|null)=>v?new Intl.DateTimeFormat(bn?"bn-BD":"en-GB",{dateStyle:"medium"}).format(new Date(v)):"—";
  const title=leads?t("Leads","লিড"):due?t("Follow-ups","ফলো-আপ"):p.view==="interest"?t("Interested, no order yet","আগ্রহী, অর্ডার হয়নি"):t("Customers","গ্রাহক");
  const sub=leads?t("People who have not bought yet.","যারা এখনো কেনেননি।"):due?t("Customers with a follow-up due.","যাদের ফলো-আপের সময় হয়েছে।"):t("Everyone who messaged, ordered or paid.","যারা মেসেজ, অর্ডার বা পেমেন্ট করেছেন।");
  const rows=data?.items.slice(0,50)??[];
@@ -37,11 +40,11 @@ export function CrmApp(p:Props){
     {data?.can_manage&&<select className="in" aria-label={t("Assigned to","দায়িত্বে")} value={f.assignee} onChange={e=>set({assignee:e.target.value})}><option value="">{t("Anyone","যে কেউ")}</option><option value="unassigned">{t("Unassigned","কেউ না")}</option>{data.members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select>}
     <div className="sp"/><button type="button" className="ib i" aria-label={t("Refresh","রিফ্রেশ")} disabled={loading} onClick={()=>void h.refresh()}><RefIcon name="refresh"/></button>
    </div>
-   {data&&rows.length>0&&<div className="tw" role="region" aria-label={title} tabIndex={0}><table><thead><tr><th>{t("Customer","গ্রাহক")}</th><th>{t("Stage","ধাপ")}</th><th>{t("Priority","গুরুত্ব")}</th><th>{t("Tags","ট্যাগ")}</th>{data.can_manage&&<th>{t("Assigned to","দায়িত্বে")}</th>}<th/></tr></thead><tbody>
+   {data&&rows.length>0&&<div className="tw" role="region" aria-label={title} tabIndex={0}><table><thead><tr><th>{t("Customer","গ্রাহক")}</th><th>{t("Stage","ধাপ")}</th>{oe&&<><th className="num">{t("Orders","অর্ডার")}</th><th className="num">{t("Total","মোট")}</th><th>{t("Last order","শেষ অর্ডার")}</th></>}<th>{t("Tags","ট্যাগ")}</th>{data.can_manage&&<th>{t("Assigned to","দায়িত্বে")}</th>}<th/></tr></thead><tbody>
     {rows.map(c=><tr className="rowclick" key={c.id} tabIndex={0} onClick={()=>void h.open(c.id!,0,due?"followups":undefined)} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==="Enter"||e.key===" ")){e.preventDefault();void h.open(c.id!,0,due?"followups":undefined);}}}>
      <td><span className="itemtitle">{name(c)}</span>{data.can_contact&&(c.phone||c.email)&&<span className="rmeta">{c.phone||c.email}</span>}</td>
      <td><span className={pill(c.stage)}>{stageText(c.stage,bn)}</span></td>
-     <td className="mut">{tempText(c.temperature,bn)}</td>
+     {oe&&<><td className="num">{stats[c.id!]?.orders??0}</td><td className="num">{stats[c.id!]?money(stats[c.id!].total_minor):"—"}</td><td className="mut">{day(stats[c.id!]?.last_at)}</td></>}
      <td className="mut">{c.tags.length?c.tags.slice(0,3).join(", ")+(c.tags.length>3?` +${c.tags.length-3}`:""):"—"}</td>
      {data.can_manage&&<td className="mut">{member(c.assignee)}</td>}
      <td className="num"><RefIcon name="chevron"/></td>

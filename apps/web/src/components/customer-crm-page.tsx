@@ -2,7 +2,7 @@ import "server-only";
 import {database} from "../lib/server/db";
 import {CrmApp} from "./crm/crm-app";
 import type {CRMList} from "./crm/use-crm";
-export async function CustomerCRMPage(props:{workspaceId:string;actorId:string;bn:boolean;view:string;embedded?:boolean;financeEnabled:boolean;environment:"live"|"sandbox"}){
+export async function CustomerCRMPage(props:{workspaceId:string;actorId:string;bn:boolean;view:string;embedded?:boolean;financeEnabled:boolean;ordersEnabled?:boolean;environment:"live"|"sandbox"}){
  let initial:CRMList|null=null;
  try{const [row]=props.view==="interest"
   ?await database()`SELECT briofold_customers_search(${props.workspaceId}::uuid,${props.environment},${props.actorId}::uuid,0,'','unconverted','','','') AS data`

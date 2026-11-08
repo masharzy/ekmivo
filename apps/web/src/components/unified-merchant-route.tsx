@@ -115,7 +115,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
   :(root==="orders"||root==="catalog")
    ?<CommercePage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} financeEnabled={workspace.mode!=="ai"} view={view.length===2&&view[0]==="products"?"products-sync":view[0]??""} environment={paymentContext?.environment??"live"}/>
   :root==="customers"&&["","leads","follow-ups"].includes(view[0]??"")
-   ?<CustomerCRMPage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} financeEnabled={workspace.mode!=="ai"} environment={paymentContext?.environment??"live"}/>
+   ?<CustomerCRMPage key={user.id+":"+workspace.id+":"+view.join("/")+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"} view={view[0]??""} financeEnabled={workspace.mode!=="ai"} ordersEnabled={workspace.mode!=="commerce"} environment={paymentContext?.environment??"live"}/>
   :root==="customers"&&(["broadcasts","bookings","posts"].includes(view[0]??"")||campaignPostRoute)&&process.env.BRIOFOLD_GROWTH_OPERATIONS_ENABLED==="true"
    ?<GrowthOperationsPage workspaceId={workspace.id} actorId={user.id} bn={locale==="bn"}
      environment={paymentContext?.environment??"live"} commerceEnabled={["owner","admin"].includes(workspace.role)}

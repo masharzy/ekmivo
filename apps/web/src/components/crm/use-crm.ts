@@ -6,6 +6,9 @@ export type Profile={id?:string;revision:number;name:string;email?:string;phone?
 export type Followup={id:string;due_at:string;time_zone:string;body:string;status:string;kind?:"reminder"|"offer";requested_due_at?:string;quiet_start?:string|null;quiet_end?:string|null};
 export type Detail={customer:Profile;archives?:{id:string;name:string;email:string;phone:string;notes:string;tags:string[]}[];sources:{id:string;kind:string;source_id:string}[];proofs:{id:string;kind:string;value:string;verified_at:string;revoked_at:string|null}[];followups:Followup[];events:{sequence:number;action:string;created_at:string}[];can_manage:boolean;can_contact:boolean;can_export:boolean};
 export type CRMList={members:{id:string;name:string}[];items:Profile[];can_manage:boolean;can_contact:boolean;can_export:boolean};
+export type OrderRow={id:string;reference:string;status:string;source:string;total_minor:number;created_at:string;summary:string;claimed_payment:{method?:string;payer_phone?:string;trx_id?:string};paid_verified:boolean};
+export type CustomerOrders={orders:OrderRow[];numbers:{value:string;count:number}[]};
+export type Stat={orders:number;total_minor:number;last_at:string|null};
 export const STAGES=["new","contacted","qualified","proposal","won","lost"] as const;
 export const blankProfile:Profile={revision:0,name:"",tags:[],stage:"new",temperature:"warm",assignee:null};
 type Pending={fp:string;key:string;action:string;body:object;time:number};
@@ -16,11 +19,11 @@ export type Filters={q:string;filter:string;source:string;priority:string;assign
  * per write and an unconfirmed-write recovery path, so that protocol lives here
  * once instead of in each screen.
  */
-export function useCrm({workspaceId,actorId,environment,initial,bn,initialFilter=""}:{workspaceId:string;actorId:string;environment:"live"|"sandbox";initial:CRMList|null;bn:boolean;initialFilter?:string}){
+export function useCrm({workspaceId,actorId,environment,initial,bn,initialFilter="",ordersEnabled=false}:{workspaceId:string;actorId:string;environment:"live"|"sandbox";initial:CRMList|null;bn:boolean;initialFilter?:string;ordersEnabled?:boolean}){
  const t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const [data,setData]=useState<CRMList|null>(initial),[detail,setDetail]=useState<Detail|null>(null),[draft,setDraft]=useState<Profile|null>(null),[baseline,setBaseline]=useState("");
  const [f,setF]=useState<Filters>({q:"",filter:initialFilter,source:"",priority:"",assignee:"",offset:0});
- const [busy,setBusy]=useState(false),[loading,setLoading]=useState(!initial),[error,setError]=useState(""),[message,setMessage]=useState(""),[unconfirmed,setUnconfirmed]=useState(false),[tab,setTab]=useState<"profile"|"followups"|"activity">("profile");
+ const [busy,setBusy]=useState(false),[loading,setLoading]=useState(!initial),[error,setError]=useState(""),[message,setMessage]=useState(""),[unconfirmed,setUnconfirmed]=useState(false),[tab,setTab]=useState<"profile"|"orders"|"followups"|"activity">("profile");
  const pending=useRef<Pending|null>(null),lock=useRef(false),seq=useRef(0),first=useRef(true);
  const dirty=draft!==null&&JSON.stringify(draft)!==baseline;
  const endpoint=`/api/go/workspaces/${workspaceId}/crm?environment=${environment}`;
@@ -40,9 +43,21 @@ export function useCrm({workspaceId,actorId,environment,initial,bn,initialFilter
   return()=>{c.abort();clearTimeout(timer);};
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[f.q,f.filter,f.source,f.priority,f.assignee,f.offset,endpoint]);
+ // Order count, total and last order for the rows on screen (chat orders carry the customer link).
+ const [stats,setStats]=useState<Record<string,Stat>>({});
+ useEffect(()=>{
+  if(!ordersEnabled||!data||data.items.length===0)return;
+  const ids=data.items.slice(0,50).map(c=>c.id).filter(Boolean).join(",");
+  const c=new AbortController();
+  void fetch(endpoint+"&view=stats&ids="+ids,{cache:"no-store",signal:c.signal}).then(r=>r.ok?r.json():{}).then(v=>{if(!c.signal.aborted)setStats(v as Record<string,Stat>);}).catch(()=>{});
+  return()=>c.abort();
+ },[data,ordersEnabled,endpoint]);
+ const loadOrders=useCallback(async(id:string):Promise<CustomerOrders|null>=>{
+  try{const r=await fetch(endpoint+"&view=orders&customer="+id,{cache:"no-store"});return r.ok?await r.json():null;}catch{return null;}
+ },[endpoint]);
  const set=useCallback((patch:Partial<Filters>)=>setF(x=>({...x,offset:0,...patch})),[]);
  const refresh=useCallback(async()=>{setLoading(true);try{setData(await request());setError("");}catch{setError(t("Refresh failed.","রিফ্রেশ হয়নি।"));}finally{setLoading(false);}},[request,t]);
- const open=useCallback(async(id:string,page=0,nextTab?:"profile"|"followups"|"activity")=>{
+ const open=useCallback(async(id:string,page=0,nextTab?:"profile"|"orders"|"followups"|"activity")=>{
   const n=++seq.current;
   try{const v:Detail=await request(id,page);if(n!==seq.current)return;setDetail(v);if(nextTab)setTab(nextTab);else if(page===0)setTab("profile");setDraft(v.customer);setBaseline(JSON.stringify(v.customer));setError("");}
   catch{setError(t("This customer could not be opened.","গ্রাহকের তথ্য খোলা যায়নি।"));}
@@ -79,7 +94,7 @@ export function useCrm({workspaceId,actorId,environment,initial,bn,initialFilter
  const act=useCallback(async(name:string,body:object)=>{if(!detail)return null;const r=await command(name,{id:detail.customer.id,revision:detail.customer.revision,...body});if(r?.id)await open(r.id,0,tab);return r;},[detail,command,open,tab]);
  useEffect(()=>registerDraft({id:`crm:${actorId}:${workspaceId}`,isDirty:()=>dirty,save,discard:()=>{setDraft(detail?.customer??null);setBaseline(JSON.stringify(detail?.customer??null));}}),[actorId,workspaceId,dirty,save,detail]);
  useEffect(()=>{const leave=(e:BeforeUnloadEvent)=>{if(dirty||pending.current){e.preventDefault();e.returnValue="";}};window.addEventListener("beforeunload",leave);return()=>window.removeEventListener("beforeunload",leave);},[dirty]);
- return {t,bn,data,setData,detail,draft,dirty,f,set,loading,busy,error,setError,message,setMessage,unconfirmed,tab,setTab,endpoint,refresh,open,close,startNew,command,retry,update,save,moveStage,act,request};
+ return {t,bn,data,setData,detail,draft,dirty,f,set,loading,busy,error,setError,message,setMessage,unconfirmed,tab,setTab,endpoint,refresh,open,close,startNew,command,retry,update,save,moveStage,act,request,stats,loadOrders,ordersEnabled};
 }
 export function initials(name:string){const p=name.trim().split(/\s+/).filter(Boolean);return ((p[0]?.[0]??"?")+(p.length>1?p[p.length-1][0]:"")).toUpperCase();}
 export const stageText=(s:string,bn:boolean)=>bn?({new:"নতুন",contacted:"যোগাযোগ হয়েছে",qualified:"যোগ্য",proposal:"প্রস্তাব",won:"কিনেছেন",lost:"হারানো"} as Record<string,string>)[s]??s:({new:"New",contacted:"Contacted",qualified:"Qualified",proposal:"Proposal",won:"Bought",lost:"Lost"} as Record<string,string>)[s]??s;

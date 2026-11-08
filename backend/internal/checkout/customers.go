@@ -65,6 +65,27 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				w.Header().Set("Content-Disposition", `attachment; filename="customer.json"`)
 			}
+		} else if view := r.URL.Query().Get("view"); view == "orders" || view == "stats" {
+			if view == "orders" {
+				if cid == "" {
+					fail(w, 422, "CUSTOMER_REQUIRED")
+					return
+				}
+				err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customer_orders($1::uuid,$2,$3::uuid,$4::uuid)", ws, realm, actor.UserID, cid).Scan(&raw)
+			} else {
+				ids := []string{}
+				for _, id := range strings.Split(r.URL.Query().Get("ids"), ",") {
+					if id == "" {
+						continue
+					}
+					if !uuidPattern.MatchString(id) || len(ids) >= 100 {
+						fail(w, 422, "INVALID_FILTER")
+						return
+					}
+					ids = append(ids, id)
+				}
+				err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customer_stats($1::uuid,$2,$3::uuid,$4::text[]::uuid[])", ws, realm, actor.UserID, ids).Scan(&raw)
+			}
 		} else {
 			source, priority, assigned := r.URL.Query().Get("source"), r.URL.Query().Get("priority"), r.URL.Query().Get("assignee")
 			if cid == "" && (source != "" || priority != "" || assigned != "" || r.URL.Query().Get("filter") == "unconverted") {

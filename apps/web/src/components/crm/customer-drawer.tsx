@@ -1,14 +1,14 @@
 "use client";
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import {RefModal} from "../reference-ui";
-import {STAGES,stageText,tempText,type Detail,type useCrm} from "./use-crm";
+import {STAGES,stageText,tempText,type CustomerOrders,type Detail,type useCrm} from "./use-crm";
 
 type H=ReturnType<typeof useCrm>;
 const when=(iso:string,bn:boolean)=>{const d=new Date(iso);return Number.isNaN(d.valueOf())?"—":new Intl.DateTimeFormat(bn?"bn-BD":"en-GB",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Dhaka"}).format(d);};
 export const looksLikeId=(s:string)=>!s.trim()||/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s.trim())||/^\d{12,}$/.test(s.trim());
 
 export function CustomerDrawer({h}:{h:H}){
- const {t,bn,data,detail,draft,dirty,busy,unconfirmed,tab,setTab,update}=h;
+ const {t,bn,data,detail,draft,dirty,busy,unconfirmed,tab,setTab,update,ordersEnabled}=h;
  const isNew=!detail,can=Boolean(data?.can_manage);
  const dead=Boolean(draft?.deleted_at||draft?.merged_into);
  const open=Boolean(draft&&data);
@@ -20,7 +20,7 @@ export function CustomerDrawer({h}:{h:H}){
    <button type="button" className="ib" disabled={busy} onClick={()=>void h.close()}>{t("Close","বন্ধ করুন")}</button>
    {can&&!dead&&<button type="submit" form="crm-profile" className="ib pri" disabled={busy||!dirty||unconfirmed}>{isNew?t("Create","তৈরি করুন"):t("Save","সংরক্ষণ")}</button>}</>}>
   {draft&&data&&<>
-   {detail&&<div className="seg" role="tablist" style={{marginBottom:16}}>{([["profile",t("Profile","প্রোফাইল")],["followups",t("Follow-ups","ফলো-আপ")+(count?` · ${count}`:"")],["activity",t("Activity","কার্যক্রম")]] as const).map(([v,l])=><button key={v} type="button" role="tab" aria-selected={tab===v} className={tab===v?"on":""} onClick={()=>setTab(v)}>{l}</button>)}</div>}
+   {detail&&<div className="seg" role="tablist" style={{marginBottom:16}}>{([["profile",t("Profile","প্রোফাইল")],...(ordersEnabled?[["orders",t("Orders","অর্ডার")] as const]:[]),["followups",t("Follow-ups","ফলো-আপ")+(count?` · ${count}`:"")],["activity",t("Activity","কার্যক্রম")]] as const).map(([v,l])=><button key={v} type="button" role="tab" aria-selected={tab===v} className={tab===v?"on":""} onClick={()=>setTab(v)}>{l}</button>)}</div>}
    {h.error&&<p className="notice ref-errors" role="alert">{h.error}</p>}
    {unconfirmed&&<p className="notice">{t("An action is not confirmed yet.","একটি কাজ এখনো নিশ্চিত হয়নি।")} <button type="button" className="ib" disabled={busy} onClick={()=>void h.retry()}>{t("Retry","আবার চেষ্টা")}</button></p>}
    {tab==="profile"&&<form id="crm-profile" onSubmit={e=>{e.preventDefault();void h.save();}}>
@@ -34,6 +34,7 @@ export function CustomerDrawer({h}:{h:H}){
      {data.can_contact&&<label className="fld" style={{display:"flex",gap:8,alignItems:"center"}}><input type="checkbox" checked={draft.preferences?.do_not_contact??false} onChange={e=>update("preferences",{marketing:draft.preferences?.marketing??"unknown",do_not_contact:e.target.checked})}/>{t("Do not contact","যোগাযোগ করবেন না")}</label>}
     </fieldset>}
    </form>}
+   {tab==="orders"&&detail&&<Orders h={h} id={detail.customer.id!}/>}
    {tab==="followups"&&detail&&<Followups h={h} detail={detail}/>}
    {tab==="activity"&&detail&&<Activity h={h} detail={detail}/>}
   </>}
@@ -67,5 +68,29 @@ function Activity({h,detail}:{h:H;detail:Detail}){
  return <>
   {detail.events.length===0?<p className="mut">{t("No activity yet.","এখনো কোনো কার্যক্রম নেই।")}</p>:detail.events.slice(0,50).map(e=><p key={e.sequence} style={{display:"flex",justifyContent:"space-between",gap:12,padding:"8px 0",borderBottom:"1px solid var(--line)"}}><span>{e.action}</span><span className="mut">{when(e.created_at,bn)}</span></p>)}
   <div style={{display:"flex",gap:8,marginTop:14}}><button type="button" className="ib" disabled={busy||dirty||page===0} onClick={()=>void go(Math.max(0,page-50))}>{t("Newer","নতুন")}</button><button type="button" className="ib" disabled={busy||dirty||detail.events.length<51} onClick={()=>void go(page+50)}>{t("Older","পুরোনো")}</button></div>
+ </>;
+}
+
+const money=(minor:number,bn:boolean)=>"৳"+new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(Math.round(minor/100));
+const STATUS:Record<string,[string,string]>={draft:["Draft","খসড়া"],hold:["On hold","স্থগিত"],confirmed:["Confirmed","নিশ্চিত"],packed:["Packed","প্যাক"],shipped:["Shipped","পাঠানো"],delivered:["Delivered","পৌঁছেছে"],cancelled:["Cancelled","বাতিল"],returned:["Returned","ফেরত"]};
+
+function Orders({h,id}:{h:H;id:string}){
+ const {t,bn,loadOrders}=h;
+ const [state,setState]=useState<{id:string;data:CustomerOrders|null}|null>(null);
+ useEffect(()=>{let live=true;void loadOrders(id).then(d=>{if(live)setState({id,data:d});});return()=>{live=false;};},[id,loadOrders]);
+ if(!state||state.id!==id)return <div className="empty" role="status">{t("Loading…","লোড হচ্ছে…")}</div>;
+ if(!state.data)return <p className="notice ref-errors" role="alert">{t("Orders could not be loaded.","অর্ডার আনা যায়নি।")}</p>;
+ const {orders,numbers}=state.data;
+ const total=orders.filter(o=>!["draft","cancelled","returned"].includes(o.status)).reduce((a,o)=>a+o.total_minor,0);
+ if(orders.length===0)return <p className="mut">{t("No orders yet.","এখনো কোনো অর্ডার নেই।")}</p>;
+ return <>
+  <p className="mut" style={{marginBottom:12}}>{orders.length} {t("orders","অর্ডার")} · {money(total,bn)} · {t("last","শেষ")} {when(orders[0].created_at,bn)}</p>
+  {orders.map(o=>{const c=o.claimed_payment,has=Boolean(c.method||c.payer_phone||c.trx_id);return <div key={o.id} className="drawer-group">
+   <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}><b>{o.reference.startsWith("INBOX-")?when(o.created_at,bn):o.reference}</b><span className="pill">{(STATUS[o.status]??[o.status,o.status])[bn?1:0]}</span></div>
+   <p>{o.summary?o.summary.split("\n").slice(1).join(" ")||o.summary:"—"}</p>
+   <p><b>{money(o.total_minor,bn)}</b>{o.paid_verified&&<> · <span className="pill green">{t("Payment verified","পেমেন্ট যাচাইকৃত")}</span></>}</p>
+   {has&&!o.paid_verified&&<p className="mut">{t("Customer said","গ্রাহক বলেছেন")}: {[c.method,c.payer_phone,c.trx_id&&"TrxID "+c.trx_id].filter(Boolean).join(" · ")} <span className="pill orange">{t("Not verified","যাচাই হয়নি")}</span></p>}
+  </div>;})}
+  {numbers.length>0&&<div className="drawer-group"><h4>{t("Numbers used","ব্যবহৃত নম্বর")}</h4>{numbers.map(n=><p key={n.value} className="mono">{n.value} <span className="mut">×{n.count}</span></p>)}</div>}
  </>;
 }
