@@ -48,3 +48,6 @@
 .ds-app .int-actions{gap:8px}
 .ds-app .int-delivery-grid strong{font-size:17px}
 @media(max-width:640px){.ds-app .int-panel,.ds-app .int-delivery,.ds-app .int-guide,.ds-app .int-secret{padding:14px}}
+
+.int-panel ol{margin:0;padding:0;list-style:none;display:grid;gap:8px}.int-panel ol li{padding:10px 12px;border-radius:8px;background:var(--color-surface-subtle);line-height:1.6;overflow-wrap:anywhere;font-weight:400}
+.int-card-grid>.int-panel{align-content:start}
