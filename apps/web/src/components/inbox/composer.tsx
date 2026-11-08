@@ -111,7 +111,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
    mr.start(250);navigator.vibrate?.(10);
    r.timer=setInterval(()=>setElapsed(elapsedMs(r)),200);
    const buf=new Uint8Array(512);let last=0;
-   const tick=(now:number)=>{if(!rec.current)return;if(r.an&&now-last>55&&!r.paused){last=now;if(r.ctx?.state==="suspended")void r.ctx.resume();r.an.getByteTimeDomainData(buf);let sum=0;for(const v of buf){const d=(v-128)/128;sum+=d*d;}const lv=Math.min(1,Math.sqrt(Math.sqrt(sum/buf.length))*1.35);setLevels(prev=>[...prev.slice(-79),lv]);}r.raf=requestAnimationFrame(tick);};r.raf=requestAnimationFrame(tick);
+   const tick=(now:number)=>{if(!rec.current)return;if(r.an&&now-last>55&&!r.paused){last=now;if(r.ctx?.state==="suspended")void r.ctx.resume();r.an.getByteTimeDomainData(buf);let sum=0;for(const v of buf){const d=(v-128)/128;sum+=d*d;}const rms=Math.sqrt(sum/buf.length);/* noise gate: room silence stays a flat dot, speech swings tall */const lv=Math.min(1,Math.pow(Math.max(0,rms-.012)*9,.75));setLevels(prev=>[...prev.slice(-159),lv]);}r.raf=requestAnimationFrame(tick);};r.raf=requestAnimationFrame(tick);
   }catch{void ctx?.close().catch(()=>{});setPhase("idle");toast(t("Allow microphone access to record","রেকর্ড করতে মাইক্রোফোনের অনুমতি দিন"));}
   finally{starting.current=false;}
  }
@@ -167,7 +167,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
    <div className={s.rec}><I n="mic" className={s.micdot}/><span className={s.recT}>{mmss(elapsed/1000,bn)}</span><div className={s.slc} style={{transform:`translateX(${dx*.6}px)`,opacity:Math.max(0,1+dx/110)}}><I n="back" size={14}/>{t("Slide to cancel","বাতিল করতে স্লাইড করুন")}</div></div>
    <div className={s.lockc} style={{["--lk" as string]:lockP} as React.CSSProperties} data-armed={armed}><I n="lko" className={s.lo}/><I n="lk" className={s.lc}/><I n="cu" className={s.cu}/></div>
    <div className={`${s.lkp} ${paused?s.paused:""}`}>
-    <div className={s.lkr1}><span className={s.lkT}>{mmss(elapsed/1000,bn)}</span><div className={s.lkW}>{Array.from({length:48}).map((_,i)=>{const v=levels[levels.length-48+i]??0;return <b key={i} style={{height:3+v*26,opacity:v?1:.35}}/>;})}</div></div>
+    <div className={s.lkr1}><span className={s.lkT}>{mmss(elapsed/1000,bn)}</span><div className={s.lkW}>{Array.from({length:160}).map((_,i)=>{const v=levels[levels.length-160+i]??0;return <b key={i} style={{height:3+v*38,opacity:v>.02?1:.45}}/>;})}</div></div>
     <div className={s.lkr2}><button type="button" className={s.lkx} aria-label={t("Delete","বাতিল")} onClick={()=>void endRec(false,true)}><I n="trash"/></button>
      <button type="button" className={s.lkpz} onClick={togglePause}>{paused?<><I n="mic"/>{t("Resume","চালু")}</>:<><I n="pause"/>{t("Pause","পজ")}</>}</button>
      <button type="button" className={s.lks} aria-label={t("Send","পাঠান")} onClick={()=>void endRec(true)}><I n="snd"/></button></div>

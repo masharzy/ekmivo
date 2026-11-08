@@ -265,9 +265,13 @@ func (s *Service) fetchInboundMedia(ctx context.Context, d mobileIdentity, t, id
 	if err != nil {
 		return inboxDownload{}, err
 	}
-	declared := ref["mime"]
+	// Providers send e.g. "audio/ogg; codecs=opus": compare the bare type only.
+	declared := strings.ToLower(strings.TrimSpace(strings.Split(ref["mime"], ";")[0]))
 	if declared == "" && str(src, "kind") == "audio" {
-		declared = strings.Split(res.Header.Get("Content-Type"), ";")[0]
+		declared = strings.ToLower(strings.TrimSpace(strings.Split(res.Header.Get("Content-Type"), ";")[0]))
+	}
+	if str(src, "kind") == "audio" && len(data) > 12 && string(data[4:8]) == "ftyp" {
+		declared = "audio/mp4" // voice notes in an MP4/M4A container
 	}
 	var typ string
 	if str(src, "kind") == "video" {
@@ -287,4 +291,17 @@ func (s *Service) fetchInboundMedia(ctx context.Context, d mobileIdentity, t, id
 		name = "attachment"
 	}
 	return inboxDownload{Data: data, MIME: typ, Name: name}, nil
+}
+
+// inboundMediaKind returns the stored attachment kind (image/audio/video/document) or "" if unknown.
+func (s *Service) inboundMediaKind(ctx context.Context, d mobileIdentity, t, id string) string {
+	var raw []byte
+	if s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_media_source($1::uuid,$2,$3::uuid,$4::uuid)", d.Workspace, d.Environment, t, id).Scan(&raw) != nil {
+		return ""
+	}
+	var src map[string]any
+	if json.Unmarshal(raw, &src) != nil {
+		return ""
+	}
+	return str(src, "kind")
 }

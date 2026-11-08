@@ -46,7 +46,7 @@ func validateInboxMediaMax(data []byte, declared string, max int) (string, error
 		return "", errors.New("FILE_LIMIT_EXCEEDED")
 	}
 	typ := http.DetectContentType(data)
-	if typ == "application/ogg" && declared == "audio/ogg" {
+	if typ == "application/ogg" && strings.HasPrefix(declared, "audio/") {
 		typ = "audio/ogg"
 	}
 	if typ == "application/octet-stream" && declared == "audio/aac" && len(data) > 2 && data[0] == 0xff && data[1]&0xf6 == 0xf0 {
@@ -143,13 +143,24 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		Mime string `json:"mime"`
 	}
 	if json.Unmarshal(raw, &f) != nil || f.Key == "" {
+		wantURL, _ := b["url"].(bool)
+		if wantURL && s.inboundMediaKind(r.Context(), d, thread, id) == "video" {
+			// Videos can be large: hand back the signed link now and let the browser stream it.
+			link, linkErr := s.mediaCapability(d.Workspace, d.Environment, thread, id)
+			if linkErr != nil {
+				fail(w, 503, "MEDIA_ORIGIN_NOT_CONFIGURED")
+				return
+			}
+			write(w, 200, map[string]any{"url": link, "mime": "video/mp4", "name": "video"})
+			return
+		}
 		media, err := s.fetchInboundMedia(r.Context(), d, thread, id)
 		if err != nil {
 			fail(w, 503, inboxMediaFailureCode(err))
 			return
 		}
 		w.Header().Set("Cache-Control", "private, no-store")
-		if wantURL, _ := b["url"].(bool); wantURL {
+		if wantURL {
 			link, err := s.mediaCapability(d.Workspace, d.Environment, thread, id)
 			if err != nil {
 				fail(w, 503, "MEDIA_ORIGIN_NOT_CONFIGURED")
