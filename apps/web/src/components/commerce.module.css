@@ -49,9 +49,9 @@
  .root :global(.toolbar){padding:10px 12px}
  .root :global(.cm-select){flex:1 1 40%;min-width:0}
 }
-.root :global(.cm-show-sm){display:none}
+.root :global(.cm-show-sm),.root :global(.pill.cm-show-sm){display:none}
 @media(max-width:560px){
- .root :global(.cm-show-sm){display:inline-flex;margin-top:4px}
+ .root :global(.cm-show-sm),.root :global(.pill.cm-show-sm){display:inline-flex;margin-top:4px}
  :global(.ref-dashboard) .root :global(.top){flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
  :global(.ref-dashboard) .root :global(.top) h1{flex:1 1 auto;min-width:0}
  :global(.ref-dashboard) .root :global(.top) :global(.acts){flex:none;width:auto;margin-left:auto}
@@ -69,3 +69,5 @@
  .root :global(.cm-filters) :global(.sp){display:none}
  .root :global(.cm-filters) :global(.cm-select){flex:none;min-width:0;width:auto}
 }
+
+@media(max-width:560px){.root :global(.cm-filters){flex-wrap:wrap;width:100%}.root :global(.toolbar){flex-wrap:wrap}}
