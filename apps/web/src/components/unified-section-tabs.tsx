@@ -2,7 +2,7 @@ import Link from "next/link";
 import {enabledUnifiedService,type BusinessMode,type UnifiedRoot} from "../lib/unified-navigation";
 import styles from "./unified-section-tabs.module.css";
 
-type Tab={en:string;bn:string;href:string;service:"ai"|"payments"|"common"};
+type Tab={en:string;bn:string;href:string;service:"ai"|"payments"|"common"|"fulfilment"};
 const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  inbox:[
   {en:"Conversations",bn:"কথোপকথন",href:"/inbox",service:"ai"},
@@ -12,14 +12,14 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
   {en:"Tickets",bn:"টিকিট",href:"/inbox/tickets",service:"ai"},
  ],
  orders:[
-  {en:"Orders",bn:"অর্ডার",href:"/orders",service:"common"},
-  {en:"To follow up",bn:"ফলোআপের অর্ডার",href:"/orders/to-chase",service:"common"},
-  {en:"Scan & pack",bn:"স্ক্যান ও প্যাক",href:"/orders/scan",service:"common"},
-  {en:"Products",bn:"পণ্য",href:"/orders/products",service:"common"},
-  {en:"Inventory",bn:"স্টক",href:"/orders/inventory",service:"common"},
-  {en:"Delivery",bn:"ডেলিভারি",href:"/orders/delivery",service:"common"},
-  {en:"Returns",bn:"রিটার্ন",href:"/orders/returns",service:"common"},
-  {en:"Coupons",bn:"কুপন",href:"/orders/coupons",service:"common"},
+  {en:"Orders",bn:"অর্ডার",href:"/orders",service:"fulfilment"},
+  {en:"To follow up",bn:"ফলোআপের অর্ডার",href:"/orders/to-chase",service:"fulfilment"},
+  {en:"Scan & pack",bn:"স্ক্যান ও প্যাক",href:"/orders/scan",service:"fulfilment"},
+  {en:"Products",bn:"পণ্য",href:"/orders/products",service:"fulfilment"},
+  {en:"Inventory",bn:"স্টক",href:"/orders/inventory",service:"fulfilment"},
+  {en:"Delivery",bn:"ডেলিভারি",href:"/orders/delivery",service:"fulfilment"},
+  {en:"Returns",bn:"রিটার্ন",href:"/orders/returns",service:"fulfilment"},
+  {en:"Coupons",bn:"কুপন",href:"/orders/coupons",service:"fulfilment"},
  ],
  payments:[
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},
@@ -37,7 +37,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  ],
  reports:[
   {en:"Business activity",bn:"ব্যবসার কার্যক্রম",href:"/reports",service:"common"},
-  {en:"Order reports",bn:"অর্ডার রিপোর্ট",href:"/reports/orders",service:"common"},
+  {en:"Order reports",bn:"অর্ডার রিপোর্ট",href:"/reports/orders",service:"fulfilment"},
   {en:"Payment reports",bn:"পেমেন্ট রিপোর্ট",href:"/reports/payments",service:"payments"},
   {en:"AI reports",bn:"AI রিপোর্ট",href:"/reports/ai",service:"ai"},
  ]

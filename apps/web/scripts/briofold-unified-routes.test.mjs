@@ -159,7 +159,7 @@ test("canonical resolver rejects inherited names and unknown routes for every bu
  }
 });
 test("canonical commerce deep links reuse real scoped scanner, courier and catalog import resources",()=>{
- for(const mode of ["ai","commerce","both"]){
+ for(const mode of ["ai","both"]){
   assert.equal(navigation.unifiedDestination(mode,"orders",["scan"]).section,"orders");
   assert.equal(navigation.unifiedDestination(mode,"orders",["courier"]).section,"shipping");
   assert.equal(navigation.unifiedDestination(mode,"orders",["products","sync"]).section,"products");
@@ -171,9 +171,10 @@ test("canonical commerce deep links reuse real scoped scanner, courier and catal
  const entry=source("components/commerce-page.tsx");
  assert.match(entry,/props\.view==="products-sync"\?"products"/);
  assert.match(entry,/props\.view==="courier"\?"delivery"/);
+ for(const view of [["scan"],["products"],["products","sync"],["integrations","courier"]])assert.equal(navigation.unifiedDestination("commerce",view[0]==="integrations"?"settings":"orders",view),null,"Payment Gateway has no fulfilment routes: "+view.join("/"));
 });
 test("unconverted-order follow-up route reads only draft or hold source, never a fictional commerce resource",()=>{
- for(const mode of ["ai","commerce","both"])
+ for(const mode of ["ai","both"])
   assert.equal(navigation.unifiedDestination(mode,"orders",["to-chase"]).section,"orders");
  assert.equal(navigation.unifiedDestination("off","orders",["to-chase"]),null);
  const page=source("components/commerce-page.tsx");
@@ -184,9 +185,10 @@ test("unconverted-order follow-up route reads only draft or hold source, never a
  assert.match(view,/chaseMode\?\["draft","hold"\]:states/);
  assert.match(view,/Open customer follow-ups/);
  assert.match(view,/no customer message is sent automatically/i);
+ assert.equal(navigation.unifiedDestination("commerce","orders",["to-chase"]),null);
 });
 test("order reports are explicit and fail closed behind a deployment flag",()=>{
- for(const mode of ["ai","commerce","both"])
+ for(const mode of ["ai","both"])
   assert.equal(navigation.unifiedDestination(mode,"reports",["orders"]).section,"reports");
  assert.equal(navigation.unifiedDestination("off","reports",["orders"]),null);
  const route=source("components/unified-merchant-route.tsx");
@@ -195,6 +197,7 @@ test("order reports are explicit and fail closed behind a deployment flag",()=>{
  const report=source("components/briofold-order-report.tsx");
  assert.match(report,/commerce_order_report/);
  assert.match(report,/No totals have been assumed/);
+ assert.equal(navigation.unifiedDestination("commerce","reports",["orders"]),null);
 });
 test("notifications open for the preferred single Store without a legacy workspace detour",()=>{
  const entry=source("app/[locale]/notifications/page.tsx");

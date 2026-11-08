@@ -4,14 +4,14 @@ import type {Service} from "./dashboard-navigation";
 export type BusinessMode="ai"|"commerce"|"both"|"off";
 export type UnifiedRoot="dashboard"|"inbox"|"orders"|"payments"|"sms-data"|"invoices"|"customers"|"reports"|"settings";
 export type UnifiedNavGroup="main"|"money"|"manage";
-export type UnifiedNavItem={key:UnifiedRoot|"devices";en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common";group:UnifiedNavGroup};
+export type UnifiedNavItem={key:UnifiedRoot|"devices";en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common"|"fulfilment";group:UnifiedNavGroup};
 export const unifiedNavGroupLabels:Record<UnifiedNavGroup,{en:string;bn:string}>={
  main:{en:"Work",bn:"কাজ"},money:{en:"Money",bn:"টাকা-পয়সা"},manage:{en:"Manage",bn:"পরিচালনা"},
 };
 export const unifiedNavigation:readonly UnifiedNavItem[]=[
  {key:"dashboard",en:"Overview",bn:"ওভারভিউ",icon:"overview",href:"/dashboard",service:"common",group:"main"},
  {key:"inbox",en:"Inbox",bn:"ইনবক্স",icon:"inbox",href:"/inbox",service:"ai",group:"main"},
- {key:"orders",en:"Orders",bn:"অর্ডার",icon:"orders",href:"/orders",service:"common",group:"main"},
+ {key:"orders",en:"Orders",bn:"অর্ডার",icon:"orders",href:"/orders",service:"fulfilment",group:"main"},
  {key:"customers",en:"Customers",bn:"গ্রাহক",icon:"customers",href:"/customers",service:"common",group:"main"},
  {key:"payments",en:"Payments",bn:"পেমেন্ট",icon:"transactions",href:"/payments",service:"payments",group:"money"},
  {key:"invoices",en:"Invoices",bn:"ইনভয়েস",icon:"invoices",href:"/invoices",service:"payments",group:"money"},
@@ -24,7 +24,7 @@ export const unifiedNavigation:readonly UnifiedNavItem[]=[
 export function currentUnifiedItem(items:readonly UnifiedNavItem[],pathname:string):UnifiedNavItem|undefined{
  return items.filter(i=>pathname===i.href||pathname.startsWith(i.href+"/")).sort((x,y)=>y.href.length-x.href.length)[0];
 }
-export type UnifiedSetting={slug:string;en:string;bn:string;section:SectionKey;service:"ai"|"payments"|"common";external?:boolean};
+export type UnifiedSetting={slug:string;en:string;bn:string;section:SectionKey;service:"ai"|"payments"|"common"|"fulfilment";external?:boolean};
 export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:readonly UnifiedSetting[]}[]=[
  {slug:"business",en:"Business",bn:"ব্যবসা",items:[
   {slug:"business",en:"Business profile",bn:"ব্যবসার পরিচিতি",section:"store",service:"common"},
@@ -52,7 +52,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"api-keys",en:"API keys",bn:"API Keys",section:"developers",service:"payments"},
   {slug:"webhooks",en:"Webhooks & alerts",bn:"ওয়েবহুক ও অ্যালার্ট",section:"webhooks",service:"payments"},
   {slug:"integrations",en:"Integrations",bn:"ইন্টিগ্রেশন",section:"integrations",service:"payments"},
-  {slug:"integrations/courier",en:"Courier credentials",bn:"কুরিয়ারের সংযোগ",section:"integrations",service:"common"},
+  {slug:"integrations/courier",en:"Courier credentials",bn:"কুরিয়ারের সংযোগ",section:"integrations",service:"fulfilment"},
   {slug:"activity",en:"Activity logs",bn:"কার্যক্রমের ইতিহাস",section:"events",service:"common"},
   {slug:"api-docs",en:"API documentation",bn:"API নির্দেশনা",section:"api-docs",service:"payments",external:true},
  ]},
@@ -113,11 +113,14 @@ export function unifiedSectionHref(section:SectionKey,service:Service):string|nu
  if(section==="comments"&&service==="ai")return "/inbox/comments";
  return unifiedSectionPaths[section]??null;
 }
-export function enabledUnifiedService(mode:BusinessMode,service:"ai"|"payments"|"common"){
+export function enabledUnifiedService(mode:BusinessMode,service:"ai"|"payments"|"common"|"fulfilment"){
+ // Orders, stock, delivery and courier tools belong to AI/Both businesses; the pure Payment Gateway has none of them.
+ if(service==="fulfilment")return mode==="ai"||mode==="both";
  return mode!=="off"&&(service==="common"||mode==="both"||(service==="ai"?mode==="ai":mode==="commerce"));
 }
 export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:readonly string[]):UnifiedDestination|null{
  if(mode==="off")return null;
+ if(mode==="commerce"&&(root==="orders"||(root==="settings"&&view.join("/")==="integrations/courier")||(root==="reports"&&view[0]==="orders")))return null;
  // The website channel is part of the canonical Channels tree, not a
  // financial UUID detail or a second Store. Keep the former one-level link
  // working while merchant bookmarks move to /settings/channels/website.
@@ -173,7 +176,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   if(part==="apps")return payments?{section:"apps",service:"payments"}:null;
   const setting=unifiedSettings.flatMap(g=>g.items).find(item=>item.slug===part);
   if(!setting||setting.external)return null;
-  destination={section:setting.section,service:setting.service==="common"?defaultService:setting.service};
+  destination={section:setting.section,service:setting.service==="common"||setting.service==="fulfilment"?defaultService:setting.service};
   if(part==="business"&&mode==="ai")destination.kind="business-profile";
   if(part==="channels")destination.kind="channels";
   if(part==="devices"&&mode==="ai")destination.kind="devices";
