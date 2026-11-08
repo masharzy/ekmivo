@@ -231,6 +231,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  const exitFull=useCallback(()=>{const el=pageRef.current,w=wrapRef.current;if(!el||!w){setFull("");return;}const done=()=>setFull("");
   if(window.matchMedia("(prefers-reduced-motion:reduce)").matches||!el.animate){done();return;}
   el.animate([{clipPath:"inset(0px round 0px)"},{clipPath:clipFrom(w.getBoundingClientRect(),el)}],{duration:260,easing:"cubic-bezier(.2,.8,.2,1)",fill:"forwards"}).finished.then(done,done);},[]);
+ useLayoutEffect(()=>{if(full===""&&pageRef.current)pageRef.current.getAnimations().forEach(x=>x.cancel());},[full]);
  useLayoutEffect(()=>{const el=pageRef.current,from=animFrom.current;if(full!=="side"||!el||!from)return;animFrom.current=null;
   if(window.matchMedia("(prefers-reduced-motion:reduce)").matches||!el.animate)return;
   el.animate([{clipPath:clipFrom(from,el)},{clipPath:"inset(0px round 0px)"}],{duration:300,easing:"cubic-bezier(.2,.8,.2,1)"});},[full]);
