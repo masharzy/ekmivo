@@ -17,6 +17,7 @@ export function useMedia(workspaceId:string,threadId:string,mediaId?:string|null
 export function reasonText(code:string,bn:boolean){
  if(/UNSUPPORTED|MIME|TYPE/i.test(code))return bn?"এই ফাইল টাইপ সাপোর্টেড নয়":"File type not supported";
  if(/LARGE|SIZE/i.test(code))return bn?"ফাইল অনেক বড়":"File too large";
+ if(/REFRESH_UNAVAILABLE/i.test(code))return bn?"চ্যানেল থেকে নতুন মিডিয়া লিংক পাওয়া যায়নি":"Channel could not refresh this media";
  if(/EXPIRED|GONE|404|410/i.test(code))return bn?"চ্যানেল থেকে মিডিয়ার মেয়াদ শেষ":"Expired at the channel";
  if(/SCAN|MALWARE/i.test(code))return bn?"নিরাপত্তা স্ক্যান শেষ হয়নি":"Security scan unavailable";
  return bn?"মিডিয়া লোড হয়নি":"Media couldn't load";
@@ -44,7 +45,7 @@ function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:st
  return <div className={s.vn}>
   <button type="button" className={s.pl} onClick={e=>{e.stopPropagation();toggle();}} disabled={!media} aria-label={playing?(bn?"থামান":"Pause"):(bn?"চালান":"Play")}>{playing?<I n="pause" size={14} fill/>:<I n="play" size={14} fill/>}</button>
   <div className={s.wf} onClick={e=>{e.stopPropagation();const a=el.current;if(!a||!total)return;const r=e.currentTarget.getBoundingClientRect();a.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*total;setPos(a.currentTime);}}>{h.map((v,i)=><i key={i} className={i/h.length<frac?s.f:undefined} style={{height:v}}/>)}</div>
-  {failed?<button type="button" className={s.vd} title={reasonText(reason,bn)} onClick={e=>{e.stopPropagation();retry();}}>{bn?"আবার চেষ্টা":"Retry"}</button>:<><span className={s.vd}>{mmss(playing||pos>0?pos:dur,bn)}</span>{(playing||pos>0)&&<button type="button" className={s.spd} aria-label="Speed" onClick={e=>{e.stopPropagation();const n=rate===1?1.5:rate===1.5?2:1;setRate(n);if(el.current)el.current.playbackRate=n;}}>{rate}x</button>}</>}
+  {failed?<button type="button" className={s.vd} title={reasonText(reason,bn)} onClick={e=>{e.stopPropagation();retry();}}>{bn?"আবার চেষ্টা":"Retry"}</button>:<><span className={s.vd}>{mmss(playing||pos>0?pos:total,bn)}</span>{(playing||pos>0)&&<button type="button" className={s.spd} aria-label="Speed" onClick={e=>{e.stopPropagation();const n=rate===1?1.5:rate===1.5?2:1;setRate(n);if(el.current)el.current.playbackRate=n;}}>{rate}x</button>}</>}
   {media&&<audio ref={el} src={media.url} preload="metadata" onLoadedMetadata={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onPlay={e=>{e.currentTarget.playbackRate=rate;setPlaying(true);}} onError={()=>{if(!tried){setTried(true);retry();}}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);}} onTimeUpdate={e=>setPos(e.currentTarget.currentTime)}/>}
  </div>;
 }
@@ -137,7 +138,7 @@ function RowImpl(p:RowProps){
  let inner;
  if(m.type==="unsupported")inner=<div className={`${s.bub} ${tone}`}><span className={s.unsup}>{m.body||(bn?"এই মেসেজটি (ভিডিও/অন্য ফাইল) এখানে দেখানো যায়নি — চ্যানেল অ্যাপে দেখুন":"This message (video or another attachment) can't be shown here — open it in the channel app")}</span>{meta}</div>;
  else if((m.type as string)==="video")inner=<div className={`${s.bub} ${s.im} ${tone}`}>{q&&<Quote q={q} onClick={()=>m.reply_to&&p.onJump(m.reply_to)}/>}<div className={s.imgw}><VideoBox m={m} workspaceId={p.workspaceId} threadId={p.threadId} bn={bn}/><span className={s.ovm}>{time}<Ticks m={m} bn={bn} onRetry={p.onRetry}/></span></div>{m.body&&<div className={s.cap}><Text body={m.body}/></div>}</div>;
- else if((m.type as string)==="sticker")inner=<><div className={s.stkimg}><Img m={m} workspaceId={p.workspaceId} threadId={p.threadId} bn={bn}/></div><div className={s.mrow}>{meta}</div></>;
+ else if(((m.type as string)==="sticker"||m.content?.sticker===true))inner=<><div className={s.stkimg}><Img m={m} workspaceId={p.workspaceId} threadId={p.threadId} bn={bn}/></div><div className={s.mrow}>{meta}</div></>;
  else if(sticker)inner=<><div className={s.stk}>{m.body.trim()}</div><div className={s.mrow}>{meta}</div></>;
  else if(imgs.length){
   const n=imgs.length,shown=Math.min(n,4),cls=n===1?"":n===2?s.g2:n===3?s.g3:s.g4;

@@ -17,8 +17,8 @@ import (
 )
 
 type inboxIncomingMedia struct {
-	Account, Message, Sender, Kind, URL, ProviderID, Mime, Filename, Caption string
-	At                                                                       time.Time
+	Account, Message, Sender, Kind, URL, ProviderID, Mime, Filename, Caption, StickerID string
+	At                                                                                  time.Time
 }
 
 func parseInboxMedia(raw []byte) []inboxIncomingMedia {
@@ -37,9 +37,20 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 			if msg["is_echo"] == true {
 				continue
 			}
+			seenSticker := map[string]bool{}
 			for index, attachment := range rows(msg["attachments"]) {
 				a := obj(attachment)
+				stickerID := mediaStickerID(obj(a["payload"])["sticker_id"])
+				if stickerID != "" {
+					if seenSticker[stickerID] {
+						continue
+					}
+					seenSticker[stickerID] = true
+				}
 				kind := str(a, "type")
+				if kind == "sticker" {
+					kind = "image"
+				}
 				if kind == "file" {
 					kind = "document"
 				}
@@ -51,7 +62,7 @@ func parseInboxMedia(raw []byte) []inboxIncomingMedia {
 					id += "/" + strconv.Itoa(index)
 				}
 				stamp, _ := m["timestamp"].(float64)
-				out = append(out, inboxIncomingMedia{Account: str(e, "id"), Message: id, Sender: str(obj(m["sender"]), "id"), Kind: kind, Caption: str(msg, "text"), URL: str(obj(a["payload"]), "url"), At: time.UnixMilli(int64(stamp))})
+				out = append(out, inboxIncomingMedia{Account: str(e, "id"), Message: id, Sender: str(obj(m["sender"]), "id"), Kind: kind, Caption: str(msg, "text"), URL: str(obj(a["payload"]), "url"), StickerID: mediaStickerID(obj(a["payload"])["sticker_id"]), At: time.UnixMilli(int64(stamp))})
 			}
 		}
 		for _, change := range rows(e["changes"]) {
@@ -137,7 +148,7 @@ func (s *Service) persistInboxMedia(ctx context.Context, tx pgx.Tx, provider str
 		if err != nil {
 			return err
 		}
-		ref, _ := json.Marshal(map[string]string{"url": m.URL, "provider_id": m.ProviderID, "mime": m.Mime, "name": m.Filename, "caption": m.Caption})
+		ref, _ := json.Marshal(map[string]string{"url": m.URL, "provider_id": m.ProviderID, "mime": m.Mime, "name": m.Filename, "caption": m.Caption, "sticker_id": m.StickerID, "message_id": m.Message})
 		cipher, err := deviceevidence.Encrypt(s.Pipeline.Key, ref, ws+"|inbox-source")
 		if err != nil {
 			return err
@@ -179,6 +190,17 @@ func safeMetaMediaURL(raw string) bool {
 	return false
 }
 
+func mediaStickerID(value any) string {
+	switch id := value.(type) {
+	case string:
+		return id
+	case float64:
+		return strconv.FormatInt(int64(id), 10)
+	default:
+		return ""
+	}
+}
+
 type inboxDownload struct {
 	Data []byte
 	MIME string
@@ -215,6 +237,9 @@ func (s *Service) fetchInboundMedia(ctx context.Context, d mobileIdentity, t, id
 		return inboxDownload{}, err
 	}
 	mediaURL := ref["url"]
+	if ref["message_id"] == "" {
+		ref["message_id"] = str(src, "provider_message_id")
+	}
 	if str(src, "provider") == "tg" {
 		var file struct {
 			Path string `json:"file_path"`
@@ -249,13 +274,73 @@ func (s *Service) fetchInboundMedia(ctx context.Context, d mobileIdentity, t, id
 	if str(src, "provider") != "tg" && !safeMetaMediaURL(mediaURL) {
 		return inboxDownload{}, errors.New("MEDIA_HOST_DENIED")
 	}
-	req, _ := http.NewRequestWithContext(ctx, "GET", mediaURL, nil)
-	if str(src, "provider") == "wa" {
-		req.Header.Set("Authorization", "Bearer "+string(token))
+	download := func() (*http.Response, error) {
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, mediaURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		if str(src, "provider") == "wa" {
+			request.Header.Set("Authorization", "Bearer "+string(token))
+		}
+		return inboxHTTP.Do(request)
 	}
-	res, err := inboxHTTP.Do(req)
+	res, err := download()
 	if err != nil {
 		return inboxDownload{}, err
+	}
+	if (res.StatusCode == 403 || res.StatusCode == 404 || res.StatusCode == 410) && (str(src, "provider") == "ms" || str(src, "provider") == "ig") {
+		res.Body.Close()
+		cfg, _ := s.channelConfig(ctx)
+		parts := strings.Split(ref["message_id"], "/")
+		index := 0
+		if len(parts) > 1 {
+			index, _ = strconv.Atoi(parts[len(parts)-1])
+		}
+		var message struct {
+			Attachments struct {
+				Data []struct {
+					Image struct {
+						URL     string `json:"url"`
+						Sticker bool   `json:"render_as_sticker"`
+					} `json:"image_data"`
+					Video struct {
+						URL string `json:"url"`
+					} `json:"video_data"`
+					FileURL string `json:"file_url"`
+				} `json:"data"`
+			} `json:"attachments"`
+		}
+		request, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://graph.facebook.com", nil)
+		if parts[0] == "" || index < 0 || !graphVersionPattern.MatchString(cfg["META_GRAPH_VERSION"]) || metaGet(request, cfg["META_GRAPH_VERSION"], url.PathEscape(parts[0])+"?fields=attachments{image_data,video_data,file_url}", string(token), &message) != nil || index >= len(message.Attachments.Data) {
+			return inboxDownload{}, errors.New("MEDIA_REFRESH_UNAVAILABLE")
+		}
+		item := message.Attachments.Data[index]
+		mediaURL = item.Image.URL
+		if mediaURL == "" {
+			mediaURL = item.Video.URL
+		}
+		if mediaURL == "" {
+			mediaURL = item.FileURL
+		}
+		if !safeMetaMediaURL(mediaURL) {
+			return inboxDownload{}, errors.New("MEDIA_HOST_DENIED")
+		}
+		ref["url"] = mediaURL
+		if item.Image.Sticker {
+			ref["sticker_id"] = "meta-sticker"
+		}
+		encoded, _ := json.Marshal(ref)
+		encrypted, encryptErr := deviceevidence.Encrypt(s.Pipeline.Key, encoded, d.Workspace+"|inbox-source")
+		if encryptErr != nil {
+			return inboxDownload{}, encryptErr
+		}
+		if _, err = s.Pipeline.Control.Exec(ctx, "SELECT inbox_source_metadata($1::uuid,$2::uuid,$3::uuid,$4,$5)", d.Workspace, t, id, encrypted, ref["sticker_id"] != ""); err != nil {
+			return inboxDownload{}, err
+		}
+		res, err = download()
+		if err != nil {
+			return inboxDownload{}, err
+		}
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
@@ -285,6 +370,16 @@ func (s *Service) fetchInboundMedia(ctx context.Context, d mobileIdentity, t, id
 	}
 	if err != nil {
 		return inboxDownload{}, err
+	}
+	if ref["sticker_id"] != "" {
+		encoded, _ := json.Marshal(ref)
+		encrypted, err := deviceevidence.Encrypt(s.Pipeline.Key, encoded, d.Workspace+"|inbox-source")
+		if err != nil {
+			return inboxDownload{}, err
+		}
+		if _, err = s.Pipeline.Control.Exec(ctx, "SELECT inbox_source_metadata($1::uuid,$2::uuid,$3::uuid,$4,true)", d.Workspace, t, id, encrypted); err != nil {
+			return inboxDownload{}, err
+		}
 	}
 	name := ref["name"]
 	if name == "" {

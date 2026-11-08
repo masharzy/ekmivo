@@ -1,6 +1,6 @@
 export type Cap={image?:boolean;audio?:boolean;document?:boolean;product?:boolean;forward?:boolean;reactions?:string[];delivered?:boolean;max_images?:number;max_bytes?:number};
 export type Thread={id:string;name:string;channel:string;preview:string;preview_sender?:string;unread:number;status?:string;priority?:string;overdue?:boolean;last_activity_at?:string;ai_enabled?:boolean;window_open?:boolean;capabilities?:Cap};
-export type Content={media_id?:string;name?:string;mime?:string;size_bytes?:number;duration_ms?:number;id?:string;price_minor?:number;currency?:string;sizes?:string;image_media_id?:string};
+export type Content={sticker?:boolean;media_id?:string;name?:string;mime?:string;size_bytes?:number;duration_ms?:number;id?:string;price_minor?:number;currency?:string;sizes?:string;image_media_id?:string};
 export type Msg={id:string;sequence:number;sender:string;body:string;state:string;created_at:string;type?:string;sent_at?:string;delivered_at?:string;seen_at?:string;reply_to?:string|null;reply_body?:string|null;error_code?:string|null;content?:Content|null;batch_id?:string|null;reaction?:string|null};
 export type ThreadInfo={name:string;send_allowed?:boolean;manage_allowed?:boolean;ai_enabled:boolean;window_open:boolean;capabilities?:Cap};
 export type Conversation={items:Msg[];thread:ThreadInfo};
