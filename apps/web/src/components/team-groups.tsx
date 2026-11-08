@@ -71,7 +71,7 @@ export function TeamGroups({workspaceId,bn,scopesEnabled=false}:{workspaceId:str
   {data?.can_manage&&<div className={styles.grid}>
    <section className={styles.panel}><h2>{t("Existing groups","বর্তমান গ্রুপ")}</h2>
     {data.groups.length===0?<p>{t("No restriction groups yet.","এখনো কোনো গ্রুপ নেই।")}</p>:data.groups.map(group=><article className={styles.group} key={group.id}><h3>{group.name}</h3><p>{t("Members","সদস্য")}: {group.members.length} · {t("Restrictions","নিষেধাজ্ঞা")}: {group.denied_capabilities.length}</p>
-     <p>{group.denied_capabilities.length?group.denied_capabilities.join(", "):t("No restrictions","কোনো নিষেধাজ্ঞা নেই")}</p>
+     {group.denied_capabilities.length?<div className={styles.chips}>{group.denied_capabilities.map(c=>{const m=caps.find(x=>x[0]===c);return <span key={c}>{m?(bn?m[2]:m[1]):c}</span>;})}</div>:<p>{t("No restrictions","কোনো নিষেধাজ্ঞা নেই")}</p>}
      <div className={styles.actions}><button type="button" disabled={busy||dirty} onClick={()=>{setDraft({...group});setPassword("");}}>{t("Edit group","গ্রুপ সম্পাদনা")}</button>
       <button type="button" disabled={busy||dirty} onClick={()=>{if(window.confirm(t("Archiving removes this group's restrictions from its members. Continue?","আর্কাইভ করলে সদস্যদের ওপর এই গ্রুপের নিষেধাজ্ঞা উঠে যাবে। চালাবেন?"))){setDraft({...group,name:group.name});setMessage(t("Enter your password, then use Archive selected group.","পাসওয়ার্ড দিয়ে নির্বাচিত গ্রুপ আর্কাইভ করুন।"));}}}>{t("Prepare archive","আর্কাইভ প্রস্তুত")}</button>
      </div></article>)}
