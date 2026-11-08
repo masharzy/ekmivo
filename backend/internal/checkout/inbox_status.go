@@ -66,6 +66,9 @@ func parseInboxStatuses(raw []byte) []inboxStatusEvent {
 			}
 		}
 		for _, m := range e.Messaging {
+			if m.Delivery != nil && m.Delivery.Watermark > 0 {
+				out = append(out, inboxStatusEvent{Account: e.ID, Recipient: m.Sender.ID, Status: "delivered", At: time.UnixMilli(m.Delivery.Watermark), Watermark: true})
+			}
 			if m.Delivery != nil {
 				for _, id := range m.Delivery.MIDs {
 					out = append(out, inboxStatusEvent{Account: e.ID, Message: id, Status: "delivered", At: time.UnixMilli(m.Delivery.Watermark)})

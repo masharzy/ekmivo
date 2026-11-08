@@ -10,7 +10,7 @@ const p={
  cu:"M6 15l6-6 6 6",pause:"M8 5v14M16 5v14",img:"M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zM9 8.4a1.6 1.6 0 100 3.2 1.6 1.6 0 000-3.2zM3 17l5-4 4 3 3-2 6 4",
  doc:"M7 3h8l4 4v14H7zM14 3v5h5",bag:"M5 8h14l-1 12H6zM9 8a3 3 0 016 0",clk:"M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2",trash:"M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
  more:"M5 12h0M12 12h0M19 12h0",plus:"M12 5v14M5 12h14",search:"M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4",tools:"M14.7 6.3a4 4 0 005 5L21 13l-8 8-3-3 8-8-1.3-1.3zM3 21l5-5",
- down:"M6 9l6 6 6-6",download:"M12 4v11M7 11l5 5 5-5M5 20h14",ext:"M14 4h6v6M20 4l-9 9M18 14v5H5V6h5"
+ down:"M6 9l6 6 6-6",full:"M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",shrink:"M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",side:"M4 5h16v14H4zM9 5v14",download:"M12 4v11M7 11l5 5 5-5M5 20h14",ext:"M14 4h6v6M20 4l-9 9M18 14v5H5V6h5"
 } as const;
 export type IconName=keyof typeof p;
 export function I({n,size=20,fill,style,className}:{n:IconName;size?:number;fill?:boolean;style?:CSSProperties;className?:string}){

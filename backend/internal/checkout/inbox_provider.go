@@ -278,7 +278,9 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 				fail(w, 503, "SOURCE_UNAVAILABLE")
 				return
 			}
-			if status.Watermark {
+			if status.Watermark && status.Status == "delivered" {
+				_, err = tx.Exec(r.Context(), "SELECT inbox_delivered_watermark($1::uuid,$2,$3)", connection, status.Recipient, status.At)
+			} else if status.Watermark {
 				_, err = tx.Exec(r.Context(), "SELECT inbox_seen_watermark($1::uuid,$2,$3)", connection, status.Recipient, status.At)
 			} else {
 				_, err = tx.Exec(r.Context(), "SELECT inbox_status($1::uuid,$2,$3,$4)", connection, status.Message, status.Status, status.At)

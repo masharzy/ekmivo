@@ -109,3 +109,6 @@ export async function loadVideoUrl(workspaceId:string,threadId:string,mediaId:st
   return {url:j.url,mime:j.mime.split(";")[0]};
  }catch{return null;}
 }
+
+// A customer reply proves they opened the chat, so earlier outbound messages count as seen even when the channel sent no read receipt (Telegram never does).
+export function inferSeen(items:Msg[]):Msg[]{let top=0;for(const m of items)if(m.sender==="customer"&&m.sequence>top)top=m.sequence;if(!top)return items;return items.map(m=>m.sender!=="customer"&&(m.state==="sent"||m.state==="delivered")&&m.sequence<top?{...m,state:"seen"}:m);}
