@@ -8,8 +8,6 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
   {en:"Conversations",bn:"কথোপকথন",href:"/inbox",service:"ai"},
   {en:"Comments",bn:"কমেন্ট",href:"/inbox/comments",service:"ai"},
   {en:"Saved replies",bn:"সেভ করা উত্তর",href:"/inbox/saved-replies",service:"ai"},
-  {en:"Agent Desk",bn:"AI এজেন্ট",href:"/inbox/agent-desk",service:"ai"},
-  {en:"Tickets",bn:"টিকিট",href:"/inbox/tickets",service:"ai"},
  ],
  orders:[
   {en:"Orders",bn:"অর্ডার",href:"/orders",service:"fulfilment"},
