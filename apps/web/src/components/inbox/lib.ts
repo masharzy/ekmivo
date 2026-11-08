@@ -1,0 +1,77 @@
+export type Cap={image?:boolean;audio?:boolean;document?:boolean;product?:boolean;forward?:boolean;reactions?:string[];delivered?:boolean;max_images?:number;max_bytes?:number};
+export type Thread={id:string;name:string;channel:string;preview:string;preview_sender?:string;unread:number;status?:string;priority?:string;overdue?:boolean;last_activity_at?:string;ai_enabled?:boolean;window_open?:boolean;capabilities?:Cap};
+export type Content={media_id?:string;name?:string;mime?:string;size_bytes?:number;duration_ms?:number;id?:string;price_minor?:number;currency?:string;sizes?:string;image_media_id?:string};
+export type Msg={id:string;sequence:number;sender:string;body:string;state:string;created_at:string;type?:string;sent_at?:string;delivered_at?:string;seen_at?:string;reply_to?:string|null;reply_body?:string|null;error_code?:string|null;content?:Content|null;batch_id?:string|null;reaction?:string|null};
+export type ThreadInfo={name:string;send_allowed?:boolean;manage_allowed?:boolean;ai_enabled:boolean;window_open:boolean;capabilities?:Cap};
+export type Conversation={items:Msg[];thread:ThreadInfo};
+export type Product={id:string;name:string;price_minor:number;currency?:string;sizes?:string;image_media_id?:string|null};
+export type OrderRow={id:string;reference:string;items:string;amount_minor:number;currency?:string;status:"ok"|"cx"|"rt"|"run";reason?:string;created_at:string};
+export type Profile={id:string;name:string;channel:string;phone?:string|null;contact?:{phone?:string;address?:string;payment?:string;username?:string}|null;note?:string|null;note_version?:number;ai_enabled:boolean;store?:string;messages:number;talks:number;first?:{at:string;text:string}|null;summary?:{total:number};orders:OrderRow[]};
+
+export const channelMeta:Record<string,{name:string;color:string}>={ms:{name:"Messenger",color:"#0A7CFF"},ig:{name:"Instagram",color:"#D6307A"},wa:{name:"WhatsApp",color:"#1FA855"},web:{name:"Website",color:"#6B6A64"}};
+export const maxImages=10;
+
+const digits="০১২৩৪৫৬৭৮৯";
+export function num(value:number|string,bn:boolean){const s=String(value);return bn?s.replace(/\d/g,d=>digits[Number(d)]):s;}
+export function clock(iso:string|undefined,bn:boolean){if(!iso)return "";const d=new Date(iso);if(Number.isNaN(d.getTime()))return "";return num(`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`,bn);}
+export function mmss(seconds:number,bn:boolean){const s=Math.max(0,Math.floor(seconds));return num(`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`,bn);}
+export function dayKey(iso:string){const d=new Date(iso);return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;}
+export function dayLabel(iso:string,bn:boolean){
+ const d=new Date(iso),now=new Date(),y=new Date(now.getTime()-86400000);
+ if(dayKey(iso)===dayKey(now.toISOString()))return bn?"আজ":"Today";
+ if(dayKey(iso)===dayKey(y.toISOString()))return bn?"গতকাল":"Yesterday";
+ return d.toLocaleDateString(bn?"bn-BD":"en-GB",{day:"numeric",month:"short",year:d.getFullYear()===now.getFullYear()?undefined:"numeric"});
+}
+export function listTime(iso:string|undefined,bn:boolean){
+ if(!iso)return "";const d=new Date(iso),now=new Date();
+ if(dayKey(iso)===dayKey(now.toISOString()))return clock(iso,bn);
+ if(dayKey(iso)===dayKey(new Date(now.getTime()-86400000).toISOString()))return bn?"গতকাল":"Yesterday";
+ return d.toLocaleDateString(bn?"bn-BD":"en-GB",{day:"numeric",month:"short"});
+}
+export function fullDate(iso:string|undefined,bn:boolean){if(!iso)return "—";const d=new Date(iso);return `${d.toLocaleDateString(bn?"bn-BD":"en-GB",{day:"numeric",month:"short",year:"numeric"})}, ${clock(iso,bn)}`;}
+export function money(minor:number,bn:boolean,currency="BDT"){const v=Math.round(minor/100);const s=v.toLocaleString("en-IN");return (currency==="BDT"?"৳":currency+" ")+num(s,bn);}
+export function initials(name:string){const t=(name||"").trim();if(!t)return "?";const p=t.split(/\s+/);return ((p[0]?.[0]??"")+(p.length>1?p[p.length-1][0]:"")).toLocaleUpperCase();}
+const emojiOnly=/^(?:\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*\s*){1,3}$/u;
+export function isSticker(m:Msg){return (m.type==="text"||!m.type)&&!!m.body&&m.body.length<=24&&emojiOnly.test(m.body.trim());}
+export function preview(m:Msg|undefined,bn:boolean){
+ if(!m)return "";
+ if(m.type==="image")return bn?"📷 ছবি":"📷 Photo";if(m.type==="audio")return bn?"🎤 ভয়েস":"🎤 Voice";
+ if(m.type==="document")return "📎 "+(m.content?.name||(bn?"ফাইল":"File"));if(m.type==="product")return "🛍 "+(m.body||(bn?"পণ্য":"Product"));
+ return m.body;
+}
+
+/* ---- grouping ---- */
+export type Row={kind:"day";key:string;label:string}|{kind:"unread";key:string;count:number}|{kind:"msg";key:string;msg:Msg;first:boolean;last:boolean;album?:Msg[]};
+export function buildRows(items:Msg[],unreadFrom:number|null,unreadCount:number,bn:boolean):Row[]{
+ const visible=items.filter(m=>m.type!=="reaction");const rows:Row[]=[];let prevDay="",prev:Msg|undefined,placed=false;
+ for(let i=0;i<visible.length;i++){
+  const m=visible[i];
+  if(dayKey(m.created_at)!==prevDay){prevDay=dayKey(m.created_at);rows.push({kind:"day",key:"d"+prevDay,label:dayLabel(m.created_at,bn)});prev=undefined;}
+  if(!placed&&unreadFrom!==null&&m.sequence>=unreadFrom&&m.sender==="customer"){placed=true;rows.push({kind:"unread",key:"u",count:unreadCount});prev=undefined;}
+  // images sharing a batch collapse into one album row anchored at its last member
+  if(m.type==="image"&&m.batch_id){
+   const album=visible.filter(x=>x.batch_id===m.batch_id&&x.type==="image");
+   if(album[0]!==m)continue;
+   rows.push({kind:"msg",key:m.id,msg:album[album.length-1],album,first:!prev||prev.sender!==m.sender,last:false});prev=album[album.length-1];continue;
+  }
+  rows.push({kind:"msg",key:m.id,msg:m,first:!prev||(prev.sender!==m.sender),last:false});prev=m;
+ }
+ for(let i=0;i<rows.length;i++){const r=rows[i];if(r.kind!=="msg")continue;const n=rows[i+1];r.last=!n||n.kind!=="msg"||n.msg.sender!==r.msg.sender;}
+ return rows;
+}
+
+/* ---- media (decoded once, shared by every bubble) ---- */
+const urls=new Map<string,Promise<{url:string;mime:string}|null>>();
+const safeMime=(m:string)=>/^(image\/(jpeg|png|webp|gif)|audio\/(mpeg|ogg|mp4|aac|webm|wav)|application\/pdf|text\/plain)$/.test(m.split(";")[0])?m.split(";")[0]:"application/octet-stream";
+export function loadMedia(workspaceId:string,threadId:string,mediaId:string){
+ const key=workspaceId+mediaId;let hit=urls.get(key);if(hit)return hit;
+ hit=fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"media-get",thread_id:threadId,body:{media_id:mediaId}})})
+  .then(async r=>{if(!r.ok)throw Error();const j=await r.json();if(typeof j.data!=="string"||j.data.length>7000000||typeof j.mime!=="string")throw Error();
+   const bin=atob(j.data),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+   const mime=safeMime(j.mime);return {url:URL.createObjectURL(new Blob([bytes],{type:mime})),mime};})
+  .catch(()=>{urls.delete(key);return null;});
+ urls.set(key,hit);
+ if(urls.size>80){const old=urls.keys().next().value;if(old){const p=urls.get(old);urls.delete(old);void p?.then(v=>v&&URL.revokeObjectURL(v.url));}}
+ return hit;
+}
+export function fileToBase64(file:Blob){return new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(",")[1]??"");r.onerror=()=>reject(Error());r.readAsDataURL(file);});}
