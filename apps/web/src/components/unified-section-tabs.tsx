@@ -11,7 +11,6 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  ],
  catalog:[
   {en:"Products",bn:"পণ্য",href:"/catalog/products",service:"fulfilment"},
-  {en:"Inventory",bn:"স্টক",href:"/catalog/inventory",service:"fulfilment"},
   {en:"Coupons",bn:"কুপন",href:"/catalog/coupons",service:"fulfilment"},
  ],
  orders:[

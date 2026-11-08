@@ -96,7 +96,7 @@ function financialDetail(root:UnifiedRoot,view:readonly string[]):UnifiedDestina
 }
 export const unifiedSectionPaths:Partial<Record<SectionKey,string>>={
  overview:"/dashboard",inbox:"/inbox",comments:"/inbox/comments","saved-replies":"/inbox/saved-replies",tickets:"/inbox/tickets",
- orders:"/orders",products:"/catalog/products",inventory:"/catalog/inventory",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/catalog/coupons",
+ orders:"/orders",products:"/catalog/products",inventory:"/catalog/products",shipping:"/orders/delivery",returns:"/orders/returns",coupons:"/catalog/coupons",
  transactions:"/payments", "payment-links":"/payments/links",requests:"/payments/links",invoices:"/invoices",refunds:"/payments/refunds",incoming:"/sms-data",reconciliation:"/payments/reconciliation",
  customers:"/customers",contacts:"/customers",leads:"/customers/leads","follow-ups":"/customers/follow-ups",broadcasts:"/customers/broadcasts",bookings:"/customers/bookings",posts:"/customers/campaigns/posts",
  reports:"/reports",settings:"/settings",gateways:"/settings/payment-methods",devices:"/settings/devices",

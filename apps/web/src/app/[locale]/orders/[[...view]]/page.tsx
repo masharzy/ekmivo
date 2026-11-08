@@ -7,6 +7,7 @@ export default async function OrdersPage({params}:{
 }){
  const {locale,view}=await params;
  // Products, stock and coupons moved to the Catalog menu; keep old links working.
- if(["products","inventory","coupons"].includes(view?.[0]??""))redirect(`/catalog/${view!.join("/")}`);
+ if(view?.[0]==="inventory")redirect("/catalog/products");
+ if(["products","coupons"].includes(view?.[0]??""))redirect(`/catalog/${view!.join("/")}`);
  return <UnifiedMerchantRoute locale={locale} root="orders" view={view??[]}/>;
 }
