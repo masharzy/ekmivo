@@ -2,9 +2,7 @@ package checkout
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
@@ -180,34 +178,41 @@ func safeMetaMediaURL(raw string) bool {
 	}
 	return false
 }
-func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id string) error {
+
+type inboxDownload struct {
+	Data []byte
+	MIME string
+	Name string
+}
+
+func (s *Service) fetchInboundMedia(ctx context.Context, d mobileIdentity, t, id string) (inboxDownload, error) {
 	var raw []byte
 	if err := s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_media_source($1::uuid,$2,$3::uuid,$4::uuid)", d.Workspace, d.Environment, t, id).Scan(&raw); err != nil {
-		return err
+		return inboxDownload{}, err
 	}
 	var src map[string]any
 	if json.Unmarshal(raw, &src) != nil || str(src, "reference") == "" {
-		return errors.New("MEDIA_UNAVAILABLE")
+		return inboxDownload{}, errors.New("MEDIA_UNAVAILABLE")
 	}
 	cipher, err := base64.StdEncoding.DecodeString(str(src, "reference"))
 	if err != nil {
-		return err
+		return inboxDownload{}, err
 	}
 	data, err := merchantwebhook.Decrypt(s.Pipeline.Key, cipher, d.Workspace+"|inbox-source")
 	if err != nil {
-		return err
+		return inboxDownload{}, err
 	}
 	var ref map[string]string
 	if json.Unmarshal(data, &ref) != nil {
-		return errors.New("MEDIA_UNAVAILABLE")
+		return inboxDownload{}, errors.New("MEDIA_UNAVAILABLE")
 	}
 	credential, err := base64.StdEncoding.DecodeString(str(src, "credential"))
 	if err != nil {
-		return err
+		return inboxDownload{}, err
 	}
 	token, err := merchantwebhook.Decrypt(s.Pipeline.Key, credential, d.Workspace+"|inbox|"+str(src, "provider")+"|"+str(src, "account"))
 	if err != nil {
-		return err
+		return inboxDownload{}, err
 	}
 	mediaURL := ref["url"]
 	if str(src, "provider") == "tg" {
@@ -215,7 +220,7 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 			Path string `json:"file_path"`
 		}
 		if ref["provider_id"] == "" || telegramCall(ctx, string(token), "getFile", map[string]string{"file_id": ref["provider_id"]}, &file) != nil || !telegramFilePath.MatchString(file.Path) {
-			return errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
+			return inboxDownload{}, errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
 		}
 		mediaURL = "https://api.telegram.org/file/bot" + string(token) + "/" + file.Path
 	}
@@ -223,13 +228,13 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 		cfg, _ := s.channelConfig(ctx)
 		version := cfg["META_GRAPH_VERSION"]
 		if !strings.HasPrefix(version, "v") || strings.ContainsAny(version, "/?#") {
-			return errors.New("CHANNEL_NOT_CONFIGURED")
+			return inboxDownload{}, errors.New("CHANNEL_NOT_CONFIGURED")
 		}
 		req, _ := http.NewRequestWithContext(ctx, "GET", "https://graph.facebook.com/"+version+"/"+url.PathEscape(ref["provider_id"]), nil)
 		req.Header.Set("Authorization", "Bearer "+string(token))
 		res, err := inboxHTTP.Do(req)
 		if err != nil {
-			return err
+			return inboxDownload{}, err
 		}
 		var result struct {
 			URL string `json:"url"`
@@ -237,12 +242,12 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 		err = json.NewDecoder(io.LimitReader(res.Body, 65536)).Decode(&result)
 		res.Body.Close()
 		if err != nil || res.StatusCode != 200 {
-			return errors.New("MEDIA_UNAVAILABLE")
+			return inboxDownload{}, errors.New("MEDIA_UNAVAILABLE")
 		}
 		mediaURL = result.URL
 	}
 	if str(src, "provider") != "tg" && !safeMetaMediaURL(mediaURL) {
-		return errors.New("MEDIA_HOST_DENIED")
+		return inboxDownload{}, errors.New("MEDIA_HOST_DENIED")
 	}
 	req, _ := http.NewRequestWithContext(ctx, "GET", mediaURL, nil)
 	if str(src, "provider") == "wa" {
@@ -250,15 +255,15 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 	}
 	res, err := inboxHTTP.Do(req)
 	if err != nil {
-		return err
+		return inboxDownload{}, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
+		return inboxDownload{}, errors.New("MEDIA_EXPIRED_OR_UNAVAILABLE")
 	}
 	data, err = io.ReadAll(io.LimitReader(res.Body, inboxInboundLimit+1))
 	if err != nil {
-		return err
+		return inboxDownload{}, err
 	}
 	declared := ref["mime"]
 	if declared == "" && str(src, "kind") == "audio" {
@@ -275,17 +280,11 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 		typ, err = "application/octet-stream", nil
 	}
 	if err != nil {
-		return err
-	}
-	hash := sha256.Sum256(data)
-	key := "inbox/" + d.Environment + "/" + d.Workspace + "/" + id + "/" + hex.EncodeToString(hash[:])
-	if _, err = objectRequest(ctx, "PUT", key, data); err != nil {
-		return err
+		return inboxDownload{}, err
 	}
 	name := ref["name"]
 	if name == "" {
 		name = "attachment"
 	}
-	_, err = s.Pipeline.Control.Exec(ctx, "SELECT inbox_inbound_store($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8)", d.Workspace, t, id, key, name, typ, len(data), hex.EncodeToString(hash[:]))
-	return err
+	return inboxDownload{Data: data, MIME: typ, Name: name}, nil
 }

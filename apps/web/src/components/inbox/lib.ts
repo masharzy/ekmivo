@@ -73,7 +73,7 @@ export function loadMedia(workspaceId:string,threadId:string,mediaId:string,bust
  if(cur&&!bust&&Date.now()-cur.at<SIGNED_TTL)return cur.p;
  const p=fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"media-get",thread_id:threadId,body:{media_id:mediaId,url:true}})})
   .then(async(r):Promise<Loaded>=>{
-   if(!r.ok){const e=await r.json().catch(()=>null) as {code?:unknown;error?:unknown}|null;const c=typeof e?.code==="string"?e.code:typeof e?.error==="string"?e.error:String(r.status);mediaReasons.set(key,c);throw Error(c);}
+   if(!r.ok){const e=await r.json().catch(()=>null) as {code?:unknown;error?:unknown}|null;const c=typeof e?.code==="string"?e.code:typeof e?.error==="string"?e.error:e?.error&&typeof e.error==="object"&&"code" in e.error?String(e.error.code):String(r.status);mediaReasons.set(key,c);throw Error(c);}
    mediaReasons.delete(key);const j=await r.json() as {url?:unknown;data?:unknown;mime?:unknown};
    if(typeof j.mime!=="string")throw Error("BAD_RESPONSE");
    const mime=safeMime(j.mime);

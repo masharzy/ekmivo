@@ -143,21 +143,22 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		Mime string `json:"mime"`
 	}
 	if json.Unmarshal(raw, &f) != nil || f.Key == "" {
-		if err := s.hydrateInboxMedia(r.Context(), d, thread, id); err != nil {
+		media, err := s.fetchInboundMedia(r.Context(), d, thread, id)
+		if err != nil {
 			fail(w, 503, inboxMediaFailureCode(err))
 			return
 		}
-		if err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_media_access($1::uuid,$2,$3::uuid,$4::uuid)", d.Workspace, d.Environment, thread, id).Scan(&raw); err != nil {
-			mapped(w, err)
-			return
+		w.Header().Set("Cache-Control", "private, no-store")
+		if wantURL, _ := b["url"].(bool); wantURL {
+			link, err := s.mediaCapability(d.Workspace, d.Environment, thread, id)
+			if err != nil {
+				fail(w, 503, "MEDIA_ORIGIN_NOT_CONFIGURED")
+				return
+			}
+			write(w, 200, map[string]any{"url": link, "mime": media.MIME, "name": media.Name})
+		} else {
+			write(w, 200, map[string]any{"data": base64.StdEncoding.EncodeToString(media.Data), "mime": media.MIME, "name": media.Name})
 		}
-		if json.Unmarshal(raw, &f) != nil || f.Key == "" {
-			fail(w, 404, "NOT_FOUND")
-			return
-		}
-	}
-	if f.Key == "" {
-		fail(w, 404, "NOT_FOUND")
 		return
 	}
 	if wantURL, _ := b["url"].(bool); wantURL {
@@ -219,14 +220,20 @@ func (s *Service) HandleInboxMedia(w http.ResponseWriter, r *http.Request) {
 		Name string `json:"name"`
 		Mime string `json:"mime"`
 	}
+	var data []byte
 	if json.Unmarshal(raw, &f) != nil || f.Key == "" {
-		fail(w, 404, "NOT_FOUND")
-		return
-	}
-	data, err := objectRequest(r.Context(), "GET", f.Key, nil)
-	if err != nil {
-		fail(w, 503, "PRIVATE_STORAGE_UNAVAILABLE")
-		return
+		media, fetchErr := s.fetchInboundMedia(r.Context(), mobileIdentity{Workspace: ws, Environment: e}, t, id)
+		if fetchErr != nil {
+			fail(w, 503, inboxMediaFailureCode(fetchErr))
+			return
+		}
+		data, f.Mime, f.Name = media.Data, media.MIME, media.Name
+	} else {
+		data, err = objectRequest(r.Context(), "GET", f.Key, nil)
+		if err != nil {
+			fail(w, 503, "PRIVATE_STORAGE_UNAVAILABLE")
+			return
+		}
 	}
 	w.Header().Set("Content-Type", f.Mime)
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": f.Name}))

@@ -36,7 +36,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  const [workflowBusy,setWorkflowBusy]=useState(false),[composeBusy,setComposeBusy]=useState(false);
  const [caps,setCaps]=useState<Cap>({}),[selectedName,setSelectedName]=useState("");
  const [sendAllowed,setSendAllowed]=useState(false),[manageAllowed,setManageAllowed]=useState(false),[draftError,setDraftError]=useState(false),[forbidden,setForbidden]=useState(false);
- const [online,setOnline]=useState(true),[syncing,setSyncing]=useState(false),[failCount,setFailCount]=useState(0);
+ const [online,setOnline]=useState(true),[syncing,setSyncing]=useState(false);
  const [divider,setDivider]=useState<{seq:number;count:number}|null>(null),[fresh,setFresh]=useState<Set<string>>(new Set()),[flash,setFlash]=useState("");
  const [sel,setSel]=useState<{id:string;left:number;top:number}|null>(null),[replyTo,setReplyTo]=useState<Msg|null>(null),[toastText,setToastText]=useState(""),[toastOn,setToastOn]=useState(false);
  const [sheet,setSheet]=useState<""|"filter"|"forward"|"info"|"tools">(""),[info,setInfo]=useState<(Msg&{channel?:string})|null>(null),[infoBusy,setInfoBusy]=useState(false);
@@ -71,7 +71,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  },[]);
  useEffect(()=>{if(loaded&&!query&&queue==="all"&&!channel&&!range&&!label&&offset===0)announceInboxUnread(threads.reduce((n,x)=>n+(Number(x.unread)||0),0));},[threads,loaded,query,queue,channel,range,label,offset]);
  const windowOpen=winRaw||threads.find(x=>x.id===selected)?.channel==="tg";
- const offline=!online||failCount>=2;
+ const offline=!online;
 
  const workGuard=()=>{
   const workflow=activeDrafts().filter(d=>d.id.startsWith(`inbox-work:${actorId}:${workspaceId}:`)||d.id.startsWith(`inbox-attachment:${actorId}:${workspaceId}:`));
@@ -137,11 +137,11 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    if(last&&last.sequence>(lastRead.current.get(selected)??0)){void api("read",selected,{sequence:last.sequence}).then(()=>lastRead.current.set(selected,last.sequence)).catch(()=>{});}
   }):Promise.resolve();
   await Promise.all([listRequest,messageRequest]);
-  if(version===generation.current){setError(false);setFailCount(0);}
+  if(version===generation.current){setError(false);setOnline(true);}
  },[api,selected]);
  useEffect(()=>{
   let alive=true;let timer:ReturnType<typeof setTimeout>;
-  async function run(){try{if(document.visibilityState!=="hidden"&&navigator.onLine)await refresh();}catch(e){if(alive){setError(true);if(e instanceof TypeError)setFailCount(c=>c+1);}}
+  async function run(){try{if(document.visibilityState!=="hidden")await refresh();}catch(e){if(alive){setError(true);}}
    finally{if(alive)timer=setTimeout(()=>void run(),2000);}}
   timer=setTimeout(()=>void run(),query?250:0);
   return()=>{alive=false;invalidate();clearTimeout(timer);};
@@ -235,7 +235,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
      <button type="button" className={s.fb} aria-label={t("Filters","ফিল্টার")} onClick={()=>setSheet("filter")}><I n="flt"/>{filterCount>0&&<u>{num(filterCount,bn)}</u>}</button></div>
     {searchOpen&&<div className={s.search}><I n="search" size={16}/><input autoFocus data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" autoComplete="off" value={query} maxLength={200} placeholder={t("Search name, phone or message","নাম, ফোন বা মেসেজ খুঁজুন")} aria-label={t("Search conversations","কথোপকথন খুঁজুন")} onChange={e=>{invalidate();setOffset(0);setQuery(e.target.value);}}/>{query&&<button type="button" className={s.ib} aria-label={t("Clear","মুছুন")} onClick={()=>{invalidate();setQuery("");}}><I n="x" size={16}/></button>}</div>}
     <div className={s.fl}>{[{id:"all",l:t("All","সব")},{id:"unread",l:t("Unread","অপঠিত")+(totalUnread&&chip!=="unread"?` ${num(totalUnread,bn)}`:"")},{id:"ms",l:"Messenger"},{id:"ig",l:"Instagram"},{id:"wa",l:"WhatsApp"}].map(c=><button key={c.id} type="button" className={chip===c.id?s.on:undefined} aria-pressed={chip===c.id} onClick={()=>chipSet(c.id)}>{c.l}</button>)}</div>
-    <div className={`${s.ban} ${offline?s.show:""}`} role="alert"><I n="alt"/><div><b>{t("No internet","ইন্টারনেট নেই")}</b><span>{t("New messages will arrive when you're back online. Replies can't be sent now.","নেট এলে নতুন মেসেজ আসবে। এখন উত্তর পাঠানো যাবে না।")}</span></div></div>
+    {offline&&<div className={`${s.ban} ${s.show}`} role="alert"><I n="alt"/><div><b>{t("No internet","ইন্টারনেট নেই")}</b><span>{t("New messages will arrive when you're back online. Replies can't be sent now.","নেট এলে নতুন মেসেজ আসবে। এখন উত্তর পাঠানো যাবে না।")}</span></div></div>}
     <div className={s.list} onTouchStart={e=>{const el=e.currentTarget;swipeY.current=el.scrollTop<=0?{y:e.touches[0].clientY,t:Date.now()}:null;}} onTouchMove={e=>{if(!swipeY.current)return;const d=e.touches[0].clientY-swipeY.current.y;if(d>0)setPtr(Math.min(60,d*.5));}} onTouchEnd={()=>{if(swipeY.current&&ptr>40){setPtr(40);void refresh().catch(()=>{}).finally(()=>setTimeout(()=>setPtr(0),500));}else setPtr(0);swipeY.current=null;}}>
      <div className={s.ptr} style={{height:ptr}}><div className={s.spin}/></div>
      {threads.map(item=>{const sender=item.preview_sender;const pv=(sender==="seller"?t("You: ","আপনি: "):sender==="ai"?"AI: ":"")+(item.preview||t("Attachment","সংযুক্তি"));
@@ -271,7 +271,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
       <button type="button" className={s.ib} onClick={()=>void openInfo()} aria-label={t("Info","তথ্য")}><I n="info"/></button>
      </div>
     </div>
-    <div className={`${s.ban} ${offline?s.show:""}`} role="alert"><I n="alt"/><div><b>{t("No internet","ইন্টারনেট নেই")}</b><span>{t("New messages will arrive when you're back online. Replies can't be sent now.","নেট এলে নতুন মেসেজ আসবে। এখন উত্তর পাঠানো যাবে না।")}</span></div></div>
+    {offline&&<div className={`${s.ban} ${s.show}`} role="alert"><I n="alt"/><div><b>{t("No internet","ইন্টারনেট নেই")}</b><span>{t("New messages will arrive when you're back online. Replies can't be sent now.","নেট এলে নতুন মেসেজ আসবে। এখন উত্তর পাঠানো যাবে না।")}</span></div></div>}
     <div className={s.mwrap}>
      <div ref={viewport} className={s.msgs} onScroll={onScroll} aria-label={t("Message history","মেসেজের ইতিহাস")} onClick={()=>{if(sel&&Date.now()-justSel.current>450)setSel(null);}}>
       {chatLoading?<p className={s.empty} role="status">{t("Opening conversation…","কথোপকথন আসছে…")}</p>:rows.length===0?<p className={s.empty}>{t("No messages in this conversation.","এই কথোপকথনে কোনো মেসেজ নেই।")}</p>:<>
