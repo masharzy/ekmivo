@@ -6,7 +6,7 @@ test("Account & security opens the existing fully implemented account view",()=>
  const index=source("components/unified-settings-index.tsx");
  const resolver=source("components/unified-merchant-route.tsx");
  const account=source("app/[locale]/account/page.tsx");
- assert.match(index,/item\.slug==="account"\?"\/account"/);
+ assert.match(index,/hidden=\[[^\]]*"account"/,"account lives in the profile menu, not the settings hub");
  assert.match(resolver,/root==="settings"&&view\.length===1&&view\[0\]==="account"\)redirect\("\/account"\)/);
  assert.match(account,/AccountSecurityView/);
  assert.match(account,/auth_sessions/);

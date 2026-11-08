@@ -10,10 +10,8 @@ export function IntegrationIcon({name}:{name:"code"|"hook"|"activity"|"plug"|"ar
  const paths={code:"m8 7-5 5 5 5m8-10 5 5-5 5m-3-14-2 18",hook:"M4 6a3 3 0 1 0 6 0 3 3 0 0 0-6 0Zm10 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0ZM7 9v6a3 3 0 0 0 3 3h4M17 15V9a3 3 0 0 0-3-3h-4",activity:"M3 12h4l3-8 4 16 3-8h4",plug:"M8 3v5m8-5v5M6 8h12v3a6 6 0 0 1-12 0V8Zm6 9v4",arrow:"M5 12h14m-6-6 6 6-6 6",refresh:"M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 14 6M4 12a8 8 0 0 0 14 6",shield:"m12 2 8 3v6c0 5-8 11-8 11S4 16 4 11V5l8-3Zm-4 9 3 3 5-6"};
  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>;
 }
-export function IntegrationNav({scope,active}:{scope:IntegrationScope;active:string}){
- const items=[['developers','Developers','ডেভেলপার','code'],['webhooks','Webhooks','ওয়েবহুক','hook'],['integrations','Integrations','সংযোগ','plug']] as const;
- return <nav className="int-nav" aria-label={scope.locale==="bn"?"ইন্টিগ্রেশন ও ইভেন্ট":"Integrations and events"}>{items.map(([id,en,bn,icon])=><Link key={id} href={integrationHref(scope,id)} aria-current={id===active?"page":undefined}><IntegrationIcon name={icon}/>{scope.locale==="bn"?bn:en}</Link>)}</nav>;
-}
+// The Settings hub is the navigation between Developers, Webhooks and Integrations; no second tab row.
+export function IntegrationNav(_props:{scope:IntegrationScope;active:string}){return null;}
 export function integrationHref(s:IntegrationScope,section:string,id?:string,tab?:string){
  const p=new URLSearchParams();if(tab)p.set("tab",tab);
  const canonical:Record<string,string>={developers:"/settings/api-keys",webhooks:"/settings/webhooks",events:"/settings/activity",integrations:"/settings/integrations"};

@@ -111,7 +111,7 @@ test("Canonical payment links expose existing one-time intents without requiring
  assert.match(content,/!oneTimeRequests&&!planFeatures\?\.\[feature\]/);
  assert.match(content,/dashboardInitialData\(workspace\.id,paymentContext\.environment,"requests"/);
  assert.match(content,/<PaymentRequests hideTabs/);
- assert.match(content,/href="\/payments\/links\?view=requests"/);
+ assert.match(src("components/unified-section-tabs.tsx"),/href:"\/payments\/links\?view=requests"/);
  assert.match(route,/paymentLinksMode=\{query\.view==="requests"\?"requests":undefined\}/);
  assert.match(unified,/initialQuery=\{root==="payments"&&view\[0\]==="links"&&paymentLinksMode==="requests"\?\{view:"requests"\}:\{\}\}/);
  assert.match(requests,/hideTabs=false/);

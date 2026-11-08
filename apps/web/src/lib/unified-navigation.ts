@@ -40,7 +40,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
  {slug:"ai",en:"AI & channels",bn:"AI ও চ্যানেল",items:[
   {slug:"ai",en:"AI assistant",bn:"AI সহকারী",section:"ai-agent",service:"ai"},
   {slug:"knowledge",en:"Knowledge base",bn:"নলেজ বেস",section:"knowledge",service:"ai"},
-  {slug:"channels",en:"Connected channels",bn:"সংযুক্ত চ্যানেল",section:"channels",service:"ai"},
+  {slug:"channels",en:"Channels",bn:"চ্যানেল",section:"channels",service:"ai"},
   {slug:"website",en:"Website chat",bn:"ওয়েবসাইট চ্যাট",section:"website",service:"ai"},
   {slug:"comment-automation",en:"Comment automation",bn:"কমেন্ট অটোমেশন",section:"comments",service:"ai"},
  ]},

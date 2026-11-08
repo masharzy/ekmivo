@@ -24,6 +24,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  payments:[
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},
   {en:"Payment links",bn:"পেমেন্ট লিংক",href:"/payments/links",service:"payments"},
+  {en:"Payment requests",bn:"পেমেন্ট রিকোয়েস্ট",href:"/payments/links?view=requests",service:"payments"},
   {en:"Refunds",bn:"রিফান্ড",href:"/payments/refunds",service:"payments"},
  ],
  customers:[
@@ -43,14 +44,26 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  ]
 };
 
-export function UnifiedSectionTabs({root,mode,locale,view}:{
- root:UnifiedRoot;mode:BusinessMode;locale:"bn"|"en";view:readonly string[];
+// Settings pages that belong together get one tab row, so "AI assistant", "Knowledge base"
+// and the channels do not each look like a separate product.
+const aiTabs:readonly Tab[]=[
+ {en:"AI assistant",bn:"AI সহকারী",href:"/settings/ai",service:"ai"},
+ {en:"Knowledge base",bn:"নলেজ বেস",href:"/settings/knowledge",service:"ai"},
+ {en:"Channels",bn:"চ্যানেল",href:"/settings/channels",service:"ai"},
+ {en:"Website chat",bn:"ওয়েবসাইট চ্যাট",href:"/settings/channels/website",service:"ai"},
+ {en:"Comment automation",bn:"কমেন্ট অটোমেশন",href:"/settings/comment-automation",service:"ai"},
+];
+const aiViews=["ai","knowledge","channels","website","comment-automation"];
+export function UnifiedSectionTabs({root,mode,locale,view,requests=false}:{
+ root:UnifiedRoot;mode:BusinessMode;locale:"bn"|"en";view:readonly string[];requests?:boolean;
 }){
- const available=tabs[root]?.filter(tab=>enabledUnifiedService(mode,tab.service)&&
+ const inAi=root==="settings"&&aiViews.includes(view[0]??"")&&!(view[0]==="channels"&&view.length>1&&view[1]!=="website");
+ const available=(inAi?aiTabs:tabs[root])?.filter(tab=>enabledUnifiedService(mode,tab.service)&&
    (tab.href!=="/orders/scan"||process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true")&&
    (tab.href!=="/reports/orders"||process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED==="true"))??[];
  if(!available.length)return null;
- const active="/"+root+(view.length?"/"+view.join("/"):"");
+ const raw="/"+root+(view.length?"/"+view.join("/"):"");
+ const active=raw==="/settings/website"?"/settings/channels/website":raw==="/payments/links"&&requests?"/payments/links?view=requests":raw;
  return <nav className={styles.tabs} aria-label={locale==="bn"?"পৃষ্ঠার বিভাগ":"Page sections"}>
   {available.map(tab=><Link key={tab.href} href={tab.href}
    className={tab.href===active?styles.active:undefined}

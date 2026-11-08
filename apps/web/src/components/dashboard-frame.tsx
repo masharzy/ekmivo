@@ -306,7 +306,8 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    {unified?(["main","money","manage"] as const).map(g=>{
     const items=unifiedItems.filter(item=>item.group===g);
     if(!items.length)return null;
-    const current=currentUnifiedItem(unifiedItems,pathname);
+    const onBilling=pathname==="/settings/billing"||pathname.startsWith("/settings/billing/");
+    const current=onBilling?undefined:currentUnifiedItem(unifiedItems,pathname);
     return <section className="ds-nav-section" key={g}><h2>{unifiedNavGroupLabels[g][locale]}</h2>{items.map(item=>{const on=current?.key===item.key;return <Link key={item.key} href={item.href} className={on?"is-current":undefined} aria-current={pathname===item.href?"page":on?"true":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute(item.href);setDraftError("");return;}startTransition(()=>router.push(item.href));}}><Icon name={item.icon}/><span>{item[locale]}</span>{on&&<span className="ds-active-mark"/>}</Link>})}</section>;
    }):groups.filter(group=>!(service==="payments"&&group.items.length===1&&group.items[0]==="billing")).map(group=><section className="ds-nav-section" key={group.label.en}>
     {service==="payments"&&group.label.en==="Commerce"?<details className="ds-unreleased-nav"><summary>{group.label[locale]} <small>{bn?"নির্মাণাধীন":"In development"}</small></summary><p>{bn?"কমার্সের এই কাজগুলো Payment phase-এর পরে চালু হবে।":"Commerce operations will follow the verified payment phase."}</p></details>:<h2>{group.label[locale]}</h2>}
@@ -314,6 +315,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
      <Icon name={key}/><span>{sections[key][locale]}</span>{key==="api-docs"&&<span aria-hidden="true">↗</span>}{section===key&&<span className="ds-active-mark"/>}</Link>)}
    </section>)}
   </nav>
+  {unified&&(()=>{const on=pathname==="/settings/billing"||pathname.startsWith("/settings/billing/");return <div className="ds-nav-fixed-bottom"><Link href="/settings/billing" className={on?"is-current":undefined} aria-current={on?"page":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute("/settings/billing");setDraftError("");return;}startTransition(()=>router.push("/settings/billing"));}}><Icon name="billing"/><span>{bn?"বিলিং ও ব্যবহার":"Billing & usage"}</span></Link></div>;})()}
   {!unified&&service==="payments"&&<div className="ds-nav-fixed-bottom"><Link href={contextHref("billing")} className={section==="billing"?"is-current":undefined} aria-current={section==="billing"?"page":undefined} onClick={event=>{event.preventDefault();nav("billing")}}><Icon name="billing"/><span>{sections.billing[locale]}</span></Link></div>}
  </>;
  return <div className="ds-app" data-service={unified?"payments":service} data-unified={unified?"true":undefined} data-environment={environment}><DashboardFeedback locale={locale}/>

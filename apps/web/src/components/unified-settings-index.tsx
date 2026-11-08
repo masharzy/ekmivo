@@ -1,6 +1,8 @@
 import Link from "next/link";
 import {unifiedSettings,enabledUnifiedService,type BusinessMode} from "../lib/unified-navigation";
 import styles from "./unified-settings-index.module.css";
+import "./dashboard-reference.css";
+import "./reference-adapters.css";
 
 // One short line per setting so people can tell where to go without opening it.
 const hints:Record<string,{en:string;bn:string}>={
@@ -30,31 +32,26 @@ const hints:Record<string,{en:string;bn:string}>={
  "help/feedback":{en:"Tell us what to improve",bn:"কী ঠিক করব জানান"},
 };
 
+// Account & security and this-browser notifications live in the profile menu (top right);
+// business preferences were only a stub. They are intentionally not listed here.
+const hidden=["preferences","account","account/devices","help/videos","help/feedback","billing"];
 export function UnifiedSettingsIndex({locale,mode}:{locale:"en"|"bn";mode:BusinessMode}){
  const bn=locale==="bn";
- return <section className={styles.root} aria-labelledby="unified-settings-title">
-  <header className={styles.header}>
-   <div>
-    <h1 id="unified-settings-title">{bn?"সেটিংস":"Settings"}</h1>
-    <p>{bn?"আপনার ব্যবসার সবকিছু এক জায়গায়।":"Everything for your business, in one place."}</p>
-   </div>
-   <Link className={styles.guide} href="/setup/checklist">{bn?"সেটআপ গাইড":"Setup guide"}</Link>
-  </header>
+ return <div className="ref-dashboard"><section className={"ref-page "+styles.root} aria-labelledby="unified-settings-title">
+  <div className="top"><h1 id="unified-settings-title">{bn?"সেটিংস":"Settings"}</h1><div className="acts"><Link className="ib" href="/setup/checklist">{bn?"সেটআপ গাইড":"Setup guide"}</Link></div><p>{bn?"ব্যবসা, পেমেন্ট, টিম ও ইন্টিগ্রেশন এক জায়গা থেকে।":"Business, payments, team and integrations in one place."}</p></div>
   <div className={styles.groups}>{unifiedSettings.map(group=>{
-   const items=group.items.filter(item=>enabledUnifiedService(mode,item.service)&&
+   const items=group.items.filter(item=>enabledUnifiedService(mode,item.service)&&!hidden.includes(item.slug)&&
     (item.slug!=="activity"||mode!=="ai"||process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true")&&
     (item.slug!=="integrations/courier"||process.env.BRIOFOLD_COURIER_SETTINGS_ENABLED==="true")&&
-    (item.slug!=="team/groups"||process.env.BRIOFOLD_TEAM_GROUPS_ENABLED==="true")&&
-    // Help sub-pages are reachable from Help itself; keep the index short.
-    !["help/videos","help/feedback","account/devices"].includes(item.slug));
+    (item.slug!=="team/groups"||process.env.BRIOFOLD_TEAM_GROUPS_ENABLED==="true"));
    if(!items.length)return null;
    return <section className={styles.group} key={group.slug} aria-labelledby={"set-"+group.slug}>
     <h2 id={"set-"+group.slug}>{group.slug==="payment"&&mode==="ai"?(bn?"ডিভাইস":"Devices"):group[locale]}</h2>
-    <div className={styles.entries}>{items.map(item=><Link key={item.slug} href={item.external?"/developers":item.slug==="account"?"/account":item.slug==="website"?"/settings/channels/website":"/settings/"+item.slug} prefetch={!item.external} target={item.external?"_blank":undefined} rel={item.external?"noopener noreferrer":undefined}>
+    <div className={"card "+styles.entries}>{items.map(item=><Link key={item.slug} href={item.external?"/developers":item.slug==="website"?"/settings/channels/website":"/settings/"+item.slug} prefetch={!item.external} target={item.external?"_blank":undefined} rel={item.external?"noopener noreferrer":undefined}>
      <span className={styles.text}><strong>{item[locale]}</strong>{hints[item.slug]&&<small>{hints[item.slug][locale]}</small>}</span>
-     <span className={styles.arrow} aria-hidden="true">{item.external?"↗":"→"}</span>
+     <span className={styles.arrow} aria-hidden="true">{item.external?"↗":"›"}</span>
     </Link>)}</div>
    </section>;
   })}</div>
- </section>;
+ </section></div>;
 }

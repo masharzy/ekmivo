@@ -206,3 +206,9 @@ html[lang="bn"] .ek-page-scope :is(button,input,select,textarea,option),
  .ek-page-scope .fin-volume-card>div+div{border-left:0;border-top:1px solid var(--line)}
  .ek-page-scope .fin-volume-card>div{padding:18px}
 }
+
+/* Inside the dashboard frame the page sits directly on the dashboard canvas:
+   no second background layer and no extra side padding. */
+.ds-app .ek-page-scope{background:transparent;padding:0;min-height:0}
+.ds-app .ek-page-scope .rf-reference,.ds-app .ek-page-scope .er-reference,.ds-app .ek-page-scope.rf-reference,.ds-app .ek-page-scope.er-reference{background:transparent}
+.ds-app .ek-page-scope .page{max-width:none}
