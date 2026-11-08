@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from "react";
+import {createInboxSyncScheduler} from "../lib/client/inbox-sync";
 import {InboxWorkflow} from "./inbox-workflow";
 import {activeDrafts,registerDraft} from "../lib/client/draft-navigation";
 import {inboxDraftKey,readInboxDraft,writeInboxDraft} from "../lib/client/inbox-drafts";
@@ -145,20 +146,19 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  const realtimeReady=useRef(false);
  useEffect(()=>{
   let stopped=false,socket:WebSocket|null=null,attempt=0;
-  let reconnect:ReturnType<typeof setTimeout>|undefined,flush:ReturnType<typeof setTimeout>|undefined;
-  let running=false,pending=false;
-  const sync=async()=>{if(stopped)return;if(document.visibilityState==="hidden"){pending=true;return;}if(running){pending=true;return;}running=true;try{await refreshRef.current();}catch{}finally{running=false;if(pending&&!stopped&&!document.hidden){pending=false;flush=setTimeout(()=>void sync(),150);}}};
+  let reconnect:ReturnType<typeof setTimeout>|undefined;
+  const sync=createInboxSyncScheduler({run:()=>refreshRef.current(),visible:()=>!document.hidden,onError:()=>setError(true)});
   const connect=()=>{
    if(stopped)return;
    socket=new WebSocket(`wss://api.briofold.tech/v1/workspaces/${workspaceId}/inbox/realtime?environment=live`);
-   socket.onopen=()=>{attempt=0;realtimeReady.current=true;setRealtime(true);void sync();};
-   socket.onmessage=event=>{try{if(JSON.parse(event.data)?.type!=="inbox.changed")return;}catch{return;}if(!flush)flush=setTimeout(()=>{flush=undefined;void sync();},100);};
+   socket.onopen=()=>{attempt=0;realtimeReady.current=true;setRealtime(true);void sync.flush();};
+   socket.onmessage=event=>{try{if(JSON.parse(event.data)?.type!=="inbox.changed")return;}catch{return;}sync.request();};
    socket.onerror=()=>socket?.close();
    socket.onclose=()=>{realtimeReady.current=false;setRealtime(false);if(!stopped)reconnect=setTimeout(connect,Math.min(15000,1000*2**Math.min(attempt++,4))+Math.random()*500);};
   };
-  const visible=()=>{if(document.visibilityState==="visible")void sync();};
+  const visible=()=>{if(document.visibilityState==="visible")void sync.flush();};
   document.addEventListener("visibilitychange",visible);connect();
-  return()=>{stopped=true;realtimeReady.current=false;clearTimeout(reconnect);clearTimeout(flush);socket?.close();document.removeEventListener("visibilitychange",visible);};
+  return()=>{stopped=true;realtimeReady.current=false;clearTimeout(reconnect);sync.dispose();socket?.close();document.removeEventListener("visibilitychange",visible);};
  },[workspaceId]);
  useEffect(()=>{
   let alive=true;let timer:ReturnType<typeof setTimeout>;

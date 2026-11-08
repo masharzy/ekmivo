@@ -13,3 +13,9 @@ Seen is no longer inferred from a customer reply: only actual stored channel rea
 Verified: Go checkout/API tests; focused race tests; go vet; TypeScript; changed-component ESLint; migrations 0225/0226 applied on production control DB; six realtime triggers and runtime avatar EXECUTE grant verified. Linux binary and Nginx WebSocket upgrade deploy script uploaded to /opt/briofold/realtime-release, with compose/Nginx backup and health-check rollback. Frontend production deployment b8263b28 is READY on the current project.
 
 Manual pending: privileged VPS activation; authenticated WebSocket 101 + real incoming message/delivery/read event across two devices; permission revocation and reconnect; customer-photo display where provider permits it; new Telegram media retrieval after API restart. No end-to-end acceptance claimed before these checks.
+
+## Realtime status correction
+
+Live database evidence: the owner's latest Messenger text reached `sent` about one second after creation while UI retained `sending`. A trailing refresh timer was not cleared after firing, suppressing later WebSocket hints. Replaced the timer logic with a serial, coalescing scheduler. Regression checks cover overlapping events during a pending request, trailing refresh, subsequent independent events, hidden-tab resume, disposal and temporary failure recovery.
+
+Meta app subscription inspection found only messages/message_reactions. Added message_deliveries/message_reads while preserving existing subscriptions and include_values. App and Page writes both returned success; app subscription readback confirms both receipt fields active. Do not infer past delivery/read timestamps or auto-resend already accepted messages. New provider receipt events still require live end-to-end verification.
