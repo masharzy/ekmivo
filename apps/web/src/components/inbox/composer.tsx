@@ -85,30 +85,33 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
 
  /* ---------- voice ---------- */
  type Rec={stream:MediaStream;mr:MediaRecorder;parts:Blob[];choice:RecorderChoice;acc:number;seg:number;paused:boolean;ctx?:AudioContext;an?:AnalyserNode;raf?:number;timer?:ReturnType<typeof setInterval>;locked:boolean;x:number;y:number;pointer:number;cancelled:boolean;stopped:boolean};
- const rec=useRef<Rec|null>(null),starting=useRef(false),holdAt=useRef(0);
+ const rec=useRef<Rec|null>(null),starting=useRef(false),holdAt=useRef(0),released=useRef(false),mouseMode=useRef(false);
  const [phase,setPhase]=useState<"idle"|"holding"|"locked">("idle"),[elapsed,setElapsed]=useState(0),[levels,setLevels]=useState<number[]>([]),[dx,setDx]=useState(0),[lockP,setLockP]=useState(0),[armed,setArmed]=useState(false),[paused,setPaused]=useState(false),[cancelling,setCancelling]=useState(false);
  const micOk=useMemo(()=>typeof window!=="undefined"&&!!navigator.mediaDevices?.getUserMedia&&!!chooseRecorder(),[]);
  const elapsedMs=(r:Rec)=>r.acc+(r.paused?0:Date.now()-r.seg);
  const cleanup=useCallback((r:Rec)=>{if(r.timer)clearInterval(r.timer);if(r.raf)cancelAnimationFrame(r.raf);r.stream.getTracks().forEach(x=>x.stop());void r.ctx?.close().catch(()=>{});},[]);
  async function startRec(e:RPE){
   if(!micOk||starting.current||rec.current||disabled||!p.canSend){if(!micOk)toast(t("Voice recording isn't supported in this browser","এই ব্রাউজারে ভয়েস রেকর্ড চলবে না"));return;}
-  starting.current=true;holdAt.current=Date.now();const pid=e.pointerId,x=e.clientX,y=e.clientY;(e.currentTarget as HTMLElement).setPointerCapture?.(pid);setPhase("holding");setElapsed(0);setLevels([]);setDx(0);setLockP(0);setArmed(false);setPaused(false);setCancelling(false);
+  starting.current=true;released.current=false;holdAt.current=Date.now();const pid=e.pointerId,x=e.clientX,y=e.clientY;const mouse=e.pointerType!=="touch";mouseMode.current=mouse;if(!mouse)(e.currentTarget as HTMLElement).setPointerCapture?.(pid);
+  /* AudioContext must be created inside the gesture or Chrome keeps it suspended (flat waveform) */
+  let ctx:AudioContext|undefined;try{ctx=new AudioContext();void ctx.resume();}catch{}
+  setPhase(mouse?"locked":"holding");setElapsed(0);setLevels([]);setDx(0);setLockP(0);setArmed(false);setPaused(false);setCancelling(false);
   try{
    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
    const choice=chooseRecorder()!;const mr=new MediaRecorder(stream,{mimeType:choice.mime});
    const r:Rec={stream,mr,parts:[],choice,acc:0,seg:Date.now(),paused:false,locked:false,x,y,pointer:pid,cancelled:false,stopped:false};
    mr.ondataavailable=ev=>{if(ev.data.size)r.parts.push(ev.data);};
-   try{const ctx=new AudioContext(),src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();an.fftSize=256;src.connect(an);r.ctx=ctx;r.an=an;}catch{}
-   rec.current=r;
-   if(r.stopped){cleanup(r);rec.current=null;return;}
+   try{if(ctx){void ctx.resume();const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();an.fftSize=512;an.smoothingTimeConstant=.4;src.connect(an);r.ctx=ctx;r.an=an;}}catch{}
+   rec.current=r;if(mouse){r.locked=true;}
+   if(r.stopped||(released.current&&!mouse)){cleanup(r);rec.current=null;setPhase("idle");if(!r.stopped)toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;}
    mr.start(250);navigator.vibrate?.(10);
    r.timer=setInterval(()=>setElapsed(elapsedMs(r)),200);
-   const buf=new Uint8Array(128);let last=0;
-   const tick=(now:number)=>{if(!rec.current)return;if(r.an&&now-last>90&&!r.paused){last=now;r.an.getByteTimeDomainData(buf);let m=0;for(const v of buf)m=Math.max(m,Math.abs(v-128));setLevels(prev=>[...prev.slice(-60),Math.min(1,m/70)]);}r.raf=requestAnimationFrame(tick);};r.raf=requestAnimationFrame(tick);
-  }catch{setPhase("idle");toast(t("Allow microphone access to record","রেকর্ড করতে মাইক্রোফোনের অনুমতি দিন"));}
+   const buf=new Uint8Array(512);let last=0;
+   const tick=(now:number)=>{if(!rec.current)return;if(r.an&&now-last>55&&!r.paused){last=now;if(r.ctx?.state==="suspended")void r.ctx.resume();r.an.getByteTimeDomainData(buf);let sum=0;for(const v of buf){const d=(v-128)/128;sum+=d*d;}const lv=Math.min(1,Math.sqrt(Math.sqrt(sum/buf.length))*1.35);setLevels(prev=>[...prev.slice(-79),lv]);}r.raf=requestAnimationFrame(tick);};r.raf=requestAnimationFrame(tick);
+  }catch{void ctx?.close().catch(()=>{});setPhase("idle");toast(t("Allow microphone access to record","রেকর্ড করতে মাইক্রোফোনের অনুমতি দিন"));}
   finally{starting.current=false;}
  }
- function moveRec(e:RPE){const r=rec.current;if(!r||r.locked||phase!=="holding")return;const ddx=e.clientX-r.x,ddy=e.clientY-r.y;
+ function moveRec(e:RPE){const r=rec.current;if(!r||r.locked||phase!=="holding"||mouseMode.current)return;const ddx=e.clientX-r.x,ddy=e.clientY-r.y;
   setDx(Math.min(0,ddx));setLockP(Math.max(0,Math.min(1,-ddy/72)));setArmed(-ddy>=61);
   if(ddx<=-96){endRec(false,true);}else if(ddy<=-72){r.locked=true;navigator.vibrate?.(12);setArmed(true);setTimeout(()=>setPhase("locked"),140);}}
  async function endRec(send:boolean,animate=false){
@@ -122,7 +125,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   cleanup(r);rec.current=null;
   setTimeout(()=>{setPhase("idle");setCancelling(false);setDx(0);},animate?220:0);
   if(!send)return;
-  if(ms<1000){toast(t("Hold longer to record a voice note","ভয়েস রেকর্ড করতে একটু বেশি ধরে রাখুন"));return;}
+  if(ms<1000){toast(t("Recording too short","রেকর্ডিং খুব ছোট"));return;}
   const out=await finishRecording(r.parts,r.choice,ms);if(!out){toast(t("Recording failed","রেকর্ড হয়নি"));return;}
   if(out.blob.size>MAX_BYTES){toast(t("Voice note is too long (max 5 MB)","ভয়েস অনেক বড় (সর্বোচ্চ ৫ MB)"));return;}
   setSending(true);p.onBusy(true);
@@ -132,7 +135,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
    if(p.replyTo)p.onCancelReply();await p.onSent();
   }catch{toast(t("Voice note couldn't be sent","ভয়েস পাঠানো যায়নি"));}finally{setSending(false);p.onBusy(false);}
  }
- function upRec(){const r=rec.current;if(!r){if(starting.current&&phase==="holding"){/* released before the mic opened */setPhase("idle");const w=Date.now()-holdAt.current;if(w<350)toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));}return;}
+ function upRec(){if(mouseMode.current)return;released.current=true;const r=rec.current;if(!r){return;}
   if(r.locked||phase==="locked")return;if(Date.now()-holdAt.current<350){void endRec(false);toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;}void endRec(true);}
  function togglePause(){const r=rec.current;if(!r)return;if(r.paused){r.mr.resume();r.seg=Date.now();r.paused=false;setPaused(false);}else{r.mr.pause();r.acc+=Date.now()-r.seg;r.paused=true;setPaused(true);}}
  useEffect(()=>()=>{const r=rec.current;if(r){r.stopped=true;try{if(r.mr.state!=="inactive")r.mr.stop();}catch{}cleanup(r);rec.current=null;}},[cleanup]);
@@ -147,20 +150,20 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   <div className={`${s.rbar} ${p.replyTo?s.show:""}`}><div><b>{p.replyWho}</b><span>{p.replyTo?(p.replyTo.body||(p.replyTo.type==="image"?t("Photo","ছবি"):p.replyTo.type==="audio"?t("Voice","ভয়েস"):t("Message","মেসেজ"))):""}</span></div><button type="button" className={s.ib} onClick={p.onCancelReply} aria-label={t("Cancel reply","রিপ্লাই বাতিল")}><I n="x"/></button></div>
   <div className={cls}>
    <div className={s.inw}>
-    <textarea ref={ta} rows={1} value={p.text} maxLength={8000} placeholder={t("Write a message…","মেসেজ লিখুন…")} aria-label={t("Message","মেসেজ")} disabled={disabled}
+    <textarea ref={ta} data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" spellCheck rows={1} value={p.text} maxLength={8000} placeholder={t("Write a message…","মেসেজ লিখুন…")} aria-label={t("Message","মেসেজ")} disabled={disabled}
      onChange={e=>p.onText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing&&window.matchMedia("(min-width:900px)").matches){e.preventDefault();if(has)p.onSendText();}}}/>
     <button type="button" className={s.ib} aria-label={t("Attach","সংযুক্ত করুন")} onClick={()=>setAttach(true)} disabled={disabled}><I n="clip"/></button>
     {canImg&&<button type="button" className={`${s.ib} ${s.cam} ${has?s.hide:""}`} aria-label={t("Camera","ক্যামেরা")} onClick={()=>camRef.current?.click()} disabled={disabled}><I n="cam"/></button>}
    </div>
    <button type="button" className={`${s.sendb} ${has?s.has:""} ${phase!=="idle"?s.recm:""}`} aria-label={has?t("Send","পাঠান"):t("Hold to record","ধরে রেকর্ড করুন")}
     onClick={()=>{if(has&&!p.busy)p.onSendText();}}
-    onPointerDown={e=>{if(!has&&e.button===0){e.preventDefault();void startRec(e);}}} onPointerMove={moveRec} onPointerUp={()=>{if(!has)upRec();}} onPointerCancel={()=>{if(!has&&phase==="holding")void endRec(false);}} onContextMenu={e=>e.preventDefault()}>
+    onPointerDown={e=>{if(!has&&e.button===0){e.preventDefault();void startRec(e);}}} onPointerMove={moveRec} onPointerUp={()=>{if(!has)upRec();}} onPointerCancel={()=>{if(!has&&phase==="holding"&&!mouseMode.current)void endRec(false);}} onContextMenu={e=>e.preventDefault()}>
     <I n="mic" className={s.s_mic}/><I n="snd" className={s.s_snd}/>
    </button>
    <div className={s.rec}><I n="mic" className={s.micdot}/><span className={s.recT}>{mmss(elapsed/1000,bn)}</span><div className={s.slc} style={{transform:`translateX(${dx*.6}px)`,opacity:Math.max(0,1+dx/110)}}><I n="back" size={14}/>{t("Slide to cancel","বাতিল করতে স্লাইড করুন")}</div></div>
    <div className={s.lockc} style={{["--lk" as string]:lockP} as React.CSSProperties} data-armed={armed}><I n="lko" className={s.lo}/><I n="lk" className={s.lc}/><I n="cu" className={s.cu}/></div>
    <div className={`${s.lkp} ${paused?s.paused:""}`}>
-    <div className={s.lkr1}><span className={s.lkT}>{mmss(elapsed/1000,bn)}</span><div className={s.lkW}>{Array.from({length:40}).map((_,i)=>{const v=levels[levels.length-40+i]??0;return <b key={i} style={{height:4+v*22}}/>;})}</div></div>
+    <div className={s.lkr1}><span className={s.lkT}>{mmss(elapsed/1000,bn)}</span><div className={s.lkW}>{Array.from({length:48}).map((_,i)=>{const v=levels[levels.length-48+i]??0;return <b key={i} style={{height:3+v*26,opacity:v?1:.35}}/>;})}</div></div>
     <div className={s.lkr2}><button type="button" className={s.lkx} aria-label={t("Delete","বাতিল")} onClick={()=>void endRec(false,true)}><I n="trash"/></button>
      <button type="button" className={s.lkpz} onClick={togglePause}>{paused?<><I n="mic"/>{t("Resume","চালু")}</>:<><I n="pause"/>{t("Pause","পজ")}</>}</button>
      <button type="button" className={s.lks} aria-label={t("Send","পাঠান")} onClick={()=>void endRec(true)}><I n="snd"/></button></div>

@@ -72,3 +72,8 @@
 .ds-app .ds-help-link{display:inline-flex;align-items:center;justify-content:center;width:36px;min-height:36px;border-radius:8px;color:var(--color-text-secondary)}.ds-app .ds-help-link:hover{background:var(--color-hover)}.ds-app[data-service="payments"] :is(.rf-card,.sd-phone,.pm-card,.smd-phone,.pg10-form){border:0;border-radius:14px;background:var(--color-surface);box-shadow:0 2px 5px rgb(15 30 40 / 2%)}@media(max-width:600px){.ds-app .ds-topbar-tools{flex-wrap:wrap}}
 
 .ref-document-filters{display:flex;flex-wrap:wrap;align-items:end;gap:14px;padding:16px;background:var(--color-surface);border-radius:10px}.ref-document-filters label{display:grid;gap:6px;font-size:12px}.ref-document-filters select{padding:9px 12px;color:var(--color-text);background:var(--color-canvas);border:1px solid var(--color-border)}.doc-controls .ref-columns label{display:flex;flex:initial;min-width:0;color:var(--color-text)}.doc-controls .ref-columns input{width:16px}.ref-document-table [hidden]{display:none!important}
+
+/* Sidebar unread badge (Inbox) */
+.ds-app .ds-nav-badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#E5484D;color:#fff;font-size:11px;font-weight:700;line-height:20px;text-align:center;font-variant-numeric:tabular-nums;box-shadow:0 0 0 2px var(--color-surface,transparent);animation:ds-badge-pop .25s cubic-bezier(.34,1.56,.64,1)}
+@keyframes ds-badge-pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ds-app .ds-nav-badge{animation:none}}

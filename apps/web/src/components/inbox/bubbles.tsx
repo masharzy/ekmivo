@@ -3,14 +3,22 @@
 import {memo,useEffect,useRef,useState} from "react";
 import type {PointerEvent as RPE} from "react";
 import {I} from "./icons";
-import {clock,isSticker,loadMedia,mmss,money,num,type Msg} from "./lib";
+import {clock,isSticker,loadMedia,mediaReasons,mmss,money,num,type Msg} from "./lib";
 import s from "./inbox.module.css";
 
 export function useMedia(workspaceId:string,threadId:string,mediaId?:string|null){
- const [st,setSt]=useState<{id:string;media:{url:string;mime:string}|null}|null>(null);
- useEffect(()=>{if(!mediaId)return;let live=true;void loadMedia(workspaceId,threadId,mediaId).then(r=>{if(live)setSt({id:mediaId,media:r});});return()=>{live=false;};},[workspaceId,threadId,mediaId]);
+ const [st,setSt]=useState<{id:string;media:{url:string;mime:string}|null}|null>(null),[tick,setTick]=useState(0);
+ useEffect(()=>{if(!mediaId)return;let live=true;void loadMedia(workspaceId,threadId,mediaId).then(r=>{if(live)setSt({id:mediaId,media:r});});return()=>{live=false;};},[workspaceId,threadId,mediaId,tick]);
  const ready=!!mediaId&&st?.id===mediaId;
- return {media:ready?st.media:null,failed:ready&&!st.media};
+ const retry=()=>{setSt(null);setTick(x=>x+1);};
+ return {media:ready?st.media:null,failed:ready&&!st.media,reason:ready&&!st.media?mediaReasons.get(workspaceId+mediaId)??"":"",retry};
+}
+export function reasonText(code:string,bn:boolean){
+ if(/UNSUPPORTED|MIME|TYPE/i.test(code))return bn?"এই ফাইল টাইপ সাপোর্টেড নয়":"File type not supported";
+ if(/LARGE|SIZE/i.test(code))return bn?"ফাইল অনেক বড়":"File too large";
+ if(/EXPIRED|GONE|404|410/i.test(code))return bn?"চ্যানেল থেকে মিডিয়ার মেয়াদ শেষ":"Expired at the channel";
+ if(/SCAN|MALWARE/i.test(code))return bn?"নিরাপত্তা স্ক্যান শেষ হয়নি":"Security scan unavailable";
+ return bn?"মিডিয়া লোড হয়নি":"Media couldn't load";
 }
 
 export function Ticks({m,bn,onRetry}:{m:Msg;bn:boolean;onRetry?:(m:Msg)=>void}){
@@ -25,8 +33,8 @@ export function Ticks({m,bn,onRetry}:{m:Msg;bn:boolean;onRetry?:(m:Msg)=>void}){
 const bars=(seed:string)=>{let h=2166136261;for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);}return Array.from({length:30},()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return 5+Math.abs(h%17);});};
 
 function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){
- const {media,failed}=useMedia(workspaceId,threadId,m.content?.media_id);
- const el=useRef<HTMLAudioElement>(null),[playing,setPlaying]=useState(false),[pos,setPos]=useState(0),[len,setLen]=useState(0);
+ const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id);
+ const el=useRef<HTMLAudioElement>(null),[playing,setPlaying]=useState(false),[pos,setPos]=useState(0),[len,setLen]=useState(0),[rate,setRate]=useState(1);
  const dur=(m.content?.duration_ms??0)/1000,h=bars(m.content?.media_id??m.id);
  useEffect(()=>()=>{el.current?.pause();},[]);
  const toggle=()=>{const a=el.current;if(!a)return;if(a.paused){document.querySelectorAll("audio").forEach(x=>{if(x!==a)x.pause();});void a.play();}else a.pause();};
@@ -35,16 +43,21 @@ function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:st
  return <div className={s.vn}>
   <button type="button" className={s.pl} onClick={e=>{e.stopPropagation();toggle();}} disabled={!media} aria-label={playing?(bn?"থামান":"Pause"):(bn?"চালান":"Play")}>{playing?<I n="pause" size={14} fill/>:<I n="play" size={14} fill/>}</button>
   <div className={s.wf} onClick={e=>{e.stopPropagation();const a=el.current;if(!a||!total)return;const r=e.currentTarget.getBoundingClientRect();a.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*total;setPos(a.currentTime);}}>{h.map((v,i)=><i key={i} className={i/h.length<frac?s.f:undefined} style={{height:v}}/>)}</div>
-  <span className={s.vd}>{failed?(bn?"লোড হয়নি":"Unavailable"):mmss(playing||pos>0?pos:dur,bn)}</span>
-  {media&&<audio ref={el} src={media.url} preload="metadata" onLoadedMetadata={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);}} onTimeUpdate={e=>setPos(e.currentTarget.currentTime)}/>}
+  {failed?<button type="button" className={s.vd} title={reasonText(reason,bn)} onClick={e=>{e.stopPropagation();retry();}}>{bn?"আবার চেষ্টা":"Retry"}</button>:<><span className={s.vd}>{mmss(playing||pos>0?pos:dur,bn)}</span>{(playing||pos>0)&&<button type="button" className={s.spd} aria-label="Speed" onClick={e=>{e.stopPropagation();const n=rate===1?1.5:rate===1.5?2:1;setRate(n);if(el.current)el.current.playbackRate=n;}}>{rate}x</button>}</>}
+  {media&&<audio ref={el} src={media.url} preload="metadata" onLoadedMetadata={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onPlay={e=>{e.currentTarget.playbackRate=rate;setPlaying(true);}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);}} onTimeUpdate={e=>setPos(e.currentTarget.currentTime)}/>}
  </div>;
 }
 
 export function Img({m,workspaceId,threadId,bn,className,onOpen}:{m:Msg;workspaceId:string;threadId:string;bn:boolean;className?:string;onOpen?:()=>void}){
- const {media,failed}=useMedia(workspaceId,threadId,m.content?.media_id);
- 
+ const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id);
  if(media&&media.mime.startsWith("image/"))return <img className={className} src={media.url} alt={m.content?.name||(bn?"ছবি":"Photo")} onClick={onOpen} draggable={false}/>;
- return <div className={`${s.imgph} ${className??""}`} onClick={failed?onOpen:undefined}>{failed?<I n="alt" size={22}/>:<span className={s.shimmer}/>}</div>;
+ return <div className={`${s.imgph} ${className??""}`} >{failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(reason,bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
+}
+
+function VideoBox({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){
+ const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id);
+ if(media&&media.mime.startsWith("video/"))return <video className={s.vid} src={media.url} controls playsInline preload="metadata" onClick={e=>e.stopPropagation()}/>;
+ return <div className={s.imgph}>{failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(reason,bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
 }
 
 function Product({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){
@@ -92,7 +105,9 @@ function RowImpl(p:RowProps){
  const meta=<span className={s.mt}>{time}<Ticks m={m} bn={bn} onRetry={p.onRetry}/></span>;
  const tone=m.sender==="ai"?s.ba:right?s.bs:"";
  let inner;
- if(m.type==="unsupported")inner=<div className={`${s.bub} ${tone}`}><span className={s.unsup}>{m.body}</span>{meta}</div>;
+ if(m.type==="unsupported")inner=<div className={`${s.bub} ${tone}`}><span className={s.unsup}>{m.body||(bn?"এই মেসেজটি (ভিডিও/অন্য ফাইল) এখানে দেখানো যায়নি — চ্যানেল অ্যাপে দেখুন":"This message (video or another attachment) can't be shown here — open it in the channel app")}</span>{meta}</div>;
+ else if((m.type as string)==="video")inner=<div className={`${s.bub} ${s.im} ${tone}`}>{q&&<Quote q={q} onClick={()=>m.reply_to&&p.onJump(m.reply_to)}/>}<div className={s.imgw}><VideoBox m={m} workspaceId={p.workspaceId} threadId={p.threadId} bn={bn}/><span className={s.ovm}>{time}<Ticks m={m} bn={bn} onRetry={p.onRetry}/></span></div>{m.body&&<div className={s.cap}><Text body={m.body}/></div>}</div>;
+ else if((m.type as string)==="sticker")inner=<><div className={s.stkimg}><Img m={m} workspaceId={p.workspaceId} threadId={p.threadId} bn={bn}/></div><div className={s.mrow}>{meta}</div></>;
  else if(sticker)inner=<><div className={s.stk}>{m.body.trim()}</div><div className={s.mrow}>{meta}</div></>;
  else if(imgs.length){
   const n=imgs.length,shown=Math.min(n,4),cls=n===1?"":n===2?s.g2:n===3?s.g3:s.g4;

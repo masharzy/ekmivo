@@ -8,7 +8,7 @@ export type Product={id:string;name:string;price_minor:number;currency?:string;s
 export type OrderRow={id:string;reference:string;items:string;amount_minor:number;currency?:string;status:"ok"|"cx"|"rt"|"run";reason?:string;created_at:string};
 export type Profile={id:string;name:string;channel:string;phone?:string|null;contact?:{phone?:string;address?:string;payment?:string;username?:string}|null;note?:string|null;note_version?:number;ai_enabled:boolean;store?:string;messages:number;talks:number;first?:{at:string;text:string}|null;summary?:{total:number};orders:OrderRow[]};
 
-export const channelMeta:Record<string,{name:string;color:string}>={ms:{name:"Messenger",color:"#0A7CFF"},ig:{name:"Instagram",color:"#D6307A"},wa:{name:"WhatsApp",color:"#1FA855"},web:{name:"Website",color:"#6B6A64"}};
+export const channelMeta:Record<string,{name:string;color:string}>={ms:{name:"Messenger",color:"#0A7CFF"},ig:{name:"Instagram",color:"#D6307A"},wa:{name:"WhatsApp",color:"#1FA855"},tg:{name:"Telegram",color:"#26A5E4"},web:{name:"Website",color:"#6B6A64"}};
 export const maxImages=10;
 
 const digits="০১২৩৪৫৬৭৮৯";
@@ -62,11 +62,12 @@ export function buildRows(items:Msg[],unreadFrom:number|null,unreadCount:number,
 
 /* ---- media (decoded once, shared by every bubble) ---- */
 const urls=new Map<string,Promise<{url:string;mime:string}|null>>();
-const safeMime=(m:string)=>/^(image\/(jpeg|png|webp|gif)|audio\/(mpeg|ogg|mp4|aac|webm|wav)|application\/pdf|text\/plain)$/.test(m.split(";")[0])?m.split(";")[0]:"application/octet-stream";
+export const mediaReasons=new Map<string,string>();
+const safeMime=(m:string)=>/^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quicktime)|audio\/(mpeg|ogg|mp4|aac|webm|wav)|application\/pdf|text\/plain)$/.test(m.split(";")[0])?m.split(";")[0]:"application/octet-stream";
 export function loadMedia(workspaceId:string,threadId:string,mediaId:string){
  const key=workspaceId+mediaId;let hit=urls.get(key);if(hit)return hit;
  hit=fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"media-get",thread_id:threadId,body:{media_id:mediaId}})})
-  .then(async r=>{if(!r.ok)throw Error();const j=await r.json();if(typeof j.data!=="string"||j.data.length>7000000||typeof j.mime!=="string")throw Error();
+  .then(async r=>{if(!r.ok){const e=await r.json().catch(()=>null) as {code?:unknown;error?:unknown}|null;const c=typeof e?.code==="string"?e.code:typeof e?.error==="string"?e.error:String(r.status);mediaReasons.set(key,c);throw Error(c);}mediaReasons.delete(key);const j=await r.json();if(typeof j.data!=="string"||j.data.length>7000000||typeof j.mime!=="string")throw Error();
    const bin=atob(j.data),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
    const mime=safeMime(j.mime);return {url:URL.createObjectURL(new Blob([bytes],{type:mime})),mime};})
   .catch(()=>{urls.delete(key);return null;});

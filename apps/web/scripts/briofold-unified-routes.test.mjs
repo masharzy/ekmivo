@@ -292,7 +292,8 @@ function renderDraftSwitch({save=true,discard=true,choose=true,pathname="/dashbo
   },
   "./dashboard-icon":{DashboardIcon:()=>null},"./site-controls":{SiteControls:()=>null},
   "./dashboard-feedback":{DashboardFeedback:()=>null},"./payment-notifications":{PaymentNotifications:()=>null},
-  "./payment-record-search":{PaymentRecordSearch:()=>null}
+  "./payment-record-search":{PaymentRecordSearch:()=>null},
+  "./inbox-unread":{useInboxUnread:()=>0}
  };
  runInNewContext(compile(source("components/dashboard-frame.tsx")),{exports,require:id=>{
   if(!Object.hasOwn(deps,id))throw Error("Unexpected frame dependency "+id);return deps[id];

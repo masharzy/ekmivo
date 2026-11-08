@@ -1,4 +1,5 @@
 import type {CSSProperties} from "react";
+import {brandColor,brandPath} from "./brand";
 const p={
  act:"M22 12h-4l-3 9L9 3l-3 9H2",set:"M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0",msg:"M4 5h16v11H9l-5 4z",
  wa:"M12 4a8 8 0 00-6.9 12L4 20l4.1-1.1A8 8 0 1012 4zM9.5 9.5c.3 2 2.5 4.2 4.5 4.5",ig:"M16.5 7.5h0M9 5h6a4 4 0 014 4v6a4 4 0 01-4 4H9a4 4 0 01-4-4V9a4 4 0 014-4zM12 8.8a3.2 3.2 0 100 6.4 3.2 3.2 0 000-6.4z",ms:"M13 3L6 13h5l-1 8 7-10h-5z",web:"M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18",
@@ -15,8 +16,10 @@ export type IconName=keyof typeof p;
 export function I({n,size=20,fill,style,className}:{n:IconName;size?:number;fill?:boolean;style?:CSSProperties;className?:string}){
  return <svg viewBox="0 0 24 24" width={size} height={size} fill={fill?"currentColor":"none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flex:"none",...style}} className={className}><path d={p[n]}/></svg>;
 }
-export function ChannelBadge({channel,size=18}:{channel:string;size?:number}){
- const color=({ms:"#0A7CFF",ig:"#D6307A",wa:"#1FA855",web:"#6B6A64"} as Record<string,string>)[channel]??"#6B6A64";
- const n=(channel==="ms"||channel==="ig"||channel==="wa"||channel==="web"?channel:"web") as IconName;
- return <span style={{position:"absolute",right:-3,bottom:-3,width:size,height:size,borderRadius:"50%",border:"2px solid var(--bg)",background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}}><I n={n} size={Math.round(size*.55)} style={{strokeWidth:2.2}}/></span>;
+export function ChannelBadge({channel,size=22}:{channel:string;size?:number}){
+ const known=brandPath[channel];
+ const color=brandColor[channel]??brandColor.web;
+ return <span title={channel} style={{position:"absolute",right:-4,bottom:-4,width:size,height:size,borderRadius:"50%",border:"2px solid var(--bg)",background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
+  {known?<svg viewBox="0 0 24 24" width={Math.round(size*.62)} height={Math.round(size*.62)} fill="currentColor" aria-hidden="true"><path d={known}/></svg>:<I n="web" size={Math.round(size*.62)} style={{strokeWidth:2}}/>}
+ </span>;
 }

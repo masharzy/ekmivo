@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { sections, type SectionKey } from "../lib/dashboard-sections";
 import { dashboardHref, navigation, searchableNavigation, searchableBusinesses, serviceEnabled, serviceNames, sectionInService, type Locale, type Service, type PaymentEnvironment } from "../lib/dashboard-navigation";
 import { DashboardIcon as Icon } from "./dashboard-icon";
+import {useInboxUnread} from "./inbox-unread";
 import {unifiedNavigation,unifiedSettings,unifiedNavGroupLabels,currentUnifiedItem,enabledUnifiedService,unifiedSectionHref,isUnifiedFinancialDetailPath} from "../lib/unified-navigation";
 import {chooseUnifiedBusiness} from "../actions/unified-business";
 import { SiteControls } from "./site-controls";
@@ -106,6 +107,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  const foundGroups=searchableNavigation(service,globalQuery).map(g=>({...g,items:g.items.filter(allowed)})).filter(g=>g.items.length);
  const foundKeys=unified?([] as SectionKey[]):foundGroups.flatMap(group=>group.items);
  const unifiedItems=unifiedNavigation.filter(item=>enabledUnifiedService(workspace.mode,item.service));
+ const inboxUnread=useInboxUnread(workspace.id,unified&&unifiedItems.some(x=>x.key==="inbox"),pathname);
  const foundUnified=unified?unifiedItems.filter(item=>`${item.en} ${item.bn}`.toLocaleLowerCase().includes(globalQuery.trim().toLocaleLowerCase())):[];
  const foundBusinesses=spaces.length>1?searchableBusinesses(spaces,globalQuery):[];
  const resultCount=foundKeys.length+foundUnified.length+foundBusinesses.length;
@@ -308,7 +310,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
     if(!items.length)return null;
     const onBilling=pathname==="/settings/billing"||pathname.startsWith("/settings/billing/");
     const current=onBilling?undefined:currentUnifiedItem(unifiedItems,pathname);
-    return <section className="ds-nav-section" key={g}><h2>{unifiedNavGroupLabels[g][locale]}</h2>{items.map(item=>{const on=current?.key===item.key;return <Link key={item.key} href={item.href} className={on?"is-current":undefined} aria-current={pathname===item.href?"page":on?"true":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute(item.href);setDraftError("");return;}startTransition(()=>router.push(item.href));}}><Icon name={item.icon}/><span>{item[locale]}</span>{on&&<span className="ds-active-mark"/>}</Link>})}</section>;
+    return <section className="ds-nav-section" key={g}><h2>{unifiedNavGroupLabels[g][locale]}</h2>{items.map(item=>{const on=current?.key===item.key;return <Link key={item.key} href={item.href} className={on?"is-current":undefined} aria-current={pathname===item.href?"page":on?"true":undefined} onClick={event=>{event.preventDefault();setMobileOpen(false);if(activeDrafts().length){setBlockedRoute(item.href);setDraftError("");return;}startTransition(()=>router.push(item.href));}}><Icon name={item.icon}/><span>{item[locale]}</span>{item.key==="inbox"&&inboxUnread>0&&<span className="ds-nav-badge" role="status" aria-label={bn?`${inboxUnread}টি অপঠিত`:`${inboxUnread} unread`}>{inboxUnread>99?"99+":inboxUnread}</span>}{on&&<span className="ds-active-mark"/>}</Link>})}</section>;
    }):groups.filter(group=>!(service==="payments"&&group.items.length===1&&group.items[0]==="billing")).map(group=><section className="ds-nav-section" key={group.label.en}>
     {service==="payments"&&group.label.en==="Commerce"?<details className="ds-unreleased-nav"><summary>{group.label[locale]} <small>{bn?"নির্মাণাধীন":"In development"}</small></summary><p>{bn?"কমার্সের এই কাজগুলো Payment phase-এর পরে চালু হবে।":"Commerce operations will follow the verified payment phase."}</p></details>:<h2>{group.label[locale]}</h2>}
     {!(service==="payments"&&group.label.en==="Commerce")&&group.items.filter(key=>!(service==="payments"&&key==="requests")).map(key=><Link key={key} href={key==="api-docs"?"/developers":contextHref(key)} target={key==="api-docs"?"_blank":undefined} rel={key==="api-docs"?"noopener noreferrer":undefined} className={section===key?"is-current":undefined} aria-current={section===key?"page":undefined} prefetch={key!=="api-docs"} onMouseEnter={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onFocus={()=>{if(key!=="api-docs")router.prefetch(contextHref(key))}} onClick={event=>{if(key!=="api-docs"){event.preventDefault();nav(key);}}}>

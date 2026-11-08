@@ -10,6 +10,7 @@ import {MessageRow,Img,useMedia} from "./inbox/bubbles";
 import {Composer} from "./inbox/composer";
 import {ProfileView} from "./inbox/profile";
 import {Sheet} from "./inbox/sheets";
+import {announceInboxUnread} from "./inbox-unread";
 import {buildRows,channelMeta,clock,fullDate,initials,listTime,num,type Cap,type Conversation,type Msg,type Profile,type Thread} from "./inbox/lib";
 import legacy from "./workspace-messaging.module.css";
 import s from "./inbox/inbox.module.css";
@@ -30,7 +31,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  const [selected,setSelected]=useState<string|null>(initialThread??null),[text,setText]=useState("");
  const [view,setView]=useState<"list"|"chat"|"profile">(initialThread?"chat":"list");
  const [error,setError]=useState(false),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[chatLoading,setChatLoading]=useState(!!initialThread);
- const [ai,setAi]=useState(true),[windowOpen,setWindowOpen]=useState(false),[query,setQuery]=useState(""),[searchOpen,setSearchOpen]=useState(false);
+ const [ai,setAi]=useState(true),[winRaw,setWindowOpen]=useState(false),[query,setQuery]=useState(""),[searchOpen,setSearchOpen]=useState(false);
  const [queue,setQueue]=useState("all"),[channel,setChannel]=useState(""),[range,setRange]=useState(""),[label,setLabel]=useState(""),[offset,setOffset]=useState(0);
  const [workflowBusy,setWorkflowBusy]=useState(false),[composeBusy,setComposeBusy]=useState(false);
  const [caps,setCaps]=useState<Cap>({}),[selectedName,setSelectedName]=useState("");
@@ -68,6 +69,8 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
   const timer=setTimeout(()=>setOnline(navigator.onLine),0);window.addEventListener("online",up);window.addEventListener("offline",down);
   return()=>{clearTimeout(timer);window.removeEventListener("online",up);window.removeEventListener("offline",down);};
  },[]);
+ useEffect(()=>{if(loaded&&!query&&queue==="all"&&!channel&&!range&&!label&&offset===0)announceInboxUnread(threads.reduce((n,x)=>n+(Number(x.unread)||0),0));},[threads,loaded,query,queue,channel,range,label,offset]);
+ const windowOpen=winRaw||threads.find(x=>x.id===selected)?.channel==="tg";
  const offline=!online||failCount>=2;
 
  const workGuard=()=>{
@@ -138,7 +141,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
  },[api,selected]);
  useEffect(()=>{
   let alive=true;let timer:ReturnType<typeof setTimeout>;
-  async function run(){try{if(document.visibilityState!=="hidden"&&navigator.onLine)await refresh();}catch{if(alive){setError(true);setFailCount(c=>c+1);}}
+  async function run(){try{if(document.visibilityState!=="hidden"&&navigator.onLine)await refresh();}catch(e){if(alive){setError(true);if(e instanceof TypeError)setFailCount(c=>c+1);}}
    finally{if(alive)timer=setTimeout(()=>void run(),2000);}}
   timer=setTimeout(()=>void run(),query?250:0);
   return()=>{alive=false;invalidate();clearTimeout(timer);};
@@ -227,10 +230,10 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    {/* ============ list ============ */}
    <div className={`${s.scr} ${s.sInbox}`}>
     <div className={s.top}><div className={s.ttl}>{t("Inbox","ইনবক্স")}</div>
-     <div className={`${s.chip} ${offline?s.off:syncing?s.sync:""}`} role="status" style={{marginLeft:"auto"}}><i className={s.dot}/>{offline?t("Offline","অফলাইন"):syncing?t("Syncing","সিঙ্ক হচ্ছে"):t("Live","লাইভ")}</div>
+     <div className={`${s.chip} ${offline?s.off:syncing||error?s.sync:""}`} role="status" style={{marginLeft:"auto"}}><i className={s.dot}/>{offline?t("Offline","অফলাইন"):error?t("Reconnecting","আবার সংযোগ হচ্ছে"):syncing?t("Syncing","সিঙ্ক হচ্ছে"):t("Live","লাইভ")}</div>
      <button type="button" className={s.fb} aria-label={t("Search","খুঁজুন")} onClick={()=>setSearchOpen(v=>!v)}><I n="search"/></button>
      <button type="button" className={s.fb} aria-label={t("Filters","ফিল্টার")} onClick={()=>setSheet("filter")}><I n="flt"/>{filterCount>0&&<u>{num(filterCount,bn)}</u>}</button></div>
-    {searchOpen&&<div className={s.search}><I n="search" size={16}/><input autoFocus value={query} maxLength={200} placeholder={t("Search name, phone or message","নাম, ফোন বা মেসেজ খুঁজুন")} aria-label={t("Search conversations","কথোপকথন খুঁজুন")} onChange={e=>{invalidate();setOffset(0);setQuery(e.target.value);}}/>{query&&<button type="button" className={s.ib} aria-label={t("Clear","মুছুন")} onClick={()=>{invalidate();setQuery("");}}><I n="x" size={16}/></button>}</div>}
+    {searchOpen&&<div className={s.search}><I n="search" size={16}/><input autoFocus data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" autoComplete="off" value={query} maxLength={200} placeholder={t("Search name, phone or message","নাম, ফোন বা মেসেজ খুঁজুন")} aria-label={t("Search conversations","কথোপকথন খুঁজুন")} onChange={e=>{invalidate();setOffset(0);setQuery(e.target.value);}}/>{query&&<button type="button" className={s.ib} aria-label={t("Clear","মুছুন")} onClick={()=>{invalidate();setQuery("");}}><I n="x" size={16}/></button>}</div>}
     <div className={s.fl}>{[{id:"all",l:t("All","সব")},{id:"unread",l:t("Unread","অপঠিত")+(totalUnread&&chip!=="unread"?` ${num(totalUnread,bn)}`:"")},{id:"ms",l:"Messenger"},{id:"ig",l:"Instagram"},{id:"wa",l:"WhatsApp"}].map(c=><button key={c.id} type="button" className={chip===c.id?s.on:undefined} aria-pressed={chip===c.id} onClick={()=>chipSet(c.id)}>{c.l}</button>)}</div>
     <div className={`${s.ban} ${offline?s.show:""}`} role="alert"><I n="alt"/><div><b>{t("No internet","ইন্টারনেট নেই")}</b><span>{t("New messages will arrive when you're back online. Replies can't be sent now.","নেট এলে নতুন মেসেজ আসবে। এখন উত্তর পাঠানো যাবে না।")}</span></div></div>
     <div className={s.list} onTouchStart={e=>{const el=e.currentTarget;swipeY.current=el.scrollTop<=0?{y:e.touches[0].clientY,t:Date.now()}:null;}} onTouchMove={e=>{if(!swipeY.current)return;const d=e.touches[0].clientY-swipeY.current.y;if(d>0)setPtr(Math.min(60,d*.5));}} onTouchEnd={()=>{if(swipeY.current&&ptr>40){setPtr(40);void refresh().catch(()=>{}).finally(()=>setTimeout(()=>setPtr(0),500));}else setPtr(0);swipeY.current=null;}}>
@@ -238,7 +241,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
      {threads.map(item=>{const sender=item.preview_sender;const pv=(sender==="seller"?t("You: ","আপনি: "):sender==="ai"?"AI: ":"")+(item.preview||t("Attachment","সংযুক্তি"));
       return <div key={item.id} ref={el=>{if(el)rowRefs.current.set(item.id,el);else rowRefs.current.delete(item.id);}} role="button" tabIndex={0} data-thread-id={item.id} aria-current={selected===item.id} className={`${s.cv} ${selected===item.id?s.cur:""} ${newRows.has(item.id)?s.rowin:""}`}
        onClick={()=>selectThread(item.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectThread(item.id);}else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();(e.currentTarget[e.key==="ArrowDown"?"nextElementSibling":"previousElementSibling"] as HTMLElement|null)?.focus();}}}>
-       <div className={s.av}>{initials(item.name)}<ChannelBadge channel={item.channel}/></div>
+       <div className={s.av}>{initials(item.name)}<ChannelBadge channel={item.channel} size={24}/></div>
        <div className={s.cm}><b>{item.name}</b><span className={item.unread>0?s.strong:undefined}>{pv}</span></div>
        <div className={s.cr}><span>{listTime(item.last_activity_at,bn)}</span>{item.unread>0?<span className={s.un} aria-label={t(`${item.unread} unread`,`${item.unread}টি অপঠিত`)}>{item.unread>99?"99+":num(item.unread,bn)}</span>:item.overdue?<span className={s.od}>{t("Overdue","দেরি")}</span>:null}</div>
       </div>;})}
@@ -256,7 +259,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
     <div className={s.chh}>
      <button type="button" className={`${s.ib} ${s.backBtn}`} onClick={backToList} aria-label={t("Back to conversations","কথোপকথনের তালিকায় ফিরুন")}><I n="back"/></button>
      <button type="button" className={s.chi} onClick={()=>setView(v=>v==="profile"&&window.matchMedia("(min-width:900px)").matches?"chat":"profile")} aria-label={t("Customer details","কাস্টমারের তথ্য")}>
-      <div className={s.av} style={{width:34,height:34,fontSize:13}}>{initials(customerName)}{chosen&&<ChannelBadge channel={chosen.channel} size={16}/>}</div>
+      <div className={s.av} style={{width:34,height:34,fontSize:13}}>{initials(customerName)}{chosen&&<ChannelBadge channel={chosen.channel} size={20}/>}</div>
       <div className={s.nm}><b>{customerName}</b><span>{channelMeta[chosen?.channel??""]?.name??""}{!windowOpen&&chosen?" · "+t("Reply window closed","উত্তরের সময় শেষ"):""}</span></div></button>
      {canManage?<button type="button" className={`${s.aic} ${ai?"":s.offai}`} aria-pressed={ai} disabled={busy} onClick={()=>void toggleAi()}><i/><span>{ai?t("AI on","AI চালু"):t("AI off","AI বন্ধ")}</span></button>:<span className={s.aic}><i style={{background:ai?"var(--ok)":"var(--mu)"}}/>{ai?t("AI on","AI চালু"):t("AI off","AI বন্ধ")}</span>}
      {canManage&&<button type="button" className={s.ib} onClick={()=>setSheet("tools")} aria-label={t("Conversation tools","কথোপকথনের কাজ")}><I n="more"/></button>}
@@ -304,13 +307,13 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
     <div className={s.sl}>{t("Channel","চ্যানেল")}</div><div className={s.pills}>{channels.map(c=><button key={c.id} type="button" className={channel===c.id?s.on:undefined} onClick={()=>{invalidate();setChannel(c.id);setOffset(0);}}>{bn?c.bn:c.en}</button>)}</div>
     <div className={s.sl}>{t("Status","অবস্থা")}</div><div className={s.pills}>{queues.map(c=><button key={c.id} type="button" className={queue===c.id?s.on:undefined} onClick={()=>{invalidate();setQueue(c.id);setOffset(0);}}>{bn?c.bn:c.en}</button>)}</div>
     <div className={s.sl}>{t("Time","সময়")}</div><div className={s.pills}>{times.map(c=><button key={c.id} type="button" className={range===c.id?s.on:undefined} onClick={()=>{invalidate();setRange(c.id);setOffset(0);}}>{bn?c.bn:c.en}</button>)}</div>
-    <div className={s.sl}>{t("Exact label","নির্দিষ্ট লেবেল")}</div><input className={s.field} value={label} maxLength={40} placeholder={t("e.g. vip","যেমন: vip")} onChange={e=>{invalidate();setLabel(e.target.value);setOffset(0);}}/>
+    <div className={s.sl}>{t("Exact label","নির্দিষ্ট লেবেল")}</div><input className={s.field} data-gramm="false" data-enable-grammarly="false" autoComplete="off" value={label} maxLength={40} placeholder={t("e.g. vip","যেমন: vip")} onChange={e=>{invalidate();setLabel(e.target.value);setOffset(0);}}/>
     <button type="button" className={s.btn} onClick={()=>setSheet("")}>{t("Show conversations","কথোপকথন দেখুন")}</button>
    </Sheet>
    <Sheet open={sheet==="forward"} onClose={()=>setSheet("")} label={t("Forward","ফরওয়ার্ড")}>
     <h4>{t("Forward to","ফরওয়ার্ড করুন")}<button type="button" onClick={()=>setSheet("")}>{t("Close","বন্ধ")}</button></h4>
     <p className={s.sheetNote}>{t("A copy is sent as a new message. Only conversations with an open 24-hour window are available.","নতুন মেসেজ হিসেবে কপি যাবে। শুধু যেসব কথোপকথনে ২৪ ঘণ্টার সময় খোলা।")}</p>
-    {threads.filter(x=>x.id!==selected).map(x=>{const blocked=x.window_open===false||(selMsg?.type==="document"&&x.channel==="ig");return <button key={x.id} type="button" className={s.lr} disabled={blocked} onClick={()=>void forwardTo(x)}><div className={s.av} style={{width:36,height:36,fontSize:13}}>{initials(x.name)}<ChannelBadge channel={x.channel} size={16}/></div><span className={s.lbody}><b>{x.name}</b><small>{blocked?(x.window_open===false?t("Reply window closed","২৪ ঘণ্টা পার"):t("Files aren't supported on Instagram","Instagram এ ফাইল যায় না")):channelMeta[x.channel]?.name}</small></span></button>;})}
+    {threads.filter(x=>x.id!==selected).map(x=>{const blocked=(x.window_open===false&&x.channel!=="tg")||(selMsg?.type==="document"&&x.channel==="ig");return <button key={x.id} type="button" className={s.lr} disabled={blocked} onClick={()=>void forwardTo(x)}><div className={s.av} style={{width:36,height:36,fontSize:13}}>{initials(x.name)}<ChannelBadge channel={x.channel} size={16}/></div><span className={s.lbody}><b>{x.name}</b><small>{blocked?(x.window_open===false?t("Reply window closed","২৪ ঘণ্টা পার"):t("Files aren't supported on Instagram","Instagram এ ফাইল যায় না")):channelMeta[x.channel]?.name}</small></span></button>;})}
    </Sheet>
    <Sheet open={sheet==="info"} onClose={()=>setSheet("")} label={t("Message info","মেসেজের তথ্য")}>
     <h4>{t("Message info","মেসেজের তথ্য")}<button type="button" onClick={()=>setSheet("")}>{t("Close","বন্ধ")}</button></h4>
