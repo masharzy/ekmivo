@@ -8,6 +8,7 @@ import {loadAiStudio,readAiKnowledge,saveAiStudio,searchAiKnowledge} from "../ac
 import {registerDraft} from "../lib/client/draft-navigation";
 import type {AiStudioCommand,AiStudioConfig,AiStudioData,AiStudioError,AiStudioView,KnowledgeDocument,KnowledgeMatch} from "../lib/ai-studio";
 import "./store-profile-editor.css";
+import "./ai-studio-page.css";
 const emptyConfig:AiStudioConfig={instructions:"",mode:"off",language:"auto",tone:"neutral",model:""};
 const emptyDocument:KnowledgeDocument={id:"",version:"",title:"",kind:"text",content:""};
 const errors:Record<AiStudioError,[string,string]>={
