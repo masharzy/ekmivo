@@ -50,7 +50,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  // Preferred business is rechecked against memberships on every server read.
  // No client-provided workspace ID, query, locale or cookie grants financial access.
  const workspace=await preferredWorkspaceFor(user.id);
- if(!workspace)redirect("/workspaces");
+ if(!workspace)redirect("/businesses");
  if(workspace.mode==="off"){
   if(root!=="dashboard"||view.length)notFound();
   return <main className="ek-app-shell ek-workspace-page"><div className="ek-page-wrap">

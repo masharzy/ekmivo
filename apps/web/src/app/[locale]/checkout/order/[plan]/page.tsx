@@ -57,7 +57,7 @@ export default async function SubscriptionOrderPage({params}:{params:Promise<{lo
  let intent:Intent;
  try{
   const flow=await resumePurchase(plan);
-  if(flow.stage!=="summary")redirect(flow.stage==="login"?"/login":flow.stage==="verify"?"/verify-email":flow.stage==="store"?"/workspaces":"/setup");
+  if(flow.stage!=="summary")redirect(flow.stage==="login"?"/login":flow.stage==="verify"?"/verify-email":flow.stage==="store"?"/businesses":"/setup");
   intent=flow.intent;
  }catch(error){
   if(error instanceof IntentError&&error.code==="INTENT_CONFIRMED"){
@@ -68,7 +68,7 @@ export default async function SubscriptionOrderPage({params}:{params:Promise<{lo
  }
  const user=await requireUser(locale);
  const workspace=await preferredWorkspaceFor(user.id);
- if(!workspace)redirect("/workspaces/open");
+ if(!workspace)redirect("/businesses/open");
  if(workspace.role!=="owner"&&workspace.role!=="admin")notFound();
  if(intent.actorId!==user.id||intent.storeId!==workspace.id)notFound();
  // The free entitlement is Phase 4's distinct claim flow, not a zero-due paid invoice.

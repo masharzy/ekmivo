@@ -66,7 +66,7 @@ export async function registerAction(localeParam:string,_previous:FormErrorState
    catch(e){report("send initial verification email",e);}
   }
  } catch(e){report("register",e);return fail(t.generic);}
- redirect(verify?"/verify-email":"/workspaces/open");
+ redirect(verify?"/verify-email":"/businesses/open");
 }
 
 export async function loginAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -101,7 +101,7 @@ export async function loginAction(localeParam:string,_previous:FormErrorState,fo
   if(e && typeof e==="object" && "digest" in e && String(e.digest).startsWith("NEXT_REDIRECT"))throw e;
   report("login",e);return fail(t.generic);
  }
- redirect(asText(form.get("admin"))==="1"?"/admin/verify":"/workspaces/open");
+ redirect(asText(form.get("admin"))==="1"?"/admin/verify":"/businesses/open");
 }
 
 export async function createWorkspaceAction(localeParam:string,_previous:FormErrorState,form:FormData):Promise<FormErrorState>{
@@ -156,7 +156,7 @@ export async function createWorkspaceOnListAction(localeParam:string,nameRaw:str
  try{
   const id=await insertUserWorkspace(user.id,name,mode);
   try{await selectDefaultWorkspace(user.id,id);}catch(e){report("set initial workspace default",e);}
-  revalidatePath(`/${locale}/workspaces`);
+  revalidatePath(`/${locale}/businesses`);
   return {status:"success",message:"",workspace:{id,name,mode}};
  }catch(e){if(e instanceof Error&&e.message==="STORE_LIMIT")return {status:"error",message:locale==="bn"?"একটি অ্যাকাউন্টে সর্বোচ্চ ৫টি ব্যবসা তৈরি করা যায়।":"An account can have up to 5 businesses."};report("createWorkspaceOnList",e);return {status:"error",message:t.generic};}
 }
@@ -168,19 +168,19 @@ export async function renameWorkspaceOnListAction(localeParam:string,id:string,n
   return {status:"error",message:locale==="bn"?"নাম ২–৬০ অক্ষরের হতে হবে।":"Use 2–60 characters."};
  try{
   const rows=await database()`SELECT dashboard_workspace_rename(${id}::uuid,${user.id}::uuid,${name}) AS name`;
-  revalidatePath(`/${locale}/workspaces`);
+  revalidatePath(`/${locale}/businesses`);
   return {status:"success",message:"",name:String(rows[0].name)};
- }catch(e){report("renameWorkspace",e);return {status:"error",message:locale==="bn"?"নাম পরিবর্তন করা যায়নি।":"Could not rename workspace."};}
+ }catch(e){report("renameWorkspace",e);return {status:"error",message:locale==="bn"?"নাম পরিবর্তন করা যায়নি।":"Could not rename business."};}
 }
 
 export async function setDefaultWorkspaceOnListAction(localeParam:string,id:string):Promise<{status:"success"|"error";message:string}>{
  const locale=safeLocale(localeParam);
  const user=await currentUser();
  if(!user)return {status:"error",message:locale==="bn"?"আবার লগইন করুন।":"Please sign in again."};
- if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))return {status:"error",message:locale==="bn"?"ওয়ার্কস্পেস পাওয়া যায়নি।":"Workspace not found."};
+ if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))return {status:"error",message:locale==="bn"?"ওয়ার্কস্পেস পাওয়া যায়নি।":"Business not found."};
  try{
-  if(!await selectDefaultWorkspace(user.id,id))return {status:"error",message:locale==="bn"?"এই ওয়ার্কস্পেসে আপনার অ্যাক্সেস নেই।":"You don't have access to this workspace."};
-  revalidatePath(`/${locale}/workspaces`);
+  if(!await selectDefaultWorkspace(user.id,id))return {status:"error",message:locale==="bn"?"এই ওয়ার্কস্পেসে আপনার অ্যাক্সেস নেই।":"You don't have access to this business."};
+  revalidatePath(`/${locale}/businesses`);
   return {status:"success",message:""};
  }catch(e){report("setDefaultWorkspaceOnList",e);return {status:"error",message:locale==="bn"?"ডিফল্ট বদলানো যায়নি।":"Could not change default."};}
 }
@@ -189,10 +189,10 @@ export async function setDefaultWorkspaceOnListAction(localeParam:string,id:stri
 export async function setDefaultWorkspaceAction(_localeParam:string,workspaceId:string){
  const user=await currentUser();
  if(!user)redirect("/login");
- if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId))redirect("/workspaces");
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId))redirect("/businesses");
  const allowed=await selectDefaultWorkspace(user.id,workspaceId);
- if(!allowed)redirect("/workspaces");
- redirect("/workspaces");
+ if(!allowed)redirect("/businesses");
+ redirect("/businesses");
 }
 
 export async function logoutAction(_localeParam:string){

@@ -21,7 +21,7 @@ export const landingCopy = {
       {tag:"CHECKOUT",title:"The order is built.",body:"Product variants, actual catalog prices, and confirmed customer details form a traceable order.",label:"Order details",signal:"Draft order",detail:"Navy shirt · size M · 1 item"},
       {tag:"EVIDENCE",title:"Payment is verified.",body:"Transaction time, actual sender number, amount, receiving account, and method are compared. Only a unique match verifies.",label:"Payment matching",signal:"Unique match · example",detail:"Five checks passed"},
       {tag:"FULFILMENT",title:"The team moves forward.",body:"With verification recorded, the order can move through inventory, shipping and delivery workflows.",label:"Fulfilment",signal:"Ready to process",detail:"Order → packing → courier"},
-      {tag:"HISTORY",title:"The whole story stays together.",body:"Messages, decisions, records, exceptions and updates remain visible in their proper workspace.",label:"Timeline",signal:"Connected record",detail:"Conversation · order · payment"},
+      {tag:"HISTORY",title:"The whole story stays together.",body:"Messages, decisions, records, exceptions and updates remain visible in their proper business.",label:"Timeline",signal:"Connected record",detail:"Conversation · order · payment"},
     ],
     servicesTag:"YOUR BUSINESS, YOUR SETUP",servicesTitle:"Two services. Better together. Fully useful apart.",servicesLead:"Choose communication, commerce and payment operations, or the connected experience.",
     serviceOptions:["AI Communication","Commerce & Payments","Use both"],serviceDescriptors:[
@@ -52,24 +52,24 @@ export const landingCopy = {
     paymentTag:"A DISTINCTLY BETTER PAYMENT FLOW",paymentTitle:"No screenshot chase. No customer transaction-ID form.",paymentLead:"Payment is confirmed automatically only when trustworthy evidence uniquely matches the request. Ambiguous or missing evidence does not turn into a success.",
     scenarios:["Unique match","Missing evidence","Conflicting receipts"], scenarioTitles:["Automatically verified","Pending evidence","Needs investigation"],scenarioBodies:["All five identifying fields match one unclaimed receipt. An automatic confirmation and webhook can follow.","Not enough transaction evidence is available. The request stays pending without a false success.","More than one candidate or conflicting evidence exists. It remains an exception rather than silently confirming."],
     checks:["Sender number","Transaction time","Exact amount","Receiving account","Payment method"],status:["VERIFIED · EXAMPLE","PENDING · EXAMPLE","EXCEPTION · EXAMPLE"],
-    operationsTag:"BUILT FOR REAL OPERATIONS",operationsTitle:"More than automation. An operating system.", operationsText:"A practical home for teams, brands, agencies and developers — with consent, ownership and recoverable records.", operations:["Role-based access and audit history","Multi-brand and agency workspaces","Developer APIs and webhook replay","Booking, service credits and billing","Data export, retention and backups","Android/iOS, PWA and extension plans"],
+    operationsTag:"BUILT FOR REAL OPERATIONS",operationsTitle:"More than automation. An operating system.", operationsText:"A practical home for teams, brands, agencies and developers — with consent, ownership and recoverable records.", operations:["Role-based access and audit history","Multi-brand and agency businesses","Developer APIs and webhook replay","Booking, service credits and billing","Data export, retention and backups","Android/iOS, PWA and extension plans"],
     solutionTag:"MADE FOR YOUR BUSINESS",solutionTitle:"Different business. Same clarity.",solutions:[
       {name:"Online stores",title:"From product question to shipped order",body:"Help with product choices, create catalog-backed orders, verify payments and track fulfilment."},
       {name:"Service teams",title:"From first inquiry to confirmed booking",body:"Turn a conversation into a scheduled service, with reminders, handover and clear payment status."},
-      {name:"Agencies",title:"Multiple brands, distinct ownership",body:"Manage client workspaces, roles, service budgets and records without mixing customer data."},
+      {name:"Agencies",title:"Multiple brands, distinct ownership",body:"Manage client businesses, roles, service budgets and records without mixing customer data."},
       {name:"Developers",title:"Your system, connected to Briofold",body:"Use scoped APIs, signed webhooks and merchant payment requests for authorized workflows."}
     ],
     pricingTag:"FLEXIBLE BY DESIGN",pricingTitle:"Start with what your business needs.",pricingLead:"Pricing is not announced yet. Below are product configurations, not purchasable plans.",
     pricing:[
       {name:"AI Communication",desc:"Customer conversations, AI assistance and team collaboration.",items:["Channels and unified inbox","Knowledge and automation","CRM and human takeover"]},
       {name:"Commerce & Payments",desc:"Operations, payment evidence and fulfilment.",items:["Catalog, inventory and orders","Automatic matching when eligible","Shipping, records and developer APIs"]},
-      {name:"Connected workspace",desc:"One operating flow, both independent services together.",items:["Everything in AI Communication","Everything in Commerce","Connected conversation-to-order history"]}
+      {name:"Connected business",desc:"One operating flow, both independent services together.",items:["Everything in AI Communication","Everything in Commerce","Connected conversation-to-order history"]}
     ], pricingAction:"View release status",
     trustTag:"TRUST IS A PRODUCT FEATURE",trustTitle:"Designed for control, not mystery.",trustItems:[
       {title:"Permission-aware connections",desc:"Only supported, authorized channel capabilities are used."},
       {title:"Human decisions stay human",desc:"Takeovers, exceptions and disputes remain explicit and auditable."},
       {title:"Evidence-led verification",desc:"No unique match means no automatic confirmed payment."},
-      {title:"Tenant boundaries",desc:"Workspaces and roles are designed to keep merchant data separate."}
+      {title:"Tenant boundaries",desc:"Businesses and roles are designed to keep merchant data separate."}
     ],
     faqTag:"THE DETAILS MATTER",faqTitle:"Questions worth answering.",faqs:[
       ["Can I use just one of the two services?","Yes. The planned product supports AI Communication, Commerce & Payments or both, with independent entitlements."],
@@ -80,7 +80,7 @@ export const landingCopy = {
       ["Can I use Messenger, Instagram and WhatsApp?","These channels are in scope, subject to official platform access and approval. Unapproved channel functionality is not presented as live."],
       ["Is the platform live right now?","The marketing experience is a product preview. Business integrations, signup and paid subscriptions are being built and are not available yet."],
     ],
-    finalTag:"THE NEXT CHAPTER OF YOUR BUSINESS",finalTitle:"Every message matters. Make every step count.",finalText:"One workspace for conversations and commerce. Two services you control. A product being built for the way real businesses move.",finalAction:"Explore the first release",finalNote:"Development preview — signup and integrations are not live yet.", sampleCaption:"Illustrative interface · no real merchant data", next:"Next",previous:"Previous", step:"Step", view:"Explore capabilities", close:"Close",
+    finalTag:"THE NEXT CHAPTER OF YOUR BUSINESS",finalTitle:"Every message matters. Make every step count.",finalText:"One place for conversations and commerce. Two services you control. A product being built for the way real businesses move.",finalAction:"Explore the first release",finalNote:"Development preview — signup and integrations are not live yet.", sampleCaption:"Illustrative interface · no real merchant data", next:"Next",previous:"Previous", step:"Step", view:"Explore capabilities", close:"Close",
   },
   bn: {
     eyebrow:"একটি প্ল্যাটফর্ম · দুটি স্বাধীন সেবা",
@@ -133,7 +133,7 @@ export const landingCopy = {
     paymentTag:"পেমেন্ট পরিচালনায় আলাদা অভিজ্ঞতা",paymentTitle:"স্ক্রিনশট চাওয়া নয়। কাস্টমারের TrxID ফর্মও নয়।",paymentLead:"বিশ্বস্ত প্রমাণের সঙ্গে একটি নির্দিষ্ট মিল হলেই automatic confirmation হবে। প্রমাণ অসম্পূর্ণ বা একাধিক মিল হলে verified দেখানো হবে না।",
     scenarios:["নির্দিষ্ট মিল","প্রমাণ অসম্পূর্ণ","পরস্পরবিরোধী প্রমাণ"],scenarioTitles:["স্বয়ংক্রিয়ভাবে যাচাইকৃত","প্রমাণের অপেক্ষায়","যাচাই প্রয়োজন"],scenarioBodies:["পাঁচটি শনাক্তকারী তথ্য একই অব্যবহৃত রসিদের সঙ্গে মিলে গেছে। স্বয়ংক্রিয় confirmation ও webhook পাঠানো সম্ভব।","যথেষ্ট লেনদেনের প্রমাণ নেই। ভুলভাবে সফল না দেখিয়ে pending থাকবে।","একাধিক সম্ভাব্য মিল বা বিরোধ থাকলে exception থাকবে, স্বয়ংক্রিয়ভাবে confirmed নয়।"],
     checks:["প্রেরকের নম্বর","লেনদেনের সময়","টাকার পরিমাণ","গ্রহণকারী অ্যাকাউন্ট","পেমেন্ট মাধ্যম"],status:["যাচাইকৃত · নমুনা","অপেক্ষমাণ · নমুনা","ব্যতিক্রম · নমুনা"],
-    operationsTag:"বাস্তব ব্যবসার জন্য",operationsTitle:"শুধু অটোমেশন নয়, ব্যবসার ওয়ার্কস্পেস।",operationsText:"টিম, ব্র্যান্ড, এজেন্সি ও ডেভেলপারের কাজ—নিয়ন্ত্রণ, সম্মতি ও নির্ভরযোগ্য রেকর্ডের পরিকল্পনা।",operations:["Role ও audit history","Multi-brand ও agency workspace","Developer API ও webhook replay","Booking, credit ও billing","Data export, retention ও backup","Android/iOS, PWA ও extension"],
+    operationsTag:"বাস্তব ব্যবসার জন্য",operationsTitle:"শুধু অটোমেশন নয়, ব্যবসার ওয়ার্কস্পেস।",operationsText:"টিম, ব্র্যান্ড, এজেন্সি ও ডেভেলপারের কাজ—নিয়ন্ত্রণ, সম্মতি ও নির্ভরযোগ্য রেকর্ডের পরিকল্পনা।",operations:["Role ও audit history","Multi-brand ও agency ব্যবসা","Developer API ও webhook replay","Booking, credit ও billing","Data export, retention ও backup","Android/iOS, PWA ও extension"],
     solutionTag:"যে ধরনের ব্যবসাই হোক",solutionTitle:"ভিন্ন ব্যবসা, একই স্বচ্ছতা।",solutions:[
       {name:"অনলাইন শপ",title:"পণ্যের প্রশ্ন থেকে ডেলিভারি",body:"পণ্য বাছাইয়ে সহায়তা, ক্যাটালগভিত্তিক অর্ডার, পেমেন্ট যাচাই ও কুরিয়ার।"},
       {name:"সেবা প্রদানকারী",title:"প্রথম যোগাযোগ থেকে বুকিং",body:"কথোপকথন থেকে সময় নির্ধারণ, reminder, human handover ও পেমেন্ট status।"},

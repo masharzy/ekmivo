@@ -79,8 +79,7 @@ function PaymentOperationsScoped({locale,workspaceId,userId,environment,resource
  const editable=(resource==="devices"||resource==="webhooks"||resource==="gateways")&&!detailId&&canManage;
  const rowHref=(row:Row)=>{
   const id=resource==="deliveries"?String(row.endpoint_id):row.id;
-  return canonicalRoutes?unifiedFinancialDetailPath(resource,id)
-   :`/${locale}/w/${workspaceId}/payments/${resource==="deliveries"?"webhooks":resource}/${id}?env=${environment}`;
+  return unifiedFinancialDetailPath(resource,id);
  };
  return <section className="ds-panel pg-operations" aria-busy={loading||busy}>
   <div className="ds-panel-heading"><p>{environment==="sandbox"?(bn?"Sandbox · কোনো live payment নয়":"Sandbox · no live payments"):(bn?"Live environment":"Live environment")}</p><button disabled={loading||busy||!online} onClick={()=>void load()}>{bn?"Refresh":"Refresh"}</button></div>

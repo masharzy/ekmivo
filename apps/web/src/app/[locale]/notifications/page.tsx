@@ -8,7 +8,7 @@ export default async function NotificationsPage({params}:{params:Promise<{locale
  const {locale:raw}=await params;const locale=raw==="en"?"en":"bn";
  const user=await requireUser(locale);
  const preferred=await preferredWorkspaceFor(user.id);
- if(!preferred||preferred.mode==="off")redirect("/workspaces");
+ if(!preferred||preferred.mode==="off")redirect("/businesses");
  const aiEnabled=preferred.mode!=="commerce";
  const paymentContext=preferred.mode!=="ai"?await paymentContextFor(preferred,user.id,undefined):undefined;
  return <AppShell unified locale={locale} user={user} workspace={preferred}

@@ -8,7 +8,7 @@ export async function beginGoogleAction(locale:"en"|"bn",mode:"signin"|"link"){
  const config=googleConfiguration(),user=await currentUser();
  const destination=mode==="link"?"/account":"/login";
  if(!config)redirect(destination+"?google=unavailable");
- if(mode==="signin"&&user)redirect("/workspaces/open");
+ if(mode==="signin"&&user)redirect("/businesses/open");
  const jar=await cookies(),token=jar.get("briofold-session")?.value;
  if(mode==="link"&&(!user||!token||!user.verified))redirect("/account?google=reauth");
  const flow=newGoogleFlow(locale,mode==="link"?{userId:user!.id,sessionHash:hashToken(token!)}:undefined);

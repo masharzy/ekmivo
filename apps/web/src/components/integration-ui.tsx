@@ -17,7 +17,7 @@ export function IntegrationNav({scope,active}:{scope:IntegrationScope;active:str
 export function integrationHref(s:IntegrationScope,section:string,id?:string,tab?:string){
  const p=new URLSearchParams();if(tab)p.set("tab",tab);
  const canonical:Record<string,string>={developers:"/settings/api-keys",webhooks:"/settings/webhooks",events:"/settings/activity",integrations:"/settings/integrations"};
- const base=s.canonicalRoutes&&canonical[section]?canonical[section]:`/${s.locale}/w/${s.workspaceId}/payments/${section}`;
+ const base=canonical[section]??`/settings/${section}`;
  return `${base}${id?'/'+encodeURIComponent(id):''}${p.size?'?'+p:''}`;
 }
 // Local view changes keep the application shell and do not trigger a new

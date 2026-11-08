@@ -15,11 +15,11 @@ test("password and OAuth signups bind the first (primary) Store transactionally"
  assert.match(oauth,/return database\(\)\.begin\(async tx=>/);
 });
 test("multi-store: any member store can be selected and the picker is not bypassed",()=>{
- const auth=read("lib/server/auth.ts"),list=read("app/[locale]/workspaces/page.tsx");
+ const auth=read("lib/server/auth.ts"),list=read("app/[locale]/businesses/page.tsx");
  assert.doesNotMatch(auth,/if\(bound && workspaceId!==bound\)return false/);
  assert.match(auth,/SELECT 1 FROM workspace_members WHERE user_id=\$\{userId\}::uuid AND workspace_id=\$\{workspaceId\}::uuid/);
  assert.match(auth,/spaces\.find\(w=>w\.id===chosen\)\?\?spaces\.find\(w=>w\.id===bound\)\?\?spaces\[0\]/);
- assert.doesNotMatch(list,/redirect\("\/workspaces\/open"\)/);
+ assert.doesNotMatch(list,/redirect\("\/businesses\/open"\)/);
  assert.match(auth,/to_regclass\(\x27public.platform_primary_stores\x27\)/);
  assert.match(auth,/if\(!schema\?\.ready\)return null/);
 });
@@ -29,9 +29,9 @@ test("dashboard always shows the store switcher with Create new store; membershi
  assert.match(shell,/const spaces=memberships/);
  assert.doesNotMatch(frame,/spaces\.length<=1\?/);
  assert.match(frame,/ds-business-picker/);
- assert.match(frame,/\/workspaces\?create=1/);
+ assert.match(frame,/\/businesses\?create=1/);
  assert.doesNotMatch(auth,/if\(bound&&bound!==id\)redirect/);
- assert.match(auth,/if\(!rows\.length\)redirect\("\/workspaces"\)/);
+ assert.match(auth,/if\(!rows\.length\)redirect\("\/businesses"\)/);
 });
 
 // Legacy multi-Store owners remain unbound until explicitly migrated.
@@ -39,10 +39,10 @@ test("dashboard always shows the store switcher with Create new store; membershi
 test("single-Store routes stay canonical without locale path segments",()=>{
  const view=read("components/workspaces-v2.tsx"),actions=read("actions/account.ts");
  assert.doesNotMatch(view,/href=\{`\/\$\{locale\}\/workspaces/);
- assert.match(view,/href="\/workspaces"/);
+ assert.match(view,/href="\/businesses"/);
  assert.match(actions,/redirect\("\/login"\)/);
  assert.match(actions,/"\/admin\/verify"/);
- assert.match(actions,/"\/workspaces\/open"/);
+ assert.match(actions,/"\/businesses\/open"/);
  const frame=read("components/dashboard-frame.tsx");
  assert.match(frame,/spaces\.length>1\?searchableBusinesses/);
 });

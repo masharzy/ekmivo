@@ -46,7 +46,7 @@ test("Phase 4 resume cannot issue an invoice and Phase 5 owns confirmed paid che
  assert.match(migration,/claimed_free/);
 });
 test("OAuth/login and Store setup have one continuation point",()=>{
- const sourceCode=source("app/[locale]/workspaces/open/page.tsx");
+ const sourceCode=source("app/[locale]/businesses/open/page.tsx");
  assert.match(sourceCode,/activePurchase\(\)/);
  assert.match(sourceCode,/subscribe\/resume/);
  const route=source("app/[locale]/subscribe/resume/[token]/route.ts");

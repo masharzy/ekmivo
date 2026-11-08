@@ -7,7 +7,7 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  try{
   const result=await resumePurchase(token);
   const to=result.stage==="login"?"/login":result.stage==="verify"?"/verify-email":
-   result.stage==="store"?"/workspaces":result.stage==="setup"?"/setup":`/checkout/order/${token}`;
+   result.stage==="store"?"/businesses":result.stage==="setup"?"/setup":`/checkout/order/${token}`;
   const response=NextResponse.redirect(new URL(to,request.url),303);
   response.headers.set("Cache-Control","no-store");
   response.headers.set("Referrer-Policy","no-referrer");

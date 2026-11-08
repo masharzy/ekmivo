@@ -52,10 +52,10 @@ test("All canonical finance-source detail links round-trip into their authorized
  assert.equal(unifiedFinancialDetailPath("payments","not-an-id"),null);
  assert.equal(unifiedFinancialDetailPath("invoices","../private"),null);
  const source=src("components/payment-operations.tsx");
- assert.match(source,/canonicalRoutes\?unifiedFinancialDetailPath\(resource,id\)/);
+ assert.match(source,/unifiedFinancialDetailPath\(resource,id\)/);
  assert.match(source,/rowHref\(row\)/);
  const docs=src("components/payment-documents.tsx");
- assert.match(docs,/canonicalRoutes\?unifiedFinancialDetailPath\(kind,selectedDocument\.id\)/);
+ assert.match(docs,/unifiedFinancialDetailPath\(kind,selectedDocument\.id\)/);
  const dashboard=src("components/dashboard-content.tsx");
  assert.match(dashboard,/<PaymentOperations canonicalRoutes=\{canonicalRoutes\}/);
  assert.match(dashboard,/<PaymentDocuments canonicalRoutes=\{canonicalRoutes\}/);
@@ -119,7 +119,7 @@ test("Canonical payment links expose existing one-time intents without requiring
  const documents=src("components/payment-documents.tsx");
  assert.match(documents,/canonicalRoutes\?`\/payments\/links\?view=requests&request=\$\{p\.intent_id\}`/);
  assert.match(documents,/`\/w\/\$\{workspaceId\}\/payments\/requests\?request=\$\{p\.intent_id\}`/);
- assert.match(documents,/canonicalRoutes\?unifiedFinancialDetailPath\("invoices",inv\.id\)/);
+ assert.match(documents,/unifiedFinancialDetailPath\("invoices",inv\.id\)/);
 });
 
 test("Production payment shell ships its original fonts without an external build-time fetch",()=>{

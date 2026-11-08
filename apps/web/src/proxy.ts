@@ -28,6 +28,11 @@ export function proxy(request:NextRequest){
    response.cookies.set("briofold-locale",locale,{path:"/",maxAge:31536000,sameSite:"lax"});
   return response;
  }
+ // Old bookmarks and emails: /workspaces is now /businesses.
+ if(/^\/workspaces(?=\/|$)/.test(path)){
+  const moved=request.nextUrl.clone();moved.pathname=path.replace(/^\/workspaces/,"/businesses");
+  return NextResponse.redirect(moved,308);
+ }
  const target=request.nextUrl.clone();
  target.pathname="/"+locale+path;
  if(path==="/")target.pathname="/"+locale;
@@ -38,7 +43,7 @@ export function proxy(request:NextRequest){
  headers.delete("x-briofold-application");
  headers.delete("x-briofold-auth-page");
  headers.set("x-briofold-locale",locale);
- if(/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin)(?:\/|$)/.test(path))headers.set("x-briofold-application","1");
+ if(/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|businesses|account|admin)(?:\/|$)/.test(path))headers.set("x-briofold-application","1");
  if(/^\/(?:login|register|forgot-password|verify-email)(?:\/|$)/.test(path))headers.set("x-briofold-auth-page","1");
  return NextResponse.rewrite(target,{request:{headers}});
 }

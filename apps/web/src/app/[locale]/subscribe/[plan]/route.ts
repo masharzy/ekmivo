@@ -62,7 +62,7 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  const workspace=requested?(await workspacesFor(user.id)).find(w=>w.id===requested):await preferredWorkspaceFor(user.id);
  if(!workspace){
   jar.set("briofold-selected-plan",plan,{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:SELECTION_TTL,path:"/"});
-  return NextResponse.redirect(new URL("/workspaces",request.url),303);
+  return NextResponse.redirect(new URL("/businesses",request.url),303);
  }
  const setup=await onboardingState(workspace,user.id);
  if(setup&&setup!=="complete"){

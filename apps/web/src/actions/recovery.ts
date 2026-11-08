@@ -27,7 +27,7 @@ export async function resendEmailCodeAction(localeParam:string,_prev:RecoverySta
 export async function verifyEmailCodeAction(localeParam:string,_prev:RecoveryState,form:FormData):Promise<RecoveryState>{
  const locale=safeLocale(localeParam),t=copy[locale],user=await currentUser();
  if(!user)return {status:"error",message:t.generic};
- if(user.verified)redirect("/workspaces/open");
+ if(user.verified)redirect("/businesses/open");
  const code=asText(form.get("code"));
  let verified=false;
  try{
@@ -36,7 +36,7 @@ export async function verifyEmailCodeAction(localeParam:string,_prev:RecoverySta
     WHERE id=${user.id}::uuid AND email_verified_at IS NULL`;
  }catch(e){console.error("[verify email]",e instanceof Error?e.name:"error");return {status:"error",message:t.generic};}
  if(!verified)return {status:"error",message:t.badCode};
- redirect(`/${locale}/workspaces/open`);
+ redirect(`/${locale}/businesses/open`);
 }
 
 export async function requestPasswordResetAction(localeParam:string,_prev:RecoveryState,form:FormData):Promise<RecoveryState>{

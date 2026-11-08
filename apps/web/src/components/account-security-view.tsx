@@ -35,7 +35,7 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme,googleReady=
  const keepDraft=()=>{if(!dirty)return;try{sessionStorage.setItem(key,name)}catch{}};
  const restore=()=>{try{const value=sessionStorage.getItem(key);if(value===null||value.length>100)throw Error("NO_DRAFT");setName(value);setRestored(true);setMessage(t("Restored your draft in this tab.","এই ট্যাবের খসড়া ফিরিয়ে আনা হয়েছে।"))}catch{setMessage(t("No saved draft in this tab.","এই ট্যাবে কোনো খসড়া নেই।"))}};
  return <div className="account-page" lang={locale}>
-  <header className="ac-top"><Link href="/workspaces" onClick={keepDraft} className="ac-brand">briofold</Link><div className="ac-top-actions"><Link href="/workspaces" onClick={keepDraft} className="ac-back">{t("Businesses","ব্যবসা")}</Link><SiteControls locale={locale} initialTheme={theme} compactThemeToggle/><span className="ac-mini-avatar" aria-label={savedName}>{initials}</span></div></header>
+  <header className="ac-top"><Link href="/businesses" onClick={keepDraft} className="ac-brand">briofold</Link><div className="ac-top-actions"><Link href="/businesses" onClick={keepDraft} className="ac-back">{t("Businesses","ব্যবসা")}</Link><SiteControls locale={locale} initialTheme={theme} compactThemeToggle/><span className="ac-mini-avatar" aria-label={savedName}>{initials}</span></div></header>
   <main className="ac-main">
    <div className="ac-page-head"><h1>{t("Account settings","অ্যাকাউন্ট সেটিংস")}</h1><p>{t("Your profile, sign-in and active sessions.","আপনার প্রোফাইল, লগইন ও সক্রিয় সেশন।")}</p></div>
    <section className="ac-identity" aria-label={t("Account summary","অ্যাকাউন্ট পরিচিতি")}><span className="ac-avatar">{initials}</span><div className="ac-identify"><strong>{savedName}</strong><span>{user.email}</span></div><span className={"ac-status "+(user.verified?"ac-positive":"ac-warning")}>{user.verified?t("Email verified","ইমেইল যাচাইকৃত"):t("Verification needed","যাচাই প্রয়োজন")}</span></section>
@@ -62,7 +62,7 @@ export function AccountSecurityView({locale,user,sessions,mfa,theme,googleReady=
      {session.is_current?<span className="ac-status ac-positive">{t("Current","বর্তমান")}</span>:<button type="button" className="ac-secondary ac-danger" disabled={busy===session.id} onClick={async()=>{setBusy(session.id);try{const result=await revokeAccountSession(locale,session.id);setMessage(result.message);if(result.status==="success")router.refresh()}finally{setBusy("")}}}>{busy===session.id?t("Working…","অপেক্ষা করুন…"):t("Revoke","বন্ধ করুন")}</button>}
     </div>)}</div><p className="ac-note">{t("We only show actual recorded sessions. Device and IP information is not collected.","শুধু সংরক্ষিত সেশন দেখানো হয়; ডিভাইস বা IP তথ্য অনুমান করে দেখানো হয় না।")}</p>
    </section>
-   <footer className="ac-footer"><Link href="/workspaces" onClick={keepDraft} className="ac-secondary">{t("Back to businesses","ব্যবসাে ফিরুন")}</Link><form action={logoutAction.bind(null,locale)}><button className="ac-secondary" type="submit">{t("Sign out","সাইন আউট")}</button></form></footer>
+   <footer className="ac-footer"><Link href="/businesses" onClick={keepDraft} className="ac-secondary">{t("Back to businesses","ব্যবসাে ফিরুন")}</Link><form action={logoutAction.bind(null,locale)}><button className="ac-secondary" type="submit">{t("Sign out","সাইন আউট")}</button></form></footer>
   </main>
  </div>;
 }

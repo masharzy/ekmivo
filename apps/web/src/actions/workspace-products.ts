@@ -38,8 +38,8 @@ export async function setWorkspaceProduct(localeText:string,_old:ServiceToggleSt
   });
   if(result==="forbidden")return {status:"error",message:bn?"এই পরিবর্তনের অনুমতি নেই।":"Only an owner or admin can change business products."};
   if(result==="unavailable")return {status:"error",message:bn?"এই ব্যবসার সেবা কনফিগার করা হয়নি।":"Product configuration is unavailable."};
-  revalidatePath(`/${locale}/workspaces`);
-  revalidatePath(`/${locale}/w/${workspace}/dashboard`);
+  revalidatePath(`/${locale}/businesses`);
+  revalidatePath(`/${locale}/dashboard`);
   return {status:"success",message:result==="unchanged"
    ?(bn?"আগের অবস্থাই আছে।":"No change was required.")
    :(next?(bn?"সেবাটি চালু করা হয়েছে।":"Product enabled."): (bn?"সেবাটি বন্ধ করা হয়েছে।":"Product disabled."))};

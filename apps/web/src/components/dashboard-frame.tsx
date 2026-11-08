@@ -264,16 +264,6 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    startTransition(async()=>{if(await chooseUnifiedBusiness(target.id)){router.push("/dashboard");router.refresh();}});
    return;
   }
-  if(target.mode==="off"){
-   setSearchOpen(false);
-   setMobileOpen(false);
-   const next=`/w/${target.id}/dashboard`;
-   // Even a disabled product has a guarded destination. Never bypass an
-   // active unsaved draft when switching to a business with both products off.
-   if(activeDrafts().length){setBlockedRoute(next);setDraftError("");return;}
-   startTransition(()=>router.push(next));
-   return;
-  }
   const chosen=serviceEnabled(service,target.mode)?service:(target.mode==="ai"?"ai":"payments");
   goTo(target.id,chosen,environment,rememberedSection(target.id,chosen));
  };
@@ -308,7 +298,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
     <label className="ds-switch-search"><span className="sr-only">{bn?"ব্যবসা খুঁজুন":"Find business"}</span><input value={businessQuery} onChange={event=>setBusinessQuery(event.target.value)} placeholder={bn?"ব্যবসা খুঁজুন…":"Search businesses…"} /></label>
     {visibleBusinesses.map(space=><button key={space.id} type="button" aria-current={space.id===workspace.id?"true":undefined} onClick={()=>switchBusiness(space)}><span className="ds-business-avatar">{space.name.slice(0,1).toUpperCase()}</span><span><strong>{space.name}</strong><small>{roleNames[space.role][locale]}</small></span>{space.id===workspace.id&&<Icon name="check"/>}</button>)}
     {!visibleBusinesses.length&&<p className="ds-no-match" role="status">{bn?"কোনো ব্যবসা পাওয়া যায়নি":"No stores match"}</p>}
-    <div className="ds-business-actions"><Link href="/workspaces" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"ব্যবসা পরিচালনা":"Manage businesses"}</Link><Link href="/workspaces?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন ব্যবসা":"New business"}</Link></div>
+    <div className="ds-business-actions"><Link href="/businesses" onClick={()=>setMobileOpen(false)}><Icon name="settings"/>{bn?"ব্যবসা পরিচালনা":"Manage businesses"}</Link><Link href="/businesses?create=1" onClick={()=>setMobileOpen(false)}><Icon name="plus"/>{bn?"নতুন ব্যবসা":"New business"}</Link></div>
    </div>
   </details>
   </div>
@@ -399,7 +389,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
      const slug=pathname.startsWith("/settings/")&&top?.key==="settings"?pathname.slice("/settings/".length):"";
      const leaf=slug?unifiedSettings.flatMap(g=>g.items).filter(i=>slug===i.slug||slug.startsWith(i.slug+"/")).sort((a,b)=>b.slug.length-a.slug.length)[0]:undefined;
      return leaf&&top?<><Link href={top.href}>{top[locale]}</Link><Icon name="chevron"/><strong aria-current="page">{leaf[locale]}</strong></>:<strong aria-current="page">{top?.[locale]??sections[section][locale]}</strong>;
-    })()}</>:<><Link href="/workspaces">{workspace.name}</Link><Icon name="chevron"/><Link href={contextHref("overview")}>{serviceNames[service][locale]}</Link><Icon name="chevron"/><strong aria-current="page">{sections[section][locale]}</strong></>}</nav>
+    })()}</>:<><Link href="/businesses">{workspace.name}</Link><Icon name="chevron"/><Link href={contextHref("overview")}>{serviceNames[service][locale]}</Link><Icon name="chevron"/><strong aria-current="page">{sections[section][locale]}</strong></>}</nav>
    {isNavigating&&<div className="ds-navigation-progress" role="status">{bn?"পৃষ্ঠা খুলছে…":"Opening page…"}</div>}
    <main id="dashboard-content" className="ds-content" tabIndex={-1} aria-busy={isNavigating}>{children}</main>
    <footer className="ds-footnote"><span>{unified?workspace.name:serviceNames[service][locale]+" · "+workspace.name}</span><span>Asia/Dhaka</span></footer>

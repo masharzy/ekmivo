@@ -119,7 +119,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
    return {code:"created" as const,raw,keyId:id};
   });
   if(result.code==="denied"||result.code==="reauth"||result.code==="limit"||result.code==="missing"||result.code==="plan")return error(bn,result.code);
-  revalidatePath(`/${locale}/w/${workspace}/payments/developers`);
+  revalidatePath(`/${locale}/settings/api-keys`);
   revalidatePath(`/${locale}/settings/api-keys`);
   if(result.code==="revoked")return {status:"success",keyId:oldId,message:bn?"কীটি বাতিল করা হয়েছে।":"API key revoked."};
   return {status:"success",message:bn?"গোপন কীটি এখনই কপি করুন। এটি আর দেখানো হবে না।":"Copy this secret now. It will never be shown again.",rawSecret:result.raw,keyId:result.keyId};

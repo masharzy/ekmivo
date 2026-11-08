@@ -24,7 +24,7 @@ export default async function PublishedOfferReview({params,searchParams}:{
   publicSubscriptionOffers(),preferredWorkspaceFor(user.id),publishedSubscriptionPolicies()
  ]);
  if(catalog.unavailable)throw new Error("Published subscription catalog unavailable");
- if(!store)redirect("/workspaces/open");
+ if(!store)redirect("/businesses/open");
  if(store.role!=="owner"&&store.role!=="admin")redirect("/pricing");
  const result=quotePublishedPrice(catalog.offers,{key:offer,version_id:version,term:term as SubscriptionTerm});
  if(result.status==="invalid"||result.status==="not_found")notFound();

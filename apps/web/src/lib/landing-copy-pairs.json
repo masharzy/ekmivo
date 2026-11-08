@@ -130,8 +130,8 @@
       "bn": "কী যাচ্ছে, দেখতে পান"
     },
     {
-      "en": "Every SMS field that reaches the server is visible to you in your workspace.",
-      "bn": "সার্ভারে যে এসএমএস-তথ্য পৌঁছায়, তার সবটাই আপনি ওয়ার্কস্পেসে দেখতে পারেন।"
+      "en": "Every SMS field that reaches the server is visible to you in your business.",
+      "bn": "সার্ভারে যে এসএমএস-তথ্য পৌঁছায়, তার সবটাই আপনি ব্যবসায় দেখতে পারেন।"
     },
     {
       "en": "Money stays with you",
@@ -198,8 +198,8 @@
       "bn": "দুবার গোনা হয় না"
     },
     {
-      "en": "Plan limits and prices are listed inside your workspace.",
-      "bn": "প্ল্যানের সীমা ও দাম ওয়ার্কস্পেসের ভেতরেই দেখা যায়।"
+      "en": "Plan limits and prices are listed inside your business.",
+      "bn": "প্ল্যানের সীমা ও দাম ব্যবসার ভেতরেই দেখা যায়।"
     },
     {
       "en": "No cut from your sales",
@@ -234,8 +234,8 @@
       "bn": "অ্যাপ কীভাবে ইনস্টল করব?"
     },
     {
-      "en": "Download the Briofold app (APK) from your workspace and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.",
-      "bn": "ওয়ার্কস্পেস থেকে Briofold অ্যাপ (APK) ডাউনলোড করে এসএমএস অ্যাক্সেস দিন। নতুন অ্যান্ড্রয়েড ভার্সনে অ্যাপের জন্য restricted settings-ও চালু করতে হতে পারে।"
+      "en": "Download the Briofold app (APK) from your business and allow SMS access. On newer Android versions you may also need to allow restricted settings for the app.",
+      "bn": "ব্যবসা থেকে Briofold অ্যাপ (APK) ডাউনলোড করে এসএমএস অ্যাক্সেস দিন। নতুন অ্যান্ড্রয়েড ভার্সনে অ্যাপের জন্য restricted settings-ও চালু করতে হতে পারে।"
     },
     {
       "en": "Payments",
@@ -762,8 +762,8 @@
       "bn": "কাস্টমার পেমেন্ট করুক, আপনাকে আর পেছনে ছুটতে হবে না।"
     },
     {
-      "en": "Create a workspace",
-      "bn": "ওয়ার্কস্পেস খুলুন"
+      "en": "Create a business",
+      "bn": "ব্যবসা খুলুন"
     },
     {
       "en": "Service status",
@@ -918,8 +918,8 @@
       "bn": "দাম এই মুহূর্তে দেখানো যাচ্ছে না।"
     },
     {
-      "en": "See plans in your workspace",
-      "bn": "ওয়ার্কস্পেসে প্ল্যান দেখুন"
+      "en": "See plans in your business",
+      "bn": "ব্যবসায় প্ল্যান দেখুন"
     },
     {
       "en": "Loading plans",

@@ -18,6 +18,6 @@ export function parseSavedDraft(value){
 }
 export function encodeSavedDraft(value){
  const draft=valid(value);
- if(!draft)throw Error("Invalid workspace draft");
+ if(!draft)throw Error("Invalid business draft");
  return JSON.stringify(draft);
 }

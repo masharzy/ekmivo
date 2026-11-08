@@ -116,7 +116,7 @@ export async function preferredWorkspaceFor(userId:string){
 }
 export const requireWorkspace=cache(async function requireWorkspace(locale:"bn"|"en",id:string){
  const user=await requireUser(locale);
- if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))redirect("/workspaces");
+ if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))redirect("/businesses");
  const rows=await database()`
  SELECT w.id,w.name,CASE WHEN COALESCE(ai.enabled,false) AND COALESCE(pay.enabled,false) THEN 'both'
  WHEN COALESCE(ai.enabled,false) THEN 'ai'
@@ -125,7 +125,7 @@ export const requireWorkspace=cache(async function requireWorkspace(locale:"bn"|
  LEFT JOIN workspace_product_access ai ON ai.workspace_id=w.id AND ai.product='ai'
  LEFT JOIN workspace_product_access pay ON pay.workspace_id=w.id AND pay.product='payments'
  WHERE m.user_id=${user.id} AND w.id=${id}::uuid LIMIT 1`;
- if(!rows.length)redirect("/workspaces");
+ if(!rows.length)redirect("/businesses");
  const w=rows[0];
  return {user,workspace:{id:String(w.id),name:String(w.name),mode:w.service_mode as Workspace["mode"],role:w.role as Workspace["role"]}};
 });

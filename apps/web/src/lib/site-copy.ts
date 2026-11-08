@@ -2,7 +2,7 @@ export type Locale = "bn" | "en";
 
 export const siteCopy = {
  en: {
-  nav: {services:"Services",workflow:"How it works",principles:"Payment checks",ai:"AI workspace",commerce:"Payments",pricing:"Pricing",solutions:"Who it's for",faq:"FAQ"},
+  nav: {services:"Services",workflow:"How it works",principles:"Payment checks",ai:"AI Bot",commerce:"Payments",pricing:"Pricing",solutions:"Who it's for",faq:"FAQ"},
   login:"Sign in", register:"Create account", theme:"Theme", language:"Language", menu:"Open menu", closeMenu:"Close menu",
   footerLine:"Payment links, checkout and evidence-based verification. AI Bot is coming later.",
   footerStatus:"Service availability", rights:"All rights reserved.",

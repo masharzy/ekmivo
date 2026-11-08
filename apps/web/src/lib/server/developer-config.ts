@@ -6,6 +6,6 @@ export const developerConfig={
  siteOrigin:publicOrigin(process.env.NEXT_PUBLIC_SITE_URL)||"https://briofold.tech",
  portalOrigin:publicOrigin(process.env.NEXT_PUBLIC_DEVELOPER_ORIGIN),
  apiOrigin:publicOrigin(process.env.NEXT_PUBLIC_DEVELOPER_API_ORIGIN),
- dashboard:"/workspaces/open",keys:"/workspaces/open",status:"/status",contract:"/api/payment-contract",
+ dashboard:"/businesses/open",keys:"/businesses/open",status:"/status",contract:"/api/payment-contract",
  fullWebhookExample:"https://github.com/masharzy/ekmivo/blob/main/examples/simple-payment/webhook.mjs"
 };

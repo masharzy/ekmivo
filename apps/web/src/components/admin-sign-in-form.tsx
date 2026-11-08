@@ -17,6 +17,6 @@ export function AdminSignInForm({locale}:{locale:"en"|"bn"}){
  {state.status==="error"&&<p role="alert" className="pa-mfa-errors">{state.message}</p>}
  </form>
  <Link className="pa-mfa-link" href={"/"+locale+"/forgot-password"}>{bn?"পাসওয়ার্ড ভুলে গেছেন?":"Forgot password?"}</Link>
- <Link className="pa-mfa-link" href={"/"+locale+"/workspaces"}>{bn?"মার্চেন্ট ড্যাশবোর্ড":"Back to merchant dashboard"}</Link>
+ <Link className="pa-mfa-link" href={"/"+locale+"/businesses"}>{bn?"মার্চেন্ট ড্যাশবোর্ড":"Back to merchant dashboard"}</Link>
  </div></main>;
 }

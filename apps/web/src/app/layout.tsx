@@ -30,7 +30,7 @@ const figtree = localFont({
 
 export const metadata: Metadata = {
   title: "Briofold — Conversations and commerce, together",
-  description: "A clearer workspace for customer conversations, AI assistance, orders and automatic payment verification.",
+  description: "A clearer home for customer conversations, AI assistance, orders and automatic payment verification.",
   manifest: "/manifest.webmanifest",
 };
 

@@ -15,5 +15,5 @@ export default async function OpenWorkspace({params}:{params:Promise<{locale:str
  if(plan&&/^[a-z][a-z0-9_-]{1,39}$/.test(plan))redirect(`/subscribe/${plan}`);
  const selected=await preferredWorkspaceFor(user.id);
  if(selected){const stage=await onboardingState(selected,user.id);redirect(stage&&stage!=="complete"?"/setup":"/dashboard");}
- redirect("/workspaces");
+ redirect("/businesses");
 }

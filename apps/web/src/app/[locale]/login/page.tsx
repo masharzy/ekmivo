@@ -12,6 +12,6 @@ export const metadata: Metadata = { title: "Log in | Briofold" };
 export default async function LoginPage({ params,searchParams }: { params: Promise<{ locale: string }>;searchParams:Promise<{google?:string}> }) {
   const { locale } = await params;
   if (locale !== "bn" && locale !== "en") notFound();
-  if(await currentUser())redirect("/workspaces/open");
+  if(await currentUser())redirect("/businesses/open");
   return <AuthForm locale={locale} mode="login" googleReady={!!googleConfiguration()} googleNotice={googleMessage((await searchParams).google,locale==="bn")} />;
 }

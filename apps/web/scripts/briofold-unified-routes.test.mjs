@@ -46,12 +46,12 @@ test("legacy API documentation settings paths resolve to the existing public dev
 });
 test("multi-store: selected-store cookie wins, primary store is only the fallback, historic memberships kept",()=>{
  const auth=source("lib/server/auth.ts"),shell=source("components/app-shell.tsx");
- const workspaces=source("app/[locale]/workspaces/page.tsx"),proxy=source("app/api/go/[...path]/route.ts");
+ const workspaces=source("app/[locale]/businesses/page.tsx"),proxy=source("app/api/go/[...path]/route.ts");
  assert.match(auth,/primaryStoreFor\(userId\)/);
  assert.match(auth,/spaces\.find\(w=>w\.id===chosen\)\?\?spaces\.find\(w=>w\.id===bound\)\?\?spaces\[0\]/);
  assert.doesNotMatch(auth,/if\(bound && workspaceId!==bound\)return false/);
  assert.match(shell,/const spaces=memberships/);
- assert.doesNotMatch(workspaces,/redirect\("\/workspaces\/open"\)/);
+ assert.doesNotMatch(workspaces,/redirect\("\/businesses\/open"\)/);
  assert.match(proxy,/STALE_BUSINESS/);
 });
 test("global marketing header and footer do not render on unified application routes",()=>{
@@ -64,9 +64,7 @@ test("settings uses opt-in CSS module and preserves legacy payment screens",()=>
  const src=source("components/unified-settings-index.tsx");
  assert.match(src,/unified-settings-index\.module\.css/);
  assert.match(src,/enabledUnifiedService\(mode,item\.service\)/);
- const layout=source("app/[locale]/w/[workspaceId]/[section]/layout.tsx");
- assert.doesNotMatch(layout,/<AppShell/);
- assert.match(source("app/[locale]/w/[workspaceId]/[section]/[serviceSection]/page.tsx"),/redirectLegacyDashboard/);
+ assert.ok(!existsSync(at("app/[locale]/w")),"legacy /w route must stay removed");
  const frame=source("components/dashboard-frame.tsx");
  assert.match(frame,/unified\?"/);
  assert.match(frame,/data-service=\{unified\?"payments":service\}/);
