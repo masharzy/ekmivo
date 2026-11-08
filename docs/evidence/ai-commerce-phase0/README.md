@@ -40,3 +40,7 @@ For these atomic test applications, any statement error rolls back the entire ba
 - [ ] Latest PR CI green, including complete isolated PostgreSQL smoke; until then Phase 0 is NOT SEALED.
 
 The connector applied the same reviewed ledger/transaction semantics as the Go coordinator; the three-realm Go CLI was not run against production. This is CONTROL schema verification, not real customer/provider/media/payment acceptance. Customer authorization/PII tests and all AI selling features remain dependent-phase work. Production migrations, merge and deployment require separate owner authorization.
+
+## CI follow-up — 2026-11-09
+
+Commit be1fa39 passed signup and all onboarding contracts in CI. Foundation run 42510118173 subsequently failed a stale public-pay route assertion; replaced the old exact route-list assertion with positive canonical business/catalog/application paths and negative public/pay/checkout paths. Phase 7 run 42510118202 passed Phase 5/6 SQL, then its read-only subscription-runtime-grants.sql check wrongly required database briofold after a branding rename. Restored the actual technical CONTROL database name ekmivo, matching migrations and fixtures. Corrected grant proof passes on the authorized Neon test branch; a wrong-database negative probe still fails closed. No production SQL or application runtime behavior changed.

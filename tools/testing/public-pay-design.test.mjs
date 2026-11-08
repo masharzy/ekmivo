@@ -59,7 +59,14 @@ test("provider colors and no marketing header in standalone routes",()=>{
  assert.match(proxy,/headers.set\("x-briofold-internal-rewrite","1"\)/);
  const nextConfig=source("apps/web/next.config.ts");
  assert.doesNotMatch(nextConfig,/source: "\/:locale\(bn\|en\)/);
- assert.match(proxy,/if\(\/\^\\\/\(\?:setup\|dashboard\|inbox\|orders\|payments\|sms-data\|invoices\|customers\|reports\|settings\|workspaces\|w\|account\|admin\)/);
+ const applicationLine=proxy.split("\n").find(line=>line.includes('headers.set("x-briofold-application","1")'));
+ const applicationPattern=applicationLine?.match(/if\((\/.*\/)\.test\(path\)\)/)?.[1];
+ assert.ok(applicationPattern,"application route classifier is present");
+ const applicationRoute=new RegExp(applicationPattern.slice(1,-1));
+ for(const path of ["/setup","/dashboard","/inbox","/orders","/catalog","/catalog/products","/payments","/sms-data","/invoices","/customers","/reports","/settings","/businesses","/businesses/open","/account","/admin"])
+  assert.ok(applicationRoute.test(path),path+" uses the application shell");
+ for(const path of ["/","/pricing","/pay/example","/checkout/example","/login","/businesses-other"])
+  assert.equal(applicationRoute.test(path),false,path+" stays outside the application shell");
  const checkout=source("apps/web/src/components/checkout-experience.tsx");
  const document=source("apps/web/src/components/public-document.tsx");
  assert.match(checkout,/pg05-standalone/);
