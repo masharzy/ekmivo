@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
+import {readFileSync,existsSync} from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 const read=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
@@ -22,20 +22,14 @@ test("Payments-only Devices retains the existing financial SMS device manager",(
  assert.equal(d?.section,"devices");
  assert.equal(d?.service,"payments");
 });
-test("Both enabled uses a selector with BOTH original independently authorized backends",()=>{
+test("Both enabled shows one Devices page without tabs",()=>{
  const d=unifiedDestination("both","settings",["devices"]);
  assert.equal(d?.kind,"mixed-devices");
  assert.equal(d?.service,"payments");
  const resolver=read("components/unified-merchant-route.tsx");
- const selector=read("components/unified-devices-settings.tsx");
  assert.match(resolver,/kind==="mixed-devices"&&paymentContext/);
- assert.match(resolver,/smsDevices=\{<DashboardContent/);
- assert.match(resolver,/aiDevices=\{<WorkspaceMobileDevices/);
- assert.match(selector,/role="tablist"/);
- assert.match(selector,/role="tabpanel"/);
- assert.match(selector,/aria-selected/);
- assert.match(selector,/aria-controls/);
- assert.match(selector,/document\.getElementById\("device-tab-"/);
+ assert.doesNotMatch(resolver,/UnifiedDevicesSettings/);
+ assert.ok(!existsSync(new URL("../src/components/unified-devices-settings.tsx",import.meta.url)));
 });
 test("No access from off business or more than one unmatched settings slug",()=>{
  assert.equal(unifiedDestination("off","settings",["devices"]),null);

@@ -15,7 +15,6 @@ import {WorkspaceChannels} from "./workspace-channels";
 import {StoreProfileEditor} from "./store-profile-editor";
 import {UnifiedSettingsIndex} from "./unified-settings-index";
 import {UnifiedSectionTabs} from "./unified-section-tabs";
-import {UnifiedDevicesSettings} from "./unified-devices-settings";
 import {BriofoldAiCreditSummary} from "./briofold-ai-credit-summary";
 import {onboardingState} from "../lib/server/briofold-onboarding";
 import {InboxLibrary} from "./inbox-library";
@@ -132,10 +131,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
     :kind==="devices"
      ?<WorkspaceMobileDevices key={workspace.id} workspaceId={workspace.id} bn={locale==="bn"}/>
     :kind==="mixed-devices"&&paymentContext
-     ?<UnifiedDevicesSettings locale={locale}
-       smsDevices={<DashboardContent key={workspace.id+":sms"} locale={locale} user={user} workspace={workspace}
-        section="devices" service="payments" paymentContext={paymentContext} framed/>}
-       aiDevices={<WorkspaceMobileDevices key={workspace.id+":ai"} workspaceId={workspace.id} bn={locale==="bn"}/>}/>
+     ?<DashboardContent key={workspace.id+":devices"} locale={locale} user={user} workspace={workspace}
+       section="devices" service="payments" paymentContext={paymentContext} framed/>
     :root==="settings"&&view[0]==="billing"&&workspace.mode==="ai"
      ?<><h1>{locale==="bn"?"বিলিং ও ব্যবহার":"Billing & usage"}</h1><BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/></>
     :<DashboardContent locale={locale} user={user} workspace={workspace}
