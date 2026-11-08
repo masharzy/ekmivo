@@ -6,16 +6,16 @@ import {readFileSync,existsSync} from "node:fs";
 const at=(path)=>new URL("../src/"+path,import.meta.url);
 const source=(path)=>readFileSync(at(path),"utf8");
 
-test("all nine canonical merchant entry routes exist independently of /w workspace slugs",()=>{
+test("all ten canonical merchant entry routes exist independently of /w workspace slugs",()=>{
  assert.ok(existsSync(at("app/[locale]/dashboard/page.tsx")));
- for(const root of ["inbox","orders","payments","sms-data","invoices","customers","reports","settings"])
+ for(const root of ["inbox","orders","catalog","payments","sms-data","invoices","customers","reports","settings"])
   assert.ok(existsSync(at(`app/[locale]/${root}/[[...view]]/page.tsx`)),`Missing canonical route: ${root}`);
 });
-test("navigation has exactly nine clean, prefixed-free merchant entries",()=>{
+test("navigation has exactly eleven clean, prefixed-free merchant entries",()=>{
  const src=source("lib/unified-navigation.ts");
- for(const path of ["/dashboard","/inbox","/orders","/payments","/sms-data","/invoices","/customers","/reports","/settings"])
+ for(const path of ["/dashboard","/inbox","/orders","/catalog/products","/catalog/coupons","/payments","/sms-data","/invoices","/customers","/reports","/settings"])
   assert.ok(src.includes(`href:"${path}"`),`Missing nav href ${path}`);
- assert.equal((src.match(/href:"\/(dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings)"/g)||[]).length,9);
+ assert.equal((src.match(/href:"\/(dashboard|inbox|orders|catalog\/products|catalog\/coupons|payments|sms-data|invoices|customers|reports|settings)"/g)||[]).length,11);
  assert.doesNotMatch(src,/href:"\/(?:bn|en|w)\//);
  assert.match(src,/view\.length>1/);
  assert.match(src,/mode==="off"/);
@@ -57,7 +57,7 @@ test("multi-store: selected-store cookie wins, primary store is only the fallbac
 test("global marketing header and footer do not render on unified application routes",()=>{
  for(const cssless of ["components/site-header.tsx","components/site-footer.tsx","proxy.ts"]){
   const src=source(cssless);
-  assert.match(src,/dashboard\|inbox\|orders\|payments\|sms-data\|invoices\|customers\|reports\|settings/,`Missing route exclusion: ${cssless}`);
+  assert.match(src,/dashboard\|inbox\|orders\|catalog\|payments\|sms-data\|invoices\|customers\|reports\|settings/,`Missing route exclusion: ${cssless}`);
  }
 });
 test("settings uses opt-in CSS module and preserves legacy payment screens",()=>{
@@ -160,16 +160,18 @@ test("canonical commerce deep links reuse real scoped scanner, courier and catal
  for(const mode of ["ai","both"]){
   assert.equal(navigation.unifiedDestination(mode,"orders",["scan"]).section,"orders");
   assert.equal(navigation.unifiedDestination(mode,"orders",["courier"]).section,"shipping");
-  assert.equal(navigation.unifiedDestination(mode,"orders",["products","sync"]).section,"products");
-  assert.equal(navigation.unifiedDestination(mode,"orders",["products","invalid"]),null);
+  assert.equal(navigation.unifiedDestination(mode,"catalog",["products","sync"]).section,"products");
+  assert.equal(navigation.unifiedDestination(mode,"catalog",["products","invalid"]),null);
+  assert.equal(navigation.unifiedDestination(mode,"catalog",[]).section,"products");
+  assert.equal(navigation.unifiedDestination(mode,"catalog",["inventory"]).section,"inventory");
  }
- assert.equal(navigation.unifiedDestination("off","orders",["products","sync"]),null);
+ assert.equal(navigation.unifiedDestination("off","catalog",["products","sync"]),null);
  const page=source("components/unified-merchant-route.tsx");
  assert.match(page,/view\.length===2&&view\[0\]==="products"\?"products-sync"/);
  const entry=source("components/commerce-page.tsx");
  assert.match(entry,/props\.view==="products-sync"\?"products"/);
  assert.match(entry,/props\.view==="courier"\?"delivery"/);
- for(const view of [["scan"],["products"],["products","sync"],["integrations","courier"]])assert.equal(navigation.unifiedDestination("commerce",view[0]==="integrations"?"settings":"orders",view),null,"Payment Gateway has no fulfilment routes: "+view.join("/"));
+ for(const view of [["scan"],["products"],["products","sync"],["integrations","courier"]])assert.equal(navigation.unifiedDestination("commerce",view[0]==="integrations"?"settings":view[0]==="products"?"catalog":"orders",view),null,"Payment Gateway has no fulfilment routes: "+view.join("/"));
 });
 test("unconverted-order follow-up route reads only draft or hold source, never a fictional commerce resource",()=>{
  for(const mode of ["ai","both"])

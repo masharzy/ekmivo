@@ -71,3 +71,4 @@
 }
 
 @media(max-width:560px){.root :global(.cm-filters){flex-wrap:wrap;width:100%}.root :global(.toolbar){flex-wrap:wrap}}
+.root :global(.cm-low){color:var(--color-danger,#b42318)}
