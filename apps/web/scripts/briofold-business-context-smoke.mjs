@@ -50,7 +50,7 @@ try{
    eq(await exports.selectDefaultWorkspace(actor,outside),false);
    eq(await exports.selectDefaultWorkspace(actor,second),true);
    eq(values.get("briofold-default-workspace"),actor+":"+second);
-   await redirected(()=>exports.requireWorkspace("en",outside),"/workspaces");
+   await redirected(()=>exports.requireWorkspace("en",outside),"/businesses");
    for(const role of ["owner","admin","editor","viewer"]){
     await tx.unsafe("UPDATE workspace_members SET role=$1 WHERE workspace_id=$2 AND user_id=$3",[role,second,actor]);
     eq((await exports.preferredWorkspaceFor(actor)).role,role);
@@ -60,7 +60,7 @@ try{
    await tx.unsafe("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",[second,actor]);
    eq((await exports.preferredWorkspaceFor(actor)).id,first);
    eq(await exports.selectDefaultWorkspace(actor,second),false);
-   await redirected(()=>exports.requireWorkspace("en",second),"/workspaces");
+   await redirected(()=>exports.requireWorkspace("en",second),"/businesses");
    await tx.unsafe("UPDATE app_users SET email_verified_at=NULL WHERE id=$1",[actor]);
    eq((await exports.currentUser()).verified,false);
    await redirected(()=>exports.requireUser("en"),"/verify-email");
