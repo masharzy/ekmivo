@@ -78,7 +78,7 @@ func validateInboxMediaMax(data []byte, declared string, max int) (string, error
 // seller why an attachment is unavailable. Anything else stays the generic MEDIA_UNAVAILABLE.
 func inboxMediaFailureCode(err error) string {
 	switch c := err.Error(); c {
-	case "MEDIA_HOST_DENIED", "MEDIA_EXPIRED_OR_UNAVAILABLE", "CHANNEL_NOT_CONFIGURED", "MEDIA_ORIGIN_NOT_CONFIGURED",
+	case "MEDIA_HOST_DENIED", "MEDIA_EXPIRED_OR_UNAVAILABLE", "MEDIA_EXPIRED", "CHANNEL_NOT_CONFIGURED", "MEDIA_ORIGIN_NOT_CONFIGURED",
 		"UNSUPPORTED_FILE_TYPE", "FILE_LIMIT_EXCEEDED", "INVALID_IMAGE":
 		return c
 	}
@@ -118,9 +118,10 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		duration, _ := b["duration_ms"].(float64)
 		hash := sha256.Sum256(data)
 		// Content-addressed suffix prevents a conflicting retry from overwriting accepted bytes.
-		key := "inbox/" + d.Environment + "/" + d.Workspace + "/" + id + "/" + hex.EncodeToString(hash[:])
-		if _, err = objectRequest(r.Context(), "PUT", key, data); err != nil {
-			fail(w, 503, "PRIVATE_STORAGE_UNAVAILABLE")
+		key := inboxBlobPrefix + d.Environment + "/" + d.Workspace + "/" + id + "/" + hex.EncodeToString(hash[:])
+		s.inboxBlobPurge(r.Context())
+		if err = s.inboxBlobPut(r.Context(), d.Workspace, key, data); err != nil {
+			fail(w, 503, "MEDIA_STORE_UNAVAILABLE")
 			return
 		}
 		var result []byte
@@ -173,6 +174,10 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		return
 	}
 	if wantURL, _ := b["url"].(bool); wantURL {
+		if strings.HasPrefix(f.Key, inboxBlobPrefix) && !s.inboxBlobHas(r.Context(), f.Key) {
+			fail(w, 404, "MEDIA_EXPIRED")
+			return
+		}
 		// Large media (video) is fetched by the browser directly through a short-lived signed URL.
 		link, linkErr := s.mediaCapability(d.Workspace, d.Environment, thread, id)
 		if linkErr != nil {
@@ -182,9 +187,9 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		write(w, 200, map[string]any{"url": link, "mime": f.Mime, "name": f.Name})
 		return
 	}
-	data, err := objectRequest(r.Context(), "GET", f.Key, nil)
+	data, err := s.inboxObjectGet(r.Context(), f.Key)
 	if err != nil {
-		fail(w, 503, "PRIVATE_STORAGE_UNAVAILABLE")
+		fail(w, 404, "MEDIA_EXPIRED")
 		return
 	}
 	write(w, 200, map[string]any{"data": base64.StdEncoding.EncodeToString(data), "mime": f.Mime, "name": f.Name})
@@ -240,9 +245,9 @@ func (s *Service) HandleInboxMedia(w http.ResponseWriter, r *http.Request) {
 		}
 		data, f.Mime, f.Name = media.Data, media.MIME, media.Name
 	} else {
-		data, err = objectRequest(r.Context(), "GET", f.Key, nil)
+		data, err = s.inboxObjectGet(r.Context(), f.Key)
 		if err != nil {
-			fail(w, 503, "PRIVATE_STORAGE_UNAVAILABLE")
+			fail(w, 404, "MEDIA_EXPIRED")
 			return
 		}
 	}

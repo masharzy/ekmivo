@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"strings"
 )
 
 type inboxSendJob struct {
@@ -102,7 +103,7 @@ func (s *Service) inboxSendPayload(ctx context.Context, j inboxSendJob, token, v
 			if json.Unmarshal(raw, &f) != nil || f.Key == "" {
 				return nil, errors.New("MEDIA_UNAVAILABLE")
 			}
-			data, err := objectRequest(ctx, "GET", f.Key, nil)
+			data, err := s.inboxObjectGet(ctx, f.Key)
 			if err != nil {
 				return nil, err
 			}
@@ -143,6 +144,13 @@ func (s *Service) inboxSendPayload(ctx context.Context, j inboxSendJob, token, v
 			}
 			return payload, nil
 		}
+		if j.Channel == "ms" {
+			// Push the bytes to Meta ourselves instead of waiting for Meta to pull a link from our server;
+			// if Meta rejects the upload the signed-link payload above is still used.
+			if id := s.messengerAttachmentUpload(ctx, j, version, token, attachmentType); id != "" {
+				payload["message"] = map[string]any{"attachment": map[string]any{"type": attachmentType, "payload": map[string]any{"attachment_id": id}}}
+			}
+		}
 	}
 	if j.Channel == "wa" {
 		payload = map[string]any{"messaging_product": "whatsapp", "to": j.Recipient, "type": "text", "text": map[string]any{"body": msg["text"]}}
@@ -153,3 +161,69 @@ func (s *Service) inboxSendPayload(ctx context.Context, j inboxSendJob, token, v
 	return payload, nil
 }
 func formatMinor(v int64) string { return fmt.Sprintf("%d.%02d", v/100, v%100) }
+
+func (s *Service) messengerAttachmentUpload(ctx context.Context, j inboxSendJob, version, token, attachmentType string) string {
+	var raw []byte
+	if s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_media_access($1::uuid,$2,$3::uuid,$4::uuid)", j.Workspace, j.Environment, j.Thread, str(j.Content, "media_id")).Scan(&raw) != nil {
+		return ""
+	}
+	var f struct {
+		Key  string `json:"object_key"`
+		Mime string `json:"mime"`
+		Name string `json:"name"`
+	}
+	if json.Unmarshal(raw, &f) != nil || f.Key == "" {
+		return ""
+	}
+	data, err := s.inboxObjectGet(ctx, f.Key)
+	if err != nil {
+		return ""
+	}
+	var buffer bytes.Buffer
+	form := multipart.NewWriter(&buffer)
+	_ = form.WriteField("message", `{"attachment":{"type":"`+attachmentType+`","payload":{"is_reusable":true}}}`)
+	header := textproto.MIMEHeader{}
+	header.Set("Content-Disposition", `form-data; name="filedata"; filename="`+safeUploadName(f.Name)+`"`)
+	header.Set("Content-Type", f.Mime)
+	part, err := form.CreatePart(header)
+	if err != nil {
+		return ""
+	}
+	_, _ = part.Write(data)
+	_ = form.Close()
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://graph.facebook.com/"+version+"/me/message_attachments", &buffer)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	res, err := inboxHTTP.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer res.Body.Close()
+	var out struct {
+		ID string `json:"attachment_id"`
+	}
+	if res.StatusCode < 200 || res.StatusCode >= 300 || json.NewDecoder(io.LimitReader(res.Body, 65536)).Decode(&out) != nil {
+		return ""
+	}
+	return out.ID
+}
+
+// safeUploadName keeps multipart headers well-formed whatever the sender named the file.
+func safeUploadName(name string) string {
+	clean := strings.Map(func(r rune) rune {
+		if r == '"' || r == '\\' || r == '\r' || r == '\n' || r < 32 {
+			return '_'
+		}
+		return r
+	}, name)
+	if clean == "" {
+		return "attachment"
+	}
+	if len(clean) > 120 {
+		clean = clean[:120]
+	}
+	return clean
+}

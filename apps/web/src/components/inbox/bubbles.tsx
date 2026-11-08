@@ -18,7 +18,7 @@ export function reasonText(code:string,bn:boolean){
  if(/UNSUPPORTED|MIME|TYPE/i.test(code))return bn?"এই ফাইল টাইপ সাপোর্টেড নয়":"File type not supported";
  if(/LARGE|SIZE/i.test(code))return bn?"ফাইল অনেক বড়":"File too large";
  if(/REFRESH_UNAVAILABLE/i.test(code))return bn?"চ্যানেল থেকে নতুন মিডিয়া লিংক পাওয়া যায়নি":"Channel could not refresh this media";
- if(/EXPIRED|GONE|404|410/i.test(code))return bn?"চ্যানেল থেকে মিডিয়ার মেয়াদ শেষ":"Expired at the channel";
+ if(/EXPIRED|GONE|404|410/i.test(code))return bn?"মিডিয়ার মেয়াদ শেষ":"Media has expired";
  if(/SCAN|MALWARE/i.test(code))return bn?"নিরাপত্তা স্ক্যান শেষ হয়নি":"Security scan unavailable";
  return bn?"মিডিয়া লোড হয়নি":"Media couldn't load";
 }

@@ -13,7 +13,9 @@ import (
 	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"regexp"
 	"strconv"
 	"strings"
@@ -294,7 +296,7 @@ func (s *Service) HandleTelegramWebhook(w http.ResponseWriter, r *http.Request) 
 	write(w, 200, map[string]bool{"accepted": true})
 }
 func (s *Service) sendTelegram(ctx context.Context, j inboxSendJob) (string, string, string) {
-	if j.Type != "text" || j.Broadcast || len([]rune(j.Text)) > 4096 {
+	if j.Broadcast || (j.Type != "text" && j.Type != "image" && j.Type != "audio" && j.Type != "document") || len([]rune(j.Text)) > 4096 {
 		return "failed", "", "TELEGRAM_TEXT_ONLY"
 	}
 	if j.ChannelGuard {
@@ -311,6 +313,9 @@ func (s *Service) sendTelegram(ctx context.Context, j inboxSendJob) (string, str
 	if err != nil {
 		return "failed", "", "CREDENTIAL_UNAVAILABLE"
 	}
+	if j.Type != "text" {
+		return s.sendTelegramMedia(ctx, j, string(token))
+	}
 	var result struct {
 		ID int64 `json:"message_id"`
 	}
@@ -321,4 +326,83 @@ func (s *Service) sendTelegram(ctx context.Context, j inboxSendJob) (string, str
 		return "uncertain", "", "PROVIDER_OUTCOME_UNKNOWN"
 	}
 	return "sent", strconv.FormatInt(result.ID, 10), ""
+}
+
+func (s *Service) sendTelegramMedia(ctx context.Context, j inboxSendJob, token string) (string, string, string) {
+	var raw []byte
+	if s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_media_access($1::uuid,$2,$3::uuid,$4::uuid)", j.Workspace, j.Environment, j.Thread, str(j.Content, "media_id")).Scan(&raw) != nil {
+		return "failed", "", "MEDIA_UNAVAILABLE"
+	}
+	var f struct {
+		Key  string `json:"object_key"`
+		Mime string `json:"mime"`
+		Name string `json:"name"`
+	}
+	if json.Unmarshal(raw, &f) != nil || f.Key == "" {
+		return "failed", "", "MEDIA_UNAVAILABLE"
+	}
+	data, err := s.inboxObjectGet(ctx, f.Key)
+	if err != nil {
+		return "failed", "", "MEDIA_EXPIRED"
+	}
+	method, field := "sendDocument", "document"
+	switch j.Type {
+	case "image":
+		method, field = "sendPhoto", "photo"
+	case "audio":
+		method, field = "sendVoice", "voice"
+	}
+	fields := map[string]string{"chat_id": j.Recipient}
+	if caption := []rune(j.Text); len(caption) > 0 && len(caption) <= 1024 {
+		fields["caption"] = j.Text
+	}
+	var result struct {
+		ID int64 `json:"message_id"`
+	}
+	if telegramUpload(ctx, token, method, field, safeUploadName(f.Name), f.Mime, fields, data, &result) != nil || result.ID <= 0 {
+		return "uncertain", "", "PROVIDER_OUTCOME_UNKNOWN"
+	}
+	return "sent", strconv.FormatInt(result.ID, 10), ""
+}
+
+// telegramUpload sends one file as multipart. Errors never include the URL (it contains the bot token).
+func telegramUpload(ctx context.Context, token, method, field, filename, mime string, fields map[string]string, data []byte, out any) error {
+	if !telegramTokenPattern.MatchString(token) {
+		return errors.New("invalid bot token")
+	}
+	var buffer bytes.Buffer
+	form := multipart.NewWriter(&buffer)
+	for k, v := range fields {
+		_ = form.WriteField(k, v)
+	}
+	header := textproto.MIMEHeader{}
+	header.Set("Content-Disposition", `form-data; name="`+field+`"; filename="`+filename+`"`)
+	header.Set("Content-Type", mime)
+	part, err := form.CreatePart(header)
+	if err != nil {
+		return errors.New("invalid request")
+	}
+	_, _ = part.Write(data)
+	_ = form.Close()
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.telegram.org/bot"+token+"/"+method, &buffer)
+	if err != nil {
+		return errors.New("provider unavailable")
+	}
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	res, err := inboxHTTP.Do(req)
+	if err != nil {
+		return errors.New("provider outcome unknown")
+	}
+	defer res.Body.Close()
+	var envelope struct {
+		OK     bool            `json:"ok"`
+		Result json.RawMessage `json:"result"`
+	}
+	if res.StatusCode != 200 || json.NewDecoder(io.LimitReader(res.Body, 65536)).Decode(&envelope) != nil || !envelope.OK {
+		return errors.New("provider rejected request")
+	}
+	if out != nil && json.Unmarshal(envelope.Result, out) != nil {
+		return errors.New("invalid provider response")
+	}
+	return nil
 }
