@@ -62,7 +62,7 @@ function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:st
  return <div className={s.vn}>
   <button type="button" className={s.pl} onClick={e=>{e.stopPropagation();toggle();}} disabled={!media} aria-label={playing?(bn?"থামান":"Pause"):(bn?"চালান":"Play")}>{playing?<I n="pause" size={14} fill/>:<I n="play" size={14} fill/>}</button>
   <div className={s.wf} onClick={e=>{e.stopPropagation();const a=el.current;if(!a||!total)return;const r=e.currentTarget.getBoundingClientRect();a.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*total;setPos(a.currentTime);}}>{h.map((v,i)=><i key={i} className={i/h.length<frac?s.f:undefined} style={{height:v}}/>)}</div>
-  {failed?<button type="button" className={s.vd} title={reasonText(reason,bn)} onClick={e=>{e.stopPropagation();retry();}}>{bn?"আবার চেষ্টা":"Retry"}</button>:<><span className={s.vd}>{(total>0?mmss(playing||pos>0?pos:total,bn):"--:--")}</span>{(playing||pos>0)&&<button type="button" className={s.spd} aria-label="Speed" onClick={e=>{e.stopPropagation();const n=rate===1?1.5:rate===1.5?2:1;setRate(n);if(el.current)el.current.playbackRate=n;}}>{rate}x</button>}</>}
+  {failed&&!/EXPIRED|GONE|404|410/i.test(reason)?<button type="button" className={s.vd} title={reasonText(reason,bn)} onClick={e=>{e.stopPropagation();retry();}}>{bn?"আবার চেষ্টা":"Retry"}</button>:<><span className={s.vd}>{(total>0?mmss(playing||pos>0?pos:total,bn):"--:--")}</span>{(playing||pos>0)&&<button type="button" className={s.spd} aria-label="Speed" onClick={e=>{e.stopPropagation();const n=rate===1?1.5:rate===1.5?2:1;setRate(n);if(el.current)el.current.playbackRate=n;}}>{rate}x</button>}</>}
   {media&&<audio ref={el} src={media.url} preload="metadata" onLoadedMetadata={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onDurationChange={e=>{const d=e.currentTarget.duration;if(Number.isFinite(d)&&d>0)setLen(d);}} onPlay={e=>{e.currentTarget.playbackRate=rate;setPlaying(true);}} onError={()=>{if(!tried){setTried(true);retry();}}} onPause={()=>setPlaying(false)} onEnded={()=>{setPlaying(false);setPos(0);}} onTimeUpdate={e=>setPos(e.currentTarget.currentTime)}/>}
  </div>;
 }
@@ -70,7 +70,7 @@ function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:st
 export function Img({m,workspaceId,threadId,bn,className,onOpen}:{m:Msg;workspaceId:string;threadId:string;bn:boolean;className?:string;onOpen?:()=>void}){
  const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id),[tried,setTried]=useState(false);
  if(media&&media.mime.startsWith("image/"))return <img className={className} src={media.url} alt={m.content?.name||(bn?"ছবি":"Photo")} onClick={onOpen} draggable={false} onError={()=>{if(!tried){setTried(true);retry();}}}/>;
- return <div className={`${s.imgph} ${className??""}`} >{failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(reason,bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
+ return <div className={`${s.imgph} ${className??""}`} >{failed&&/EXPIRED|GONE|404|410/i.test(reason)?<span className={s.mfail} style={{cursor:"default"}}><I n="alt" size={20}/><span>{bn?"ছবি":"Photo"}</span></span>:failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(reason,bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
 }
 
 function VideoBox({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){
@@ -80,7 +80,7 @@ function VideoBox({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId
  const ready=!!mediaId&&st?.id===mediaId,v=ready?st.v:null,failed=ready&&!st.v;
  const retry=()=>{setSt(null);setTick(x=>x+1);};
  if(v)return <video className={s.vid} src={v.url} controls playsInline preload="metadata" onClick={e=>e.stopPropagation()} onError={()=>{if(tick<2)retry();}}/>;
- return <div className={s.imgph}>{failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(mediaReasons.get(workspaceId+mediaId)??"",bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
+ return <div className={s.imgph}>{failed&&/EXPIRED|GONE|404|410/i.test(mediaReasons.get(workspaceId+mediaId)??"")?<span className={s.mfail} style={{cursor:"default"}}><I n="alt" size={20}/><span>{bn?"ভিডিও":"Video"}</span></span>:failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(mediaReasons.get(workspaceId+mediaId)??"",bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
 }
 
 function Product({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){
