@@ -163,6 +163,9 @@ func (s *Service) inboxSendPayload(ctx context.Context, j inboxSendJob, token, v
 func formatMinor(v int64) string { return fmt.Sprintf("%d.%02d", v/100, v%100) }
 
 func (s *Service) messengerAttachmentUpload(ctx context.Context, j inboxSendJob, version, token, attachmentType string) string {
+	if s.Pipeline == nil || s.Pipeline.Control == nil {
+		return ""
+	}
 	var raw []byte
 	if s.Pipeline.Control.QueryRow(ctx, "SELECT inbox_media_access($1::uuid,$2,$3::uuid,$4::uuid)", j.Workspace, j.Environment, j.Thread, str(j.Content, "media_id")).Scan(&raw) != nil {
 		return ""

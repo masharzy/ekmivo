@@ -90,7 +90,7 @@ func TestTelegramSendKeepsTextAndAvoidsOtherMethods(t *testing.T) {
 		t.Fatal(state, id, code)
 	}
 	state, _, code = s.sendTelegram(context.Background(), inboxSendJob{Type: "image"})
-	if state != "failed" || code != "TELEGRAM_TEXT_ONLY" {
-		t.Fatal("media falsely supported")
+	if state != "failed" || code != "CREDENTIAL_UNAVAILABLE" {
+		t.Fatal("media without credentials accepted")
 	}
 }
