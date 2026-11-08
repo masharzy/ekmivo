@@ -27,6 +27,7 @@ type inboxAvatarEntry struct {
 var inboxAvatars = struct {
 	sync.Mutex
 	items map[string]inboxAvatarEntry
+	bytes int
 }{items: map[string]inboxAvatarEntry{}}
 var inboxAvatarFlights singleflight.Group
 
@@ -86,13 +87,25 @@ func (s *Service) HandleInboxAvatar(w http.ResponseWriter, r *http.Request) {
 			}
 			fresh := inboxAvatarEntry{data, mime, time.Now().Add(ttl)}
 			inboxAvatars.Lock()
-			if len(inboxAvatars.items) >= 128 {
-				for k := range inboxAvatars.items {
+			if old, ok := inboxAvatars.items[key]; ok {
+				inboxAvatars.bytes -= len(old.data)
+				delete(inboxAvatars.items, key)
+			}
+			for k, v := range inboxAvatars.items {
+				if time.Now().After(v.expires) {
+					inboxAvatars.bytes -= len(v.data)
+					delete(inboxAvatars.items, k)
+				}
+			}
+			for len(inboxAvatars.items) >= 128 || inboxAvatars.bytes+len(data) > 32*1024*1024 {
+				for k, v := range inboxAvatars.items {
+					inboxAvatars.bytes -= len(v.data)
 					delete(inboxAvatars.items, k)
 					break
 				}
 			}
 			inboxAvatars.items[key] = fresh
+			inboxAvatars.bytes += len(data)
 			inboxAvatars.Unlock()
 			return fresh, nil
 		})
@@ -173,9 +186,9 @@ func (s *Service) fetchInboxAvatar(ctx context.Context, workspace string, raw []
 		return nil, "", errors.New("PHOTO_UNAVAILABLE")
 	}
 	defer res.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(res.Body, 512*1024+1))
+	data, err := io.ReadAll(io.LimitReader(res.Body, 5*1024*1024+1))
 	typ := http.DetectContentType(data)
-	if err != nil || res.StatusCode != 200 || len(data) > 512*1024 || !strings.HasPrefix(typ, "image/") || typ == "image/svg+xml" {
+	if err != nil || res.StatusCode != 200 || len(data) > 5*1024*1024 || !strings.HasPrefix(typ, "image/") || typ == "image/svg+xml" {
 		return nil, "", errors.New("PHOTO_UNAVAILABLE")
 	}
 	return data, typ, nil

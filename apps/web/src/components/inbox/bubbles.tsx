@@ -68,9 +68,9 @@ function Voice({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:st
 }
 
 export function Img({m,workspaceId,threadId,bn,className,onOpen}:{m:Msg;workspaceId:string;threadId:string;bn:boolean;className?:string;onOpen?:()=>void}){
- const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id),[tried,setTried]=useState(false);
- if(media&&media.mime.startsWith("image/"))return <img className={className} src={media.url} alt={m.content?.name||(bn?"ছবি":"Photo")} onClick={onOpen} draggable={false} onError={()=>{if(!tried){setTried(true);retry();}}}/>;
- return <div className={`${s.imgph} ${className??""}`} >{failed&&/EXPIRED|GONE|404|410/i.test(reason)?<span className={s.mfail} style={{cursor:"default"}}><I n="alt" size={20}/><span>{bn?"ছবি":"Photo"}</span></span>:failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(reason,bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
+ const {media,failed,reason,retry}=useMedia(workspaceId,threadId,m.content?.media_id),[tried,setTried]=useState(false),[broken,setBroken]=useState(false);
+ if(media&&!broken&&media.mime.startsWith("image/"))return <img className={className} src={media.url} alt={m.content?.name||(bn?"ছবি":"Photo")} onClick={onOpen} draggable={false} onError={()=>{if(!tried){setTried(true);retry();}else{setBroken(true);}}}/>;
+ return <div className={`${s.imgph} ${className??""}`} >{(broken||failed&&/EXPIRED|GONE|404|410/i.test(reason))?<span className={s.mfail} style={{cursor:"default"}}><I n="alt" size={20}/><span>{bn?"ছবি এখন পাওয়া যাচ্ছে না":"Photo unavailable"}</span></span>:failed?<button type="button" className={s.mfail} onClick={e=>{e.stopPropagation();retry();}}><I n="alt" size={20}/><span>{reasonText(reason,bn)}</span><u>{bn?"আবার চেষ্টা":"Tap to retry"}</u></button>:<span className={s.shimmer}/>}</div>;
 }
 
 function VideoBox({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){

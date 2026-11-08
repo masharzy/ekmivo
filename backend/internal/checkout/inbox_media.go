@@ -144,6 +144,17 @@ func (s *Service) inboxMediaAction(w http.ResponseWriter, r *http.Request, d mob
 		return
 	}
 	if wantURL, _ := b["url"].(bool); wantURL {
+		if strings.HasPrefix(f.Key, inboxBlobPrefix) && !s.inboxBlobHas(r.Context(), f.Key) {
+			var source []byte
+			var ref struct {
+				Reference string `json:"reference"`
+			}
+			err := s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_media_source($1::uuid,$2,$3::uuid,$4::uuid)", d.Workspace, d.Environment, thread, id).Scan(&source)
+			if err != nil || json.Unmarshal(source, &ref) != nil || ref.Reference == "" {
+				fail(w, 404, "MEDIA_EXPIRED")
+				return
+			}
+		}
 		// Large media (video) is fetched by the browser directly through a short-lived signed URL.
 		link, linkErr := s.mediaCapability(d.Workspace, d.Environment, thread, id)
 		if linkErr != nil {
