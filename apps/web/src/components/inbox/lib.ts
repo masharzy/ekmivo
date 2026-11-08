@@ -31,7 +31,7 @@ export function listTime(iso:string|undefined,bn:boolean){
 export function fullDate(iso:string|undefined,bn:boolean){if(!iso)return "—";const d=new Date(iso);return `${d.toLocaleDateString(bn?"bn-BD":"en-GB",{day:"numeric",month:"short",year:"numeric"})}, ${clock(iso,bn)}`;}
 export function money(minor:number,bn:boolean,currency="BDT"){const v=Math.round(minor/100);const s=v.toLocaleString("en-IN");return (currency==="BDT"?"৳":currency+" ")+num(s,bn);}
 export function initials(name:string){const t=(name||"").trim();if(!t)return "?";const p=t.split(/\s+/);return ((p[0]?.[0]??"")+(p.length>1?p[p.length-1][0]:"")).toLocaleUpperCase();}
-const emojiOnly=/^(?:\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*\s*){1,3}$/u;
+const emojiOnly=/^(?:\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*\s*){1}$/u;
 export function isSticker(m:Msg){return (m.type==="text"||!m.type)&&!!m.body&&m.body.length<=24&&emojiOnly.test(m.body.trim());}
 export function preview(m:Msg|undefined,bn:boolean){
  if(!m)return "";

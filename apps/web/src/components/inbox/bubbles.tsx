@@ -107,7 +107,7 @@ function File({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:str
   if(skip&&!warn){save(r.url,name);return;}
   setAsk({url:r.url,name,warn});
  }
- function save(url:string,name:string){const a=document.createElement("a");a.href=url;a.download=name;a.rel="noopener";document.body.appendChild(a);a.click();a.remove();}
+ function save(url:string,name:string){const a=document.createElement("a");const target=new URL(url,window.location.href);if(target.protocol==="https:"&&target.hostname==="api.briofold.tech"&&target.pathname.startsWith("/v1/channels/media/"))target.searchParams.set("download","1");a.href=target.href;a.download=name;a.rel="noopener";document.body.appendChild(a);a.click();a.remove();}
  function confirm(){if(!ask)return;if(never&&!ask.warn){try{localStorage.setItem(SKIP_KEY,"1");}catch{}}save(ask.url,ask.name);setAsk(null);}
  const kb=Math.max(1,Math.round((m.content?.size_bytes??0)/1024));
  return <>
