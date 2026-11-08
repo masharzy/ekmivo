@@ -236,7 +236,9 @@ test("unified operational activity preserves the financial event source",()=>{
 test("canonical product gates cover all roots, settings and valid subroutes",()=>{
  for(const mode of ["ai","commerce","both","off"]){
   for(const item of navigation.unifiedNavigation){
-   const result=navigation.unifiedDestination(mode,item.key,[]);
+   // Menu entries resolve by href, so shortcuts such as Devices (/settings/devices) are gated too.
+   const [root,...view]=item.href.split("/").filter(Boolean);
+   const result=navigation.unifiedDestination(mode,root,view);
    assert.equal(Boolean(result),navigation.enabledUnifiedService(mode,item.service),mode+"/"+item.key);
    if(result){assert.equal(typeof result.section,"string");assert.ok(["ai","payments"].includes(result.service));}
   }
