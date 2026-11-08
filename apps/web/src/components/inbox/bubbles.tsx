@@ -3,6 +3,7 @@
 import {memo,useEffect,useRef,useState} from "react";
 import type {PointerEvent as RPE} from "react";
 import {I} from "./icons";
+import {Sheet} from "./sheets";
 import {clock,isSticker,loadMedia,mediaReasons,mmss,money,num,type Msg} from "./lib";
 import s from "./inbox.module.css";
 
@@ -66,11 +67,36 @@ function Product({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:
   <div className={s.pi}><b>{m.body||"—"}</b>{c.sizes?<span>{(bn?"সাইজ: ":"Sizes: ")+c.sizes}</span>:null}{typeof c.price_minor==="number"&&<div className={s.pp}>{money(c.price_minor,bn,c.currency)}</div>}</div></div>;
 }
 
+const SKIP_KEY="briofold-inbox-download-ok";
+const EXT:Record<string,RegExp>={pdf:/^application\/pdf$/,txt:/^text\/plain$/,jpg:/^image\/jpeg$/,jpeg:/^image\/jpeg$/,png:/^image\/png$/,gif:/^image\/gif$/,webp:/^image\/webp$/,mp3:/^audio\//,ogg:/^audio\//,m4a:/^audio\//,aac:/^audio\//,mp4:/^(video|audio)\//};
+const inlineMime=/^(application\/pdf|text\/plain|image\/(jpeg|png|gif|webp)|video\/(mp4|webm)|audio\/)/;
 function File({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:string;bn:boolean}){
- const [busy,setBusy]=useState(false);
- async function open(){if(busy||!m.content?.media_id)return;setBusy(true);const r=await loadMedia(workspaceId,threadId,m.content.media_id);setBusy(false);if(!r)return;const a=document.createElement("a");a.href=r.url;a.download=m.content.name||"file";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();}
+ const [busy,setBusy]=useState(false),[ask,setAsk]=useState<{url:string;name:string;warn:boolean}|null>(null),[never,setNever]=useState(false),[err,setErr]=useState("");
+ async function open(){
+  if(busy||!m.content?.media_id)return;setBusy(true);setErr("");
+  const tab=window.open("","_blank");// opened synchronously so the pop-up blocker allows it
+  const r=await loadMedia(workspaceId,threadId,m.content.media_id);setBusy(false);
+  if(!r){tab?.close();setErr(reasonText(mediaReasons.get(workspaceId+m.content.media_id)??"",bn));return;}
+  const name=m.content.name||"file",ext=name.split(".").pop()?.toLowerCase()??"";
+  const warn=!!EXT[ext]&&!EXT[ext].test(r.mime);// extension says one thing, the content is another
+  if(inlineMime.test(r.mime)&&!warn&&tab){tab.location.href=r.url;tab.opener=null;return;}
+  tab?.close();
+  let skip=false;try{skip=localStorage.getItem(SKIP_KEY)==="1";}catch{}
+  if(skip&&!warn){save(r.url,name);return;}
+  setAsk({url:r.url,name,warn});
+ }
+ function save(url:string,name:string){const a=document.createElement("a");a.href=url;a.download=name;a.rel="noopener";document.body.appendChild(a);a.click();a.remove();}
+ function confirm(){if(!ask)return;if(never&&!ask.warn){try{localStorage.setItem(SKIP_KEY,"1");}catch{}}save(ask.url,ask.name);setAsk(null);}
  const kb=Math.max(1,Math.round((m.content?.size_bytes??0)/1024));
- return <button type="button" className={s.fileb} onClick={e=>{e.stopPropagation();void open();}}><span className={s.fi}><I n="doc" size={18}/></span><span><b>{m.content?.name||(bn?"ফাইল":"File")}</b><span>{num(kb,bn)} KB{busy?" …":""}</span></span></button>;
+ return <>
+  <button type="button" className={s.fileb} onClick={e=>{e.stopPropagation();void open();}}><span className={s.fi}><I n="doc" size={18}/></span><span><b>{m.content?.name||(bn?"ফাইল":"File")}</b><span>{num(kb,bn)} KB{busy?" …":""}{err?` · ${err}`:""}</span></span></button>
+  <Sheet open={!!ask} onClose={()=>setAsk(null)} label={bn?"ফাইল ডাউনলোড":"Download file"}>
+   <h4>{bn?"এই ফাইল এখানে দেখা যাচ্ছে না":"This file can't be previewed here"}</h4>
+   <p className={s.sheetNote}>{ask?.warn?(bn?"সতর্কতা: ফাইলের এক্সটেনশন আর আসল কনটেন্ট মিলছে না। ডাউনলোড করলে ঝুঁকি আপনার।":"Warning: the file extension doesn't match its real content. Download only if you trust the sender — at your own risk."):(bn?"ডাউনলোড করলে ফাইলটি ভাইরাস স্ক্যান করা হয় না। ঝুঁকি আপনার নিজের।":"Downloaded files are not virus-scanned. You download at your own risk.")}</p>
+   {!ask?.warn&&<label className={s.dna}><input type="checkbox" checked={never} onChange={e=>setNever(e.target.checked)}/>{bn?"আর দেখাবেন না":"Don't show this again"}</label>}
+   <div className={s.dlrow}><button type="button" onClick={()=>setAsk(null)}>{bn?"বাতিল":"Cancel"}</button><button type="button" className={s.dlgo} onClick={confirm}>{bn?"ডাউনলোড":"Download"}</button></div>
+  </Sheet>
+ </>;
 }
 
 const urlRe=/(https?:\/\/[^\s<>]+)/g;

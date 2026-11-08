@@ -45,7 +45,7 @@ export function ProfileView({p,bn,aiEnabled,canManage,canNote,onBack,onChat,onTo
   const kv=(k:string,v:string)=><div className={s.kv} key={k}><span className={s.k}>{k}</span><span className={s.v}>{v}</span></div>;
   const sum=V.ok.reduce((a,x)=>a+x.amount_minor,0);
   return <>
-   <div className={s.hero}><div className={`${s.av} ${s.avBig}`}>{initials(p.name)}<ChannelBadge channel={p.channel} size={24}/></div><h2>{p.name}</h2><div className={s.sub}>{sub}</div><span className={`${s.tag} ${tone(V.tone)}`}>{V.label}</span></div>
+   <div className={s.hero}><div className={`${s.av} ${s.avBig}`}>{initials(p.name)}<ChannelBadge channel={p.channel} size={20}/></div><h2>{p.name}</h2><div className={s.sub}>{sub}</div><span className={`${s.tag} ${tone(V.tone)}`}>{V.label}</span></div>
    <div className={s.qa}><button type="button" onClick={onChat}><I n="msg"/>{t("Message","মেসেজ")}</button>
     {phone&&<button type="button" onClick={()=>{try{void navigator.clipboard.writeText(phone);}catch{}toast(t("Number copied","নম্বর কপি হয়েছে"));}}><I n="copy"/>{t("Copy number","নম্বর কপি")}</button>}
     {canManage&&<button type="button" onClick={onToggleAi}><I n="ms"/>{aiEnabled?t("Turn AI off","AI বন্ধ করুন"):t("Turn AI on","AI চালু করুন")}</button>}</div>

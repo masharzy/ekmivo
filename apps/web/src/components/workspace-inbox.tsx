@@ -103,7 +103,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
    method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",
    body:JSON.stringify({action,thread_id:thread,body,before:cursor,filters:{q:f.query,offset:f.offset,queue:f.queue,channel:f.channel,from_date:f.range?dayStr(Number(f.range)):"",through_date:"",label:f.label}})
   });
-  if(!response.ok){if(response.status===401||response.status===403){setForbidden(true);setThreads([]);setLatest([]);setSelected(null);setView("list");setLoaded(false);cached.current.clear();}throw Error(String(response.status));}
+  if(!response.ok){if(response.status===401||response.status===403){setForbidden(true);setThreads([]);setLatest([]);setSelected(null);setView("list");setLoaded(false);cached.current.clear();}const code=await response.json().then((j:{code?:unknown;error?:{code?:unknown}|string})=>String(j?.code??(typeof j?.error==="object"?j.error?.code:j?.error)??"")).catch(()=>"");throw Object.assign(Error(String(response.status)),{code});}
   setForbidden(false);return response.json() as Promise<T>;
  },[workspaceId]);
  const call=useCallback(async <T,>(action:string,body?:object):Promise<T>=>{if(!selected)throw Error("no thread");return api<T>(action,selected,body);},[api,selected]);
@@ -241,7 +241,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
      {threads.map(item=>{const sender=item.preview_sender;const pv=(sender==="seller"?t("You: ","আপনি: "):sender==="ai"?"AI: ":"")+(item.preview||t("Attachment","সংযুক্তি"));
       return <div key={item.id} ref={el=>{if(el)rowRefs.current.set(item.id,el);else rowRefs.current.delete(item.id);}} role="button" tabIndex={0} data-thread-id={item.id} aria-current={selected===item.id} className={`${s.cv} ${selected===item.id?s.cur:""} ${newRows.has(item.id)?s.rowin:""}`}
        onClick={()=>selectThread(item.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectThread(item.id);}else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();(e.currentTarget[e.key==="ArrowDown"?"nextElementSibling":"previousElementSibling"] as HTMLElement|null)?.focus();}}}>
-       <div className={s.av}>{initials(item.name)}<ChannelBadge channel={item.channel} size={24}/></div>
+       <div className={s.av}>{initials(item.name)}<ChannelBadge channel={item.channel} size={18}/></div>
        <div className={s.cm}><b>{item.name}</b><span className={item.unread>0?s.strong:undefined}>{pv}</span></div>
        <div className={s.cr}><span>{listTime(item.last_activity_at,bn)}</span>{item.unread>0?<span className={s.un} aria-label={t(`${item.unread} unread`,`${item.unread}টি অপঠিত`)}>{item.unread>99?"99+":num(item.unread,bn)}</span>:item.overdue?<span className={s.od}>{t("Overdue","দেরি")}</span>:null}</div>
       </div>;})}
@@ -259,7 +259,7 @@ export function WorkspaceInbox({workspaceId,actorId,bn,initialThread,role="viewe
     <div className={s.chh}>
      <button type="button" className={`${s.ib} ${s.backBtn}`} onClick={backToList} aria-label={t("Back to conversations","কথোপকথনের তালিকায় ফিরুন")}><I n="back"/></button>
      <button type="button" className={s.chi} onClick={()=>setView(v=>v==="profile"&&window.matchMedia("(min-width:900px)").matches?"chat":"profile")} aria-label={t("Customer details","কাস্টমারের তথ্য")}>
-      <div className={s.av} style={{width:34,height:34,fontSize:13}}>{initials(customerName)}{chosen&&<ChannelBadge channel={chosen.channel} size={20}/>}</div>
+      <div className={s.av} style={{width:34,height:34,fontSize:13}}>{initials(customerName)}{chosen&&<ChannelBadge channel={chosen.channel} size={16}/>}</div>
       <div className={s.nm}><b>{customerName}</b><span>{channelMeta[chosen?.channel??""]?.name??""}{!windowOpen&&chosen?" · "+t("Reply window closed","উত্তরের সময় শেষ"):""}</span></div></button>
      {canManage?<button type="button" className={`${s.aic} ${ai?"":s.offai}`} aria-pressed={ai} disabled={busy} onClick={()=>void toggleAi()}><i/><span>{ai?t("AI on","AI চালু"):t("AI off","AI বন্ধ")}</span></button>:<span className={s.aic}><i style={{background:ai?"var(--ok)":"var(--mu)"}}/>{ai?t("AI on","AI চালু"):t("AI off","AI বন্ধ")}</span>}
      {canManage&&<button type="button" className={s.ib} onClick={()=>setSheet("tools")} aria-label={t("Conversation tools","কথোপকথনের কাজ")}><I n="more"/></button>}

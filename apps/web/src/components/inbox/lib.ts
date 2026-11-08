@@ -76,3 +76,12 @@ export function loadMedia(workspaceId:string,threadId:string,mediaId:string){
  return hit;
 }
 export function fileToBase64(file:Blob){return new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(",")[1]??"");r.onerror=()=>reject(Error());r.readAsDataURL(file);});}
+
+export function sendReason(e:unknown,bn:boolean){
+ const x=e as {message?:string;code?:string}|null;const code=x?.code??"",st=x?.message??"";
+ if(/FILE_LIMIT|TOO_LARGE/i.test(code))return bn?"ফাইল ৫ MB-এর বেশি":"File is over 5 MB";
+ if(/UNSUPPORTED|INVALID_MEDIA|INVALID_IMAGE/i.test(code))return bn?"ফাইলটি সাপোর্টেড নয়":"File type not supported";
+ if(st==="429")return bn?"একটু পরে আবার চেষ্টা করুন":"Too many uploads, try again shortly";
+ if(/WINDOW|CLOSED/i.test(code))return bn?"উত্তরের সময় শেষ":"Reply window closed";
+ return code?code:st&&/^\d+$/.test(st)?`HTTP ${st}`:"";
+}

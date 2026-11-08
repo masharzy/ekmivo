@@ -19,7 +19,7 @@ export function I({n,size=20,fill,style,className}:{n:IconName;size?:number;fill
 export function ChannelBadge({channel,size=22}:{channel:string;size?:number}){
  const known=brandPath[channel];
  const color=brandColor[channel]??brandColor.web;
- return <span title={channel} style={{position:"absolute",right:-4,bottom:-4,width:size,height:size,borderRadius:"50%",border:"2px solid var(--bg)",background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
+ return <span title={channel} style={{position:"absolute",right:-3,bottom:-3,width:size,height:size,borderRadius:"50%",border:"1.5px solid var(--bg)",background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
   {known?<svg viewBox="0 0 24 24" width={Math.round(size*.62)} height={Math.round(size*.62)} fill="currentColor" aria-hidden="true"><path d={known}/></svg>:<I n="web" size={Math.round(size*.62)} style={{strokeWidth:2}}/>}
  </span>;
 }

@@ -256,6 +256,10 @@ func (s *Service) hydrateInboxMedia(ctx context.Context, d mobileIdentity, t, id
 		declared = strings.Split(res.Header.Get("Content-Type"), ";")[0]
 	}
 	typ, err := validateInboxMedia(data, declared)
+	if err != nil && err.Error() == "UNSUPPORTED_FILE_TYPE" && str(src, "kind") == "document" && len(data) > 0 && len(data) <= inboxMediaLimit {
+		// Unknown document formats are stored as opaque bytes; the owner downloads them at their own risk.
+		typ, err = "application/octet-stream", nil
+	}
 	if err != nil {
 		return err
 	}

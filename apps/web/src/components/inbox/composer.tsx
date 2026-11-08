@@ -4,7 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {PointerEvent as RPE} from "react";
 import {I} from "./icons";
 import {Sheet} from "./sheets";
-import {fileToBase64,maxImages,mmss,money,num,type Cap,type Msg,type Product} from "./lib";
+import {fileToBase64,maxImages,sendReason,mmss,money,num,type Cap,type Msg,type Product} from "./lib";
 import {chooseRecorder,finishRecording,type RecorderChoice} from "./voice";
 import {useMedia} from "./bubbles";
 import s from "./inbox.module.css";
@@ -53,6 +53,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
  },[toast,bn]);// eslint-disable-line react-hooks/exhaustive-deps
  function removeItem(i:number){setItems(prev=>{const x=prev[i];if(x)URL.revokeObjectURL(x.url);const n=prev.filter((_,j)=>j!==i);if(!n.length)setPvOpen(false);setCur(c=>Math.max(0,Math.min(c,n.length-1)));return n;});}
  function closePreview(){items.forEach(x=>URL.revokeObjectURL(x.url));setItems([]);setPvOpen(false);}
+ const rs=(e:unknown)=>{const r=sendReason(e,bn);return r?" — "+r:"";};
  async function uploadAndSend(item:Item,extra:object,mime=item.mime,duration?:number){
   const data=await fileToBase64(item.blob);
   await call("media-upload",{media_id:item.mediaId,data,mime,name:item.name,...(duration?{duration_ms:duration}:{})});
@@ -63,9 +64,9 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   try{
    for(let i=0;i<items.length;i++){await uploadAndSend(items[i],{...(batch?{batch_id:batch}:{}),...(i===0&&p.replyTo?{reply_to:p.replyTo.id}:{})});done++;}
    if(p.replyTo)p.onCancelReply();closePreview();await p.onSent();
-  }catch{
+  }catch(e){
    setItems(prev=>{prev.slice(0,done).forEach(x=>URL.revokeObjectURL(x.url));return prev.slice(done);});
-   toast(t("Couldn't send all photos. Remaining ones are kept.","সব ছবি যায়নি। বাকিগুলো রাখা আছে।"));
+   toast(t("Couldn't send all photos. Remaining ones are kept.","সব ছবি যায়নি। বাকিগুলো রাখা আছে।")+rs(e));
   }finally{setSending(false);p.onBusy(false);}
  }
 
@@ -74,7 +75,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   if(!file||sending)return;if(file.size>MAX_BYTES||!["application/pdf","text/plain"].includes(file.type)){toast(t("Only PDF or text up to 5 MB","শুধু ৫ MB পর্যন্ত PDF বা টেক্সট"));return;}
   setSending(true);p.onBusy(true);
   try{await uploadAndSend({id:"",mediaId:crypto.randomUUID(),key:crypto.randomUUID(),blob:file,url:"",name:file.name.slice(0,200),mime:file.type},p.replyTo?{reply_to:p.replyTo.id}:{});if(p.replyTo)p.onCancelReply();await p.onSent();}
-  catch{toast(t("Couldn't send the file","ফাইল পাঠানো যায়নি"));}finally{setSending(false);p.onBusy(false);}
+  catch(e){toast(t("Couldn't send the file","ফাইল পাঠানো যায়নি")+rs(e));}finally{setSending(false);p.onBusy(false);}
  }
  async function openProducts(){setAttach(false);setProdOpen(true);if(products)return;try{const r=await call<{items:Product[]}>("products");setProducts(r.items);}catch{setProducts([]);toast(t("Couldn't load products","পণ্য আনা যায়নি"));}}
  async function sendProduct(prod:Product){
@@ -85,25 +86,28 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
 
  /* ---------- voice ---------- */
  type Rec={stream:MediaStream;mr:MediaRecorder;parts:Blob[];choice:RecorderChoice;acc:number;seg:number;paused:boolean;ctx?:AudioContext;an?:AnalyserNode;raf?:number;timer?:ReturnType<typeof setInterval>;locked:boolean;x:number;y:number;pointer:number;cancelled:boolean;stopped:boolean};
- const rec=useRef<Rec|null>(null),starting=useRef(false),holdAt=useRef(0),released=useRef(false),mouseMode=useRef(false);
+ const rec=useRef<Rec|null>(null),starting=useRef(false),holdAt=useRef(0),released=useRef(false);
  const [phase,setPhase]=useState<"idle"|"holding"|"locked">("idle"),[elapsed,setElapsed]=useState(0),[levels,setLevels]=useState<number[]>([]),[dx,setDx]=useState(0),[lockP,setLockP]=useState(0),[armed,setArmed]=useState(false),[paused,setPaused]=useState(false),[cancelling,setCancelling]=useState(false);
  const micOk=useMemo(()=>typeof window!=="undefined"&&!!navigator.mediaDevices?.getUserMedia&&!!chooseRecorder(),[]);
  const elapsedMs=(r:Rec)=>r.acc+(r.paused?0:Date.now()-r.seg);
  const cleanup=useCallback((r:Rec)=>{if(r.timer)clearInterval(r.timer);if(r.raf)cancelAnimationFrame(r.raf);r.stream.getTracks().forEach(x=>x.stop());void r.ctx?.close().catch(()=>{});},[]);
  async function startRec(e:RPE){
   if(!micOk||starting.current||rec.current||disabled||!p.canSend){if(!micOk)toast(t("Voice recording isn't supported in this browser","এই ব্রাউজারে ভয়েস রেকর্ড চলবে না"));return;}
-  starting.current=true;released.current=false;holdAt.current=Date.now();const pid=e.pointerId,x=e.clientX,y=e.clientY;const mouse=e.pointerType!=="touch";mouseMode.current=mouse;if(!mouse)(e.currentTarget as HTMLElement).setPointerCapture?.(pid);
+  starting.current=true;released.current=false;holdAt.current=Date.now();const pid=e.pointerId,x=e.clientX,y=e.clientY;(e.currentTarget as HTMLElement).setPointerCapture?.(pid);
   /* AudioContext must be created inside the gesture or Chrome keeps it suspended (flat waveform) */
   let ctx:AudioContext|undefined;try{ctx=new AudioContext();void ctx.resume();}catch{}
-  setPhase(mouse?"locked":"holding");setElapsed(0);setLevels([]);setDx(0);setLockP(0);setArmed(false);setPaused(false);setCancelling(false);
+  setPhase("holding");setElapsed(0);setLevels([]);setDx(0);setLockP(0);setArmed(false);setPaused(false);setCancelling(false);
   try{
    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
    const choice=chooseRecorder()!;const mr=new MediaRecorder(stream,{mimeType:choice.mime});
    const r:Rec={stream,mr,parts:[],choice,acc:0,seg:Date.now(),paused:false,locked:false,x,y,pointer:pid,cancelled:false,stopped:false};
    mr.ondataavailable=ev=>{if(ev.data.size)r.parts.push(ev.data);};
    try{if(ctx){void ctx.resume();const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();an.fftSize=512;an.smoothingTimeConstant=.4;src.connect(an);r.ctx=ctx;r.an=an;}}catch{}
-   rec.current=r;if(mouse){r.locked=true;}
-   if(r.stopped||(released.current&&!mouse)){cleanup(r);rec.current=null;setPhase("idle");if(!r.stopped)toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;}
+   rec.current=r;
+   if(r.stopped){cleanup(r);rec.current=null;return;}
+   if(released.current){/* finger lifted while the mic permission/start was pending */
+    if(Date.now()-holdAt.current<350){cleanup(r);rec.current=null;setPhase("idle");toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;}
+    r.locked=true;setPhase("locked");}
    mr.start(250);navigator.vibrate?.(10);
    r.timer=setInterval(()=>setElapsed(elapsedMs(r)),200);
    const buf=new Uint8Array(512);let last=0;
@@ -111,7 +115,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
   }catch{void ctx?.close().catch(()=>{});setPhase("idle");toast(t("Allow microphone access to record","রেকর্ড করতে মাইক্রোফোনের অনুমতি দিন"));}
   finally{starting.current=false;}
  }
- function moveRec(e:RPE){const r=rec.current;if(!r||r.locked||phase!=="holding"||mouseMode.current)return;const ddx=e.clientX-r.x,ddy=e.clientY-r.y;
+ function moveRec(e:RPE){const r=rec.current;if(!r||r.locked||phase!=="holding")return;const ddx=e.clientX-r.x,ddy=e.clientY-r.y;
   setDx(Math.min(0,ddx));setLockP(Math.max(0,Math.min(1,-ddy/72)));setArmed(-ddy>=61);
   if(ddx<=-96){endRec(false,true);}else if(ddy<=-72){r.locked=true;navigator.vibrate?.(12);setArmed(true);setTimeout(()=>setPhase("locked"),140);}}
  async function endRec(send:boolean,animate=false){
@@ -133,9 +137,9 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
    const ext=out.mime==="audio/ogg"?"ogg":out.mime==="audio/mp4"?"m4a":"audio";
    await uploadAndSend({id:"",mediaId:crypto.randomUUID(),key:crypto.randomUUID(),blob:out.blob,url:"",name:`voice-${Date.now()}.${ext}`,mime:out.mime},p.replyTo?{reply_to:p.replyTo.id}:{},out.mime,Math.max(1000,out.durationMs));
    if(p.replyTo)p.onCancelReply();await p.onSent();
-  }catch{toast(t("Voice note couldn't be sent","ভয়েস পাঠানো যায়নি"));}finally{setSending(false);p.onBusy(false);}
+  }catch(e){toast(t("Voice note couldn't be sent","ভয়েস পাঠানো যায়নি")+rs(e));}finally{setSending(false);p.onBusy(false);}
  }
- function upRec(){if(mouseMode.current)return;released.current=true;const r=rec.current;if(!r){return;}
+ function upRec(){released.current=true;const r=rec.current;if(!r){return;}
   if(r.locked||phase==="locked")return;if(Date.now()-holdAt.current<350){void endRec(false);toast(t("Hold the mic to record","মাইক চেপে ধরে রাখুন"));return;}void endRec(true);}
  function togglePause(){const r=rec.current;if(!r)return;if(r.paused){r.mr.resume();r.seg=Date.now();r.paused=false;setPaused(false);}else{r.mr.pause();r.acc+=Date.now()-r.seg;r.paused=true;setPaused(true);}}
  useEffect(()=>()=>{const r=rec.current;if(r){r.stopped=true;try{if(r.mr.state!=="inactive")r.mr.stop();}catch{}cleanup(r);rec.current=null;}},[cleanup]);
@@ -157,7 +161,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
    </div>
    <button type="button" className={`${s.sendb} ${has?s.has:""} ${phase!=="idle"?s.recm:""}`} aria-label={has?t("Send","পাঠান"):t("Hold to record","ধরে রেকর্ড করুন")}
     onClick={()=>{if(has&&!p.busy)p.onSendText();}}
-    onPointerDown={e=>{if(!has&&e.button===0){e.preventDefault();void startRec(e);}}} onPointerMove={moveRec} onPointerUp={()=>{if(!has)upRec();}} onPointerCancel={()=>{if(!has&&phase==="holding"&&!mouseMode.current)void endRec(false);}} onContextMenu={e=>e.preventDefault()}>
+    onPointerDown={e=>{if(!has&&e.button===0){e.preventDefault();void startRec(e);}}} onPointerMove={moveRec} onPointerUp={()=>{if(!has)upRec();}} onPointerCancel={()=>{if(!has&&phase==="holding")void endRec(false);}} onContextMenu={e=>e.preventDefault()}>
     <I n="mic" className={s.s_mic}/><I n="snd" className={s.s_snd}/>
    </button>
    <div className={s.rec}><I n="mic" className={s.micdot}/><span className={s.recT}>{mmss(elapsed/1000,bn)}</span><div className={s.slc} style={{transform:`translateX(${dx*.6}px)`,opacity:Math.max(0,1+dx/110)}}><I n="back" size={14}/>{t("Slide to cancel","বাতিল করতে স্লাইড করুন")}</div></div>
