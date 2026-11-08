@@ -7,7 +7,7 @@ export function SiteFooter({locale}:{locale:Locale}){
  const pathname=usePathname();
  const segment=useSelectedLayoutSegment();
  const path=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
- if(["setup","dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin|login|register|forgot-password|verify-email|pay|checkout|receipt|invoice)(?:\/|$)/.test(path))return null;
+ if(["setup","dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|businesses|account|admin|login|register|forgot-password|verify-email|pay|checkout|receipt|invoice)(?:\/|$)/.test(path))return null;
  if(["/","/payment-gateway","/ai-bot","/pricing","/privacy","/data-deletion"].includes(path))return <footer className="ekm-footer" lang={locale}><div className="ekm-footer-inner">
   <Link className="ekm-footer-logo" href="/">briofold<b>.</b></Link>
   <nav aria-label={locale==="bn"?"ফুটার নেভিগেশন":"Footer navigation"}>

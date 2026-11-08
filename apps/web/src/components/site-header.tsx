@@ -19,7 +19,7 @@ export function SiteHeader({locale,initialTheme,authenticated=false}:{locale:Loc
  const pathname=usePathname();
  const segment=useSelectedLayoutSegment();
  const visiblePath=(pathname||"/").replace(/^\/(bn|en)(?=\/|$)/,"")||"/";
- if(["setup","dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","workspaces","w","account","admin","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|workspaces|w|account|admin|pay|checkout|receipt|invoice)(?:\/|$)/.test(visiblePath))return null;
+ if(["setup","dashboard","inbox","orders","payments","sms-data","invoices","customers","reports","settings","businesses","account","admin","pay","checkout","receipt","invoice"].includes(segment||"")||/^\/(?:setup|dashboard|inbox|orders|payments|sms-data|invoices|customers|reports|settings|businesses|account|admin|pay|checkout|receipt|invoice)(?:\/|$)/.test(visiblePath))return null;
  const actionHref=authenticated?"/dashboard":visiblePath==="/login"?"/register":"/login";
  const actionLabel=authenticated?(locale==="bn"?"ড্যাশবোর্ড":"Dashboard"):visiblePath==="/login"?(locale==="bn"?"অ্যাকাউন্ট খুলুন":"Create account"):(locale==="bn"?"লগইন":"Sign in");
  return <header className="ekm-nav" lang={locale} aria-label={locale==="bn"?"প্রধান নেভিগেশন":"Main navigation"}>
