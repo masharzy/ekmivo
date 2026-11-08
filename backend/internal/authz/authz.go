@@ -33,6 +33,9 @@ const (
 	InboxRead         Capability = "inbox:read"
 	InboxSend         Capability = "inbox:send"
 	InboxManage       Capability = "inbox:manage"
+	// CommerceAccess gates the Orders surface (orders, products, stock, delivery,
+	// coupons). It is an AI/Both entitlement; a pure Payment Gateway has none.
+	CommerceAccess Capability = "commerce:access"
 )
 
 type Environment string
@@ -132,7 +135,7 @@ func (r *Repository) Authenticate(ctx context.Context, token string) (Principal,
 func validEnvironment(e Environment) bool { return e == Sandbox || e == Live }
 func permits(role string, c Capability) bool {
 	switch c {
-	case PaymentsRead, InboxRead:
+	case PaymentsRead, InboxRead, CommerceAccess:
 		return role == "owner" || role == "admin" || role == "editor" || role == "viewer"
 	case PaymentsIssue, InboxSend:
 		return role == "owner" || role == "admin" || role == "editor"
@@ -144,7 +147,7 @@ func permits(role string, c Capability) bool {
 }
 func serviceAllows(mode string, capability Capability) bool {
 	switch capability {
-	case InboxRead, InboxSend, InboxManage:
+	case InboxRead, InboxSend, InboxManage, CommerceAccess:
 		return mode == "ai" || mode == "both"
 	case PaymentsRead, PaymentsIssue, PaymentsManage:
 		return mode == "commerce" || mode == "both"
@@ -207,7 +210,7 @@ func (r *Repository) AuthorizeWorkspace(ctx context.Context, principal Principal
 	switch capability {
 	case PaymentsRead, PaymentsIssue, PaymentsManage:
 		product = "payments"
-	case InboxRead, InboxSend, InboxManage:
+	case InboxRead, InboxSend, InboxManage, CommerceAccess:
 		product = "ai"
 	}
 	if product != "" {

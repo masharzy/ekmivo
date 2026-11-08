@@ -44,6 +44,11 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 	if !s.budget(w, "commerce:"+ws+":"+actor.UserID, 120) {
 		return
 	}
+	// Orders belong to AI and Both businesses; a pure Payment Gateway workspace is refused server-side.
+	if _, err = s.Auth.AuthorizeWorkspace(r.Context(), actor, ws, authz.Environment(realm), authz.CommerceAccess); err != nil {
+		authError(w, err)
+		return
+	}
 	var raw []byte
 	if r.Method == http.MethodGet {
 		off := 0

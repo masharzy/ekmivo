@@ -55,7 +55,7 @@ func TestInboxLeastPrivilegeAndIndependentProductAccess(t *testing.T) {
    if permits(role, check.capability) != check.allowed { t.Fatalf("%s %s permission mismatch", role, check.capability) }
   }
  }
- for _, capability := range []Capability{InboxRead, InboxSend, InboxManage} {
+ for _, capability := range []Capability{InboxRead, InboxSend, InboxManage, CommerceAccess} {
   if !serviceAllows("ai", capability) || !serviceAllows("both", capability) || serviceAllows("commerce", capability) || serviceAllows("off", capability) {
    t.Fatalf("incorrect AI entitlement gate for %s", capability)
   }
