@@ -236,3 +236,14 @@ following docs/design/briofold-phase-prompts.md; no UI changes in Phase 1.
 ## AI Commerce Core Phase 0 — 2026-11-09 (CI pending)
 
 Fixed sidebar ref rendering through atomic navigation state and added 43 missing CONTROL migrations to the existing checksummed coordinator. Full lint, TypeScript, production build, 208 non-browser contracts and Go migrator tests pass. With owner approval, deleted only archived test-managed-plans-20261016 and created a ready no-compute checkpoint of test-customer-orders-20261108. Applied 43 migrations there; second execution is a checksum-protected no-op (75 ledger rows, all hashes match). No production writes/model change/merge/deploy. Final CI is the remaining seal gate. See docs/evidence/ai-commerce-phase0/README.md and test-catchup.json.
+
+## AI Commerce Phase 1 — catalog (2026-11-09) — PARTIAL, branch agents/ai-commerce-phase1 (stacked on Phase 0 PR #162)
+Done (data layer only):
+- Migration 0228: catalog columns on commerce_products (tags, category, search_aliases, ai_notes, min_price_minor, source, external_id), Bangla/Banglish/English synonym table, search columns kept current by triggers, `commerce_product_search` (every word must match, variant-level pick, price/stock/category filters, typo fallback, never returns min_price_minor), `commerce_catalog_write` (one write path, upsert by source+external_id), one-time idempotent copy of inbox_products (each size -> a variant, BDT only). commerce_media now allows webp.
+- Registered 0228 in the financial-migrate coordinator list.
+- tools/testing/catalog-search-harness.sql: 15 assertions on an empty local PostgreSQL 16, migration applied twice. All PASS. NOT yet run on the full migration chain or on a Neon branch.
+Measured locally (10k synthetic products, PG16): normal search 23–41 ms; typo fallback ~105 ms in a worst case where 20% of products share the word.
+NOT done: manual product form, CSV import with image URLs (SSRF-safe), public REST API + Idempotency-Key, Woo full import/webhooks, feature flags, docs/curl examples, Go integration tests, CI run, Neon test-branch run.
+Not verified: Go tests (toolchain here is 1.24, repo needs 1.27); web lint/build.
+Blocker: Neon project hit "branches limit exceeded", so no Phase 1 branch could be created. Needs the owner to free a slot (delete an archived branch) or to allow applying 0228 on test-customer-orders-20261108.
+Known gap: inbox product images are in inbox_media and are not copied into commerce_media; owner must re-attach.

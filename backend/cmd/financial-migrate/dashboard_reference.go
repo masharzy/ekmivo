@@ -91,6 +91,7 @@ var dashboardControlMigrations = []string{
 	"0225_inbox_delivered_watermark.sql",
 	"0226_inbox_realtime_avatars.sql",
 	"0227_briofold_customer_orders_link.sql",
+	"0228_briofold_catalog_search.sql",
 }
 
 // Explicit release mode in the existing coordinator; never runs at API startup.
