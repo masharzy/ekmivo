@@ -13,16 +13,28 @@ export type Call=<T=unknown>(action:string,body?:object)=>Promise<T>;
 type Item={id:string;mediaId:string;key:string;blob:Blob;url:string;name:string;mime:string};
 const MAX_BYTES=5*1024*1024;
 
+// Base64 travels through the web proxy: keep a photo well below its payload limit.
+const PHOTO_BYTES=2*1024*1024;
 async function normalizeImage(file:File):Promise<{blob:Blob;mime:string;name:string}|null>{
  if(!file.type.startsWith("image/"))return null;
- const direct=(file.type==="image/jpeg"||file.type==="image/png")&&file.size<=MAX_BYTES;
- if(direct)return {blob:file,mime:file.type,name:file.name||"photo"};
+ let source:CanvasImageSource|null=null,release=()=>{};
  try{
-  const bmp=await createImageBitmap(file);const scale=Math.min(1,2048/Math.max(bmp.width,bmp.height));
-  const c=document.createElement("canvas");c.width=Math.max(1,Math.round(bmp.width*scale));c.height=Math.max(1,Math.round(bmp.height*scale));
-  const ctx=c.getContext("2d");if(!ctx)return null;ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(bmp,0,0,c.width,c.height);bmp.close?.();
-  for(const q of [.88,.74,.6]){const blob=await new Promise<Blob|null>(r=>c.toBlob(r,"image/jpeg",q));if(blob&&blob.size<=MAX_BYTES)return {blob,mime:"image/jpeg",name:(file.name||"photo").replace(/\.[^.]+$/,"")+".jpg"};}
+  try{const bmp=await createImageBitmap(file);source=bmp;release=()=>bmp.close();}
+  catch{
+   // Some mobile browsers cannot decode camera photos with createImageBitmap.
+   const url=URL.createObjectURL(file);release=()=>URL.revokeObjectURL(url);
+   const img=new Image();await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(Error("IMAGE_DECODE_FAILED"));img.src=url;});source=img;
+  }
+  const width=source instanceof HTMLImageElement?source.naturalWidth:(source as ImageBitmap).width;
+  const height=source instanceof HTMLImageElement?source.naturalHeight:(source as ImageBitmap).height;
+  if(!width||!height)return null;
+  if((file.type==="image/jpeg"||file.type==="image/png")&&file.size<=PHOTO_BYTES&&Math.max(width,height)<=2560)return {blob:file,mime:file.type,name:file.name||"photo"};
+  const scale=Math.min(1,2560/Math.max(width,height));
+  const c=document.createElement("canvas");c.width=Math.max(1,Math.round(width*scale));c.height=Math.max(1,Math.round(height*scale));
+  const ctx=c.getContext("2d");if(!ctx)return null;ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(source,0,0,c.width,c.height);
+  for(const q of [.88,.74,.6,.45]){const blob=await new Promise<Blob|null>(r=>c.toBlob(r,"image/jpeg",q));if(blob&&blob.size<=PHOTO_BYTES)return {blob,mime:"image/jpeg",name:(file.name||"photo").replace(/\.[^.]+$/,"")+".jpg"};}
  }catch{}
+ finally{release();}
  return null;
 }
 
@@ -66,7 +78,7 @@ export function Composer(p:{workspaceId:string;threadId:string;bn:boolean;call:C
    if(p.replyTo)p.onCancelReply();closePreview();await p.onSent();
   }catch(e){
    setItems(prev=>{prev.slice(0,done).forEach(x=>URL.revokeObjectURL(x.url));return prev.slice(done);});
-   toast(t("Couldn't send all photos. Remaining ones are kept.","সব ছবি যায়নি। বাকিগুলো রাখা আছে।")+rs(e));
+   toast((items.length===1?t("Couldn't send this photo. It is kept for retry.","ছবিটি পাঠানো যায়নি। আবার পাঠানোর জন্য রাখা আছে।"):t("Couldn't send all photos. Remaining ones are kept.","সব ছবি যায়নি। বাকিগুলো রাখা আছে।"))+rs(e));
   }finally{setSending(false);p.onBusy(false);}
  }
 
