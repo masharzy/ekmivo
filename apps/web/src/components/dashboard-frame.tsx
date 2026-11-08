@@ -55,11 +55,9 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
  const [searchOpen,setSearchOpen]=useState(false);
  const [isNavigating,startTransition]=useTransition();
  const [noticeOpen,setNoticeOpen]=useState(false);
- const [blockedRoute,setBlockedRouteValue]=useState<string|null>(null);
- const blockedBusiness=useRef<string|null>(null);
+ const [{route:blockedRoute,businessId:blockedBusiness},setBlockedNavigation]=useState<{route:string|null;businessId:string|null}>({route:null,businessId:null});
  const setBlockedRoute=useCallback((route:string|null,businessId:string|null=null)=>{
-  blockedBusiness.current=businessId;
-  setBlockedRouteValue(route);
+  setBlockedNavigation({route,businessId});
  },[]);
  const [draftError,setDraftError]=useState("");
  const [draftSaving,setDraftSaving]=useState(false);
@@ -126,7 +124,7 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
   const next=unified&&businessId===workspace.id?(unifiedSectionHref(nextSection,product)??dashboardHref(locale,businessId,product,nextSection,env)):dashboardHref(locale,businessId,product,nextSection,env);
   if(activeDrafts().length){setBlockedRoute(next);setDraftError("");return;}
   startTransition(()=>router.push(next));
- },[locale,router,startTransition,unified,workspace.id]);
+ },[locale,router,startTransition,unified,workspace.id,setBlockedRoute]);
 
  useEffect(()=>{
   try{window.localStorage.setItem(memoryKey(workspace.id,service),section);}catch{/* Non-essential preference. */}
@@ -204,10 +202,10 @@ export function DashboardFrame({ unified=false, locale, service, section:initial
    window.removeEventListener("briofold:guarded-navigation",guardedNavigation);
    document.removeEventListener("click",guardedAnchor,true);
   };
- },[]);
+ },[setBlockedRoute]);
  const finishDraftNavigation=async()=>{
   if(!blockedRoute)return;
-  const next=blockedRoute,businessId=blockedBusiness.current;
+  const next=blockedRoute,businessId=blockedBusiness;
   setDraftSaving(true);
   try{
    // Persist the authorized business only after the draft decision succeeds.

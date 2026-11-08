@@ -232,3 +232,7 @@ following docs/design/briofold-phase-prompts.md; no UI changes in Phase 1.
 - Vercel ekmivo-web: BRIOFOLD_SUBSCRIPTION_PAYMENT_ENABLED added; old EKMIVO_ one kept until verified.
 - Left on purpose: DB roles/schemas/GUCs (ekmivo_*, ekmivo.*), historical migrations/evidence, github.com/masharzy/ekmivo URLs (until repo rename), GOOGLE_AUTH_ORIGIN (ekmivo-web.vercel.app).
 - Needs owner: GitHub Actions secrets rename (BRIOFOLD_ANDROID_KEYSTORE_*), Render envs, Google/Meta settings.
+
+## AI Commerce Core Phase 0 — 2026-11-08 (OPEN)
+
+Atomic pending navigation state fixes sidebar render refs. Full lint, TypeScript and 51 regression contracts pass. Audited 209 migrations; 32 recorded checksums match. Rehearsed 35 missing-anchor migrations through 0227 on the authorized Neon test branch with rollback. Durable catch-up/idempotence remain open: child snapshots unsupported and backup branch quota full. No production writes/model change/merge/deploy. See docs/evidence/ai-commerce-phase0/README.md.

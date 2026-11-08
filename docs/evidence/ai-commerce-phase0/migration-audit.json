@@ -1,0 +1,3956 @@
+{
+  "source_commit": "a3df78814c66e87af201ba7cc07605a7d0973670",
+  "branch": "production",
+  "database": "ekmivo",
+  "note": "source_lf_sha256 normalizes Windows CRLF to repository LF. Presence does not prove SQL version. Financial objects absent from CONTROL are expected. inbox_blobs intentionally removed by 0223.",
+  "migrations": [
+    {
+      "name": "0001_auth_workspaces.sql",
+      "tables": [
+        "app_users",
+        "auth_sessions",
+        "auth_attempts",
+        "workspaces",
+        "workspace_members",
+        "platform_administrators"
+      ],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "f2a1157104529fdf51df8754439dff01c023eeeddad6eb052b5714dde7417dcd",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "9dfbb85dc1eb36a0aad9ff166790da4efb2a37614b1dbd5d54c2de916ab68e45"
+    },
+    {
+      "name": "0002_account_recovery_admin.sql",
+      "tables": [
+        "platform_auth_settings",
+        "auth_one_time_codes",
+        "platform_admin_audit"
+      ],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "6a49904df7ecf1576795ea8ae25722af9daf221cd2947111f6dd988cea6105fe",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "0b00169233afdff4aef69d1103cb4041a5fb530bc3a47f9b5a099eb0044abc8c"
+    },
+    {
+      "name": "0003_pg01_admin_mfa.sql",
+      "tables": [
+        "platform_admin_mfa",
+        "platform_admin_mfa_attempts"
+      ],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "d3e435cea18bbe29c24fa022e707608b1433019a6c1812926e12a3b37dcf67bc",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "ed0adec7ad08f4661aa994f10a107c72bf550ae94d9fd665120b9926f21d7722"
+    },
+    {
+      "name": "0004_pg01_environment_rls.sql",
+      "tables": [
+        "workspace_environments",
+        "workspace_environment_settings"
+      ],
+      "functions": [
+        "seed_workspace_environments"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "4edf959069f29de82bc5a6651c0fabde1659a8eb2bab9fcb0d11f59670b64863",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "5f5fb9b1b1eb2ce56093022efac4bf3f295cb524802dd70a26afe554a73206f2"
+    },
+    {
+      "name": "0005_pg02_product_access.sql",
+      "tables": [
+        "workspace_product_access",
+        "workspace_product_access_audit"
+      ],
+      "functions": [
+        "seed_workspace_product_access"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "9edc5b158ee8a64e05a2132f142d045a0b61a71e2a1844ede6326fc34bb98eb8",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c66df10b597d7168e3749acdec51960cd023f8585410301fe599d7e65fb3c625"
+    },
+    {
+      "name": "0006_pg01_mfa_recovery.sql",
+      "tables": [
+        "platform_admin_recovery_codes"
+      ],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "6504fa061e747fa266f069b53e90fc4c82de0f3071dacd85f37623adfc81fccb",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "0cbacd84c4a761e1a650e8c19d50a2d63c146892c958154c45cf9894adddeef1"
+    },
+    {
+      "name": "0007_pg03_merchant_keys.sql",
+      "tables": [
+        "merchant_api_keys",
+        "merchant_api_key_audit"
+      ],
+      "functions": [
+        "resolve_merchant_api_key",
+        "touch_merchant_api_key"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "e22a88b5054c53598541513a2c8ad229d4b74e5973a4d3967339742b2ddb165a",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "1eb6c3cbe5614dbe816f3779674f23bbb2f585a546945b4aa9dcd1748d5cea4d"
+    },
+    {
+      "name": "0008_pg04_financial_core.sql",
+      "tables": [
+        "financial_realm",
+        "financial_workspace_registry",
+        "financial_receiving_accounts",
+        "payment_intents",
+        "payment_attempts",
+        "financial_inbound_events",
+        "financial_receipt_observations",
+        "financial_payments",
+        "financial_allocations",
+        "financial_idempotency",
+        "financial_outbox",
+        "financial_audit_processed"
+      ],
+      "functions": [
+        "financial_sync_workspace",
+        "financial_validate_attempt",
+        "financial_verify_payment_fields",
+        "financial_enforce_allocation_caps",
+        "financial_require_river_job",
+        "financial_audit_context",
+        "financial_process_audit",
+        "financial_reject_history_change"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "financial_realm",
+        "financial_workspace_registry",
+        "financial_receiving_accounts",
+        "payment_intents",
+        "payment_attempts",
+        "financial_inbound_events",
+        "financial_receipt_observations",
+        "financial_payments",
+        "financial_allocations",
+        "financial_idempotency",
+        "financial_outbox",
+        "financial_audit_processed"
+      ],
+      "missing_functions": [
+        "financial_sync_workspace",
+        "financial_validate_attempt",
+        "financial_verify_payment_fields",
+        "financial_enforce_allocation_caps",
+        "financial_require_river_job",
+        "financial_audit_context",
+        "financial_process_audit",
+        "financial_reject_history_change"
+      ],
+      "source_sha256": "df388c134178d4b2b410ec12170ef8bef00c70150c1e153dee8dc4d3e5539bec",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "26b53736e9ce3bd8361730b7211eecf675d4554da486da55d8b23531b2f64f1c"
+    },
+    {
+      "name": "0009_pg04_control_projection.sql",
+      "tables": [
+        "financial_projection_versions",
+        "financial_projection_tombstones"
+      ],
+      "functions": [
+        "financial_projection_environment_seed",
+        "financial_projection_environment_bump",
+        "financial_projection_payment_product_bump",
+        "financial_projection_workspace_deleted",
+        "list_financial_projections",
+        "resolve_financial_projection"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "545d619fa86bd66a973465442b7558f89d71ab1b9f0d8fd93be9dd68f3a48c0e",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "3561164ff458774529949f8146fc6318b136c1b0fec25d0af7585b7b6cfc73ab"
+    },
+    {
+      "name": "0010_pg05_checkout.sql",
+      "tables": [
+        "pg05_checkout_tokens",
+        "pg05_intent_events"
+      ],
+      "functions": [
+        "pg05_intent_state",
+        "pg05_create_intent",
+        "pg05_checkout_view",
+        "pg05_lock_payer",
+        "pg05_merchant_list",
+        "pg05_cancel_intent",
+        "financial_validate_attempt"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg05_checkout_tokens",
+        "pg05_intent_events"
+      ],
+      "missing_functions": [
+        "pg05_intent_state",
+        "pg05_create_intent",
+        "pg05_checkout_view",
+        "pg05_lock_payer",
+        "pg05_merchant_list",
+        "pg05_cancel_intent",
+        "financial_validate_attempt"
+      ],
+      "source_sha256": "117732a2b1909fc9e6e65e682db2f3ac118417d424c44456cf10d6b2bd16d167",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4cf6b91e9c90432dbcc85085d38e24f0937cd46ed2ef5e40bb78b446e56d78a4"
+    },
+    {
+      "name": "0011_pg05_linked_sources.sql",
+      "tables": [
+        "pg05_billing_sources",
+        "pg05_intent_source_links"
+      ],
+      "functions": [
+        "pg05_create_billing_source",
+        "pg05_list_billing_sources",
+        "pg05_create_linked_intent",
+        "pg05_merchant_list"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg05_billing_sources",
+        "pg05_intent_source_links"
+      ],
+      "missing_functions": [
+        "pg05_create_billing_source",
+        "pg05_list_billing_sources",
+        "pg05_create_linked_intent",
+        "pg05_merchant_list"
+      ],
+      "source_sha256": "a8eebc16de2ab28884e4d6e6173bd774b890cf06acf27db26f631e6db7bfdc51",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "85b4b8098c7a01f376fca022b72e937162949a28fe9245a2de7b4c2edc145bca"
+    },
+    {
+      "name": "0012_pg05_source_integrity.sql",
+      "tables": [],
+      "functions": [
+        "pg05_create_linked_intent",
+        "pg05_validate_source_link",
+        "pg05_create_billing_source",
+        "pg05_merchant_detail",
+        "pg05_checkout_view"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg05_create_linked_intent",
+        "pg05_validate_source_link",
+        "pg05_create_billing_source",
+        "pg05_merchant_detail",
+        "pg05_checkout_view"
+      ],
+      "source_sha256": "11cbfd6c577fe3ee1453bc7ae1954fa2e69a161c4d067a57fdf9404252fd355b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "3ddeb19736bfc078529bb01f9274680f6cbb21495b313af4df8f3b1cb88f7938"
+    },
+    {
+      "name": "0013_pg05_public_business.sql",
+      "tables": [],
+      "functions": [
+        "pg05_public_business"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "39c4d93a6149c3e19e5158c49b06506c25ea448b4935724b400af0f9aa3ca4b0",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "feccb6cdcaf13f05997a913f4d44afd8ef3980abdfe09568b76dcce34144c64a"
+    },
+    {
+      "name": "0014_pg06_pg09_receipt_pipeline.sql",
+      "tables": [
+        "pg06_account_configuration",
+        "pg06_devices",
+        "pg06_transport",
+        "pg07_receipt_results",
+        "pg08_endpoints",
+        "pg07_events",
+        "pg09_audit",
+        "pg08_deliveries"
+      ],
+      "functions": [
+        "pg06_scope",
+        "pg06_pair",
+        "pg06_account",
+        "pg06_account_attempt_guard",
+        "pg06_claim",
+        "pg06_device_context",
+        "pg06_ingest",
+        "pg06_heartbeat",
+        "pg06_history",
+        "pg07_pending",
+        "pg07_match",
+        "pg08_due",
+        "pg08_claim",
+        "pg08_finish",
+        "pg07_candidates",
+        "pg09_read",
+        "pg09_read",
+        "pg09_action"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg06_account_configuration",
+        "pg06_devices",
+        "pg06_transport",
+        "pg07_receipt_results",
+        "pg08_endpoints",
+        "pg07_events",
+        "pg09_audit",
+        "pg08_deliveries"
+      ],
+      "missing_functions": [
+        "pg06_scope",
+        "pg06_pair",
+        "pg06_account",
+        "pg06_account_attempt_guard",
+        "pg06_claim",
+        "pg06_device_context",
+        "pg06_ingest",
+        "pg06_heartbeat",
+        "pg06_history",
+        "pg07_pending",
+        "pg07_match",
+        "pg08_due",
+        "pg08_claim",
+        "pg08_finish",
+        "pg07_candidates",
+        "pg09_read",
+        "pg09_read",
+        "pg09_action"
+      ],
+      "source_sha256": "0e622a639485d972a2126fee34a1ab94ade950e494534ec810c316d4b48e0e53",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "7713c9102a5506a51512e1d992c5b5eccc5c2a0d5bc744db0b58176fcbff27dc"
+    },
+    {
+      "name": "0015_pg08_customer_notice.sql",
+      "tables": [
+        "pg08_notice_contacts",
+        "pg08_customer_notices"
+      ],
+      "functions": [
+        "pg08_notice_register",
+        "pg08_notice_enqueue",
+        "pg08_notice_verify",
+        "pg08_notice_withdraw",
+        "pg08_notice_on_payment",
+        "pg08_notice_due",
+        "pg08_notice_claim",
+        "pg08_notice_finish",
+        "pg08_notice_read",
+        "pg08_notice_retry"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg08_notice_contacts",
+        "pg08_customer_notices"
+      ],
+      "missing_functions": [
+        "pg08_notice_register",
+        "pg08_notice_enqueue",
+        "pg08_notice_verify",
+        "pg08_notice_withdraw",
+        "pg08_notice_on_payment",
+        "pg08_notice_due",
+        "pg08_notice_claim",
+        "pg08_notice_finish",
+        "pg08_notice_read",
+        "pg08_notice_retry"
+      ],
+      "source_sha256": "ea13466b557a127da7ec4ce2caea4fa69f459f29718ac751719b41041a61fd0a",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "6842d8aeca008e43f0e353d316aaa4b6e9df33305ab650eaba046be3ca558cf4"
+    },
+    {
+      "name": "0016_pg10_documents.sql",
+      "tables": [
+        "pg10_documents",
+        "pg10_idempotency",
+        "pg10_versions",
+        "pg10_document_intents",
+        "pg10_files",
+        "pg10_exports"
+      ],
+      "functions": [
+        "pg10_total",
+        "pg10_intent",
+        "pg10_read",
+        "pg10_write",
+        "pg10_import",
+        "pg10_public",
+        "pg10_visit"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg10_documents",
+        "pg10_idempotency",
+        "pg10_versions",
+        "pg10_document_intents",
+        "pg10_files",
+        "pg10_exports"
+      ],
+      "missing_functions": [
+        "pg10_total",
+        "pg10_intent",
+        "pg10_read",
+        "pg10_write",
+        "pg10_import",
+        "pg10_public",
+        "pg10_visit"
+      ],
+      "source_sha256": "db67352ec1f009838ec7257a13fbb51dd7803797124970690100dc624ca9883b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "18ee16f48ac4928a09705b41470e76596a0eb124fa55395bf479451b6899c28b"
+    },
+    {
+      "name": "0017_pg11_operations.sql",
+      "tables": [
+        "pg11_refunds",
+        "pg11_statements",
+        "pg13_notifications",
+        "pg13_notification_reads"
+      ],
+      "functions": [
+        "pg11_event",
+        "pg08_notice_enqueue",
+        "pg11_refund",
+        "pg11_refund_action",
+        "pg11_read",
+        "pg11_statement",
+        "pg11_settlement"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg11_refunds",
+        "pg11_statements",
+        "pg13_notifications",
+        "pg13_notification_reads"
+      ],
+      "missing_functions": [
+        "pg11_event",
+        "pg08_notice_enqueue",
+        "pg11_refund",
+        "pg11_refund_action",
+        "pg11_read",
+        "pg11_statement",
+        "pg11_settlement"
+      ],
+      "source_sha256": "5c7dfc7e74bb6cea23d64ea58bb6aa06185c536cbf9f914fa439f94c3f5f012c",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "eacc215ea86f1bcef315e73e65bac31de42ed3ebaa364fcaa38d9806b24648ce"
+    },
+    {
+      "name": "0018_pg10_live_checkout.sql",
+      "tables": [],
+      "functions": [
+        "pg10_checkout_view",
+        "pg11_checkout_payment"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_checkout_view",
+        "pg11_checkout_payment"
+      ],
+      "source_sha256": "580a9b2672cf738b48422c4400a69bfe6999874c8308c2b62e04dc0fe007e4a1",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f0cc9e19af70ca64d364bb83cd947d40fb56cefcb3793e94c121cef908fd41dc"
+    },
+    {
+      "name": "0019_pg10_control_public.sql",
+      "tables": [],
+      "functions": [
+        "pg10_public_business"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b78ab88b2ddcea19e0664424e60394bb69c0a750a8a80f3bc3b367de5391485a",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4c2c5d6a1f9fb8ae2e224d6786822de53ad9dbf29cab7637f60f3094c2bdbaa8"
+    },
+    {
+      "name": "0020_pg10_private_files.sql",
+      "tables": [],
+      "functions": [
+        "pg10_file_save",
+        "pg10_file_read",
+        "pg10_validate_files"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_file_save",
+        "pg10_file_read",
+        "pg10_validate_files"
+      ],
+      "source_sha256": "4c2aad3dd11a5b1716bccbf697a5bef31dd454be77473e4fdc887d41cd508382",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "9ceb44acc329acc55673b972eb7c261cbf57b61c4251e8fdfdd6fe83ab01c128"
+    },
+    {
+      "name": "0021_pg12_integrations.sql",
+      "tables": [
+        "pg12_integrations"
+      ],
+      "functions": [
+        "pg12_read",
+        "pg12_save"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg12_integrations"
+      ],
+      "missing_functions": [
+        "pg12_read",
+        "pg12_save"
+      ],
+      "source_sha256": "319e49225eb087bdaf52eb71d51d1ed1be88247509bf14c3773f3ae2d45b6e13",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f435cbd75327f2cf5377a43ad9dc28cb901d74f3207946e48557e6d836dba6a6"
+    },
+    {
+      "name": "0022_pg13_reporting.sql",
+      "tables": [],
+      "functions": [
+        "pg13_reports",
+        "pg13_notification_list",
+        "pg13_notification_read"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg13_reports",
+        "pg13_notification_list",
+        "pg13_notification_read"
+      ],
+      "source_sha256": "8f51cf84655f89313122215a7a25898a05a95d8f6f6ae5486d37bcea7051fd12",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "70fd34f4259b3cacd11fb75e77f0c20800965d84782caad4875e1a4c36e550ff"
+    },
+    {
+      "name": "0023_pg13_workspace.sql",
+      "tables": [
+        "pg13_business_settings",
+        "pg13_invites",
+        "pg13_support",
+        "pg13_control_audit"
+      ],
+      "functions": [
+        "pg13_actor",
+        "pg13_workspace_read",
+        "pg13_workspace_write",
+        "pg13_invite_accept"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "ceb319518b35cbe46ffcf0853101b5b73b063c59d498924e7c556e149d14d4e1",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4b5d69bee70b0ce3518ae4bd5d7ca5e946ee1e54b8f7c44b0a53901c1899b3bb"
+    },
+    {
+      "name": "0024_pg13_billing.sql",
+      "tables": [
+        "pg13_plans",
+        "pg13_platform_invoices",
+        "pg13_subscriptions"
+      ],
+      "functions": [
+        "pg13_billing_read",
+        "pg13_billing_issue",
+        "pg13_billing_verified",
+        "pg13_billing_allowed"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "739cf16eb1850503efdd5c4b1d63299919b86cce9302aa77f9022361bac62cfc",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "db633c04c779797196efc4a5f36e5d4b510fd84bea07bb5a2be871c1cc49ca45"
+    },
+    {
+      "name": "0025_pg13_platform_payment.sql",
+      "tables": [],
+      "functions": [
+        "pg13_platform_payment"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg13_platform_payment"
+      ],
+      "source_sha256": "bd185c72b24d368482f2f788f7d3f9f9552f2d257d2f44419e2382629eba6190",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "176b4a829bd4d03cb42656870987240f282459a2a5da05a9f42c1e0e26265c59"
+    },
+    {
+      "name": "0026_pg13_domain_notifications.sql",
+      "tables": [],
+      "functions": [
+        "pg13_domain_notification",
+        "pg10_invoice_paid_event"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg13_domain_notification",
+        "pg10_invoice_paid_event"
+      ],
+      "source_sha256": "8034b8add2f2841f9434741d69cdaecf9ecfc0e42af9fd312755e02a0c8d81f5",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4eaa36ad234c4cf7bba3eed9265cc35f84ee783235f12089039f35a6eef4e396"
+    },
+    {
+      "name": "0027_pg10_async_exports.sql",
+      "tables": [
+        "pg10_export_jobs"
+      ],
+      "functions": [
+        "pg10_export_enqueue",
+        "pg10_export_claim",
+        "pg10_export_rows",
+        "pg10_export_finish",
+        "pg10_export_get"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg10_export_jobs"
+      ],
+      "missing_functions": [
+        "pg10_export_enqueue",
+        "pg10_export_claim",
+        "pg10_export_rows",
+        "pg10_export_finish",
+        "pg10_export_get"
+      ],
+      "source_sha256": "bfa37042e8e42627a52d1318ca215726efb15cba3641ea6b85377021c8cd8b9c",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "d62a6db900ca294199d385f3f96abfdbbb198f8b7ef88af9e1c24afcf840c610"
+    },
+    {
+      "name": "0028_pg10_export_authority.sql",
+      "tables": [],
+      "functions": [
+        "pg10_export_authorized"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "74c0e9140956dbb37023a4cfacdef6df8c828f9483d0b4876d4d81f1f65f2c07",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f10c30d43493b948dfd18ff17801c56f272bfdcb16262f53d9a1277142c9e0a5"
+    },
+    {
+      "name": "0029_pg10_linked_invoice.sql",
+      "tables": [],
+      "functions": [
+        "pg10_invoice_intent"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_invoice_intent"
+      ],
+      "source_sha256": "679f7bf12bef959b05554215d71a6da368438e100447e3a09f265f9849715594",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "933015c35be77b251e846b913599e6fd4768d4af928c4c96bec79021cb41d5bc"
+    },
+    {
+      "name": "0030_pg15_worker_health.sql",
+      "tables": [
+        "pg15_worker_health"
+      ],
+      "functions": [
+        "pg15_heartbeat",
+        "pg15_health"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg15_worker_health"
+      ],
+      "missing_functions": [
+        "pg15_heartbeat",
+        "pg15_health"
+      ],
+      "source_sha256": "8ef22938568f2a76ad8a5c26d3fa5ac91d67be2278cfb78683c1bb8f04476957",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "3cd7b6faf26d2bcbcdefa2fdf79329fb6c83f3c2bcb834bbf37a3bd1b7c9da6d"
+    },
+    {
+      "name": "0031_pg13_reauthentication.sql",
+      "tables": [
+        "pg13_reauth_attempts"
+      ],
+      "functions": [
+        "pg13_reauth_hash",
+        "pg13_reauth_success"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "eef75b26999b4151b47d3905a7a5c97561b1f5be00d58f51bfc77875092dfe27",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "a2e221f360f3641a19c463718db39e881a3e40158cdd5d79d65dee3b9a34ce9f"
+    },
+    {
+      "name": "0032_pg13_grants_transfer.sql",
+      "tables": [
+        "pg13_member_grants"
+      ],
+      "functions": [
+        "pg13_capability_override",
+        "pg13_grants",
+        "pg13_transfer_owner",
+        "pg10_export_authorized",
+        "pg10_invoice_send_authorized",
+        "pg13_team_grants"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "97cd890c89407ddb86cbf98f27c3d7d1990489e9c02e6f6dfda19f0818bc8e4b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f807acb0c20dbe2cb7656421fd0176be63f133c71ef9cbe185dee55c1970e504"
+    },
+    {
+      "name": "0033_pg15_retention.sql",
+      "tables": [],
+      "functions": [
+        "pg15_file_claim",
+        "pg15_file_deleted",
+        "pg15_prune_exports"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg15_file_claim",
+        "pg15_file_deleted",
+        "pg15_prune_exports"
+      ],
+      "source_sha256": "b79b1fda8363fd470edefee4b998ee703ae357ffdbe0184784547a4ed34f0564",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "eafa34b045b1fadf04aabef8853eb0b1ab540ec2c018e3bd40e109e20e40419e"
+    },
+    {
+      "name": "0034_pg13_billing_reconciliation.sql",
+      "tables": [],
+      "functions": [
+        "pg13_pending_billing"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "3ea0394a96c585bd29814e40d166a5c2a4bcd7c4d56d5412bc6d07cd847f5e50",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "64584f6b800948b5a9d4d2a8d1804bbaaaca2ffdc28fb5ee99a42757bca95308"
+    },
+    {
+      "name": "0035_pg10_document_policies.sql",
+      "tables": [],
+      "functions": [
+        "pg10_return_allowed",
+        "pg10_customer_activity"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_return_allowed",
+        "pg10_customer_activity"
+      ],
+      "source_sha256": "592c65cad99384decf56c0bf4d4e620e2707b17362e4a98b42aacca05783ba10",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f259289a6b354a954a460e17504de711d050ace67831bacc9ed3fc09639264d7"
+    },
+    {
+      "name": "0036_pg10_invoice_delivery.sql",
+      "tables": [
+        "pg10_invoice_notices"
+      ],
+      "functions": [
+        "pg10_invoice_contact",
+        "pg10_invoice_send",
+        "pg10_invoice_notice_claim",
+        "pg10_invoice_notice_finish",
+        "pg10_invoice_delivery"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg10_invoice_notices"
+      ],
+      "missing_functions": [
+        "pg10_invoice_contact",
+        "pg10_invoice_send",
+        "pg10_invoice_notice_claim",
+        "pg10_invoice_notice_finish",
+        "pg10_invoice_delivery"
+      ],
+      "source_sha256": "9a5eac61312a6964177eb0e0f6af72da5354d1c13239e76445fc1efa149d359b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "956cbe5d29a60f8c8985050125b16fd116a4b4c34125a059bf466831c2796f0e"
+    },
+    {
+      "name": "0037_pg14_sandbox_tools.sql",
+      "tables": [
+        "pg14_sandbox_runs"
+      ],
+      "functions": [
+        "pg14_run",
+        "pg14_runs",
+        "pg14_reset"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg14_sandbox_runs"
+      ],
+      "missing_functions": [
+        "pg14_run",
+        "pg14_runs",
+        "pg14_reset"
+      ],
+      "source_sha256": "b80b853c650e509b1ce5819fcadae91821671a0fb85978c06ea7b6075df9096c",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "3fff1a48580b29843015cf673315104bdfaeff5bd2cc96be772455ed437558e7"
+    },
+    {
+      "name": "0038_pg11_domain_events.sql",
+      "tables": [],
+      "functions": [
+        "pg11_exception_event",
+        "pg11_emit_expiry"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg11_exception_event",
+        "pg11_emit_expiry"
+      ],
+      "source_sha256": "c253f80b235928422cc2042d0a4b8e19915a2f450e828506b7efecf60e09a2c7",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "0325a1c088ab7d7b0e7b670d1e192ff3d48660ad80845dde17e2314808ebd226"
+    },
+    {
+      "name": "0039_pg13_support_resend.sql",
+      "tables": [
+        "pg13_support_replies"
+      ],
+      "functions": [
+        "pg13_support_history",
+        "pg13_support_reply",
+        "pg13_invite_resend"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "1b0d04c6a5e479a83f0cde3bfb34d10a538b20c25963c9914bad2412c2a7820c",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "932e741a68c094e329974909dd9489bf7a79fc442f2470386551da088db0610c"
+    },
+    {
+      "name": "0040_pg15_receipt_retention.sql",
+      "tables": [
+        "pg15_receipt_policy",
+        "pg15_evidence_holds",
+        "pg15_evidence_redactions"
+      ],
+      "functions": [
+        "financial_reject_history_change",
+        "pg15_prune_receipt_evidence",
+        "pg15_hold_evidence"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg15_receipt_policy",
+        "pg15_evidence_holds",
+        "pg15_evidence_redactions"
+      ],
+      "missing_functions": [
+        "financial_reject_history_change",
+        "pg15_prune_receipt_evidence",
+        "pg15_hold_evidence"
+      ],
+      "source_sha256": "85fbce20d3b6c5143e1c8a4197fe5622a3783f0eabb3beee67e685fdc9d37044",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c7e372c2b65075e424b9c84868ede96717969f4d4cfef9eeb03074d6cca5af6d"
+    },
+    {
+      "name": "0041_pg10_upload_recovery.sql",
+      "tables": [
+        "pg10_upload_intents"
+      ],
+      "functions": [
+        "pg10_upload_reserve",
+        "pg10_upload_commit",
+        "pg15_orphan_claim",
+        "pg15_orphan_deleted"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg10_upload_intents"
+      ],
+      "missing_functions": [
+        "pg10_upload_reserve",
+        "pg10_upload_commit",
+        "pg15_orphan_claim",
+        "pg15_orphan_deleted"
+      ],
+      "source_sha256": "614390710ed70bc51e67143c7bbab47ee606c7157d13c9c3401dae93c925a264",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f42ad20383d763a15196060f580011f73ca7c4bfa8a3e6bbac35e49337ef647b"
+    },
+    {
+      "name": "0042_pg11_paged_operations.sql",
+      "tables": [],
+      "functions": [
+        "pg11_page"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg11_page"
+      ],
+      "source_sha256": "17a42390c8bf1066ded743fd842cbaf0711ac65d6719df13d1aa34f4d79444a8",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "94ba01481f699a65c080ec3b3ea70ca75580f4c0b8047a9718798ecf2b406831"
+    },
+    {
+      "name": "0043_pg13_privacy_requests.sql",
+      "tables": [
+        "pg13_privacy_requests",
+        "pg13_privacy_stores",
+        "pg13_privacy_observations"
+      ],
+      "functions": [
+        "pg13_privacy_history_guard",
+        "pg13_privacy_read",
+        "pg13_privacy_request",
+        "pg13_privacy_observe",
+        "pg13_privacy_cancel"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b8c7b24dee7f52faa6f0ce93f98e0db29e8a8d29e15065f4cafd85d2fd7a28ea",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "5e99027abaa2b2326c29c4ed02ab20f31d597b28d8ad435ecb7a2f28709b7e02"
+    },
+    {
+      "name": "0044_pg13_public_brand.sql",
+      "tables": [],
+      "functions": [
+        "pg13_public_checkout"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "cbeef84bfb00fc0f2f93ede1a200c6714c8c2b4fa35e45d068b9389cce5cebb6",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "7349ee58b664c4aff453c0bf9f9ef338ed673f300871f1dfc389542ab29cd0c5"
+    },
+    {
+      "name": "0045_pg06_physical_phone_multi_account.sql",
+      "tables": [
+        "pg06_phones"
+      ],
+      "functions": [
+        "pg06_phone_begin",
+        "pg06_phone_claim",
+        "pg06_phone_attach",
+        "pg06_phone_detach",
+        "pg06_phone_action",
+        "pg06_phone_list",
+        "pg06_phone_configuration",
+        "pg06_phone_heartbeat",
+        "pg06_phone_key",
+        "pg06_phone_account_cipher",
+        "pg06_phone_account_label",
+        "pg06_phone_account_edit",
+        "pg06_device_receiving_cipher"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg06_phones"
+      ],
+      "missing_functions": [
+        "pg06_phone_begin",
+        "pg06_phone_claim",
+        "pg06_phone_attach",
+        "pg06_phone_detach",
+        "pg06_phone_action",
+        "pg06_phone_list",
+        "pg06_phone_configuration",
+        "pg06_phone_heartbeat",
+        "pg06_phone_key",
+        "pg06_phone_account_cipher",
+        "pg06_phone_account_label",
+        "pg06_phone_account_edit",
+        "pg06_device_receiving_cipher"
+      ],
+      "source_sha256": "f7181a8e871b50ddf7a79961b31534981ea92ff817051cb753802998cdbd6686",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c5b57e536f8941d5f423c35ad4021545d356f83a0d8a6df13333ad933616413c"
+    },
+    {
+      "name": "0046_pg06_account_cipher_text.sql",
+      "tables": [],
+      "functions": [
+        "pg06_phone_account_cipher"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_phone_account_cipher"
+      ],
+      "source_sha256": "782cae41686a64a011b9040912acd494d5b1913902ca9ff1fe2646b345379bfb",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "0b14a4f01b36b9dc87ed7b78e18f180cc6046b3e72091a0d16b42846ed1e7f0e"
+    },
+    {
+      "name": "0047_pg06_phone_forwarder.sql",
+      "tables": [
+        "pg06_phone_forwarded"
+      ],
+      "functions": [
+        "pg06_phone_candidate_accounts",
+        "pg06_phone_forward"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg06_phone_forwarded"
+      ],
+      "missing_functions": [
+        "pg06_phone_candidate_accounts",
+        "pg06_phone_forward"
+      ],
+      "source_sha256": "dfa3b54ce96255e23567d4d68d41b2adacb371f89062d15e73bc2b06d31d8114",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "b6a2983cac00483588de4498846f52988f5296b9e0b4f017bd57bb4a284bf961"
+    },
+    {
+      "name": "0048_pg10_phone_forwarder_checkout.sql",
+      "tables": [],
+      "functions": [
+        "pg10_checkout_view",
+        "pg10_lock_route"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_checkout_view",
+        "pg10_lock_route"
+      ],
+      "source_sha256": "2c434cba963b89f4282ae5939f75b62e9cc5b49da028b9cdd6b2269c31b6751a",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "6e6507568ab52bfe23399d4619e5627fe7a6b4423f946c84cee6be595b29eb9b"
+    },
+    {
+      "name": "0049_pg10_physical_phone_intent.sql",
+      "tables": [],
+      "functions": [
+        "pg10_intent"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_intent"
+      ],
+      "source_sha256": "0e83038ed4c20ecc71f1ed3862d4e535d765bb1fff90d49bce453d27459fef82",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "07843538abe40d0504df9a4ceb577b05bb4b03c40dd791eb8bb238e2c8cbd102"
+    },
+    {
+      "name": "0050_pg10_public_methods.sql",
+      "tables": [],
+      "functions": [
+        "pg10_public_payment_sources"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_public_payment_sources"
+      ],
+      "source_sha256": "760be8f465a53ce1c6a227d8d48bd18786120004d6e835bb270a70d4c61e98b3",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "073a82194bd8b6bcc85e65412efa6f5039e337f245e9f81a4278fe1119161d0a"
+    },
+    {
+      "name": "0051_pg06_late_sms_refund.sql",
+      "tables": [],
+      "functions": [
+        "pg06_phone_candidate",
+        "financial_validate_attempt",
+        "pg06_phone_forward",
+        "pg11_late_phone_receipt_case",
+        "pg07_match"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_phone_candidate",
+        "financial_validate_attempt",
+        "pg06_phone_forward",
+        "pg11_late_phone_receipt_case",
+        "pg07_match"
+      ],
+      "source_sha256": "ed567507513e4fa50084cebd830d6a72312746ec1a9e3cc504d7f03337ff4856",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "b6ff3f6bbbf510530a6e1043ec47686a07419acd90e5106bf03a289c3a5ec43e"
+    },
+    {
+      "name": "0052_pg06_phone_forward_ambiguous_column.sql",
+      "tables": [],
+      "functions": [
+        "pg06_phone_forward"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_phone_forward"
+      ],
+      "source_sha256": "4e470556501de565134a206eb84e7d55112a06ec8ba7cbe64be5656b3db5d9f4",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "aa711869145ce6db6e410ecdc27969e8fda1a1b8ababde327314af2fa7f7e268"
+    },
+    {
+      "name": "0053_pg07_immediate_phone_match.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b9130af5f8809ed688da1b407794cedae2219618cc252538b3098ada3e5a6231",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "7c33d1c51d07c3532b31ac6959351990d20aff4ecc73812aab797a91cb4f2d52"
+    },
+    {
+      "name": "0054_public_checkout_cancel.sql",
+      "tables": [],
+      "functions": [
+        "pg05_public_cancel"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg05_public_cancel"
+      ],
+      "source_sha256": "686577ae341e8e11c6247e42682ae03147b34eff7b083cafde65c5077beaa81c",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "641077d6c13c0faed33c72d17570a69435ac80ad83523983144de5d650e3dbd1"
+    },
+    {
+      "name": "0055_repeat_payment_after_terminal.sql",
+      "tables": [],
+      "functions": [
+        "financial_validate_attempt"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "financial_validate_attempt"
+      ],
+      "source_sha256": "7847a057bd860fc22489c5b82e00630d0e5be39be26c818187232733de6700e8",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "ed8cfc6acec0db9101d080175ca2cccf9e6a7d29e28bc9a30dc555bec96c94fe"
+    },
+    {
+      "name": "0056_phone_incoming_and_late_refund_reports.sql",
+      "tables": [],
+      "functions": [
+        "pg56_incoming_read",
+        "pg56_refund_summary"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg56_incoming_read",
+        "pg56_refund_summary"
+      ],
+      "source_sha256": "8b278f4979dc018bab05274db5f8ae9bdd3798efc991740041a4770f5d422a85",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "be3d564045c7e3ecbf5cb212372ccef2d8386b8bbed666c121f6f22515801d86"
+    },
+    {
+      "name": "0057_pg13_payer_ledger.sql",
+      "tables": [],
+      "functions": [
+        "pg57_report_payer_ledger"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg57_report_payer_ledger"
+      ],
+      "source_sha256": "3128d827feb53a3412b15ce7a24acfdbf55f33f2c597b9c5df0b2eb35832aff3",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "46c8007eeece5485fbbcb17e2be7ef190d59763edfcf618588c5e7c49a1ed251"
+    },
+    {
+      "name": "0058_integration_activity.sql",
+      "tables": [
+        "pg58_delivery_attempts",
+        "pg58_api_activity"
+      ],
+      "functions": [
+        "pg58_record_delivery",
+        "pg58_delivery_history",
+        "pg58_record_api",
+        "pg58_activity_read"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg58_delivery_attempts",
+        "pg58_api_activity"
+      ],
+      "missing_functions": [
+        "pg58_record_delivery",
+        "pg58_delivery_history",
+        "pg58_record_api",
+        "pg58_activity_read"
+      ],
+      "source_sha256": "454fa58a2333f5fa1b0b2cdaf047afb966b5c20b3098c19d7ff63a80db02932c",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "55cca1574943b9dc06a7c7911d469a099e498e523e267f56603443cbf14d5f6c"
+    },
+    {
+      "name": "0059_public_sandbox.sql",
+      "tables": [
+        "public_sandbox_config"
+      ],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "5f19551edefba746bbf59e9fd31268c42abdda1d445689a93e387fc8dc1752ea",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "06d26c5cd24e20e7db1bd894df0d7dc4ce396c5a125a1fdfd6ff0e0b8ab9c254"
+    },
+    {
+      "name": "0060_public_sandbox_receiver.sql",
+      "tables": [
+        "pg60_public_workspace",
+        "pg60_receiver_log"
+      ],
+      "functions": [
+        "pg60_receiver_credentials",
+        "pg60_receiver_record",
+        "pg60_receiver_read"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg60_public_workspace",
+        "pg60_receiver_log"
+      ],
+      "missing_functions": [
+        "pg60_receiver_credentials",
+        "pg60_receiver_record",
+        "pg60_receiver_read"
+      ],
+      "source_sha256": "bbab2b2cab8f3c0570ca6fdfad36c8123e04b05a2568f59acde52be846d50a50",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "9b60e2d6867cca908ae8e4e9926c91813dddf5da7f35b6e3afb5aa71f673c8ca"
+    },
+    {
+      "name": "0061_transaction_lookup.sql",
+      "tables": [],
+      "functions": [
+        "pg61_transaction_lookup"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg61_transaction_lookup"
+      ],
+      "source_sha256": "e8f5902fa708b49a418563ac7ec8bc02e2a4264864349766122dbb6c1b20eb8b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "d53b0cef3d4650fe5803f91a9be0d59cbce75362237ff298a1a9033188374811"
+    },
+    {
+      "name": "0062_simple_payment_options.sql",
+      "tables": [
+        "pg62_intent_options"
+      ],
+      "functions": [
+        "pg62_store_intent_options",
+        "pg62_merchant_options",
+        "pg62_checkout_redirects",
+        "pg62_route_payment_webhook"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg62_intent_options"
+      ],
+      "missing_functions": [
+        "pg62_store_intent_options",
+        "pg62_merchant_options",
+        "pg62_checkout_redirects",
+        "pg62_route_payment_webhook"
+      ],
+      "source_sha256": "42fda138fde46c9996b09e49eec3606da465cdb2503733198512bbeb2d316cce",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "0a06ed47298d6f39acdd96771b0aa4e7682326ee00dffe7998d3c8d3cb5370c4"
+    },
+    {
+      "name": "0063_payment_webhook_binding.sql",
+      "tables": [],
+      "functions": [
+        "pg63_bind_payment_endpoint",
+        "pg62_store_intent_options",
+        "pg62_route_payment_webhook",
+        "pg63_payment_callback_fields"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg63_bind_payment_endpoint",
+        "pg62_store_intent_options",
+        "pg62_route_payment_webhook",
+        "pg63_payment_callback_fields"
+      ],
+      "source_sha256": "f31891623c70cc7a859438133cf4660514a4ea788532a9519736d23380efb7e6",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "404e77ffa848eec84fe9c39e0b038586b03598cf8b31b399f5746efa84639f11"
+    },
+    {
+      "name": "0064_dashboard_read_models.sql",
+      "tables": [],
+      "functions": [
+        "pg10_read",
+        "pg10_customer_activity",
+        "pg64_sms_evidence"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_read",
+        "pg10_customer_activity",
+        "pg64_sms_evidence"
+      ],
+      "source_sha256": "1842498d0374391fba62ca4c503b032d81e7e6401574b9bdc255a5b815dea56e",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "52d525e28006fb4b7c298319aed190fe9e3d597409eb38ef95bd9257d21551c6"
+    },
+    {
+      "name": "0065_workspace_team_role.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "845693e5b94143fb9f2909e17a52f0187ccb7bda1395557bd0d3c4fd56ca180f",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "04fbdd3133eddbeb1268ac0929acf7fcbb8a267f139c1546adc26ec0a3393056"
+    },
+    {
+      "name": "0066_payment_sms_evidence_read.sql",
+      "tables": [],
+      "functions": [
+        "pg66_payment_sms_evidence",
+        "pg66_customer_payer_evidence",
+        "pg10_read",
+        "pg10_customer_activity"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg66_payment_sms_evidence",
+        "pg66_customer_payer_evidence",
+        "pg10_read",
+        "pg10_customer_activity"
+      ],
+      "source_sha256": "c209fbfbb5316fab1538f83ae50fc8085495e6c5def77e92796124e8bb353232",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "622c14a4bf9bf88582a8a1a501f3c7b3f47d31acc149ac4adb371dc16cdf6abd"
+    },
+    {
+      "name": "0067_managed_payment_plans.sql",
+      "tables": [
+        "payment_plan_versions",
+        "payment_plan_catalog",
+        "payment_subscription_audit",
+        "payment_subscription_overrides"
+      ],
+      "functions": [
+        "payment_plan_validate",
+        "payment_plan_public",
+        "payment_plan_effective",
+        "payment_plan_admin",
+        "payment_plan_claim_free",
+        "pg13_billing_allowed",
+        "pg13_billing_issue",
+        "pg13_billing_verified",
+        "pg13_billing_read",
+        "payment_plan_control_limit",
+        "payment_plan_immutable"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "a79b2496b2f24805b73da55cdd53f03171de7725b5cb7a5f00bba96f603e7821",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "e4efedd83cd3ae02549d9d7fb4d71b5d1314e875647c7e10cb8dc967f1fa12c9"
+    },
+    {
+      "name": "0068_payment_allowance.sql",
+      "tables": [
+        "payment_allowance_slots",
+        "payment_creation_buckets"
+      ],
+      "functions": [
+        "payment_allowance_reserve",
+        "payment_allowance_settle",
+        "payment_allowance_usage",
+        "payment_plan_financial_limit"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "payment_allowance_slots",
+        "payment_creation_buckets"
+      ],
+      "missing_functions": [
+        "payment_allowance_reserve",
+        "payment_allowance_settle",
+        "payment_allowance_usage",
+        "payment_plan_financial_limit"
+      ],
+      "source_sha256": "5ff65a426e64b91de477bc73f32275479877f7cd86f12663d0abe376a3c87c12",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "a6c7088e8a9dd098d7418e9de08eb7aa847dbac213e1e12c8befa68fe0f2031f"
+    },
+    {
+      "name": "0069_dashboard_preferences.sql",
+      "tables": [
+        "dashboard_user_preferences"
+      ],
+      "functions": [
+        "dashboard_preferences"
+      ],
+      "recorded_sha256": "cf9b821067b219c47d9401934119a2d9042ff6c3c6b35ea31908def34791ac28",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "4ef0bd0844090623a1e4866dac0346d9c53f0b4394b95fc7e53d6786a1d745af",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "cf9b821067b219c47d9401934119a2d9042ff6c3c6b35ea31908def34791ac28"
+    },
+    {
+      "name": "0070_dashboard_link_actions.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "a407df592f60a2ba5325c5706371ca0bb8abf61371f10780c64e5ba12cada9af",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "05fe9836e3123d905e5de8c029f9175fc26aeae6b75a65d00b3c426c0fc16dce"
+    },
+    {
+      "name": "0071_dashboard_phone_counts.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "342f3f7469e9ff7c3c9ee62c4617a456d2e2b394137565684c723930204295d6",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "fc9ddb28837226c1ea8dd34902a19250d558155a3273891ef0b6529bb1006c94"
+    },
+    {
+      "name": "0072_dashboard_notification_read_all.sql",
+      "tables": [],
+      "functions": [
+        "pg13_notification_read_all"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg13_notification_read_all"
+      ],
+      "source_sha256": "61cb9a1a31351a67644bda3edc74ccb954f3bde18ffdc01a9c1ac03f6c6867d4",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "9269b99ce57efe07ab125566b67b029e368aa074a7ff145c8bb376f5547c640e"
+    },
+    {
+      "name": "0073_dashboard_support_topic.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "2458fdd761d6cec20a3c7b278dc0eecaaf971d4d96d0b15f2c05fd976c0df3d7",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "646ecfcb0ab0bbbd4ec109c44c56eff9e6b9fac38b5743ed35fc9af82f391ced",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "2458fdd761d6cec20a3c7b278dc0eecaaf971d4d96d0b15f2c05fd976c0df3d7"
+    },
+    {
+      "name": "0074_checkout_themes.sql",
+      "tables": [
+        "checkout_theme_settings",
+        "checkout_theme_logos"
+      ],
+      "functions": [
+        "dashboard_checkout_theme_read",
+        "dashboard_checkout_theme_write",
+        "dashboard_checkout_logo",
+        "pg13_public_checkout"
+      ],
+      "recorded_sha256": "7764270091910571d205b32d8d2e552560340bf0b35d04903e90134877332796",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "48cc1bf3f70abb35c6be98838881892f0cb3579c3d9279c572ee8a0f28ccd14d",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "7764270091910571d205b32d8d2e552560340bf0b35d04903e90134877332796"
+    },
+    {
+      "name": "0075_checkout_customer_details.sql",
+      "tables": [
+        "checkout_customer_details"
+      ],
+      "functions": [
+        "pg75_checkout_details"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "checkout_customer_details"
+      ],
+      "missing_functions": [
+        "pg75_checkout_details"
+      ],
+      "source_sha256": "5e171b078c200405e26e373970b6bc003734e20eef8127780873e347bb670ead",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "5bbb946de952af77a3cb32563e04a75721b5553d423a5e0b3fc7c833ccf39b77"
+    },
+    {
+      "name": "0076_dashboard_billing.sql",
+      "tables": [
+        "dashboard_billing_quotes"
+      ],
+      "functions": [
+        "dashboard_billing_change",
+        "dashboard_billing_quote",
+        "dashboard_billing_issue",
+        "pg13_billing_read",
+        "dashboard_billing_verified"
+      ],
+      "recorded_sha256": "b8cc8db5b0a52563c7baf0c2ce829ae71ecb23f1f9e49b5f29b9fe32d7be1f5e",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "d560cb47f20fd6ca3524eb987acd5365dd4c482bff8805d5bff085b4a12099da",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "b8cc8db5b0a52563c7baf0c2ce829ae71ecb23f1f9e49b5f29b9fe32d7be1f5e"
+    },
+    {
+      "name": "0077_dashboard_billing_usage.sql",
+      "tables": [
+        "dashboard_checkout_checks",
+        "dashboard_usage_tracking"
+      ],
+      "functions": [
+        "dashboard_record_checkout_check",
+        "dashboard_billing_usage",
+        "pg13_platform_payment"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "dashboard_checkout_checks",
+        "dashboard_usage_tracking"
+      ],
+      "missing_functions": [
+        "dashboard_record_checkout_check",
+        "dashboard_billing_usage",
+        "pg13_platform_payment"
+      ],
+      "source_sha256": "9780c4169b4f28519aaaf067a2fe3098033013f28e5cf40a40048564fbe73385",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "6a2c88163ac8e52fcacd7fc9a668d6daa48c79161219a63fe380f1cab01b1df0"
+    },
+    {
+      "name": "0078_invoice_numbers.sql",
+      "tables": [
+        "pg10_invoice_sequences"
+      ],
+      "functions": [
+        "pg10_invoice_auto_create"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "pg10_invoice_sequences"
+      ],
+      "missing_functions": [
+        "pg10_invoice_auto_create"
+      ],
+      "source_sha256": "b05462e293b8b2d9b243e6c95489b905ba38e44287fa9bd729b48ea8bc684d07",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "ca7ac1eba7110c60ac941fb6b1127ceb4818ec75593fef139515aaff11930da8"
+    },
+    {
+      "name": "0079_public_invoice_details.sql",
+      "tables": [],
+      "functions": [
+        "pg10_public"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_public"
+      ],
+      "source_sha256": "17a05e6b649372ac72e5aa17c40b790a9a3bcb417a11f4f4b55ee0cd67f4bd92",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "347ad43c36927747180364330c4bc731d1ee4b1a756494f7134bde1218de9652"
+    },
+    {
+      "name": "0080_invoice_public_draft.sql",
+      "tables": [],
+      "functions": [
+        "pg10_public"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_public"
+      ],
+      "source_sha256": "ffe75412fb9a300d9986b931c43d2477af504e1ae98f9ac3e2fb8772a6b3a042",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "ee01427fd2178103da0ba9d569d8fa2a73f1cd161b444cbfdcde8a1fe14e7ac3"
+    },
+    {
+      "name": "0081_public_invoice_receipts.sql",
+      "tables": [],
+      "functions": [
+        "pg10_public"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg10_public"
+      ],
+      "source_sha256": "28b423e7a97c415227cbdfc75875689f639bdeec0ae80f7c68d1df2b53e823ff",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f9f2b47110605ccdebff82a7ab38577c3112904cdd53d3be44b305c748086ad6"
+    },
+    {
+      "name": "0082_remove_phone_account_count.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "3c800fc37b843111dab954f49d706270b4619e9394856c7cd1b804909a3ad974",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c82c611ce88aa2703185ea6942c24e02db1a019ebec27723ddbd5a89d8ad5c57"
+    },
+    {
+      "name": "0083_phone_self_revoke.sql",
+      "tables": [],
+      "functions": [
+        "pg06_phone_self_revoke"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_phone_self_revoke"
+      ],
+      "source_sha256": "55f9bc42f974b0e9667c6995e921708f6442f04e36ab4afcdf30f2f818bf7567",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "6fc41c09d35d57725a5aa13c3b1a4a8a889d75c6947087649b42757c4d7cdc1a"
+    },
+    {
+      "name": "0084_admin_provider_credit_catalog.sql",
+      "tables": [
+        "platform_payment_providers",
+        "platform_ai_credit_balances",
+        "platform_ai_credit_ledger"
+      ],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "ce9c44b4c603f935ee807e402aeadbf055d4d7182c4e53878ae6863e654ba572",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "626b4c488d1df00a22b7c5d9e2e675b50345a42d3d572b56e0f3823b01b5a80e"
+    },
+    {
+      "name": "0085_admin_credit_ledger_immutability.sql",
+      "tables": [],
+      "functions": [
+        "platform_ai_credit_ledger_immutable"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "ca183a5627764313487f2548153331b412a8b4d95bfa1dccc8b8ac01e206fcec",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "94618cb41a6d2ab0fa6cd509a15c945ef2a390dd831c7a9fc8d87ba937e858c4"
+    },
+    {
+      "name": "0086_phone_reconnect_delete.sql",
+      "tables": [],
+      "functions": [
+        "pg06_phone_reconnect",
+        "pg06_phone_delete"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_phone_reconnect",
+        "pg06_phone_delete"
+      ],
+      "source_sha256": "405d9854e590dc3d70ca4a026e518199c058ba403f990e63369c5707f91a2ef1",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "46e040544cf2e482252b16cdda5b2d7299d43ef9b54b2db46f419cac76da0c99"
+    },
+    {
+      "name": "0087_admin_provider_assets.sql",
+      "tables": [
+        "platform_provider_assets"
+      ],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "fdc232fcc2cab16bdd3d940fe71d731e18ebcb62d3822a40422c421c9c99b22b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "134c056ecc099d4ed558ef9b487a3bb5c064b0f95f28593f86bfd8b3f3986f91"
+    },
+    {
+      "name": "0088_financial_phone_forward_column.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "dfb53d82184b5cfc40409e026277044a342b28776aaa9b94d58134ed9d6c8e97",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "7e8219134229521d557b0122fbe45c94b8dbcb24baf1b16b1dd9a204514f8fda"
+    },
+    {
+      "name": "0089_admin_trusted_devices.sql",
+      "tables": [
+        "platform_admin_trusted_devices"
+      ],
+      "functions": [],
+      "recorded_sha256": "59eddd6cfef75071dca834fa9a032b53a099e08dcca55e774261260b32a2d68e",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "51da16e32c209947d77310e0acfe6585ff23f9ea624ed1c7703714138a26c27a",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "59eddd6cfef75071dca834fa9a032b53a099e08dcca55e774261260b32a2d68e"
+    },
+    {
+      "name": "0090_admin_support_roles.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "1cf40315efd39a8677da2dd52d7ec3a1d3d118563d3070f8ce7b168ede557063",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "58c614499cdf869a9f3917e076b0082d976d0a5778d521a92f3ef292150ca299",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "1cf40315efd39a8677da2dd52d7ec3a1d3d118563d3070f8ce7b168ede557063"
+    },
+    {
+      "name": "0091_plan_feature_enforcement.sql",
+      "tables": [],
+      "functions": [
+        "payment_plan_require_feature"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "payment_plan_require_feature"
+      ],
+      "source_sha256": "4a83dae1a0caa6363adb5e17c17e500458f0a38fbd991b208a8ad73e9779fe62",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "da935d6160d6d8668341d82ea536bd21d2c7149a0ea752f335d4afc6bafc1192"
+    },
+    {
+      "name": "0092_plan_document_feature_guards.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "754c0303f2c71706559749d3af1bb3329de2840a6ceab110146b71d662431bf9",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "a80f1fa2d56d6f8c27d6fbc91dd673d3f3bc47259f79182e9ba1f7c74b7485b2"
+    },
+    {
+      "name": "0093_payment_plan_resource_usage.sql",
+      "tables": [],
+      "functions": [
+        "payment_plan_resource_usage"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "payment_plan_resource_usage"
+      ],
+      "source_sha256": "0c28a8d7151b44d7f9c0c1da599ea7f4eca117f638ec590ca3f1f857003d8dce",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "1aebd3c80503163ebd189acbdc6e6c0dee7dab0aabac42fb6b0135c7b8a4d5bd"
+    },
+    {
+      "name": "0094_admin_control_resource_usage.sql",
+      "tables": [],
+      "functions": [
+        "payment_plan_admin_resource_usage"
+      ],
+      "recorded_sha256": "d69bfbb0dc2944ebabee46216a33a2a4e87399be825aef2b8a37675913ad641f",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "405688ff13eec50952733a855393fb06535d826c8c8c20aa7b439ffbd5ffe4ef",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "d69bfbb0dc2944ebabee46216a33a2a4e87399be825aef2b8a37675913ad641f"
+    },
+    {
+      "name": "0095_receiving_account_consent_delete.sql",
+      "tables": [],
+      "functions": [
+        "pg06_account_add",
+        "pg06_account",
+        "pg06_account_delete",
+        "pg06_phone_account_cipher"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_account_add",
+        "pg06_account",
+        "pg06_account_delete",
+        "pg06_phone_account_cipher"
+      ],
+      "source_sha256": "e46379e0366c2794c5dd75ef7540dacf2fbe0bb582153598a890e5692484c792",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4cd59abdc6bfbc209de53cb1ef2972db0ae4a093dd00ba41dadf5db08502b898"
+    },
+    {
+      "name": "0096_platform_receiving_workspace.sql",
+      "tables": [
+        "platform_billing_settings"
+      ],
+      "functions": [
+        "platform_billing_workspace",
+        "platform_billing_system_workspace",
+        "platform_billing_set",
+        "platform_billing_invoice_receiver",
+        "platform_billing_pin_invoice",
+        "platform_billing_member_guard",
+        "platform_billing_role_guard",
+        "pg13_pending_billing"
+      ],
+      "recorded_sha256": "93a4585cbb61a10b02b367471d5e8d86263fcc4ca186c6cd8fd4b667d9662e19",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "0192f76532a093e5f75650c9192137c9410dff75e07a4cee2790a3e691130974",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "93a4585cbb61a10b02b367471d5e8d86263fcc4ca186c6cd8fd4b667d9662e19"
+    },
+    {
+      "name": "0097_workspace_store_identity.sql",
+      "tables": [
+        "dashboard_store_profiles"
+      ],
+      "functions": [
+        "dashboard_store_on_workspace",
+        "dashboard_store_read",
+        "dashboard_store_write",
+        "dashboard_workspace_rename",
+        "dashboard_checkout_logo",
+        "dashboard_checkout_theme_read",
+        "dashboard_checkout_theme_write",
+        "pg13_public_checkout"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "710b1d6781052d2dbd1ec5a036caa59d0bb3a09fee94713004e567b97c133246",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "541800b9806e14983875f3b553555410cf1b0c4e2a30991e22a94c5481e993b1"
+    },
+    {
+      "name": "0098_checkout_account_tiles.sql",
+      "tables": [],
+      "functions": [
+        "pg98_checkout_accounts",
+        "pg98_lock_account"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg98_checkout_accounts",
+        "pg98_lock_account"
+      ],
+      "source_sha256": "adaa703ae48f9f995e54d37ea6c00c250cfdf888568ed845e74de1ebc0de1b9a",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "fc2a9ef32ac4ae32e4aac7f58d70f94a8d3acc10b3be8d331675c820f2347441"
+    },
+    {
+      "name": "0099_store_details.sql",
+      "tables": [],
+      "functions": [
+        "dashboard_store_on_workspace",
+        "dashboard_store_write",
+        "pg13_public_checkout"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "89e4683ae76317bd46335b2f7bb94939ab624a52ef57f7a3dc43f0f4dffa5385",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "ee4ab62c863f8a6aaed5a6d7409da8b4a65064ad3dc3f326c46fc60abc5fa704"
+    },
+    {
+      "name": "0100_checkout_logo_presentation.sql",
+      "tables": [],
+      "functions": [
+        "dashboard_checkout_theme_read",
+        "dashboard_checkout_theme_write",
+        "pg13_public_checkout"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "f229f82373f2adff446c347c5cdf92fc54bdabb5f1ab6ca9d9b059b89bbc4eba",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "ba396322f36e909c9f689f61538f721a17a29ef471190728c6fd61e55a29a2c1"
+    },
+    {
+      "name": "0101_dashboard_control_plan_limits.sql",
+      "tables": [],
+      "functions": [
+        "payment_plan_member_resource_usage",
+        "payment_plan_control_limit",
+        "payment_plan_invite_limit"
+      ],
+      "recorded_sha256": "d9492b25409ebb64a00ff7d7ce3e91d25b47facc6a85ef1a5e4a2b032ec3c812",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "9417f487abde3c2f7c66c6e6498e5060581cfb4023a7691fdc24169842b9f69f",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "d9492b25409ebb64a00ff7d7ce3e91d25b47facc6a85ef1a5e4a2b032ec3c812"
+    },
+    {
+      "name": "0102_dashboard_financial_plan_limits.sql",
+      "tables": [],
+      "functions": [
+        "payment_plan_financial_limit"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "payment_plan_financial_limit"
+      ],
+      "source_sha256": "f4a4f674a46586561f5eb7a7dd6a72ccc80b83f709dae3083a5a617fa1efb5e2",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "5ee1876b694d8701296935714a1cbf5408fc2f4c632de210c6be2a6cf13768b2"
+    },
+    {
+      "name": "0103_notification_center_pagination.sql",
+      "tables": [],
+      "functions": [
+        "pg103_notification_page"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg103_notification_page"
+      ],
+      "source_sha256": "32a093e1e32a1853209ff77ce7d062d604515b9a901f00b7869778c0da06df73",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c97b2ff2b63c5b6362e6c4f1c5effeb46718e0e38c7f3d6959f165fc4aa0faa6"
+    },
+    {
+      "name": "0103_system_workspace_unlimited.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "cc3b9ed1924821fc68b6d8f59675e184dfbe1a8f001559104b0a8efccabb9568",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "5cbf7f6f8624f690d44fe82a1957828f26f90ccb440dd93e2c711a4375318cd4",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "cc3b9ed1924821fc68b6d8f59675e184dfbe1a8f001559104b0a8efccabb9568"
+    },
+    {
+      "name": "0104_system_workspace_subscription_cleanup.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "6f5058e03d697e0d533ba0a3e24cab6a42e5d6830bead006ea667b450a884c10",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "0120486f0528ecd71b42a43104cc28c5448c5f83b42b3f8df849dcc0c8333b36",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "6f5058e03d697e0d533ba0a3e24cab6a42e5d6830bead006ea667b450a884c10"
+    },
+    {
+      "name": "0105_buyer_upgrade_timing.sql",
+      "tables": [],
+      "functions": [
+        "dashboard_billing_quote",
+        "dashboard_billing_quote",
+        "dashboard_billing_issue",
+        "pg13_billing_verified",
+        "payment_plan_prepaid_guard"
+      ],
+      "recorded_sha256": "8f72e53abc81d3ddffa17211f366e8df972136013f1414a08d0bdb82e40dcb02",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "431e78f7e1684d82b387fe9b35f0175cef2e9e2cf07cae7ca29136d12e3f2cec",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "8f72e53abc81d3ddffa17211f366e8df972136013f1414a08d0bdb82e40dcb02"
+    },
+    {
+      "name": "0106_google_login.sql",
+      "tables": [
+        "auth_google_identities"
+      ],
+      "functions": [],
+      "recorded_sha256": "eaa86e11a4508c4d1f6de4da4148fa38b989f8637da4eecad0d09c5d48ce6c43",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "09bcf86ba082a3188bde9c9039cb052758e7d57f1ede3dbda679415abb9e0917",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "eaa86e11a4508c4d1f6de4da4148fa38b989f8637da4eecad0d09c5d48ce6c43"
+    },
+    {
+      "name": "0107_workspace_projection_readiness.sql",
+      "tables": [],
+      "functions": [
+        "pg06_scope",
+        "pg06_workspace_ready"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_scope",
+        "pg06_workspace_ready"
+      ],
+      "source_sha256": "fc315142a304acf683d20134e7bb4bc287878a3422ed5fd96908354b6b8da6c1",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "e0c87ae2e60c3cc5b7c061696f95d12acd51766d69385d37f4e04cec2b6a070d"
+    },
+    {
+      "name": "0108_pending_phone_receipt_recovery.sql",
+      "tables": [],
+      "functions": [
+        "pg108_pending_phone_receipts",
+        "pg108_recover_phone_receipt"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg108_pending_phone_receipts",
+        "pg108_recover_phone_receipt"
+      ],
+      "source_sha256": "172d805c9bb00ace57a16c3bba55c43892f5df742f414ae94fcddd18292392ee",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4006579fd33f0cd7302d0833c66b1e4674a462bdb4ce48154fd301ff35e50e13"
+    },
+    {
+      "name": "0109_checkout_return_origin.sql",
+      "tables": [],
+      "functions": [
+        "pg62_checkout_redirects"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg62_checkout_redirects"
+      ],
+      "source_sha256": "4dbebb5d1699a2148ff8e5af13f6305a8d49146950e8cf37d11b12bb67608393",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "76a33e8862c27429a6debb72b4c34450f27a8403af7d3ae0e53d341bb0dafb96"
+    },
+    {
+      "name": "0110_all_enabled_checkout_account_tiles.sql",
+      "tables": [],
+      "functions": [
+        "pg110_public_workspace_accounts",
+        "pg98_checkout_accounts"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg110_public_workspace_accounts",
+        "pg98_checkout_accounts"
+      ],
+      "source_sha256": "70aad6c1088e0514925cfd6b39fd7c1c43bb17ad0d07f7252fa0ea8750387e22",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "9108aed51d4d4856b0cb94e5dc08856913b2b98201a2ff020b33401cda31321b"
+    },
+    {
+      "name": "0111_public_checkout_store_contact.sql",
+      "tables": [],
+      "functions": [
+        "pg13_public_checkout"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "47dcd5cff2b91fc52441680e939ec3ecd76c6f45c53cd127fb0c518536e34192",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "9c478ef81987d86b0108e086cd4e01900c44f7be47a002b1601a15bd38781ca5"
+    },
+    {
+      "name": "0112_free_plan_quota_increase_subscriber_upgrade.sql",
+      "tables": [],
+      "functions": [
+        "payment_plan_free_quota_upgrade"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "de255b26befc8e33571ad3c7f1217799305979b05e08214e2fa8720e5d01283d",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c05831e4dcd1050857e7f9b29917133a6034ec645c6db3c33427c7732dfc453a"
+    },
+    {
+      "name": "0113_expired_payment_allowance_release.sql",
+      "tables": [],
+      "functions": [
+        "payment_allowance_reconcile_expired"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "payment_allowance_reconcile_expired"
+      ],
+      "source_sha256": "f0b16d9224e9e355ea6cfd476560bdb62615a228b6f0dca89bbf21c0c234ec29",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "dea0b009e3d2c3d68ae9b4b81dbd41f40b1336e22f17fa6eb0c6b49b1f24fd58"
+    },
+    {
+      "name": "0114_mobile_workspace_preview_control.sql",
+      "tables": [],
+      "functions": [
+        "mobile_workspace_preview"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "f581ec852c59edb8cc6c6ce9968126687b6325f3084099ec13b86e0fd1caa573",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "b1f3a800fbc9803ae3e95a0dccbc3f50d433ef57454c95aa771d68672666ebbb"
+    },
+    {
+      "name": "0115_mobile_pairing_preview_financial.sql",
+      "tables": [],
+      "functions": [
+        "pg06_phone_pairing_preview"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_phone_pairing_preview"
+      ],
+      "source_sha256": "fe68ca674d6f82f681d6d238f60459b139508b67b47b48c3eefcf1f57ae0659b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f144c659b4b3d1ec00b548dd2248b92d0d77fc6e415c8de7a7224e0672e648ce"
+    },
+    {
+      "name": "0116_mobile_devices_control.sql",
+      "tables": [
+        "mobile_devices"
+      ],
+      "functions": [
+        "mobile_device_manage",
+        "mobile_device_preview",
+        "mobile_device_claim",
+        "mobile_device_key",
+        "mobile_device_adopt",
+        "mobile_device_touch",
+        "mobile_workspace_state",
+        "mobile_device_pair_exists"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "531f231e0f6c60fb0135d0bdf3bcba27d47b79b97b516dbbaf668cd926898510",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "cbd48b6c1a1fe94ac5746526a6b4245981a481ca13cba19a529713eb273b0bb7"
+    },
+    {
+      "name": "0117_mobile_device_financial_adoption.sql",
+      "tables": [],
+      "functions": [
+        "pg06_mobile_adopt",
+        "pg06_mobile_key"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "pg06_mobile_adopt",
+        "pg06_mobile_key"
+      ],
+      "source_sha256": "29db9dd4b73c2cad992babffa4205c38fb8f3b6e3f0a991b49d4efc6a4911fe6",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "304f9f58870e6bb16c41df38d944c077463bbcf14b8306f7adf37f96b1553592"
+    },
+    {
+      "name": "0118_workspace_inbox.sql",
+      "tables": [
+        "inbox_connections",
+        "inbox_threads",
+        "inbox_messages",
+        "inbox_read_cursors",
+        "inbox_webhook_events",
+        "inbox_status_events",
+        "inbox_read_watermarks"
+      ],
+      "functions": [
+        "inbox_page",
+        "inbox_action",
+        "inbox_ingest",
+        "inbox_connection",
+        "inbox_next_send",
+        "inbox_finish_send",
+        "inbox_provider_connections",
+        "inbox_webhook_record",
+        "inbox_status",
+        "inbox_seen_watermark",
+        "inbox_connection_list",
+        "inbox_disconnect"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "19590a9dec4121559ef29043c67d22f09b4722baa4b34e42921331604fc964e0",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "3edf25953b0befdbdb476ce74717213da031399f1cdea3622deff559b3a318c3"
+    },
+    {
+      "name": "0119_channel_oauth.sql",
+      "tables": [
+        "inbox_oauth_states"
+      ],
+      "functions": [
+        "inbox_oauth_begin",
+        "inbox_oauth_consume"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b3f158ebd22073f56e998d5cc91bc408cc28e2c08c2034fa90f70ee41a983363",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "a307dd8419f47e286e807f8e86be0f7651117312d35ed1397953a77e835da4ff"
+    },
+    {
+      "name": "0120_inbox_push.sql",
+      "tables": [
+        "inbox_push_tokens",
+        "inbox_push_jobs"
+      ],
+      "functions": [
+        "inbox_register_push",
+        "inbox_queue_push",
+        "inbox_next_push",
+        "inbox_finish_push"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "a48fd8ead51c45b3fa87d25f3535183eb0c1a4c5f5db567528117532deaa7f87",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "21c45fc80ef31e067dacf8fbe02b0e882ce7a5a64736d8b5a910a913a460d8b8"
+    },
+    {
+      "name": "0121_inbox_media_profiles.sql",
+      "tables": [
+        "inbox_media",
+        "inbox_products",
+        "inbox_orders",
+        "inbox_reactions",
+        "inbox_media_sources",
+        "inbox_incoming_reactions"
+      ],
+      "functions": [
+        "inbox_scope",
+        "inbox_capabilities",
+        "inbox_page",
+        "inbox_media_access",
+        "inbox_media_save",
+        "inbox_profile",
+        "inbox_advanced",
+        "inbox_next_send",
+        "inbox_reaction_finish",
+        "inbox_inbound_media",
+        "inbox_media_source",
+        "inbox_inbound_store",
+        "inbox_provider_reaction",
+        "inbox_finish_send",
+        "inbox_forward_album"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "ec2b8f3d9cca88f69d6efdc3aea57a9c5441ffef0a13e2888c1f470b2c4130e4",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "490b9e9fca4f691468a9fd23b2efa99e36d944dffe6366a15958dc09f19046f3"
+    },
+    {
+      "name": "0122_payment_allowance_worker_grant.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "a5f30adfac98b9cec3fc89ce7dcfa9d5d378531b8a2e9b9c23ea09144aa19529",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "2cc71ab43c90279c1c53bbacb2c7137c55762f2d53ad051e0444c84995eda621"
+    },
+    {
+      "name": "0123_briofold_business_onboarding.sql",
+      "tables": [
+        "briofold_business_onboarding"
+      ],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "20e46d0c8c521a91265a626ffcab5053b74ce82cd013e0184a95d419e2f9cfe1",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "73904d652e402a7b4fa1246a54dc314aae570a0fceb5e16a125a438a71e2a4dc"
+    },
+    {
+      "name": "0124_briofold_ai_prepaid_wallet.sql",
+      "tables": [
+        "briofold_ai_wallets",
+        "briofold_ai_reservations",
+        "briofold_ai_credit_journal"
+      ],
+      "functions": [
+        "briofold_ai_journal_immutable",
+        "briofold_ai_wallet_reserve",
+        "briofold_ai_wallet_settle"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "fcb56f151a9f9b69c19450cdec205569c3dbb53c348b9b589483876a27e56283",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f840f2bc162ff69d2f70d0e2d1e20262e8def99490eec4aa4d80c0a87fc3b74f"
+    },
+    {
+      "name": "0125_briofold_ai_verified_topups.sql",
+      "tables": [
+        "briofold_ai_topups"
+      ],
+      "functions": [
+        "briofold_ai_topup_issue",
+        "briofold_ai_topup_apply_verified"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "83d996b98ea69d487b846124b3fcb04ae5f689c0c0933eebe108fbe24486125a",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "6557479a5330966f4b94d2922f5bea15d13ecd8a65965a751eb9367434b40898"
+    },
+    {
+      "name": "0126_briofold_ai_topup_runtime_access.sql",
+      "tables": [],
+      "functions": [
+        "briofold_ai_topup_context"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "e19707a28e95b8c59cdf02ebe2acf145d371b804110f27dea7fd48255a2db90f",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "5e9d5691a1415f83b7f9e6856eda9e6d77da5dadb053d57cfd12215315033080"
+    },
+    {
+      "name": "0127_briofold_ai_admin_catalog.sql",
+      "tables": [
+        "briofold_ai_tariff_versions",
+        "briofold_ai_tariff_catalog"
+      ],
+      "functions": [
+        "briofold_ai_require_super_admin",
+        "briofold_ai_admin_adjust",
+        "briofold_ai_tariff_publish",
+        "briofold_ai_tariff_current"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b9022075e8b889698a1df8a6fd39c3e2f1d55b1309455ec76763d2a558bad488",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "143dbee34609c7e930661502ccd65f4135a61ccfcf1489f33b7e2dcfb20e2f3c"
+    },
+    {
+      "name": "0128_briofold_ai_topup_recovery.sql",
+      "tables": [],
+      "functions": [
+        "briofold_ai_topup_claim_pending",
+        "briofold_ai_topup_credit_proof",
+        "briofold_ai_topup_apply_verified"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "f78f82152af20903c4b6aee08c4c2bea0182ce0b233d6f69da2ca70ac8ebfa39",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "d84617eb7a97905e6334ad1ed2f0a99cc4040463c898ed8ad54a68416c77e06a"
+    },
+    {
+      "name": "0129_briofold_ai_execution_meter.sql",
+      "tables": [
+        "briofold_ai_executions"
+      ],
+      "functions": [
+        "briofold_ai_require_super_admin",
+        "briofold_ai_wallet_settle_authoritative",
+        "briofold_ai_wallet_settle",
+        "briofold_ai_request_view",
+        "briofold_ai_request_begin",
+        "briofold_ai_request_complete",
+        "briofold_ai_request_fail"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "d8426416691acd843001ef89cf56cb44374ce657f3a3bf2ed20c090fa6fbdf12",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "74bf1981c246a1712243b3ddeffcfe90f2ad48e2dfe6fec522b312f15cdb104d"
+    },
+    {
+      "name": "0130_briofold_ai_exception_resolution.sql",
+      "tables": [],
+      "functions": [
+        "briofold_ai_request_complete",
+        "briofold_ai_request_fail",
+        "briofold_ai_admin_waive"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "fde011f81c8e32e420f37b0463119c297f26c63d971e8b491ddf0f0ffceef0ab",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4ba9479d0c16f1ad15bd772f2bb30ee31302cd3c5ba5bb3f2e5c897262cd99c7"
+    },
+    {
+      "name": "0131_briofold_ai_topup_proof_binding.sql",
+      "tables": [],
+      "functions": [
+        "briofold_ai_topup_bind_proof",
+        "briofold_ai_topup_payment_context",
+        "briofold_ai_topup_claim_pending"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "11ce88c3a5339c1503446f1ea75636864e1a74e564a5c7b858b878c6c422a47d",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "fbf3d1e669e8f6ce8b2bcb1307a0582ae6ffad6f72ba25e7ab55d64acc866ef0"
+    },
+    {
+      "name": "0132_briofold_inbox_permissions.sql",
+      "tables": [],
+      "functions": [
+        "pg13_capability_override"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "78fc621ecc1d4f950b7d9d7e5e3ce76b755f3dab4016eb8f0b79ffe9fc261208",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f2538ee84bf416cd2379f95a966bd58efcdf742ded4bc6425d822b70a11173f5"
+    },
+    {
+      "name": "0133_briofold_ai_studio.sql",
+      "tables": [
+        "briofold_ai_studio_versions",
+        "briofold_ai_studio_drafts",
+        "briofold_ai_knowledge_sources",
+        "briofold_ai_knowledge_versions",
+        "briofold_ai_studio_sources",
+        "briofold_ai_studio_operations"
+      ],
+      "functions": [
+        "briofold_ai_studio_immutable",
+        "briofold_ai_studio_actor",
+        "briofold_ai_studio_validate",
+        "briofold_ai_studio_read",
+        "briofold_ai_studio_write",
+        "briofold_ai_knowledge_read",
+        "briofold_ai_knowledge_search"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "fe8469aa38b6f93c1bb046e08b440a781677ac6e2e2b6aa8c64df26184fce0f3",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4647cfa1f9e116266aac4ddc198b9617b67ab2333e6b79b3495cc30f97625019"
+    },
+    {
+      "name": "0133_platform_subscription_checkout_foundation.sql",
+      "tables": [
+        "platform_primary_stores",
+        "platform_subscription_offers",
+        "platform_subscription_offer_versions",
+        "platform_subscription_coupons",
+        "platform_subscription_purchase_intents",
+        "platform_subscription_purchase_quotes",
+        "platform_subscription_quote_lines",
+        "platform_subscription_policy_versions",
+        "platform_subscription_policy_acceptances",
+        "platform_subscription_coupon_reservations",
+        "platform_subscription_coupon_redemptions",
+        "platform_subscription_purchase_audit"
+      ],
+      "functions": [],
+      "recorded_sha256": "430d1cd8cb0576926fea10bcd4ccdf78ecc3776cd2b5921f46ae0acc74f6c6ff",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "674a2b9ee3d44cca823fe3c7269227d0f4f9154ed8eec3d9c34c74bf166eec57",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "430d1cd8cb0576926fea10bcd4ccdf78ecc3776cd2b5921f46ae0acc74f6c6ff"
+    },
+    {
+      "name": "0134_briofold_inbox_operations.sql",
+      "tables": [
+        "briofold_inbox_work",
+        "briofold_inbox_duty",
+        "briofold_inbox_saved_replies",
+        "briofold_inbox_tickets",
+        "briofold_inbox_events"
+      ],
+      "functions": [
+        "briofold_inbox_actor",
+        "briofold_inbox_work_read",
+        "briofold_inbox_work_write",
+        "briofold_inbox_reopen",
+        "inbox_action",
+        "briofold_inbox_due_returns",
+        "inbox_next_send_v1",
+        "inbox_page"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "bcd39284c90eaf1ded40982a63ad9378e505b93c7e0bd1a6ba5e80225bdeb610",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "d2977b317bf7bc24c7ed7d42ecb0abfe7b336b6233e4402a02d15d779146e42b"
+    },
+    {
+      "name": "0134_platform_subscription_coupon_admin.sql",
+      "tables": [],
+      "functions": [
+        "platform_subscription_coupon_admin"
+      ],
+      "recorded_sha256": "0d9572ac2d173eb6e1fe2963d9dd44f3f31b13202338a853e139b0f44aa469a6",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "10d354cd9e6acfef6dd2e95266528587c4aa341a8dad2ec049e38f5d3eb35ec4",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "0d9572ac2d173eb6e1fe2963d9dd44f3f31b13202338a853e139b0f44aa469a6"
+    },
+    {
+      "name": "0135_briofold_ai_channel_execution.sql",
+      "tables": [
+        "briofold_ai_channel_jobs"
+      ],
+      "functions": [
+        "briofold_ai_studio_context",
+        "briofold_ai_channel_enqueue",
+        "briofold_ai_channel_claim",
+        "briofold_ai_channel_valid",
+        "briofold_ai_channel_finish",
+        "inbox_next_send_v1",
+        "briofold_ai_review_read",
+        "briofold_ai_review_done"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "9d540748d940ec55307d2e9e64a8d1420b619eaa1a1fb3b68f7680e71961d4b0",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f9be3106b0e473324cfa2596a712d35815e032725328738f77951e106f6fb0be"
+    },
+    {
+      "name": "0135_subscription_coupon_admin_audit_subject_fix.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "3493b89bfcc65f532a9d9c9ee2f6530cf6452e625a7c46105556961974d59350",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "eb999014b0b4f709b5eb4e9dab078779de3a63ecc5e46a0b9e1f82562c77bed2",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "3493b89bfcc65f532a9d9c9ee2f6530cf6452e625a7c46105556961974d59350"
+    },
+    {
+      "name": "0136_briofold_knowledge_import.sql",
+      "tables": [],
+      "functions": [
+        "briofold_ai_import_authorize"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "34c7b8723c87eb1c506a1c9f1d7d8e4eb1a52e400a32ef6d8dd436b227d2b2d6",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "b4f65c37ba8765fdf8cea3a79bd56d890ce701281b194792a1add3dfcd9893d5"
+    },
+    {
+      "name": "0137_briofold_website_chat.sql",
+      "tables": [
+        "briofold_website_sites",
+        "briofold_website_visitors",
+        "briofold_website_rates"
+      ],
+      "functions": [
+        "briofold_website_read",
+        "briofold_website_save",
+        "briofold_website_origin",
+        "briofold_website_limit",
+        "briofold_website_visit",
+        "briofold_website_media"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "e8b98eeb255d4ecb252ade59e255a55448355e3666456c0f0b708afbda66046e",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "1312093a4877ccabb79003db79d8a37f94e9caa83ac7e061db4bac857e4686cc"
+    },
+    {
+      "name": "0138_briofold_inbox_alerts.sql",
+      "tables": [
+        "briofold_inbox_alerts",
+        "briofold_inbox_alert_reads"
+      ],
+      "functions": [
+        "briofold_inbox_work_alert",
+        "briofold_inbox_ticket_alert",
+        "briofold_inbox_ai_alert",
+        "briofold_inbox_alert_sweep",
+        "briofold_inbox_alert_read",
+        "briofold_inbox_alert_mark"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "1182bf86ed49685bfcdd65503f772ae72ae43dcf4f5fde397f890394102443ef",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "1b8cd66fffc78a6317bc8495f314aae5980755cbad4c8b029cec6d83a1d114c7"
+    },
+    {
+      "name": "0139_briofold_comments.sql",
+      "tables": [
+        "briofold_comment_rules",
+        "briofold_comments",
+        "briofold_comment_audit"
+      ],
+      "functions": [
+        "briofold_comments_read",
+        "briofold_comments_write",
+        "briofold_comment_ingest",
+        "briofold_comment_context_valid",
+        "briofold_comment_claim",
+        "briofold_comment_decide",
+        "briofold_comment_finish",
+        "inbox_oauth_begin",
+        "briofold_comment_oauth_begin",
+        "inbox_oauth_consume"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b392bdf6b81adcaa8b7a5008d12800d3165d477147eef16b70fc8d0c2ba44ef3",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "acfc5422e32b22e09969a80954d353ea98417db5d6cfd644e7449cc550ef953a"
+    },
+    {
+      "name": "0140_briofold_customers.sql",
+      "tables": [
+        "briofold_customers",
+        "briofold_customer_sources",
+        "briofold_customer_proofs",
+        "briofold_customer_challenges",
+        "briofold_customer_followups",
+        "briofold_customer_events",
+        "briofold_customer_commands"
+      ],
+      "functions": [
+        "briofold_customer_event_immutable",
+        "briofold_customer_actor",
+        "briofold_customer_attach_thread",
+        "briofold_customers_read",
+        "briofold_customers_write",
+        "briofold_customer_challenge",
+        "briofold_customer_export",
+        "briofold_customer_whatsapp_identity",
+        "briofold_customer_finance_import",
+        "briofold_customer_api_create",
+        "briofold_customer_verify"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "fc236923d8f9f24da18305295596dfd675c35d46c522cdee22f8975f6122ea1f",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4c73e7dc78c9293e908c65dd5a7fc612bb7ce867679a55182aed3abbcce2bd0e"
+    },
+    {
+      "name": "0140_platform_subscription_policy_catalog.sql",
+      "tables": [],
+      "functions": [
+        "platform_subscription_policy_admin",
+        "platform_subscription_policy_public"
+      ],
+      "recorded_sha256": "e10275c24db4246a9b83e38ef04edc3f7e4ccbfb9da91e8482971a0d5e275c97",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "6c27a36455e4152d57a1b61778d086bf10e487d2c5fbcd72d470d97066d22940",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "e10275c24db4246a9b83e38ef04edc3f7e4ccbfb9da91e8482971a0d5e275c97"
+    },
+    {
+      "name": "0141_briofold_commerce.sql",
+      "tables": [
+        "commerce_media",
+        "commerce_integrations",
+        "commerce_products",
+        "commerce_variants",
+        "commerce_warehouses",
+        "commerce_stock",
+        "commerce_coupons",
+        "commerce_orders",
+        "commerce_lines",
+        "commerce_coupon_claims",
+        "commerce_stock_moves",
+        "commerce_deliveries",
+        "commerce_returns",
+        "commerce_finance_links",
+        "commerce_post_products",
+        "commerce_imports",
+        "commerce_events",
+        "commerce_notification_reads",
+        "commerce_commands"
+      ],
+      "functions": [
+        "commerce_actor",
+        "commerce_move",
+        "commerce_read",
+        "commerce_write",
+        "commerce_capture_inbox_order",
+        "commerce_integration",
+        "commerce_api_write",
+        "commerce_api_read",
+        "commerce_media_access",
+        "commerce_notification_ack"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "commerce_media",
+        "commerce_integrations",
+        "commerce_products",
+        "commerce_variants",
+        "commerce_warehouses",
+        "commerce_stock",
+        "commerce_coupons",
+        "commerce_orders",
+        "commerce_lines",
+        "commerce_coupon_claims",
+        "commerce_stock_moves",
+        "commerce_deliveries",
+        "commerce_returns",
+        "commerce_finance_links",
+        "commerce_post_products",
+        "commerce_imports",
+        "commerce_events",
+        "commerce_notification_reads",
+        "commerce_commands"
+      ],
+      "missing_functions": [
+        "commerce_actor",
+        "commerce_move",
+        "commerce_read",
+        "commerce_write",
+        "commerce_capture_inbox_order",
+        "commerce_integration",
+        "commerce_api_write",
+        "commerce_api_read",
+        "commerce_media_access",
+        "commerce_notification_ack"
+      ],
+      "source_sha256": "78e6f563f5a723795a10b5ac2396592976a4527ab9e65bd137c7479e8941a87d",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "daa136acc79875bb226831ad82c548bc6eaccddb3c15ca7d92e64e6ac40114ff"
+    },
+    {
+      "name": "0141_platform_subscription_policy_lock_concat_fix.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "5ee0301e073fef6d8c68cb10be31e90976e4d3d815d3b6544fad5e8aeb94c8e5",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "f17e51d68d8c19a39a85980866e314b58f65a66199e1108d1f196b3827bbc6d9",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "5ee0301e073fef6d8c68cb10be31e90976e4d3d815d3b6544fad5e8aeb94c8e5"
+    },
+    {
+      "name": "0142_briofold_growth_reporting.sql",
+      "tables": [],
+      "functions": [
+        "briofold_growth_snapshot"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_growth_snapshot"
+      ],
+      "source_sha256": "6f87facada05ba107f285d26aed20bead3c5753838ecdffdbe8b8436793377d2",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "76180779eb1cfe5d554182ca3b2f236bee9c0aacd4979884e69a3521a8611cc9"
+    },
+    {
+      "name": "0142_platform_subscription_policy_kind_qualification.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "bcbf205232d49d99b09e0e41da6b36c8aac5c3052d458d842bd9369fc8e13130",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "2b319c7b0e8573de3c9c13856b725dd8a5c55ad977fe86f1fb384bb1f6a56d6e",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "bcbf205232d49d99b09e0e41da6b36c8aac5c3052d458d842bd9369fc8e13130"
+    },
+    {
+      "name": "0143_platform_subscription_offer_admin.sql",
+      "tables": [],
+      "functions": [
+        "platform_subscription_offer_admin"
+      ],
+      "recorded_sha256": "347ba59969a3c4fca3702a3f09f082cf13d846acdb8a2efbd7f353b4a5afaa98",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "ee565e1c809f9d010f81c477f3a5e1becdc1441203f167987a5ca596bcedc59d",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "347ba59969a3c4fca3702a3f09f082cf13d846acdb8a2efbd7f353b4a5afaa98"
+    },
+    {
+      "name": "0144_platform_subscription_public_catalog.sql",
+      "tables": [],
+      "functions": [
+        "platform_subscription_offers_public"
+      ],
+      "recorded_sha256": "6bfc80ba71d10a9f739383d9360656660b71cd0a2884b91114808e022f123ad4",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "62e3dd0223b2be5ed3678b900631893da58a9d2b650cbd9021472d44226cfbbc",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "6bfc80ba71d10a9f739383d9360656660b71cd0a2884b91114808e022f123ad4"
+    },
+    {
+      "name": "0145_platform_subscription_coupon_versions.sql",
+      "tables": [
+        "platform_subscription_coupon_versions"
+      ],
+      "functions": [
+        "subscription_coupon_record_version",
+        "subscription_coupon_version_immutable"
+      ],
+      "recorded_sha256": "78123a374cbc771e7138fdc813f3650b9877ee96cefa545aac64f5535d79ce1f",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "f6b1c495b5560acec922f8bfefcff2720eadfe3ee98a8964cbd7507d54433547",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "78123a374cbc771e7138fdc813f3650b9877ee96cefa545aac64f5535d79ce1f"
+    },
+    {
+      "name": "0146_platform_subscription_coupon_lifecycle.sql",
+      "tables": [
+        "platform_subscription_coupon_commands"
+      ],
+      "functions": [
+        "platform_subscription_coupon_quote",
+        "platform_subscription_coupon_reconcile",
+        "subscription_coupon_invoice_changed",
+        "platform_subscription_coupon_history"
+      ],
+      "recorded_sha256": "12d42b88b3384d52de95d62a1d75f0b7efd17d543c5736193e61fbae7ad9265b",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "ae47e9257477343cd7928e08b6c3b7bd6b0c09a519e612f669aca5723de23213",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "12d42b88b3384d52de95d62a1d75f0b7efd17d543c5736193e61fbae7ad9265b"
+    },
+    {
+      "name": "0147_platform_subscription_coupon_restrictions.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "3aba98cd94fa058549e530122742cd280104e03fba04b0152a2470566651372d",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b2bde72e391ef3cc571f066b64e0bab33a52066370e5cf3deabb2f2c260c127e",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "3aba98cd94fa058549e530122742cd280104e03fba04b0152a2470566651372d"
+    },
+    {
+      "name": "0148_platform_subscription_coupon_tax_requote.sql",
+      "tables": [
+        "platform_subscription_tax_policies",
+        "platform_subscription_tax_policy_versions"
+      ],
+      "functions": [
+        "subscription_tax_record_version",
+        "platform_subscription_tax_admin"
+      ],
+      "recorded_sha256": "6e9fb502b5bed2e2fb5b855987823cdde862e4e3d7b7d929c5c595d9fc422f1b",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "36a6287dacc5668c432c14fc053843e596a9c5653bb5c5d321bdfc04edbfeb2c",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "6e9fb502b5bed2e2fb5b855987823cdde862e4e3d7b7d929c5c595d9fc422f1b"
+    },
+    {
+      "name": "0149_platform_subscription_coupon_quote_read.sql",
+      "tables": [],
+      "functions": [
+        "platform_subscription_coupon_current_quote"
+      ],
+      "recorded_sha256": "b654806725a811e774b70614c3d7e45743f9bc31386f40f4d654600fc7a1a5af",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "62f2f734985867c5871df1382b9ce1159ed3a116c70b7c93da57c1909ced8f7c",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "b654806725a811e774b70614c3d7e45743f9bc31386f40f4d654600fc7a1a5af"
+    },
+    {
+      "name": "0151_phase4_durable_purchase_intents.sql",
+      "tables": [],
+      "functions": [
+        "platform_subscription_intent_command"
+      ],
+      "recorded_sha256": "e9041ba6c393ce0c1554557d02abc2177b51ce9353b363d23234043cfe560df2",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "58a29d4b8dd014479e55b3702625488a760527fc7ae73271974a9288e25cb16c",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "e9041ba6c393ce0c1554557d02abc2177b51ce9353b363d23234043cfe560df2"
+    },
+    {
+      "name": "0152_platform_subscription_order_summary.sql",
+      "tables": [
+        "platform_subscription_order_confirmations"
+      ],
+      "functions": [
+        "platform_subscription_order_request"
+      ],
+      "recorded_sha256": "32e2e7fa3a0d0c4d5637939f687f2fbddfcd75f8b875da3258547ce9521cf1c5",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "1cff1f2cc6ab98d80564fd32992b5c62b0f597774448767abb8fa25fc2feb59a",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "32e2e7fa3a0d0c4d5637939f687f2fbddfcd75f8b875da3258547ce9521cf1c5"
+    },
+    {
+      "name": "0153_platform_subscription_payment_handoff.sql",
+      "tables": [
+        "platform_subscription_payment_handoffs",
+        "platform_subscription_payment_recovery_cases"
+      ],
+      "functions": [
+        "platform_subscription_payment_bind",
+        "platform_subscription_payment_read",
+        "platform_subscription_payment_capability",
+        "platform_subscription_payment_pending",
+        "platform_subscription_payment_settle",
+        "platform_subscription_payment_recover",
+        "platform_subscription_payment_terminal",
+        "platform_subscription_payment_is_handoff"
+      ],
+      "recorded_sha256": "d9a7ed3c961002f8e122498ac18af34d7ab666dc790209f7716ce6455d958dd6",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "6cc78ccafcc605de1c615c64148ec700243a441ed2c8d1b04f28421b86e65063",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "d9a7ed3c961002f8e122498ac18af34d7ab666dc790209f7716ce6455d958dd6"
+    },
+    {
+      "name": "0154_platform_subscription_release_operations.sql",
+      "tables": [],
+      "functions": [
+        "platform_subscription_admin_operations",
+        "platform_subscription_admin_export"
+      ],
+      "recorded_sha256": "2ea99211dddc836fe2c70d3f475a8b797224702c9f27bbb46580d12ffd3833ee",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "443ed6d47b595656ce07f3124b08d5f37362953a6eda2de916bb5bf61344ac8a",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "2ea99211dddc836fe2c70d3f475a8b797224702c9f27bbb46580d12ffd3833ee"
+    },
+    {
+      "name": "0155_platform_subscription_safe_runtime_grants.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "67dd090dbd7c04d675eca56136efb4fd5f5278d601ecef4f75203825333d97ee",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "798658caffbd75faf430db09972841eb6f0ecbc72cb5339a6949ecbccbb32c55",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "67dd090dbd7c04d675eca56136efb4fd5f5278d601ecef4f75203825333d97ee"
+    },
+    {
+      "name": "0156_web_runtime_least_privilege.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": "4b2440e36388407047185e2b78198ef9ff1062f80ebd67b59f8751bbb811ee31",
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "6407060e7be5024045b598efad9a403bc37ac11309291f1c13cdaa2c012fc843",
+      "ledger_checksum_matches": true,
+      "source_lf_sha256": "4b2440e36388407047185e2b78198ef9ff1062f80ebd67b59f8751bbb811ee31"
+    },
+    {
+      "name": "0180_briofold_growth_operations.sql",
+      "tables": [
+        "briofold_campaign_drafts",
+        "briofold_booking_resources",
+        "briofold_bookings",
+        "briofold_growth_commands"
+      ],
+      "functions": [
+        "briofold_growth_store_actor",
+        "briofold_growth_operations_read",
+        "briofold_growth_operations_write"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "briofold_campaign_drafts",
+        "briofold_booking_resources",
+        "briofold_bookings",
+        "briofold_growth_commands"
+      ],
+      "missing_functions": [
+        "briofold_growth_store_actor",
+        "briofold_growth_operations_read",
+        "briofold_growth_operations_write"
+      ],
+      "source_sha256": "3a9f926fd72387a1381b7e77f7ed52a5f05a0322941bdbe3c7d747b413d7347c",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "4c2189753c56d13d3c800376520d865c694a2c2ea0b02f39ea8925203707ab48"
+    },
+    {
+      "name": "0181_briofold_growth_analytics_exports.sql",
+      "tables": [],
+      "functions": [
+        "briofold_growth_operational_snapshot",
+        "briofold_growth_export"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_growth_operational_snapshot",
+        "briofold_growth_export"
+      ],
+      "source_sha256": "f8eb57675a2a40655ba3dee21106b11478e1838c5ca6abc866a65ba38bd9d348",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "1522e08ccb488d8eae3275f9925b24df03bb47bcad3334b4b57c6d6128fac82c"
+    },
+    {
+      "name": "0182_briofold_growth_consent_safety.sql",
+      "tables": [
+        "briofold_growth_channel_consents",
+        "briofold_growth_suppressions",
+        "briofold_growth_suppression_events"
+      ],
+      "functions": [
+        "briofold_growth_consent_append_only",
+        "briofold_growth_suppression_immutable",
+        "briofold_growth_suppression_on_merge",
+        "briofold_growth_audience_preview",
+        "briofold_growth_suppress_contact"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "briofold_growth_channel_consents",
+        "briofold_growth_suppressions",
+        "briofold_growth_suppression_events"
+      ],
+      "missing_functions": [
+        "briofold_growth_consent_append_only",
+        "briofold_growth_suppression_immutable",
+        "briofold_growth_suppression_on_merge",
+        "briofold_growth_audience_preview",
+        "briofold_growth_suppress_contact"
+      ],
+      "source_sha256": "8ffa327cf3726a2f107cf1650667b4cde1993efd62a70a3001596a734f8baf27",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "e24010c157ecfc6b6add2c16ca4197d9a8dd542ebc43b0e146ec049da3278aaa"
+    },
+    {
+      "name": "0183_briofold_signed_channel_optouts.sql",
+      "tables": [],
+      "functions": [
+        "briofold_growth_provider_opt_out",
+        "briofold_growth_suppression_on_merge"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_growth_provider_opt_out",
+        "briofold_growth_suppression_on_merge"
+      ],
+      "source_sha256": "62f4b15b803a6944e79e41233d0c5f913a460a94ebb02bbec6664f8053e49d6a",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "8d20cc9ffa6b70e3d48e742a1d707c950a76bdc5e8b64e4f8b46e1c8fca93f2d"
+    },
+    {
+      "name": "0184_briofold_order_assignment.sql",
+      "tables": [
+        "commerce_order_assignments",
+        "commerce_order_assignment_commands"
+      ],
+      "functions": [
+        "commerce_assignment_read",
+        "commerce_assignment_write"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "commerce_order_assignments",
+        "commerce_order_assignment_commands"
+      ],
+      "missing_functions": [
+        "commerce_assignment_read",
+        "commerce_assignment_write"
+      ],
+      "source_sha256": "7d33776753e45c319bd0e393d86c4708b0de2a80fab9f10f78cb8c82c38b25c2",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "1108217857ce21fe5e0e91d3348016da6657456818565e5b610da9cecc7b2689"
+    },
+    {
+      "name": "0185_briofold_order_barcode_search.sql",
+      "tables": [],
+      "functions": [
+        "commerce_order_scan"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "commerce_order_scan"
+      ],
+      "source_sha256": "847fef8d2013872d254110700157e4b29dd8e891277c93bcf384f872fbd12667",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "773d9bbf11cc52bcc87c7c725edc4955ee03fe49650708428ab0ed9cc5ba95e7"
+    },
+    {
+      "name": "0186_briofold_order_reporting.sql",
+      "tables": [],
+      "functions": [
+        "commerce_order_report"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "commerce_order_report"
+      ],
+      "source_sha256": "5995e0fd78765259613eb71def241f005f6c90330a5b93868f75bfb1fb8c06db",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "d6d3cfa8b60b551f4b70d2adfabde12157cc3de27c3fcd8a3b8b0db00c90c519"
+    },
+    {
+      "name": "0187_briofold_assignment_viewer_privacy.sql",
+      "tables": [],
+      "functions": [
+        "commerce_assignment_read"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "commerce_assignment_read"
+      ],
+      "source_sha256": "99e9de68543a08a3a9e79dacf406401ebfcd33b22cf73f3dffdb8af29fa81561",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c0b1879e6e47f27dbd0776fc55eb7a816749cc37c4f9a935459d4fc7b400e1ea"
+    },
+    {
+      "name": "0188_briofold_unified_activity.sql",
+      "tables": [],
+      "functions": [
+        "briofold_unified_activity"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_unified_activity"
+      ],
+      "source_sha256": "1d3d0c65dd1e604d0eabd7c24d20c177cedd2bf63c3ce14021e38eb466e85c68",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "83a412597847d2d8977bb368947c187d8afee26f6be8f0d8d99d0a7e8c8cd63e"
+    },
+    {
+      "name": "0189_briofold_crm_viewer_privacy.sql",
+      "tables": [],
+      "functions": [
+        "briofold_customers_read"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "afa9f9a0d1d734e836bdbd1068a0da3433d53cf5ba4d573e1e03b9c0ed8d77e1",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "6efecc54f0f7f3a87b5b3f8727d4858f30e4d9f36cbd897a752a8af39325ac2f"
+    },
+    {
+      "name": "0190_briofold_feedback_topics.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "28526359f9a242ed18e6aa98ca0e82179ec72a4634a46515962609de86a3588d",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "ad044809d123eac4fbbc718033b109c21e6eda66171df04f0baaf06742ed5a24"
+    },
+    {
+      "name": "0191_briofold_crm_search.sql",
+      "tables": [],
+      "functions": [
+        "briofold_customers_search"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_customers_search"
+      ],
+      "source_sha256": "27953b722ae9758f95af3071b082d485b70757f8918a2d6788945b27a38ac658",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "49a2ccfcdfecbf40ff1f6efa95355ae76dfcc0bd913d13160c6e47546c846074"
+    },
+    {
+      "name": "0192_briofold_followup_scheduling.sql",
+      "tables": [],
+      "functions": [
+        "briofold_followup_due",
+        "briofold_customers_write",
+        "briofold_customers_read"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_followup_due"
+      ],
+      "source_sha256": "2ec4de6543324d6efa245ff52dbe6cbc4134a8075940758f8feec85573f38929",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "7ef6e7da8d9d249baa72f0c81836be94b0099bc09da191d7a6b60e5146d701a9"
+    },
+    {
+      "name": "0193_briofold_inbox_filters.sql",
+      "tables": [],
+      "functions": [
+        "inbox_page"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b7ae1097ee80863244f34d2b083bfed622260b62b28ba51a44cbde9a2c056dd7",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f99e26722bc154ae171542b5443f4edfa9851180ad5c64b49868118f67594d3c"
+    },
+    {
+      "name": "0194_briofold_response_reporting.sql",
+      "tables": [],
+      "functions": [
+        "briofold_response_snapshot"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_response_snapshot"
+      ],
+      "source_sha256": "e953e5e01d2552fe9aa3817e4dd0b99b35bf03d8ad5f0e6310c27f78b3fcf849",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "feb34940919e4684c8a4f34417ebb15874c36d9cd214280aacd8ee397aff0c20"
+    },
+    {
+      "name": "0195_briofold_product_operational_analytics.sql",
+      "tables": [],
+      "functions": [
+        "commerce_product_operational_analytics"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "commerce_product_operational_analytics"
+      ],
+      "source_sha256": "fa0dfe2385ace1fc94e06b25575e3d395dce3c192489fe8ffc318cacdba76e09",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "64d7e59f8a5e2295274629f8ad810fe96ce0d76d02d91ad8f15d835b598758f1"
+    },
+    {
+      "name": "0196_briofold_team_groups.sql",
+      "tables": [
+        "briofold_team_groups",
+        "briofold_team_group_members"
+      ],
+      "functions": [
+        "pg13_capability_override",
+        "briofold_team_groups_read",
+        "briofold_team_groups_write"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "briofold_team_groups",
+        "briofold_team_group_members"
+      ],
+      "missing_functions": [
+        "briofold_team_groups_read",
+        "briofold_team_groups_write"
+      ],
+      "source_sha256": "35fef51acb7b49954f6668c733f228215e730609c773adab1280a30fd78c43fe",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "111f87cf6f9c73303ad7afbeeb23327079b5fd563f02eabd968133f26d94fee9"
+    },
+    {
+      "name": "0197_briofold_saved_reply_sequences.sql",
+      "tables": [],
+      "functions": [
+        "briofold_inbox_work_write",
+        "briofold_inbox_work_read",
+        "briofold_saved_reply_send",
+        "inbox_next_send_v1"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_saved_reply_send"
+      ],
+      "source_sha256": "bd95990cec402026ddf8b3ea9d707bf9c295104684495fee5350e00cf2704a77",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "428cbf83e0c04511880bafcc96436994d9fa15edd9efe32eade798d02b235314"
+    },
+    {
+      "name": "0198_briofold_feedback_screenshots.sql",
+      "tables": [
+        "briofold_feedback_submissions"
+      ],
+      "functions": [
+        "briofold_feedback_write",
+        "pg13_workspace_read",
+        "briofold_feedback_screenshot_read"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "briofold_feedback_submissions"
+      ],
+      "missing_functions": [
+        "briofold_feedback_write",
+        "briofold_feedback_screenshot_read"
+      ],
+      "source_sha256": "8f3e6389982bbeab50ad78e63c272f5262b17a400d7266572dee947d3a339551",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "9ed729504c8c3a1e36982d48126095c7793783090c6c3ae0b30ebaea1a30d767"
+    },
+    {
+      "name": "0199_briofold_unconverted_interest.sql",
+      "tables": [],
+      "functions": [
+        "briofold_customers_search"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_customers_search"
+      ],
+      "source_sha256": "0434654791d5fd238995198c8b317084f0b978549664e4fc8d4ee2b299c24de7",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "1158acbdbf25d0c66630431cc71299391c1f91850c8c3aaf806bf70701c5b435"
+    },
+    {
+      "name": "0200_briofold_help_videos.sql",
+      "tables": [
+        "briofold_help_videos",
+        "briofold_help_watch_state"
+      ],
+      "functions": [
+        "briofold_help_videos_read",
+        "briofold_help_video_progress"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "briofold_help_videos",
+        "briofold_help_watch_state"
+      ],
+      "missing_functions": [
+        "briofold_help_videos_read",
+        "briofold_help_video_progress"
+      ],
+      "source_sha256": "38ddbd47f44e50a9435d804a7d3d8d00a11783692067fc872932e35c5a12a11e",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "5bc43f3ae6dc77a1ef2f73687429ac7fc842067897d305ada1d02190723a5abc"
+    },
+    {
+      "name": "0201_briofold_waiting_reply_truth.sql",
+      "tables": [],
+      "functions": [
+        "inbox_page"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b5482654d4a266e9911da6cfa2ec9dad71bcd258f2dd50e426872af301a6bd2f",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "3064995b6bc0323ee9ca3cd94e7e6f31eb0cc83b6bad4a449a02d266b93a6995"
+    },
+    {
+      "name": "0202_briofold_channel_policies.sql",
+      "tables": [
+        "briofold_channel_policies",
+        "briofold_channel_policy_events"
+      ],
+      "functions": [
+        "briofold_channel_policy",
+        "briofold_channel_settings_read",
+        "briofold_channel_settings_write",
+        "briofold_channel_job_policy_guard",
+        "briofold_ai_channel_claim",
+        "briofold_inbox_work_read",
+        "briofold_ai_channel_valid",
+        "briofold_channel_work_valid"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "briofold_channel_policies",
+        "briofold_channel_policy_events"
+      ],
+      "missing_functions": [
+        "briofold_channel_policy",
+        "briofold_channel_settings_read",
+        "briofold_channel_settings_write",
+        "briofold_channel_job_policy_guard",
+        "briofold_channel_work_valid"
+      ],
+      "source_sha256": "db48deb615c78a8bce4645ebb244ad5bb750af89ea6bb82bcc6e500422ee9b16",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c5322de467f80fc9387303980497d99df8e5cdcc5606d2335ab8834637ac7235"
+    },
+    {
+      "name": "0203_briofold_linked_order_conversion.sql",
+      "tables": [],
+      "functions": [
+        "briofold_linked_order_conversion"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_linked_order_conversion"
+      ],
+      "source_sha256": "db7e7cfd75f2298fa738db45871eb5f53c7ae6bd6e9277be5e99ae4fb55124c4",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "53fabe5eefc51ca75f02b5161d404c3193d9f168862f11b791a631a92cb6453e"
+    },
+    {
+      "name": "0204_briofold_product_photo_search.sql",
+      "tables": [
+        "commerce_photo_features",
+        "commerce_photo_evaluations"
+      ],
+      "functions": [
+        "commerce_photo_signature_valid",
+        "commerce_photo_actor",
+        "commerce_photo_index_source",
+        "commerce_photo_index",
+        "commerce_photo_similarity",
+        "commerce_photo_metrics",
+        "commerce_photo_search",
+        "commerce_photo_evaluate"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "commerce_photo_features",
+        "commerce_photo_evaluations"
+      ],
+      "missing_functions": [
+        "commerce_photo_signature_valid",
+        "commerce_photo_actor",
+        "commerce_photo_index_source",
+        "commerce_photo_index",
+        "commerce_photo_similarity",
+        "commerce_photo_metrics",
+        "commerce_photo_search",
+        "commerce_photo_evaluate"
+      ],
+      "source_sha256": "8acd10fa807752db930b9fe740af28231d787f1cba0f0fb7d87ef2155517ff10",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "7d1013ca18db82b424c41932aa0424b68c91f356299746b3fdbe9d5881d2413b"
+    },
+    {
+      "name": "0205_briofold_pathao_courier.sql",
+      "tables": [],
+      "functions": [
+        "commerce_pathao_credentials",
+        "commerce_pathao_command"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "commerce_pathao_credentials",
+        "commerce_pathao_command"
+      ],
+      "source_sha256": "53424d9adcc69847473ba717d18e88a51788f5787643fb98cca0d34c346e6396",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "36f4bf225939f4bf0efb02bca8b22744d84204ffa9d0e9dcb811f27682bd1ef6"
+    },
+    {
+      "name": "0206_briofold_woo_webhook_sources.sql",
+      "tables": [
+        "commerce_woo_hook_sources",
+        "commerce_woo_hook_events",
+        "commerce_woo_hook_receipts"
+      ],
+      "functions": [
+        "commerce_woo_hook_manage",
+        "commerce_woo_hook_create",
+        "commerce_woo_hook_disable",
+        "commerce_woo_hook_read",
+        "commerce_woo_hook_source",
+        "commerce_woo_hook_receive",
+        "commerce_woo_event_source"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "commerce_woo_hook_sources",
+        "commerce_woo_hook_events",
+        "commerce_woo_hook_receipts"
+      ],
+      "missing_functions": [
+        "commerce_woo_hook_manage",
+        "commerce_woo_hook_create",
+        "commerce_woo_hook_disable",
+        "commerce_woo_hook_read",
+        "commerce_woo_hook_source",
+        "commerce_woo_hook_receive",
+        "commerce_woo_event_source"
+      ],
+      "source_sha256": "d698c49fe8b3426adc230516c996d00e67f189f6226675b5c0aab9b315b5922a",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "a867a0c6b845a1c4b059badcdee22e4a4b57ffcbbfe674bf1241e2ee6c9d0042"
+    },
+    {
+      "name": "0207_briofold_broadcast_dispatch.sql",
+      "tables": [
+        "briofold_broadcast_runs",
+        "briofold_broadcast_recipients"
+      ],
+      "functions": [
+        "briofold_broadcast_actor",
+        "briofold_broadcast_audience",
+        "briofold_broadcast_preview",
+        "briofold_broadcast_command",
+        "briofold_broadcast_valid",
+        "briofold_broadcast_due",
+        "briofold_broadcast_tick",
+        "briofold_broadcast_read",
+        "briofold_broadcast_send_check",
+        "inbox_next_send_v1"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "briofold_broadcast_runs",
+        "briofold_broadcast_recipients"
+      ],
+      "missing_functions": [
+        "briofold_broadcast_actor",
+        "briofold_broadcast_audience",
+        "briofold_broadcast_preview",
+        "briofold_broadcast_command",
+        "briofold_broadcast_valid",
+        "briofold_broadcast_due",
+        "briofold_broadcast_tick",
+        "briofold_broadcast_read",
+        "briofold_broadcast_send_check"
+      ],
+      "source_sha256": "699ff09664b75016d3bd6a3bde20c6c9fb1f63b31af67bc032a6d188d197a91f",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "a219db793da647fa2b9f32e5cb14f1700b50bee20f812fb3519cbe79daea8717"
+    },
+    {
+      "name": "0208_briofold_member_channel_scopes.sql",
+      "tables": [
+        "briofold_member_channel_scopes"
+      ],
+      "functions": [
+        "briofold_channel_allowed",
+        "briofold_channel_thread",
+        "briofold_channel_customer",
+        "briofold_channel_scopes_read",
+        "briofold_channel_scopes_write",
+        "pg13_capability_override",
+        "inbox_page",
+        "briofold_customers_read",
+        "briofold_customers_search",
+        "briofold_inbox_alert_read",
+        "briofold_inbox_alert_mark",
+        "briofold_ai_review_read",
+        "briofold_ai_review_done",
+        "briofold_response_snapshot",
+        "briofold_growth_snapshot",
+        "briofold_growth_operational_snapshot",
+        "briofold_inbox_work_read_before_channel_policy",
+        "briofold_channel_reply",
+        "inbox_action",
+        "inbox_advanced",
+        "briofold_saved_reply_send",
+        "briofold_inbox_work_write",
+        "briofold_customers_write",
+        "briofold_channel_send_valid",
+        "briofold_comments_read",
+        "briofold_customer_challenge",
+        "briofold_unified_activity",
+        "briofold_linked_order_conversion",
+        "inbox_next_send_v1",
+        "briofold_broadcast_valid",
+        "inbox_forward_album",
+        "briofold_growth_operations_read",
+        "briofold_growth_audience_preview",
+        "briofold_growth_suppress_contact",
+        "briofold_growth_operations_write"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "briofold_member_channel_scopes"
+      ],
+      "missing_functions": [
+        "briofold_channel_allowed",
+        "briofold_channel_thread",
+        "briofold_channel_customer",
+        "briofold_channel_scopes_read",
+        "briofold_channel_scopes_write",
+        "briofold_customers_search",
+        "briofold_response_snapshot",
+        "briofold_growth_snapshot",
+        "briofold_growth_operational_snapshot",
+        "briofold_inbox_work_read_before_channel_policy",
+        "briofold_channel_reply",
+        "briofold_saved_reply_send",
+        "briofold_channel_send_valid",
+        "briofold_unified_activity",
+        "briofold_linked_order_conversion",
+        "briofold_broadcast_valid",
+        "briofold_growth_operations_read",
+        "briofold_growth_audience_preview",
+        "briofold_growth_suppress_contact",
+        "briofold_growth_operations_write"
+      ],
+      "source_sha256": "56c4cd20b3cea08d1cd1e24080dcb645162854589d9f012abe85cc994a0eba79",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "1bcd32be40df20a9a6cc3978c42fdad395043de45792d72f2f44a4eeab9c9d16"
+    },
+    {
+      "name": "0209_briofold_broadcast_optin_offers.sql",
+      "tables": [],
+      "functions": [
+        "briofold_growth_provider_opt_in",
+        "briofold_broadcast_coupon_available",
+        "briofold_broadcast_coupon_snapshot_immutable",
+        "briofold_broadcast_preview",
+        "briofold_broadcast_command",
+        "briofold_broadcast_valid",
+        "briofold_channel_send_valid",
+        "inbox_page",
+        "briofold_inbox_work_read_before_channel_policy",
+        "briofold_growth_audience_preview",
+        "briofold_customers_write_before_channel_scopes",
+        "briofold_channel_customer"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_growth_provider_opt_in",
+        "briofold_broadcast_coupon_available",
+        "briofold_broadcast_coupon_snapshot_immutable",
+        "briofold_broadcast_preview",
+        "briofold_broadcast_command",
+        "briofold_broadcast_valid",
+        "briofold_channel_send_valid",
+        "briofold_inbox_work_read_before_channel_policy",
+        "briofold_growth_audience_preview",
+        "briofold_customers_write_before_channel_scopes",
+        "briofold_channel_customer"
+      ],
+      "source_sha256": "83c93d5e1759c8252216008637ad04f42b3818ce6462a1e9a0882e85812f5961",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "55df46c7057c01fa9fe2b54358390743182771711ed719ad19c696c1b4b56ef1"
+    },
+    {
+      "name": "0210_briofold_sender_guard_precedence.sql",
+      "tables": [],
+      "functions": [
+        "inbox_next_send_v1"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "91438dbb487b27647f68fd95f1815a4722ae063762823b71353696e99db5bbf2",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "ae2a8cf6dc0566bc4be1531131d097055a6cbe1e9aae100e173eb2f5d79ec8d4"
+    },
+    {
+      "name": "0211_briofold_consent_scope_runtime.sql",
+      "tables": [],
+      "functions": [
+        "briofold_channel_customer"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "briofold_channel_customer"
+      ],
+      "source_sha256": "428c516e25a3a0aef15a3cbba0f0e8ed06bcdf154e5ae83b8830cce2823e7af5",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "023b99a075869f42b1478f6f0215b77cc44833508f35d8c222ad7bd9268a0579"
+    },
+    {
+      "name": "0212_channel_platform_telegram.sql",
+      "tables": [
+        "channel_platform_config"
+      ],
+      "functions": [
+        "channel_platform_config_read",
+        "channel_platform_config_write",
+        "inbox_capabilities"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "b8e0eab8a2cf028cfaf1e3269f421d8a6f30c1a1c5de997c3287d1b5ee6ec31b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "47542b880d2e85360bf87879f0bbdbf16ed57f8f997bc27914d091b4d420c347"
+    },
+    {
+      "name": "0213_qwen_provider_tariffs.sql",
+      "tables": [],
+      "functions": [
+        "briofold_ai_tariff_publish"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "1619c8f5c1763977d430febb6d234850445c2fd3d186f6c467f9de902dbc3788",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "11e6c0652e04fef62636f39af8802f36fdbdfb9ee9ad1470b578ce3ff348d8db"
+    },
+    {
+      "name": "0215_ai_unknown_thread_isolation.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "f74b33418c913648a9289f02dcf15e4438b00064db6f4829064a6dab0d66df0d",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "43d4d4a5cbe9b94cc7c0ec8520476eec1b5707b70e5f11614fd83b1b6a51b617"
+    },
+    {
+      "name": "0216_ai_multimodal_input.sql",
+      "tables": [],
+      "functions": [
+        "briofold_ai_channel_media"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "2dfeb9274bfde8867788872f7a0ada0ed1d713a8a12deac0fb757320c7ec1ad7",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "67f5c8b2d0805205af6adfb6deb9919ffc779e3d6d76831c7a2f3e822ae286a6"
+    },
+    {
+      "name": "0217_briofold_key_prefix.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "6a06afec720f15a9697020190bc67a4bfb63b8b05ba573753f3d57816e6f1f3b",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "02befae1e8659be0017a61248def80fa8cfc368bc4b530953ae5631fce20429f"
+    },
+    {
+      "name": "0218_web_members_lock_grant.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "a4035ac0ff0c20184a69521fa7f1562ebe4d983608766aaeaced92e8c6b39cd2",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "f8b5ed95bf5c7236702de3d91e3e5c6e1a5469bf6ad2d1163cb61b402fcc0527"
+    },
+    {
+      "name": "0219_inbox_telegram_no_reply_window.sql",
+      "tables": [],
+      "functions": [
+        "inbox_window_free"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "inbox_window_free"
+      ],
+      "source_sha256": "e08ac3a628d53419510af3a7e4fce9aa131ed6e4fb63bed6828794e74bad2b04",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "fe02abb2760378ac390e1553ed28fef19caeb2a1e8d959bd3b16e3e3865458ef"
+    },
+    {
+      "name": "0220_inbox_window_execution_grants.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "9419163ed88ace82d3ef41c2c1380658d7bc2ccc47b582e3d9bd965e7dd9b754",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "2e8441e9330ae3e3c1bc233ccb4fb094ea8f493f6508922d6a72c3b75bbf703a"
+    },
+    {
+      "name": "0221_inbox_media_refresh_metadata.sql",
+      "tables": [],
+      "functions": [
+        "inbox_media_source",
+        "inbox_source_metadata"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "inbox_source_metadata"
+      ],
+      "source_sha256": "5c6889aa2564527190ea9bb316a7bfd7df3da56a9382ebd2d13a5b68cecdcf98",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "35d6007e32ce5361f07653652de61bacd1da4bbeee69e7e3289c1d8220b52300"
+    },
+    {
+      "name": "0222_inbox_transient_blobs.sql",
+      "tables": [
+        "inbox_blobs"
+      ],
+      "functions": [
+        "inbox_blob_put",
+        "inbox_blob_get",
+        "inbox_blob_has",
+        "inbox_blob_purge"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [
+        "inbox_blobs"
+      ],
+      "missing_functions": [
+        "inbox_blob_put",
+        "inbox_blob_get",
+        "inbox_blob_has",
+        "inbox_blob_purge"
+      ],
+      "source_sha256": "38342499d6ae1605924d5da523f024b37ac663bf4c083900aad3a7bb562441ba",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "c65491caaf6951a55033bc581a1f92114adf8474925b7a24140cbf511412eea9"
+    },
+    {
+      "name": "0223_inbox_blobs_drop.sql",
+      "tables": [],
+      "functions": [],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [],
+      "source_sha256": "41f5de51e7e6bd9347357bd83cc35e904cf06833212b40ec3f44d7ec1275f3ee",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "88bfb8da350d564b009f64cab56a22bbdc4ba27bcd3c0aaea45a1d80f64250b8"
+    },
+    {
+      "name": "0224_inbox_telegram_delivered_on_send.sql",
+      "tables": [],
+      "functions": [
+        "inbox_telegram_delivered"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "inbox_telegram_delivered"
+      ],
+      "source_sha256": "2cdacd82a6052fe1960ad109cf0e704c17bbc2c047b06b5df50fe64e7702a685",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "8b0b2519aff89b2afb7ca5ed511f7d610c149915f4867deb084aa62a8b0fb073"
+    },
+    {
+      "name": "0225_inbox_delivered_watermark.sql",
+      "tables": [],
+      "functions": [
+        "inbox_delivered_watermark"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "inbox_delivered_watermark"
+      ],
+      "source_sha256": "c2cec990a7c03907a7cd73e20dfad509f1eecb5b9cd21fe4a5b67b935156df48",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "7067fc6bb7a476e701da14123d57b52d8adcc09dc35bcdfdcb6f323dae22991c"
+    },
+    {
+      "name": "0226_inbox_realtime_avatars.sql",
+      "tables": [],
+      "functions": [
+        "inbox_realtime_notify",
+        "inbox_avatar_source",
+        "inbox_outgoing_media_reference"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "inbox_realtime_notify",
+        "inbox_avatar_source",
+        "inbox_outgoing_media_reference"
+      ],
+      "source_sha256": "345aa2d8eee4d4b7d8daa4611a436d75fbc003e09b180b685c753ad20d66aa43",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "fef7d86ec348c842e35ed42dd2ccd39b3ac86e5db42c5a9fc60d59fc6482de87"
+    },
+    {
+      "name": "0227_briofold_customer_orders_link.sql",
+      "tables": [],
+      "functions": [
+        "commerce_capture_inbox_order",
+        "inbox_order_payment_claim",
+        "briofold_customer_stats",
+        "briofold_customer_orders"
+      ],
+      "recorded_sha256": null,
+      "missing_tables": [],
+      "missing_functions": [
+        "commerce_capture_inbox_order",
+        "inbox_order_payment_claim",
+        "briofold_customer_stats",
+        "briofold_customer_orders"
+      ],
+      "source_sha256": "677b30dea27ba9568fa14d1b62694bcd1295969a19a427d8f0709a7ae38f634c",
+      "ledger_checksum_matches": null,
+      "source_lf_sha256": "677b30dea27ba9568fa14d1b62694bcd1295969a19a427d8f0709a7ae38f634c"
+    }
+  ]
+}
