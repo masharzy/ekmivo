@@ -4,6 +4,8 @@ import {LinkedOrderConversionReport} from "./linked-order-conversion-report";
 import {BriofoldResponseReport} from "./briofold-response-report";
 import {database} from "../lib/server/db";
 import styles from "./briofold-growth-reports.module.css";
+import "./dashboard-reference.css";
+import "./reference-adapters.css";
 
 type Locale="bn"|"en";
 type Metric={name:string;value:number};
@@ -99,31 +101,38 @@ export async function BriofoldGrowthReports({workspaceId,actorId,locale,environm
    {key:"messages",title:t("Message activity (7 days)","মেসেজের কার্যক্রম (৭ দিন)"),href:"/inbox",data:snapshot.operations.messages}
   ]:[])
  ];
- return <div className={styles.root} role="region" aria-label={t("Business reporting metrics","ব্যবসার রিপোর্টের পরিমাপ")}>
-  <header className={styles.heading}><div><h1>{focus==="ai"?t("AI & conversations","AI ও কথোপকথন"):t("Business reports","ব্যবসার রিপোর্ট")}</h1>
-    <p>{t("Authorized, read-only counts. Figures are scoped to your selected business and environment.","অনুমোদিত, শুধু-পড়ার হিসাব। নির্বাচিত ব্যবসা ও পরিবেশের তথ্য।")}</p></div>
-    <div className={styles.actions}><span className={styles.realm}>{environment==="live"?"Live":"Sandbox"}</span>
-    {canExport&&snapshot?.operations&&<Link className={styles.export} href="/api/reports/growth-export" download>{t("Download metrics CSV","হিসাবের CSV ডাউনলোড")}</Link>}</div></header>
-  {snapshot===null&&<p role="alert" className={styles.alert}>{t("Reports are unavailable; no zero values have been assumed.","রিপোর্ট পাওয়া যাচ্ছে না; অনুমান করে শূন্য দেখানো হয়নি।")}</p>}
-  <div className={styles.grid}>{sections.map(section=><section className={styles.panel} key={section.key} aria-labelledby={`growth-${section.key}`}>
-   <div className={styles.sectionHead}><h2 id={`growth-${section.key}`}>{section.title}</h2><Link href={section.href}>{t("View records","তথ্য দেখুন")}</Link></div>
-   {section.data===null||section.data===undefined?<p role="alert" className={styles.alert}>{t("This data source is unavailable; counts cannot be verified.","এই তথ্যের উৎস পাওয়া যাচ্ছে না; হিসাব যাচাই করা যাচ্ছে না।")}</p>
-   :<dl className={styles.metrics}>{section.data.map(item=><div key={item.name}><dt>{names[item.name]?.[bn?1:0]??item.name}</dt><dd>{new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(item.value)}</dd></div>)}</dl>}
+ const nf=new Intl.NumberFormat(bn?"bn-BD":"en-GB");
+ const pick=(list:Metric[]|null|undefined,name:string)=>list?.find(m=>m.name===name)?.value;
+ const kpis=(focus==="ai"?[
+  {label:t("Conversations","কথোপকথন"),value:pick(snapshot?.inbox,"conversations"),href:"/inbox"},
+  {label:t("Messages · 7 days","মেসেজ · ৭ দিন"),value:pick(snapshot?.inbox,"messages_7d"),href:"/inbox"}
+ ]:[
+  {label:t("Leads won","সফল লিড"),value:pick(snapshot?.customers,"won"),href:"/customers/leads"},
+  {label:t("Follow-ups due","বাকি ফলো-আপ"),value:pick(snapshot?.customers,"due"),href:"/customers/follow-ups"},
+  ...(mode==="commerce"?[]:[{label:t("Confirmed orders","নিশ্চিত অর্ডার"),value:pick(snapshot?.commerce,"confirmed"),href:"/orders"},{label:t("Conversations","কথোপকথন"),value:pick(snapshot?.inbox,"conversations"),href:"/inbox"}])
+ ]).filter(k=>k.value!==undefined);
+ return <div className="ref-dashboard"><div className={`ref-page ${styles.root}`} role="region" aria-label={t("Business reporting metrics","ব্যবসার রিপোর্টের পরিমাপ")}>
+  <div className="top"><h1>{focus==="ai"?t("AI & conversations","AI ও কথোপকথন"):t("Business activity","ব্যবসার কার্যক্রম")}</h1>
+   <div className="acts"><span className="pill">{environment==="live"?"Live":"Sandbox"}</span>{canExport&&snapshot?.operations&&<Link className="ib" href="/api/reports/growth-export" download>{t("Download CSV","CSV ডাউনলোড")}</Link>}</div>
+   <p>{t("Counts for your selected business. Orders here are workflow counts, not revenue — see Payment reports for verified money.","নির্বাচিত ব্যবসার হিসাব। এখানে অর্ডার মানে কাজের সংখ্যা, আয় নয় — যাচাইকৃত টাকার হিসাব পেমেন্ট রিপোর্টে।")}</p></div>
+  {snapshot===null&&<div className="notice" role="alert">{t("Reports are unavailable right now. No zero values have been assumed.","রিপোর্ট এখন পাওয়া যাচ্ছে না। অনুমান করে শূন্য দেখানো হয়নি।")}</div>}
+  {kpis.length>0&&<div className={styles.kpis}>{kpis.map(k=><Link key={k.label} href={k.href} className={`card ${styles.kpi}`}><span>{k.label}</span><strong>{nf.format(k.value as number)}</strong></Link>)}</div>}
+  <div className={styles.grid}>{sections.map(section=><section className={`card ${styles.panel}`} key={section.key} aria-labelledby={`growth-${section.key}`}>
+   <div className={styles.sectionHead}><h2 id={`growth-${section.key}`}>{section.title}</h2><Link href={section.href}>{t("View","দেখুন")} ›</Link></div>
+   {section.data===null||section.data===undefined?<p role="alert" className={styles.empty}>{t("This data source is unavailable.","এই তথ্যের উৎস পাওয়া যাচ্ছে না।")}</p>
+   :<dl className={styles.metrics}>{section.data.map(item=><div key={item.name}><dt>{names[item.name]?.[bn?1:0]??item.name}</dt><dd>{nf.format(item.value)}</dd></div>)}</dl>}
   </section>)}
-  {focus!=="ai"&&<section className={styles.panel} aria-label={t("Lead stage conversion","লিড স্টেজ কনভার্সন")}>
-   <h2>{t("Lead stage conversion","লিড স্টেজ কনভার্সন")}</h2>
-   {stageRate===null?<p role="status">{t("No verifiable conversion rate for the current profiles.","বর্তমান প্রোফাইলে যাচাইযোগ্য কনভার্সন হার নেই।")}</p>
-   :<><p><strong>{stageRate}</strong> · {t("Won-stage leads among all current leads","বর্তমান সব লিডের মধ্যে সফল স্টেজের লিড")}</p>
-   <p>{new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(currentWonTotal??0)} / {new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(currentLeadTotal??0)}</p></>}
-   <p>{t("A current CRM stage ratio, not attributed marketing conversions or verified payment revenue.","এটি CRM-এর বর্তমান স্টেজের অনুপাত; প্রচারণা থেকে বিক্রির প্রমাণ বা যাচাইকৃত পেমেন্টের আয় নয়।")}</p>
+  {focus!=="ai"&&<section className={`card ${styles.panel}`} aria-label={t("Lead stage conversion","লিড স্টেজ কনভার্সন")}>
+   <div className={styles.sectionHead}><h2>{t("Lead conversion","লিড কনভার্সন")}</h2></div>
+   {stageRate===null?<p role="status" className={styles.empty}>{t("No verifiable rate yet.","এখনো যাচাইযোগ্য হার নেই।")}</p>
+   :<dl className={styles.metrics}><div><dt>{t("Won among all leads","সব লিডের মধ্যে সফল")}</dt><dd>{stageRate}</dd></div><div><dt>{t("Won / total","সফল / মোট")}</dt><dd>{nf.format(currentWonTotal??0)} / {nf.format(currentLeadTotal??0)}</dd></div></dl>}
   </section>}</div>
   {mode!=="commerce"&&process.env.BRIOFOLD_GROWTH_ANALYTICS_ENABLED==="true"&&<BriofoldResponseReport workspaceId={workspaceId} actorId={actorId} environment={environment} locale={locale}/>}
   {process.env.BRIOFOLD_CONVERSION_REPORT_ENABLED==="true"&&<LinkedOrderConversionReport workspaceId={workspaceId} actorId={actorId} environment={environment} locale={locale}/>}
-  <aside className={styles.note}>
-   <p>{t("Orders are workflow counts—not verified revenue. Payment totals remain solely in the authoritative payment report.","অর্ডারগুলো কাজের অবস্থার হিসাব, যাচাইকৃত আয় নয়। প্রকৃত পেমেন্টের হিসাব শুধু মূল পেমেন্ট রিপোর্টে আছে।")}</p>
-   <p>{t("*Profile-level marketing consent is not a channel-specific send permission. Provider opt-in, quiet hours, suppression and audience validation are still required before any broadcast.","*প্রোফাইলে প্রচারণার সম্মতি থাকলেই কোনো চ্যানেলে মেসেজ পাঠানোর অনুমতি হয় না। Broadcast-এর আগে provider consent, quiet hours ও audience যাচাই জরুরি।")}</p>
-   {snapshot&&<p>{t("Calculated at","হিসাব করা হয়েছে")}: <time dateTime={snapshot.asOf}>{new Date(snapshot.asOf).toLocaleString(bn?"bn-BD":"en-GB",{timeZone:"Asia/Dhaka"})} · Asia/Dhaka</time></p>}
-   <Link href="/reports/payments">{t("Open verified payment reports","যাচাইকৃত পেমেন্ট রিপোর্ট খুলুন")}</Link>
-  </aside>
- </div>;
+  <details className={styles.note}><summary>{t("How to read these numbers","এই সংখ্যাগুলো কীভাবে পড়বেন")}</summary>
+   <p>{t("*Profile-level marketing consent is not a channel-specific send permission. Provider opt-in, quiet hours, suppression and audience validation are still required before any broadcast.","*প্রোফাইলে প্রচারণার সম্মতি থাকলেই কোনো চ্যানেলে মেসেজ পাঠানোর অনুমতি হয় না। Broadcast-এর আগে চ্যানেলের opt-in, নীরব সময়, suppression ও audience যাচাই লাগবে।")}</p>
+   {snapshot&&<p>{t("Calculated at","হিসাব করা হয়েছে")}: <time dateTime={snapshot.asOf}>{new Date(snapshot.asOf).toLocaleString(bn?"bn-BD":"en-GB",{timeZone:"Asia/Dhaka"})} · Asia/Dhaka</time></p>}
+   <Link href="/reports/payments">{t("Open verified payment reports","যাচাইকৃত পেমেন্ট রিপোর্ট খুলুন")} ›</Link>
+  </details>
+ </div></div>;
 }

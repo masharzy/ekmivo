@@ -11,12 +11,12 @@ import {pairingSvg} from "../lib/pairing-qr.mjs";
 import {merchantStatusLabel} from "../lib/dashboard-status-labels";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
 type Phone={receipt_count?:number;id:string;name:string;created_at?:string;claimed_at?:string|null;pair_expires_at?:string|null;revoked_at?:string|null;model?:string;app_version?:string;heartbeat_at?:string|null;permission_ok:boolean;backlog:number;last_queue_error?:string};
-type Props={locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;detailId?:string};
+type Props={locale:Locale;workspaceId:string;environment:PaymentEnvironment;canManage:boolean;detailId?:string;mixed?:boolean};
 function health(p:Phone,now:number){if(p.revoked_at)return "revoked";if(!p.claimed_at)return p.pair_expires_at?now>=Date.parse(p.pair_expires_at)?"expired":"pairing":p.created_at&&now-Date.parse(p.created_at)>=300000?"expired":"pairing";if(!p.heartbeat_at)return "waiting";if(!p.permission_ok)return "permission";const elapsed=now-Date.parse(p.heartbeat_at);if(!Number.isFinite(elapsed)||elapsed>=2700000)return "offline";return elapsed>=1200000?"delayed":"online";}
 export function PaymentPhoneManagement(props:Props){
  return <ScopedDevices key={JSON.stringify([props.workspaceId,props.environment,props.canManage,props.detailId])} {...props}/>;
 }
-function ScopedDevices({locale,workspaceId,environment,canManage,detailId}:Props){
+function ScopedDevices({locale,workspaceId,environment,canManage,detailId,mixed}:Props){
  const bn=locale==="bn",t=useCallback((en:string,bg:string)=>bn?bg:en,[bn]);
  const deviceLimit=useResourceLimit("devices",workspaceId,environment);
  const refreshDeviceLimit=deviceLimit.refresh;
@@ -66,7 +66,7 @@ function ScopedDevices({locale,workspaceId,environment,canManage,detailId}:Props
   const hours=Math.floor(mins/60);if(hours<24)return bn?hours+" ঘণ্টা আগে":hours+" hours ago";
   return timestamp(value);
  }; return <div className="ref-dashboard"><div className="ref-page" aria-busy={loading||busy}>
-  <div className="top"><h1>{t("SMS devices","SMS ডিভাইস")}</h1><div className="acts">{canManage&&<button className="ib pri" disabled={busy||showCode||deviceLimit.blocked} onClick={openCreate}><RefIcon name="plus"/>{t("Connect phone","ফোন যুক্ত করুন")}</button>}</div><p>{t("Phones collecting payment SMS in the background.","ব্যাকগ্রাউন্ডে পেমেন্ট SMS সংগ্রহ করা ফোন।")}</p></div>
+  <div className="top"><h1>{mixed?t("Devices","ডিভাইস"):t("SMS devices","SMS ডিভাইস")}</h1><div className="acts">{canManage&&<button className="ib pri" disabled={busy||showCode||deviceLimit.blocked} onClick={openCreate}><RefIcon name="plus"/>{t("Connect phone","ফোন যুক্ত করুন")}</button>}</div><p>{mixed?t("Phones that forward your payment SMS.","যেসব ফোন পেমেন্ট SMS ফরওয়ার্ড করে।"):t("Phones collecting payment SMS in the background.","ব্যাকগ্রাউন্ডে পেমেন্ট SMS সংগ্রহ করা ফোন।")}</p></div>
   <PlanResourceStatus value={deviceLimit} locale={locale}/>
   {offline&&<p className="notice" role="status">{t("You are offline. Showing the last loaded phone status.","সংযোগ নেই। সর্বশেষ পাওয়া ফোনের অবস্থা দেখানো হচ্ছে।")}</p>}{error&&<p className="notice ref-errors" role="alert">{error}</p>}{notice&&<p className="notice" role="status" data-feedback="success">{notice}</p>}
   <div className="card"><div className="toolbar"><span className="mut" style={{fontSize:12.5}}>{t("Pair one physical phone once.","একটি ফোন একবারই পেয়ার করুন।")}</span><div className="sp"/><button className="ib i" aria-label={t("Refresh","রিফ্রেশ")} disabled={loading} onClick={()=>void refresh()}><RefIcon name="refresh"/></button></div><div className="tw"><table><thead><tr><th>{t("Device","ডিভাইস")}</th><th>{t("Connection","সংযোগ")}</th><th>{t("Last seen","শেষ দেখা")}</th><th className="num">{t("Receipts","রিসিপ্ট")}</th><th/></tr></thead><tbody>{visiblePhones.map(p=><tr className="rowclick" key={p.id} tabIndex={0} onClick={()=>setSelected(p.id)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelected(p.id)}}}><td><div className="me"><span className="ma"><RefIcon name="phone"/></span><div><span className="itemtitle">{p.name}</span><span className="rmeta mono">{p.id}</span></div></div></td><td><RefStatus status={health(p,now)} label={labels[health(p,now)]}/></td><td>{relative(p.heartbeat_at)}</td><td className="num">{p.receipt_count??'—'}</td><td className="num"><RefIcon name="chevron"/></td></tr>)}</tbody></table></div>{!visiblePhones.length&&<div className="empty" role="status">{loading?t("Loading…","লোড হচ্ছে…"):t("No phones connected yet.","এখনো কোনো ফোন যুক্ত নেই।")}</div>}</div>

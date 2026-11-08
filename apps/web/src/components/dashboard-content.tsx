@@ -75,7 +75,7 @@ export async function DashboardContent({locale,user,workspace,section,service=de
       detailId={detailId} canManage={["owner","admin"].includes(workspace.role)}/>
     :["transactions","incoming","gateways","devices","webhooks","events"].includes(section)
      ?<PaymentOperations userId={user.id} locale={locale} workspaceId={workspace.id}
-       environment={paymentContext.environment} detailId={detailId} canonicalRoutes={canonicalRoutes}
+       environment={paymentContext.environment} detailId={detailId} canonicalRoutes={canonicalRoutes} mixedDevices={workspace.mode==="both"}
        resource={(section==="transactions"?"payments":section) as "payments"|"incoming"|"gateways"|"devices"|"webhooks"|"events"}
        canManage={["owner","admin"].includes(workspace.role)}/>
      :null

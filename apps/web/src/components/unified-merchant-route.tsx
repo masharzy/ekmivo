@@ -134,7 +134,7 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
      ?<DashboardContent key={workspace.id+":devices"} locale={locale} user={user} workspace={workspace}
        section="devices" service="payments" paymentContext={paymentContext} framed/>
     :root==="settings"&&view[0]==="billing"&&workspace.mode==="ai"
-     ?<><h1>{locale==="bn"?"বিলিং ও ব্যবহার":"Billing & usage"}</h1><BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/></>
+     ?<BriofoldAiCreditSummary standalone workspaceId={workspace.id} actorId={user.id} locale={locale}/>
     :<DashboardContent locale={locale} user={user} workspace={workspace}
       section={section} service={service} paymentContext={paymentContext} detailId={detailId}
       initialQuery={root==="payments"&&view[0]==="links"&&paymentLinksMode==="requests"?{view:"requests"}:{}}

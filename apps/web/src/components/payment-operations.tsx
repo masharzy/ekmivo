@@ -33,11 +33,11 @@ function show(value:unknown,key:string,locale:Locale):string{
  if(statuses[String(value)])return statuses[String(value)][bn?1:0];return String(value)
 }
 const blank={name:"",account_id:"",source:"",binding:"",parser_id:"",url:"",method:"bkash",account_number:""};
-type PaymentOperationsProps={locale:Locale;workspaceId:string;userId:string;environment:PaymentEnvironment;resource:Resource;canManage:boolean;detailId?:string;canonicalRoutes?:boolean};
+type PaymentOperationsProps={locale:Locale;workspaceId:string;userId:string;environment:PaymentEnvironment;resource:Resource;canManage:boolean;detailId?:string;canonicalRoutes?:boolean;mixedDevices?:boolean};
 export function PaymentOperations(props:PaymentOperationsProps){
  if(props.resource==="webhooks")return <PaymentWebhooks {...props}/>;
  if(props.resource==="events")return <PaymentEvents {...props}/>;
- if(props.resource==="devices")return <PaymentPhoneManagement locale={props.locale} workspaceId={props.workspaceId} environment={props.environment} canManage={props.canManage} detailId={props.detailId}/>;
+ if(props.resource==="devices")return <PaymentPhoneManagement locale={props.locale} workspaceId={props.workspaceId} environment={props.environment} canManage={props.canManage} detailId={props.detailId} mixed={props.mixedDevices}/>;
  if(props.resource==="gateways")return <PaymentMethodManagement key={`${props.workspaceId}:${props.environment}:${props.detailId??""}`} locale={props.locale} workspaceId={props.workspaceId} environment={props.environment} canManage={props.canManage} detailId={props.detailId}/>;
  return <PaymentOperationsScoped key={[props.userId,props.workspaceId,props.environment,props.resource,props.detailId||""].join(":")} {...props}/>;
 }
