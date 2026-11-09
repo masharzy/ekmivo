@@ -124,7 +124,8 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  const catalogFixture=process.env.PG04_SETTINGS_SUITES?.split(",").map(name=>name.trim()).includes("runCatalogPhase1")===true;
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const privateStorage=await startBriofoldPrivateStorage(control);
- const api=spawn(apiBin,[],{env:{...apiEnv,...privateStorage.env,BRIOFOLD_CATALOG_ENABLED:String(catalogFixture),INBOX_SENDER_ENABLED:"false",PORT:"17912",GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_WOO_WEBHOOKS_ENABLED:"true",BRIOFOLD_BROADCAST_DISPATCH_ENABLED:"true",BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED:"true",WOO_WEBHOOK_PUBLIC_ORIGIN:"https://fixture-hooks.example.invalid",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
+ const scanner=catalogFixture?await (await import("./briofold-catalog-phase1-acceptance.mjs")).startCatalogScanner():null;
+ const api=spawn(apiBin,[],{env:{...apiEnv,...privateStorage.env,BRIOFOLD_CATALOG_ENABLED:String(catalogFixture),BRIOFOLD_PRODUCT_API_ENABLED:String(catalogFixture),...(scanner?{PRIVATE_UPLOAD_CLAMD_ADDRESS:scanner.address}:{}),INBOX_SENDER_ENABLED:"false",PORT:"17912",GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_WOO_WEBHOOKS_ENABLED:"true",BRIOFOLD_BROADCAST_DISPATCH_ENABLED:"true",BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED:"true",WOO_WEBHOOK_PUBLIC_ORIGIN:"https://fixture-hooks.example.invalid",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
  let server,browser,logs="";
  const capture=child=>{for(const stream of [child.stdout,child.stderr])stream.on("data",chunk=>{logs=(logs+String(chunk)).slice(-5000);});};
  capture(api);
@@ -155,7 +156,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   const check=async(name,run)=>{if(requested.length&&!requested.includes(name))return;executed.add(name);console.log("BRIOFOLD INDEPENDENT SUITE START",name);try{await run();console.log("BRIOFOLD INDEPENDENT SUITE DONE",name);}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
   if(catalogFixture)await check("runCatalogPhase1",async()=>{
    const {runCatalogPhase1}=await import("./briofold-catalog-phase1-acceptance.mjs");
-   await runCatalogPhase1({origin,browser,control,sessions});
+   await runCatalogPhase1({origin,apiOrigin,browser,control,sessions,privateStorage});
   });
   await check("runBriofoldSettingsBrowser",async()=>{await runBriofoldSettingsBrowser({origin,browser,control,sessions});});
   await check("runWalletBrowser",async()=>{await runWalletBrowser({control,sessions,origin,browser});});
@@ -196,5 +197,5 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   if(requested.some(name=>!executed.has(name)))throw Error("Requested PG04 suite was unavailable in this fixture");
   if(failures.length)throw new AggregateError(failures.map(x=>x.error),failures.map(x=>x.name+": "+x.error.message).join("\n"));
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
- finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");await privateStorage.close();}
+ finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");await privateStorage.close();await scanner?.close();}
 }

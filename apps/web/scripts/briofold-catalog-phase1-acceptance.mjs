@@ -1,9 +1,45 @@
 import assert from "node:assert/strict";
-import {createHash,randomUUID} from "node:crypto";
+import {createHash,randomBytes,randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import postgres from "postgres";
+import {createServer} from "node:net";
 
-export async function runCatalogPhase1({origin,browser,control,sessions}){
+
+export async function startCatalogScanner(){
+ const fixtures=JSON.parse(await readFile(new URL("./fixtures/phase10-photo-search.json",import.meta.url),"utf8"));
+ const allowed=new Set(["red","blue"].map(name=>createHash("sha256").update(Buffer.from(fixtures[name],"base64")).digest("hex")));
+ const server=createServer(socket=>{
+  let pending=Buffer.alloc(0),started=false,total=0;
+  const digest=createHash("sha256");
+  socket.setTimeout(3000,()=>socket.destroy());
+  socket.on("error",()=>socket.destroy());
+  socket.on("data",chunk=>{
+   pending=Buffer.concat([pending,chunk]);
+   if(!started){
+    if(pending.length<10)return;
+    if(pending.subarray(0,10).toString()!=="zINSTREAM\0"){socket.destroy();return;}
+    pending=pending.subarray(10);
+    started=true;
+   }
+   while(pending.length>=4){
+    const size=pending.readUInt32BE(0);
+    if(size>32768||total+size>5*1024*1024){socket.destroy();return;}
+    if(pending.length<4+size)return;
+    if(size===0){
+     socket.end(allowed.has(digest.digest("hex"))?"stream: OK\0":"stream: FixtureMismatch FOUND\0");
+     return;
+    }
+    digest.update(pending.subarray(4,4+size));
+    total+=size;
+    pending=pending.subarray(4+size);
+   }
+  });
+ });
+ await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",resolve);});
+ return {address:"127.0.0.1:"+server.address().port,close:()=>new Promise(resolve=>server.close(resolve))};
+}
+
+export async function runCatalogPhase1({origin,apiOrigin,browser,control,sessions,privateStorage}){
  const target=new URL(control);
  assert.ok(["localhost","127.0.0.1","[::1]"].includes(target.hostname)&&target.pathname==="/ekmivo_pg00","Catalog acceptance requires the disposable CI database");
  const db=postgres(control,{max:1,prepare:false});
@@ -14,7 +50,7 @@ export async function runCatalogPhase1({origin,browser,control,sessions}){
   const workspace=randomUUID();
   await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${workspace},'Fictional catalog acceptance','both',${actor})`;
   await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${workspace},${actor},'owner')`;
-  await db`INSERT INTO commerce_warehouses(workspace_id,environment,name) VALUES(${workspace},'live','Fixture warehouse')`;
+  await db`INSERT INTO commerce_warehouses(workspace_id,environment,name) VALUES(${workspace},'live','Fixture warehouse'),(${workspace},'sandbox','Fixture warehouse')`;
   context=await browser.newContext({viewport:{width:390,height:844}});
   await context.addCookies([
    {name:"briofold-session",value:sessions.owner,url:origin,httpOnly:true},
@@ -31,7 +67,14 @@ export async function runCatalogPhase1({origin,browser,control,sessions}){
   await catalog.getByLabel("মজুত",{exact:true}).fill("4");
   const fixtures=JSON.parse(await readFile(new URL("./fixtures/phase10-photo-search.json",import.meta.url),"utf8"));
   const photos=["red","blue"].map(name=>({name:name+".png",mimeType:"image/png",buffer:Buffer.from(fixtures[name],"base64")}));
-  await catalog.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles(photos);
+  for(const photo of photos){
+   const upload=page.waitForResponse(response=>{
+    try{return response.request().postDataJSON()?.action==="media-upload";}catch{return false;}
+   });
+   const [response]=await Promise.all([upload,catalog.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles(photo)]);
+   const body=await response.json();
+   assert.equal(response.status(),200,body.error?.code??body.code??"upload failed");
+  }
   await catalog.getByRole("img",{name:"ছবি 2",exact:true}).waitFor();
   await catalog.getByRole("button",{name:"আগে আনুন",exact:true}).last().click();
   await catalog.getByRole("button",{name:"পণ্য সংরক্ষণ",exact:true}).click();
@@ -64,7 +107,35 @@ export async function runCatalogPhase1({origin,browser,control,sessions}){
   assert.equal(Number(products[0].price_minor),125025);
   assert.equal(Number(products[0].min_price_minor),90000);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Bangla catalog overflows at 390 px");
-  console.log("Catalog Phase 1 PASS: styled Bangla dashboard, photo upload/reorder, Go/PostgreSQL manual save, CSV row validation and replay");
+  const uploads=privateStorage.requests.filter(r=>r.method==="PUT"&&r.key.startsWith("commerce/live/"+workspace+"/"));
+  assert.equal(uploads.length,2,"both images must reach signed storage");
+  const publicId=randomBytes(8).toString("hex");
+  const secret="bf_test_"+publicId+"_"+randomBytes(32).toString("base64url");
+  const digest=createHash("sha256").update(secret).digest("hex");
+  await db`INSERT INTO merchant_api_keys(workspace_id,environment,public_id,secret_digest,name,scopes,created_by,expires_at)
+   VALUES(${workspace},'sandbox',${publicId},${digest},'Fictional catalog client',${["products:read","products:write"]},${actor},now()+interval '1 hour')`;
+  const call=(method,path,body,key)=>context.request.fetch(apiOrigin+"/v1/products"+path+"?environment=sandbox",{
+   method,headers:{Authorization:"Bearer "+secret,...(key?{"Idempotency-Key":key}:{})},data:body
+  });
+  const input={external_id:"api-fixture",name:"API fixture",variants:[{sku:"API-BN-M",price_minor:125025,stock:5}]};
+  const idempotency=randomUUID();
+  let apiResponse=await call("POST","",input,idempotency);
+  assert.equal(apiResponse.status(),201);
+  const created=await apiResponse.json();
+  apiResponse=await call("POST","",input,idempotency);
+  assert.equal(apiResponse.status(),201);
+  assert.deepEqual(await apiResponse.json(),created);
+  assert.equal((await call("POST","",{...input,name:"Different"},idempotency)).status(),409);
+  const idPath="/"+created.id;
+  assert.equal((await call("GET",idPath)).status(),200);
+  assert.equal((await call("PUT",idPath+"/stock",{items:[{sku:"API-BN-M",quantity:8}]},randomUUID())).status(),200);
+  const [apiStock]=await db`SELECT s.on_hand FROM commerce_stock s JOIN commerce_variants v ON v.id=s.variant_id
+   WHERE s.workspace_id=${workspace} AND s.environment='sandbox' AND v.sku='API-BN-M'`;
+  assert.equal(Number(apiStock.on_hand),8);
+  assert.equal((await call("DELETE",idPath)).status(),200);
+  const [retired]=await db`SELECT active FROM commerce_products WHERE id=${created.id}`;
+  assert.equal(retired.active,false);
+  console.log("Catalog Phase 1 PASS: styled Bangla dashboard, photo upload/reorder, Go/PostgreSQL manual save, CSV replay, signed storage and public Product API lifecycle");
  }finally{
   await context?.close();
   await db.end({timeout:3});
