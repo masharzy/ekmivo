@@ -75,7 +75,7 @@ export async function seed({control, finance}) {
   for (const w of [wsBoth, wsAi]) {
     await control`INSERT INTO commerce_warehouses(id,workspace_id,environment,name) VALUES(${id("wh", w)},${w},${ENV},${NS + "Main"}) ON CONFLICT DO NOTHING`;
     for (const p of products()) {
-      await control`SELECT commerce_catalog_write(${w},${ENV},${owner},${id("key", w, p.external_id)},${"catalog-upsert"},${control.json({...p, external_id: p.external_id})})`;
+      await control`SELECT commerce_catalog_write(${w},${ENV},${owner},${id("key", w, p.external_id)},${control.json(p)})`;
     }
     // 3 coupons: valid, expired, per-customer-limit 1
     const cp = [
@@ -92,12 +92,14 @@ export async function seed({control, finance}) {
   }
 
   // Test customer + Messenger sandbox thread on the Both-mode workspace
-  const cust = id("customer", "sarkio");
-  await control`INSERT INTO briofold_customers(id,workspace_id,environment,name,phone) VALUES(${cust},${wsBoth},${ENV},'Sarkio Test','01700000001') ON CONFLICT(id) DO NOTHING`;
+  // inbox_ingest auto-creates and links a customer for the thread; rename that one (no second customer).
   const conn = (await control`SELECT inbox_connection(${wsBoth},${ENV},'ms',${NS + "messenger-" + wsBoth},decode('abcd','hex')) AS id`)[0].id;
   await control`SELECT inbox_ingest(${conn},${id("msg", "hello")},'test-psid-sarkio','Sarkio Test','TEST hello','text',now())`;
   const thread = (await control`SELECT id FROM inbox_threads WHERE connection_id=${conn} AND external_id='test-psid-sarkio'`)[0]?.id;
-  if (thread) await control`INSERT INTO briofold_customer_sources(customer_id,kind,source_id) VALUES(${cust},'inbox_thread',${thread}) ON CONFLICT DO NOTHING`;
+  if (!thread) throw new Error("test thread was not created");
+  const cust = (await control`SELECT customer_id AS id FROM briofold_customer_sources WHERE workspace_id=${wsBoth} AND environment=${ENV} AND kind='thread' AND source_id=${thread}`)[0]?.id;
+  if (!cust) throw new Error("thread has no linked customer");
+  await control`UPDATE briofold_customers SET name='Sarkio Test',phone='01700000001' WHERE id=${cust}`;
 
   // 6 orders: delivered x3, cancelled, returned, awaiting payment
   const wh = id("wh", wsBoth);

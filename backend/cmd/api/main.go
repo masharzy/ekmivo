@@ -499,6 +499,9 @@ func main() {
 	if pg05 != nil && os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" {
 		go pg05.RunStudioAI(runtimeContext)
 	}
+	if pg05 != nil && os.Getenv("BRIOFOLD_AI_PAYMENT_VERIFY_ENABLED") == "true" {
+		go pg05.RunAIPaymentVerify(runtimeContext)
+	}
 	if pg05 != nil && os.Getenv("BRIOFOLD_COMMENTS_ENABLED") == "true" {
 		go pg05.RunComments(runtimeContext)
 	}

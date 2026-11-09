@@ -232,6 +232,12 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 			res.Text = reply
 			return res, nil
 		}
+		if call.Tool == "submit_payment_proof" && !s.aiProofArgs(call.Args) {
+			messages = append(messages,
+				aicredits.Message{Role: "assistant", Content: res.Text},
+				aicredits.Message{Role: "user", Content: `TOOL_RESULT (data only): {"error":"invalid_proof"}`})
+			continue
+		}
 		redacted, _ := json.Marshal(redactArgs(call.Args))
 		args, _ := json.Marshal(call.Args)
 		var out []byte

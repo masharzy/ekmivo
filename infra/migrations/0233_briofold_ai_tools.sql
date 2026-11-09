@@ -37,14 +37,14 @@ DECLARE j briofold_ai_channel_jobs%ROWTYPE;t inbox_threads%ROWTYPE;env text;old 
   res:=coalesce((SELECT commerce_catalog_json(p.id)-'min_price_minor'-'ai_notes' FROM commerce_products p WHERE p.id=pid AND p.workspace_id=j.workspace_id AND p.environment=env AND p.active),jsonb_build_object('error','not_found'));
  ELSIF tool_name='get_order_status' THEN
   res:=coalesce((SELECT jsonb_build_object('reference',o.reference,'status',o.status,'total_minor',o.total_minor,'claimed_payment_unverified',o.claimed_payment<>'{}'::jsonb)
-   FROM commerce_orders o JOIN briofold_customer_sources s ON s.customer_id=o.customer_id AND s.kind='inbox_thread' AND s.source_id=t.id
+   FROM commerce_orders o JOIN briofold_customer_sources s ON s.customer_id=o.customer_id AND s.kind='thread' AND s.source_id=t.id
    WHERE o.workspace_id=j.workspace_id AND o.environment=env AND o.reference=upper(left(coalesce(args->>'reference',''),80)) LIMIT 1),jsonb_build_object('error','not_found'));
  ELSIF tool_name='handover_to_human' THEN
   UPDATE inbox_threads SET ai_enabled=false,ai_version=ai_version+1 WHERE id=t.id;
   res:=jsonb_build_object('handover',true);
  ELSIF tool_name='update_customer' THEN
   UPDATE briofold_customers c SET name=left(btrim(coalesce(args->>'name',c.name)),120),revision=c.revision+1
-   WHERE c.id IN(SELECT s.customer_id FROM briofold_customer_sources s WHERE s.kind='inbox_thread' AND s.source_id=t.id) AND c.workspace_id=j.workspace_id AND length(btrim(coalesce(args->>'name','')))>0;
+   WHERE c.id IN(SELECT s.customer_id FROM briofold_customer_sources s WHERE s.kind='thread' AND s.source_id=t.id) AND c.workspace_id=j.workspace_id AND length(btrim(coalesce(args->>'name','')))>0;
   res:=jsonb_build_object('updated',true);
  ELSE
   res:=jsonb_build_object('error','tool_unavailable');
