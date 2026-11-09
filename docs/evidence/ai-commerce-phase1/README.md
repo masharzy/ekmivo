@@ -1,6 +1,6 @@
 # AI Commerce Core — Phase 1 (product catalog)
 
-Status 2026-11-09 (Asia/Dhaka): **code complete for the four ways to add products; verified in pieces, not end to end.** Read "Not verified" before relying on it.
+Status 2026-11-09 (Asia/Dhaka): **closed at code level by the owner's decision; verified in pieces, not end to end.** On 2026-11-09 the owner asked for an end-to-end sandbox test (first on their PC, then in the cloud) and then said it is not needed and to finish at code level. The PC sandbox could not start (too little free disk for the Linux workspace). The cloud one is blocked: the Go toolchain and modules come from proxy.golang.org, which egress policy denies, and CI has no builder for a full-chain scratch database (the migration coordinator is a catch-up on a deployment baseline). So no HTTP→Go→database→storage run exists. Read "Not verified" before relying on it.
 Branch agents/ai-commerce-phase1 → PR #163 (stacked on Phase 0 PR #162, which is still open).
 
 ## What exists
