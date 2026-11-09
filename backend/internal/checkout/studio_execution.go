@@ -37,10 +37,11 @@ type studioContext struct {
 		Sender string `json:"sender"`
 		Text   string `json:"text"`
 	} `json:"history"`
-	Products []json.RawMessage `json:"products"`
-	Question string            `json:"question"`
-	media    []aicredits.Media // Set only by the leased channel worker, never dashboard JSON.
-	tools    bool              // Tool mode: grounding comes from tool results, not only quoted facts.
+	Products  []json.RawMessage `json:"products"`
+	Question  string            `json:"question"`
+	AISelling bool              `json:"ai_selling"` // Set by the claim when the owner enabled AI selling and a live catalog exists.
+	media     []aicredits.Media // Set only by the leased channel worker, never dashboard JSON.
+	tools     bool              // Tool mode: grounding comes from tool results, not only quoted facts.
 }
 
 // Knowledge is quoted data, never additional system instructions. No tools or
@@ -213,7 +214,11 @@ func parseStudioProposal(text, model string) (studioProposal, error) {
 }
 
 func (s *Service) studioEngine() aicredits.Engine {
-	return aicredits.Engine{Store: aiExecutionStore{db: s.Auth.DB}, Provider: s.configuredAIProvider(), Codec: aiExecutionCodec{key: s.Pipeline.Key}}
+	provider := aicredits.Provider(s.aiProvider)
+	if provider == nil {
+		provider = s.configuredAIProvider()
+	}
+	return aicredits.Engine{Store: aiExecutionStore{db: s.Auth.DB}, Provider: provider, Codec: aiExecutionCodec{key: s.Pipeline.Key}}
 }
 func (s *Service) studioReady() bool {
 	return os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" && s.configuredAIKey() && s != nil && s.Auth != nil && s.Auth.DB != nil && s.Pipeline != nil && s.Pipeline.Control != nil && len(s.Pipeline.Key) == 32
@@ -372,7 +377,7 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			job.Context.Question = caption
 		}
 	}
-	toolMode := aiToolsEnabledFor(job.Workspace)
+	toolMode := aiToolsEnabledFor(job.Workspace) && job.Context.AISelling
 	job.Context.tools = toolMode
 	messages, err := studioMessages(job.Context)
 	reason, body := "", ""

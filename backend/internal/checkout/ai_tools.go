@@ -201,6 +201,9 @@ func redactValue(v any) any {
 		}
 		return out
 	case string:
+		if uuidPattern.MatchString(x) {
+			return x // references are not personal data
+		}
 		s := phonePattern.ReplaceAllString(x, "[phone]")
 		s = trxPattern.ReplaceAllStringFunc(s, func(m string) string {
 			if strings.IndexFunc(m, func(r rune) bool { return r >= '0' && r <= '9' }) >= 0 && strings.IndexFunc(m, func(r rune) bool { return r > '9' }) >= 0 {

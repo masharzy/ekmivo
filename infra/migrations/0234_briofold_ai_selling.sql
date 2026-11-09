@@ -14,7 +14,11 @@ CREATE TABLE IF NOT EXISTS commerce_ai_settings(
  draft_expiry_hours integer NOT NULL DEFAULT 24 CHECK(draft_expiry_hours BETWEEN 1 AND 168),wrong_trx_limit integer NOT NULL DEFAULT 5 CHECK(wrong_trx_limit BETWEEN 1 AND 20),
  -- References to financial_receiving_accounts in the isolated realm. Empty = every enabled account. Numbers stay encrypted there.
  receiving_account_ids uuid[] NOT NULL DEFAULT '{}' CHECK(cardinality(receiving_account_ids)<=10),
+ -- Owner opt-in: the AI may sell from the catalog (tool mode) for this workspace.
+ ai_selling_enabled boolean NOT NULL DEFAULT false,
  revision bigint NOT NULL DEFAULT 1,updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(workspace_id,environment));
+
+ALTER TABLE commerce_ai_settings ADD COLUMN IF NOT EXISTS ai_selling_enabled boolean NOT NULL DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS commerce_ai_quotes(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),workspace_id uuid NOT NULL REFERENCES workspaces(id),environment text NOT NULL CHECK(environment IN('live','sandbox')),
@@ -270,7 +274,7 @@ BEGIN
  IF jsonb_exists(patch,'receiving_account_ids') AND jsonb_typeof(patch->'receiving_account_ids')<>'array' THEN RAISE EXCEPTION 'Invalid settings' USING ERRCODE='22023';END IF;
  INSERT INTO commerce_ai_settings(workspace_id,environment) VALUES(w,e) ON CONFLICT DO NOTHING;
  UPDATE commerce_ai_settings SET
-  cod_enabled=coalesce((patch->>'cod_enabled')::boolean,cod_enabled),cod_charge_minor=coalesce((patch->>'cod_charge_minor')::bigint,cod_charge_minor),
+  ai_selling_enabled=coalesce((patch->>'ai_selling_enabled')::boolean,ai_selling_enabled),cod_enabled=coalesce((patch->>'cod_enabled')::boolean,cod_enabled),cod_charge_minor=coalesce((patch->>'cod_charge_minor')::bigint,cod_charge_minor),
   delivery_dhaka_minor=coalesce((patch->>'delivery_dhaka_minor')::bigint,delivery_dhaka_minor),delivery_outside_minor=coalesce((patch->>'delivery_outside_minor')::bigint,delivery_outside_minor),
   max_discount_pct=coalesce((patch->>'max_discount_pct')::integer,max_discount_pct),negotiation_enabled=coalesce((patch->>'negotiation_enabled')::boolean,negotiation_enabled),
   draft_expiry_hours=coalesce((patch->>'draft_expiry_hours')::integer,draft_expiry_hours),wrong_trx_limit=coalesce((patch->>'wrong_trx_limit')::integer,wrong_trx_limit),
@@ -283,6 +287,24 @@ CREATE OR REPLACE FUNCTION briofold_ai_selling_read(w uuid,e text,a uuid) RETURN
 BEGIN
  PERFORM briofold_customer_actor(w,a,'contact');
  RETURN coalesce((SELECT to_jsonb(s)-'workspace_id' FROM commerce_ai_settings s WHERE workspace_id=w AND environment=e),'{}'::jsonb);
+END $$;
+
+-- AI selling grounding: with the owner's opt-in and an active live catalog, a question that matches no knowledge source
+-- is still claimed (the tools search the catalog). The claim marks such jobs with ctx.ai_selling. Patched in place like
+-- 0216/0219 so every existing guard is kept; without the opt-in the claim behaves exactly as before.
+CREATE OR REPLACE FUNCTION briofold_ai_selling_on(w uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+ SELECT EXISTS(SELECT 1 FROM commerce_ai_settings s WHERE s.workspace_id=w AND s.environment='live' AND s.ai_selling_enabled)
+    AND EXISTS(SELECT 1 FROM commerce_products p WHERE p.workspace_id=w AND p.environment='live' AND p.active)
+$$;
+REVOKE ALL ON FUNCTION briofold_ai_selling_on(uuid) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
+DO $$DECLARE d text;f regprocedure;BEGIN
+ f:=coalesce(to_regprocedure('briofold_ai_channel_claim_before_policy()'),to_regprocedure('briofold_ai_channel_claim()'));
+ SELECT pg_get_functiondef(f) INTO d;
+ IF position('briofold_ai_selling_on' IN d)>0 THEN RETURN;END IF;
+ IF position('jsonb_array_length(ctx->''products'')=0 THEN' IN d)=0 OR position('ctx:=ctx||jsonb_build_object(''history'',' IN d)=0 THEN RAISE EXCEPTION 'Unexpected AI claim definition';END IF;
+ d:=replace(d,'jsonb_array_length(ctx->''products'')=0 THEN','jsonb_array_length(ctx->''products'')=0 AND NOT briofold_ai_selling_on(j.workspace_id) THEN');
+ d:=replace(d,'ctx:=ctx||jsonb_build_object(''history'',','ctx:=ctx||jsonb_build_object(''ai_selling'',briofold_ai_selling_on(j.workspace_id),''history'',');
+ EXECUTE d;
 END $$;
 
 REVOKE ALL ON FUNCTION briofold_ai_order_summary(uuid),briofold_ai_release(uuid,text),briofold_ai_order_tool(uuid,text,uuid,uuid,text,jsonb),briofold_ai_claim_resolve(uuid,text,text,uuid),

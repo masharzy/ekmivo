@@ -43,6 +43,10 @@ func TestRedactArgs(t *testing.T) {
 	if out["note"] != "ok" {
 		t.Fatal("plain value changed")
 	}
+	ref := "6f1c2d3e-0000-4000-a000-000000000001"
+	if got := redactArgs(map[string]any{"variant_ref": ref})["variant_ref"]; got != ref {
+		t.Fatalf("reference mangled: %v", got)
+	}
 }
 
 func TestSignedPayloads(t *testing.T) {

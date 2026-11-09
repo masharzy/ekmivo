@@ -2,7 +2,8 @@
 // Phase 2: idempotent AI-commerce SANDBOX seed. Every record is TEST-prefixed and lives in environment='sandbox'.
 //
 //   SEED_CONTROL_URL=...            control DB of a disposable test branch
-//   SEED_FINANCE_SANDBOX_URL=...    sandbox financial realm DB of the same test setup (optional; SMS + payments)
+//   SEED_FINANCE_SANDBOX_URL=...    financial realm DB of the same test setup for SEED_ENVIRONMENT (optional; SMS + payments)
+//   SEED_ENVIRONMENT=live           optional: seed the live environment of the TEST branch (needed for AI chat tests)
 //   SEED_OWNER_EMAIL=...            an existing app_users email in that branch
 //   SEED_PAYER_SECRET=...           same value as the API's PG05_PAYER_SECRET (TrxID/sender digests must match)
 //   SEED_PIPELINE_KEY_HEX=...       same value as the API's PG06_ENCRYPTION_KEY_HEX (encrypts the receiving number)
@@ -13,7 +14,9 @@
 import {createCipheriv, createHash, createHmac, randomBytes} from "node:crypto";
 import {createRequire} from "node:module";
 
-export const ENV = "sandbox";
+// AI replies only run on live inbox connections (briofold_ai_request_begin), so chat tests need SEED_ENVIRONMENT=live.
+// That is allowed only on a database that carries the test-branch marker (local or remote).
+export const ENV = process.env.SEED_ENVIRONMENT === "live" ? "live" : "sandbox";
 const NS = "TEST-";
 
 // Synchronous URL check. Remote hosts must be named exactly; production-looking database names are refused.
@@ -103,7 +106,8 @@ async function ensureWorkspace(db, owner, name, mode) {
 export async function seed({control, finance, remote = {}}) {
   const email = process.env.SEED_OWNER_EMAIL;
   if (!email) throw new Error("SEED_OWNER_EMAIL required (an existing user in the test DB)");
-  if (remote.control) await assertTestMarker(control, "control");
+  if (remote.control || ENV === "live") await assertTestMarker(control, "control");
+  if (finance && ENV === "live") await assertTestMarker(finance, "finance");
   if (finance && remote.finance) await assertTestMarker(finance, "finance");
   const payerKey = process.env.SEED_PAYER_SECRET, pipelineKey = process.env.SEED_PIPELINE_KEY_HEX;
   if (finance && (!payerKey || payerKey.length < 32 || !/^[0-9a-f]{64}$/i.test(pipelineKey || "")))
@@ -161,7 +165,7 @@ export async function seed({control, finance, remote = {}}) {
   report.orders = orders.length;
 
   // AI selling settings (receiving account filled in below when the financial realm is available).
-  const settings = {cod_enabled: true, cod_charge_minor: 0, delivery_dhaka_minor: 7000, delivery_outside_minor: 13000, max_discount_pct: 5, negotiation_enabled: true};
+  const settings = {ai_selling_enabled: true, cod_enabled: true, cod_charge_minor: 0, delivery_dhaka_minor: 7000, delivery_outside_minor: 13000, max_discount_pct: 5, negotiation_enabled: true};
   for (const w of [wsBoth, wsAi]) await control`SELECT briofold_ai_selling_write(${w},${ENV},${owner},${control.json(settings)})`;
 
   if (finance) {
@@ -185,6 +189,9 @@ export async function seed({control, finance, remote = {}}) {
         obs = (await finance`INSERT INTO financial_receipt_observations(workspace_id,environment,inbound_event_id,receiving_account_id,provider_reference_hmac,payer_hmac,amount_minor,method,direction,original_transaction_at,time_precision,parser_version)
           VALUES(${wsBoth},${ENV},${ev.id},${acct.id},${rh},${ph},${amount},'bkash','incoming',now(),'second',1) RETURNING id`)[0];
       }
+      // The realm matcher's decision: the allocated receipt matched a checkout, all others found no checkout attempt.
+      await finance`INSERT INTO pg07_receipt_results(workspace_id,environment,observation_id,status,reason,processed_at)
+        VALUES(${wsBoth},${ENV},${obs.id},${s.allocated ? "matched" : "unmatched"},'seed',now()) ON CONFLICT(observation_id) DO NOTHING`;
       if (s.allocated && !(await finance`SELECT 1 FROM financial_payments WHERE observation_id=${obs.id}`).length) {
         const [intent] = await finance`INSERT INTO payment_intents(workspace_id,environment,merchant_reference,amount_minor,expires_at) VALUES(${wsBoth},${ENV},${NS + "INTENT-" + s.ref},${amount},now()+interval '30 minutes') RETURNING id`;
         const [attempt] = await finance`INSERT INTO payment_attempts(workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version)

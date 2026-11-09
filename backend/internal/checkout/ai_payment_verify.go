@@ -39,6 +39,7 @@ type aiReceipt struct {
 	PayerHMAC   string    `json:"payer_hmac"`
 	Account     string    `json:"receiving_account_id"`
 	Allocated   bool      `json:"allocated"`
+	Checkout    string    `json:"checkout_status"` // realm matcher decision for this receipt
 }
 
 // matchClaim returns "matched", "retry" (no receipt yet), "review" (needs the owner) or "failed", plus a reason.
@@ -58,8 +59,13 @@ func matchClaim(c aiClaim, r *aiReceipt) (string, string) {
 	switch {
 	case r.Direction != "incoming":
 		return "failed", "not_incoming"
-	case r.Allocated:
+	case r.Allocated || r.Checkout == "matched":
 		return "failed", "already_used"
+	case r.Checkout == "" || r.Checkout == "pending":
+		// The checkout matcher has not decided yet; claiming now could double-spend the receipt.
+		return "retry", "checkout_matcher_pending"
+	case r.Checkout != "unmatched":
+		return "review", "checkout_" + r.Checkout
 	case r.Method != c.Method:
 		return "failed", "wrong_method"
 	case !accountOK:
