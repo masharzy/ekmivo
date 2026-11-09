@@ -24,6 +24,9 @@ func catalogAPIEnabled() bool { return os.Getenv("BRIOFOLD_PRODUCT_API_ENABLED")
 // replayed request stores the same media rows instead of new ones.
 func catalogDerivedID(key, part string) string {
 	sum := md5.Sum([]byte(key + ":" + part))
+	// Version 4 and RFC 4122 variant bits keep the id valid for every UUID check in the API.
+	sum[6] = sum[6]&0x0f | 0x40
+	sum[8] = sum[8]&0x3f | 0x80
 	h := hex.EncodeToString(sum[:])
 	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32]
 }
