@@ -319,3 +319,11 @@ Remaining, in this order:
 - Owner-shop page checks and Vercel/Go error review pending. Go stages 1–4 and the Vercel env stage have not started. No flag edits or rollbacks.
 - AI provider, private S3, SMTP, FCM and Meta secret presence checks pending. No secrets created or rotated.
 - Owner-shop settings, Messenger order, stock, payment verification/review, notices and model rollback smoke tests pending. No order reference yet.
+
+### Production health gate — 2026-11-09
+
+- Owner terminal confirmed running revision 15eac9816404df435c3d85b67a7b6c04e33da24b and binary checksum. Container started at 22:33:34 Bangladesh time. Startup health passed after an initial connection reset.
+- Owner waived the ten-minute wait and requested direct testing. The ten-minute log result was not verified.
+- Overview rendered with data. Orders, Products, Customers, Payments, Reports and Settings opened. Inbox opened but its settled data state was not verified.
+- STOP: the customer drawer opened for a UI Test customer in the Briofold shop. The Orders tab reported “Orders could not be loaded.” Cause and Go/Vercel log review remain unverified.
+- All flag stages, secret presence checks and live commerce smoke tests remain pending. No flag changes, rollback, or test order.
