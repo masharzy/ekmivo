@@ -239,7 +239,22 @@ func TestAICommerceIntegration(t *testing.T) {
 	if plain, err := merchantwebhook.Decrypt(pipelineKey, cipher, it.ws+"|live"); err != nil || string(plain) != "01700000000" {
 		t.Fatal("receiving number envelope mismatch")
 	}
-	it.exec(it.live, "INSERT INTO pg06_account_configuration(workspace_id,environment,account_id,number_cipher) VALUES($1::uuid,'live',$2::uuid,$3)", it.ws, account, cipher)
+	// The live realm's plan-limit trigger needs a fresh plan snapshot in the same transaction, as the API sets it.
+	snapshot, _ := json.Marshal(map[string]any{"workspace_id": it.ws, "fetched_at": time.Now().UTC().Format(time.RFC3339Nano), "platform_billing": true})
+	tx, err := it.live.BeginTx(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec("SELECT set_config('ekmivo.payment_plan',$1,true)", string(snapshot)); err == nil {
+		_, err = tx.Exec("INSERT INTO pg06_account_configuration(workspace_id,environment,account_id,number_cipher) VALUES($1::uuid,'live',$2::uuid,$3)", it.ws, account, cipher)
+	}
+	if err != nil {
+		_ = tx.Rollback()
+		t.Fatal(err)
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
 	settings, _ := json.Marshal(map[string]any{"ai_selling_enabled": true, "cod_enabled": true, "negotiation_enabled": true, "max_discount_pct": 5, "receiving_account_ids": []string{account}})
 	it.exec(it.admin, "SELECT briofold_ai_selling_write($1::uuid,'live',$2::uuid,$3::jsonb)", it.ws, it.user, string(settings))
 

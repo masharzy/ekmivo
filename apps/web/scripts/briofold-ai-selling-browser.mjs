@@ -11,9 +11,15 @@ export async function runBriofoldAiSellingBrowser({origin,browser,control,sessio
   const actor=async token=>(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(token).digest('hex')}`)[0].user_id;
   const owner=await actor(sessions.owner),viewer=await actor(sessions.viewer),store=randomUUID();
   await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},'Fictional AI selling shop','both',${owner})`;
-  await db`INSERT INTO pg13_plans(id,name,amount_minor) VALUES('ai_selling_browser','AI selling browser fixture',10000) ON CONFLICT DO NOTHING`;
-  await db`INSERT INTO pg13_subscriptions(workspace_id,plan_id,paid_until,grace_until)
-   VALUES(${store},'ai_selling_browser',now()+interval '1 day',now()+interval '2 days')`;
+  // Unpublished loopback-only plan version, built like the Phase9 fixture, so the payments team-member gate sees an active plan.
+  const planId='ci_ai_selling_'+randomUUID().replaceAll('-','').slice(0,12);
+  const terms={name:'Unpublished AI selling browser test',kind:'free',amount_minor:0,period_days:30,grace_days:3,free_days:30,payment_limit:null,quota_period:'billing',
+   active_checkout_limit:100,create_per_minute:120,features:{invoices:true,payment_links:true,reports:true,exports:true},
+   limits:{api_keys:null,team_members:null,devices:null,payment_methods:null}};
+  const [validated]=await db.unsafe('SELECT payment_plan_validate($1::jsonb) AS terms',[db.json(terms)]);
+  await db.unsafe('INSERT INTO pg13_plans(id,name,amount_minor,period_days,grace_days,enabled) VALUES($1,$2,0,30,3,false)',[planId,terms.name]);
+  const [planVersion]=await db.unsafe('INSERT INTO payment_plan_versions(plan_id,version,terms,created_by) VALUES($1,1,$2::jsonb,$3::uuid) RETURNING id',[planId,db.json(validated.terms),owner]);
+  await db.unsafe("INSERT INTO pg13_subscriptions(workspace_id,plan_id,plan_version_id,paid_until,grace_until) VALUES($1::uuid,$2,$3::uuid,now()+interval '30 days',now()+interval '33 days')",[store,planId,planVersion.id]);
   await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner'),(${store},${viewer},'viewer')`;
   const authenticated=async(token,user)=>{const c=await browser.newContext();await c.addCookies([{name:'briofold-session',value:token,url:origin,httpOnly:true},{name:'briofold-default-workspace',value:user+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);return c;};
   context=await authenticated(sessions.owner,owner);viewerContext=await authenticated(sessions.viewer,viewer);
