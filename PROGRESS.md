@@ -246,3 +246,14 @@ Web panel checked in Chrome at 360/412 px against a mocked API (flows pass; no a
 Decisions: apply-state for Woo notices is a separate table because notices are immutable; CSV importer accepts both the plan's columns and the older whole-paisa columns; images https-only.
 Open: inbox product picker + AI reply path still read `inbox_products` (migrations 0135/0202) → do with Phase 3 orchestrator. Needs-web-change: none. Needs owner: set the three flags when ready; a warehouse must exist before stock can be set.
 Evidence: docs/evidence/ai-commerce-phase1/README.md.
+
+## AI commerce Phases 2-6 + production readiness (code level, owner decision 2026-11-09)
+Owner asked for code-level completion; end-to-end testing is done later by the owner using `docs/testing/ai-commerce-e2e-test-guide.md`.
+- Phase 2: `tools/testing/seed-ai-commerce-sandbox.mjs` (+ safety test). Not executed against a DB.
+- Phase 3: `ai_tools.go`, migration 0233 (`ai_tool_calls`, `briofold_ai_tool`). Applied and spot-tested on Neon test branch `br-tiny-mouse-b37574ht`.
+- Phase 4: migration 0234 (payment_state, claims, settings, order tools, resolve/expire/review functions), `ai_payment_verify.go`. Scenario tested on the test branch (rolled back).
+- Phase 5: migration 0235 (customer profile, name sync). Tested on the test branch (rolled back).
+- Phase 6: eval scripts + runner (not run). Readiness: flags/allowlist/kill switch/limits, runbook, load test script (not run).
+- Open / not built: see "NOT BUILT" in the test guide (all UI for settings/badges/drawer, carousels and buttons, image/voice tools, notifications, model admin setting, inbox_products switch, payment links).
+- Needs-web-change: Settings > AI selling page; review queue + sidebar badge; customer drawer; admin model setting.
+- Branch note: Phases 3-6 are stacked on branch `agents/ai-commerce-phase5` (one PR) instead of one PR per phase.

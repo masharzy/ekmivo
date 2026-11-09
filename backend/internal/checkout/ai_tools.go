@@ -44,6 +44,44 @@ var aiForbiddenArgs = map[string]bool{
 
 func aiToolsEnabled() bool { return os.Getenv("BRIOFOLD_AI_TOOLS_ENABLED") == "true" }
 
+// aiToolsEnabledFor applies the kill switch, the global flag and the optional workspace allowlist
+// (BRIOFOLD_AI_TOOLS_WORKSPACES=uuid,uuid). An empty allowlist means every workspace.
+func aiToolsEnabledFor(workspace string) bool {
+	if os.Getenv("BRIOFOLD_AI_KILL_SWITCH") == "true" || !aiToolsEnabled() {
+		return false
+	}
+	allow := strings.TrimSpace(os.Getenv("BRIOFOLD_AI_TOOLS_WORKSPACES"))
+	if allow == "" {
+		return true
+	}
+	for _, id := range strings.Split(allow, ",") {
+		if strings.TrimSpace(id) == workspace {
+			return true
+		}
+	}
+	return false
+}
+
+func envInt(name string, def int) int {
+	var n int
+	if _, err := fmt.Sscanf(os.Getenv(name), "%d", &n); err != nil || n <= 0 {
+		return def
+	}
+	return n
+}
+
+// aiWithinLimits enforces a per-thread rate limit (tool steps per minute) and a per-workspace daily cap.
+func (s *Service) aiWithinLimits(ctx context.Context, workspace, thread string) bool {
+	var perThread, perDay int
+	err := s.Pipeline.Control.QueryRow(ctx, `SELECT
+		(SELECT count(*) FROM ai_tool_calls c JOIN briofold_ai_channel_jobs j ON j.id=c.job_id WHERE j.thread_id=$2::uuid AND c.created_at>now()-interval '1 minute'),
+		(SELECT count(*) FROM ai_tool_calls WHERE workspace_id=$1::uuid AND created_at>now()-interval '24 hours')`, workspace, thread).Scan(&perThread, &perDay)
+	if err != nil {
+		return false // fail closed
+	}
+	return perThread < envInt("BRIOFOLD_AI_THREAD_STEPS_PER_MIN", 30) && perDay < envInt("BRIOFOLD_AI_DAILY_STEP_CAP", 5000)
+}
+
 type aiToolCall struct {
 	Tool string         `json:"tool"`
 	Args map[string]any `json:"args"`
@@ -213,6 +251,9 @@ func aiStepKey(jobKey string, step int) string {
 func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobID, lease string) (aicredits.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, aiToolBudget)
 	defer cancel()
+	if !s.aiWithinLimits(ctx, req.Workspace, req.Thread) {
+		return aicredits.Result{}, aicredits.ErrUnavailable
+	}
 	messages := append([]aicredits.Message{{Role: "system", Content: aiToolPrompt}}, req.Messages...)
 	var last aicredits.Result
 	for step := 1; step <= aiToolMaxSteps; step++ {

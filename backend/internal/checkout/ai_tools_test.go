@@ -77,3 +77,25 @@ func TestAILimits(t *testing.T) {
 		t.Fatal("step keys")
 	}
 }
+
+func TestAIToolsEnabledFor(t *testing.T) {
+	t.Setenv("BRIOFOLD_AI_TOOLS_ENABLED", "true")
+	t.Setenv("BRIOFOLD_AI_KILL_SWITCH", "")
+	t.Setenv("BRIOFOLD_AI_TOOLS_WORKSPACES", "")
+	if !aiToolsEnabledFor("w1") {
+		t.Fatal("enabled for everyone when allowlist empty")
+	}
+	t.Setenv("BRIOFOLD_AI_TOOLS_WORKSPACES", "w2, w1")
+	if !aiToolsEnabledFor("w1") || aiToolsEnabledFor("w3") {
+		t.Fatal("allowlist not applied")
+	}
+	t.Setenv("BRIOFOLD_AI_KILL_SWITCH", "true")
+	if aiToolsEnabledFor("w1") {
+		t.Fatal("kill switch ignored")
+	}
+	t.Setenv("BRIOFOLD_AI_KILL_SWITCH", "")
+	t.Setenv("BRIOFOLD_AI_TOOLS_ENABLED", "false")
+	if aiToolsEnabledFor("w1") {
+		t.Fatal("flag off must disable")
+	}
+}
