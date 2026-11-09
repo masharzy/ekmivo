@@ -307,3 +307,9 @@ Remaining, in this order:
   - Apply 0233–0246 twice on the Neon test branch br-damp-mud-b3c38es3. This cloud workspace cannot reach Neon hosts; run financial-migrate from a machine that can.
   - Gemini evals (needs an OpenRouter key).
   - Fix the 9 base-branch suite failures before merging the stack.
+
+### AI commerce production rollout — 2026-11-09
+- Production Neon migration ledger was previously verified for control and both finance realms through 0246, including the 48 prerequisite control migrations. Vercel production was verified READY at main `15eac98`.
+- The repository's API release path is `deploy/vps/build.sh` followed by `deploy/vps/deploy.sh` on the Briofold VPS. At 22:18 Dhaka time, the SSH retry returned `Network is unreachable` on port 22 before authentication. No Go API deployment time or deployed commit could be verified. The health endpoint and ten-minute Go log gate remain pending.
+- Owner page and SQL/5xx log checks were gated by the API release. Go flag stages 1–4 and the Vercel production flag update and redeploy were not started. No flag changes or rollbacks.
+- Provider key, private S3, SMTP, FCM and Meta credential presence are unverified. No secrets were changed. The owner test-shop order, notices, payment verification and admin rollback checks did not run. No order reference was created.
