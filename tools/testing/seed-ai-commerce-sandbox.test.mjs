@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import {assertSafeTarget, id, products} from "./seed-ai-commerce-sandbox.mjs";
+assert.throws(() => assertSafeTarget("postgres://u@db.neon.tech/ekmivo_live", "c"), /live|remote/);
+assert.throws(() => assertSafeTarget("postgres://u@db.neon.tech/ekmivo", "c"), /remote/);
+assert.throws(() => assertSafeTarget("postgres://u@localhost/ekmivo_prod", "c"), /production/);
+assert.doesNotThrow(() => assertSafeTarget("postgres://u@localhost/ekmivo_sandbox", "c"));
+assert.doesNotThrow(() => assertSafeTarget("postgres://u@db.neon.tech/ekmivo", "c", {allowRemote: true}));
+assert.equal(id("a", 1), id("a", 1));
+assert.notEqual(id("a", 1), id("a", 2));
+assert.match(id("x"), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/);
+const p = products();
+assert.equal(p.length, 20);
+assert.ok(p.every(x => x.name.startsWith("TEST-") && x.variants.length >= 2 && x.variants.length <= 4));
+assert.ok(p.some(x => x.variants.some(v => v.stock === 0)) && p.some(x => x.min_price_minor));
+assert.equal(new Set(p.map(x => x.external_id)).size, 20);
+console.log("seed safety tests ok");
