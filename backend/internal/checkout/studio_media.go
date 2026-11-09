@@ -24,7 +24,10 @@ import (
 	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 )
 
-var errStudioMedia = errors.New("AI media unavailable")
+var (
+	errStudioMedia             = errors.New("AI media unavailable")
+	errAICommerceMediaHandover = errors.New("AI selling media requires human review")
+)
 var telegramFilePath = regexp.MustCompile(`^[A-Za-z0-9_/-]+\.[A-Za-z0-9]+$`)
 
 type studioMediaSource struct {
@@ -35,7 +38,7 @@ type studioMediaSource struct {
 	Kind       string `json:"kind"`
 }
 
-func (s *Service) studioJobMedia(ctx context.Context, job, lease, workspace string) (aicredits.Media, string, error) {
+func (s *Service) studioJobMedia(ctx context.Context, job, lease, workspace string, textAndPhotoOnly bool) (aicredits.Media, string, error) {
 	var raw []byte
 	if err := s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_ai_channel_media($1::uuid,$2::uuid)", job, lease).Scan(&raw); err != nil {
 		return aicredits.Media{}, "", errStudioMedia
@@ -47,8 +50,40 @@ func (s *Service) studioJobMedia(ctx context.Context, job, lease, workspace stri
 	if json.Unmarshal(raw, &source) != nil {
 		return aicredits.Media{}, "", errStudioMedia
 	}
+	return s.loadStudioJobMedia(ctx, workspace, source, textAndPhotoOnly)
+}
+
+// Images and fingerprints are transient. Only verified catalog facts enter the model context.
+func (s *Service) aiChannelPhotoProducts(ctx context.Context, job, lease string, media aicredits.Media) []json.RawMessage {
+	data, err := base64.StdEncoding.DecodeString(media.Data)
+	if err != nil {
+		return nil
+	}
+	signature, err := productPhotoFeatures(data)
+	if err != nil {
+		return nil
+	}
+	var raw []byte
+	if s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_ai_channel_photo_products($1::uuid,$2::uuid,$3,$4::jsonb)",
+		job, lease, signature.Hash, photoColorsJSON(signature)).Scan(&raw) != nil {
+		return nil
+	}
+	var matches []json.RawMessage
+	if json.Unmarshal(raw, &matches) != nil {
+		return nil
+	}
+	return matches
+}
+
+func (s *Service) loadStudioJobMedia(ctx context.Context, workspace string, source studioMediaSource, textAndPhotoOnly bool) (aicredits.Media, string, error) {
+	// AI selling accepts text and photos. Voice and video remain available to staff
+	// without downloading, transcoding or forwarding them to the AI provider.
+	if textAndPhotoOnly && (source.Kind == "audio" || source.Kind == "video") {
+		return aicredits.Media{}, "", errAICommerceMediaHandover
+	}
 	return s.loadStudioMedia(ctx, workspace, source)
 }
+
 func (s *Service) loadStudioMedia(ctx context.Context, workspace string, src studioMediaSource) (aicredits.Media, string, error) {
 	var none aicredits.Media
 	if src.Kind != "image" && src.Kind != "audio" && src.Kind != "video" {

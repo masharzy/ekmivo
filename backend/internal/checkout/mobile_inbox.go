@@ -247,7 +247,11 @@ func (s *Service) executeInboxRequest(w http.ResponseWriter, r *http.Request, ra
 			return
 		}
 		body, _ := json.Marshal(b.Body)
-		err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT inbox_advanced($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", d.Workspace, d.Environment, d.ID, thread, b.Action, body).Scan(&result)
+		query := "SELECT inbox_advanced($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)"
+		if reader == "user" && aiChannelCommerceEnabledFor(d.Workspace) && (b.Action == "products" || b.Action == "send-product") {
+			query = "SELECT briofold_inbox_catalog($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)"
+		}
+		err = s.Pipeline.Control.QueryRow(r.Context(), query, d.Workspace, d.Environment, d.ID, thread, b.Action, body).Scan(&result)
 		if err != nil {
 			mapped(w, err)
 			return

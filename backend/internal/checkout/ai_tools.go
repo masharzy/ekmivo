@@ -72,6 +72,10 @@ func aiToolsEnabledFor(workspace string) bool {
 	return false
 }
 
+func aiChannelCommerceEnabledFor(workspace string) bool {
+	return os.Getenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED") == "true" && aiToolsEnabledFor(workspace)
+}
+
 func envInt(name string, def int64) int64 {
 	var n int64
 	if _, err := fmt.Sscanf(os.Getenv(name), "%d", &n); err != nil || n < 0 {
@@ -419,10 +423,11 @@ func (s *Service) aiResolvePayTo(ctx context.Context, workspace string, result m
 }
 
 type aiLoopResult struct {
-	Result   aicredits.Result
-	Handover bool              // hand the thread to a person after the reply is finished
-	Acted    bool              // a state-changing tool succeeded in this job
-	Facts    []json.RawMessage // tool results shown to the model; they ground the safety filter
+	Result        aicredits.Result
+	Handover      bool              // hand the thread to a person after the reply is finished
+	CheckoutOrder string            // internal order reference, never an actual checkout token
+	Acted         bool              // a state-changing tool succeeded in this job
+	Facts         []json.RawMessage // tool results shown to the model; they ground the safety filter
 }
 
 func aiHandoverText(lang string) string {
@@ -438,11 +443,16 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 	var out aiLoopResult
 	ctx, cancel := context.WithTimeout(ctx, aiToolBudget)
 	defer cancel()
+	prompt := aiToolPrompt
+	channelCommerce := aiChannelCommerceEnabledFor(req.Workspace)
+	if channelCommerce {
+		prompt += "\nIf the customer explicitly wants a checkout link for the current draft, ask_payment_choice can take {\"choice\":\"link\"}. Only say a link was prepared if the tool succeeds. The server delivers the link separately. Never invent or include a URL."
+	}
 	messages := append([]aicredits.Message(nil), req.Messages...)
 	if len(messages) > 0 && messages[0].Role == "system" {
-		messages[0].Content = aiToolPrompt + "\n\n" + messages[0].Content
+		messages[0].Content = prompt + "\n\n" + messages[0].Content
 	} else {
-		messages = append([]aicredits.Message{{Role: "system", Content: aiToolPrompt}}, messages...)
+		messages = append([]aicredits.Message{{Role: "system", Content: prompt}}, messages...)
 	}
 	retried := false
 	for step := 1; step <= aiToolMaxSteps; step++ {
@@ -472,6 +482,19 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 			return out, nil
 		}
 		var result map[string]any
+		if channelCommerce && call.Tool == "ask_payment_choice" && call.Args["choice"] == "link" {
+			link, err := s.createAIOrderPaymentLink(ctx, req.Workspace, jobID, lease)
+			if err != nil || link.Error != "" {
+				reason := link.Error
+				if reason == "" {
+					reason = "payment_link_unavailable"
+				}
+				result = map[string]any{"error": reason}
+			} else {
+				out.CheckoutOrder = link.Order
+				result = map[string]any{"payment_link_prepared": true, "amount_minor": link.Amount, "expires_at": link.ExpiresAt}
+			}
+		}
 		if call.Tool == "submit_payment_proof" {
 			if why := s.aiProofArgs(call.Args); why != "" {
 				result = map[string]any{"error": "invalid_proof", "need": why}

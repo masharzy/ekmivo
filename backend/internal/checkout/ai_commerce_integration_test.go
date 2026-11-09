@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"strings"
@@ -240,6 +242,7 @@ func TestAICommerceIntegration(t *testing.T) {
 	settings, _ := json.Marshal(map[string]any{"ai_selling_enabled": true, "cod_enabled": true, "negotiation_enabled": true, "max_discount_pct": 5, "receiving_account_ids": []string{account}})
 	it.exec(it.admin, "SELECT briofold_ai_selling_write($1::uuid,'live',$2::uuid,$3::jsonb)", it.ws, it.user, string(settings))
 
+	t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "true")
 	// Turn 1: search. Step 1 uses the job key, so finish accepts it (review B2).
 	thread, state, reason, reply := it.say("psid-a", "punjabi ache?", `{"tool":"search_products","args":{"query":"punjabi"}}`, `{"reply":"IT Cotton Punjabi 1000 taka, M and L."}`)
 	if state != "completed" || !strings.Contains(reply, "IT Cotton Punjabi") {
@@ -248,6 +251,11 @@ func TestAICommerceIntegration(t *testing.T) {
 	if r := fake.lastToolResult(); strings.Contains(r, "90000") || strings.Contains(r, "SECRET-NOTE") || !strings.Contains(r, "variant_ref") {
 		t.Fatalf("search result leaked floor/notes or lacks refs: %s", r)
 	}
+
+	if cards := it.one(it.admin, "SELECT content->'ai_cards'->'cards'->0->>'name' FROM inbox_messages WHERE thread_id=$1::uuid AND sender='ai'", thread); cards != "IT Cotton Punjabi" {
+		t.Fatal("search did not queue authoritative product cards")
+	}
+	t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "false")
 
 	// Turn 2: 2 of the last unit -> out_of_stock result, customer is told, AI stays on (review B4).
 	_, state, reason, reply = it.say("psid-a", "M size 2ta nibo",
@@ -478,4 +486,157 @@ func TestAICommerceIntegration(t *testing.T) {
 			t.Fatalf("buyer paid message for %s: %s", o, n)
 		}
 	}
+
+	t.Run("channel photo catalog and picker", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		product := it.one(it.admin, "SELECT product_id::text FROM commerce_variants WHERE id=$1::uuid", vm)
+		media := newUUID()
+		sha := strings.Repeat("f", 64)
+		hash := strings.Repeat("1", 64)
+		it.exec(it.admin, `INSERT INTO commerce_media(id,workspace_id,environment,object_key,mime,name,sha256)
+			VALUES($1::uuid,$2::uuid,'live',$1::text,'image/png','fixture.png',$3)`, media, it.ws, sha)
+		it.exec(it.admin, "UPDATE commerce_products SET images=ARRAY[$1::uuid] WHERE id=$2::uuid", media, product)
+		it.exec(it.admin, "SELECT commerce_photo_index($1::uuid,'live',$2::uuid,$3::uuid,$4,$5,'[120,40,20]')",
+			it.ws, it.user, media, sha, hash)
+		var raw []byte
+		photo := "SELECT briofold_ai_channel_photo_products($1::uuid,$2::uuid,$3,'[120,40,20]')"
+		if err := it.svc.Pipeline.Control.QueryRow(ctx, photo, a.ID, a.Lease, hash).Scan(&raw); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(raw), product) || strings.Contains(string(raw), "SECRET-NOTE") {
+			t.Fatal("photo search failed to return public product facts")
+		}
+		if err := it.svc.Pipeline.Control.QueryRow(ctx, photo, a.ID, newUUID(), hash).Scan(&raw); err == nil {
+			t.Fatal("photo search accepted an invalid lease")
+		}
+
+		picker := "SELECT briofold_inbox_catalog($1::uuid,'live',$2::uuid,$3::uuid,$4,$5::jsonb)"
+		runtime := it.svc.Auth.DB
+		if err := runtime.QueryRowContext(ctx, picker, it.ws, it.user, thread, "products", "{}").Scan(&raw); err != nil || !strings.Contains(string(raw), product) {
+			t.Fatalf("catalog picker did not return the commerce product: %v", err)
+		}
+		viewer := it.one(it.admin, "INSERT INTO app_users(email,display_name,password_hash) VALUES($1,'AI IT viewer','fixture') RETURNING id::text", tag+"-picker-viewer@example.invalid")
+		it.exec(it.admin, "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1::uuid,$2::uuid,'viewer')", it.ws, viewer)
+		key := newUUID()
+		input := fmt.Sprintf(`{"product_id":"%s","idempotency_key":"%s"}`, product, key)
+		for _, action := range []string{"products", "send-product"} {
+			err := runtime.QueryRowContext(ctx, picker, it.ws, viewer, thread, action, input).Scan(&raw)
+			var pg *pgconn.PgError
+			if !errors.As(err, &pg) || pg.Code != "42501" {
+				t.Fatalf("viewer %s: expected denial, got %v", action, err)
+			}
+		}
+		for i := 0; i < 2; i++ {
+			if err := runtime.QueryRowContext(ctx, picker, it.ws, it.user, thread, "send-product", input).Scan(&raw); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if got := it.one(it.admin, "SELECT count(*)::text FROM inbox_messages WHERE thread_id=$1::uuid AND type='product' AND idempotency_key=$2::uuid AND requested_by=$3::uuid", thread, key, it.user); got != "1" {
+			t.Fatalf("expected one authorized, idempotent send, got %s", got)
+		}
+	})
+
+	t.Run("signed product postback is a scoped customer turn", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "true")
+		const secret = "isolated-fixture-meta-signature"
+		t.Setenv("META_APP_SECRET", secret)
+		token := signAIOrderButton(pipelineKey, it.ws, thread, vm, time.Now().Add(time.Minute).Unix())
+		send := func(sender, id, button string) {
+			body, _ := json.Marshal(map[string]any{"object": "page", "entry": []any{
+				map[string]any{"id": "ai-it-" + tag, "messaging": []any{map[string]any{
+					"sender":    map[string]string{"id": sender},
+					"timestamp": time.Now().UnixMilli(),
+					"postback":  map[string]string{"mid": id, "payload": button},
+				}}},
+			}})
+			r := httptest.NewRequest(http.MethodPost, "/v1/inbox/meta/webhook", strings.NewReader(string(body)))
+			r.Header.Set("X-Hub-Signature-256", "sha256="+hex.EncodeToString(channelHMAC([]byte(secret), body)))
+			w := httptest.NewRecorder()
+			it.svc.HandleInboxWebhook(w, r)
+			if w.Code != http.StatusOK {
+				t.Fatalf("webhook status %d: %s", w.Code, w.Body)
+			}
+		}
+		accepted := "it-button-valid-" + tag
+		send("psid-a", accepted, token)
+		send("psid-a", accepted, token)
+		got := it.one(it.admin, "SELECT body FROM inbox_messages WHERE thread_id=$1::uuid AND provider_id=$2 AND sender='customer'", thread, accepted)
+		if !strings.Contains(got, vm) || strings.Contains(got, token) {
+			t.Fatal("button was not ingested as an ordinary customer turn")
+		}
+		rejected := "it-button-rejected-" + tag
+		send("psid-a", rejected, signAIOrderButton(pipelineKey, it.ws, thread, vm, time.Now().Add(-time.Minute).Unix()))
+		send("psid-a", rejected, signAIOrderButton(pipelineKey, newUUID(), thread, vm, time.Now().Add(time.Minute).Unix()))
+		if count := it.one(it.admin, "SELECT count(*)::text FROM inbox_messages WHERE workspace_id=$1::uuid AND provider_id=$2", it.ws, rejected); count != "0" {
+			t.Fatal("rejected buttons became customer messages")
+		}
+	})
+
+	t.Run("Both mode checkout expires with draft and verifies paid order", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "true")
+		it.svc.TokenKey = pipelineKey
+		it.exec(it.admin, "UPDATE commerce_stock SET on_hand=on_hand+2 WHERE variant_id=$1::uuid", vl)
+		it.exec(it.admin, "UPDATE briofold_ai_channel_jobs SET state='cancelled' WHERE workspace_id=$1::uuid AND state IN ('queued','running')", it.ws)
+		it.exec(it.admin, "INSERT INTO pg13_plans(id,name,amount_minor) VALUES('ai_link_fixture','AI link fixture',10000) ON CONFLICT DO NOTHING")
+		it.exec(it.admin, "INSERT INTO pg13_subscriptions(workspace_id,plan_id,paid_until,grace_until) VALUES($1::uuid,'ai_link_fixture',now()+interval '1 day',now()+interval '2 days') ON CONFLICT DO NOTHING", it.ws)
+		it.exec(it.live, `INSERT INTO pg06_devices(workspace_id,environment,account_id,name,source,parser_id,binding,heartbeat_at,permission_ok)
+			VALUES($1::uuid,'live',$2::uuid,'Fixture device','fixture','fixture','fixture',now(),true)`, it.ws, account)
+		payThread, state, _, _ := it.say("psid-checkout", "Please prepare an order and send the checkout link.",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"area":"dhaka","recipient":{"name":"Fixture","phone":"01700000001","address":"Fixture delivery"},"items":[{"variant_ref":"%s","quantity":1}]}}`, vl),
+			`{"tool":"ask_payment_choice","args":{"choice":"link"}}`,
+			`{"reply":"Please use the checkout link for this order."}`)
+		if state != "completed" || !strings.Contains(fake.lastToolResult(), "payment_link_prepared") {
+			t.Fatalf("link was not prepared: %s %s", state, fake.lastToolResult())
+		}
+		var link aiPaymentLink
+		err := it.admin.QueryRowContext(ctx, `SELECT order_id::text,intent_id::text,amount_minor,expires_at
+			FROM commerce_ai_payment_links WHERE workspace_id=$1::uuid AND thread_id=$2::uuid`,
+			it.ws, payThread).Scan(&link.Order, &link.Intent, &link.Amount, &link.ExpiresAt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var intentExpiry time.Time
+		if err := it.live.QueryRowContext(ctx, "SELECT expires_at FROM payment_intents WHERE id=$1::uuid AND amount_minor=$2", link.Intent, link.Amount).Scan(&intentExpiry); err != nil || !intentExpiry.Equal(link.ExpiresAt) {
+			t.Fatalf("intent did not inherit exact draft expiry: %v", err)
+		}
+		checkoutURL := it.svc.aiOrderCheckoutURL(ctx, it.ws, payThread, link.Order)
+		if !strings.Contains(checkoutURL, "/checkout/") || it.svc.aiOrderCheckoutURL(ctx, it.ws, thread, link.Order) != "" {
+			t.Fatal("checkout URL unavailable or escaped its thread")
+		}
+		if count := it.one(it.admin, `SELECT count(*)::text FROM inbox_messages WHERE thread_id=$1::uuid AND (body LIKE '%'||$2||'%' OR content::text LIKE '%'||$2||'%')`, payThread, checkoutURL); count != "0" {
+			t.Fatal("raw checkout link persisted")
+		}
+		it.svc.resolveAIOrderPaymentLinks(ctx)
+		if status := it.one(it.admin, "SELECT payment_state FROM commerce_orders WHERE id=$1::uuid", link.Order); status != "none" {
+			t.Fatal("unpaid link verified an order")
+		}
+		payer := deviceevidence.Identity(payerKey, "ai-link-payer-"+tag)
+		it.exec(it.live, `INSERT INTO payment_attempts(workspace_id,environment,intent_id,receiving_account_id,payer_hmac,payer_suffix,amount_minor,method,window_start,window_end,policy_version)
+			VALUES($1::uuid,'live',$2::uuid,$3::uuid,$4,'1000',$5,'bkash',now(),now()+interval '2 minutes',1)`,
+			it.ws, link.Intent, account, payer, link.Amount)
+		inbound := it.one(it.live, `INSERT INTO financial_inbound_events(workspace_id,environment,source_kind,source_event_id,event_digest,original_source_at,encrypted_evidence)
+			VALUES($1::uuid,'live','device_sms',$2,$3,now(),$4) RETURNING id::text`, it.ws, "link-"+tag,
+			deviceevidence.Identity(payerKey, "link-receipt-"+tag), make([]byte, 48))
+		observation := it.one(it.live, `INSERT INTO financial_receipt_observations(workspace_id,environment,inbound_event_id,receiving_account_id,provider_reference_hmac,payer_hmac,amount_minor,method,direction,original_transaction_at,time_precision,parser_version)
+			VALUES($1::uuid,'live',$2::uuid,$3::uuid,$4,$5,$6,'bkash','incoming',now(),'second',1) RETURNING id::text`,
+			it.ws, inbound, account, deviceevidence.Identity(payerKey, "link-reference-"+tag), payer, link.Amount)
+		it.exec(it.live, "INSERT INTO pg07_receipt_results(workspace_id,environment,observation_id,status,reason) VALUES($1::uuid,'live',$2::uuid,'pending','fixture') ON CONFLICT DO NOTHING", it.ws, observation)
+		if match := it.one(it.live, "SELECT pg07_match($1::uuid,$2::bigint)", observation, sourceVersion); match != "matched" {
+			t.Fatalf("receipt match: %s", match)
+		}
+		it.exec(it.admin, "UPDATE commerce_ai_payment_links SET checked_at='-infinity' WHERE order_id=$1::uuid", link.Order)
+		it.svc.resolveAIOrderPaymentLinks(ctx)
+		if status := it.one(it.admin, "SELECT payment_state||'/'||status FROM commerce_orders WHERE id=$1::uuid", link.Order); status != "verified/confirmed" {
+			t.Fatalf("paid link did not verify the order: %s", status)
+		}
+	})
+
 }

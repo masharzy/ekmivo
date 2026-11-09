@@ -33,6 +33,11 @@ type inboxSendJob struct {
 
 func str(m map[string]any, k string) string { v, _ := m[k].(string); return v }
 func (s *Service) inboxSendPayload(ctx context.Context, j inboxSendJob, token, version string) (map[string]any, error) {
+	if j.Content["ai_cards"] != nil {
+		if cards := s.aiMetaCardPayload(j); cards != nil {
+			return cards, nil
+		}
+	}
 	kind := j.Type
 	if kind == "" {
 		kind = "text"

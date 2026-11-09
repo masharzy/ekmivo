@@ -116,6 +116,9 @@ func (s *Service) RunAIPaymentVerify(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
+			if os.Getenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED") == "true" {
+				s.resolveAIOrderPaymentLinks(ctx)
+			}
 			if aiPaymentVerifyEnabled() {
 				s.verifyAIClaimsOnce(ctx)
 			} else {

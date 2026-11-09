@@ -368,8 +368,21 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			return
 		}
 	}
+	toolMode := aiToolsEnabledFor(job.Workspace) && job.Context.AISelling
+	channelCommerce := toolMode && aiChannelCommerceEnabledFor(job.Workspace)
 	mediaCtx, mediaCancel := context.WithTimeout(ctx, 30*time.Second)
-	media, caption, mediaErr := s.studioJobMedia(mediaCtx, job.ID, job.Lease, job.Workspace)
+	media, caption, mediaErr := s.studioJobMedia(mediaCtx, job.ID, job.Lease, job.Workspace, channelCommerce)
+	var cardFacts []json.RawMessage
+	if channelCommerce && media.Kind == "image" {
+		matches := s.aiChannelPhotoProducts(mediaCtx, job.ID, job.Lease, media)
+		if len(matches) > 0 {
+			cardFacts = matches
+			job.Context.Products = append(matches, job.Context.Products...)
+			if len(job.Context.Products) > 5 {
+				job.Context.Products = job.Context.Products[:5]
+			}
+		}
+	}
 	mediaCancel()
 	if media.Kind != "" {
 		job.Context.media = []aicredits.Media{media}
@@ -377,13 +390,14 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			job.Context.Question = caption
 		}
 	}
-	toolMode := aiToolsEnabledFor(job.Workspace) && job.Context.AISelling
 	job.Context.tools = toolMode
 	messages, err := studioMessages(job.Context)
 	reason, body := "", ""
 	handover := false
+	checkoutOrder := ""
 	if mediaErr != nil {
 		reason = "AI_MEDIA_UNAVAILABLE"
+		handover = errors.Is(mediaErr, errAICommerceMediaHandover)
 	} else if err != nil {
 		reason = "AI_CONTEXT_TOO_LARGE"
 	} else {
@@ -407,8 +421,14 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			var loop aiLoopResult
 			loop, runErr = s.runAIToolLoop(run, request, job.ID, job.Lease, studioReplyLanguage(job.Context))
 			result, handover, acted = loop.Result, loop.Handover, loop.Acted
+			checkoutOrder = loop.CheckoutOrder
 			// Tool results are business facts for the contact/number check of the safety filter.
 			job.Context.Products = append(job.Context.Products, loop.Facts...)
+			if channelCommerce && !acted && !handover {
+				cardFacts = append(loop.Facts, cardFacts...)
+			} else {
+				cardFacts = nil
+			}
 		} else {
 			result, runErr = s.studioEngine().Run(run, request)
 		}
@@ -444,10 +464,28 @@ func (s *Service) runStudioJob(ctx context.Context) {
 	defer cancel()
 	var result []byte
 	// A failed finish leaves the leased job for review; it cannot trigger another generation.
-	if err := s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_channel_finish($1::uuid,$2::uuid,$3,$4)", job.ID, job.Lease, body, reason).Scan(&result); err != nil {
+	query := "SELECT briofold_ai_channel_finish($1::uuid,$2::uuid,$3,$4)"
+	var argument any = reason
+	if reason == "" && len(cardFacts) > 0 {
+		cards := buildAIProductCards(cardFacts, studioReplyLanguage(job.Context), time.Now())
+		if len(cards.Cards) > 0 {
+			encoded, _ := json.Marshal(cards)
+			if len(encoded) <= 15000 {
+				query = "SELECT briofold_ai_channel_finish_cards($1::uuid,$2::uuid,$3,$4::jsonb)"
+				argument = string(encoded)
+			}
+		}
+	}
+	var finishErr error
+	if reason == "" && checkoutOrder != "" {
+		finishErr = s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_channel_finish_link($1::uuid,$2::uuid,$3,$4::uuid)", job.ID, job.Lease, body, checkoutOrder).Scan(&result)
+	} else {
+		finishErr = s.Pipeline.Control.QueryRow(finish, query, job.ID, job.Lease, body, argument).Scan(&result)
+	}
+	if finishErr != nil {
 		code := ""
 		var pg *pgconn.PgError
-		if errors.As(err, &pg) {
+		if errors.As(finishErr, &pg) {
 			code = pg.Code
 		}
 		log.Printf("ai finish failed job=%s code=%s", job.ID, code)

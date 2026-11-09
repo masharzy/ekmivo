@@ -7,11 +7,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -129,8 +132,10 @@ func (s *Service) HandleWebsiteChat(w http.ResponseWriter, r *http.Request) {
 		Key    string `json:"key"`
 		Before int64  `json:"before"`
 		Media  string `json:"media_id"`
+		Button string `json:"button"`
 	}
-	if decodeBounded(w, r, &b, 32768) != nil || (b.Action != "start" && b.Action != "read" && b.Action != "send" && b.Action != "media-get") || b.Before < 0 {
+	channelCommerce := os.Getenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED") == "true"
+	if decodeBounded(w, r, &b, 32768) != nil || (b.Action != "start" && b.Action != "read" && b.Action != "send" && b.Action != "media-get" && !(channelCommerce && b.Action == "select-product")) || b.Before < 0 {
 		fail(w, 422, "INVALID_REQUEST")
 		return
 	}
@@ -184,6 +189,20 @@ func (s *Service) HandleWebsiteChat(w http.ResponseWriter, r *http.Request) {
 		write(w, 200, map[string]any{"data": base64.StdEncoding.EncodeToString(content), "name": file.Name, "mime": file.Mime})
 		return
 	}
+	var workspace, thread string
+	if channelCommerce && (b.Action == "select-product" || b.Action == "read") {
+		_ = s.Pipeline.Control.QueryRow(r.Context(), "SELECT * FROM briofold_ai_website_button_scope($1::uuid,$2,$3)",
+			site, origin, websiteHash(b.Secret)).Scan(&workspace, &thread)
+	}
+	if b.Action == "select-product" {
+		text, valid := aiOrderButtonTurn(s.Pipeline.Key, b.Button, workspace, thread, time.Now())
+		if !valid || !aiChannelCommerceEnabledFor(workspace) || !uuidPattern.MatchString(b.Key) {
+			log.Print("AI commerce rejected a website button")
+			fail(w, 403, "PRODUCT_BUTTON_DENIED")
+			return
+		}
+		b.Action, b.Text = "send", text
+	}
 	var raw []byte
 	e = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_website_visit($1::uuid,$2,$3,$4,$5,$6,$7,$8)", site, origin, b.Action, websiteHash(b.Secret), peerHash, b.Text, b.Key, b.Before).Scan(&raw)
 	if e != nil {
@@ -195,8 +214,55 @@ func (s *Service) HandleWebsiteChat(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
+	if b.Action == "read" && workspace != "" && aiChannelCommerceEnabledFor(workspace) {
+		s.addWebsiteProductCards(r, data, site, origin, websiteHash(b.Secret), workspace, thread)
+	}
 	if b.Action == "start" {
 		data["secret"] = b.Secret
 	}
 	write(w, 200, data)
+}
+
+func (s *Service) addWebsiteProductCards(r *http.Request, data map[string]any, site, origin, visitor, workspace, thread string) {
+	items, _ := data["items"].([]any)
+	sequences := make([]int64, 0, len(items))
+	for _, value := range items {
+		item, _ := value.(map[string]any)
+		if item["sender"] == "ai" {
+			if sequence, ok := item["sequence"].(float64); ok {
+				sequences = append(sequences, int64(sequence))
+			}
+		}
+	}
+	if len(sequences) == 0 {
+		return
+	}
+	var raw []byte
+	if s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_ai_website_cards($1::uuid,$2,$3,$4::bigint[])",
+		site, origin, visitor, sequences).Scan(&raw) != nil {
+		return
+	}
+	var snapshots map[string]json.RawMessage
+	if json.Unmarshal(raw, &snapshots) != nil {
+		return
+	}
+	var orders map[string]string
+	if s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_ai_website_checkout_orders($1::uuid,$2,$3,$4::bigint[])",
+		site, origin, visitor, sequences).Scan(&raw) == nil {
+		_ = json.Unmarshal(raw, &orders)
+	}
+	now := time.Now()
+	for _, value := range items {
+		item, _ := value.(map[string]any)
+		sequence, _ := item["sequence"].(float64)
+		key := strconv.FormatInt(int64(sequence), 10)
+		if order := orders[key]; order != "" {
+			if link := s.aiOrderCheckoutURL(r.Context(), workspace, thread, order); link != "" {
+				item["checkout_url"] = link
+			}
+		}
+		if cards := s.signAIProductCards(snapshots[key], workspace, thread, now); len(cards) > 0 {
+			item["product_cards"] = cards
+		}
+	}
 }
