@@ -29,3 +29,11 @@ test("batches hold at most 25 products and body omits empty optionals",()=>{
  const {products}=parseProducts(csvCells("product_id,name,sku,price_minor\nA,Shirt,A-1,100\n"));
  const body=importBody(products[0]);assert.equal("image_urls" in body,false);assert.equal("min_price_minor" in body,false);assert.equal("stock" in body.variants[0],false);
 });
+
+test("plan-format rows use SKU as a stable fallback and reject ambiguous inputs",()=>{
+ const {products,issues}=parseProducts(csvCells("name,sku,price,min_price,options,price_minor\nPanjabi,P-1,1200.05,900,size=M;color=Red,\nBag,B-1,20,,,2000\nCap,C-1,10,,size=M;size=L,\n"));
+ assert.deepEqual(issues,[{line:3,code:"PRICE_INVALID"},{line:4,code:"OPTIONS_INVALID"}]);
+ assert.equal(products[0].external_id,"P-1");
+ assert.equal(products[0].min_price_minor,90000);
+ assert.deepEqual(products[0].variants[0],{sku:"P-1",price_minor:120005,stock:null,options:{size:"M",color:"Red"}});
+});
