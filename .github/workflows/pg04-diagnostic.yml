@@ -97,7 +97,7 @@ jobs:
       - name: PG04 independent financial River + realm migration and durability
         working-directory: apps/web
         env:
-          PG04_SETTINGS_SUITES: runChannelPolicies
+          PG04_SETTINGS_SUITES: runBriofoldChannelExtensions,runBriofoldCommerce,runMemberChannelScopes,runBriofoldPhase9Browser
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
           PG05_BROWSER_TESTS: "true"
         run: node scripts/pg04-financial-smoke.mjs
