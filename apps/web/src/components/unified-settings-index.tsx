@@ -18,6 +18,7 @@ const hints:Record<string,{en:string;bn:string}>={
  channels:{en:"Facebook, Instagram, WhatsApp",bn:"ফেসবুক, ইনস্টাগ্রাম, হোয়াটসঅ্যাপ"},
  website:{en:"Chat widget for your website",bn:"আপনার ওয়েবসাইটের চ্যাট উইজেট"},
  "comment-automation":{en:"Auto-reply to post comments",bn:"পোস্টের কমেন্টে অটো-রিপ্লাই"},
+ "ai-selling":{en:"Let the AI take orders: numbers, delivery, COD, discounts",bn:"AI অর্ডার নেবে: নম্বর, ডেলিভারি, COD, ছাড়"},
  team:{en:"Invite people and set roles",bn:"মানুষ যোগ করুন ও ভূমিকা দিন"},
  "team/groups":{en:"Reusable permission sets",bn:"পুনর্ব্যবহারযোগ্য অনুমতির সেট"},
  "api-keys":{en:"Keys for your website or app",bn:"আপনার ওয়েবসাইট বা অ্যাপের জন্য কী"},
@@ -43,7 +44,8 @@ export function UnifiedSettingsIndex({locale,mode}:{locale:"en"|"bn";mode:Busine
    const items=group.items.filter(item=>enabledUnifiedService(mode,item.service)&&!hidden.includes(item.slug)&&
     (item.slug!=="activity"||mode!=="ai"||process.env.BRIOFOLD_ACTIVITY_UNIFIED_ENABLED==="true")&&
     (item.slug!=="integrations/courier"||process.env.BRIOFOLD_COURIER_SETTINGS_ENABLED==="true")&&
-    (item.slug!=="team/groups"||process.env.BRIOFOLD_TEAM_GROUPS_ENABLED==="true"));
+    (item.slug!=="team/groups"||process.env.BRIOFOLD_TEAM_GROUPS_ENABLED==="true")&&
+    (item.slug!=="ai-selling"||process.env.BRIOFOLD_AI_TOOLS_ENABLED==="true"));
    if(!items.length)return null;
    return <section className={styles.group} key={group.slug} aria-labelledby={"set-"+group.slug}>
     <h2 id={"set-"+group.slug}>{group.slug==="payment"&&mode==="ai"?(bn?"ডিভাইস":"Devices"):group[locale]}</h2>

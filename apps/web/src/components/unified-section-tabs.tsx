@@ -15,6 +15,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
   {en:"Scan & pack",bn:"স্ক্যান ও প্যাক",href:"/orders/scan",service:"fulfilment"},
   {en:"Delivery",bn:"ডেলিভারি",href:"/orders/delivery",service:"fulfilment"},
   {en:"Returns",bn:"রিটার্ন",href:"/orders/returns",service:"fulfilment"},
+  {en:"Payment review",bn:"পেমেন্ট যাচাই",href:"/orders/payment-review",service:"fulfilment"},
  ],
  payments:[
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},
@@ -42,15 +43,17 @@ const aiTabs:readonly Tab[]=[
  {en:"Channels",bn:"চ্যানেল",href:"/settings/channels",service:"ai"},
  {en:"Website chat",bn:"ওয়েবসাইট চ্যাট",href:"/settings/channels/website",service:"ai"},
  {en:"Comment automation",bn:"কমেন্ট অটোমেশন",href:"/settings/comment-automation",service:"ai"},
+ {en:"AI selling",bn:"AI দিয়ে বিক্রি",href:"/settings/ai-selling",service:"fulfilment"},
 ];
-const aiViews=["ai","knowledge","channels","website","comment-automation"];
+const aiViews=["ai","knowledge","channels","website","comment-automation","ai-selling"];
 export function UnifiedSectionTabs({root,mode,locale,view,requests=false}:{
  root:UnifiedRoot;mode:BusinessMode;locale:"bn"|"en";view:readonly string[];requests?:boolean;
 }){
  const inAi=root==="settings"&&aiViews.includes(view[0]??"")&&!(view[0]==="channels"&&view.length>1&&view[1]!=="website");
  const available=(inAi?aiTabs:tabs[root])?.filter(tab=>enabledUnifiedService(mode,tab.service)&&
    (tab.href!=="/orders/scan"||process.env.BRIOFOLD_COMMERCE_SCAN_ENABLED==="true")&&
-   (tab.href!=="/reports/orders"||process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED==="true"))??[];
+   (tab.href!=="/reports/orders"||process.env.BRIOFOLD_COMMERCE_REPORTS_ENABLED==="true")&&
+   ((tab.href!=="/orders/payment-review"&&tab.href!=="/settings/ai-selling")||process.env.BRIOFOLD_AI_TOOLS_ENABLED==="true"))??[];
  if(!available.length)return null;
  const raw="/"+root+(view.length?"/"+view.join("/"):"");
  const active=raw==="/settings/website"?"/settings/channels/website":raw==="/payments/links"&&requests?"/payments/links?view=requests":raw;

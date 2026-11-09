@@ -45,6 +45,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"channels",en:"Channels",bn:"চ্যানেল",section:"channels",service:"ai"},
   {slug:"website",en:"Website chat",bn:"ওয়েবসাইট চ্যাট",section:"website",service:"ai"},
   {slug:"comment-automation",en:"Comment automation",bn:"কমেন্ট অটোমেশন",section:"comments",service:"ai"},
+  {slug:"ai-selling",en:"AI selling",bn:"AI দিয়ে বিক্রি",section:"ai-agent",service:"fulfilment"},
  ]},
  {slug:"team",en:"Team",bn:"টিম",items:[
   {slug:"team",en:"Team management",bn:"টিম পরিচালনা",section:"team",service:"common"},
@@ -65,7 +66,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"member-channel-scopes"|"help-videos"|"channel-settings"|"courier-integrations"|"product-photos"};
+export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"member-channel-scopes"|"help-videos"|"channel-settings"|"courier-integrations"|"product-photos"|"ai-selling"|"ai-payment-review"};
 const financialRecordId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const financialDetailPrefixes={
  payments:"/payments/transactions",incoming:"/sms-data",gateways:"/settings/payment-methods",
@@ -165,7 +166,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
  const main:Record<Exclude<UnifiedRoot,"settings">,Record<string,UnifiedDestination>>={
   dashboard:{"":{section:"overview",service:defaultService}},
   inbox:{"":{section:"inbox",service:"ai",kind:"inbox"},comments:{section:"comments",service:"ai"},"saved-replies":{section:"saved-replies",service:"ai"},tickets:{section:"tickets",service:"ai"},"agent-desk":{section:"ai-agent",service:"ai"}},
-  orders:{"":{section:"orders",service:payments?"payments":"ai"},scan:{section:"orders",service:payments?"payments":"ai"},"to-chase":{section:"orders",service:payments?"payments":"ai"},delivery:{section:"shipping",service:defaultService},courier:{section:"shipping",service:defaultService},returns:{section:"returns",service:defaultService}},
+  orders:{"":{section:"orders",service:payments?"payments":"ai"},scan:{section:"orders",service:payments?"payments":"ai"},"to-chase":{section:"orders",service:payments?"payments":"ai"},delivery:{section:"shipping",service:defaultService},courier:{section:"shipping",service:defaultService},returns:{section:"returns",service:defaultService},"payment-review":{section:"orders",service:payments?"payments":"ai",kind:"ai-payment-review"}},
   catalog:{"":{section:"products",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:defaultService},coupons:{section:"coupons",service:defaultService}},
   payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},refunds:{section:"refunds",service:"payments"},reconciliation:{section:"reconciliation",service:"payments"}},
   "sms-data":{"":{section:"incoming",service:"payments"}},
@@ -182,6 +183,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   destination={section:setting.section,service:setting.service==="common"||setting.service==="fulfilment"?defaultService:setting.service};
   if(part==="business"&&mode==="ai")destination.kind="business-profile";
   if(part==="channels")destination.kind="channels";
+  if(part==="ai-selling"){if(mode==="commerce")return null;destination.kind="ai-selling";}
   if(part==="devices"&&mode==="ai")destination.kind="devices";
   if(part==="devices"&&mode==="both")destination.kind="mixed-devices";
  }else{
