@@ -63,6 +63,7 @@ export async function runSavedReplySequences({control,sessions,origin,browser,pr
   context=await browser.newContext();await context.addCookies([{name:'briofold-session',value:sessions.owner,url:origin},{name:'briofold-locale',value:'en',url:origin},{name:'briofold-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'}]);
   const page=await context.newPage();await page.goto(origin+'/inbox/saved-replies');
   await page.getByText('Fictional sequence',{exact:true}).waitFor();await page.getByRole('button',{name:'Edit',exact:true}).click();
+  await page.getByText('Multiple messages, shortcut and sharing',{exact:true}).click();
   await page.getByRole('textbox',{name:'Reply shortcut',exact:true}).fill('voice-help-updated');
   await page.getByRole('button',{name:'Save reply',exact:true}).click();await page.reload();await page.getByText(/voice-help-updated/).waitFor();
   const api=await context.request.post(origin+`/api/go/workspaces/${workspace}/inbox?environment=live`,{headers:{Origin:origin},data:{action:'send-saved-reply',thread_id:destination,body:{id:reply,revision:5,confirmed:true,operation_key:randomUUID()}}});
@@ -72,7 +73,7 @@ export async function runSavedReplySequences({control,sessions,origin,browser,pr
   for(const thread of [source,destination]){const response=await getMedia(thread);assert.equal(response.status(),200,await response.text());const file=await response.json();assert.equal(file.mime,'audio/ogg');assert.equal(createHash('sha256').update(Buffer.from(file.data,'base64')).digest('hex'),voiceSha,'forwarded voice bytes changed');}
   assert.ok(privateStorage.requests.some(x=>x.method==='GET'&&x.key===voiceKey),'voice did not pass through signed private TLS storage');
   const reads=privateStorage.requests.length;assert.notEqual((await getMedia(destination,'sandbox')).status(),200);assert.equal(privateStorage.requests.length,reads,'wrong realm fetched private voice');
-  await page.goto(origin+'/inbox?thread='+destination);await page.getByRole('button',{name:'Open attachment · Fictional voice.ogg',exact:true}).first().click();await page.locator('audio').first().waitFor();
+  await page.goto(origin+'/inbox?thread='+destination);await page.getByRole('button',{name:'Play',exact:true}).first().waitFor();await page.locator('audio').first().waitFor({state:'attached'});
   const audio=page.locator('audio').first();await audio.evaluate(async element=>{element.load();await element.play();});assert.ok(await audio.evaluate(element=>element.duration>1&&element.duration<2),'voice is not decodable by browser');await audio.evaluate(element=>element.pause());
   console.log('SAVED REPLY SEQUENCES SQL/Go/Next/browser PASS: private/team, archive, shortcut, media, voice, variables, ordered atomic queue, signed private voice bytes and native playback, retry and denial');
  }finally{await context?.close();await db.end({timeout:3});}

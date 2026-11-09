@@ -40,12 +40,12 @@ export async function runBriofoldChannelExtensions({control,sessions,origin,apiO
   await db`UPDATE briofold_website_visitors SET expires_at=now()-interval '1 second' WHERE site_id=${site} AND secret_hash=${createHash('sha256').update(other).digest('hex')}`;assert.equal((await publicCall({action:'read',secret:other})).status,403);
   context=await browser.newContext();await context.addCookies([{name:'briofold-session',value:sessions.owner,url:origin,httpOnly:true,sameSite:'Lax'},{name:'briofold-default-workspace',value:actor+':'+workspace,url:origin,httpOnly:true,sameSite:'Lax'},{name:'briofold-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const p=await context.newPage();p.setDefaultTimeout(30000);p.setDefaultNavigationTimeout(90000);
-  await p.goto(origin+'/settings/website');await p.getByLabel('Website origin',{exact:true}).waitFor();assert.equal(await p.getByLabel('Website origin',{exact:true}).inputValue(),shop);
-  await p.getByLabel('Website origin',{exact:true}).fill('https://replacement-shop.example');await p.getByRole('button',{name:'Save',exact:true}).click();await p.getByText('Settings saved.',{exact:true}).waitFor();await p.reload();assert.equal(await p.getByLabel('Website origin',{exact:true}).inputValue(),'https://replacement-shop.example');
+  await p.goto(origin+'/settings/website');await p.getByLabel('Your website address',{exact:true}).waitFor();assert.equal(await p.getByLabel('Your website address',{exact:true}).inputValue(),shop);
+  await p.getByLabel('Your website address',{exact:true}).fill('https://replacement-shop.example');await p.getByRole('button',{name:'Save',exact:true}).click();await p.getByText('Saved.',{exact:true}).waitFor();await p.reload();assert.equal(await p.getByLabel('Your website address',{exact:true}).inputValue(),'https://replacement-shop.example');
   const nestedWebsite=await p.goto(origin+'/settings/channels/website');
   assert.equal(nestedWebsite.status(),200,'canonical nested website Channel route did not resolve');
-  await p.getByLabel('Website origin',{exact:true}).waitFor();
-  assert.equal(await p.getByLabel('Website origin',{exact:true}).inputValue(),'https://replacement-shop.example',
+  await p.getByLabel('Your website address',{exact:true}).waitFor();
+  assert.equal(await p.getByLabel('Your website address',{exact:true}).inputValue(),'https://replacement-shop.example',
    'nested website Channel route lost the same persisted Store settings');
   await p.getByText('Voice calling is currently unavailable.',{exact:true}).waitFor();
   assert.equal((await publicCall({action:'read',secret},'https://replacement-shop.example')).status,403,'origin change retained visitor');

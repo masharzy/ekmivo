@@ -2,7 +2,7 @@
 import {RefIcon} from "../reference-ui";
 import {crmPageCsv} from "../../lib/crm-csv";
 import {CustomerDrawer,looksLikeId} from "./customer-drawer";
-import {stageText,STAGES,useCrm,type CRMList,type Profile} from "./use-crm";
+import {stageText,tempText,STAGES,useCrm,type CRMList,type Profile} from "./use-crm";
 
 type Props={workspaceId:string;actorId:string;bn:boolean;view:string;embedded?:boolean;financeEnabled:boolean;ordersEnabled?:boolean;environment:"live"|"sandbox";initial:CRMList|null};
 const LEAD_STAGES=["new","contacted","qualified","proposal"] as const;
@@ -22,10 +22,10 @@ export function CrmApp(p:Props){
  const exportCsv=()=>{if(!data?.can_export)return;const url=URL.createObjectURL(new Blob([crmPageCsv(data.items,data.members)],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");a.href=url;a.download="customers.csv";a.click();URL.revokeObjectURL(url);};
  const importFinance=async()=>{const r=await h.command("finance-import",{cursor:""});if(r)h.setMessage(t(`Imported ${r.imported??0} new profiles.${r.next_cursor?" Run Import again for more.":""}`,`নতুন ${r.imported??0}টি প্রোফাইল আনা হয়েছে।${r.next_cursor?" আরও আছে, আবার চালান।":""}`));};
  const name=(c:Profile)=>looksLikeId(c.name)?t("Unnamed customer","নামহীন গ্রাহক"):c.name;
- const filtered=Boolean(f.q||f.assignee||(!leads&&!due&&f.filter));
+ const filtered=Boolean(f.q||f.source||f.priority||f.assignee||(!leads&&!due&&f.filter));
  return <div className="ref-dashboard"><div className="ref-page" aria-busy={loading}>
   {!p.embedded&&<div className="top"><h1>{title}</h1><div className="acts">
-   {data?.can_export&&!leads&&<button type="button" className="ib" disabled={h.busy} onClick={exportCsv}><RefIcon name="download"/>{t("Export","এক্সপোর্ট")}</button>}
+   {data?.can_export&&<button type="button" className="ib" disabled={h.busy} onClick={exportCsv}><RefIcon name="download"/>{t("Export","এক্সপোর্ট")}</button>}
    {p.financeEnabled&&data?.can_contact&&p.view===""&&<button type="button" className="ib" disabled={h.busy||h.unconfirmed} onClick={()=>void importFinance()}>{t("Import payers","পেয়ার আনুন")}</button>}
    {data?.can_manage&&<button type="button" className="ib pri" disabled={h.busy||h.unconfirmed} onClick={()=>h.startNew(data.can_contact)}><RefIcon name="plus"/>{t("Add customer","গ্রাহক যোগ")}</button>}
   </div><p>{sub}</p></div>}
@@ -38,6 +38,8 @@ export function CrmApp(p:Props){
     {leads?<div className="seg">{LEAD_STAGES.map(s=><button key={s} type="button" className={f.filter===s?"on":""} onClick={()=>set({filter:s})}>{stageText(s,bn)}</button>)}</div>
      :!due&&p.view!=="interest"&&<select className="in" aria-label={t("Stage","ধাপ")} value={f.filter} onChange={e=>set({filter:e.target.value})}><option value="">{t("All stages","সব ধাপ")}</option>{STAGES.map(s=><option key={s} value={s}>{stageText(s,bn)}</option>)}</select>}
     {data?.can_manage&&<select className="in" aria-label={t("Assigned to","দায়িত্বে")} value={f.assignee} onChange={e=>set({assignee:e.target.value})}><option value="">{t("Anyone","যে কেউ")}</option><option value="unassigned">{t("Unassigned","কেউ না")}</option>{data.members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select>}
+    <select className="in" aria-label={t("Source filter","উৎস")} value={f.source} onChange={e=>set({source:e.target.value})}><option value="">{t("All sources","সব উৎস")}</option>{["thread","finance-customer","invoice","payment","order","api"].map(s=><option key={s} value={s}>{({thread:t("Inbox","ইনবক্স"),"finance-customer":t("Payer","পেয়ার"),invoice:t("Invoice","ইনভয়েস"),payment:t("Payment","পেমেন্ট"),order:t("Order","অর্ডার"),api:"API"} as Record<string,string>)[s]}</option>)}</select>
+    <select className="in" aria-label={t("Priority filter","গুরুত্ব")} value={f.priority} onChange={e=>set({priority:e.target.value})}><option value="">{t("All priorities","সব গুরুত্ব")}</option>{["hot","warm","cold"].map(s=><option key={s} value={s}>{tempText(s,bn)}</option>)}</select>
     <div className="sp"/><button type="button" className="ib i" aria-label={t("Refresh","রিফ্রেশ")} disabled={loading} onClick={()=>void h.refresh()}><RefIcon name="refresh"/></button>
    </div>
    {data&&rows.length>0&&<div className="tw" role="region" aria-label={title} tabIndex={0}><table><thead><tr><th>{t("Customer","গ্রাহক")}</th><th>{t("Stage","ধাপ")}</th>{oe&&<><th className="num">{t("Orders","অর্ডার")}</th><th className="num">{t("Total","মোট")}</th><th>{t("Last order","শেষ অর্ডার")}</th></>}<th>{t("Tags","ট্যাগ")}</th>{data.can_manage&&<th>{t("Assigned to","দায়িত্বে")}</th>}<th/></tr></thead><tbody>

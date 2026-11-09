@@ -8,7 +8,7 @@ import postgres from "postgres";
 // Synthetic records in the disposable CI *live-realm database*. Nothing here
 // claims to simulate a provider callback, connected phone, or real money.
 // This verifies that the real Next -> authenticated Go -> restricted finance
-// reader -> Next UI chain is unchanged between legacy and canonical routes.
+// reader -> canonical Next UI chain, with deleted legacy routes unavailable.
 export async function runBriofoldPhase9Browser({origin,browser,control,sessions,liveDatabase,sandboxDatabase,workspaceId}){
  const controlURL=new URL(control),financeURL=new URL(liveDatabase),sandboxURL=new URL(sandboxDatabase);
  for(const url of [controlURL,financeURL,sandboxURL]){
@@ -583,21 +583,15 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
    ["/sms-data",`/w/${workspaceId}/payments/incoming`,"234.56"],
    [`/sms-data/${transport.id}`,`/w/${workspaceId}/payments/incoming/${transport.id}`,"234.56"]
   ]){
-   let oldText="",newText="",oldRecord="",newRecord="";
-   for(const [path,record] of [[legacy,false],[canonical,true]]){
-    const response=await page.goto(origin+path);assert.equal(response.status(),200,`route ${path} did not render`);
-    if(path.includes("transactions/")||path.includes("/sms-data/")||path.includes("incoming/"))await page.locator(".pg-operation-detail").waitFor();
-    else await page.locator("table tbody tr").first().waitFor();
-    const content=await page.locator("main").innerText();
-    assert.ok(content.includes(expected),`${path} missing same financial record ${expected}`);
-    const data=path.includes("transactions/")||path.includes("/sms-data/")||path.includes("incoming/")
-     ?await page.locator(".pg-operation-detail").innerText()
-     :await page.locator("table tbody tr").first().innerText();
-    if(record){newText=content;newRecord=data;}else{oldText=content;oldRecord=data;}
-   }
-   assert.ok(oldText.includes(expected)&&newText.includes(expected),"legacy/canonical readers changed financial record semantics");
-   assert.equal(newRecord,oldRecord,`${canonical} changed authorized record facts vs ${legacy}`);
-   if(canonical==="/payments")assert.ok(newRecord.includes("234.56"),"UI verified amount disagrees with finance ledger");
+   assert.equal((await page.goto(origin+legacy)).status(),404,`deleted legacy route ${legacy} remains exposed`);
+   const response=await page.goto(origin+canonical);
+   assert.equal(response.status(),200,`route ${canonical} did not render`);
+   const detail=canonical.includes("transactions/")||canonical.includes("/sms-data/");
+   const record=detail?page.locator(".pg-operation-detail"):page.locator("table tbody tr").first();
+   await record.waitFor();
+   assert.ok((await page.locator("main").innerText()).includes(expected),`${canonical} missing financial record ${expected}`);
+   assert.ok((await record.innerText()).includes(expected),`${canonical} changed authorized record facts`);
+   if(canonical==="/payments")assert.ok((await record.innerText()).includes("234.56"),"UI verified amount disagrees with finance ledger");
   }
   await page.goto(origin+"/payments/links?view=requests");
   await page.getByRole("heading",{name:"One-time requests",exact:true}).waitFor();

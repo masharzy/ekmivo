@@ -131,7 +131,7 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
      assert.equal(response.status(),200);
      await page.getByText(reference,{exact:true}).first().waitFor();
      const row=page.locator("table tbody tr").filter({hasText:reference});
-     await row.getByRole("button",{name:locale==="bn"?"খুলুন":"Open"}).click();
+     await row.getByText(reference,{exact:true}).click();
      await page.getByRole("region",{name:locale==="bn"?"অর্ডারের টিম অ্যাসাইনমেন্ট":"Order team assignment"}).waitFor();
      assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"order assignment horizontal overflow");
@@ -169,11 +169,11 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   assert.equal((await report(owner,'live',store,'','',viewer)).total,0,'agent filter leaked rows');
   await page.goto(origin+"/orders/scan");
   await page.getByRole('heading',{name:'Scan & pack'}).waitFor();
-  await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
+  await page.getByRole('textbox',{name:'Search',exact:true}).fill(barcode);
   await page.getByRole('button',{name:'Search',exact:true}).click();
   await page.getByText(reference,{exact:true}).first().waitFor();
   assert.equal(await page.getByRole('button',{name:'Scan with camera'}).count(),1,'camera action missing');
-  await page.getByRole('textbox',{name:'Search / scan barcode'}).fill('NOT-THIS-BARCODE');
+  await page.getByRole('textbox',{name:'Search',exact:true}).fill('NOT-THIS-BARCODE');
   await Promise.all([
    page.waitForResponse(response=>response.url().includes('resource=scan')&&response.url().includes('q=NOT-THIS-BARCODE')),
    page.getByRole('button',{name:'Search',exact:true}).click(),
@@ -194,16 +194,17 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   ]);
   assert.equal(cameraSearch.status(),200);
   await page.waitForFunction(()=>globalThis.__briofoldScannerStopped===true);
-  assert.equal(await page.getByRole('textbox',{name:'Search / scan barcode'}).inputValue(),barcode);
+  assert.equal(await page.getByRole('textbox',{name:'Search',exact:true}).inputValue(),barcode);
   await page.getByRole('button',{name:'Scan with camera'}).waitFor();
   await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=async()=>{throw Error('permission denied');};});
   await page.getByRole('button',{name:'Scan with camera'}).click();
   await page.getByRole('alert').filter({hasText:'Camera permission or preview unavailable. Manual barcode search remains available.'}).waitFor();
-  await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
+  await page.getByRole('textbox',{name:'Search',exact:true}).fill(barcode);
   assert.equal((await page.goto(origin+'/catalog/products/sync')).status(),200);
-  const importView=page.locator('details').filter({has:page.getByText('Import / sync catalog',{exact:true})});
+  const importView=page.getByRole('dialog',{name:'Import / sync catalog',exact:true});
   await importView.waitFor();
   assert.equal(await importView.getAttribute('open'),'','catalog import deep link must open a real preview workflow');
+  await importView.getByLabel('Catalog file (up to 500 rows)',{exact:true}).waitFor();
   assert.equal((await page.goto(origin+'/orders/courier')).status(),200);
   await page.getByRole('heading',{name:'Delivery'}).waitFor();
   assert.equal((await page.goto(origin+'/reports/orders')).status(),200);
@@ -235,7 +236,7 @@ export async function runBriofoldOrderAssignment({origin,browser,control,session
   await db`INSERT INTO commerce_lines(workspace_id,environment,order_id,variant_id,name,sku,options,unit_minor,quantity)
    VALUES(${store},'live',${bulkOrder},${variant.id},'Fictional packing item',${'CI-SKU-'+barcode},${db.json({})},0,1)`;
   await page.goto(origin+"/orders/scan");
-  await page.getByRole('textbox',{name:'Search / scan barcode'}).fill(barcode);
+  await page.getByRole('textbox',{name:'Search',exact:true}).fill(barcode);
   await page.getByRole('button',{name:'Search',exact:true}).click();
   await page.getByRole('checkbox',{name:'Select '+bulkReference}).check();
   await page.getByRole('button',{name:'cancelled',exact:true}).click();
