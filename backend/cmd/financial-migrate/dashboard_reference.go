@@ -101,6 +101,7 @@ var dashboardControlMigrations = []string{
 	"0235_briofold_customer_profile.sql",
 	"0237_briofold_ai_order_notices.sql",
 	"0238_briofold_ai_review_decide.sql",
+	"0239_briofold_customer_products.sql",
 }
 
 // Explicit release mode in the existing coordinator; never runs at API startup.

@@ -264,3 +264,15 @@ Owner asked for code-level completion; end-to-end testing is done later by the o
 Review `docs/reviews/ai-commerce-phase2-6-review.md` (4 blockers, 8 high, 10 medium, 7 low) fixed in place in 0233-0235 (never applied to production) plus realm migration 0236.
 Verified on Neon test branch `ai-commerce-fixes-test-20261109` (`br-damp-mud-b3c38es3`, created after deleting archived `repeat-payments-guard-20261013` with owner approval).
 Open: H3 reverse race needs a realm lock; orders not via `commerce_write`; all UI; Go compile only in CI. Test guide rewritten for Gemini run.
+
+## AI commerce handoff (2026-11-09, branch agents/ai-commerce-phase5, PR #165)
+Done and verified locally (real Postgres + Go + Next + browser): tools and payment verification with race tests, exactly-once owner notices (0237), owner settings + payment review API/UI (0238), customer drawer summary/risk/products bought/order deep link (0239). Fixed a live bug: the /api/go proxy never forwarded `view`/`ids`, so the CRM Orders tab crashed and per-customer stats were never sent.
+
+How to verify: `/tmp/pgl/reinit.sh` (fresh local PG16), then `SUITES=runBriofoldAiCommerce,runBriofoldAiSellingBrowser /tmp/pgl/runci.sh`; expect "AI SELLING SETTINGS/REVIEW ... PASS". In CI the same suites run inside the PG04 settings acceptance (phase9 fixture). Web needs `node scripts/sync-tokens.mjs` once (tokens.css is generated).
+
+Remaining, in this order:
+1. Admin model setting with one-click rollback (admin design system rules in apps/web/AGENTS.md; inside the existing "AI Credits" admin page, no new sidebar item).
+2. Channel features (largest): Messenger generic template / WhatsApp interactive list / website cards with ≤3 buttons; signed button payloads (HMAC, reuse the broadcast offer signing) handled as a customer turn; image product search (product-photos exists); payment links in Both mode via payment_intents; voice/video limits; switch the inbox product picker to commerce_products.
+3. Meta Graph customer name fetch + cache; owner merge action for merge_suggestions (nothing auto-merges).
+4. Seed product images; run migrations 0233–0239 twice on a Neon test branch (ask the owner before deleting/creating branches); 1,000-customer profile p95 < 300 ms.
+5. Evals with Gemini via OpenRouter (key needed from the owner): `evals/bangla-commerce/run-evals.mjs`.

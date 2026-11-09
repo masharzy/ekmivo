@@ -65,8 +65,14 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				w.Header().Set("Content-Disposition", `attachment; filename="customer.json"`)
 			}
-		} else if view := r.URL.Query().Get("view"); view == "orders" || view == "stats" {
-			if view == "orders" {
+		} else if view := r.URL.Query().Get("view"); view == "orders" || view == "stats" || view == "profile" {
+			if view == "profile" {
+				if cid == "" {
+					fail(w, 422, "CUSTOMER_REQUIRED")
+					return
+				}
+				err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customer_profile($1::uuid,$2,$3::uuid,$4::uuid)||jsonb_build_object('products',briofold_customer_products($1::uuid,$2,$3::uuid,$4::uuid))", ws, realm, actor.UserID, cid).Scan(&raw)
+			} else if view == "orders" {
 				if cid == "" {
 					fail(w, 422, "CUSTOMER_REQUIRED")
 					return
