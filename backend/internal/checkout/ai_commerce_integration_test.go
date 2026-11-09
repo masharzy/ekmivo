@@ -95,6 +95,25 @@ type aiIT struct {
 
 func (it *aiIT) exec(db *sql.DB, q string, args ...any) {
 	it.t.Helper()
+	if db == it.live && it.ws != "" {
+		// Live realm plan-limit triggers need the fresh plan snapshot the API sets per transaction.
+		snapshot, _ := json.Marshal(map[string]any{"workspace_id": it.ws, "fetched_at": time.Now().UTC().Format(time.RFC3339Nano), "platform_billing": true})
+		tx, err := db.BeginTx(it.ctx, nil)
+		if err == nil {
+			if _, err = tx.ExecContext(it.ctx, "SELECT set_config('ekmivo.payment_plan',$1,true)", string(snapshot)); err == nil {
+				if _, err = tx.ExecContext(it.ctx, q, args...); err == nil {
+					err = tx.Commit()
+				}
+			}
+			if err != nil {
+				_ = tx.Rollback()
+			}
+		}
+		if err != nil {
+			it.t.Fatalf("%s: %v", q, err)
+		}
+		return
+	}
 	if _, err := db.ExecContext(it.ctx, q, args...); err != nil {
 		it.t.Fatalf("%s: %v", q, err)
 	}
@@ -163,6 +182,12 @@ func TestAICommerceIntegration(t *testing.T) {
 	it.user = it.one(it.admin, "INSERT INTO app_users(email,display_name,password_hash) VALUES($1,'AI IT owner','invalid-fixture') RETURNING id::text", "ai-it-"+tag+"@example.invalid")
 	it.ws = it.one(it.admin, "INSERT INTO workspaces(name,service_mode,created_by) VALUES('AI IT shop','both',$1::uuid) RETURNING id::text", it.user)
 	it.exec(it.admin, "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1::uuid,$2::uuid,'owner')", it.ws, it.user)
+	// Unpublished, loopback-only plan version (as in the Phase9 browser fixture) so payments team-member gates pass.
+	planID := "ci_ai_it_" + strings.ReplaceAll(newUUID(), "-", "")[:12]
+	terms := `{"name":"Unpublished AI IT plan","kind":"free","amount_minor":0,"period_days":30,"grace_days":3,"free_days":30,"payment_limit":null,"quota_period":"billing","active_checkout_limit":100,"create_per_minute":120,"features":{"invoices":true,"payment_links":true,"reports":true,"exports":true},"limits":{"api_keys":null,"team_members":null,"devices":null,"payment_methods":null}}`
+	it.exec(it.admin, "INSERT INTO pg13_plans(id,name,amount_minor,period_days,grace_days,enabled) VALUES($1,'Unpublished AI IT plan',0,30,3,false)", planID)
+	version := it.one(it.admin, "INSERT INTO payment_plan_versions(plan_id,version,terms,created_by) VALUES($1,1,payment_plan_validate($2::jsonb),$3::uuid) RETURNING id::text", planID, terms, it.user)
+	it.exec(it.admin, "INSERT INTO pg13_subscriptions(workspace_id,plan_id,plan_version_id,paid_until,grace_until) VALUES($1::uuid,$2,$3::uuid,now()+interval '30 days',now()+interval '33 days')", it.ws, planID, version)
 	it.exec(it.admin, "UPDATE app_users SET email_verified_at=now()-interval '1 minute' WHERE id=$1::uuid", it.user)
 	model := it.one(it.admin, "SELECT model FROM briofold_ai_tariff_catalog ORDER BY model LIMIT 1")
 	write := func(kind string, body map[string]any) {
