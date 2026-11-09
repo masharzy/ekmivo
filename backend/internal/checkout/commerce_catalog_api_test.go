@@ -2,7 +2,12 @@ package checkout
 
 import (
 	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func catalogBody(t *testing.T, raw string) map[string]any {
@@ -49,5 +54,29 @@ func TestCatalogDerivedIDIsStable(t *testing.T) {
 	c := catalogDerivedID("11111111-1111-1111-1111-111111111111", "img:1")
 	if a != b || a == c || !uuidPattern.MatchString(a) {
 		t.Fatalf("unstable ids %s %s %s", a, b, c)
+	}
+}
+
+func TestProductAPIIsOffUnlessEnabled(t *testing.T) {
+	t.Setenv("BRIOFOLD_PRODUCT_API_ENABLED", "false")
+	for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete} {
+		recorder := httptest.NewRecorder()
+		(&Service{}).HandleProductAPI(recorder, httptest.NewRequest(method, "/v1/products?environment=live", nil))
+		if recorder.Code != 404 {
+			t.Fatalf("%s answered %d while the API is disabled", method, recorder.Code)
+		}
+	}
+}
+
+func TestCatalogRowCodeNeverLeaksDatabaseText(t *testing.T) {
+	cases := map[string]string{"22023": "INVALID_ROW", "23505": "DUPLICATE_ROW", "42501": "NOT_ALLOWED", "XX000": "ROW_FAILED"}
+	for code, want := range cases {
+		err := &pgconn.PgError{Code: code, Message: "relation commerce_products secret detail"}
+		if got := catalogRowCode(err); got != want {
+			t.Fatalf("%s mapped to %s, want %s", code, got, want)
+		}
+	}
+	if catalogRowCode(errors.New("connection refused")) != "ROW_FAILED" {
+		t.Fatal("plain errors must map to the generic code")
 	}
 }

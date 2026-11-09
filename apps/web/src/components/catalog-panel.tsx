@@ -116,7 +116,7 @@ export function CatalogPanel({workspaceId,environment,bn,canManage,wooSyncEnable
      <input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy||draft.images.length>=10} onChange={e=>{void upload(e.target.files);e.target.value="";}}/>
      <ol style={{display:"flex",gap:10,flexWrap:"wrap",listStyle:"none",padding:0,margin:0}}>{draft.images.map((id,i)=><li key={id} style={{display:"grid",gap:4}}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      {thumbs[id]?<img src={thumbs[id]} alt={t(`Image ${i+1}`,`ছবি ${i+1}`)} width={72} height={72} style={{objectFit:"cover"}}/>:<button type="button" onClick={()=>void thumb(id)}>{t("Show","দেখুন")}</button>}
+      {thumbs[id]?<img src={thumbs[id]} alt={t(`Image ${i+1}`,`ছবি ${i+1}`)} width={72} height={72} style={{objectFit:"cover",width:72,height:72}}/>:<button type="button" onClick={()=>void thumb(id)}>{t("Show","দেখুন")}</button>}
       <span style={{display:"flex",gap:4}}><button type="button" aria-label={t("Move earlier","আগে আনুন")} disabled={i===0} onClick={()=>move(i,-1)}>←</button><button type="button" aria-label={t("Move later","পরে নিন")} disabled={i===draft.images.length-1} onClick={()=>move(i,1)}>→</button><button type="button" aria-label={t("Remove image","ছবি সরান")} onClick={()=>setDraft({...draft,images:draft.images.filter(x=>x!==id)})}>×</button></span>
      </li>)}</ol></fieldset>
     <fieldset style={grid}><legend>{t("Variants","ধরন")}</legend>
