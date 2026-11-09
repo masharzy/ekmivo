@@ -378,7 +378,14 @@ func (s *Service) runStudioJob(ctx context.Context) {
 		reason = "AI_CONTEXT_TOO_LARGE"
 	} else {
 		run, cancel := context.WithTimeout(ctx, 75*time.Second)
-		result, runErr := s.studioEngine().Run(run, aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: s.selectedAIModel(job.Context.Config.Model), Messages: messages})
+		request := aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: s.selectedAIModel(job.Context.Config.Model), Messages: messages}
+		var result aicredits.Result
+		var runErr error
+		if aiToolsEnabled() {
+			result, runErr = s.runAIToolLoop(run, request, job.ID, job.Lease)
+		} else {
+			result, runErr = s.studioEngine().Run(run, request)
+		}
 		cancel()
 		if runErr != nil {
 			reason = "AI_REQUEST_UNKNOWN"

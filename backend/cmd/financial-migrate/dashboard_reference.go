@@ -96,6 +96,7 @@ var dashboardControlMigrations = []string{
 	"0230_briofold_woo_sync.sql",
 	"0231_briofold_catalog_key_actor.sql",
 	"0232_briofold_catalog_search_speed.sql",
+	"0233_briofold_ai_tools.sql",
 }
 
 // Explicit release mode in the existing coordinator; never runs at API startup.
