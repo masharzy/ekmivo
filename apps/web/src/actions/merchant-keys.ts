@@ -13,7 +13,7 @@ export type KeyActionState={
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const SCOPES=new Set([
  "payments:read","payments:write","customers:read","customers:write",
- "invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage","orders:read","orders:write"
+ "invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage","orders:read","orders:write","products:read","products:write"
 ]);
 type Operation="create"|"rotate"|"revoke";
 function error(bn:boolean,code:"bad"|"denied"|"reauth"|"limit"|"missing"|"offline"|"plan"|"planLimit"):KeyActionState{

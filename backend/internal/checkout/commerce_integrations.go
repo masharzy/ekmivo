@@ -132,6 +132,10 @@ func (s *Service) commerceIntegration(w http.ResponseWriter, r *http.Request, ws
 		s.commerceWooPreview(w, r, ws, realm, actor, key, b, cred)
 		return
 	}
+	if action == "woocommerce-import" {
+		s.commerceWooImport(w, r, ws, realm, actor, key, b, cred)
+		return
+	}
 	if realm != "live" {
 		fail(w, 422, "COURIER_LIVE_ONLY")
 		return

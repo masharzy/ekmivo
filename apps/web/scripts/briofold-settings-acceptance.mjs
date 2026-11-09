@@ -140,7 +140,12 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   // Collect independent failures so one UI assertion does not hide all later
   // feature evidence. The final job remains red if any suite fails.
   const failures=[];
-  const check=async(name,run)=>{console.log("BRIOFOLD INDEPENDENT SUITE START",name);try{await run();console.log("BRIOFOLD INDEPENDENT SUITE DONE",name);}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
+  // A focused run still provisions a fresh isolated database and app.
+  const requested=process.env.PG04_SETTINGS_SUITES?.split(",").map(name=>name.trim()).filter(Boolean)??[];
+  const known=new Set(["runBriofoldSettingsBrowser","runWalletBrowser","runSetupChecklist","runBriofoldOnboardingBrowser","runBriofoldInboxAccess","runChannelPolicies","runBriofoldAiChannel","runBriofoldAiStudioAcceptance","runBriofoldInboxDrafts","runBriofoldInboxWorkflow","runSavedReplySequences","runFeedbackAcceptance","runTeamGroups","runInterestAcceptance","runHelpVideos","runBriofoldChannelExtensions","runBriofoldCustomers","runBriofoldCRMParity","runLinkedOrderConversion","runBriofoldResponseReport","runPathaoControlBooking","runWooWebhookSources","runCourierSettings","runProductPhotos","runBriofoldCommerce","runBriofoldOrderAssignment","runMemberChannelScopes","runSignedBroadcastOffers","runBroadcastDispatch","runBriofoldGrowthOperations","runBriofoldPhase9Browser","runBriofoldKeyLifecycle"]);
+  if(requested.some(name=>!known.has(name)))throw Error("Unknown PG04 settings suite: "+requested.filter(name=>!known.has(name)).join(", "));
+  const executed=new Set();
+  const check=async(name,run)=>{if(requested.length&&!requested.includes(name))return;executed.add(name);console.log("BRIOFOLD INDEPENDENT SUITE START",name);try{await run();console.log("BRIOFOLD INDEPENDENT SUITE DONE",name);}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
   await check("runBriofoldSettingsBrowser",async()=>{await runBriofoldSettingsBrowser({origin,browser,control,sessions});});
   await check("runWalletBrowser",async()=>{await runWalletBrowser({control,sessions,origin,browser});});
   await check("runSetupChecklist",async()=>{await runSetupChecklist({origin,browser,control,sessions});});
@@ -177,6 +182,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runBriofoldGrowthOperations",async()=>{await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});});
   if(phase9Fixture)await check("runBriofoldPhase9Browser",async()=>{await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});});
   if(phase9Fixture)await check("runBriofoldKeyLifecycle",async()=>{await runBriofoldKeyLifecycle({origin,browser,control,sessions,...phase9Fixture});});
+  if(requested.some(name=>!executed.has(name)))throw Error("Requested PG04 suite was unavailable in this fixture");
   if(failures.length)throw new AggregateError(failures.map(x=>x.error),failures.map(x=>x.name+": "+x.error.message).join("\n"));
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}
  finally{if(browser)await browser.close();if(server)server.kill("SIGTERM");api.kill("SIGTERM");await privateStorage.close();}

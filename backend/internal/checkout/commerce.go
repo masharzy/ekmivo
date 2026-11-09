@@ -143,10 +143,13 @@ func (s *Service) HandleCommerce(w http.ResponseWriter, r *http.Request) {
 		case "photo-search", "photo-evaluate", "photo-index":
 			s.commercePhotoAction(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Action, cmd.Body)
 			return
+		case "catalog-product", "catalog-import":
+			s.commerceCatalogAction(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Action, cmd.Body)
+			return
 		case "media-upload":
 			s.commerceMediaUpload(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Body)
 			return
-		case "integration-save", "integration-disable", "courier-book", "courier-status", "woocommerce-preview", "pathao-locations", "woo-hook-create", "woo-hook-disable":
+		case "integration-save", "integration-disable", "courier-book", "courier-status", "woocommerce-preview", "woocommerce-import", "pathao-locations", "woo-hook-create", "woo-hook-disable":
 			s.commerceIntegration(w, r, ws, realm, actor.UserID, cmd.Key, cmd.Action, cmd.Body)
 			return
 		default:

@@ -526,7 +526,7 @@ try{
    same(expiredView.status,200,"PG05 expired checkout unavailable instead of truthful expired state");
    same((await expiredView.json()).state,"expired","PG05 expired checkout offered payment");
    same((await fetch(origin+"/v1/public/checkout/"+expiredToken+"/lock",{method:"POST",headers:{Origin:origin,"Content-Type":"application/json"},body:JSON.stringify({payer_number:"01912345678",method:"rocket"})})).status,409,"PG05 expired checkout created payer attempt");
-   if(process.env.PG05_BROWSER_TESTS==="true"){
+   if(process.env.PG05_BROWSER_TESTS==="true"&&!process.env.PG04_SETTINGS_SUITES?.trim()){
     const {runPG05Browser}=await import("./pg05-browser-evidence.mjs");
     await runPG05Browser({control,goOrigin:origin,tenant,sessions,token:httpToken,expiredToken});
    }

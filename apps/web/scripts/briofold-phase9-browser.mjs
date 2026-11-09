@@ -595,7 +595,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   }
   await page.goto(origin+"/payments/links?view=requests");
   await page.getByRole("heading",{name:"One-time requests",exact:true}).waitFor();
-  assert.ok(await page.getByRole("link",{name:"One-time requests"}).count(),"canonical links do not expose one-time requests");
+  assert.ok(await page.getByRole("button",{name:"One-time requests",exact:true}).count(),"canonical links do not expose one-time requests");
   assert.ok(await page.getByRole("region",{name:"One-time requests"}).count(),"one-time source table missing behind reusable-link entitlement");
   // The same mounted UI must not reveal a provider HMAC, raw payer number, or
   // cached cross-tenant session when opened by a viewer.

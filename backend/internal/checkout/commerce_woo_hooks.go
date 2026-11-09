@@ -198,6 +198,16 @@ func (s *Service) HandleWooWebhook(w http.ResponseWriter, r *http.Request) {
 		inboxWorkFailure(w, err)
 		return
 	}
+	if wooSyncEnabled() {
+		var received struct {
+			ID string `json:"id"`
+		}
+		if json.Unmarshal(raw, &received) == nil && uuidPattern.MatchString(received.ID) {
+			// Applied exactly once: the claim in SQL refuses a finished notice or a held lease,
+			// and a redelivered notice retries an unfinished one.
+			go s.wooAutoApply(received.ID, cred)
+		}
+	}
 	write(w, 200, json.RawMessage(raw))
 }
 
