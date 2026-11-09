@@ -104,9 +104,9 @@ func (s *Service) lookupAIReceipt(ctx context.Context, c aiClaim) (*aiReceipt, e
 }
 
 // RunAIPaymentVerify checks pending claims every minute (the SQL resolver moves a claim to the owner
-// review queue after 15 minutes without a matching receipt) and expires stale AI drafts.
+// review queue after 15 minutes without a matching receipt), expires stale AI drafts and sends owner notices.
 func (s *Service) RunAIPaymentVerify(ctx context.Context) {
-	if !aiPaymentVerifyEnabled() || s.Pipeline == nil {
+	if (!aiPaymentVerifyEnabled() && !aiToolsEnabled()) || s.Pipeline == nil {
 		return
 	}
 	t := time.NewTicker(time.Minute)
@@ -116,7 +116,13 @@ func (s *Service) RunAIPaymentVerify(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			s.verifyAIClaimsOnce(ctx)
+			if aiPaymentVerifyEnabled() {
+				s.verifyAIClaimsOnce(ctx)
+			} else {
+				var n int
+				_ = s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_ai_expire_drafts()").Scan(&n)
+			}
+			s.processAINotices(ctx, 20)
 		}
 	}
 }

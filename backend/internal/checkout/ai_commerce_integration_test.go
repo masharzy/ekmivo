@@ -20,6 +20,7 @@ import (
 	"github.com/masharzy/briofold/backend/internal/authz"
 	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/receiptnotice"
 )
 
 // End-to-end AI commerce test on the isolated CI databases: real migrations, real runtime role, real metering,
@@ -156,6 +157,7 @@ func TestAICommerceIntegration(t *testing.T) {
 	it.user = it.one(it.admin, "INSERT INTO app_users(email,display_name,password_hash) VALUES($1,'AI IT owner','invalid-fixture') RETURNING id::text", "ai-it-"+tag+"@example.invalid")
 	it.ws = it.one(it.admin, "INSERT INTO workspaces(name,service_mode,created_by) VALUES('AI IT shop','both',$1::uuid) RETURNING id::text", it.user)
 	it.exec(it.admin, "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1::uuid,$2::uuid,'owner')", it.ws, it.user)
+	it.exec(it.admin, "UPDATE app_users SET email_verified_at=now()-interval '1 minute' WHERE id=$1::uuid", it.user)
 	model := it.one(it.admin, "SELECT model FROM briofold_ai_tariff_catalog ORDER BY model LIMIT 1")
 	write := func(kind string, body map[string]any) {
 		raw, _ := json.Marshal(body)
@@ -250,13 +252,13 @@ func TestAICommerceIntegration(t *testing.T) {
 		t.Fatalf("raw TrxID or phone stored in ai_tool_calls: %s rows", n)
 	}
 	digest := deviceevidence.Identity(payerKey, "receipt|bkash|ITTRX00001")
-	if it.one(it.admin, "SELECT state FROM commerce_payment_claims WHERE transaction_digest=$1", digest) != "pending" {
+	if it.one(it.admin, "SELECT state FROM commerce_payment_claims WHERE transaction_digest=$1 AND workspace_id=$2::uuid", digest, it.ws) != "pending" {
 		t.Fatal("claim not pending with the upper-cased digest")
 	}
 
 	// SMS arrives late: first verifier pass retries, the second (after the SMS) verifies.
 	it.svc.verifyAIClaimsOnce(ctx)
-	if it.one(it.admin, "SELECT state FROM commerce_payment_claims WHERE transaction_digest=$1", digest) != "pending" {
+	if it.one(it.admin, "SELECT state FROM commerce_payment_claims WHERE transaction_digest=$1 AND workspace_id=$2::uuid", digest, it.ws) != "pending" {
 		t.Fatal("claim resolved without an SMS")
 	}
 	event := it.one(it.live, "INSERT INTO financial_inbound_events(workspace_id,environment,source_kind,source_event_id,event_digest,original_source_at,encrypted_evidence) VALUES($1::uuid,'live','device_sms',$2,$3,now(),$4) RETURNING id::text",
@@ -264,17 +266,55 @@ func TestAICommerceIntegration(t *testing.T) {
 	it.exec(it.live, `INSERT INTO financial_receipt_observations(workspace_id,environment,inbound_event_id,receiving_account_id,provider_reference_hmac,payer_hmac,amount_minor,method,direction,original_transaction_at,time_precision,parser_version)
 		VALUES($1::uuid,'live',$2::uuid,$3::uuid,$4,$5,$6::bigint,'bkash','incoming',now(),'second',1)`, it.ws, event, account, digest, deviceevidence.Identity(payerKey, "+8801711111111"), total)
 	// The realm matcher has not decided yet: still no verification (closes the AI/checkout double-spend race).
-	it.exec(it.admin, "UPDATE commerce_payment_claims SET next_try_at=now() WHERE transaction_digest=$1", digest)
+	it.exec(it.admin, "UPDATE commerce_payment_claims SET next_try_at=now() WHERE transaction_digest=$1 AND workspace_id=$2::uuid", digest, it.ws)
 	it.svc.verifyAIClaimsOnce(ctx)
-	if it.one(it.admin, "SELECT state FROM commerce_payment_claims WHERE transaction_digest=$1", digest) != "pending" {
+	if it.one(it.admin, "SELECT state FROM commerce_payment_claims WHERE transaction_digest=$1 AND workspace_id=$2::uuid", digest, it.ws) != "pending" {
 		t.Fatal("claim verified before the checkout matcher decided")
 	}
-	it.exec(it.live, "INSERT INTO pg07_receipt_results(workspace_id,environment,observation_id,status,reason,processed_at) SELECT workspace_id,environment,id,'unmatched','no_attempt',now() FROM financial_receipt_observations WHERE provider_reference_hmac=$1", digest)
-	it.exec(it.admin, "UPDATE commerce_payment_claims SET next_try_at=now() WHERE transaction_digest=$1", digest)
+	it.exec(it.live, "INSERT INTO pg07_receipt_results(workspace_id,environment,observation_id,status,reason,processed_at) SELECT workspace_id,environment,id,'unmatched','no_attempt',now() FROM financial_receipt_observations WHERE provider_reference_hmac=$1 AND workspace_id=$2::uuid", digest, it.ws)
+	it.exec(it.admin, "UPDATE commerce_payment_claims SET next_try_at=now() WHERE transaction_digest=$1 AND workspace_id=$2::uuid", digest, it.ws)
 	it.svc.verifyAIClaimsOnce(ctx)
 	if s := it.one(it.admin, "SELECT payment_state||'/'||status FROM commerce_orders WHERE source_id=$1::uuid AND source='ai'", thread); s != "verified/confirmed" {
-		t.Fatalf("payment not verified: %s claim=%s", s, it.one(it.admin, "SELECT state||'/'||reason FROM commerce_payment_claims WHERE transaction_digest=$1", digest))
+		t.Fatalf("payment not verified: %s claim=%s", s, it.one(it.admin, "SELECT state||'/'||reason FROM commerce_payment_claims WHERE transaction_digest=$1 AND workspace_id=$2::uuid", digest, it.ws))
 	}
+
+	// Owner notice: exactly one 'paid' notice + badge event, one email to the verified owner, nothing on a second pass.
+	var mails []receiptnotice.Message
+	aiSendEmail = func(_ context.Context, _ *Service, m receiptnotice.Message) error {
+		mails = append(mails, m)
+		return nil
+	}
+	defer func() {
+		aiSendEmail = func(context.Context, *Service, receiptnotice.Message) error { return errAINoticeUnconfigured }
+	}()
+	order := it.one(it.admin, "SELECT id::text FROM commerce_orders WHERE source_id=$1::uuid AND source='ai'", thread)
+	if n := it.one(it.admin, "SELECT count(*)::text FROM commerce_ai_notices WHERE order_id=$1::uuid", order); n != "1" {
+		t.Fatalf("want 1 notice, got %s", n)
+	}
+	if n := it.one(it.admin, "SELECT count(*)::text FROM commerce_events WHERE action='order-state' AND detail->>'order_id'=$1 AND detail->>'payment'='paid'", order); n != "1" {
+		t.Fatalf("want 1 badge event, got %s", n)
+	}
+	it.svc.processAINotices(ctx, 10)
+	it.svc.processAINotices(ctx, 10)
+	if len(mails) != 1 || !strings.HasSuffix(mails[0].Recipient.Email, "@example.invalid") || !strings.Contains(mails[0].Subject, "Payment verified") ||
+		strings.Contains(mails[0].Text, "01711111111") || it.one(it.admin, "SELECT state||'/'||email_state||'/'||push_state FROM commerce_ai_notices WHERE order_id=$1::uuid", order) != "sent/sent/skipped" {
+		t.Fatalf("notice delivery: mails=%d state=%s", len(mails), it.one(it.admin, "SELECT state||'/'||email_state||'/'||push_state FROM commerce_ai_notices WHERE order_id=$1::uuid", order))
+	}
+
+	// COD and review notices fire once per kind, repeated state writes do not duplicate them.
+	it.exec(it.admin, "UPDATE commerce_orders SET payment_state='cod' WHERE id=$1::uuid", order)
+	it.exec(it.admin, "UPDATE commerce_orders SET payment_state='verified' WHERE id=$1::uuid", order)
+	it.exec(it.admin, "UPDATE commerce_orders SET payment_state='cod' WHERE id=$1::uuid", order)
+	it.exec(it.admin, "UPDATE commerce_payment_claims SET state='review' WHERE order_id=$1::uuid", order)
+	it.exec(it.admin, "UPDATE commerce_payment_claims SET state='review' WHERE order_id=$1::uuid", order)
+	if k := it.one(it.admin, "SELECT string_agg(kind,',' ORDER BY kind) FROM commerce_ai_notices WHERE order_id=$1::uuid", order); k != "cod,paid,review" {
+		t.Fatalf("notice kinds: %s", k)
+	}
+	if n := it.one(it.admin, "SELECT count(*)::text FROM commerce_events WHERE action='order-state' AND detail->>'order_id'=$1 AND detail->>'source'='ai'", order); n != "3" {
+		t.Fatalf("want 3 badge events, got %s", n)
+	}
+	it.exec(it.admin, "UPDATE commerce_payment_claims SET state='verified' WHERE order_id=$1::uuid", order)
+	it.exec(it.admin, "UPDATE commerce_orders SET payment_state='verified' WHERE id=$1::uuid", order)
 
 	// Turn 6: handover. The customer receives the reply first, then the thread is handed to a person.
 	_, state, reason, reply = it.say("psid-a", "manager er sathe kotha bolbo", `{"tool":"handover_to_human","args":{"reason":"asked for a person"}}`)
@@ -353,7 +393,7 @@ func TestAICommerceIntegration(t *testing.T) {
 			accepted++
 		}
 	}
-	if accepted != 1 || it.one(it.admin, "SELECT count(*)::text FROM commerce_payment_claims WHERE transaction_digest=$1", same) != "1" {
+	if accepted != 1 || it.one(it.admin, "SELECT count(*)::text FROM commerce_payment_claims WHERE transaction_digest=$1 AND workspace_id=$2::uuid", same, it.ws) != "1" {
 		t.Fatalf("same-TrxID race: accepted=%d results=%v", accepted, results)
 	}
 	// A retried step replays its stored result and never acts twice.

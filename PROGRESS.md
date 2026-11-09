@@ -254,7 +254,8 @@ Owner asked for code-level completion; end-to-end testing is done later by the o
 - Phase 4: migration 0234 (payment_state, claims, settings, order tools, resolve/expire/review functions), `ai_payment_verify.go`. Scenario tested on the test branch (rolled back).
 - Phase 5: migration 0235 (customer profile, name sync). Tested on the test branch (rolled back).
 - Phase 6: eval scripts + runner (not run). Readiness: flags/allowlist/kill switch/limits, runbook, load test script (not run).
-- Open / not built: see "NOT BUILT" in the test guide (all UI for settings/badges/drawer, carousels and buttons, image/voice tools, notifications, model admin setting, inbox_products switch, payment links).
+- Owner notifications (0237 + ai_notices.go): paid / COD / payment-review each produce exactly one commerce_ai_notices row and one `order-state` commerce event (feeds the existing notifications badge). The verifier tick drains the outbox: email to verified owner/admin accounts via the receipt-notice SMTP, FCM push to claimed devices; unconfigured channels are recorded as `skipped`, never retried forever (5 attempts → failed). Text carries only the order reference and amount. Covered by TestAICommerceIntegration (once-only, second drain sends nothing, no phone in the mail).
+- Open / not built: see "NOT BUILT" in the test guide (UI for settings/badges/drawer, carousels and buttons, image/voice tools, model admin setting, inbox_products switch, payment links).
 - Needs-web-change: Settings > AI selling page; review queue + sidebar badge; customer drawer; admin model setting.
 - Branch note: Phases 3-6 are stacked on branch `agents/ai-commerce-phase5` (one PR) instead of one PR per phase.
 
