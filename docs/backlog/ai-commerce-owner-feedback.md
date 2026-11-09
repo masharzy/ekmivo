@@ -2,7 +2,27 @@
 
 Recorded from the owner's first production test. Not fixed yet; owner asked to note them.
 
-## 1. Two separate product lists confuse owners (highest priority)
+## 0. The AI does not read the business's own data (blocker, found 2026-11-10)
+- The AI's context (`studioContext`, built in `briofold_ai_channel_claim`) contains only:
+  - the Settings → AI instructions, language and tone;
+  - the Knowledge base;
+  - the Settings → AI product list (`inbox_products`);
+  - the chat history;
+  - the channel instructions.
+- It never reads:
+  - the **Business profile** (`dashboard_store_profiles.body`, or the workspace name): name, contact, address, hours, policies;
+  - the **Products** catalog, unless AI selling is on;
+  - the platform's real published **subscription plans** (`pg13_plans` / `payment_plan_versions`) for Briofold's own shop.
+- Observed in production:
+  - The store name "Ekmivo", saved long ago in the Business profile, is unknown to the AI ("no business name set").
+  - Asked about plans, the AI answered "1 month ৳50, 2 months ৳90 (payment gateway)". These came from entries the owner typed into the Settings → AI list, not from the real plans. Replacing the Knowledge text did not help, because that list still holds the old numbers.
+- Fix direction:
+  - At claim time, add a read-only `business` block to the context: Business profile fields and the workspace name, plus the catalog (always) and, for the platform's own workspace, the published plans with current prices.
+  - The prompt treats these database facts as authoritative over free-text lists.
+  - Remove the duplicate Settings → AI list (item 1), so there is one source per fact.
+- Owner workaround until fixed: put the business name in the Settings → AI instructions, and delete or correct the old service prices in the Settings → AI list.
+
+## 1. Two separate product lists confuse owners
 - **Settings → AI** has its own "products/services" list (`inbox_products`, old AI studio list).
 - **Products** page is the commerce catalog (`commerce_products`).
 - The AI reads only one of them, and which one depends on the shop's **AI selling** toggle:
