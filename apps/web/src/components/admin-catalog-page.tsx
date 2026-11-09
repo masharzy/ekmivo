@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {randomUUID} from "node:crypto";
 import {AdminAiExceptions,type AiException} from "./admin-ai-exceptions";
+import {AdminShopAssistantModel} from "./admin-shop-assistant-model";
 import {AdminAiTariffs} from "./admin-ai-tariffs";
 import type {AiTariffRow} from "../lib/ai-credit-tariff";
 import {database} from "../lib/server/db";
@@ -46,7 +47,17 @@ export async function AdminCreditsPage({isSuper,locale}:{isSuper:boolean;locale:
  exceptions=unresolved.map(x=>({workspace_id:String(x.workspace_id),workspace_name:String(x.workspace_name),request_key:String(x.request_key),model:String(x.model),reserved_minor:Number(x.reserved_minor),created_at:new Date(x.created_at).toISOString(),state:String(x.state),provider_ref:String(x.provider_ref||""),operation_key:randomUUID()}));
  tariffs=rates.map(x=>({id:String(x.id),model:String(x.model),revision:Number(x.revision),terms:x.terms as AiTariffRow["terms"],active:x.active===true,created_at:new Date(x.created_at).toISOString()}));
  }catch(error){console.error("[admin/credits]",error instanceof Error?error.name:"unknown");}
- return workspaces?<><AdminAiCreditsManager canEdit={isSuper} locale={locale} workspaces={workspaces} entries={history} operationKey={randomUUID()}/><AdminAiTariffs rows={tariffs} canEdit={isSuper} locale={locale} operationKey={randomUUID()}/><AdminAiExceptions items={exceptions} canEdit={isSuper} locale={locale}/></>:<><div className="pa-page-head"><h1>AI Credits</h1></div><DbMissing name="Prepaid AI wallet and model rates" migration="0130_briofold_ai_exception_resolution.sql"/></>;
+ let assistantModel = null;
+ if (isSuper && process.env.BRIOFOLD_AI_MODEL_SETTING_ENABLED === "true") {
+  const activeVersions = await database()<Array<{revision: string; model: string | null}>>`
+   SELECT revision::text, model FROM briofold_shop_assistant_model_versions ORDER BY revision DESC LIMIT 1
+  `.catch(() => null);
+  assistantModel = activeVersions
+   ? <AdminShopAssistantModel locale={locale} revision={activeVersions[0]?.revision ?? "0"}
+       model={activeVersions[0]?.model ?? null} options={tariffs.filter(row=>row.active).map(row=>row.model)}/>
+   : <DbMissing name="Shop assistant model" migration="0240_briofold_shop_assistant_model.sql"/>;
+ }
+ return workspaces?<><AdminAiCreditsManager canEdit={isSuper} locale={locale} workspaces={workspaces} entries={history} operationKey={randomUUID()}/>{assistantModel}<AdminAiTariffs rows={tariffs} canEdit={isSuper} locale={locale} operationKey={randomUUID()}/><AdminAiExceptions items={exceptions} canEdit={isSuper} locale={locale}/></>:<><div className="pa-page-head"><h1>AI Credits</h1></div><DbMissing name="Prepaid AI wallet and model rates" migration="0130_briofold_ai_exception_resolution.sql"/></>;
 }
 export async function AdminSubscriptionsPage({locale,query}:{locale:AdminLocale;query:string}){
  const base="/"+locale+"/admin",q=query.slice(0,80),term="%"+q+"%";

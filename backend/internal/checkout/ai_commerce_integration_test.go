@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/masharzy/briofold/backend/internal/aicredits"
@@ -168,6 +170,44 @@ func TestAICommerceIntegration(t *testing.T) {
 	rev := it.one(it.admin, "SELECT (briofold_ai_studio_read($1::uuid,$2::uuid,0,0)->>'revision')", it.ws, it.user)
 	write("publish", map[string]any{"revision": json.Number(rev), "confirmed": true, "reason": "AI commerce integration test"})
 	adminUser := it.one(it.admin, "SELECT user_id::text FROM platform_administrators WHERE role='super_admin' LIMIT 1")
+	t.Run("shop assistant model version and rollback", func(t *testing.T) {
+		tx, err := it.svc.Auth.DB.BeginTx(ctx, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback()
+		change := "SELECT briofold_shop_assistant_model_change($1::uuid,$2,$3,$4)"
+		_, err = tx.ExecContext(ctx, "SAVEPOINT before_denial")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tx.ExecContext(ctx, change, it.user, 0, model, false)
+		var denied *pgconn.PgError
+		if !errors.As(err, &denied) || denied.Code != "42501" {
+			t.Fatalf("expected insufficient privilege, got %v", err)
+		}
+		if _, err = tx.ExecContext(ctx, "ROLLBACK TO before_denial"); err != nil {
+			t.Fatal(err)
+		}
+		var revision int64
+		if err = tx.QueryRowContext(ctx, change, adminUser, 0, model, false).Scan(&revision); err != nil {
+			t.Fatal(err)
+		}
+		var active *string
+		if err = tx.QueryRowContext(ctx, "SELECT briofold_shop_assistant_model()").Scan(&active); err != nil || active == nil || *active != model {
+			t.Fatalf("saved model was not selected: %v", err)
+		}
+		var rolledBack int64
+		if err = tx.QueryRowContext(ctx, change, adminUser, revision, nil, true).Scan(&rolledBack); err != nil || rolledBack <= revision {
+			t.Fatalf("rollback did not append a revision: %v", err)
+		}
+		if err = tx.QueryRowContext(ctx, "SELECT briofold_shop_assistant_model()").Scan(&active); err != nil || active != nil {
+			t.Fatalf("rollback did not restore default: %v", err)
+		}
+		if _, err = tx.ExecContext(ctx, change, adminUser, revision, model, false); err == nil {
+			t.Fatal("stale revision accepted")
+		}
+	})
 	it.exec(it.admin, "SELECT briofold_ai_admin_adjust($1::uuid,$2::uuid,gen_random_uuid(),500000,'AI commerce integration test grant')", adminUser, it.ws)
 	it.conn = it.one(it.admin, "SELECT inbox_connection($1::uuid,'live','ms',$2,decode('abcd','hex'))::text", it.ws, "ai-it-"+tag)
 	// Only this test's jobs may be claimed by the worker below.

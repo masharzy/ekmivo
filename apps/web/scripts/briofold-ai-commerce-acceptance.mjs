@@ -10,7 +10,7 @@ const CONTROL = ["0215_ai_unknown_thread_isolation.sql", "0216_ai_multimodal_inp
   "0223_inbox_blobs_drop.sql", "0224_inbox_telegram_delivered_on_send.sql", "0225_inbox_delivered_watermark.sql", "0226_inbox_realtime_avatars.sql",
   "0227_briofold_customer_orders_link.sql", "0228_briofold_catalog_search.sql", "0229_briofold_catalog_api.sql", "0230_briofold_woo_sync.sql",
   "0231_briofold_catalog_key_actor.sql", "0232_briofold_catalog_search_speed.sql", "0233_briofold_ai_tools.sql", "0234_briofold_ai_selling.sql",
-  "0235_briofold_customer_profile.sql", "0237_briofold_ai_order_notices.sql", "0238_briofold_ai_review_decide.sql", "0239_briofold_customer_products.sql"];
+  "0235_briofold_customer_profile.sql", "0237_briofold_ai_order_notices.sql", "0238_briofold_ai_review_decide.sql", "0239_briofold_customer_products.sql", "0240_briofold_shop_assistant_model.sql"];
 const PREREQ = {"0217_briofold_key_prefix.sql": "to_regclass('public.public_sandbox_config') IS NOT NULL"};
 // Production roles that later migrations grant to; the disposable CI cluster creates them as NOLOGIN placeholders.
 const PRODUCTION_ROLES = ["ekmivo_owner", "ekmivo_runtime", "ekmivo_web_app"];

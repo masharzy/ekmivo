@@ -392,7 +392,14 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			timeout = aiToolJobTimeout
 		}
 		run, cancel := context.WithTimeout(ctx, timeout)
-		request := aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: s.selectedAIModel(job.Context.Config.Model), Messages: messages}
+		model := s.selectedAIModel(job.Context.Config.Model)
+		if toolMode && os.Getenv("BRIOFOLD_AI_MODEL_SETTING_ENABLED") == "true" {
+			var override *string
+			if s.Pipeline.Control.QueryRow(run, "SELECT briofold_shop_assistant_model()").Scan(&override) == nil && override != nil {
+				model = *override
+			}
+		}
+		request := aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: model, Messages: messages}
 		var result aicredits.Result
 		var runErr error
 		acted := false
