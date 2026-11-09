@@ -6,8 +6,11 @@ export type Profile={id?:string;revision:number;name:string;email?:string;phone?
 export type Followup={id:string;due_at:string;time_zone:string;body:string;status:string;kind?:"reminder"|"offer";requested_due_at?:string;quiet_start?:string|null;quiet_end?:string|null};
 export type Detail={customer:Profile;archives?:{id:string;name:string;email:string;phone:string;notes:string;tags:string[]}[];sources:{id:string;kind:string;source_id:string}[];proofs:{id:string;kind:string;value:string;verified_at:string;revoked_at:string|null}[];followups:Followup[];events:{sequence:number;action:string;created_at:string}[];can_manage:boolean;can_contact:boolean;can_export:boolean};
 export type CRMList={members:{id:string;name:string}[];items:Profile[];can_manage:boolean;can_contact:boolean;can_export:boolean};
-export type OrderRow={id:string;reference:string;status:string;source:string;total_minor:number;created_at:string;summary:string;claimed_payment:{method?:string;payer_phone?:string;trx_id?:string};paid_verified:boolean};
-export type CustomerOrders={orders:OrderRow[];numbers:{value:string;count:number}[]};
+export type OrderRow={id:string;reference:string;status:string;source:string;total_minor:number;created_at:string;summary:string;claimed_payment:{method?:string;payer_phone?:string;trx_id?:string};paid_verified:boolean;payment_state?:string};
+export type CustomerOrders={orders:OrderRow[];numbers:{value:string;count:number}[];
+ stats?:{orders:number;total_minor:number;last_at:string|null;delivered:number;cancelled:number;returned:number};
+ risk?:{level:"none"|"medium"|"high";reasons:string[]};channels?:string[];
+ products?:{name:string;sku:string;quantity:number;orders:number;last_at:string}[];merge_suggestions?:{id:string;name:string;can_merge?:boolean}[]};
 export type Stat={orders:number;total_minor:number;last_at:string|null};
 export const STAGES=["new","contacted","qualified","proposal","won","lost"] as const;
 export const blankProfile:Profile={revision:0,name:"",tags:[],stage:"new",temperature:"warm",assignee:null};
@@ -53,7 +56,7 @@ export function useCrm({workspaceId,actorId,environment,initial,bn,initialFilter
   return()=>c.abort();
  },[data,ordersEnabled,endpoint]);
  const loadOrders=useCallback(async(id:string):Promise<CustomerOrders|null>=>{
-  try{const r=await fetch(endpoint+"&view=orders&customer="+id,{cache:"no-store"});return r.ok?await r.json():null;}catch{return null;}
+  try{const r=await fetch(endpoint+"&view=profile&customer="+id,{cache:"no-store"});return r.ok?await r.json():null;}catch{return null;}
  },[endpoint]);
  const set=useCallback((patch:Partial<Filters>)=>setF(x=>({...x,offset:0,...patch})),[]);
  const refresh=useCallback(async()=>{setLoading(true);try{setData(await request());setError("");}catch{setError(t("Refresh failed.","রিফ্রেশ হয়নি।"));}finally{setLoading(false);}},[request,t]);

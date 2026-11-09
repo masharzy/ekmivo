@@ -31,6 +31,8 @@ import {HelpVideos} from "./help-videos";
 import {MemberChannelScopes} from "./member-channel-scopes";
 import {TeamGroups} from "./team-groups";
 import {BrowserDevicePreferences} from "./browser-device-preferences";
+import {AiSellingSettings} from "./ai-selling-settings";
+import {AiPaymentReview} from "./ai-payment-review";
 
 export const unifiedDynamic="force-dynamic";
 
@@ -77,8 +79,15 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
  if(kind==="product-photos"&&process.env.BRIOFOLD_PRODUCT_PHOTOS_ENABLED!=="true")notFound();
  if(kind==="courier-integrations"&&process.env.BRIOFOLD_COURIER_SETTINGS_ENABLED!=="true")notFound();
  if(kind==="channel-settings"&&process.env.BRIOFOLD_CHANNEL_POLICIES_ENABLED!=="true")notFound();
+ if((kind==="ai-selling"||kind==="ai-payment-review")&&process.env.BRIOFOLD_AI_TOOLS_ENABLED!=="true")notFound();
  const body=kind==="settings-index"
   ?<UnifiedSettingsIndex locale={locale} mode={workspace.mode}/>
+  :kind==="ai-selling"
+   ?<AiSellingSettings key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"} environment={paymentContext?.environment??"live"}
+     canManage={workspace.role==="owner"||workspace.role==="admin"} mode={workspace.mode}/>
+  :kind==="ai-payment-review"
+   ?<AiPaymentReview key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"} environment={paymentContext?.environment??"live"}
+     canManage={workspace.role==="owner"||workspace.role==="admin"}/>
   :kind==="product-photos"
    ?<ProductPhotoSearch key={workspace.id+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
   :kind==="courier-integrations"

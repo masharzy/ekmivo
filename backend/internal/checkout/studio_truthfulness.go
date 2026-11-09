@@ -32,6 +32,12 @@ var studioSendPromise = regexp.MustCompile(`(?i)(?:\b(?:i|ami)\b[^.!?\n।]{0,10
 var studioContactOffer = regexp.MustCompile(`(?i)(?:provide|give|share|diye dei|dite pari|diye dite|দিতে পারি|দিয়ে দিই)[^?\n।]{0,90}(?:contact|website|support|link|যোগাযোগ|ওয়েবসাইট|নম্বর)|(?:contact|website|support|ওয়েবসাইট|সাপোর্ট)[^?\n।]{0,120}(?:provide|give|share|diye dei|dite pari|diye dite|দিতে পারি|দিয়ে দিই)`)
 
 func studioSafeReply(c studioContext, reply string) string {
+	return studioSafeReplyMode(c, reply, false)
+}
+
+// studioSafeReplyMode: allowActions is true only in tool mode after an order/payment tool really succeeded,
+// so "your order is placed" is allowed then; unverified contact details are always blocked.
+func studioSafeReplyMode(c studioContext, reply string, allowActions bool) string {
 	// Conversation history/customer input can contain invented links and is never
 	// an authority for contact details. Use only current business material.
 	var facts strings.Builder
@@ -62,7 +68,7 @@ func studioSafeReply(c studioContext, reply string) string {
 	}
 	clauses := strings.NewReplacer(" but ", "\n", " But ", "\n", " kintu ", "\n", " কিন্তু ", "\n").Replace(reply)
 	for _, sentence := range strings.FieldsFunc(clauses, func(r rune) bool { return r == '\n' || r == '.' || r == '!' || r == '?' || r == '।' }) {
-		if (studioActionPromise.MatchString(sentence) || studioSendPromise.MatchString(sentence)) && !studioNegation.MatchString(sentence) {
+		if !allowActions && (studioActionPromise.MatchString(sentence) || studioSendPromise.MatchString(sentence)) && !studioNegation.MatchString(sentence) {
 			unsafe = true
 		}
 	}

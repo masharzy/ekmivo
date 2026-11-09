@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/masharzy/briofold/backend/internal/aicredits"
 	"github.com/masharzy/briofold/backend/internal/authz"
 	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
@@ -44,8 +45,10 @@ type Service struct {
 	realtimeHub  *inboxRealtimeHub
 	wooRequest   func(context.Context, *http.Request) (*http.Response, error)
 	// Injectable only by package tests; production uses pinned HTTPS transport.
-	pathaoRequest       func(context.Context, *http.Request) (*http.Response, error)
-	SyncProjection      func(context.Context, string, string) error
+	pathaoRequest  func(context.Context, *http.Request) (*http.Response, error)
+	SyncProjection func(context.Context, string, string) error
+	// aiProvider replaces the configured model provider in integration tests only.
+	aiProvider          aicredits.Provider
 	NoticeSMTP          *receiptnotice.SMTPConfig
 	NoticeSchema        bool
 	Pipeline            *Pipeline

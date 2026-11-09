@@ -246,3 +246,64 @@ Web panel checked in Chrome at 360/412 px against a mocked API (flows pass; no a
 Decisions: apply-state for Woo notices is a separate table because notices are immutable; CSV importer accepts both the plan's columns and the older whole-paisa columns; images https-only.
 Open: inbox product picker + AI reply path still read `inbox_products` (migrations 0135/0202) → do with Phase 3 orchestrator. Needs-web-change: none. Needs owner: set the three flags when ready; a warehouse must exist before stock can be set.
 Evidence: docs/evidence/ai-commerce-phase1/README.md.
+
+## AI commerce Phases 2-6 + production readiness (code level, owner decision 2026-11-09)
+Owner asked for code-level completion; end-to-end testing is done later by the owner using `docs/testing/ai-commerce-e2e-test-guide.md`.
+- Phase 2: `tools/testing/seed-ai-commerce-sandbox.mjs` (+ safety test). Not executed against a DB.
+- Phase 3: `ai_tools.go`, migration 0233 (`ai_tool_calls`, `briofold_ai_tool`). Applied and spot-tested on Neon test branch `br-tiny-mouse-b37574ht`.
+- Phase 4: migration 0234 (payment_state, claims, settings, order tools, resolve/expire/review functions), `ai_payment_verify.go`. Scenario tested on the test branch (rolled back).
+- Phase 5: migration 0235 (customer profile, name sync). Tested on the test branch (rolled back).
+- Phase 6: eval scripts + runner (not run). Readiness: flags/allowlist/kill switch/limits, runbook, load test script (not run).
+- Owner notifications (0237 + ai_notices.go): paid / COD / payment-review each produce exactly one commerce_ai_notices row and one `order-state` commerce event (feeds the existing notifications badge). The verifier tick drains the outbox: email to verified owner/admin accounts via the receipt-notice SMTP, FCM push to claimed devices; unconfigured channels are recorded as `skipped`, never retried forever (5 attempts → failed). Text carries only the order reference and amount. Covered by TestAICommerceIntegration (once-only, second drain sends nothing, no phone in the mail).
+- Owner UI (flag BRIOFOLD_AI_TOOLS_ENABLED on web + API): Settings → AI selling (opt-in, receiving accounts shown as suffix + label only, delivery, COD, bargaining cap, draft expiry, wrong-TrxID limit, handover-above amount; revision-checked, audited) and Orders → Payment review (approve/reject; approving a changed/expired order is refused; buyer gets one "payment verified" message inside the 24 h window). Evidence: runBriofoldAiSellingBrowser in the PG04 settings acceptance (real Next proxy + Go API + Postgres, viewer/origin denial, en/bn, light/dark, 320/412/1440 without overflow).
+- Open / not built: see "NOT BUILT" in the test guide (customer drawer, carousels and buttons, image/voice tools, model admin setting, inbox_products switch, payment links).
+- Needs-web-change: Settings > AI selling page; review queue + sidebar badge; customer drawer; admin model setting.
+- Branch note: Phases 3-6 are stacked on branch `agents/ai-commerce-phase5` (one PR) instead of one PR per phase.
+
+## AI commerce review fixes (2026-11-09)
+Review `docs/reviews/ai-commerce-phase2-6-review.md` (4 blockers, 8 high, 10 medium, 7 low) fixed in place in 0233-0235 (never applied to production) plus realm migration 0236.
+Verified on Neon test branch `ai-commerce-fixes-test-20261109` (`br-damp-mud-b3c38es3`, created after deleting archived `repeat-payments-guard-20261013` with owner approval).
+Open: H3 reverse race needs a realm lock; orders not via `commerce_write`; all UI; Go compile only in CI. Test guide rewritten for Gemini run.
+
+## AI commerce handoff (2026-11-09, branch agents/ai-commerce-phase5, PR #165)
+Done and verified locally (real Postgres + Go + Next + browser): tools and payment verification with race tests, exactly-once owner notices (0237), owner settings + payment review API/UI (0238), customer drawer summary/risk/products bought/order deep link (0239). Fixed a live bug: the /api/go proxy never forwarded `view`/`ids`, so the CRM Orders tab crashed and per-customer stats were never sent.
+
+How to verify: `/tmp/pgl/reinit.sh` (fresh local PG16), then `SUITES=runBriofoldAiCommerce,runBriofoldAiSellingBrowser /tmp/pgl/runci.sh`; expect "AI SELLING SETTINGS/REVIEW ... PASS". In CI the same suites run inside the PG04 settings acceptance (phase9 fixture). Web needs `node scripts/sync-tokens.mjs` once (tokens.css is generated).
+
+Remaining, in this order:
+1. Admin model setting with one-click rollback (admin design system rules in apps/web/AGENTS.md; inside the existing "AI Credits" admin page, no new sidebar item).
+2. Channel features (largest): Messenger generic template / WhatsApp interactive list / website cards with ≤3 buttons; signed button payloads (HMAC, reuse the broadcast offer signing) handled as a customer turn; image product search (product-photos exists); payment links in Both mode via payment_intents; voice/video limits; switch the inbox product picker to commerce_products.
+3. Meta Graph customer name fetch + cache; owner merge action for merge_suggestions (nothing auto-merges).
+4. Seed product images; run migrations 0233–0239 twice on a Neon test branch (ask the owner before deleting/creating branches); 1,000-customer profile p95 < 300 ms.
+5. Evals with Gemini via OpenRouter (key needed from the owner): `evals/bangla-commerce/run-evals.mjs`.
+
+### AI commerce continuation — shop assistant model
+- Added the AI Credits model selector and rollback, append-only model revisions and audit events, and the AI selling worker override.
+- Assumption: only models with published tariffs are selectable. The first rollback restores the existing default selection behavior.
+- Enable `BRIOFOLD_AI_MODEL_SETTING_ENABLED=true` on the web and Go services after migration 0240 is available. The worker uses the override for AI selling jobs.
+- Verification: Go vet/tests, web token sync/lint/TypeScript, and the admin design check passed. Isolated PostgreSQL 16 PG04 passed with 796 assertions, including `TestAICommerceIntegration/shop_assistant_model_version_and_rollback` and `runBriofoldShopAssistantModelBrowser` (English/Bangla, light/dark, 320/412/1440, HTTP 403, save/rollback/audit). Channel features, customer identity, and seed/performance work remain open.
+
+### AI commerce continuation — channel features
+- Implemented AI catalog cards for Messenger, Instagram, WhatsApp and the website widget. Unsupported transports receive text. Product buttons expire after 30 minutes and HMAC-bind the action, variant, workspace and thread. Meta callback storage redacts the button capability.
+- The worker reuses product-photo fingerprints and scoped catalog search for customer photos. AI selling hands voice/video to staff before downloading or processing them. The web inbox picker reads commerce products and keeps send authorization and idempotency.
+- Both-mode checkout uses existing payment intents and the exact draft expiry. The order is held while checkout is payable. The URL is derived at delivery and never written to the inbox or model context. Authoritative financial completion verifies the order. Assumption: reserve stock for 15 minutes after expiry for matching lag, then send later receipts to owner review.
+- Enable `BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED=true` with `BRIOFOLD_AI_TOOLS_ENABLED=true` on Go after migrations 0241–0244. Migration 0243 belongs to the financial realms.
+- Evidence: PostgreSQL 16 `TestAICommerceIntegration` passed, including scoped photo and picker, signed Meta postbacks, and receipt-to-order checkout settlement. `TestAIChannelProductButtonsRejectTamperExpiryAndForeignScope`, `TestAIChannelProductCardsProviderLimitsAndFlagOffFallback`, and `TestAICommerceVoiceAndVideoHandedOverBeforeDownload` passed. The website widget browser suite passed across both languages/themes and 320/412/1440. Go vet/tests and web lint/TypeScript passed.
+
+### AI commerce continuation — customer identity
+- `BRIOFOLD_CUSTOMER_IDENTITY_ENABLED=true` enables Messenger/Instagram Graph names and owner-only merges from the drawer. Names cache for 24 hours, with a shared 20-request/minute budget and exponential retries after failure. Failed lookups preserve names. Manual CRM renames and merged records are excluded from automatic name changes.
+- Assumption: same-phone matches are suggestions, and the existing shared verified identity requirement still applies to a merge. Confirmation is explicit, and orders, sources and prior activity remain accessible from the canonical surviving profile.
+- Evidence: PostgreSQL 16 `TestAICommerceIntegration/Meta_customer_name_cache_retries_and_owner_merge_preserves_records`, `TestMetaInstagramCustomerNameUsesBoundCredential`, and `runBriofoldAiSellingBrowser` passed. Browser exercised owner confirmation, viewer HTTP 403 and English/Bangla light/dark layouts at 320/412/1440. Migration 0245 reapplication and Go/web checks passed.
+
+### AI commerce — verification and item 4 (2026-11-09, Opus)
+- Reviewed GPT's items 1–3 by running them. Fixed a privacy regression: 0245's merged-history read returned customer event `detail` to viewers. 0246 restores the 0189/0208 contract.
+- Fixed the AI fixtures for the payments plan gates the full CI chain enforces: an active unpublished plan, plus the per-transaction realm plan snapshot.
+- Item 4:
+  - `SeedCatalogImages` / `cmd/seed-product-images` store generated PNGs exactly like owner uploads (private storage, media row, image list, photo index). Running them twice is a no-op.
+  - Profile p95 with 1,000 customers and 3,000 orders: 1.2–1.9 ms (limit 300 ms).
+- CI (8c4c412): every AI suite passes in the full chain: TestAICommerceIntegration, runBriofoldAiSellingBrowser, runBriofoldShopAssistantModelBrowser, runBriofoldCustomers.
+- Still failing, and failing identically on the base branch agents/ai-commerce-phase1 (not caused by this PR): runBriofoldChannelExtensions, runBriofoldCommerce, runBriofoldInboxDrafts, runBriofoldKeyLifecycle, runBriofoldPhase9Browser, runChannelPolicies, runMemberChannelScopes, runSavedReplySequences, runWooWebhookSources.
+- Open:
+  - Apply 0233–0246 twice on the Neon test branch br-damp-mud-b3c38es3. This cloud workspace cannot reach Neon hosts; run financial-migrate from a machine that can.
+  - Gemini evals (needs an OpenRouter key).
+  - Fix the 9 base-branch suite failures before merging the stack.

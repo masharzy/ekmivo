@@ -36,7 +36,7 @@ export function CustomerDrawer({h}:{h:H}){
      {data.can_contact&&<label className="fld" style={{display:"flex",gap:8,alignItems:"center"}}><input type="checkbox" checked={draft.preferences?.do_not_contact??false} onChange={e=>update("preferences",{marketing:draft.preferences?.marketing??"unknown",do_not_contact:e.target.checked})}/>{t("Do not contact","যোগাযোগ করবেন না")}</label>}
     </fieldset>}
    </form>}
-   {tab==="orders"&&detail&&<Orders h={h} id={detail.customer.id!}/>}
+   {tab==="orders"&&detail&&<Orders h={h} id={detail.customer.id!} threads={(detail.sources??[]).filter(x=>x.kind==="thread").map(x=>x.source_id)}/>}
    {tab==="followups"&&detail&&<Followups h={h} detail={detail}/>}
    {tab==="activity"&&detail&&<Activity h={h} detail={detail}/>}
   </>}
@@ -79,23 +79,54 @@ function Activity({h,detail}:{h:H;detail:Detail}){
 const money=(minor:number,bn:boolean)=>"৳"+new Intl.NumberFormat(bn?"bn-BD":"en-GB").format(Math.round(minor/100));
 const STATUS:Record<string,[string,string]>={draft:["Draft","খসড়া"],hold:["On hold","স্থগিত"],confirmed:["Confirmed","নিশ্চিত"],packed:["Packed","প্যাক"],shipped:["Shipped","পাঠানো"],delivered:["Delivered","পৌঁছেছে"],cancelled:["Cancelled","বাতিল"],returned:["Returned","ফেরত"]};
 
-function Orders({h,id}:{h:H;id:string}){
+const PAY:Record<string,[string,string,string]>={verified:["Payment verified","পেমেন্ট যাচাইকৃত","green"],claimed:["Payment claimed","পেমেন্টের দাবি","orange"],cod:["Cash on delivery","ক্যাশ অন ডেলিভারি","blue"],awaiting:["Awaiting payment","পেমেন্টের অপেক্ষা",""],failed:["Payment failed","পেমেন্ট ব্যর্থ","red"]};
+const CHANNEL:Record<string,string>={messenger:"Messenger",instagram:"Instagram",whatsapp:"WhatsApp",telegram:"Telegram",website:"Website chat"};
+function Orders({h,id,threads}:{h:H;id:string;threads:string[]}){
  const {t,bn,loadOrders}=h;
+ const [mergeVersion,setMergeVersion]=useState(0);
  const [state,setState]=useState<{id:string;data:CustomerOrders|null}|null>(null);
- useEffect(()=>{let live=true;void loadOrders(id).then(d=>{if(live)setState({id,data:d});});return()=>{live=false;};},[id,loadOrders]);
+ const [view,setView]=useState<"orders"|"products">("orders");
+ useEffect(()=>{let live=true;void loadOrders(id).then(d=>{if(live)setState({id,data:d});});return()=>{live=false;};},[id,loadOrders,mergeVersion]);
  if(!state||state.id!==id)return <div className="empty" role="status">{t("Loading…","লোড হচ্ছে…")}</div>;
  if(!state.data)return <p className="notice ref-errors" role="alert">{t("Orders could not be loaded.","অর্ডার আনা যায়নি।")}</p>;
- const {orders,numbers}=state.data;
- const total=orders.filter(o=>!["draft","cancelled","returned"].includes(o.status)).reduce((a,o)=>a+o.total_minor,0);
- if(orders.length===0)return <p className="mut">{t("No orders yet.","এখনো কোনো অর্ডার নেই।")}</p>;
+ const {orders,numbers,stats,risk,channels=[],products=[],merge_suggestions=[]}=state.data;
+ const placed=orders.filter(o=>o.status!=="draft");
+ const total=placed.filter(o=>!["cancelled","returned"].includes(o.status)).reduce((a,o)=>a+o.total_minor,0);
+ const bad=(stats?.cancelled??0)+(stats?.returned??0),rate=placed.length?Math.round(bad*100/placed.length):0;
+ const average=placed.length?total/Math.max(1,placed.length-bad):0;
  return <>
-  <p className="mut" style={{marginBottom:12}}>{orders.length} {t("orders","অর্ডার")} · {money(total,bn)} · {t("last","শেষ")} {when(orders[0].created_at,bn)}</p>
-  {orders.map(o=>{const c=o.claimed_payment,has=Boolean(c.method||c.payer_phone||c.trx_id);return <div key={o.id} className="drawer-group">
+  {risk&&risk.level!=="none"&&<p className="notice ref-errors" role="status"><span className="pill red">{t("Risk","ঝুঁকি")}</span>{" "}
+   {risk.reasons.map(r=>r==="many_cancelled_or_returned"?t("Many cancelled or returned orders","অনেক অর্ডার বাতিল বা ফেরত"):r==="failed_payment_claims"?t("Several payment claims did not match","কয়েকটি পেমেন্টের দাবি মেলেনি"):r).join(" · ")}</p>}
+  <div className="drawer-group">
+   <p><b>{placed.length}</b> {t("orders","অর্ডার")} · <b>{money(total,bn)}</b> {t("bought","কেনা")} · {t("average","গড়")} {money(average,bn)}</p>
+   {stats&&<p className="mut">{t("Delivered","ডেলিভারি")} {stats.delivered} · {t("Cancelled","বাতিল")} {stats.cancelled} · {t("Returned","ফেরত")} {stats.returned} · {t("cancel + return rate","বাতিল + ফেরতের হার")} {rate}%</p>}
+   {orders[0]&&<p className="mut">{t("Last order","শেষ অর্ডার")} {when(orders[0].created_at,bn)}{channels.length?" · "+channels.map(c=>CHANNEL[c]??c).join(", "):""}</p>}
+   {threads.length>0&&<p>{threads.slice(0,3).map((th,i)=><a key={th} className="ib" style={{marginRight:6}} href={"/inbox?thread="+th}>{threads.length>1?t("Open chat","চ্যাট খুলুন")+" "+(i+1):t("Open chat","চ্যাট খুলুন")}</a>)}</p>}
+  </div>
+  {merge_suggestions.length>0&&<div className="drawer-group"><h4>{t("Possible duplicates (same phone)","সম্ভাব্য একই গ্রাহক (একই ফোন)")}</h4>
+   {merge_suggestions.map(m=><p key={m.id}>
+    <button type="button" className="ib" onClick={()=>void h.open(m.id)}>{m.name}</button>{" "}
+    {m.can_merge&&<button type="button" className="ib" disabled={h.busy||h.dirty||h.unconfirmed} onClick={()=>{
+     if(window.confirm(t(`Merge with ${m.name}? This joins both profiles, orders and activity.`,`${m.name}-এর সঙ্গে একত্র করবেন? দুই প্রোফাইলের অর্ডার ও কার্যক্রম একত্র হবে।`))){
+      void h.act("merge",{target:m.id,confirmed:true}).then(result=>{if(result)setMergeVersion(value=>value+1);});
+     }
+    }}>{t("Merge","একত্র করুন")}</button>}
+   </p>)}
+   <p className="mut">{t("Nothing is merged automatically.","নিজে থেকে কিছু একত্র করা হয় না।")}</p></div>}
+  {orders.length===0?<p className="mut">{t("No orders yet.","এখনো কোনো অর্ডার নেই।")}</p>:<>
+  <div className="seg" role="tablist" style={{margin:"4px 0 12px"}}>{([["orders",t("Orders","অর্ডার")],["products",t("Products bought","কেনা পণ্য")]] as const).map(([v,l])=>
+   <button key={v} type="button" role="tab" aria-selected={view===v} className={view===v?"on":""} onClick={()=>setView(v)}>{l}</button>)}</div>
+  {view==="products"?(products.length===0?<p className="mut">{t("No completed purchases yet.","এখনো কোনো সম্পন্ন কেনাকাটা নেই।")}</p>
+   :products.map(p=><div key={p.sku+p.name} className="drawer-group"><div style={{display:"flex",justifyContent:"space-between",gap:8}}><b>{p.name}</b><span className="mut">×{p.quantity}</span></div>
+     <p className="mut">{p.orders} {t("orders","অর্ডার")} · {t("last","শেষ")} {when(p.last_at,bn)}</p></div>))
+  :orders.map(o=>{const c=o.claimed_payment??{},has=Boolean(c.method||c.payer_phone||c.trx_id),pay=o.payment_state&&o.payment_state!=="none"?PAY[o.payment_state]:undefined;return <div key={o.id} className="drawer-group">
    <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}><b>{o.reference.startsWith("INBOX-")?when(o.created_at,bn):o.reference}</b><span className="pill">{(STATUS[o.status]??[o.status,o.status])[bn?1:0]}</span></div>
    <p>{o.summary?o.summary.split("\n").slice(1).join(" ")||o.summary:"—"}</p>
-   <p><b>{money(o.total_minor,bn)}</b>{o.paid_verified&&<> · <span className="pill green">{t("Payment verified","পেমেন্ট যাচাইকৃত")}</span></>}</p>
+   <p><b>{money(o.total_minor,bn)}</b>{pay?<> · <span className={"pill "+pay[2]}>{bn?pay[1]:pay[0]}</span></>:o.paid_verified&&<> · <span className="pill green">{t("Payment verified","পেমেন্ট যাচাইকৃত")}</span></>}</p>
    {has&&!o.paid_verified&&<p className="mut">{t("Customer said","গ্রাহক বলেছেন")}: {[c.method,c.payer_phone,c.trx_id&&"TrxID "+c.trx_id].filter(Boolean).join(" · ")} <span className="pill orange">{t("Not verified","যাচাই হয়নি")}</span></p>}
+   <p><a href={"/orders?order="+o.id} className="mut">{t("Open order","অর্ডার খুলুন")}</a></p>
   </div>;})}
-  {numbers.length>0&&<div className="drawer-group"><h4>{t("Numbers used","ব্যবহৃত নম্বর")}</h4>{numbers.map(n=><p key={n.value} className="mono">{n.value} <span className="mut">×{n.count}</span></p>)}</div>}
+  {view==="orders"&&numbers.length>0&&<div className="drawer-group"><h4>{t("Numbers used","ব্যবহৃত নম্বর")}</h4>{numbers.map(n=><p key={n.value} className="mono">{n.value} <span className="mut">×{n.count}</span></p>)}</div>}
+  </>}
  </>;
 }

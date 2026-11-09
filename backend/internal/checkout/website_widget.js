@@ -18,6 +18,26 @@
  input.disabled=Boolean(pending);if(pending)send.textContent=say("আবার পাঠান","Retry send");
  async function api(action,extra={}){const response=await fetch(endpoint,{method:"POST",credentials:"omit",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,secret,...extra}),signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error(String(response.status));return response.json();}
  function render(){for(const url of mediaUrls)URL.revokeObjectURL(url);mediaUrls.length=0;list.replaceChildren();for(const item of items){const row=document.createElement("li");row.textContent=(item.sender==="customer"?say("আপনি: ","You: "):say("টিম: ","Team: "))+item.body;
+  if(typeof item.checkout_url==="string"){
+   try{const url=new URL(item.checkout_url);if(url.protocol==="https:"&&/^\/checkout\/[A-Za-z0-9_-]{43}$/.test(url.pathname)&&!url.search&&!url.hash&&!url.username&&!url.password){
+    const pay=document.createElement("a");pay.href=url.href;pay.textContent=say("পেমেন্ট করুন","Pay for this order");pay.target="_blank";pay.rel="noopener noreferrer";row.append(pay);
+   }}catch{/* Invalid checkout links are ignored. */}
+  }
+  if(Array.isArray(item.product_cards))for(const card of item.product_cards.slice(0,10)){
+   if(typeof card.name!=="string"||!Number.isSafeInteger(card.price_minor)||!Array.isArray(card.buttons))continue;
+   const detail=document.createElement("div"),name=document.createElement("strong"),price=document.createElement("p");
+   name.textContent=card.name;price.textContent=say("মূল্য শুরু ","From ")+new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT"}).format(card.price_minor/100);detail.append(name,price);
+   for(const option of card.buttons.slice(0,3)){
+    if(typeof option.label!=="string"||typeof option.token!=="string"||!/^bc1\.[A-Za-z0-9_-]{119}$/.test(option.token))continue;
+    const choice=document.createElement("button");choice.type="button";choice.textContent=option.label;detail.append(choice);
+    let key;
+    choice.onclick=async()=>{if(choice.disabled)return;choice.disabled=true;key??=crypto.randomUUID();
+     try{await api("select-product",{button:option.token,key});before=0;void run();}
+     catch{status.textContent=say("পণ্যটি নির্বাচন করা যায়নি। আবার চেষ্টা করুন।","Couldn't select this product. Try again.");choice.disabled=false;}
+    };
+   }
+   row.append(detail);
+  }
   if(typeof item.media_id==="string"&&/^[0-9a-f-]{36}$/.test(item.media_id)){
    const open=document.createElement("button");open.textContent=say("ফাইল খুলুন","Open attachment");row.append(open);open.onclick=async()=>{if(open.disabled)return;open.disabled=true;try{const file=await api("media-get",{media_id:item.media_id});if(!row.isConnected)return;if(typeof file.data!=="string"||file.data.length>7000000)throw Error();const mime=["image/jpeg","image/png","audio/mpeg","audio/ogg","audio/mp4","audio/aac","application/pdf","text/plain"].includes(file.mime)?file.mime:"application/octet-stream",bytes=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:mime}));mediaUrls.push(url);
     if(mime.startsWith("image/")){const img=document.createElement("img");img.src=url;img.alt=file.name||say("ছবি","Image");img.style.maxWidth="100%";row.append(img);}else if(mime.startsWith("audio/")){const audio=document.createElement("audio");audio.src=url;audio.controls=true;row.append(audio);}else{const link=document.createElement("a");link.href=url;link.download=file.name||"attachment";link.textContent=file.name||say("ফাইল ডাউনলোড","Download file");row.append(link);}open.remove();

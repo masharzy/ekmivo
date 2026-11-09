@@ -26,3 +26,55 @@ test('actual website embed: reload-safe retry, text safety, history and keyboard
   items=Array.from({length:100},(_,i)=>({sequence:i+1,sender:i%2?'seller':'customer',body:'History message '+(i+1)}));await widget.getByRole('button',{name:'Close',exact:true}).click();await widget.getByRole('button',{name:'Chat',exact:true}).click();await widget.getByText('Team: History message 100',{exact:true}).waitFor();await widget.getByRole('button',{name:'Older messages',exact:true}).click();await widget.getByText('Team: History message 50',{exact:true}).waitFor();await widget.getByRole('button',{name:'Latest messages',exact:true}).click();await widget.getByText('Team: History message 100',{exact:true}).waitFor();await input.press('Escape');assert.equal(await widget.locator('section').isHidden(),true);
  }finally{await context.close();await browser.close();}
 });
+
+
+test("website catalog cards and checkout link fit and dispatch a single customer turn", async () => {
+ const script=await readFile(new URL("../../../backend/internal/checkout/website_widget.js",import.meta.url),"utf8");
+ const browser=await chromium.launch({headless:true});
+ const site="a69fd4c7-c6ea-4709-92f6-dd3b80691e4f", secret="a".repeat(64), button="bc1."+"A".repeat(119);
+ const labels={en:{chat:"Chat",checkout:"Pay for this order",select:"Order · Small"},bn:{chat:"চ্যাট",checkout:"পেমেন্ট করুন",select:"অর্ডার করুন · ছোট"}};
+ try{
+  for(const locale of ["en","bn"]){
+   for(const theme of ["light","dark"]){
+    const context=await browser.newContext({colorScheme:theme});
+    try{
+     let selected=0;
+     const reply={items:[{sequence:1,sender:"ai",body:"Catalog",checkout_url:"https://briofold.tech/checkout/"+"A".repeat(43),product_cards:[{
+      name:"<img src=x onerror=alert(1)>",price_minor:100000,buttons:[{label:labels[locale].select,token:button}],
+     }]}]};
+     await context.route("https://widget.fixture.example/**",async route=>{
+      if(route.request().url().endsWith("/widget.js"))return route.fulfill({contentType:"text/javascript",body:script});
+      const headers={"Access-Control-Allow-Origin":"https://shop.fixture.example","Access-Control-Allow-Methods":"POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type"};
+      if(route.request().method()==="OPTIONS")return route.fulfill({status:204,headers});
+      const body=route.request().postDataJSON();
+      if(body.action==="start")return route.fulfill({headers,json:{secret,started:true}});
+      assert.equal(body.secret,secret);
+      if(body.action==="select-product"){
+       assert.equal(body.button,button);assert.match(body.key,/^[0-9a-f-]{36}$/);selected++;
+      }
+      return route.fulfill({headers,json:reply});
+     });
+     await context.route("https://shop.fixture.example/**",route=>route.fulfill({contentType:"text/html",body:`<!doctype html><html lang="${locale}"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><script src="https://widget.fixture.example/v1/channels/website/widget.js" data-site="${site}"></script><body></body></html>`}));
+     const page=await context.newPage();
+     await page.goto("https://shop.fixture.example");
+     const widget=page.locator("[data-briofold-chat]");
+     await widget.getByRole("button",{name:labels[locale].chat,exact:true}).click();
+     const choose=widget.getByRole("button",{name:labels[locale].select});
+     await choose.waitFor();
+     assert.equal(await widget.locator("img").count(),0);
+     assert.equal(await widget.getByRole("link",{name:labels[locale].checkout}).getAttribute("rel"),"noopener noreferrer");
+     for(const width of [320,412,1440]){
+      await page.setViewportSize({width,height:900});
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      assert.ok(await widget.locator("section").evaluate(panel=>panel.scrollWidth<=panel.clientWidth));
+     }
+     const response=page.waitForResponse(r=>r.request().method()==="POST"&&r.request().postDataJSON().action==="select-product");
+     await choose.click();
+     await response;
+     await page.waitForFunction(()=>document.querySelector("[data-briofold-chat]").shadowRoot.querySelector("li button").disabled);
+     assert.equal(selected,1);
+    }finally{await context.close();}
+   }
+  }
+ }finally{await browser.close();}
+});

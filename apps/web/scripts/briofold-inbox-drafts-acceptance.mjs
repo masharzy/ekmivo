@@ -16,7 +16,8 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
    {name:'briofold-locale',value:'en',url:origin,sameSite:'Lax'}]);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultNavigationTimeout(90000);page.setDefaultTimeout(30000);
   await page.goto(origin+'/inbox');
-  const choose=async n=>{await page.getByRole('button',{name:new RegExp('Draft fixture customer '+n)}).click();await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();};
+  // The inbox ignores a thread switch while a send/refresh is still busy; retry until the row is really selected.
+  const choose=async n=>{const row=page.getByRole('button',{name:new RegExp('Draft fixture customer '+n)});for(let i=0;i<20&&await row.getAttribute('aria-pressed')!=='true';i++){await row.click();await page.waitForTimeout(250);}assert.equal(await row.getAttribute('aria-pressed'),'true','thread did not open');await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();};
   await choose(0);
   await page.getByRole('button',{name:'Load older messages',exact:true}).click();await page.getByText('Fictional long conversation 1',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Scroll to latest',exact:true}).click();await page.getByText('Fictional long conversation 65',{exact:true}).last().waitFor();
@@ -76,9 +77,9 @@ export async function runBriofoldInboxDrafts({origin,browser,control,sessions}){
   await page.getByRole('button',{name:'Discard attachment',exact:true}).waitFor({state:'detached'});
   assert.equal(Number((await db`SELECT count(*) AS n FROM inbox_messages WHERE workspace_id=${workspace} AND sender='seller' AND content->>'media_id'=${mediaId}`)[0].n),1,'lost attachment response queued twice');
   await page.getByRole('img',{name:'Fictional attachment.png',exact:true}).last().click();await page.getByRole('dialog',{name:'Photo',exact:true}).getByRole('img',{name:'Fictional attachment.png',exact:true}).waitFor();
-  // A payload over the former 32-KB proxy cap must reach the real Go scanner.
   const scan=await context.request.post(origin+'/api/go/workspaces/'+workspace+'/inbox?environment=live',{headers:{Origin:origin},data:{action:'media-upload',thread_id:(await db`SELECT id FROM inbox_threads WHERE workspace_id=${workspace} AND customer_name='Draft fixture customer 0'`)[0].id,body:{media_id:randomUUID(),data:Buffer.alloc(100000,65).toString('base64'),mime:'text/plain',name:'Fictional scanner probe.txt'}}});
-  assert.equal(scan.status(),503);assert.equal((await scan.json()).error?.code,'FILE_SCAN_UNCONFIRMED','proxy blocked before secure scanner or scanner was bypassed');
+  // Owner decision (ff3ac6dd): inbox uploads are type-checked by magic bytes, not malware-scanned. The proxy must still pass >32 KB to Go.
+  assert.equal(scan.status(),200,'proxy blocked a valid upload over the former 32-KB cap');
   await db`DELETE FROM workspace_members WHERE workspace_id=${workspace} AND user_id=${actor}`;
   // Both the unified shell and the Inbox may explain a revoked membership.
   // Assert the accessibility alert instead of a globally ambiguous text node.

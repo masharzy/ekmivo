@@ -96,6 +96,18 @@ var dashboardControlMigrations = []string{
 	"0230_briofold_woo_sync.sql",
 	"0231_briofold_catalog_key_actor.sql",
 	"0232_briofold_catalog_search_speed.sql",
+	"0233_briofold_ai_tools.sql",
+	"0234_briofold_ai_selling.sql",
+	"0235_briofold_customer_profile.sql",
+	"0237_briofold_ai_order_notices.sql",
+	"0238_briofold_ai_review_decide.sql",
+	"0239_briofold_customer_products.sql",
+	"0240_briofold_shop_assistant_model.sql",
+	"0241_briofold_ai_channel_catalog.sql",
+	"0242_briofold_ai_channel_cards.sql",
+	"0244_briofold_ai_payment_links.sql",
+	"0245_briofold_customer_identity.sql",
+	"0246_briofold_customer_history_privacy.sql",
 }
 
 // Explicit release mode in the existing coordinator; never runs at API startup.
@@ -110,8 +122,8 @@ func migrateDashboardReference(ctx context.Context) error {
 		files      []string
 	}{
 		{"control", os.Getenv("PG04_CONTROL_MIGRATION_DATABASE_URL"), dashboardControlMigrations},
-		{"sandbox", os.Getenv("PG04_SANDBOX_MIGRATION_DATABASE_URL"), []string{"0070_dashboard_link_actions.sql", "0071_dashboard_phone_counts.sql", "0072_dashboard_notification_read_all.sql", "0075_checkout_customer_details.sql", "0077_dashboard_billing_usage.sql", "0078_invoice_numbers.sql", "0079_public_invoice_details.sql", "0080_invoice_public_draft.sql", "0081_public_invoice_receipts.sql", "0086_phone_reconnect_delete.sql", "0091_plan_feature_enforcement.sql", "0092_plan_document_feature_guards.sql", "0093_payment_plan_resource_usage.sql", "0095_receiving_account_consent_delete.sql", "0102_dashboard_financial_plan_limits.sql", "0107_workspace_projection_readiness.sql", "0108_pending_phone_receipt_recovery.sql", "0109_checkout_return_origin.sql"}},
-		{"live", os.Getenv("PG04_LIVE_MIGRATION_DATABASE_URL"), []string{"0070_dashboard_link_actions.sql", "0071_dashboard_phone_counts.sql", "0072_dashboard_notification_read_all.sql", "0075_checkout_customer_details.sql", "0077_dashboard_billing_usage.sql", "0078_invoice_numbers.sql", "0079_public_invoice_details.sql", "0080_invoice_public_draft.sql", "0081_public_invoice_receipts.sql", "0086_phone_reconnect_delete.sql", "0091_plan_feature_enforcement.sql", "0092_plan_document_feature_guards.sql", "0093_payment_plan_resource_usage.sql", "0095_receiving_account_consent_delete.sql", "0102_dashboard_financial_plan_limits.sql", "0107_workspace_projection_readiness.sql", "0108_pending_phone_receipt_recovery.sql", "0109_checkout_return_origin.sql"}},
+		{"sandbox", os.Getenv("PG04_SANDBOX_MIGRATION_DATABASE_URL"), []string{"0070_dashboard_link_actions.sql", "0071_dashboard_phone_counts.sql", "0072_dashboard_notification_read_all.sql", "0075_checkout_customer_details.sql", "0077_dashboard_billing_usage.sql", "0078_invoice_numbers.sql", "0079_public_invoice_details.sql", "0080_invoice_public_draft.sql", "0081_public_invoice_receipts.sql", "0086_phone_reconnect_delete.sql", "0091_plan_feature_enforcement.sql", "0092_plan_document_feature_guards.sql", "0093_payment_plan_resource_usage.sql", "0095_receiving_account_consent_delete.sql", "0102_dashboard_financial_plan_limits.sql", "0107_workspace_projection_readiness.sql", "0108_pending_phone_receipt_recovery.sql", "0109_checkout_return_origin.sql", "0236_briofold_ai_receipt_lookup.sql", "0243_briofold_ai_payment_link_realm.sql"}},
+		{"live", os.Getenv("PG04_LIVE_MIGRATION_DATABASE_URL"), []string{"0070_dashboard_link_actions.sql", "0071_dashboard_phone_counts.sql", "0072_dashboard_notification_read_all.sql", "0075_checkout_customer_details.sql", "0077_dashboard_billing_usage.sql", "0078_invoice_numbers.sql", "0079_public_invoice_details.sql", "0080_invoice_public_draft.sql", "0081_public_invoice_receipts.sql", "0086_phone_reconnect_delete.sql", "0091_plan_feature_enforcement.sql", "0092_plan_document_feature_guards.sql", "0093_payment_plan_resource_usage.sql", "0095_receiving_account_consent_delete.sql", "0102_dashboard_financial_plan_limits.sql", "0107_workspace_projection_readiness.sql", "0108_pending_phone_receipt_recovery.sql", "0109_checkout_return_origin.sql", "0236_briofold_ai_receipt_lookup.sql", "0243_briofold_ai_payment_link_realm.sql"}},
 	}
 	seen := map[string]bool{}
 	for _, target := range targets {

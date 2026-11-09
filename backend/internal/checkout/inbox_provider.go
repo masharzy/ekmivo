@@ -11,6 +11,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -117,11 +118,14 @@ func (s *Service) HandleInboxConnection(w http.ResponseWriter, r *http.Request) 
 	}
 	write(w, 200, map[string]string{"id": id})
 }
+func channelHMAC(key, raw []byte) []byte {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(raw)
+	return mac.Sum(nil)
+}
 func inboxWebhookSignature(secret, header string, raw []byte) bool {
-	expected := hmac.New(sha256.New, []byte(secret))
-	expected.Write(raw)
 	supplied, err := hex.DecodeString(strings.TrimPrefix(header, "sha256="))
-	return secret != "" && strings.HasPrefix(header, "sha256=") && err == nil && hmac.Equal(expected.Sum(nil), supplied)
+	return secret != "" && strings.HasPrefix(header, "sha256=") && err == nil && hmac.Equal(channelHMAC([]byte(secret), raw), supplied)
 }
 
 // A small, exact opt-out vocabulary prevents substring false positives such
@@ -169,6 +173,10 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 				Sender struct {
 					ID string `json:"id"`
 				} `json:"sender"`
+				Postback struct {
+					MID     string `json:"mid"`
+					Payload string `json:"payload"`
+				} `json:"postback"`
 				Timestamp int64 `json:"timestamp"`
 				Message   struct {
 					MID    string `json:"mid"`
@@ -188,11 +196,19 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 						} `json:"profile"`
 					} `json:"contacts"`
 					Messages []struct {
-						ID        string `json:"id"`
-						From      string `json:"from"`
-						Timestamp string `json:"timestamp"`
-						Type      string `json:"type"`
-						Text      struct {
+						ID          string `json:"id"`
+						From        string `json:"from"`
+						Timestamp   string `json:"timestamp"`
+						Type        string `json:"type"`
+						Interactive struct {
+							ListReply struct {
+								ID string `json:"id"`
+							} `json:"list_reply"`
+							ButtonReply struct {
+								ID string `json:"id"`
+							} `json:"button_reply"`
+						} `json:"interactive"`
+						Text struct {
 							Body string `json:"body"`
 						} `json:"text"`
 					} `json:"messages"`
@@ -212,7 +228,11 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		provider = "wa"
 	}
 	hash := digest(string(raw))
-	cipher, err := deviceevidence.Encrypt(s.Pipeline.Key, raw, "inbox-webhook|"+hash)
+	stored := raw
+	if os.Getenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED") == "true" {
+		stored = redactAIChannelButtons(raw)
+	}
+	cipher, err := deviceevidence.Encrypt(s.Pipeline.Key, stored, "inbox-webhook|"+hash)
 	if err != nil {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
@@ -228,7 +248,7 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	ingest := func(account, id, from, name, text, kind string, at time.Time) error {
+	ingest := func(account, id, from, name, text, kind, button string, at time.Time) error {
 		var connection, workspace string
 		var token []byte
 		queryErr := tx.QueryRow(r.Context(), "SELECT * FROM inbox_provider_connections($1,$2)", provider, account).Scan(&connection, &workspace, &token)
@@ -238,6 +258,24 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 			}
 			return queryErr
 		} // durable raw event retained for connections not linked yet
+		if button != "" {
+			if !aiChannelCommerceEnabledFor(workspace) {
+				return nil
+			}
+			var thread *string
+			if err := tx.QueryRow(r.Context(), "SELECT briofold_ai_channel_button_thread($1::uuid,$2::uuid,$3)", connection, workspace, from).Scan(&thread); err != nil {
+				return err
+			}
+			var valid bool
+			if thread != nil {
+				text, valid = aiOrderButtonTurn(s.Pipeline.Key, button, workspace, *thread, time.Now())
+			}
+			if !valid {
+				log.Print("AI commerce rejected a channel button")
+				return nil
+			}
+			kind = "text"
+		}
 		var accepted bool
 		if err := tx.QueryRow(r.Context(), "SELECT inbox_ingest($1::uuid,$2,$3,$4,$5,$6,$7)", connection, id, from, name, text, kind, at).Scan(&accepted); err != nil {
 			return err
@@ -292,6 +330,17 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, entry := range payload.Entry {
 			for _, m := range entry.Messaging {
+				if strings.HasPrefix(m.Postback.Payload, aiButtonPrefix) && os.Getenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED") == "true" {
+					id := m.Postback.MID
+					if id == "" {
+						id = "button:" + digest(m.Sender.ID+"|"+m.Postback.Payload+"|"+time.UnixMilli(m.Timestamp).String())
+					}
+					if err = ingest(entry.ID, id, m.Sender.ID, "", "", "text", m.Postback.Payload, time.UnixMilli(m.Timestamp)); err != nil {
+						fail(w, 503, "SOURCE_UNAVAILABLE")
+						return
+					}
+					continue
+				}
 				if m.Message.MID == "" || m.Message.IsEcho {
 					continue
 				}
@@ -301,7 +350,7 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 					kind = "unsupported"
 					text = "এই ধরনের মেসেজ এখানে দেখানো যায় না।"
 				}
-				if err = ingest(entry.ID, m.Message.MID, m.Sender.ID, "", text, kind, time.UnixMilli(m.Timestamp)); err != nil {
+				if err = ingest(entry.ID, m.Message.MID, m.Sender.ID, "", text, kind, "", time.UnixMilli(m.Timestamp)); err != nil {
 					fail(w, 503, "SOURCE_UNAVAILABLE")
 					return
 				}
@@ -327,7 +376,17 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 							name = c.Profile.Name
 						}
 					}
-					if err = ingest(change.Value.Metadata.Phone, m.ID, m.From, name, text, kind, time.Unix(0, 0).Add(at)); err != nil {
+					button := ""
+					if m.Type == "interactive" && os.Getenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED") == "true" {
+						button = m.Interactive.ListReply.ID
+						if button == "" {
+							button = m.Interactive.ButtonReply.ID
+						}
+						if !strings.HasPrefix(button, aiButtonPrefix) {
+							button = ""
+						}
+					}
+					if err = ingest(change.Value.Metadata.Phone, m.ID, m.From, name, text, kind, button, time.Unix(0, 0).Add(at)); err != nil {
 						fail(w, 503, "SOURCE_UNAVAILABLE")
 						return
 					}
@@ -389,6 +448,11 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			if job.Broadcast && os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") != "true" {
 				_, _ = s.Pipeline.Control.Exec(ctx, "SELECT inbox_finish_send($1::uuid,'','failed','BROADCAST_DISABLED')", job.ID)
 				continue
+			}
+			if order := str(job.Content, "ai_checkout_order"); order != "" && job.Channel != "site" {
+				if link := s.aiOrderCheckoutURL(ctx, job.Workspace, job.Thread, order); link != "" {
+					job.Text += "\n" + link
+				}
 			}
 			if job.Channel == "tg" {
 				state, id, safe := s.sendTelegram(ctx, job)

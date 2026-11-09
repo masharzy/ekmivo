@@ -72,6 +72,10 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/inbox/avatar/{threadID}", pay.HandleInboxAvatar)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/website-chat", pay.HandleWebsiteSettings)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/ai-selling", pay.HandleAISelling)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai-selling", pay.HandleAISelling)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/ai-payment-reviews", pay.HandleAIPaymentReviews)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai-payment-reviews", pay.HandleAIPaymentReviews)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/comments", pay.HandleComments)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/commerce", pay.HandleCommerce)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/commerce", pay.HandleCommerce)
@@ -492,12 +496,16 @@ func main() {
 	defer stop()
 	if pg05 != nil && pg05.Pipeline != nil {
 		go pg05.RunInboxRealtime(runtimeContext)
+		go pg05.RunMetaCustomerNames(runtimeContext)
 	}
 	if pg05 != nil && pg05.Pipeline != nil && os.Getenv("INBOX_SENDER_ENABLED") == "true" {
 		go pg05.RunInboxSender(runtimeContext)
 	}
 	if pg05 != nil && os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" {
 		go pg05.RunStudioAI(runtimeContext)
+	}
+	if pg05 != nil && (os.Getenv("BRIOFOLD_AI_PAYMENT_VERIFY_ENABLED") == "true" || os.Getenv("BRIOFOLD_AI_TOOLS_ENABLED") == "true") {
+		go pg05.RunAIPaymentVerify(runtimeContext)
 	}
 	if pg05 != nil && os.Getenv("BRIOFOLD_COMMENTS_ENABLED") == "true" {
 		go pg05.RunComments(runtimeContext)

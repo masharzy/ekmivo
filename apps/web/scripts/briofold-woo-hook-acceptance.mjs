@@ -10,10 +10,10 @@ export async function runWooWebhookSources({origin,browser,control,sessions,apiO
   const authenticated=async(token,user)=>{const c=await browser.newContext();await c.addCookies([{name:'briofold-session',value:token,url:origin,httpOnly:true},{name:'briofold-default-workspace',value:user+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);return c;};context=await authenticated(sessions.owner,owner);viewerContext=await authenticated(sessions.viewer,viewer);
   const endpoint=origin+`/api/go/workspaces/${store}/commerce?environment=live`;
   const configured=await context.request.post(endpoint,{headers:{Origin:origin},data:{action:'integration-save',operation_key:randomUUID(),body:{provider:'woocommerce',origin:'https://fictional-shop.example.invalid',api_key:'fictional-consumer-key',secret:'fictional-consumer-secret'}}});assert.equal(configured.status(),200,await configured.text());
-  const p=await context.newPage();p.on('dialog',dialog=>void dialog.accept());await p.goto(origin+'/catalog/products/sync');const panel=p.getByRole('region',{name:'WooCommerce webhook sources',exact:true});
+  const p=await context.newPage();p.on('dialog',dialog=>void dialog.accept());await p.goto(origin+'/catalog/products/sync');const panel=p.getByRole('region',{name:/^WooCommerce (webhook sources|\S+ \S+)$/});
   // The sync route deliberately opens the import dialog. Dismiss it before
   // exercising the separate webhook panel; modal siblings are inert.
-  const openSources=async()=>{const dialog=p.getByRole('dialog',{name:/^(Import \/ sync catalog|পণ্য আমদানি \/ সিঙ্ক)$/});await dialog.waitFor();await dialog.getByRole('button',{name:'Close',exact:true}).click();await dialog.waitFor({state:'hidden'});await panel.waitFor();};
+  const openSources=async()=>{const dialog=p.getByRole('dialog',{name:/^(Import \/ sync catalog|পণ্য আমদানি \/ সিঙ্ক)$/});await dialog.waitFor();await dialog.getByRole('button',{name:/^(Close|বন্ধ করুন|বন্ধ)$/}).first().click();await dialog.waitFor({state:'hidden'});await panel.waitFor();};
   await openSources();
   const [response]=await Promise.all([
    p.waitForResponse(response=>{try{return response.request().method()==='POST'&&response.request().postDataJSON()?.action==='woo-hook-create';}catch{return false;}}),

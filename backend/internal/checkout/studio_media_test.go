@@ -177,3 +177,19 @@ func TestStudioVoiceContextFitsPublishedSixteenThousandTokenTariff(t *testing.T)
 		t.Fatal("budgeting discarded capability safety rules")
 	}
 }
+
+func TestAICommerceVoiceAndVideoHandedOverBeforeDownload(t *testing.T) {
+	var service Service
+	for _, kind := range []string{"audio", "video", "image"} {
+		for _, enabled := range []bool{false, true} {
+			_, _, err := service.loadStudioJobMedia(context.Background(), "", studioMediaSource{Kind: kind, Reference: "invalid!"}, enabled)
+			want := errStudioMedia
+			if enabled && kind != "image" {
+				want = errAICommerceMediaHandover
+			}
+			if err != want {
+				t.Fatalf("%s, feature enabled=%v: got %v, want %v", kind, enabled, err, want)
+			}
+		}
+	}
+}

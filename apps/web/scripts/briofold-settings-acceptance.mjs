@@ -22,6 +22,9 @@ import {runSavedReplySequences} from "./briofold-saved-reply-sequences-acceptanc
 import {runBriofoldSettingsBrowser} from "./briofold-settings-browser.mjs";
 import {runBriofoldOnboardingBrowser} from "./briofold-onboarding-browser.mjs";
 import {runBriofoldAiChannel} from "./briofold-ai-channel-acceptance.mjs";
+import {runBriofoldAiCommerce} from "./briofold-ai-commerce-acceptance.mjs";
+import {runBriofoldShopAssistantModelBrowser} from "./briofold-shop-assistant-model-browser.mjs";
+import {runBriofoldAiSellingBrowser} from "./briofold-ai-selling-browser.mjs";
 import {runBriofoldInboxWorkflow} from "./briofold-inbox-workflow-acceptance.mjs";
 import {runBriofoldInboxDrafts} from "./briofold-inbox-drafts-acceptance.mjs";
 import {runBriofoldAiStudioAcceptance} from "./briofold-ai-studio-acceptance.mjs";
@@ -114,10 +117,12 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await apply("0211_briofold_consent_scope_runtime.sql");
   await apply("0212_channel_platform_telegram.sql");
   await apply("0213_qwen_provider_tariffs.sql");
+  await apply("0245_briofold_customer_identity.sql");
+  await apply("0246_briofold_customer_history_privacy.sql");
  }finally{await schema.end({timeout:3});}
  const apiOrigin="http://127.0.0.1:17912",origin="http://127.0.0.1:17913";
  const privateStorage=await startBriofoldPrivateStorage(control);
- const api=spawn(apiBin,[],{env:{...apiEnv,...privateStorage.env,INBOX_SENDER_ENABLED:"false",PORT:"17912",GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_WOO_WEBHOOKS_ENABLED:"true",BRIOFOLD_BROADCAST_DISPATCH_ENABLED:"true",BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED:"true",WOO_WEBHOOK_PUBLIC_ORIGIN:"https://fixture-hooks.example.invalid",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
+ const api=spawn(apiBin,[],{env:{...apiEnv,...privateStorage.env,INBOX_SENDER_ENABLED:"false",BRIOFOLD_CUSTOMER_IDENTITY_ENABLED:"true",PORT:"17912",GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_REQUIRE_AUTHZ:"true",PG10_EXTENSIONS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_WOO_WEBHOOKS_ENABLED:"true",BRIOFOLD_BROADCAST_DISPATCH_ENABLED:"true",BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED:"true",WOO_WEBHOOK_PUBLIC_ORIGIN:"https://fixture-hooks.example.invalid",BRIOFOLD_AI_RUNTIME_ENABLED:"false",BRIOFOLD_AI_TOOLS_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_COMMENTS_ENABLED:"false",BRIOFOLD_COMMENT_DELIVERY_ENABLED:"false",META_APP_SECRET:"phase6-comment-test-secret"},stdio:["ignore","pipe","pipe"]});
  let server,browser,logs="";
  const capture=child=>{for(const stream of [child.stdout,child.stderr])stream.on("data",chunk=>{logs=(logs+String(chunk)).slice(-5000);});};
  capture(api);
@@ -132,7 +137,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
  try{
   await ready(apiOrigin+"/healthz",200,api);
   server=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--webpack","--hostname","127.0.0.1","--port","17913"],{
-   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_WOO_WEBHOOKS_ENABLED:"true",BRIOFOLD_BROADCAST_DISPATCH_ENABLED:"true",BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED:"true",WOO_WEBHOOK_PUBLIC_ORIGIN:"https://fixture-hooks.example.invalid",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_COURIER_SETTINGS_ENABLED:"true",BRIOFOLD_CHANNEL_POLICIES_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
+   cwd:new URL("../",import.meta.url),env:{...process.env,NODE_ENV:"development",BRIOFOLD_AI_MODEL_SETTING_ENABLED:"true",MFA_ENCRYPTION_KEY:Buffer.alloc(32, 7).toString("base64url"),DATABASE_URL:control,GO_API_URL:apiOrigin,GO_WEB_ORIGIN:apiOrigin,BRIOFOLD_AI_RUNTIME_ENABLED:"true",BRIOFOLD_AI_TOOLS_ENABLED:"true",BRIOFOLD_AI_TOPUPS_ENABLED:"false",BRIOFOLD_GROWTH_REPORTS_ENABLED:"true",BRIOFOLD_GROWTH_OPERATIONS_ENABLED:"true",BRIOFOLD_GROWTH_ANALYTICS_ENABLED:"true",BRIOFOLD_GROWTH_CONSENT_ENABLED:"true",BRIOFOLD_COMMERCE_ASSIGNMENTS_ENABLED:"true",BRIOFOLD_COMMERCE_SCAN_ENABLED:"true",BRIOFOLD_COMMERCE_REPORTS_ENABLED:"true",BRIOFOLD_COMMERCE_PRODUCT_ANALYTICS_ENABLED:"true",BRIOFOLD_ACTIVITY_UNIFIED_ENABLED:"true",BRIOFOLD_PRODUCT_PHOTOS_ENABLED:"true",BRIOFOLD_PATHAO_ENABLED:"true",BRIOFOLD_WOO_WEBHOOKS_ENABLED:"true",BRIOFOLD_BROADCAST_DISPATCH_ENABLED:"true",BRIOFOLD_MEMBER_CHANNEL_SCOPES_ENABLED:"true",WOO_WEBHOOK_PUBLIC_ORIGIN:"https://fixture-hooks.example.invalid",BRIOFOLD_CONVERSION_REPORT_ENABLED:"true",BRIOFOLD_COURIER_SETTINGS_ENABLED:"true",BRIOFOLD_CHANNEL_POLICIES_ENABLED:"true",BRIOFOLD_TEAM_GROUPS_ENABLED:"true",BRIOFOLD_UNCONVERTED_INTEREST_ENABLED:"true"},stdio:["ignore","pipe","pipe"]
   });
   capture(server);await ready(origin+"/api/checkout/invalid",404,server);
   browser=await chromium.launch({headless:true});
@@ -142,7 +147,7 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   const failures=[];
   // A focused run still provisions a fresh isolated database and app.
   const requested=process.env.PG04_SETTINGS_SUITES?.split(",").map(name=>name.trim()).filter(Boolean)??[];
-  const known=new Set(["runBriofoldSettingsBrowser","runWalletBrowser","runSetupChecklist","runBriofoldOnboardingBrowser","runBriofoldInboxAccess","runChannelPolicies","runBriofoldAiChannel","runBriofoldAiStudioAcceptance","runBriofoldInboxDrafts","runBriofoldInboxWorkflow","runSavedReplySequences","runFeedbackAcceptance","runTeamGroups","runInterestAcceptance","runHelpVideos","runBriofoldChannelExtensions","runBriofoldCustomers","runBriofoldCRMParity","runLinkedOrderConversion","runBriofoldResponseReport","runPathaoControlBooking","runWooWebhookSources","runCourierSettings","runProductPhotos","runBriofoldCommerce","runBriofoldOrderAssignment","runMemberChannelScopes","runSignedBroadcastOffers","runBroadcastDispatch","runBriofoldGrowthOperations","runBriofoldPhase9Browser","runBriofoldKeyLifecycle"]);
+  const known=new Set(["runBriofoldSettingsBrowser","runWalletBrowser","runSetupChecklist","runBriofoldOnboardingBrowser","runBriofoldInboxAccess","runChannelPolicies","runBriofoldAiChannel","runBriofoldAiCommerce","runBriofoldAiSellingBrowser","runBriofoldShopAssistantModelBrowser","runBriofoldAiStudioAcceptance","runBriofoldInboxDrafts","runBriofoldInboxWorkflow","runSavedReplySequences","runFeedbackAcceptance","runTeamGroups","runInterestAcceptance","runHelpVideos","runBriofoldChannelExtensions","runBriofoldCustomers","runBriofoldCRMParity","runLinkedOrderConversion","runBriofoldResponseReport","runPathaoControlBooking","runWooWebhookSources","runCourierSettings","runProductPhotos","runBriofoldCommerce","runBriofoldOrderAssignment","runMemberChannelScopes","runSignedBroadcastOffers","runBroadcastDispatch","runBriofoldGrowthOperations","runBriofoldPhase9Browser","runBriofoldKeyLifecycle"]);
   if(requested.some(name=>!known.has(name)))throw Error("Unknown PG04 settings suite: "+requested.filter(name=>!known.has(name)).join(", "));
   const executed=new Set();
   const check=async(name,run)=>{if(requested.length&&!requested.includes(name))return;executed.add(name);console.log("BRIOFOLD INDEPENDENT SUITE START",name);try{await run();console.log("BRIOFOLD INDEPENDENT SUITE DONE",name);}catch(error){failures.push({name,error});console.error("BRIOFOLD INDEPENDENT SUITE FAIL",name,error.message);}};
@@ -182,6 +187,10 @@ export async function runBriofoldSettingsAcceptance({control,sessions,apiBin,api
   await check("runBriofoldGrowthOperations",async()=>{await runBriofoldGrowthOperations({origin,browser,control,sessions,apiOrigin});});
   if(phase9Fixture)await check("runBriofoldPhase9Browser",async()=>{await runBriofoldPhase9Browser({origin,browser,control,sessions,...phase9Fixture});});
   if(phase9Fixture)await check("runBriofoldKeyLifecycle",async()=>{await runBriofoldKeyLifecycle({origin,browser,control,sessions,...phase9Fixture});});
+  if(phase9Fixture)await check("runBriofoldAiCommerce",async()=>{await runBriofoldAiCommerce({control,apiEnv,phase9Fixture});});
+  // Needs the AI commerce migrations that the previous suite applies to this fixture.
+  if(phase9Fixture)await check("runBriofoldShopAssistantModelBrowser",async()=>{await runBriofoldShopAssistantModelBrowser({origin,browser,control,sessions});});
+  if(phase9Fixture)await check("runBriofoldAiSellingBrowser",async()=>{await runBriofoldAiSellingBrowser({origin,browser,control,sessions});});
   if(requested.some(name=>!executed.has(name)))throw Error("Requested PG04 suite was unavailable in this fixture");
   if(failures.length)throw new AggregateError(failures.map(x=>x.error),failures.map(x=>x.name+": "+x.error.message).join("\n"));
  }catch(error){throw Error(error.message+"\nSettings acceptance service output:\n"+logs);}

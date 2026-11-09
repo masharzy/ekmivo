@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -36,9 +37,11 @@ type studioContext struct {
 		Sender string `json:"sender"`
 		Text   string `json:"text"`
 	} `json:"history"`
-	Products []json.RawMessage `json:"products"`
-	Question string            `json:"question"`
-	media    []aicredits.Media // Set only by the leased channel worker, never dashboard JSON.
+	Products  []json.RawMessage `json:"products"`
+	Question  string            `json:"question"`
+	AISelling bool              `json:"ai_selling"` // Set by the claim when the owner enabled AI selling and a live catalog exists.
+	media     []aicredits.Media // Set only by the leased channel worker, never dashboard JSON.
+	tools     bool              // Tool mode: grounding comes from tool results, not only quoted facts.
 }
 
 // Knowledge is quoted data, never additional system instructions. No tools or
@@ -47,7 +50,7 @@ func studioMessages(c studioContext) ([]aicredits.Message, error) {
 	if !utf8.ValidString(c.ChannelInstructions) || len(c.ChannelInstructions) > 10000 || c.Config.Model == "" || !utf8.ValidString(c.Question) || len(c.Question) > 8000 || strings.TrimSpace(c.Question) == "" || !utf8.ValidString(c.Config.Instructions) || len(c.Config.Instructions) > 32000 || len(c.Knowledge) > 5 || len(c.Products) > 5 || len(c.History) > 8 {
 		return nil, aicredits.ErrInvalidRequest
 	}
-	if len(c.Knowledge) == 0 && len(c.Products) == 0 && len(c.media) == 0 {
+	if len(c.Knowledge) == 0 && len(c.Products) == 0 && len(c.media) == 0 && !c.tools {
 		return nil, errors.New("no grounded source")
 	}
 	facts := make([]map[string]string, 0, len(c.Knowledge))
@@ -211,7 +214,11 @@ func parseStudioProposal(text, model string) (studioProposal, error) {
 }
 
 func (s *Service) studioEngine() aicredits.Engine {
-	return aicredits.Engine{Store: aiExecutionStore{db: s.Auth.DB}, Provider: s.configuredAIProvider(), Codec: aiExecutionCodec{key: s.Pipeline.Key}}
+	provider := aicredits.Provider(s.aiProvider)
+	if provider == nil {
+		provider = s.configuredAIProvider()
+	}
+	return aicredits.Engine{Store: aiExecutionStore{db: s.Auth.DB}, Provider: provider, Codec: aiExecutionCodec{key: s.Pipeline.Key}}
 }
 func (s *Service) studioReady() bool {
 	return os.Getenv("BRIOFOLD_AI_RUNTIME_ENABLED") == "true" && s.configuredAIKey() && s != nil && s.Auth != nil && s.Auth.DB != nil && s.Pipeline != nil && s.Pipeline.Control != nil && len(s.Pipeline.Key) == 32
@@ -361,8 +368,21 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			return
 		}
 	}
+	toolMode := aiToolsEnabledFor(job.Workspace) && job.Context.AISelling
+	channelCommerce := toolMode && aiChannelCommerceEnabledFor(job.Workspace)
 	mediaCtx, mediaCancel := context.WithTimeout(ctx, 30*time.Second)
-	media, caption, mediaErr := s.studioJobMedia(mediaCtx, job.ID, job.Lease, job.Workspace)
+	media, caption, mediaErr := s.studioJobMedia(mediaCtx, job.ID, job.Lease, job.Workspace, channelCommerce)
+	var cardFacts []json.RawMessage
+	if channelCommerce && media.Kind == "image" {
+		matches := s.aiChannelPhotoProducts(mediaCtx, job.ID, job.Lease, media)
+		if len(matches) > 0 {
+			cardFacts = matches
+			job.Context.Products = append(matches, job.Context.Products...)
+			if len(job.Context.Products) > 5 {
+				job.Context.Products = job.Context.Products[:5]
+			}
+		}
+	}
 	mediaCancel()
 	if media.Kind != "" {
 		job.Context.media = []aicredits.Media{media}
@@ -370,15 +390,48 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			job.Context.Question = caption
 		}
 	}
+	job.Context.tools = toolMode
 	messages, err := studioMessages(job.Context)
 	reason, body := "", ""
+	handover := false
+	checkoutOrder := ""
 	if mediaErr != nil {
 		reason = "AI_MEDIA_UNAVAILABLE"
+		handover = errors.Is(mediaErr, errAICommerceMediaHandover)
 	} else if err != nil {
 		reason = "AI_CONTEXT_TOO_LARGE"
 	} else {
-		run, cancel := context.WithTimeout(ctx, 75*time.Second)
-		result, runErr := s.studioEngine().Run(run, aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: s.selectedAIModel(job.Context.Config.Model), Messages: messages})
+		timeout := 75 * time.Second
+		if toolMode {
+			timeout = aiToolJobTimeout
+		}
+		run, cancel := context.WithTimeout(ctx, timeout)
+		model := s.selectedAIModel(job.Context.Config.Model)
+		if toolMode && os.Getenv("BRIOFOLD_AI_MODEL_SETTING_ENABLED") == "true" {
+			var override *string
+			if s.Pipeline.Control.QueryRow(run, "SELECT briofold_shop_assistant_model()").Scan(&override) == nil && override != nil {
+				model = *override
+			}
+		}
+		request := aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: model, Messages: messages}
+		var result aicredits.Result
+		var runErr error
+		acted := false
+		if toolMode {
+			var loop aiLoopResult
+			loop, runErr = s.runAIToolLoop(run, request, job.ID, job.Lease, studioReplyLanguage(job.Context))
+			result, handover, acted = loop.Result, loop.Handover, loop.Acted
+			checkoutOrder = loop.CheckoutOrder
+			// Tool results are business facts for the contact/number check of the safety filter.
+			job.Context.Products = append(job.Context.Products, loop.Facts...)
+			if channelCommerce && !acted && !handover {
+				cardFacts = append(loop.Facts, cardFacts...)
+			} else {
+				cardFacts = nil
+			}
+		} else {
+			result, runErr = s.studioEngine().Run(run, request)
+		}
 		cancel()
 		if runErr != nil {
 			reason = "AI_REQUEST_UNKNOWN"
@@ -392,11 +445,15 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			if errors.Is(runErr, aicredits.ErrInvalidRequest) || (pg != nil && pg.Code == "22023") {
 				reason = "AI_CONTEXT_TOO_LARGE"
 			}
-			if errors.Is(runErr, aicredits.ErrInvalidTariff) || errors.Is(runErr, aicredits.ErrUnavailable) || (pg != nil && (pg.Code == "42501" || pg.Code == "P0002" || pg.Code == "54000")) {
+			if errors.Is(runErr, aicredits.ErrInvalidTariff) || errors.Is(runErr, aicredits.ErrUnavailable) || errors.Is(runErr, errAIRateLimited) || (pg != nil && (pg.Code == "42501" || pg.Code == "P0002" || pg.Code == "54000")) {
 				reason = "AI_RUNTIME_UNAVAILABLE"
 			}
+			if errors.Is(runErr, errAIToolOutput) {
+				reason = "AI_INVALID_OUTPUT"
+			}
 		} else {
-			body = studioSafeReply(job.Context, result.Text)
+			// In tool mode a successful order/payment tool lets the reply describe what was actually done.
+			body = studioSafeReplyMode(job.Context, result.Text, toolMode && acted)
 			if !utf8.ValidString(body) || strings.TrimSpace(body) == "" || utf8.RuneCountInString(body) > 8000 {
 				reason = "AI_INVALID_OUTPUT"
 				body = ""
@@ -407,7 +464,35 @@ func (s *Service) runStudioJob(ctx context.Context) {
 	defer cancel()
 	var result []byte
 	// A failed finish leaves the leased job for review; it cannot trigger another generation.
-	_ = s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_channel_finish($1::uuid,$2::uuid,$3,$4)", job.ID, job.Lease, body, reason).Scan(&result)
+	query := "SELECT briofold_ai_channel_finish($1::uuid,$2::uuid,$3,$4)"
+	var argument any = reason
+	if reason == "" && len(cardFacts) > 0 {
+		cards := buildAIProductCards(cardFacts, studioReplyLanguage(job.Context), time.Now())
+		if len(cards.Cards) > 0 {
+			encoded, _ := json.Marshal(cards)
+			if len(encoded) <= 15000 {
+				query = "SELECT briofold_ai_channel_finish_cards($1::uuid,$2::uuid,$3,$4::jsonb)"
+				argument = string(encoded)
+			}
+		}
+	}
+	var finishErr error
+	if reason == "" && checkoutOrder != "" {
+		finishErr = s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_channel_finish_link($1::uuid,$2::uuid,$3,$4::uuid)", job.ID, job.Lease, body, checkoutOrder).Scan(&result)
+	} else {
+		finishErr = s.Pipeline.Control.QueryRow(finish, query, job.ID, job.Lease, body, argument).Scan(&result)
+	}
+	if finishErr != nil {
+		code := ""
+		var pg *pgconn.PgError
+		if errors.As(finishErr, &pg) {
+			code = pg.Code
+		}
+		log.Printf("ai finish failed job=%s code=%s", job.ID, code)
+	}
+	if handover {
+		s.aiApplyHandover(finish, job.ID)
+	}
 }
 
 func (s *Service) configuredAIProvider() aicredits.Provider {

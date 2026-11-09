@@ -124,7 +124,8 @@ function File({m,workspaceId,threadId,bn}:{m:Msg;workspaceId:string;threadId:str
 const urlRe=/(https?:\/\/[^\s<>]+)/g;
 function Text({body}:{body:string}){
  const parts=body.split(urlRe);
- return <>{parts.map((p,i)=>i%2?<a key={i} href={p} target="_blank" rel="noopener noreferrer nofollow" onClick={e=>e.stopPropagation()}>{p}</a>:p)}</>;
+ // Own element so the message text is separable from the time/tick metadata in the same bubble.
+ return <span>{parts.map((p,i)=>i%2?<a key={i} href={p} target="_blank" rel="noopener noreferrer nofollow" onClick={e=>e.stopPropagation()}>{p}</a>:p)}</span>;
 }
 
 export type RowProps={msg:Msg;album?:Msg[];first:boolean;last:boolean;bn:boolean;workspaceId:string;threadId:string;customerName:string;byId:Map<string,Msg>;selected:boolean;fresh:boolean;flash:boolean;

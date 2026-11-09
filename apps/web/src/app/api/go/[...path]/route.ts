@@ -12,7 +12,7 @@ const adminWorkspaceRead=/^platform\/workspaces\/[0-9a-f-]{36}\/operations\/(pay
 const operationPath=/^workspaces\/[0-9a-f-]{36}\/operations\/(payments|incoming|gateways|devices|webhooks|deliveries|events|parsers|overview|notices)(?:\/[0-9a-f-]{36}(?:\/(revoke|rename|reprocess|enable|disable|rotate|activate_rotation|revoke_previous|replay|retry))?)?$/i;
 const workspacePath = /^workspaces\/[0-9a-f-]{36}\/(access|settings|(?:payment-intents(?:\/[0-9a-f-]{36}(?:\/cancel)?)?|linked-sources))$/i;
 const mobilePath=/^workspaces\/[0-9a-f-]{36}\/(?:mobile-devices(?:\/[0-9a-f-]{36}\/(?:revoke|reconnect|delete))?|comments|website-chat|inbox-connect|inbox-channel-status|inbox-telegram|inbox|inbox-connections(?:\/[0-9a-f-]{36}\/disconnect)?)$/i;
-const commercePath=/^workspaces\/[0-9a-f-]{36}\/commerce$/i;
+const commercePath=/^workspaces\/[0-9a-f-]{36}\/(?:commerce|ai-selling|ai-payment-reviews)$/i;
 const crmPath=/^workspaces\/[0-9a-f-]{36}\/crm$/i;
 const growthPath=/^workspaces\/[0-9a-f-]{36}\/growth$/i;
 const aiRuntimePath=/^workspaces\/[0-9a-f-]{36}\/ai\/(?:test|studio-test|knowledge-import)$/i;
@@ -56,7 +56,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
   return Response.json({ code: sandboxTools?"SANDBOX_TOOLS_UNAVAILABLE":"PROXY_CONFIG_INVALID" }, { status: 503 });
  const target = new URL("/v1/" + path, base);
  const incoming = new URL(request.url);
- for (const key of ["resource", "item", "source", "priority", "assignee", "customer", "format", "environment", "capability", "cursor", "status", "account", "method", "from", "to", "q", "period", "page", "page_size", "filter", "kind", "channel", "audience"]) {
+ for (const key of ["resource", "item", "source", "priority", "assignee", "customer", "format", "environment", "capability", "cursor", "status", "account", "method", "from", "to", "q", "period", "page", "page_size", "filter", "kind", "channel", "audience", "view", "ids"]) {
   if(incoming.searchParams.getAll(key).length>1)return Response.json({code:"INVALID_SCOPE"},{status:400});
   const value = incoming.searchParams.get(key);
   if (value) target.searchParams.set(key, value);
