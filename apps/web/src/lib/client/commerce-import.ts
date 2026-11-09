@@ -4,14 +4,15 @@ export function catalogRows(rows:string[][]):CatalogRow[]{
  if(rows.length<1||rows.length>500)throw Error("IMPORT_REQUIRES_1_TO_500_ROWS");const seen=new Set<string>();
  return rows.map((values,i)=>{const r=Object.fromEntries(header.map((key,n)=>[key,(values[n]??"").trim()]));if(!r.name||r.name.length>200||!r.sku||r.sku.length>80||!/^[0-9]{1,12}$/.test(r.price_minor)||Number(r.price_minor)>100000000000||seen.has(r.sku)||r.barcode?.length>80||r.group?.length>500)throw Error(`INVALID_IMPORT_ROW_${i+2}`);seen.add(r.sku);return {name:r.name,sku:r.sku,price_minor:Number(r.price_minor),barcode:r.barcode??"",group:r.group||r.sku};});
 }
-export function parseCatalogCSV(text:string):CatalogRow[]{
+export function csvCells(text:string):string[][]{
  if(text.length>5242880)throw Error("FILE_TOO_LARGE");const rows:string[][]=[];let row:string[]=[],cell="",quoted=false;
  for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else if(!quoted&&cell!=="")throw Error("INVALID_CSV_QUOTE");else quoted=!quoted;}else if(!quoted&&(c===","||c==="\n"||c==="\r")){row.push(cell);cell="";if(c!==","){if(c==="\r"&&text[i+1]==="\n")i++;if(row.some(v=>v!==""))rows.push(row);row=[];}if(rows.length>501||row.length>30)throw Error("IMPORT_TOO_LARGE");}else cell+=c;}
- if(quoted)throw Error("UNCLOSED_CSV_QUOTE");row.push(cell);if(row.some(v=>v!==""))rows.push(row);return catalogRows(rows);
+ if(quoted)throw Error("UNCLOSED_CSV_QUOTE");row.push(cell);if(row.some(v=>v!==""))rows.push(row);return rows;
 }
+export function parseCatalogCSV(text:string):CatalogRow[]{return catalogRows(csvCells(text));}
 // Read a bounded first worksheet without executing formulas, macros or links.
 // ZIP entries are read in memory; no archive path is ever written to disk.
-async function xlsxRows(bytes:Uint8Array):Promise<string[][]>{
+export async function xlsxRows(bytes:Uint8Array):Promise<string[][]>{
  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let end=-1;
  for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--)if(view.getUint32(i,true)===0x06054b50){end=i;break;}
  if(end<0)throw Error("INVALID_XLSX_ZIP");const entries=view.getUint16(end+10,true);if(entries>2000||view.getUint16(end+4,true)!==0||view.getUint16(end+6,true)!==0)throw Error("UNSUPPORTED_XLSX_ARCHIVE");

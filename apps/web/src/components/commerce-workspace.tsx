@@ -13,6 +13,7 @@ import {parseCatalogFile} from "../lib/client/commerce-import";
 import {OrderBarcode} from "./order-barcode";
 import {OrderBarcodeScanner} from "./order-barcode-scanner";
 import {CommerceProductAnalytics} from "./commerce-product-analytics";
+import {CatalogPanel} from "./catalog-panel";
 
 type Row=Record<string,unknown>;
 type Variant={id?:string;sku:string;barcode:string;price_minor:number;options:Record<string,string>;active:boolean};
@@ -52,7 +53,7 @@ function MoneyInput({value,onChange,required=true,percent=false}:{value:unknown;
  const [text,setText]=useState(value===null||value===undefined||value===""?"":(Number(value)/100).toFixed(2));
  return <input type="number" min={0} max={percent?100:1000000000} step="0.01" required={required} value={text} onChange={e=>{const raw=e.target.value;setText(raw);if(raw===""){e.target.setCustomValidity("");onChange(null);return;}if(!/^[0-9]{1,10}(\.[0-9]{0,2})?$/.test(raw)){e.target.setCustomValidity("Use at most two decimal places.");onChange(null);return;}e.target.setCustomValidity("");const [whole,fraction=""]=raw.split(".");onChange(Number(whole)*100+Number((fraction+"00").slice(0,2)));}}/>;
 }
-export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initial,assignmentEnabled=false,scanEnabled=false,productAnalyticsEnabled=false,productPhotosEnabled=false,pathaoEnabled=false,wooHooksEnabled=false}:{workspaceId:string;actorId:string;bn:boolean;view:string;environment:"live"|"sandbox";initial:CommercePageData|null;assignmentEnabled?:boolean;scanEnabled?:boolean;productAnalyticsEnabled?:boolean;productPhotosEnabled?:boolean;pathaoEnabled?:boolean;wooHooksEnabled?:boolean}){
+export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initial,assignmentEnabled=false,scanEnabled=false,productAnalyticsEnabled=false,productPhotosEnabled=false,pathaoEnabled=false,wooHooksEnabled=false,catalogEnabled=false,wooSyncEnabled=false}:{workspaceId:string;actorId:string;bn:boolean;view:string;environment:"live"|"sandbox";initial:CommercePageData|null;assignmentEnabled?:boolean;scanEnabled?:boolean;productAnalyticsEnabled?:boolean;productPhotosEnabled?:boolean;pathaoEnabled?:boolean;wooHooksEnabled?:boolean;catalogEnabled?:boolean;wooSyncEnabled?:boolean}){
  const t=useCallback((en:string,be:string)=>bn?be:en,[bn]);
  const scanMode=view==="scan",chaseMode=view==="to-chase",syncMode=view==="products-sync",resource=scanMode||chaseMode?"orders":syncMode?"products":view==="courier"?"delivery":view||"orders",api=`/api/go/workspaces/${workspaceId}/commerce?environment=${environment}`;
  const [data,setData]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState(initial?"":t("Commerce source unavailable. Retry refresh.","অর্ডারের তথ্য পাওয়া যাচ্ছে না। রিফ্রেশ করুন।")),[message,setMessage]=useState("");
@@ -218,6 +219,7 @@ export function CommerceWorkspace({workspaceId,actorId,bn,view,environment,initi
    :<p style={{margin:0}}>{stockRows?t("No stock recorded yet. Create a warehouse, then adjust stock for a product.","এখনো মজুত নেই। আগে গুদাম তৈরি করুন, তারপর পণ্যের মজুত সংশোধন করুন।"):t("Stock could not be loaded.","মজুত লোড করা যায়নি।")}</p>}
   </div></RefModal>
   <RefModal open={syncExpanded} width={760} busy={busy} title={t("Import / sync catalog","পণ্য আমদানি / সিঙ্ক")} onClose={()=>setSyncExpanded(false)}><div style={{display:"grid",gap:14}}>
+   {catalogEnabled&&data?.can_manage&&<CatalogPanel workspaceId={workspaceId} environment={environment} bn={bn} canManage={data.can_manage} wooSyncEnabled={wooSyncEnabled} onChanged={()=>void refresh()}/>}
    <p>{t("CSV / XLSX columns: name, sku, price_minor, barcode (optional), group (optional). Each group becomes one product with variants. Review changes before applying; stock is never overwritten.","CSV / XLSX-এর কলাম: name, sku, price_minor, barcode (ঐচ্ছিক), group (ঐচ্ছিক)। একই group-এর পণ্যগুলো আলাদা ধরন হবে। প্রয়োগের আগে পরিবর্তন দেখুন; মজুত বদলাবে না।")}</p>
    <section style={{display:"grid",gap:10}}><h3 style={{margin:0,fontSize:15}}>{t("From a file","ফাইল থেকে")}</h3><label style={{display:"grid",gap:6}}>{t("Catalog file (up to 500 rows)","পণ্যের ফাইল (সর্বোচ্চ ৫০০ সারি)")}
     <input type="file" accept=".csv,.xlsx" disabled={busy||dirty||unconfirmed} onChange={async e=>{
