@@ -281,7 +281,9 @@ func TestAICommerceIntegration(t *testing.T) {
 	// Owner notice: exactly one 'paid' notice + badge event, one email to the verified owner, nothing on a second pass.
 	var mails []receiptnotice.Message
 	aiSendEmail = func(_ context.Context, _ *Service, m receiptnotice.Message) error {
-		mails = append(mails, m)
+		if m.Recipient.Email == "ai-it-"+tag+"@example.invalid" { // the shared fixture DB may hold earlier runs' notices
+			mails = append(mails, m)
+		}
 		return nil
 	}
 	defer func() {
@@ -376,8 +378,21 @@ func TestAICommerceIntegration(t *testing.T) {
 	}
 	// Give both an order, then race the same TrxID.
 	it.exec(it.admin, "UPDATE commerce_stock SET on_hand=on_hand+1 WHERE variant_id=$1::uuid", vl)
-	for _, c := range []claimed{a, b} {
-		tool(c, 2, "upsert_order_draft", fmt.Sprintf(`{"area":"dhaka","recipient":{"address":"Race"},"items":[{"variant_ref":"%s","quantity":1}]}`, vl))
+	// Owner settings: a stale revision is refused; the handover limit hands a large order to a person.
+	settingsRev := it.one(it.admin, "SELECT revision::text FROM commerce_ai_settings WHERE workspace_id=$1::uuid AND environment='live'", it.ws)
+	if _, err := it.svc.Pipeline.Control.Exec(ctx, "SELECT briofold_ai_selling_save($1::uuid,'live',$2::uuid,999999,'{\"handover_above_minor\":1}'::jsonb)", it.ws, it.user); err == nil || !strings.Contains(err.Error(), "40001") {
+		t.Fatalf("stale settings revision accepted: %v", err)
+	}
+	it.exec(it.admin, "SELECT briofold_ai_selling_save($1::uuid,'live',$2::uuid,$3::bigint,'{\"handover_above_minor\":1}'::jsonb)", it.ws, it.user, settingsRev)
+	for i, c := range []claimed{a, b} {
+		r := tool(c, 2, "upsert_order_draft", fmt.Sprintf(`{"area":"dhaka","recipient":{"address":"Race"},"items":[{"variant_ref":"%s","quantity":1}]}`, vl))
+		if i == 0 && r["handover"] != true {
+			t.Fatalf("order above the owner's limit was not handed over: %v", r)
+		}
+		if i == 0 {
+			it.exec(it.admin, "SELECT briofold_ai_selling_save($1::uuid,'live',$2::uuid,$3::bigint,'{\"handover_above_minor\":0}'::jsonb)", it.ws, it.user,
+				it.one(it.admin, "SELECT revision::text FROM commerce_ai_settings WHERE workspace_id=$1::uuid AND environment='live'", it.ws))
+		}
 		tool(c, 3, "ask_payment_choice", `{"choice":"mobile"}`)
 	}
 	same := deviceevidence.Identity(payerKey, "receipt|bkash|RACE00001")
@@ -399,5 +414,28 @@ func TestAICommerceIntegration(t *testing.T) {
 	// A retried step replays its stored result and never acts twice.
 	if again := tool(a, 4, "submit_payment_proof", proof); fmt.Sprint(again) != fmt.Sprint(results[0]) {
 		t.Fatalf("retry did not replay: %v vs %v", again, results[0])
+	}
+
+	// Owner review: the accepted race claim goes to review; approving confirms the order once and tells the buyer once.
+	claim := it.one(it.admin, "SELECT id::text FROM commerce_payment_claims WHERE transaction_digest=$1 AND workspace_id=$2::uuid", same, it.ws)
+	it.exec(it.admin, "SELECT briofold_ai_claim_resolve($1::uuid,'review','no_matching_sms')", claim)
+	var queue []byte
+	if err := it.svc.Pipeline.Control.QueryRow(ctx, "SELECT briofold_ai_review_queue($1::uuid,'live',$2::uuid)", it.ws, it.user).Scan(&queue); err != nil || !strings.Contains(string(queue), claim) {
+		t.Fatalf("review queue: %v %s", err, queue)
+	}
+	if _, err := it.svc.Pipeline.Control.Exec(ctx, "SELECT briofold_ai_review_decide($1::uuid,'live',$2::uuid,$3::uuid,'approve')", it.ws, it.user, claim); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	if _, err := it.svc.Pipeline.Control.Exec(ctx, "SELECT briofold_ai_review_decide($1::uuid,'live',$2::uuid,$3::uuid,'approve')", it.ws, it.user, claim); err == nil {
+		t.Fatal("a decided claim was decided twice")
+	}
+	raceOrder := it.one(it.admin, "SELECT order_id::text FROM commerce_payment_claims WHERE id=$1::uuid", claim)
+	if s := it.one(it.admin, "SELECT payment_state||'/'||status FROM commerce_orders WHERE id=$1::uuid", raceOrder); s != "verified/confirmed" {
+		t.Fatalf("approved order: %s", s)
+	}
+	for _, o := range []string{order, raceOrder} {
+		if n := it.one(it.admin, "SELECT count(*)::text FROM inbox_messages WHERE idempotency_key=$1::uuid AND sender='seller'", o); n != "1" {
+			t.Fatalf("buyer paid message for %s: %s", o, n)
+		}
 	}
 }
