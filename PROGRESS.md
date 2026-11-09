@@ -281,4 +281,4 @@ Remaining, in this order:
 - Added the AI Credits model selector and rollback, append-only model revisions and audit events, and the AI selling worker override.
 - Assumption: only models with published tariffs are selectable. The first rollback restores the existing default selection behavior.
 - Enable `BRIOFOLD_AI_MODEL_SETTING_ENABLED=true` on the web and Go services after migration 0240 is available. The worker uses the override for AI selling jobs.
-- Verification: admin design check passed. The Postgres integration subtest and `runBriofoldShopAssistantModelBrowser` require isolated PG04 acceptance. Channel features, customer identity, and seed/performance work remain open.
+- Verification: Go vet/tests, web token sync/lint/TypeScript, and the admin design check passed. Isolated PostgreSQL 16 PG04 passed with 796 assertions, including `TestAICommerceIntegration/shop_assistant_model_version_and_rollback` and `runBriofoldShopAssistantModelBrowser` (English/Bangla, light/dark, 320/412/1440, HTTP 403, save/rollback/audit). Channel features, customer identity, and seed/performance work remain open.
