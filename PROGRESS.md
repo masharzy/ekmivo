@@ -239,13 +239,10 @@ Fixed sidebar ref rendering through atomic navigation state and added 43 missing
 
 Phase 0 CI follow-up: broad Foundation acceptance exposed existing Inbox/CRM/modal regressions after the original gates passed. Restored same-origin inbox requests, date/keyboard controls, CRM filters/export/follow-up settings/accessibility, operable mapping dialogs and metadata-only reload-safe attachment retries. Updated current-UI acceptance contracts without dropping authorization/privacy/idempotency/value assertions. Linux build/TypeScript, 210 non-browser tests and eight draft/attachment checks pass. Final full CI remains pending; Phase 0 is NOT SEALED. Coordination with Claude partial Phase 1: GitHub issue #164.
 
-## AI Commerce Phase 1 — catalog (2026-11-09) — PARTIAL, branch agents/ai-commerce-phase1 (stacked on Phase 0 PR #162)
-Done (data layer only):
-- Migration 0228: catalog columns on commerce_products (tags, category, search_aliases, ai_notes, min_price_minor, source, external_id), Bangla/Banglish/English synonym table, search columns kept current by triggers, `commerce_product_search` (every word must match, variant-level pick, price/stock/category filters, typo fallback, never returns min_price_minor), `commerce_catalog_write` (one write path, upsert by source+external_id), one-time idempotent copy of inbox_products (each size -> a variant, BDT only). commerce_media now allows webp.
-- Registered 0228 in the financial-migrate coordinator list.
-- tools/testing/catalog-search-harness.sql: 15 assertions on an empty local PostgreSQL 16, migration applied twice. All PASS. NOT yet run on the full migration chain or on a Neon branch.
-Measured locally (10k synthetic products, PG16): normal search 23–41 ms; typo fallback ~105 ms in a worst case where 20% of products share the word.
-NOT done: manual product form, CSV import with image URLs (SSRF-safe), public REST API + Idempotency-Key, Woo full import/webhooks, feature flags, docs/curl examples, Go integration tests, CI run, Neon test-branch run.
-Not verified: Go tests (toolchain here is 1.24, repo needs 1.27); web lint/build.
-Neon: owner approved deleting archived branch test-dashboard-sms-evidence-20261015; created ai-commerce-phase1-test-20261109 and applied 0228 once (ledger 76 rows). Evidence: docs/evidence/ai-commerce-phase1/README.md. Neon second run not done.
-Known gap: inbox product images are in inbox_media and are not copied into commerce_media; owner must re-attach.
+## AI Commerce Phase 1 — catalog (2026-11-09) — code complete, NOT fully verified; branch agents/ai-commerce-phase1 (PR #163, stacked on Phase 0 PR #162)
+Done: migrations 0228–0232 (catalog columns/search, one write path, scoped API SQL, Woo apply-once table, indexes); Go product API `/v1/products` + dashboard catalog actions + SSRF-safe image fetch + Woo full import and webhook auto-apply; web catalog panel (manual form, CSV/XLSX import with preview, Woo import); `docs/api/products-api.md`. Flags (all off by default): BRIOFOLD_CATALOG_ENABLED, BRIOFOLD_PRODUCT_API_ENABLED, BRIOFOLD_WOO_SYNC_ENABLED.
+Verified: CI Go compile and unit tests pass (SSRF, validation, Woo mapping, migration list); web tsc/eslint clean; importer node tests 5/5; Neon test branch rollback checks for upsert/replay/scopes/stock/deactivate/Woo claim; search on 10,000 products p50 11 ms, p95 40 ms (found and fixed a missing index and a non-indexed filter that made it ~900 ms).
+NOT verified: any end-to-end run (HTTP→DB→storage) or real Woo store; the web UI in a browser; VPS; Next.js CI job (baseline-failing on Phase 0 too). No Go integration tests were written.
+Decisions: apply-state for Woo notices is a separate table because notices are immutable; CSV columns differ from the plan (see evidence); images https-only.
+Open: inbox product picker + AI reply path still read `inbox_products` (migrations 0135/0202) → do with Phase 3 orchestrator. Needs-web-change: none. Needs owner: set the three flags when ready; a warehouse must exist before stock can be set.
+Evidence: docs/evidence/ai-commerce-phase1/README.md.
