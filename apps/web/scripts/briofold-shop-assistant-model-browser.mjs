@@ -65,6 +65,11 @@ export async function runBriofoldShopAssistantModelBrowser({origin, browser, con
     assert.deepEqual(audit.map(row => row.action), ["ai_model.change", "ai_model.rollback"]);
 
     const viewer = await (await open(sessions.viewer)).newPage();
+    const forbidden = await viewer.request.post(origin + "/api/admin/shop-assistant-model", {
+      headers: {Origin: origin},
+      form: {revision: "0", operation: "save", model},
+    });
+    assert.equal(forbidden.status(), 403);
     const denied = await viewer.goto(origin + "/en/admin/credits");
     assert.equal(denied.status(), 404);
     assert.equal(await viewer.getByRole("heading", {name: heading.en}).count(), 0);
