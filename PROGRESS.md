@@ -257,3 +257,8 @@ Owner asked for code-level completion; end-to-end testing is done later by the o
 - Open / not built: see "NOT BUILT" in the test guide (all UI for settings/badges/drawer, carousels and buttons, image/voice tools, notifications, model admin setting, inbox_products switch, payment links).
 - Needs-web-change: Settings > AI selling page; review queue + sidebar badge; customer drawer; admin model setting.
 - Branch note: Phases 3-6 are stacked on branch `agents/ai-commerce-phase5` (one PR) instead of one PR per phase.
+
+## AI commerce review fixes (2026-11-09)
+Review `docs/reviews/ai-commerce-phase2-6-review.md` (4 blockers, 8 high, 10 medium, 7 low) fixed in place in 0233-0235 (never applied to production) plus realm migration 0236.
+Verified on Neon test branch `ai-commerce-fixes-test-20261109` (`br-damp-mud-b3c38es3`, created after deleting archived `repeat-payments-guard-20261013` with owner approval).
+Open: H3 reverse race needs a realm lock; orders not via `commerce_write`; all UI; Go compile only in CI. Test guide rewritten for Gemini run.

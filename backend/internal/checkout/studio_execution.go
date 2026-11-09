@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -39,6 +40,7 @@ type studioContext struct {
 	Products []json.RawMessage `json:"products"`
 	Question string            `json:"question"`
 	media    []aicredits.Media // Set only by the leased channel worker, never dashboard JSON.
+	tools    bool              // Tool mode: grounding comes from tool results, not only quoted facts.
 }
 
 // Knowledge is quoted data, never additional system instructions. No tools or
@@ -47,7 +49,7 @@ func studioMessages(c studioContext) ([]aicredits.Message, error) {
 	if !utf8.ValidString(c.ChannelInstructions) || len(c.ChannelInstructions) > 10000 || c.Config.Model == "" || !utf8.ValidString(c.Question) || len(c.Question) > 8000 || strings.TrimSpace(c.Question) == "" || !utf8.ValidString(c.Config.Instructions) || len(c.Config.Instructions) > 32000 || len(c.Knowledge) > 5 || len(c.Products) > 5 || len(c.History) > 8 {
 		return nil, aicredits.ErrInvalidRequest
 	}
-	if len(c.Knowledge) == 0 && len(c.Products) == 0 && len(c.media) == 0 {
+	if len(c.Knowledge) == 0 && len(c.Products) == 0 && len(c.media) == 0 && !c.tools {
 		return nil, errors.New("no grounded source")
 	}
 	facts := make([]map[string]string, 0, len(c.Knowledge))
@@ -370,19 +372,31 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			job.Context.Question = caption
 		}
 	}
+	toolMode := aiToolsEnabledFor(job.Workspace)
+	job.Context.tools = toolMode
 	messages, err := studioMessages(job.Context)
 	reason, body := "", ""
+	handover := false
 	if mediaErr != nil {
 		reason = "AI_MEDIA_UNAVAILABLE"
 	} else if err != nil {
 		reason = "AI_CONTEXT_TOO_LARGE"
 	} else {
-		run, cancel := context.WithTimeout(ctx, 75*time.Second)
+		timeout := 75 * time.Second
+		if toolMode {
+			timeout = aiToolJobTimeout
+		}
+		run, cancel := context.WithTimeout(ctx, timeout)
 		request := aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: s.selectedAIModel(job.Context.Config.Model), Messages: messages}
 		var result aicredits.Result
 		var runErr error
-		if aiToolsEnabledFor(job.Workspace) {
-			result, runErr = s.runAIToolLoop(run, request, job.ID, job.Lease)
+		acted := false
+		if toolMode {
+			var loop aiLoopResult
+			loop, runErr = s.runAIToolLoop(run, request, job.ID, job.Lease, studioReplyLanguage(job.Context))
+			result, handover, acted = loop.Result, loop.Handover, loop.Acted
+			// Tool results are business facts for the contact/number check of the safety filter.
+			job.Context.Products = append(job.Context.Products, loop.Facts...)
 		} else {
 			result, runErr = s.studioEngine().Run(run, request)
 		}
@@ -399,11 +413,15 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			if errors.Is(runErr, aicredits.ErrInvalidRequest) || (pg != nil && pg.Code == "22023") {
 				reason = "AI_CONTEXT_TOO_LARGE"
 			}
-			if errors.Is(runErr, aicredits.ErrInvalidTariff) || errors.Is(runErr, aicredits.ErrUnavailable) || (pg != nil && (pg.Code == "42501" || pg.Code == "P0002" || pg.Code == "54000")) {
+			if errors.Is(runErr, aicredits.ErrInvalidTariff) || errors.Is(runErr, aicredits.ErrUnavailable) || errors.Is(runErr, errAIRateLimited) || (pg != nil && (pg.Code == "42501" || pg.Code == "P0002" || pg.Code == "54000")) {
 				reason = "AI_RUNTIME_UNAVAILABLE"
 			}
+			if errors.Is(runErr, errAIToolOutput) {
+				reason = "AI_INVALID_OUTPUT"
+			}
 		} else {
-			body = studioSafeReply(job.Context, result.Text)
+			// In tool mode a successful order/payment tool lets the reply describe what was actually done.
+			body = studioSafeReplyMode(job.Context, result.Text, toolMode && acted)
 			if !utf8.ValidString(body) || strings.TrimSpace(body) == "" || utf8.RuneCountInString(body) > 8000 {
 				reason = "AI_INVALID_OUTPUT"
 				body = ""
@@ -414,7 +432,17 @@ func (s *Service) runStudioJob(ctx context.Context) {
 	defer cancel()
 	var result []byte
 	// A failed finish leaves the leased job for review; it cannot trigger another generation.
-	_ = s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_channel_finish($1::uuid,$2::uuid,$3,$4)", job.ID, job.Lease, body, reason).Scan(&result)
+	if err := s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_channel_finish($1::uuid,$2::uuid,$3,$4)", job.ID, job.Lease, body, reason).Scan(&result); err != nil {
+		code := ""
+		var pg *pgconn.PgError
+		if errors.As(err, &pg) {
+			code = pg.Code
+		}
+		log.Printf("ai finish failed job=%s code=%s", job.ID, code)
+	}
+	if handover {
+		s.aiApplyHandover(finish, job.ID)
+	}
 }
 
 func (s *Service) configuredAIProvider() aicredits.Provider {

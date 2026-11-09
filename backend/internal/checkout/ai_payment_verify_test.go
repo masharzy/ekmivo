@@ -7,24 +7,32 @@ import (
 
 func TestMatchClaim(t *testing.T) {
 	at := time.Unix(1_800_000_000, 0)
-	c := aiClaim{Method: "bkash", DueMinor: 197000, OrderAt: at}
-	ok := &aiReceipt{Method: "bkash", AmountMinor: 197000, At: at.Add(time.Minute), Direction: "incoming", OwnAccount: true}
+	c := aiClaim{Method: "bkash", DueMinor: 197000, OrderAt: at, PayerDigest: "p", Accounts: []string{"acc"}}
+	base := func() *aiReceipt {
+		return &aiReceipt{Method: "bkash", AmountMinor: 197000, At: at.Add(time.Minute), Direction: "incoming", PayerHMAC: "p", Account: "acc"}
+	}
+	mod := func(f func(*aiReceipt)) *aiReceipt { r := base(); f(r); return r }
 	cases := []struct {
 		name string
+		c    aiClaim
 		r    *aiReceipt
 		want string
 	}{
-		{"none", nil, "retry"},
-		{"ok", ok, "matched"},
-		{"short", &aiReceipt{Method: "bkash", AmountMinor: 100, At: ok.At, Direction: "incoming", OwnAccount: true}, "review"},
-		{"over", &aiReceipt{Method: "bkash", AmountMinor: 300000, At: ok.At, Direction: "incoming", OwnAccount: true}, "review"},
-		{"method", &aiReceipt{Method: "nagad", AmountMinor: 197000, At: ok.At, Direction: "incoming", OwnAccount: true}, "failed"},
-		{"account", &aiReceipt{Method: "bkash", AmountMinor: 197000, At: ok.At, Direction: "incoming", OwnAccount: false}, "failed"},
-		{"before order", &aiReceipt{Method: "bkash", AmountMinor: 197000, At: at.Add(-time.Hour), Direction: "incoming", OwnAccount: true}, "failed"},
-		{"outgoing", &aiReceipt{Method: "bkash", AmountMinor: 197000, At: ok.At, Direction: "outgoing", OwnAccount: true}, "failed"},
+		{"none", c, nil, "retry"},
+		{"ok", c, base(), "matched"},
+		{"any account when unset", aiClaim{Method: "bkash", DueMinor: 197000, OrderAt: at, PayerDigest: "p"}, mod(func(r *aiReceipt) { r.Account = "other" }), "matched"},
+		{"ai only", aiClaim{ServiceMode: "ai"}, base(), "review"},
+		{"short", c, mod(func(r *aiReceipt) { r.AmountMinor = 100 }), "review"},
+		{"over", c, mod(func(r *aiReceipt) { r.AmountMinor = 300000 }), "review"},
+		{"method", c, mod(func(r *aiReceipt) { r.Method = "nagad" }), "failed"},
+		{"allocated", c, mod(func(r *aiReceipt) { r.Allocated = true }), "failed"},
+		{"account", c, mod(func(r *aiReceipt) { r.Account = "other" }), "review"},
+		{"sender", c, mod(func(r *aiReceipt) { r.PayerHMAC = "x" }), "review"},
+		{"before order", c, mod(func(r *aiReceipt) { r.At = at.Add(-time.Hour) }), "review"},
+		{"outgoing", c, mod(func(r *aiReceipt) { r.Direction = "outgoing" }), "failed"},
 	}
 	for _, tc := range cases {
-		if got, _ := matchClaim(c, tc.r); got != tc.want {
+		if got, _ := matchClaim(tc.c, tc.r); got != tc.want {
 			t.Errorf("%s: got %s want %s", tc.name, got, tc.want)
 		}
 	}

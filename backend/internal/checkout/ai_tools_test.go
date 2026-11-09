@@ -18,23 +18,27 @@ func TestParseAIToolOutput(t *testing.T) {
 		t.Fatalf("plain text rejected: %q %v", r, err)
 	}
 	for _, bad := range []string{`{"tool":"drop_tables","args":{}}`, `{"tool":"quote_price","args":{"price_minor":1}}`,
-		`{"tool":"get_product","args":{"variant_id":"x"}}`, `{"reply":""}`, `{"reply":"a"} {"reply":"b"}`, `{broken`} {
-		if c, _, err := parseAIToolOutput(bad); err == nil && c != nil {
-			t.Fatalf("accepted %s", bad)
-		} else if err == nil {
-			t.Fatalf("no error for %s", bad)
+		`{"tool":"get_product","args":{"variant_id":"x"}}`, `{"reply":""}`, `{"reply":"a"} {"reply":"b"}`, `{broken`,
+		`Sure! {"tool":"search_products","args":{}}`, `{"tool":"upsert_order_draft","args":{"items":[{"variant_ref":"v","unit_minor":1}]}}`,
+		`{"tool":"find_product_by_image","args":{}}`, ``} {
+		if _, _, err := parseAIToolOutput(bad); err == nil {
+			t.Fatalf("accepted %q", bad)
 		}
 	}
 }
 
 func TestRedactArgs(t *testing.T) {
-	out := redactArgs(map[string]any{"query": "call 01712345678 trx ABCD1234EF", "address": "House 1", "transaction_id": "X1", "note": "ok"})
-	if out["address"] != "[redacted]" || out["transaction_id"] != "[redacted]" {
+	out := redactArgs(map[string]any{"query": "call 01712345678 trx abcd1234ef", "recipient": map[string]any{"address": "House 1"},
+		"items": []any{map[string]any{"variant_ref": "v", "note": "8801812345678"}}, "transaction_id": "X1", "note": "ok"})
+	if out["recipient"] != "[redacted]" || out["transaction_id"] != "[redacted]" {
 		t.Fatalf("keys not redacted: %v", out)
 	}
 	q := out["query"].(string)
-	if strings.Contains(q, "01712345678") || strings.Contains(q, "ABCD1234EF") {
+	if strings.Contains(q, "01712345678") || strings.Contains(strings.ToLower(q), "abcd1234ef") {
 		t.Fatalf("value leaked: %s", q)
+	}
+	if n := out["items"].([]any)[0].(map[string]any)["note"].(string); strings.Contains(n, "1812345678") {
+		t.Fatalf("nested phone leaked: %s", n)
 	}
 	if out["note"] != "ok" {
 		t.Fatal("plain value changed")
@@ -44,9 +48,13 @@ func TestRedactArgs(t *testing.T) {
 func TestSignedPayloads(t *testing.T) {
 	secret := []byte("0123456789abcdef0123456789abcdef")
 	now := time.Unix(1_800_000_000, 0)
-	tok, err := signAIPayload(secret, map[string]any{"thread": "t", "order_id": "o", "action": "pay_cod"}, aiQuoteTTL, now)
+	in := map[string]any{"thread": "t", "order_id": "o", "action": "pay_cod"}
+	tok, err := signAIPayload(secret, in, aiQuoteTTL, now)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if _, mutated := in["exp"]; mutated {
+		t.Fatal("caller map mutated")
 	}
 	if p, err := verifyAIPayload(secret, tok, now.Add(10*time.Minute)); err != nil || p["action"] != "pay_cod" {
 		t.Fatalf("valid token rejected: %v", err)
@@ -57,15 +65,14 @@ func TestSignedPayloads(t *testing.T) {
 	if _, err := verifyAIPayload([]byte("ffffffffffffffffffffffffffffffff"), tok, now); err == nil {
 		t.Fatal("wrong secret accepted")
 	}
-	tampered := "x" + tok
-	if _, err := verifyAIPayload(secret, tampered, now); err == nil {
+	if _, err := verifyAIPayload(secret, "x"+tok, now); err == nil {
 		t.Fatal("tampered token accepted")
 	}
 }
 
-func TestAILimits(t *testing.T) {
-	if l := aiLimits("ms"); l.MaxCards != 10 || l.MaxButtons != 3 {
-		t.Fatalf("messenger limits %+v", l)
+func TestAILimitsAndKeys(t *testing.T) {
+	if l := aiLimits("wa"); l.MaxButtons != 3 || !l.SeparateImages {
+		t.Fatalf("whatsapp limits %+v", l)
 	}
 	if !aiMediaAllowed("audio", 120, 0) || aiMediaAllowed("audio", 121, 0) {
 		t.Fatal("voice limit")
@@ -73,8 +80,37 @@ func TestAILimits(t *testing.T) {
 	if !aiMediaAllowed("video", 30, 20<<20) || aiMediaAllowed("video", 31, 1) || aiMediaAllowed("video", 10, 21<<20) {
 		t.Fatal("video limit")
 	}
-	if aiStepKey("job-key-1234567890", 1) == aiStepKey("job-key-1234567890", 2) || len(aiStepKey("k", 1)) > 128 {
-		t.Fatal("step keys")
+	job := "job-key-1234567890abcdef"
+	if aiStepKey(job, 1) != job {
+		t.Fatal("step 1 must use the job key so finish finds the metered generation")
+	}
+	if aiStepKey(job, 2) == aiStepKey(job, 3) || aiStepKey(job, 2) == job || len(aiStepKey(job, 5)) > 128 || len(aiStepKey(job, 5)) < 16 {
+		t.Fatal("derived step keys")
+	}
+}
+
+func TestAIProofArgs(t *testing.T) {
+	s := &Service{PayerKey: []byte("0123456789abcdef0123456789abcdef")}
+	args := map[string]any{"method": "bKash", "transaction_id": " testtrx0001 ", "sender_number": "01711111111"}
+	if why := s.aiProofArgs(args); why != "" {
+		t.Fatalf("valid proof refused: %s", why)
+	}
+	if _, raw := args["transaction_id"]; raw {
+		t.Fatal("raw TrxID kept")
+	}
+	if _, raw := args["sender_number"]; raw {
+		t.Fatal("raw sender number kept")
+	}
+	upper := map[string]any{"method": "bkash", "transaction_id": "TESTTRX0001", "sender_number": "01711111111"}
+	s.aiProofArgs(upper)
+	if args["transaction_digest"] != upper["transaction_digest"] || args["transaction_last4"] != "0001" || args["payer_last3"] != "111" {
+		t.Fatalf("case or digits not normalized: %v", args)
+	}
+	if why := s.aiProofArgs(map[string]any{"method": "bkash", "transaction_id": "TESTTRX0001"}); why != "sender_number_required" {
+		t.Fatalf("missing sender accepted: %s", why)
+	}
+	if why := s.aiProofArgs(map[string]any{"method": "card", "transaction_id": "TESTTRX0001", "sender_number": "01711111111"}); why != "method_required" {
+		t.Fatalf("bad method accepted: %s", why)
 	}
 }
 
