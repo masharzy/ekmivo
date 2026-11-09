@@ -496,6 +496,7 @@ func main() {
 	defer stop()
 	if pg05 != nil && pg05.Pipeline != nil {
 		go pg05.RunInboxRealtime(runtimeContext)
+		go pg05.RunMetaCustomerNames(runtimeContext)
 	}
 	if pg05 != nil && pg05.Pipeline != nil && os.Getenv("INBOX_SENDER_ENABLED") == "true" {
 		go pg05.RunInboxSender(runtimeContext)

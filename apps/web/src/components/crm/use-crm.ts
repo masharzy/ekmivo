@@ -10,7 +10,7 @@ export type OrderRow={id:string;reference:string;status:string;source:string;tot
 export type CustomerOrders={orders:OrderRow[];numbers:{value:string;count:number}[];
  stats?:{orders:number;total_minor:number;last_at:string|null;delivered:number;cancelled:number;returned:number};
  risk?:{level:"none"|"medium"|"high";reasons:string[]};channels?:string[];
- products?:{name:string;sku:string;quantity:number;orders:number;last_at:string}[];merge_suggestions?:{id:string;name:string}[]};
+ products?:{name:string;sku:string;quantity:number;orders:number;last_at:string}[];merge_suggestions?:{id:string;name:string;can_merge?:boolean}[]};
 export type Stat={orders:number;total_minor:number;last_at:string|null};
 export const STAGES=["new","contacted","qualified","proposal","won","lost"] as const;
 export const blankProfile:Profile={revision:0,name:"",tags:[],stage:"new",temperature:"warm",assignee:null};

@@ -83,9 +83,10 @@ const PAY:Record<string,[string,string,string]>={verified:["Payment verified","�
 const CHANNEL:Record<string,string>={messenger:"Messenger",instagram:"Instagram",whatsapp:"WhatsApp",telegram:"Telegram",website:"Website chat"};
 function Orders({h,id,threads}:{h:H;id:string;threads:string[]}){
  const {t,bn,loadOrders}=h;
+ const [mergeVersion,setMergeVersion]=useState(0);
  const [state,setState]=useState<{id:string;data:CustomerOrders|null}|null>(null);
  const [view,setView]=useState<"orders"|"products">("orders");
- useEffect(()=>{let live=true;void loadOrders(id).then(d=>{if(live)setState({id,data:d});});return()=>{live=false;};},[id,loadOrders]);
+ useEffect(()=>{let live=true;void loadOrders(id).then(d=>{if(live)setState({id,data:d});});return()=>{live=false;};},[id,loadOrders,mergeVersion]);
  if(!state||state.id!==id)return <div className="empty" role="status">{t("Loading…","লোড হচ্ছে…")}</div>;
  if(!state.data)return <p className="notice ref-errors" role="alert">{t("Orders could not be loaded.","অর্ডার আনা যায়নি।")}</p>;
  const {orders,numbers,stats,risk,channels=[],products=[],merge_suggestions=[]}=state.data;
@@ -103,7 +104,14 @@ function Orders({h,id,threads}:{h:H;id:string;threads:string[]}){
    {threads.length>0&&<p>{threads.slice(0,3).map((th,i)=><a key={th} className="ib" style={{marginRight:6}} href={"/inbox?thread="+th}>{threads.length>1?t("Open chat","চ্যাট খুলুন")+" "+(i+1):t("Open chat","চ্যাট খুলুন")}</a>)}</p>}
   </div>
   {merge_suggestions.length>0&&<div className="drawer-group"><h4>{t("Possible duplicates (same phone)","সম্ভাব্য একই গ্রাহক (একই ফোন)")}</h4>
-   {merge_suggestions.map(m=><p key={m.id}><button type="button" className="ib" onClick={()=>void h.open(m.id)}>{m.name}</button></p>)}
+   {merge_suggestions.map(m=><p key={m.id}>
+    <button type="button" className="ib" onClick={()=>void h.open(m.id)}>{m.name}</button>{" "}
+    {m.can_merge&&<button type="button" className="ib" disabled={h.busy||h.dirty||h.unconfirmed} onClick={()=>{
+     if(window.confirm(t(`Merge with ${m.name}? This joins both profiles, orders and activity.`,`${m.name}-এর সঙ্গে একত্র করবেন? দুই প্রোফাইলের অর্ডার ও কার্যক্রম একত্র হবে।`))){
+      void h.act("merge",{target:m.id,confirmed:true}).then(result=>{if(result)setMergeVersion(value=>value+1);});
+     }
+    }}>{t("Merge","একত্র করুন")}</button>}
+   </p>)}
    <p className="mut">{t("Nothing is merged automatically.","নিজে থেকে কিছু একত্র করা হয় না।")}</p></div>}
   {orders.length===0?<p className="mut">{t("No orders yet.","এখনো কোনো অর্ডার নেই।")}</p>:<>
   <div className="seg" role="tablist" style={{margin:"4px 0 12px"}}>{([["orders",t("Orders","অর্ডার")],["products",t("Products bought","কেনা পণ্য")]] as const).map(([v,l])=>

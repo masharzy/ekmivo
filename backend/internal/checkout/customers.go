@@ -45,6 +45,7 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 	if !s.budget(w, "crm:"+ws+":"+actor.UserID, 120) {
 		return
 	}
+	identityEnabled := customerIdentityEnabled()
 	var raw []byte
 	if r.Method == http.MethodGet {
 		cid := r.URL.Query().Get("customer")
@@ -71,7 +72,11 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 					fail(w, 422, "CUSTOMER_REQUIRED")
 					return
 				}
-				err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customer_profile($1::uuid,$2,$3::uuid,$4::uuid)||jsonb_build_object('products',briofold_customer_products($1::uuid,$2,$3::uuid,$4::uuid))", ws, realm, actor.UserID, cid).Scan(&raw)
+				query := "SELECT briofold_customer_profile($1::uuid,$2,$3::uuid,$4::uuid)||jsonb_build_object('products',briofold_customer_products($1::uuid,$2,$3::uuid,$4::uuid))"
+				if identityEnabled {
+					query += "||jsonb_build_object('merge_suggestions',briofold_customer_merge_options($1::uuid,$2,$3::uuid,$4::uuid))"
+				}
+				err = s.Pipeline.Control.QueryRow(r.Context(), query, ws, realm, actor.UserID, cid).Scan(&raw)
 			} else if view == "orders" {
 				if cid == "" {
 					fail(w, 422, "CUSTOMER_REQUIRED")
@@ -97,7 +102,11 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 			if cid == "" && (source != "" || priority != "" || assigned != "" || r.URL.Query().Get("filter") == "unconverted") {
 				err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customers_search($1::uuid,$2,$3::uuid,$4,$5,$6,$7,$8,$9)", ws, realm, actor.UserID, off, r.URL.Query().Get("q"), r.URL.Query().Get("filter"), source, priority, assigned).Scan(&raw)
 			} else {
-				err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customers_read($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7)", ws, realm, actor.UserID, nullableID(cid), off, r.URL.Query().Get("q"), r.URL.Query().Get("filter")).Scan(&raw)
+				query := "SELECT briofold_customers_read($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7)"
+				if identityEnabled && cid != "" {
+					query = "SELECT briofold_customer_identity_detail($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7)"
+				}
+				err = s.Pipeline.Control.QueryRow(r.Context(), query, ws, realm, actor.UserID, nullableID(cid), off, r.URL.Query().Get("q"), r.URL.Query().Get("filter")).Scan(&raw)
 			}
 		}
 	} else if r.Method == http.MethodPost {
@@ -194,7 +203,12 @@ func (s *Service) HandleCustomers(w http.ResponseWriter, r *http.Request) {
 			b.Body["followup_id"] = b.Key
 		}
 		encoded, _ := json.Marshal(b.Body)
-		err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customers_write($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", ws, realm, actor.UserID, b.Key, b.Action, encoded).Scan(&raw)
+		if identityEnabled && b.Action == "merge" {
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customer_owner_merge($1::uuid,$2,$3::uuid,$4::uuid,$5::jsonb)",
+				ws, realm, actor.UserID, b.Key, encoded).Scan(&raw)
+		} else {
+			err = s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_customers_write($1::uuid,$2,$3::uuid,$4::uuid,$5,$6::jsonb)", ws, realm, actor.UserID, b.Key, b.Action, encoded).Scan(&raw)
+		}
 	} else {
 		fail(w, 405, "METHOD_NOT_ALLOWED")
 		return

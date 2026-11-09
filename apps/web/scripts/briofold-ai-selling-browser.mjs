@@ -11,6 +11,9 @@ export async function runBriofoldAiSellingBrowser({origin,browser,control,sessio
   const actor=async token=>(await db`SELECT user_id FROM auth_sessions WHERE token_hash=${createHash('sha256').update(token).digest('hex')}`)[0].user_id;
   const owner=await actor(sessions.owner),viewer=await actor(sessions.viewer),store=randomUUID();
   await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${store},'Fictional AI selling shop','both',${owner})`;
+  await db`INSERT INTO pg13_plans(id,name,amount_minor) VALUES('ai_selling_browser','AI selling browser fixture',10000) ON CONFLICT DO NOTHING`;
+  await db`INSERT INTO pg13_subscriptions(workspace_id,plan_id,paid_until,grace_until)
+   VALUES(${store},'ai_selling_browser',now()+interval '1 day',now()+interval '2 days')`;
   await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${store},${owner},'owner'),(${store},${viewer},'viewer')`;
   const authenticated=async(token,user)=>{const c=await browser.newContext();await c.addCookies([{name:'briofold-session',value:token,url:origin,httpOnly:true},{name:'briofold-default-workspace',value:user+':'+store,url:origin,httpOnly:true},{name:'briofold-locale',value:'en',url:origin}]);return c;};
   context=await authenticated(sessions.owner,owner);viewerContext=await authenticated(sessions.viewer,viewer);
@@ -88,6 +91,41 @@ export async function runBriofoldAiSellingBrowser({origin,browser,control,sessio
      await page.goto(origin+path);await page.getByRole('heading',{name:lang==='bn'?bn:en,exact:true}).waitFor();
      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${path} overflows at ${width}px`);cases++;}}}}
   await context.addCookies([{name:'briofold-locale',value:'en',url:origin},{name:'briofold-theme',value:'light',url:origin}]);
+  // Owner-reviewed merge from a verified suggestion; viewer cannot execute the same request.
+  const duplicate=randomUUID();
+  await db`INSERT INTO briofold_customers(id,workspace_id,environment,name,phone) VALUES(${duplicate},${store},'live','Fictional Duplicate Buyer','01700009999')`;
+  await db`INSERT INTO briofold_customer_proofs(workspace_id,environment,customer_id,kind,value)
+    VALUES(${store},'live',${buyer},'email','fixture-merge@example.invalid'),
+          (${store},'live',${duplicate},'email','fixture-merge@example.invalid')`;
+  const [{revision:buyerRevision}]=await db`SELECT revision::int FROM briofold_customers WHERE id=${buyer}`;
+  const mergePayload={action:'merge',operation_key:randomUUID(),body:{id:buyer,target:duplicate,revision:buyerRevision,confirmed:true}};
+  const customerEndpoint=origin+`/api/go/workspaces/${store}/crm?environment=live`;
+  assert.equal((await viewerContext.request.post(customerEndpoint,{headers:{Origin:origin},data:mergePayload})).status(),403);
+  for(const lang of ['en','bn']){
+   for(const theme of ['light','dark']){
+    await context.addCookies([{name:'briofold-locale',value:lang,url:origin},{name:'briofold-theme',value:theme,url:origin}]);
+    await page.emulateMedia({colorScheme:theme});await page.goto(origin+'/customers');
+    await page.getByText('Fictional Repeat Buyer',{exact:true}).first().click();
+    await page.getByRole('tab',{name:lang==='bn'?'অর্ডার':'Orders',exact:true}).click();
+    await page.getByRole('button',{name:lang==='bn'?'একত্র করুন':'Merge',exact:true}).waitFor();
+    for(const width of [320,412,1440]){
+     await page.setViewportSize({width,height:900});
+     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+     const drawer=page.getByRole('dialog');
+     assert.ok(await drawer.evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+    }
+   }
+  }
+  await context.addCookies([{name:'briofold-locale',value:'en',url:origin},{name:'briofold-theme',value:'light',url:origin}]);
+  await page.goto(origin+'/customers');await page.getByText('Fictional Repeat Buyer',{exact:true}).first().click();
+  await page.getByRole('tab',{name:'Orders',exact:true}).click();
+  const merge=page.getByRole('button',{name:'Merge',exact:true});
+  page.once('dialog',dialog=>dialog.dismiss());await merge.click();
+  assert.equal((await db`SELECT merged_into FROM briofold_customers WHERE id=${duplicate}`)[0].merged_into,null);
+  page.once('dialog',dialog=>dialog.accept());await merge.click();
+  await page.getByText('Saved.',{exact:true}).waitFor();
+  assert.equal((await db`SELECT merged_into FROM briofold_customers WHERE id=${duplicate}`)[0].merged_into,buyer);
+  assert.equal((await db`SELECT count(*)::int n FROM briofold_customer_events WHERE customer_id=${buyer} AND actor_id=${owner} AND action='merge-survived'`)[0].n,1);
   if(process.env.BRIOFOLD_SCREENSHOT_DIR){
    const shown=randomUUID();await db`INSERT INTO commerce_orders(id,workspace_id,environment,reference,source,status,recipient,subtotal_minor,shipping_minor,total_minor,payment_state) VALUES(${shown},${store},'live','AI-7Q2K9X','ai','draft','{"name":"Fictional Buyer"}',125000,7000,132000,'claimed')`;
    await db`INSERT INTO commerce_payment_claims(workspace_id,environment,order_id,method,transaction_digest,transaction_last4,payer_digest,payer_last3,state,reason,claimed_amount_minor) VALUES(${store},'live',${shown},'nagad',${hex()},'4H8P',${hex()},'207','review','short_payment',120000)`;for(const [path,name,heading] of [['/settings/ai-selling','ai-selling','AI selling'],['/orders/payment-review','payment-review','Payment review']])for(const width of [412,1440]){

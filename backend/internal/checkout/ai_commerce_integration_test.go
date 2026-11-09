@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -636,6 +637,83 @@ func TestAICommerceIntegration(t *testing.T) {
 		it.svc.resolveAIOrderPaymentLinks(ctx)
 		if status := it.one(it.admin, "SELECT payment_state||'/'||status FROM commerce_orders WHERE id=$1::uuid", link.Order); status != "verified/confirmed" {
 			t.Fatalf("paid link did not verify the order: %s", status)
+		}
+	})
+
+	t.Run("Meta customer name cache retries and owner merge preserves records", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		external := tag
+		cipher, err := deviceevidence.Encrypt(pipelineKey, []byte("fixture-page-credential"), it.ws+"|inbox|ms|ai-it-"+tag)
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.exec(it.admin, "UPDATE inbox_connections SET credential_cipher=$1 WHERE id=$2::uuid", cipher, it.conn)
+		it.exec(it.admin, "SELECT inbox_ingest($1::uuid,$2,$3,'Existing name','Hello','text',now())", it.conn, "meta-name-"+tag, external)
+		named := it.one(it.admin, "SELECT id::text FROM inbox_threads WHERE connection_id=$1::uuid AND external_id=$2", it.conn, external)
+		t.Setenv("META_GRAPH_VERSION", "v25.0")
+		old := inboxHTTP
+		defer func() { inboxHTTP = old }()
+		requests := 0
+		inboxHTTP = &http.Client{Transport: telegramTransport(func(r *http.Request) (*http.Response, error) {
+			if r.URL.Host != "graph.facebook.com" || !strings.HasSuffix(r.URL.Path, "/"+external) {
+				return &http.Response{StatusCode: 404, Body: io.NopCloser(strings.NewReader("{}"))}, nil
+			}
+			if r.Header.Get("Authorization") != "Bearer fixture-page-credential" || r.URL.Query().Get("fields") != "first_name,last_name" || strings.Contains(r.URL.RawQuery, "credential") {
+				t.Error("unexpected Graph authorization or requested profile fields")
+			}
+			requests++
+			if requests == 1 {
+				return &http.Response{StatusCode: 429, Body: io.NopCloser(strings.NewReader("{}"))}, nil
+			}
+			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"first_name":"ফিকশনাল","last_name":"ক্রেতা"}`))}, nil
+		})}
+		it.svc.refreshMetaCustomerNames(ctx)
+		it.svc.refreshMetaCustomerNames(ctx)
+		if got := it.one(it.admin, "SELECT customer_name FROM inbox_threads WHERE id=$1::uuid", named); got != "Existing name" || requests != 1 {
+			t.Fatalf("failed refresh replaced the name or retried too early: %s (%d calls)", got, requests)
+		}
+		it.exec(it.admin, "UPDATE inbox_threads SET meta_name_next_at=now()-interval '1 second' WHERE id=$1::uuid", named)
+		it.svc.refreshMetaCustomerNames(ctx)
+		it.svc.refreshMetaCustomerNames(ctx)
+		customer := it.one(it.admin, "SELECT customer_id::text FROM briofold_customer_sources WHERE workspace_id=$1::uuid AND kind='thread' AND source_id=$2::uuid", it.ws, named)
+		if got := it.one(it.admin, "SELECT name FROM briofold_customers WHERE id=$1::uuid", customer); got != "ফিকশনাল ক্রেতা" || requests != 2 {
+			t.Fatalf("cached Graph name missing or fetched before TTL: %s (%d calls)", got, requests)
+		}
+		duplicate := it.one(it.admin, "INSERT INTO briofold_customers(workspace_id,environment,name) VALUES($1::uuid,'live','Duplicate profile') RETURNING id::text", it.ws)
+		it.exec(it.admin, "UPDATE briofold_customers SET phone='fixture-identity-match' WHERE id IN ($1::uuid,$2::uuid)", customer, duplicate)
+		it.exec(it.admin, `INSERT INTO briofold_customer_proofs(workspace_id,environment,customer_id,kind,value)
+			VALUES($1::uuid,'live',$2::uuid,'email',$4),($1::uuid,'live',$3::uuid,'email',$4)`, it.ws, customer, duplicate, tag+"@example.invalid")
+		it.exec(it.admin, "INSERT INTO briofold_customer_sources(workspace_id,environment,customer_id,kind,source_id) VALUES($1::uuid,'live',$2::uuid,'api',gen_random_uuid())", it.ws, duplicate)
+		it.exec(it.admin, "UPDATE commerce_orders SET customer_id=$1::uuid WHERE id=$2::uuid", duplicate, raceOrder)
+		it.exec(it.admin, "INSERT INTO briofold_customer_events(workspace_id,environment,customer_id,action) VALUES($1::uuid,'live',$2::uuid,'fixture-history')", it.ws, duplicate)
+		admin := it.one(it.admin, "INSERT INTO app_users(email,display_name,password_hash) VALUES($1,'Other admin','fixture') RETURNING id::text", tag+"-merge-admin@example.invalid")
+		it.exec(it.admin, "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1::uuid,$2::uuid,'admin')", it.ws, admin)
+		input := fmt.Sprintf(`{"id":"%s","target":"%s","revision":%s,"confirmed":true}`, customer, duplicate,
+			it.one(it.admin, "SELECT revision::text FROM briofold_customers WHERE id=$1::uuid", customer))
+		command := "SELECT briofold_customer_owner_merge($1::uuid,'live',$2::uuid,$3::uuid,$4::jsonb)->>'id'"
+		key := newUUID()
+		if _, err = it.svc.Auth.DB.ExecContext(ctx, command, it.ws, admin, key, input); err == nil {
+			t.Fatal("non-owner merged customer profiles")
+		}
+		if got := it.one(it.admin, "SELECT coalesce(merged_into::text,'') FROM briofold_customers WHERE id=$1::uuid", duplicate); got != "" {
+			t.Fatal("matching identities auto-merged")
+		}
+		for i := 0; i < 2; i++ {
+			if survivor := it.one(it.svc.Auth.DB, command, it.ws, it.user, key, input); survivor != customer {
+				t.Fatalf("unexpected canonical merge target: %s", survivor)
+			}
+		}
+		if linked := it.one(it.admin, "SELECT customer_id::text FROM commerce_orders WHERE id=$1::uuid", raceOrder); linked != customer {
+			t.Fatal("merge lost a commerce order")
+		}
+		if count := it.one(it.admin, "SELECT count(*)::text FROM briofold_customer_sources WHERE customer_id=$1::uuid", customer); count != "2" {
+			t.Fatal("merge lost source records")
+		}
+		history := it.one(it.svc.Auth.DB, "SELECT briofold_customer_identity_detail($1::uuid,'live',$2::uuid,$3::uuid,0,'','')->>'events'", it.ws, it.user, customer)
+		if !strings.Contains(history, "fixture-history") || strings.Count(history, "merge-survived") != 1 {
+			t.Fatal("merge lost historical activity or duplicated its audit")
 		}
 	})
 
