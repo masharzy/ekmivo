@@ -327,3 +327,12 @@ Remaining, in this order:
 - Overview rendered with data. Orders, Products, Customers, Payments, Reports and Settings opened. Inbox opened but its settled data state was not verified.
 - STOP: the customer drawer opened for a UI Test customer in the Briofold shop. The Orders tab reported “Orders could not be loaded.” Cause and Go/Vercel log review remain unverified.
 - All flag stages, secret presence checks and live commerce smoke tests remain pending. No flag changes, rollback, or test order.
+
+### AI commerce rollout — production SQL prerequisite check, 2026-11-09
+
+- API revision 15eac9816404df435c3d85b67a7b6c04e33da24b and running binary verified. Started 22:33:34 Bangladesh time and passed startup health. The ten-minute verifier subsequently reported 3 Go log error indicators.
+- Owner CRM profile request returned HTTP 503. Body: {"error":{"code":"FINANCIAL_SERVICE_UNAVAILABLE","correlation_id":"6e01c87a220fcaa50c603d57","message":"A required service is unavailable."}}
+- Owner's filtered Go logs show repeated sqlstate=42883 routine=ParseFuncOrColumn table=. The filter drops timestamps, so individual lines cannot be attributed to the request correlation ID.
+- Read-only catalog check as the configured API projection role on its VPS control database ekmivo confirmed briofold_customer_profile(uuid,text,uuid,uuid), briofold_customer_products(uuid,text,uuid,uuid), and briofold_ai_tool absent. The drawer calls the first two. The missing AI tool is an independent stage-1 prerequisite, regardless of the owner's waiver for the drawer.
+- Vercel production log counts showed one error entry each on /dashboard and /inbox in the inspected 30-minute window. They were not matched to the CRM correlation ID.
+- Stopped before Go stage 1. Go stages 2–4 and Vercel env/redeploy remain pending. No flags, migrations or drawer code changed. No rollback required. AI provider, S3, SMTP, FCM and Meta secret presence checks and the owner-shop smoke test remain pending. No order reference.
