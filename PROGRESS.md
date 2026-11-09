@@ -294,3 +294,16 @@ Remaining, in this order:
 - `BRIOFOLD_CUSTOMER_IDENTITY_ENABLED=true` enables Messenger/Instagram Graph names and owner-only merges from the drawer. Names cache for 24 hours, with a shared 20-request/minute budget and exponential retries after failure. Failed lookups preserve names. Manual CRM renames and merged records are excluded from automatic name changes.
 - Assumption: same-phone matches are suggestions, and the existing shared verified identity requirement still applies to a merge. Confirmation is explicit, and orders, sources and prior activity remain accessible from the canonical surviving profile.
 - Evidence: PostgreSQL 16 `TestAICommerceIntegration/Meta_customer_name_cache_retries_and_owner_merge_preserves_records`, `TestMetaInstagramCustomerNameUsesBoundCredential`, and `runBriofoldAiSellingBrowser` passed. Browser exercised owner confirmation, viewer HTTP 403 and English/Bangla light/dark layouts at 320/412/1440. Migration 0245 reapplication and Go/web checks passed.
+
+### AI commerce — verification and item 4 (2026-11-09, Opus)
+- Reviewed GPT's items 1–3 by running them. Fixed a privacy regression: 0245's merged-history read returned customer event `detail` to viewers. 0246 restores the 0189/0208 contract.
+- Fixed the AI fixtures for the payments plan gates the full CI chain enforces: an active unpublished plan, plus the per-transaction realm plan snapshot.
+- Item 4:
+  - `SeedCatalogImages` / `cmd/seed-product-images` store generated PNGs exactly like owner uploads (private storage, media row, image list, photo index). Running them twice is a no-op.
+  - Profile p95 with 1,000 customers and 3,000 orders: 1.2–1.9 ms (limit 300 ms).
+- CI (8c4c412): every AI suite passes in the full chain: TestAICommerceIntegration, runBriofoldAiSellingBrowser, runBriofoldShopAssistantModelBrowser, runBriofoldCustomers.
+- Still failing, and failing identically on the base branch agents/ai-commerce-phase1 (not caused by this PR): runBriofoldChannelExtensions, runBriofoldCommerce, runBriofoldInboxDrafts, runBriofoldKeyLifecycle, runBriofoldPhase9Browser, runChannelPolicies, runMemberChannelScopes, runSavedReplySequences, runWooWebhookSources.
+- Open:
+  - Apply 0233–0246 twice on the Neon test branch br-damp-mud-b3c38es3. This cloud workspace cannot reach Neon hosts; run financial-migrate from a machine that can.
+  - Gemini evals (needs an OpenRouter key).
+  - Fix the 9 base-branch suite failures before merging the stack.
