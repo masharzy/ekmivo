@@ -91,6 +91,9 @@ jobs:
         run: |
           npx --no-install playwright install --only-shell chromium
           node scripts/playwright-readiness.mjs
+      - name: Prepare shared dashboard CSS tokens
+        working-directory: apps/web
+        run: npm run predev
       - name: PG04 independent financial River + realm migration and durability
         working-directory: apps/web
         env:
