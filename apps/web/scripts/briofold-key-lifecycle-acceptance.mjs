@@ -101,17 +101,16 @@ export async function runBriofoldKeyLifecycle({origin,browser,control,sessions,w
   assert.equal(forged.status(),200,"viewer denial did not return a handled action result");
   assert.ok((await forged.text()).includes("Only an authorized owner or admin can manage payment keys."),"forged viewer action bypassed server authorization");
   assert.equal((await rows()).length,1,"forged viewer action minted a key despite hidden UI");
-  const foreign=randomUUID();
-  await db`INSERT INTO workspaces(id,name,service_mode,created_by) VALUES(${foreign}::uuid,'Fictional historical Store','commerce',${owner}::uuid)`;
-  await db`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES(${foreign}::uuid,${owner}::uuid,'owner')`;
-  await db`UPDATE platform_primary_stores SET workspace_id=${foreign}::uuid WHERE user_id=${owner}::uuid`;
+  // Multi-store policy (fd1f899f): the primary-Store binding no longer decides key access; the actor's current
+  // owner/admin membership of the submitted Store does. A replayed form after losing that role must be refused.
+  await db`UPDATE workspace_members SET role='viewer' WHERE workspace_id=${workspaceId}::uuid AND user_id=${owner}::uuid`;
   try{
    const stale=await context.request.post(origin+"/settings/api-keys",{headers:{...submittedAction.headers,Origin:origin},data:submittedAction.data});
    assert.equal(stale.status(),200);
-   assert.ok((await stale.text()).includes("Only an authorized owner or admin can manage payment keys."),"historical owner membership bypassed the authoritative Store binding");
-   assert.equal((await rows()).length,1,"stale Store form minted another key");
+   assert.ok((await stale.text()).includes("Only an authorized owner or admin can manage payment keys."),"a demoted member's replayed form was not refused");
+   assert.equal((await rows()).length,1,"replayed form minted another key after the role was removed");
   }finally{
-   await db`UPDATE platform_primary_stores SET workspace_id=${workspaceId}::uuid WHERE user_id=${owner}::uuid`;
+   await db`UPDATE workspace_members SET role='owner' WHERE workspace_id=${workspaceId}::uuid AND user_id=${owner}::uuid`;
   }
   const lookup=async publicId=>db`SELECT key_id,allowed_scopes,stored_digest FROM resolve_merchant_api_key(${publicId})`;
   assert.equal((await lookup(first.public_id.trim()))[0]?.key_id,first.id,"new key cannot authenticate");

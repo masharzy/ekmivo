@@ -71,7 +71,9 @@ const safeMime=(m:string)=>/^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quickt
 export function loadMedia(workspaceId:string,threadId:string,mediaId:string,bust=false){
  const key=workspaceId+mediaId;const cur=urls.get(key);
  if(cur&&!bust&&Date.now()-cur.at<SIGNED_TTL)return cur.p;
- const p=fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"media-get",thread_id:threadId,body:{media_id:mediaId,url:true}})})
+ const get=(url:boolean)=>fetch(`/api/go/workspaces/${workspaceId}/inbox?environment=live`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"media-get",thread_id:threadId,body:{media_id:mediaId,url}})});
+ // Signed links need a configured media origin; without one the server can still return the (size-capped) bytes.
+ const p=get(true).then(async r=>{if(r.status!==503)return r;const e=await r.clone().json().catch(()=>null) as {code?:unknown;error?:{code?:unknown}}|null;return (e?.error?.code??e?.code)==="MEDIA_ORIGIN_NOT_CONFIGURED"?get(false):r;})
   .then(async(r):Promise<Loaded>=>{
    if(!r.ok){const e=await r.json().catch(()=>null) as {code?:unknown;error?:unknown}|null;const c=typeof e?.code==="string"?e.code:typeof e?.error==="string"?e.error:e?.error&&typeof e.error==="object"&&"code" in e.error?String(e.error.code):String(r.status);mediaReasons.set(key,c);throw Error(c);}
    mediaReasons.delete(key);const j=await r.json() as {url?:unknown;data?:unknown;mime?:unknown};
