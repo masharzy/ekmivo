@@ -1,5 +1,6 @@
 "use client";
 import {useCallback,useRef,useState} from "react";
+import styles from "./commerce.module.css";
 import {CATALOG_TEMPLATE,importBody,parseProducts,toBatches,type ImportIssue,type ImportProduct} from "../lib/client/catalog-import";
 import {csvCells,xlsxRows} from "../lib/client/commerce-import";
 
@@ -98,8 +99,8 @@ export function CatalogPanel({workspaceId,environment,bn,canManage,wooSyncEnable
  };
  const template=()=>{const blob=new Blob(["﻿"+CATALOG_TEMPLATE],{type:"text/csv"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="briofold-catalog-template.csv";a.click();URL.revokeObjectURL(u);};
  if(!canManage)return null;
- const grid={display:"grid",gap:10} as const;
- return <section aria-label={t("Product catalog","পণ্যের ক্যাটালগ")} style={{display:"grid",gap:18}}>
+ const grid={display:"grid",gridTemplateColumns:"minmax(0,1fr)",gap:10} as const;
+ return <section aria-label={t("Product catalog","পণ্যের ক্যাটালগ")} className={styles.catalogPanel}>
   {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}{progress&&<p role="status">{progress}</p>}
   <details open><summary><strong>{t("Add a product","পণ্য যোগ করুন")}</strong></summary>
    <form style={grid} onSubmit={e=>{e.preventDefault();void save();}}>

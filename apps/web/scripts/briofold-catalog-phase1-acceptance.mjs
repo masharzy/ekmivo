@@ -106,7 +106,14 @@ export async function runCatalogPhase1({origin,apiOrigin,browser,control,session
   assert.equal(products[0].source,"csv");
   assert.equal(Number(products[0].price_minor),125025);
   assert.equal(Number(products[0].min_price_minor),90000);
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Bangla catalog overflows at 390 px");
+  const overflow=await page.evaluate(()=>{
+   if(document.documentElement.scrollWidth<=innerWidth+1)return [];
+   return [...document.querySelectorAll("main,section,dialog,form,fieldset,div,input,button")].filter(element=>{
+    const box=element.getBoundingClientRect();
+    return box.width>0&&box.right>innerWidth+1;
+   }).slice(0,12).map(element=>({tag:element.tagName,className:element.className,right:Math.round(element.getBoundingClientRect().right)}));
+  });
+  assert.deepEqual(overflow,[],"Bangla catalog overflows at 390 px");
   const uploads=privateStorage.requests.filter(r=>r.method==="PUT"&&r.key.startsWith("commerce/live/"+workspace+"/"));
   assert.equal(uploads.length,2,"both images must reach signed storage");
   const publicId=randomBytes(8).toString("hex");
