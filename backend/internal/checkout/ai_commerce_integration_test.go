@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -502,6 +503,82 @@ func TestAICommerceIntegration(t *testing.T) {
 			t.Fatalf("buyer paid message for %s: %s", o, n)
 		}
 	}
+
+	t.Run("seeded catalog images are stored, attached and found by photo search", func(t *testing.T) {
+		var stored []string
+		seedPutObject = func(_ context.Context, method, key string, data []byte) ([]byte, error) {
+			if method != "PUT" || !strings.HasPrefix(key, "commerce/live/"+it.ws+"/") || len(data) == 0 {
+				t.Fatalf("unexpected object write %s %s", method, key)
+			}
+			stored = append(stored, key)
+			return nil, nil
+		}
+		defer func() { seedPutObject = objectRequest }()
+		// Only the seeded name prefix is touched; the other fixture products keep their (empty) image lists.
+		it.exec(it.admin, "UPDATE commerce_products SET name='SEEDIMG '||name WHERE workspace_id=$1::uuid AND id=(SELECT product_id FROM commerce_variants WHERE id=$2::uuid)", it.ws, vm)
+		n, err := SeedCatalogImages(context.Background(), it.admin, it.ws, "live", it.user, "SEEDIMG ")
+		if err != nil || n != 1 || len(stored) != 1 {
+			t.Fatalf("seed images: n=%d stored=%d err=%v", n, len(stored), err)
+		}
+		if again, err := SeedCatalogImages(context.Background(), it.admin, it.ws, "live", it.user, "SEEDIMG "); err != nil || again != 0 {
+			t.Fatalf("seeding twice added images: %d %v", again, err)
+		}
+		product := it.one(it.admin, "SELECT product_id::text FROM commerce_variants WHERE id=$1::uuid", vm)
+		if it.one(it.admin, "SELECT cardinality(images)::text FROM commerce_products WHERE id=$1::uuid", product) != "1" ||
+			it.one(it.admin, "SELECT count(*)::text FROM commerce_photo_features f JOIN commerce_products p ON f.media_id=p.images[1] WHERE p.id=$1::uuid", product) != "1" {
+			t.Fatal("seeded image not attached or not indexed")
+		}
+		data, _ := seedProductPNG(it.ws + "|" + product)
+		sig, _ := productPhotoFeatures(data)
+		found := it.one(it.admin, "SELECT commerce_photo_search($1::uuid,'live',$2::uuid,$3,$4::jsonb,'')::text", it.ws, it.user, sig.Hash, photoColorsJSON(sig))
+		if !strings.Contains(found, product) {
+			t.Fatalf("photo search did not find the seeded product: %s", found)
+		}
+		it.exec(it.admin, "UPDATE commerce_products SET name=substr(name,9) WHERE id=$1::uuid AND name LIKE 'SEEDIMG %'", product)
+	})
+
+	t.Run("customer profile p95 under 300ms with 1000 customers", func(t *testing.T) {
+		perf := it.one(it.admin, "INSERT INTO workspaces(name,service_mode,created_by) VALUES('AI IT perf shop','both',$1::uuid) RETURNING id::text", it.user)
+		it.exec(it.admin, "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1::uuid,$2::uuid,'owner')", perf, it.user)
+		product := it.one(it.admin, "INSERT INTO commerce_products(id,workspace_id,environment,name) VALUES(gen_random_uuid(),$1::uuid,'live','Perf product') RETURNING id::text", perf)
+		variant := it.one(it.admin, "INSERT INTO commerce_variants(id,workspace_id,environment,product_id,sku,price_minor) VALUES(gen_random_uuid(),$1::uuid,'live',$2::uuid,'PERF-1',100000) RETURNING id::text", perf, product)
+		it.exec(it.admin, `INSERT INTO briofold_customers(workspace_id,environment,name,phone)
+			SELECT $1::uuid,'live','Perf customer '||g,'017'||lpad(g::text,8,'0') FROM generate_series(1,1000) g`, perf)
+		it.exec(it.admin, `INSERT INTO commerce_orders(id,workspace_id,environment,reference,source,status,recipient,subtotal_minor,shipping_minor,total_minor,customer_id,created_at)
+			SELECT gen_random_uuid(),$1::uuid,'live','PERF-'||c.n||'-'||k,'ai',(ARRAY['delivered','cancelled','confirmed'])[k],'{"name":"Perf"}',100000,7000,107000,c.id,now()-make_interval(days=>k)
+			FROM (SELECT id,row_number() OVER (ORDER BY id) n FROM briofold_customers WHERE workspace_id=$1::uuid) c CROSS JOIN generate_series(1,3) k`, perf)
+		it.exec(it.admin, `INSERT INTO commerce_lines(workspace_id,environment,order_id,variant_id,name,sku,options,unit_minor,quantity)
+			SELECT $1::uuid,'live',o.id,$2::uuid,'Perf product','PERF-1','{}',100000,1 FROM commerce_orders o WHERE o.workspace_id=$1::uuid`, perf, variant)
+		it.exec(it.admin, "ANALYZE briofold_customers; ANALYZE commerce_orders; ANALYZE commerce_lines")
+		ids := []string{}
+		rows, err := it.admin.Query("SELECT id::text FROM briofold_customers WHERE workspace_id=$1::uuid ORDER BY random() LIMIT 100", perf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for rows.Next() {
+			var id string
+			_ = rows.Scan(&id)
+			ids = append(ids, id)
+		}
+		rows.Close()
+		// Same statement the drawer's profile view runs, as the API's runtime role.
+		const profileSQL = "SELECT briofold_customer_profile($1::uuid,'live',$2::uuid,$3::uuid)||jsonb_build_object('products',briofold_customer_products($1::uuid,'live',$2::uuid,$3::uuid))"
+		times := make([]time.Duration, 0, len(ids))
+		for _, id := range ids {
+			start := time.Now()
+			var raw []byte
+			if err := it.svc.Pipeline.Control.QueryRow(context.Background(), profileSQL, perf, it.user, id).Scan(&raw); err != nil {
+				t.Fatal(err)
+			}
+			times = append(times, time.Since(start))
+		}
+		sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
+		p95 := times[len(times)*95/100-1]
+		t.Logf("customer profile over 1000 customers / 3000 orders: p50=%s p95=%s", times[len(times)/2], p95)
+		if p95 > 300*time.Millisecond {
+			t.Fatalf("customer profile p95 %s exceeds 300ms", p95)
+		}
+	})
 
 	t.Run("channel photo catalog and picker", func(t *testing.T) {
 		fixture := *it
