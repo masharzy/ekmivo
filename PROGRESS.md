@@ -307,3 +307,15 @@ Remaining, in this order:
   - Apply 0233–0246 twice on the Neon test branch br-damp-mud-b3c38es3. This cloud workspace cannot reach Neon hosts; run financial-migrate from a machine that can.
   - Gemini evals (needs an OpenRouter key).
   - Fix the 9 base-branch suite failures before merging the stack.
+
+## AI commerce production rollout — 2026-11-09
+
+**Partial: privileged API activation and production verification pending.**
+
+- Owner reported production migrations 0233–0246 applied to control and live/sandbox finance, including the prerequisite catch-up, and web live at 15eac98.
+- Built Linux API from exact source 15eac9816404df435c3d85b67a7b6c04e33da24b. The env compatibility tests passed. Uploaded binary SHA-256: 4db3550c7aa11804d24541a1588d9c06b7052919cab4459bd97734fd847c1639.
+- Staged the repository's Compose image switch and health rollback under /opt/briofold/release-15eac98. Last observed Compose API image was avatar-media-989c9ac4. Deploy time and ten-minute health/log observation remain pending because SSH sudo requires the owner terminal.
+- Owner command: sudo bash /opt/briofold/release-15eac98/deploy.sh && sudo bash /opt/briofold/release-15eac98/verify.sh
+- Owner-shop page checks and Vercel/Go error review pending. Go stages 1–4 and the Vercel env stage have not started. No flag edits or rollbacks.
+- AI provider, private S3, SMTP, FCM and Meta secret presence checks pending. No secrets created or rotated.
+- Owner-shop settings, Messenger order, stock, payment verification/review, notices and model rollback smoke tests pending. No order reference yet.
