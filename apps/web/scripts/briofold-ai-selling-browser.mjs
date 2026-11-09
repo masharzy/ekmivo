@@ -26,7 +26,7 @@ export async function runBriofoldAiSellingBrowser({origin,browser,control,sessio
   await page.getByLabel('Delivery inside Dhaka (৳)',{exact:true}).fill('80');
   await page.getByLabel('Offer cash on delivery',{exact:true}).check();await page.getByLabel('COD charge (৳)',{exact:true}).fill('20');
   await page.getByLabel('Hand orders above this total to a person (৳, 0 = never)',{exact:true}).fill('15000');
-  await page.getByRole('button',{name:'Save',exact:true}).click();await page.getByText('Saved.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Save',exact:true}).click();await page.locator('#dashboard-content').getByText('Saved.',{exact:true}).waitFor();
   const saved=(await db`SELECT ai_selling_enabled,delivery_dhaka_minor::int d,cod_enabled,cod_charge_minor::int c,handover_above_minor::bigint h,revision::int r FROM commerce_ai_settings WHERE workspace_id=${store} AND environment='live'`)[0];
   assert.deepEqual({...saved,h:Number(saved.h)},{ai_selling_enabled:true,d:8000,cod_enabled:true,c:2000,h:1500000,r:saved.r});
   assert.ok((await db`SELECT count(*)::int n FROM commerce_events WHERE workspace_id=${store} AND action='ai-selling-settings' AND actor_id=${owner}`)[0].n>=1,'settings change was not audited');
@@ -123,7 +123,7 @@ export async function runBriofoldAiSellingBrowser({origin,browser,control,sessio
   page.once('dialog',dialog=>dialog.dismiss());await merge.click();
   assert.equal((await db`SELECT merged_into FROM briofold_customers WHERE id=${duplicate}`)[0].merged_into,null);
   page.once('dialog',dialog=>dialog.accept());await merge.click();
-  await page.getByText('Saved.',{exact:true}).waitFor();
+  await page.locator('#dashboard-content').getByText('Saved.',{exact:true}).waitFor();
   assert.equal((await db`SELECT merged_into FROM briofold_customers WHERE id=${duplicate}`)[0].merged_into,buyer);
   assert.equal((await db`SELECT count(*)::int n FROM briofold_customer_events WHERE customer_id=${buyer} AND actor_id=${owner} AND action='merge-survived'`)[0].n,1);
   if(process.env.BRIOFOLD_SCREENSHOT_DIR){
