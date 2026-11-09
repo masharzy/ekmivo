@@ -336,3 +336,13 @@ Remaining, in this order:
 - Read-only catalog check as the configured API projection role on its VPS control database ekmivo confirmed briofold_customer_profile(uuid,text,uuid,uuid), briofold_customer_products(uuid,text,uuid,uuid), and briofold_ai_tool absent. The drawer calls the first two. The missing AI tool is an independent stage-1 prerequisite, regardless of the owner's waiver for the drawer.
 - Vercel production log counts showed one error entry each on /dashboard and /inbox in the inspected 30-minute window. They were not matched to the CRM correlation ID.
 - Stopped before Go stage 1. Go stages 2–4 and Vercel env/redeploy remain pending. No flags, migrations or drawer code changed. No rollback required. AI provider, S3, SMTP, FCM and Meta secret presence checks and the owner-shop smoke test remain pending. No order reference.
+
+### VPS AI commerce migration and post-migration checks — 2026-11-09
+
+- VPS Postgres targets: control/auth ekmivo, finance ekmivo_live_financial and ekmivo_sandbox_financial.
+- Private custom-format backups in /opt/briofold/backups/ai-commerce-15eac98.JfzWYb: ekmivo.dump 1829731 bytes, ekmivo_sandbox_financial.dump 4887933 bytes, ekmivo_live_financial.dump 5126591 bytes. Archive listing and SHA-256 checks passed.
+- Reconciled eight pre-existing inbox schema changes (0219–0226) in the ledger after comparing function bodies, grants, Telegram capabilities and realtime triggers. The first coordinator run stopped at 0069 checksum mismatch. Windows archive line endings caused it. The retry matched pinned LF/CRLF bytes to existing ledger hashes without changing those hashes.
+- Pinned 15eac98 coordinator completed at 23:34:34 Bangladesh time. Control pending migrations 0227–0246 excluding 0236/0243 were applied. 0236/0243 ran in each finance realm. pg236_ai_receipt exists in both.
+- Five requested control functions exist with runtime EXECUTE. briofold_ai_selling_on exists and has no direct runtime grant by design (0234 explicitly revokes it). Its live SECURITY DEFINER caller is owned by ekmivo_owner and that owner has EXECUTE.
+- The same test customer Orders tab rendered its order summary and normal empty state. Overview, Inbox, Orders, Products, Customers, Payments, Reports and Settings opened without the checked page error messages. API health HTTP 200. Post-migration Go log gate pending. Vercel recent error count included /settings/knowledge, not attributed to the drawer.
+- Stage 1 runner staged, with post-migration Go log precheck and stage-specific rollback. No flags enabled yet. Stages 2–4, Vercel redeploy, secret checks and live order/payment/notice/model smoke test pending. No restore or order reference.
