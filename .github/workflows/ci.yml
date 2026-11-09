@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      pg04_suites:
+        description: Comma-separated PG04 settings suites for a focused rerun. Empty runs full CI.
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -41,6 +47,9 @@ jobs:
       - name: Clean dependency install
         working-directory: apps/web
         run: npm ci
+      - name: Catalog CSV compatibility
+        working-directory: apps/web
+        run: node --test scripts/catalog-import.test.mjs
       - name: Production dependency security audit
         working-directory: apps/web
         shell: bash
@@ -113,6 +122,7 @@ jobs:
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json
       - name: Production build (no application credentials)
+        if: ${{ inputs.pg04_suites == '' || github.event_name != 'workflow_dispatch' }}
         working-directory: apps/web
         run: npm run build
       - name: Verify locked Admin design tokens and theme isolation
@@ -203,6 +213,7 @@ jobs:
       - name: PG04 independent financial River + realm migration and durability
         working-directory: apps/web
         env:
+          PG04_SETTINGS_SUITES: ${{ inputs.pg04_suites }}
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
           PG05_BROWSER_TESTS: "true"
         run: node scripts/pg04-financial-smoke.mjs
