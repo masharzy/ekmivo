@@ -136,7 +136,7 @@ jobs:
           test -x "$verifier"
           "$verifier" verify --verbose --print-certs "$apk"
           actual="$("$verifier" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':' | tr '[:upper:]' '[:lower:]' | head -1)"
-          expected='52f54eef5bfeb351a0c2d615e1191048e30f1701b29f36aaa825359ca97276d9'
+          expected='38ddc784a78dc100ef7c4b63a97c5408c4318be9798a54489aed10bf1a319a77'
           if [[ "$actual" != "$expected" ]]; then
             echo 'Unexpected APK signing certificate — refusing release.' >&2
             exit 1
@@ -149,7 +149,7 @@ jobs:
           import json, os, pathlib
           event=json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
           source=event.get('pull_request',{}).get('head',{}).get('sha',os.environ['GITHUB_SHA'])
-          pathlib.Path('apps/mobile/app/build/outputs/apk/release/release-metadata.json').write_text(json.dumps({'source_commit':source,'version_code':5,'version_name':'0.3.0','certificate_sha256':'52f54eef5bfeb351a0c2d615e1191048e30f1701b29f36aaa825359ca97276d9'},indent=2))
+          pathlib.Path('apps/mobile/app/build/outputs/apk/release/release-metadata.json').write_text(json.dumps({'source_commit':source,'version_code':6,'version_name':'0.3.1','certificate_sha256':'38ddc784a78dc100ef7c4b63a97c5408c4318be9798a54489aed10bf1a319a77'},indent=2))
           PYMETA
       - name: Save signed APK artifact
         uses: actions/upload-artifact@v4
