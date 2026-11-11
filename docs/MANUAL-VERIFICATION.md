@@ -1,3 +1,7 @@
+## Administrator MFA permission repair - 2026-10-25 (manual pending)
+
+- [ ] Owner: at /admin/verify submit a fresh code from the existing authenticator and confirm the admin page opens. Production database row-lock queries now pass as the restricted web role; full browser verification is pending. See docs/evidence/PG01/admin-mfa-permission-fix-20261025.md.
+
 ## Briofold Phase 10 — consolidated owner acceptance (2026-10-22, NOT PASSED)
 
 The consolidated Briofold 0–10 implementation/evidence matrix and one owner checklist are in
