@@ -6,10 +6,10 @@ import "./reference-adapters.css";
 
 type Account={id:string;method:string;number_masked:string;label:string;disabled:boolean};
 type Settings={revision?:number;ai_selling_enabled?:boolean;cod_enabled?:boolean;cod_charge_minor?:number;delivery_dhaka_minor?:number;delivery_outside_minor?:number;
- max_discount_pct?:number;negotiation_enabled?:boolean;draft_expiry_hours?:number;wrong_trx_limit?:number;receiving_account_ids?:string[];handover_above_minor?:number};
+ max_discount_pct?:number;negotiation_enabled?:boolean;draft_expiry_hours?:number;wrong_trx_limit?:number;receiving_account_ids?:string[];handover_above_minor?:number;advance_rule?:string;advance_pct?:number};
 type Data={settings:Settings;accounts:Account[];accounts_available:boolean};
 type Form={ai_selling_enabled:boolean;cod_enabled:boolean;cod_charge:string;dhaka:string;outside:string;negotiation_enabled:boolean;max_discount_pct:string;
- draft_expiry_hours:string;wrong_trx_limit:string;handover_above:string;accounts:string[]};
+ draft_expiry_hours:string;wrong_trx_limit:string;handover_above:string;accounts:string[];advance_rule:string;advance_pct:string};
 
 const methods:Record<string,string>={bkash:"bKash",nagad:"Nagad",rocket:"Rocket"};
 const taka=(minor?:number,fallback=0)=>String(Math.round((minor??fallback))/100);
@@ -17,7 +17,7 @@ const minor=(v:string)=>Math.round(Number(v||"0")*100);
 function toForm(s:Settings):Form{
  return {ai_selling_enabled:!!s.ai_selling_enabled,cod_enabled:!!s.cod_enabled,cod_charge:taka(s.cod_charge_minor),dhaka:taka(s.delivery_dhaka_minor,7000),outside:taka(s.delivery_outside_minor,13000),
   negotiation_enabled:!!s.negotiation_enabled,max_discount_pct:String(s.max_discount_pct??0),draft_expiry_hours:String(s.draft_expiry_hours??24),wrong_trx_limit:String(s.wrong_trx_limit??5),
-  handover_above:taka(s.handover_above_minor),accounts:s.receiving_account_ids??[]};
+  handover_above:taka(s.handover_above_minor),accounts:s.receiving_account_ids??[],advance_rule:s.advance_rule??"none",advance_pct:String(s.advance_pct??50)};
 }
 
 export function AiSellingSettings({workspaceId,bn,environment,canManage,mode}:{workspaceId:string;bn:boolean;environment:string;canManage:boolean;mode:string}){
@@ -41,6 +41,7 @@ export function AiSellingSettings({workspaceId,bn,environment,canManage,mode}:{w
   const patch={ai_selling_enabled:form.ai_selling_enabled,cod_enabled:form.cod_enabled,cod_charge_minor:minor(form.cod_charge),delivery_dhaka_minor:minor(form.dhaka),
    delivery_outside_minor:minor(form.outside),negotiation_enabled:form.negotiation_enabled,max_discount_pct:Math.round(Number(form.max_discount_pct)),
    draft_expiry_hours:Math.round(Number(form.draft_expiry_hours)),wrong_trx_limit:Math.round(Number(form.wrong_trx_limit)),handover_above_minor:minor(form.handover_above),
+   ...(data.settings.advance_rule!==undefined?{advance_rule:form.advance_rule,advance_pct:Math.min(99,Math.max(1,Math.round(Number(form.advance_pct)||50)))}:{}),
    ...(data.accounts_available?{receiving_account_ids:form.accounts}:{})};
   try{
    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({revision:data.settings.revision??0,patch})});
@@ -88,6 +89,14 @@ export function AiSellingSettings({workspaceId,bn,environment,canManage,mode}:{w
     </div>
     <label className={styles.toggle}><input type="checkbox" checked={form.cod_enabled} disabled={locked} onChange={e=>set("cod_enabled",e.target.checked)}/>{t("Offer cash on delivery","ক্যাশ অন ডেলিভারি দেওয়া যাবে")}</label>
     {form.cod_enabled&&<label className={styles.field}>{t("COD charge (৳)","COD চার্জ (৳)")}<input inputMode="decimal" value={form.cod_charge} disabled={locked} onChange={e=>set("cod_charge",e.target.value)}/></label>}
+    {form.cod_enabled&&data.settings.advance_rule!==undefined&&<label className={styles.field}>{t("Advance for cash on delivery","ক্যাশ অন ডেলিভারিতে অগ্রিম")}
+     <select value={form.advance_rule} disabled={locked} onChange={e=>set("advance_rule",e.target.value)}>
+      <option value="none">{t("No advance","অগ্রিম লাগবে না")}</option>
+      <option value="delivery">{t("Delivery charge in advance","ডেলিভারি চার্জ অগ্রিম")}</option>
+      <option value="percent">{t("A percentage in advance","নির্দিষ্ট শতাংশ অগ্রিম")}</option>
+      <option value="full">{t("Full payment in advance","পুরো টাকা অগ্রিম")}</option>
+     </select></label>}
+    {form.cod_enabled&&data.settings.advance_rule!==undefined&&form.advance_rule==="percent"&&<label className={styles.field}>{t("Advance (%)","অগ্রিম (%)")}<input inputMode="numeric" value={form.advance_pct} disabled={locked} onChange={e=>set("advance_pct",e.target.value)}/></label>}
    </div></div>
 
    <div className="card"><div className={styles.body}>

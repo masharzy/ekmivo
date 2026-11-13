@@ -26,6 +26,7 @@ var aiSellingFields = map[string]string{
 	"cod_charge_minor": "money", "delivery_dhaka_minor": "money", "delivery_outside_minor": "money",
 	"max_discount_pct": "pct", "draft_expiry_hours": "hours", "wrong_trx_limit": "limit", "receiving_account_ids": "ids",
 	"handover_above_minor": "money",
+	"advance_rule": "advance", "advance_pct": "advance_pct", // COD advance rule (migration 0247)
 }
 
 func (s *Service) aiOwnerActor(w http.ResponseWriter, r *http.Request) (ws, realm, user string, ok bool) {
@@ -115,6 +116,18 @@ func aiSellingPatch(in map[string]json.RawMessage, accounts []aiOwnerAccount) (m
 				}
 			}
 			out[k] = ids
+		case "advance":
+			var v string
+			if json.Unmarshal(raw, &v) != nil || (v != "none" && v != "delivery" && v != "percent" && v != "full") {
+				return nil, false
+			}
+			out[k] = v
+		case "advance_pct":
+			var v int64
+			if json.Unmarshal(raw, &v) != nil || v < 1 || v > 99 {
+				return nil, false
+			}
+			out[k] = v
 		default:
 			var v int64
 			if json.Unmarshal(raw, &v) != nil || v < 0 {
