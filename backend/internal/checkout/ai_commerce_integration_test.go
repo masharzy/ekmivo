@@ -189,7 +189,13 @@ func TestAICommerceIntegration(t *testing.T) {
 	version := it.one(it.admin, "INSERT INTO payment_plan_versions(plan_id,version,terms,created_by) VALUES($1,1,payment_plan_validate($2::jsonb),$3::uuid) RETURNING id::text", planID, terms, it.user)
 	it.exec(it.admin, "INSERT INTO pg13_subscriptions(workspace_id,plan_id,plan_version_id,paid_until,grace_until) VALUES($1::uuid,$2,$3::uuid,now()+interval '30 days',now()+interval '33 days')", it.ws, planID, version)
 	it.exec(it.admin, "UPDATE app_users SET email_verified_at=now()-interval '1 minute' WHERE id=$1::uuid", it.user)
-	model := it.one(it.admin, "SELECT model FROM briofold_ai_tariff_catalog ORDER BY model LIMIT 1")
+	// The tool protocol plus the shop context needs the production input bound; shared fixture tariffs are smaller.
+	// This run gets its own model with the terms of an existing tariff and a 32k input bound.
+	model := "fixture/ai-it-" + tag
+	tariff := it.one(it.admin, `INSERT INTO briofold_ai_tariff_versions(model,revision,terms,created_by,reason,operation_key)
+		SELECT $1,1,v.terms||'{"max_input_tokens":32000}'::jsonb,$2::uuid,'AI commerce integration tariff',gen_random_uuid()
+		FROM briofold_ai_tariff_catalog c JOIN briofold_ai_tariff_versions v ON v.id=c.current_version ORDER BY c.model LIMIT 1 RETURNING id::text`, model, it.user)
+	it.exec(it.admin, "INSERT INTO briofold_ai_tariff_catalog(model,current_version) VALUES($1,$2::uuid)", model, tariff)
 	write := func(kind string, body map[string]any) {
 		raw, _ := json.Marshal(body)
 		it.exec(it.admin, "SELECT briofold_ai_studio_write($1::uuid,$2::uuid,gen_random_uuid(),$3,$4::jsonb)", it.ws, it.user, kind, string(raw))

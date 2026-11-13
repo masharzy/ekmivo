@@ -49,6 +49,9 @@ echo '== 1/5 checks'
 health || { echo 'The API is not healthy now; not deploying on top of a broken service.'; exit 1; }
 sql ekmivo 'select 1' >/dev/null
 [ "$(df --output=avail -m /opt/briofold | tail -1)" -gt 3000 ] || { echo 'Less than 3 GB free disk.'; exit 1; }
+# The sales instructions are sent with every AI request; a tariff with a small input bound would reject them.
+small=$(sql ekmivo "select coalesce(string_agg(c.model||'='||(v.terms->>'max_input_tokens'),', '),'') from briofold_ai_tariff_catalog c join briofold_ai_tariff_versions v on v.id=c.current_version where (v.terms->>'max_input_tokens')::bigint<16000")
+[ -z "$small" ] || { echo "These AI models allow fewer than 16000 input tokens and would reject AI requests: $small"; echo 'Raise the bound in Admin > AI tariffs, then run again.'; exit 1; }
 cid=$("${compose[@]}" ps -q api); [ -n "$cid" ]
 base_image=$(docker inspect -f '{{.Config.Image}}' "$cid")
 echo "running image: $base_image"
