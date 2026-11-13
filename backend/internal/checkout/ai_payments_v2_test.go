@@ -9,16 +9,19 @@ import (
 // silently stop applying, so this test pins every part of the new payment conversation.
 func TestAIToolPromptV2(t *testing.T) {
 	p := aiToolPromptV2()
-	for _, want := range []string{"- verify_payment {", "- change_payment_method {", "ask ONLY for the number they paid from",
+	for _, want := range []string{"- verify_payment {", "- change_payment_method {", "ask ONLY for the number they paid from", "- update_order_address {",
 		`next "ask_transaction_id"`, "never ask for them again", `only when a tool result in this turn has status "confirmed"`} {
 		if !strings.Contains(p, want) {
 			t.Errorf("v2 prompt lacks %q", want)
 		}
 	}
-	for _, gone := range []string{"submit_payment_proof", "Ask for the TrxID AND the sender number", `never "confirmed"`} {
+	for _, gone := range []string{"submit_payment_proof", "Ask for name, phone and address before ask_payment_choice.", `never "confirmed"`} {
 		if strings.Contains(p, gone) {
 			t.Errorf("v2 prompt still has %q", gone)
 		}
+	}
+	if !strings.Contains(aiToolPrompt, aiLegacyProofRule) {
+		t.Error("the legacy proof paragraph no longer matches aiToolPrompt")
 	}
 	if !strings.Contains(aiToolPrompt, "submit_payment_proof") {
 		t.Error("legacy prompt must stay unchanged")

@@ -130,12 +130,50 @@ func (s *Service) RunAIPaymentVerify(ctx context.Context) {
 	}
 }
 
+// reviewLateSMS re-checks claims that went to review only because no SMS had arrived (the forwarding phone was
+// offline, the SMS was late). When the receipt now matches exactly, the claim is verified without the owner.
+func (s *Service) reviewLateSMS(ctx context.Context) {
+	if os.Getenv("BRIOFOLD_AI_LATE_SMS_REVIEW_ENABLED") != "true" {
+		return
+	}
+	var raw []byte
+	if err := s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_ai_sms_review_due(10)").Scan(&raw); err != nil {
+		log.Printf("ai payment verify: sms_review_due failed")
+		return
+	}
+	var claims []aiClaim
+	if json.Unmarshal(raw, &claims) != nil {
+		return
+	}
+	for _, c := range claims {
+		if c.ServiceMode == "ai" {
+			continue
+		}
+		receipt, err := s.lookupAIReceipt(ctx, c)
+		if err != nil || receipt == nil {
+			continue
+		}
+		if outcome, _ := matchClaim(c, receipt); outcome != "matched" {
+			continue
+		}
+		var acct any
+		if receipt.Account != "" {
+			acct = receipt.Account
+		}
+		var res []byte
+		if err := s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_ai_claim_resolve($1::uuid,'matched','',$2::uuid)", c.ID, acct).Scan(&res); err != nil {
+			log.Printf("ai payment verify: late sms resolve failed")
+		}
+	}
+}
+
 func (s *Service) verifyAIClaimsOnce(ctx context.Context) {
 	var raw []byte
 	if err := s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_ai_claims_due(20)").Scan(&raw); err != nil {
 		log.Printf("ai payment verify: claims_due failed")
 		return
 	}
+	defer s.reviewLateSMS(ctx)
 	var claims []aiClaim
 	if json.Unmarshal(raw, &claims) != nil {
 		return
