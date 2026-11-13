@@ -102,5 +102,4 @@ BEGIN
  END IF;
 END$$;
 REVOKE ALL ON FUNCTION briofold_ai_payment_settle(uuid,text,uuid,jsonb) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
-GRANT EXECUTE ON FUNCTION briofold_ai_payment_settle(uuid,text,uuid,jsonb) TO ekmivo_financial_runtime;
 COMMIT;

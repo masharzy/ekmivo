@@ -39,10 +39,13 @@ var aiToolNames = map[string]bool{
 	"search_products": true, "get_product": true, "quote_price": true, "check_coupon": true, "delivery_charge": true,
 	"upsert_order_draft": true, "send_order_summary": true, "ask_payment_choice": true, "submit_payment_proof": true,
 	"get_order_status": true, "update_customer": true, "handover_to_human": true,
+	// Payments v2 (ai_payments_v2.go); only offered to the model when BRIOFOLD_AI_PAYMENTS_V2_ENABLED is on.
+	"verify_payment": true, "change_payment_method": true,
 }
 
 // Tools that change state; a successful one allows the reply to say what was done.
-var aiActingTools = map[string]bool{"upsert_order_draft": true, "ask_payment_choice": true, "submit_payment_proof": true, "update_customer": true}
+var aiActingTools = map[string]bool{"upsert_order_draft": true, "ask_payment_choice": true, "submit_payment_proof": true, "update_customer": true,
+	"verify_payment": true, "change_payment_method": true}
 
 // Keys the model may never send, at any depth: the server decides them.
 var aiForbiddenArgs = map[string]bool{
@@ -444,6 +447,10 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 	ctx, cancel := context.WithTimeout(ctx, aiToolBudget)
 	defer cancel()
 	prompt := aiToolPrompt
+	paymentsV2 := aiPaymentsV2EnabledFor(req.Workspace)
+	if paymentsV2 {
+		prompt = aiToolPromptV2()
+	}
 	channelCommerce := aiChannelCommerceEnabledFor(req.Workspace)
 	if channelCommerce {
 		prompt += "\nIf the customer explicitly wants a checkout link for the current draft, ask_payment_choice can take {\"choice\":\"link\"}. Only say a link was prepared if the tool succeeds. The server delivers the link separately. Never invent or include a URL."
@@ -495,7 +502,24 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 				result = map[string]any{"payment_link_prepared": true, "amount_minor": link.Amount, "expires_at": link.ExpiresAt}
 			}
 		}
-		if call.Tool == "submit_payment_proof" {
+		if paymentsV2 && result == nil {
+			tool := call.Tool
+			if tool == "submit_payment_proof" {
+				tool = "verify_payment" // an older habit of the model: same proof, new ladder
+			}
+			choice, _ := call.Args["choice"].(string)
+			if aiPaymentV2Tools[tool] || (tool == "ask_payment_choice" && (choice == "mobile" || choice == "cod")) {
+				r, err := s.aiPaymentV2Tool(ctx, jobID, lease, step, tool, call.Args)
+				if err != nil {
+					// Lease lost or a database is unavailable: stop without guessing about money.
+					return out, err
+				}
+				result = r
+			}
+		} else if !paymentsV2 && aiPaymentV2Tools[call.Tool] {
+			result = map[string]any{"error": "tool_unavailable"}
+		}
+		if result == nil && call.Tool == "submit_payment_proof" {
 			if why := s.aiProofArgs(call.Args); why != "" {
 				result = map[string]any{"error": "invalid_proof", "need": why}
 			}

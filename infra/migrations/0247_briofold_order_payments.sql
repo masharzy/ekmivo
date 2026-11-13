@@ -264,6 +264,7 @@ UPDATE commerce_orders SET pay_method='cod' WHERE payment_state='cod' AND pay_me
 REVOKE ALL ON FUNCTION commerce_order_payments_immutable(),commerce_order_advance(bigint,bigint,text,integer),commerce_order_payment_recalc(uuid),
  commerce_payment_claim_ledger(),briofold_ai_payment_record(uuid,bigint,uuid),briofold_ai_payment_method(uuid,text,uuid,text),
  commerce_order_payment_owner(uuid,text,uuid,uuid,text,jsonb) FROM PUBLIC,ekmivo_financial_runtime,ekmivo_financial_projection;
-GRANT EXECUTE ON FUNCTION briofold_ai_payment_record(uuid,bigint,uuid),briofold_ai_payment_method(uuid,text,uuid,text),
- commerce_order_payment_owner(uuid,text,uuid,uuid,text,jsonb) TO ekmivo_financial_runtime;
+-- The AI reaches record/method only through the leased tool entry point (0250); the dashboard calls the owner action.
+REVOKE ALL ON FUNCTION briofold_ai_payment_record(uuid,bigint,uuid),briofold_ai_payment_method(uuid,text,uuid,text) FROM ekmivo_financial_runtime;
+GRANT EXECUTE ON FUNCTION commerce_order_payment_owner(uuid,text,uuid,uuid,text,jsonb) TO ekmivo_financial_runtime;
 COMMIT;
