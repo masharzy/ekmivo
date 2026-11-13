@@ -99,6 +99,11 @@ BEGIN
 
  -- summary carries the money view
  ASSERT briofold_ai_order_summary(o)?'paid_minor' AND briofold_ai_order_summary(o)?'due_now_minor';
+ -- the Orders list shows ledger money (0253), when that migration is installed
+ IF position('o.paid_minor) linked_verified_minor' IN pg_get_functiondef('commerce_order_scan'::regproc))>0 THEN
+  o:=pg_temp.new_order('T10',10000,13000);c:=pg_temp.new_claim(o);PERFORM briofold_ai_payment_record(c,23000,NULL);
+  ASSERT (SELECT greatest(coalesce((SELECT sum(f.amount_minor) FROM commerce_finance_links f WHERE f.order_id=x2.id AND f.kind='payment'),0),x2.paid_minor) FROM commerce_orders x2 WHERE x2.id=o)=23000;
+ END IF;
  RAISE NOTICE '0247 tests passed';
 END $t$;
 ROLLBACK;

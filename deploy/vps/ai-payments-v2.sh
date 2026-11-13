@@ -67,7 +67,7 @@ if [ ! -d "$src" ]; then
   git -c safe.directory='*' -C "$repo" archive "$commit" backend infra/migrations | tar -x -C "$src"
 fi
 for f in 0247_briofold_order_payments 0248_briofold_ai_receipts_by_payer 0249_briofold_ai_payment_settle 0250_briofold_ai_payment_tool \
-         0251_briofold_production_baseline 0252_briofold_ai_advance_rule_setting; do
+         0251_briofold_production_baseline 0252_briofold_ai_advance_rule_setting 0253_briofold_orders_paid_from_ledger; do
   [ -s "$src/infra/migrations/$f.sql" ] || { echo "Missing migration $f"; exit 1; }
 done
 out="$state/out-$commit"; mkdir -p "$out"
@@ -94,6 +94,7 @@ psql_as ekmivo_owner ekmivo "$m/0249_briofold_ai_payment_settle.sql"
 psql_as ekmivo_owner ekmivo "$m/0250_briofold_ai_payment_tool.sql"
 psql_as ekmivo_owner ekmivo "$m/0251_briofold_production_baseline.sql"
 psql_as ekmivo_owner ekmivo "$m/0252_briofold_ai_advance_rule_setting.sql"
+psql_as ekmivo_owner ekmivo "$m/0253_briofold_orders_paid_from_ledger.sql"
 # Every order's paid amount must equal its ledger, and every verified AI order must be fully in the ledger.
 bad=$(sql ekmivo "select count(*) from commerce_orders o where o.paid_minor<>(select coalesce(sum(p.amount_minor),0) from commerce_order_payments p where p.order_id=o.id and p.voided_at is null)")
 [ "$bad" = "0" ] || { echo "Ledger check failed for $bad orders; the API was NOT changed."; exit 1; }

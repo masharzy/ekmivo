@@ -113,6 +113,7 @@ var dashboardControlMigrations = []string{
 	"0250_briofold_ai_payment_tool.sql",
 	"0251_briofold_production_baseline.sql",
 	"0252_briofold_ai_advance_rule_setting.sql",
+	"0253_briofold_orders_paid_from_ledger.sql",
 }
 
 // Explicit release mode in the existing coordinator; never runs at API startup.
