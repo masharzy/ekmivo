@@ -1,5 +1,7 @@
 # Briofold agent entry point
 
+> **All work, read first (2026-11-14):** `docs/AI-HANDOFF.md` sections 1 to 4 (how to work with the owner, safety rules, production layout on the VPS, the only allowed deploy) apply to every task in this repo. The rest of that file covers the AI selling bot, AI payments and orders. Where the notes below describe Neon or Render as production, check the VPS first: production moved there.
+
 ## Latest owner execution correction — 2026-10-15
 Do not start Docker or run local Docker database tests without explicit owner permission. Database work and verification for this task must use Neon. Use an isolated Neon test branch for migration/fixture checks; do not treat a test-branch pass as production rollout evidence.
 
