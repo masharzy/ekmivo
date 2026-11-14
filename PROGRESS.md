@@ -346,3 +346,43 @@ Remaining, in this order:
 - Five requested control functions exist with runtime EXECUTE. briofold_ai_selling_on exists and has no direct runtime grant by design (0234 explicitly revokes it). Its live SECURITY DEFINER caller is owned by ekmivo_owner and that owner has EXECUTE.
 - The same test customer Orders tab rendered its order summary and normal empty state. Overview, Inbox, Orders, Products, Customers, Payments, Reports and Settings opened without the checked page error messages. API health HTTP 200. Post-migration Go log gate pending. Vercel recent error count included /settings/knowledge, not attributed to the drawer.
 - Stage 1 runner staged, with post-migration Go log precheck and stage-specific rollback. No flags enabled yet. Stages 2–4, Vercel redeploy, secret checks and live order/payment/notice/model smoke test pending. No restore or order reference.
+
+## AI commerce state sync (step 0 of the production-ready plan) — 2026-11-14
+
+Read-only audit of the repo. Nothing on the VPS, Vercel or any database was read or changed.
+
+- Code: PR #166 (ai-payments-v2) and PR #167 (docs) are merged to `main` (`09bd9122`). The owner reported the last API deploy from `672d0dfa`; that commit is an ancestor of `main` and differs from it only in four docs files. Not verified on the VPS which commit is running.
+- CI on `672d0dfa`: Go compile and unit tests, Next.js lint/build and isolated PostgreSQL smoke, PG04 Docker builds, Android build and tests, Phase 7 jobs: all success.
+- Migrations: latest is 0253. The next new migration is **0254**.
+- No unmerged code branches from 2026-11-08 onward (only old diagnostic branches).
+- This file had no entry for 2026-11-10 to 2026-11-14; `docs/AI-HANDOFF.md` sections 5 to 8 describe that work.
+
+### v2 plan section 15 checklist (code reading, no screenshots exist yet)
+
+| # | Check | State |
+|---|---|---|
+| 1 | Shop name | In code: `briofold_ai_business_facts` (0251), flag `BRIOFOLD_AI_COMMERCE_V2_ENABLED`. No evidence |
+| 2 | "Potato in stock?" | Live `search_products` when AI selling is on. Root-cause write-up from v2 section 1 missing. Partial |
+| 3 | Order taking | In code; owner reports a real ৳230 order. No screenshot |
+| 4 | Service plans | Not built: no product/service type, no plan table; the Settings → AI list still exists |
+| 5 | Service order without address | Not built |
+| 6 | Coupon check | `check_coupon` tool exists (0234); no shop coupon UI, no product/service scope. Partial |
+| 7 | Product photo | Fingerprint + cards only (0241–0242); photos flag and `PRIVATE_S3_*` reportedly unset; no embedding/pgvector. Not working |
+| 8 | Unclear photo/video asks | Not built: video goes to a human |
+| 9 | Price Save shows next reply | Tools read live, so expected by design. No evidence |
+| 10 | Instructions Save = live | Not built: Draft/Publish still in `ai-studio.tsx` |
+| 11 | AI selling off still shows products | Not built: the off path still reads the old list |
+
+Also still open from v2: warehouse required for stock, Needs-a-human is a card list not a table, receiving number masked for the owner, variant redesign.
+
+### Facts for step 1
+- The model input bound is data, not code: `briofold_ai_tariff_versions.terms->>'max_input_tokens'` (Admin → AI tariffs). Raising it to 32,000 changes production data and needs the owner's permission.
+- Go reads `OPENROUTER_API_KEY`; no `QWEN_API_KEY` read exists in Go (assumption: the Qwen key lives in the admin provider config).
+- The midnight permission error has no source found in the repo; it needs the VPS log.
+
+### Next (step 1, without R2)
+1. Confirm the running API commit on the VPS (read-only command).
+2. Generic deploy script for any `main` commit, with dry run.
+3. Midnight permission error: find cause from the log, fix in migration 0254.
+4. Input bound 32,000 (owner permission).
+5. Daily owner summary behind a flag.
