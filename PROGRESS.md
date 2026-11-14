@@ -392,3 +392,11 @@ Also still open from v2: warehouse required for stock, Needs-a-human is a card l
 - API container env (names only): set: `BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED`, `BRIOFOLD_AI_COMMERCE_V2_ENABLED`, `BRIOFOLD_AI_LATE_SMS_REVIEW_ENABLED`, `BRIOFOLD_AI_MODEL_SETTING_ENABLED`, `BRIOFOLD_AI_ORDER_MEMORY_ENABLED`, `BRIOFOLD_AI_PAYMENTS_V2_ENABLED`, `BRIOFOLD_AI_PAYMENT_VERIFY_ENABLED`, `BRIOFOLD_AI_RUNTIME_ENABLED`, `BRIOFOLD_AI_TOOLS_ENABLED`, `BRIOFOLD_BROADCAST_DISPATCH_ENABLED`, `BRIOFOLD_COMMENTS_ENABLED`, `BRIOFOLD_COMMENT_DELIVERY_ENABLED`, `BRIOFOLD_CUSTOMER_IDENTITY_ENABLED`, `BRIOFOLD_GROWTH_CONSENT_ENABLED` (all true).
 - Not set: `BRIOFOLD_CATALOG_ENABLED`, `BRIOFOLD_PRODUCT_PHOTOS_ENABLED`, `PRIVATE_S3_*`, `PG08_SMTP_*`, `INBOX_FCM_CREDENTIALS_FILE`, `OPENROUTER_API_KEY` (env).
 - Consequence: owner email and push notices (0237) are recorded as `skipped`; the daily summary in step 1 cannot reach the owner until SMTP or FCM is set.
+
+### Production migration ledger — 2026-11-14 20:45 (owner-run read-only query)
+- Control `dashboard_reference_migrations`: 101 rows. Ledger rows from 0240 on: 0240, 0241, 0242, 0244, 0245, 0246, then **six files that do not exist in the repo**: `0247_briofold_catalog_kind_stock.sql`, `0248_briofold_ai_business_facts.sql`, `0249_briofold_catalog_spelling.sql`, `0250_briofold_ai_order_address.sql`, `0251_briofold_ai_order_memory.sql`, `0252_briofold_ai_late_sms_review.sql`. These were applied on the VPS through the coordinator and never pushed (same incident as `docs/recovered/vps-2026-11-10/`). Their contents are unknown; only function bodies captured in `control-functions.sql` / migration 0251 are recovered.
+- The repo's own 0247–0253 (payments v2) are **not** in the ledger: `ai-payments-v2.sh` applied them with psql directly.
+- Live and sandbox finance ledgers: 20 rows each, last `0243`. Repo `0248_briofold_ai_receipts_by_payer.sql` is not recorded there.
+- Consequence: the v2 section 15 table above is based on the repo only. Production schema may differ (for example `catalog_kind_stock` may add a product/service kind; unverified). No deploy-script or migration work until the six files are recovered and compared.
+
+Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no email/push for now). Each shop owner sees their own shop; the platform admin sees all shops in Admin.
