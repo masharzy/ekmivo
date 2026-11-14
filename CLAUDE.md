@@ -1,5 +1,7 @@
 # Briofold Android: working rules
 
+> **AI selling bot, AI payments, orders, VPS deploy (2026-11-14):** read `docs/AI-HANDOFF.md` first. The Android rules below apply only to `apps/mobile` work.
+
 Project: Kotlin + Jetpack Compose seller app for Briofold (SMS payment forwarder, later a chat inbox). Rebuild in progress.
 
 Repo layout (fill in the real folder names):
