@@ -377,7 +377,7 @@ Also still open from v2: warehouse required for stock, Needs-a-human is a card l
 
 ### Facts for step 1
 - The model input bound is data, not code: `briofold_ai_tariff_versions.terms->>'max_input_tokens'` (Admin → AI tariffs). Raising it to 32,000 changes production data and needs the owner's permission.
-- Go reads `OPENROUTER_API_KEY`; no `QWEN_API_KEY` read exists in Go (assumption: the Qwen key lives in the admin provider config).
+- AI selling reads `QWEN_API_KEY` / `OPENROUTER_API_KEY` from the admin channel config in the database (`channel_platform.go`, `studio_execution.go`), not from env. Only the older `ai_execution.go` path reads `OPENROUTER_API_KEY` from env.
 - The midnight permission error has no source found in the repo; it needs the VPS log.
 
 ### Next (step 1, without R2)
@@ -386,3 +386,9 @@ Also still open from v2: warehouse required for stock, Needs-a-human is a card l
 3. Midnight permission error: find cause from the log, fix in migration 0254.
 4. Input bound 32,000 (owner permission).
 5. Daily owner summary behind a flag.
+
+### VPS check — 2026-11-14 20:35
+- Running API: image `briofold-api:payments-v2-672d0dfa`, label revision `672d0dfa422ba97ad29266077e360747b2ddaa6b`, started 2026-11-14 04:48 UTC. Ancestor of `main`; code identical to `main`. Step 1 "production runs from a main commit": done.
+- API container env (names only): set: `BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED`, `BRIOFOLD_AI_COMMERCE_V2_ENABLED`, `BRIOFOLD_AI_LATE_SMS_REVIEW_ENABLED`, `BRIOFOLD_AI_MODEL_SETTING_ENABLED`, `BRIOFOLD_AI_ORDER_MEMORY_ENABLED`, `BRIOFOLD_AI_PAYMENTS_V2_ENABLED`, `BRIOFOLD_AI_PAYMENT_VERIFY_ENABLED`, `BRIOFOLD_AI_RUNTIME_ENABLED`, `BRIOFOLD_AI_TOOLS_ENABLED`, `BRIOFOLD_BROADCAST_DISPATCH_ENABLED`, `BRIOFOLD_COMMENTS_ENABLED`, `BRIOFOLD_COMMENT_DELIVERY_ENABLED`, `BRIOFOLD_CUSTOMER_IDENTITY_ENABLED`, `BRIOFOLD_GROWTH_CONSENT_ENABLED` (all true).
+- Not set: `BRIOFOLD_CATALOG_ENABLED`, `BRIOFOLD_PRODUCT_PHOTOS_ENABLED`, `PRIVATE_S3_*`, `PG08_SMTP_*`, `INBOX_FCM_CREDENTIALS_FILE`, `OPENROUTER_API_KEY` (env).
+- Consequence: owner email and push notices (0237) are recorded as `skipped`; the daily summary in step 1 cannot reach the owner until SMTP or FCM is set.
