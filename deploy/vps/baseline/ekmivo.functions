@@ -1,0 +1,520 @@
+armor|bytea, text[], text[]|1bce182b530c0933287cdf307667e70f
+armor|bytea|f6d2959639d44048e31b0b9a869efa66
+briofold_ai_admin_adjust|a uuid, w uuid, k uuid, delta_minor bigint, why text|b04107f69bdc00c79d23417d6d061431
+briofold_ai_admin_waive|a uuid, w uuid, k text, op uuid, why text|cbd452c1d4f204c85670cec7f3dad7d4
+briofold_ai_apply_handover|job uuid|1f13ea67563112a76290435797c20be4
+briofold_ai_business_facts|w uuid|3428cfe42de8ef7e99e8201dc9c3d360
+briofold_ai_channel_button_thread|c uuid, w uuid, external text|4dd06a11d79c0441d8e70b17ba5fb8e6
+briofold_ai_channel_claim_before_policy_v2||c40dc8c60958fa0788d088cf0606046c
+briofold_ai_channel_claim_before_policy||1b338898753cc4dc4fc4c23f0b44cf9b
+briofold_ai_channel_claim_with_policy_v2||0dfebcaa0ef02f146ab0e1a9d7eebd5d
+briofold_ai_channel_claim|include_business boolean|dafaceb44c8069c404ae51ea20cd4227
+briofold_ai_channel_claim||ac15e8a705c70dccd28cb0efed036252
+briofold_ai_channel_enqueue||efc5491d4887cbb5c740fa2a18aa8294
+briofold_ai_channel_finish_cards|job uuid, lease uuid, body text, cards jsonb|ff4c0d56a2ef431a6a156dd9cfbb7b2f
+briofold_ai_channel_finish_link|job uuid, lease uuid, body text, oid uuid|9fb69a949173b3560568374afe8350ff
+briofold_ai_channel_finish|job_id uuid, lease uuid, body text, safe_reason text|eb01d25f0bb5355ee7dfac8b6bac914a
+briofold_ai_channel_media|job uuid, lease uuid|d98c64ccd2295d9963978c9e90fb0a1d
+briofold_ai_channel_photo_products|job uuid, lease uuid, h text, c jsonb|586d9cebd05f882fc2fdff5af73290af
+briofold_ai_channel_valid|job_id uuid|44d1d6044b807e47ace21009a56cbb42
+briofold_ai_claim_resolve|cid uuid, outcome text, why text, account uuid|07bd2d1fc13e76c05bbe403a8b5859ff
+briofold_ai_claims_due|lim integer|6e37a1a47cda3b280c54b6ca020b9514
+briofold_ai_customer_paid|oid uuid|f846c592c479978286bead298c623643
+briofold_ai_expire_drafts||cb17b576aa364f49a669cd1a1f96dab5
+briofold_ai_financial_receipt_lookup|w uuid, env text, ref_digest text|d771fba90195591dd2520a23775c0a37
+briofold_ai_finish_notice|oid uuid, k text, email text, push text|fb73bcff8eedae844b524a6cf8133352
+briofold_ai_import_authorize|w uuid, a uuid|68ca90506dbdb7ca3472b9179f355a74
+briofold_ai_journal_immutable||54b466c4eed5155823a8f0597c2461cf
+briofold_ai_knowledge_read|w uuid, a uuid, s uuid|479bd3be3b226cbb2aaf9ced388f22f3
+briofold_ai_knowledge_search|w uuid, a uuid, q text, published boolean|b061920225f99cc9cfaa0bdfe603a71b
+briofold_ai_next_notice||90938db329ac8e0670b6ce90ec2c3a36
+briofold_ai_notice_add|oid uuid, k text|b4b266d395d049c53629164d0de4727a
+briofold_ai_notice_claim||dd2e96000f1446121eb002e01f48d37a
+briofold_ai_notice_order||2a75ddbbc474c77d80e11d4d2967493e
+briofold_ai_order_limit|w uuid, e text, tool text, res jsonb|d7447677bc46368ae628cf2114175c32
+briofold_ai_order_memory|job uuid, lease uuid|6cbcff41a2973097802dfce536a46380
+briofold_ai_order_status_live|w uuid, env text, thread_id uuid, ref_arg text|7bb7d137db197057644b05f51a4c464b
+briofold_ai_order_summary|oid uuid|6f2766b5a98df92919a962dedfbbad49
+briofold_ai_order_tool|w uuid, e text, thread uuid, actor uuid, tool_name text, args jsonb|a0a045e9c02774c8ca5b1f9971f2aea6
+briofold_ai_payment_context|job uuid, lease uuid|6ca15547b59791f4a881148ab43f00f0
+briofold_ai_payment_link_active|w uuid, t uuid, oid uuid|2dfa8335e3362d65b76dfdf2e19454dd
+briofold_ai_payment_link_bind|job uuid, lease uuid, oid uuid, intent uuid, amount bigint, expiry timestamp with time zone|de497a278d60efd9fa930adf122ec186
+briofold_ai_payment_link_guard||4c3af75cc3d9ae371d1aa04792cb444e
+briofold_ai_payment_link_prepare|job uuid, lease uuid|7ef45f73aad4c4681c17876b2686627a
+briofold_ai_payment_link_resolve|oid uuid, intent uuid, outcome text|14bd4d56edb1518fd4bc13e0e4e86945
+briofold_ai_payment_links_due||42f33097cba66f750e9de8530b7145ca
+briofold_ai_payment_method|w uuid, e text, thread uuid, choice text|e2e35f7d10271891bf2beee2011aaddc
+briofold_ai_payment_record|cid uuid, amount bigint, account uuid|4d03612685c109acb2002e3e6abaea34
+briofold_ai_payment_settle|w uuid, e text, thread uuid, args jsonb|3015b7a61e95379d4685c34fb661687c
+briofold_ai_payment_tool|job uuid, lease uuid, step_no integer, tool_name text, args jsonb, args_redacted jsonb|4ca4a0bb4922c8ac5ad04549471fd540
+briofold_ai_public_product|p jsonb|6e56f5fe696dee697cc96090572d039e
+briofold_ai_public_variant|v jsonb|732762172b110c0f2142bc796e0524cb
+briofold_ai_rate_ok|w uuid, thread uuid, per_min integer, cap_minor bigint|0a8dd9fc8483f3657849fd0c72f9991d
+briofold_ai_release|oid uuid, why text|b3cf52043d48c0defd947673c8376b4b
+briofold_ai_request_begin|w uuid, a uuid, k text, m text, fp text, input_bound bigint, thread uuid|2e009b4e4fa58fa712996375452a0534
+briofold_ai_request_complete|w uuid, k text, ref text, input_tokens bigint, cached_tokens bigint, output_tokens bigint, cipher bytea|a6c02fbc22b5eda2d9b33f18ee3952a7
+briofold_ai_request_fail|w uuid, k text, ref text, rejected boolean|651b4a661de1a6ab5f572377969f1db7
+briofold_ai_request_view|w uuid, k text, fresh boolean|c8cc1e171a315db5ec7b25e1fdb379be
+briofold_ai_require_super_admin|a uuid|415ee6d85dc26a4a91423caf5b82afee
+briofold_ai_review_decide|w uuid, e text, a uuid, cid uuid, decision text|6f5fb25206f796dedcc654ba095e18ab
+briofold_ai_review_done|w uuid, e text, a uuid, job_id uuid, op uuid|3c405b5691cf271afe606b37a9492ee2
+briofold_ai_review_queue|w uuid, e text, a uuid|eccff224e3e6508b88f3b36ab3f7453e
+briofold_ai_review_read|w uuid, e text, a uuid, off integer, q text|6d03941e78a931a08b5c2e4afa801e52
+briofold_ai_selling_on|w uuid|89a4daa8854bcefb1b70944c2c239138
+briofold_ai_selling_read|w uuid, e text, a uuid|d78e3dba1c45d164eb63bdcec62fd08f
+briofold_ai_selling_save|w uuid, e text, a uuid, rev bigint, patch jsonb|033e9f887aed1d90efb197c5384b2eb1
+briofold_ai_selling_write|w uuid, e text, a uuid, patch jsonb|4eea304bac6174974b4fc2a118ae561a
+briofold_ai_sms_review_due|lim integer|d6f4c2660cd805f727d7483155d89172
+briofold_ai_studio_actor|w uuid, a uuid|f09354b04a7355abb7abe5c719411726
+briofold_ai_studio_context|w uuid, a uuid, revision bigint, published boolean, pub uuid, q text, include_business boolean|6bc5522043d63e460a305b9a3c8d86ee
+briofold_ai_studio_context|w uuid, a uuid, revision bigint, published boolean, pub uuid, q text|701489252827793b3b22d9c3e0fa5688
+briofold_ai_studio_immutable||3e08b19cfc75d4831da331e236432fd9
+briofold_ai_studio_read|w uuid, a uuid, source_offset integer, version_offset integer|facc03ad1e8efbbb8f7aecd4126ed01c
+briofold_ai_studio_validate|b jsonb|f543c54c3fa449393655f887278021d0
+briofold_ai_studio_write|w uuid, a uuid, op uuid, kind text, b jsonb|091ce64ccbc02b51c0acd2f8d643ee7c
+briofold_ai_tariff_current|m text|4a5ac34917cfbc6d5b00b34df84becdb
+briofold_ai_tariff_publish|a uuid, k uuid, m text, expected uuid, b jsonb, why text|96bc027343e6f814821ddc66f77b42ce
+briofold_ai_tool|job uuid, lease uuid, step_no integer, tool_name text, args jsonb, args_redacted jsonb|f69bc460a998d75379765d9daa60c50e
+briofold_ai_topup_apply_verified|w uuid, a uuid, topup_id uuid, verified_id uuid, verified_minor bigint|c4e112bc79a014c82174c768131a3a01
+briofold_ai_topup_bind_proof|w uuid, a uuid, tid uuid, proof_digest text|1235c0ebbf33216473dceeef446eac68
+briofold_ai_topup_claim_pending||13f0fafebe7d64fcdf863d552b2aec2e
+briofold_ai_topup_context|w uuid, a uuid, tid uuid|28b03d389ba49ce6a8f3a959b719619f
+briofold_ai_topup_credit_proof|w uuid, topup_id uuid, verified_id uuid, verified_minor bigint|5525203ccdffd1a41430c66561e83cc9
+briofold_ai_topup_issue|w uuid, a uuid, cost bigint, k text|69df731b7045fbd5370a38a572bd1f30
+briofold_ai_topup_payment_context|w uuid, a uuid, tid uuid|8bb282c9fc1e8d255d212fbfc988eadf
+briofold_ai_verify_claim_now|cid uuid|57b97e566f9f5da63aa3a34aaa50be3a
+briofold_ai_wallet_reserve|w uuid, a uuid, k text, cost_minor bigint|c696a947604d771ebe210323c25b7af7
+briofold_ai_wallet_settle_authoritative|w uuid, a uuid, k text, actual_cost_minor bigint|3e64e37eca9dc2346d14e16fa2bc02fd
+briofold_ai_wallet_settle|w uuid, a uuid, k text, actual_cost_minor bigint|11c98dd69501eee802313f6e9d9717e7
+briofold_ai_website_button_scope|sid uuid, o text, secret text|8be0e38716a1876e260920bf05349b37
+briofold_ai_website_cards|sid uuid, o text, secret text, sequences bigint[]|08d5107f4d1fcf52c0e69eb64e9cd6c5
+briofold_ai_website_checkout_orders|sid uuid, o text, secret text, sequences bigint[]|334968898aca06aba5bff56c5791c316
+briofold_broadcast_actor|w uuid, a uuid|9dd82ebdbd342acaa94ee26a16d44306
+briofold_broadcast_audience|w uuid, e text, ch text, segment text, test_id uuid|7e40c05f0adf698fc373a87d2d5ea567
+briofold_broadcast_command_before_offers|w uuid, e text, a uuid, k uuid, act text, b jsonb|c3bc13450fe22cb148256f5c33679aac
+briofold_broadcast_command|w uuid, e text, a uuid, k uuid, act text, b jsonb|faf2f15908dc3b36aabb5123a70726a9
+briofold_broadcast_coupon_available|w uuid, e text, cp uuid, cid uuid, at_time timestamp with time zone|b7ffda15c9d481c79c9fa09350b6b8fb
+briofold_broadcast_coupon_snapshot_immutable||e5ae4508932ed2d12d39262bae26965f
+briofold_broadcast_due|recipient uuid|e9143e5939999b680d41b1d60fd82155
+briofold_broadcast_preview_before_offers|w uuid, e text, a uuid, b jsonb|b04b037712f9aee9815adf1dcd0b5487
+briofold_broadcast_preview|w uuid, e text, a uuid, b jsonb|c18bf1f8596c8e61dae28ba0dedec033
+briofold_broadcast_read|w uuid, e text, a uuid, q text, off integer|90f359a734ec5e427fc8bced45d41b6a
+briofold_broadcast_send_check|i uuid|43786a3a1526a712a8026634c290f287
+briofold_broadcast_tick||de990d3a63e3d26f502d6415afbfb455
+briofold_broadcast_valid_before_offers|recipient uuid|f81b44d9a75a478fc8466cdd26626c53
+briofold_broadcast_valid|recipient uuid|a319a57612279ade9ae898dfca0034e2
+briofold_channel_allowed|w uuid, a uuid, c uuid, cap text|67ad0ea6d23835f9a544f769fb788876
+briofold_channel_customer|w uuid, e text, a uuid, cid uuid|b56567d66d0fc19bbe61a785257603e6
+briofold_channel_job_policy_guard||16caee14a97150693bad2a66bb1829cd
+briofold_channel_policy|c uuid|216f6d6efd9cb65ffd4ec295c40bf8dd
+briofold_channel_reply|w uuid, e text, a uuid, r uuid|6b2ee9c46ed4bb06e18c2bee7e5e3598
+briofold_channel_scopes_read|w uuid, a uuid|dd04c05dc6644936ebbeae3eb1d84db7
+briofold_channel_scopes_write|w uuid, a uuid, b jsonb|ebb00e1267b650c5dfb6b6ba97d7ea2b
+briofold_channel_send_valid|i uuid|024b7ff9287e92bb1b127f98eb883fb8
+briofold_channel_settings_read|w uuid, a uuid, c uuid|d96445a13585c36f938d1a836bc92142
+briofold_channel_settings_write|w uuid, a uuid, k uuid, b jsonb|236fad200e7e3dcb15a0bc2fe7be5b12
+briofold_channel_thread|w uuid, e text, a uuid, t uuid, cap text|8ec91a9ba0753e61ee0af7dafe6b5eab
+briofold_channel_work_valid|j uuid, l uuid|4e370cd2395c7b54ba215d8ad6af3ba8
+briofold_comment_claim|phase text|43eb46fec30270feef583e9f9463dc12
+briofold_comment_context_valid|c briofold_comments|371409bbba25e43e16f3f12de211d590
+briofold_comment_decide|cid uuid, lease uuid, rev bigint, d jsonb, actor uuid, rule uuid, rule_rev bigint, pub uuid|1f488466cf8440e301a40c0f30e0c130
+briofold_comment_finish|cid uuid, lease uuid, rev bigint, outcome text, reason text|6b64a215690747da96e5d712cbb7a955
+briofold_comment_ingest|p text, account text, external text, post text, author text, txt text, removed boolean|541092233b69af208cc32dd998682857
+briofold_comment_oauth_begin|d text, w uuid, e text, a uuid, p text|6e0d6483c8c7414952a76a076f320d5c
+briofold_comments_read|w uuid, a uuid, off integer, q text, st text|7dbc48daa26e723cd4ece5f905a82cae
+briofold_comments_write|w uuid, a uuid, op uuid, act text, b jsonb|ec930da8e23ec431cff36843fd549739
+briofold_customer_actor|w uuid, a uuid, cap text|5e3c18b1ab6ecd4c505f833b6b45c5e6
+briofold_customer_api_create|w uuid, e text, key_id uuid, k uuid, b jsonb|676029cdeee48c42a555d69095460252
+briofold_customer_attach_thread||3b8aa127848a3abdee12c9f4cec877f9
+briofold_customer_challenge|w uuid, e text, a uuid, cid uuid, d text|6bd80931f7516c7432be0fe7b33a4df4
+briofold_customer_event_immutable||008415d8328d1f378e66ed549c355e53
+briofold_customer_export|w uuid, e text, a uuid, cid uuid|a719aa35b95ddd1c81bd9e51bab66f5c
+briofold_customer_finance_import|w uuid, e text, a uuid, rows jsonb|f1b2af46e0a4709c8a79cb073adc6666
+briofold_customer_identity_detail|w uuid, e text, a uuid, c uuid, off integer, q text, f text|4e78b2b5540d47628823a27347ed5f90
+briofold_customer_merge_options|w uuid, e text, a uuid, c uuid|4453dd913ef6cb67ff923075867b6591
+briofold_customer_orders|w uuid, e text, a uuid, c uuid|6325d04aa99ff175fdb8ac249a591ebd
+briofold_customer_owner_merge|w uuid, e text, a uuid, k uuid, b jsonb|a1f06499cf17992c9dd088b7aeb852e2
+briofold_customer_products|w uuid, e text, a uuid, c uuid|c3fc0da0708bc095e29da17bd0023018
+briofold_customer_profile|w uuid, e text, a uuid, c uuid|34ce9aee412145ba0627cbe7cf3ad78f
+briofold_customer_stats|w uuid, e text, a uuid, ids uuid[]|d552b32ba323eb6b08b56632f72f66d8
+briofold_customer_verified_shared|w uuid, e text, c uuid, target uuid|a7f45faee5290fec161c132addd0eaad
+briofold_customer_verify|d text|3b18c3f50188dd20ab45d52a7152252f
+briofold_customer_whatsapp_identity|conn uuid, sender_id text|038e09d5d83d701c2daa102ca3d6760d
+briofold_customers_read|w uuid, e text, a uuid, cid uuid, off integer, q text, filter text|b89375646c72146a4a1a59c3d795a3de
+briofold_customers_search|w uuid, e text, a uuid, off integer, q text, stage_filter text, source_filter text, priority_filter text, assigned_filter text|c85057f4e463a232556f6cb2d74bbe76
+briofold_customers_write_before_channel_scopes|w uuid, e text, a uuid, k uuid, act text, b jsonb|54829bc7561a610dd3b67c2404b1caa6
+briofold_customers_write|w uuid, e text, a uuid, k uuid, act text, b jsonb|bed90404a6aa780365ec1adcf66edd5c
+briofold_feedback_screenshot_read|w uuid, a uuid, t uuid|2d12b8ef457c5cd06a8de858c6aeaa8e
+briofold_feedback_write|w uuid, a uuid, k uuid, b jsonb|fd5be5cbf469036c26dec130224c7c8d
+briofold_followup_due|requested timestamp with time zone, zone text, quiet_start time without time zone, quiet_end time without time zone|dfcdc64a406c679bded9cb0067e115ad
+briofold_growth_audience_preview_before_dispatch|w uuid, e text, a uuid, ch text, segment text|e428dd98be0608a8e4d845e42c8bdd32
+briofold_growth_audience_preview|w uuid, e text, a uuid, ch text, segment text|be2ec593d8928aec76f9e748dac34c5c
+briofold_growth_consent_append_only||2266271f09627e36b59e1c4b72272276
+briofold_growth_export|w uuid, e text, a uuid|4eba502a262d72a856a30d5356041de5
+briofold_growth_operational_snapshot|w uuid, e text, a uuid|8e93517fc724a88c4bee52f0663ff1da
+briofold_growth_operations_read|w uuid, e text, a uuid, k text|236863c4bc2f5b32890c756062e8d559
+briofold_growth_operations_write_before_channel_scopes|w uuid, e text, a uuid, k uuid, act text, b jsonb|5c7697b593a923ca4619631b79befdd3
+briofold_growth_operations_write|w uuid, e text, a uuid, k uuid, act text, b jsonb|4e8cded80bc90b19f6f2ab42ac5cb848
+briofold_growth_provider_opt_in|conn uuid, provider_message text, raw_digest text|acf523181372ed37381147dac38d72c5
+briofold_growth_provider_opt_out|p_connection_id uuid, provider_message text|113bf33144493a809d0364accd995c9c
+briofold_growth_snapshot|w uuid, e text, a uuid|40a43b4986d78646fbd81e771dc10062
+briofold_growth_store_actor|w uuid, a uuid, cap text|75bc21691e547370ca407171dfe3c5f6
+briofold_growth_suppress_contact|w uuid, e text, a uuid, k uuid, b jsonb|29396534d718c2bd39f97a004c266a49
+briofold_growth_suppression_immutable||6d6b850c3ad2a9fca89e824ae43d3041
+briofold_growth_suppression_on_merge||10de4fc5a72d4071f7b1cd573009f315
+briofold_help_video_progress|w uuid, a uuid, b jsonb|bbd5240def42dc7ced5434e6625ac4fd
+briofold_help_videos_read|w uuid, a uuid, category text|2f3d416db7bbdde384df52b68736368f
+briofold_inbox_actor|w uuid, a uuid, cap text|560d615bbd50d9a87a3231f5429654f4
+briofold_inbox_ai_alert||a3ec4b04952ff70a7de3fe2474af899f
+briofold_inbox_alert_mark|w uuid, a uuid, alert uuid|f2bab6d30e12244284da9f49218334fc
+briofold_inbox_alert_read|w uuid, a uuid, off integer, q text, k text, unread_only boolean|7c94a3316096ed83a8f101c92b938889
+briofold_inbox_alert_sweep||9005f2034d7faf62fffe3e363d714308
+briofold_inbox_catalog_items|w uuid, e text, selected uuid|af88e0ae86a95ea8b9495f8383f1a081
+briofold_inbox_catalog|w uuid, e text, a uuid, t uuid, action text, b jsonb|28ce98091732295ed39e2989ca9567a3
+briofold_inbox_due_returns||4652ef1db803b3ea439f5d8188606c4a
+briofold_inbox_reopen||6042992b6b2a07b4ea8166df049c78f4
+briofold_inbox_ticket_alert||89351738da1548e6f8130ab2cd079cfb
+briofold_inbox_work_alert||4eddb46402980910c197d04f383b5890
+briofold_inbox_work_read_before_channel_policy|w uuid, e text, a uuid, t uuid, off integer, ticket_offset integer, history_offset integer, filters jsonb|d448ee272dc1c1d3627496164095664d
+briofold_inbox_work_read|w uuid, e text, a uuid, t uuid, off integer, ticket_offset integer, history_offset integer, filters jsonb|0edda6097eed2b96e53c1966ddad0e2d
+briofold_inbox_work_write_before_channel_scopes|w uuid, e text, a uuid, t uuid, k uuid, act text, b jsonb|e39e8cea09efd67dc5330ac539196c50
+briofold_inbox_work_write_before_sequences|w uuid, e text, a uuid, t uuid, k uuid, act text, b jsonb|7b63bf128bf50d34d3aee15e8d062f51
+briofold_inbox_work_write|w uuid, e text, a uuid, t uuid, k uuid, act text, b jsonb|03127d0927f20e50b8b223246ae2ea34
+briofold_linked_order_conversion|w uuid, e text, a uuid, days integer, off integer|5f41ada1e1aa599149865aad20fc2c65
+briofold_meta_customer_name_finish|tid uuid, attempt timestamp with time zone, display text|52aae1a7f9ab3e94e1c7fae953573bef
+briofold_meta_customer_names_claim||5e9f49561eb7f1493c677afc252480b3
+briofold_response_snapshot|w uuid, e text, a uuid|59ae754a29986bdc7732d14ef4d54eda
+briofold_saved_reply_send_before_channel_scopes|w uuid, e text, a uuid, t uuid, k uuid, b jsonb|16e7eb1798001c237532ab99d79d3b30
+briofold_saved_reply_send|w uuid, e text, a uuid, t uuid, k uuid, b jsonb|c9efc51f19748f64fc40ef6710edef52
+briofold_shop_assistant_model_change|actor uuid, expected bigint, selected_model text, rollback boolean|fc64a361e87e45b5bde919749c06f18d
+briofold_shop_assistant_model||2e5fe0665f8fdb51d360d86515dae217
+briofold_team_groups_read|w uuid, a uuid|0f9ad728ae47342a089aa606a44ac370
+briofold_team_groups_write|w uuid, a uuid, act text, b jsonb|14df1522853e25c978194d990581d950
+briofold_thread_name_sync||fd6f94d47ccd9269e336d64709d7fe86
+briofold_unified_activity|w uuid, e text, a uuid, category text, q text, off integer|80d508fb5c789ba7641754e8223ad704
+briofold_website_limit|sid uuid, identity_key text, max_hits integer|4006e1ddf0bce7874b9a37b52bffee14
+briofold_website_media|sid uuid, o text, secret text, peer text, media uuid|23deeec0d74aa8e073ad891eac1ba52f
+briofold_website_origin|sid uuid, o text|124f7676f5493d22dc7344877a94cdbc
+briofold_website_read|w uuid, a uuid|5aa5c205e60786304f7f1ff9f5f16439
+briofold_website_save|w uuid, a uuid, o text, on_off boolean, rev bigint, op uuid|40876e2c91b5aa0a1d2f687b0224bd72
+briofold_website_visit|sid uuid, o text, act text, secret text, peer text, txt text, key text, before_seq bigint|86602a7b3d31349eda00b76f0583a977
+channel_platform_config_read||f4200a8c340988aa14d4d11081e0289f
+channel_platform_config_write|a uuid, c bytea, r text, v text|d54fc9d260a043011ec7d5c9e6253acb
+commerce_actor|w uuid, a uuid, manage boolean|d0a4a7ba15b5c51ffca76db330e0cd9a
+commerce_api_catalog_delete|w uuid, e text, key_id uuid, pid uuid|310ac52ff519a691e5dbce7c5f2ceaaf
+commerce_api_catalog_read|w uuid, e text, key_id uuid, pid uuid, ext text, off integer, q text|7b7d3ae2a45b38416a26d289e31b5708
+commerce_api_catalog_stock|w uuid, e text, key_id uuid, k uuid, pid uuid, b jsonb|d3d6bc3a8844e5da26eb69896f1a445e
+commerce_api_catalog_update|w uuid, e text, key_id uuid, k uuid, pid uuid, b jsonb|0832b222ca6c672f923ae7d10f0d52ee
+commerce_api_catalog_write|w uuid, e text, key_id uuid, k uuid, b jsonb|fcd895cbf3b1214f2f66069b05addc6c
+commerce_api_key_actor|w uuid, e text, key_id uuid, scope text|989fd93c5c119882e40309f65832b1fb
+commerce_api_read|w uuid, e text, key_id uuid, cid uuid, off integer, q text|3b6003b7245725f21e41073ea7711ff9
+commerce_api_write|w uuid, e text, key_id uuid, k uuid, b jsonb|9c27d1cce5e418ad9fc85afd4817f1ef
+commerce_assignment_read|w uuid, e text, a uuid, oid uuid|1b764a0d25b9af281a83214175b36501
+commerce_assignment_write|w uuid, e text, a uuid, k uuid, b jsonb|a6318b9638a50121318bcb2ba45b3599
+commerce_capture_inbox_order||92f3caf7d055dbf9edb16e33d4cb0621
+commerce_catalog_deactivate|w uuid, e text, a uuid, pid uuid, src text, ext text|b7460a12c25a88ce34eefeafa84f4603
+commerce_catalog_json|pid uuid|e0123b1df573496bdc13ecce92a3f776
+commerce_catalog_stock_set|w uuid, e text, a uuid, k uuid, vid uuid, qty bigint, wh uuid|3b513e1aa0ebe5a30f878c988863ee9a
+commerce_catalog_write|w uuid, e text, a uuid, k uuid, b jsonb|f84629833e9080715283bd587d11f4fc
+commerce_derive_key|k uuid, part text|113c7b8ee35d27a4bc1c4bf1a1b12aa9
+commerce_integration|w uuid, e text, a uuid, p text, c bytea, enabled_value boolean|c88220dee5408f5b039a01742e2c6e71
+commerce_media_access|w uuid, e text, a uuid, mid uuid|9eac28738bd6f80e413d05d0320a02cc
+commerce_move|w uuid, e text, a uuid, wh uuid, v uuid, dh bigint, dr bigint, why text, oid uuid|bb7d8e5762c4178ed5697c194f8fe74d
+commerce_notification_ack|w uuid, e text, a uuid, seq bigint|6e9c2992e2f1fa738f5afe5c328fe7b7
+commerce_order_advance|total bigint, shipping bigint, rule text, pct integer|6751747e212133c0fc941dee2c4bdcb5
+commerce_order_payment_owner|w uuid, e text, a uuid, oid uuid, action text, body jsonb|05bddf01756df5bf7968cd4240cdd734
+commerce_order_payment_recalc|oid uuid|6362edaaf338c08953930fe453ec1a51
+commerce_order_payments_immutable||39264d83ca6a80c7dcf2838b7486a69e
+commerce_order_report|w uuid, e text, a uuid, day_from date, day_to date, state_filter text, source_filter text, agent_filter uuid|4a96c38487bbbff2a630edc05d818ac6
+commerce_order_scan|w uuid, e text, a uuid, code text, off integer, state_filter text, source_filter text|50e651c6277888ddd5bfbe3b85c6e09b
+commerce_pathao_command|w uuid, e text, a uuid, k uuid, act text, b jsonb|bb531127b100a25231b3b6c7393a34db
+commerce_pathao_credentials|w uuid, e text, a uuid, c bytea, on_value boolean|a8beb77bcde6b20bf4c39eb2ec6c246d
+commerce_payment_claim_ledger||0e43cd2d520139313001ba11fe68884e
+commerce_photo_actor|w uuid, a uuid, manage boolean|0ad8c0f9bed46bedf06a7041d2697d33
+commerce_photo_evaluate|w uuid, e text, a uuid, k uuid, expected uuid, h text, c jsonb, q text|1868738389211cafb144e4252fad0cfe
+commerce_photo_index_source|w uuid, e text, a uuid, i uuid|9ac9a561a7efc7d129ced6b4cc31a388
+commerce_photo_index|w uuid, e text, a uuid, i uuid, sha text, h text, c jsonb|396bb85a912a4d03d257c11af3614f9a
+commerce_photo_metrics|w uuid, e text, a uuid|0b768f51767cff9166c3a81c4056ff0b
+commerce_photo_search|w uuid, e text, a uuid, h text, c jsonb, q text|7c721effe33668f4c7311aeb025118fb
+commerce_photo_signature_valid|h text, c jsonb|235cc8282f5b176fd943f4fda47e6688
+commerce_photo_similarity|h text, c jsonb, sh bit, sc jsonb|919daad5b7b8e8203e357beb0fb720be
+commerce_product_operational_analytics|w uuid, e text, a uuid, off integer, q text|191bcb8699b57ccd6b5fd5b8ec85d73b
+commerce_product_refresh_search|pid uuid|215965cadaaf68abd9846564837d93e0
+commerce_product_search|w uuid, e text, q text, filters jsonb, lim integer|37e4f12fc306088497c51a73797eb368
+commerce_products_search_trigger||480a43f82ce527b94741d5049193e04c
+commerce_read|w uuid, e text, a uuid, kind text, cid uuid, off integer, q text, state_filter text, source_filter text|2851ddde9ca0ac8670b33b5bcfd6095b
+commerce_search_norm|t text|110cc8ede7b87e5f191a32be8fbfcf99
+commerce_search_tokens|t text|997c9e770ea1c7557fe1ea794a6f5c8f
+commerce_variants_search_trigger||ac9bdf51e9874e730dacd30cf0cc915b
+commerce_woo_event_claim|eid uuid|2ffa759f34e774ef3e0e27c03664924b
+commerce_woo_event_finish|eid uuid, err text|a1ef7af36dd1df1d58625a311dc7f26d
+commerce_woo_event_source|w uuid, e text, a uuid, event_id uuid|7d28829edcfd0c00167056ff269d2eae
+commerce_woo_hook_create|w uuid, e text, a uuid, k uuid, sid uuid, source_origin text, cipher bytea|c11b98b4ef162464eb33dfcf2b44a999
+commerce_woo_hook_disable|w uuid, e text, a uuid, sid uuid|a5a3914cc0ce656ee08c38aecb06d113
+commerce_woo_hook_manage|w uuid, e text, a uuid|279f74987c65067db3b7bc4176cb99ab
+commerce_woo_hook_read|w uuid, e text, a uuid, off integer|35cfbf9671b1b27f838f227b9fdc6a20
+commerce_woo_hook_receive|sid uuid, delivery text, h text, pid bigint, n text|a302f705308ec5936c1377fe8615f6e2
+commerce_woo_hook_source|sid uuid|a19ef767927cfee797d69632ebadd60a
+commerce_write|w uuid, e text, a uuid, k uuid, act text, b jsonb|6c387950c543977e6b330fc5e0ad7cf3
+crypt|text, text|0939715a0bd721d85d420be1aee841c7
+dashboard_billing_change|w uuid, a uuid, pid text, undo boolean|000eb8863e7cab6ed8ce1f1cc8986132
+dashboard_billing_issue|w uuid, a uuid, qid uuid, k text|7d8b373f5d95455064151f112ac5ec67
+dashboard_billing_quote|w uuid, a uuid, pid text, n integer, timing text|c0d0780513277510c75d680a1a9c64a5
+dashboard_billing_quote|w uuid, a uuid, pid text, n integer|333bd03e4df27de2b0aea5e21b99358f
+dashboard_billing_verified|w uuid, i uuid, p uuid, amount bigint, at_time timestamp with time zone, method text, suffix text|57d3edf86984d24c9c5a2ee0e9070213
+dashboard_checkout_logo|d text|939a7bbe99e2a5508d6cc4c97052c3e3
+dashboard_checkout_theme_read|w uuid, a uuid|756d0447c8e3cba6f1b4cdbb7320af28
+dashboard_checkout_theme_write|w uuid, a uuid, b jsonb, v bigint, logo_hash text, logo_png bytea|a444eff60e6572a18ab922e3633c79cb
+dashboard_preferences|w uuid, a uuid, hidden boolean|2b234992b995714e52516c1d4fa558f6
+dashboard_store_on_workspace||c1616bae48f1187e851d5d1e908df0d6
+dashboard_store_read|w uuid, a uuid|291b620a0db4a787a8c92f218e1320b0
+dashboard_store_write|w uuid, a uuid, b jsonb, v bigint, logo_hash text, logo_png bytea|95d0edc204c6ca529247bce0cb6dd90e
+dashboard_workspace_rename|w uuid, a uuid, new_name text|9a0157f032f280916dcdaed51372e782
+dblink_build_sql_delete|text, int2vector, integer, text[]|907ac25ad4e48b26e7050954adf553e8
+dblink_build_sql_insert|text, int2vector, integer, text[], text[]|718f7295f0f973a03375fa74c8978f35
+dblink_build_sql_update|text, int2vector, integer, text[], text[]|99ca5e310c7d74fd4e289c7033ccf38f
+dblink_cancel_query|text|d7ab23f5dd2256ae194db0a02b6bdaed
+dblink_close|text, boolean|aacef52c8c5df6613d1217abb4362189
+dblink_close|text, text, boolean|760a53bd2a2a95c9af65004f0239b051
+dblink_close|text, text|0f57928265e9e16d59d43c61eaacf8af
+dblink_close|text|23db4f1831e10dd2c069c4fbec7406b5
+dblink_connect_u|text, text|f7fc512776e20cdf8a17fce4121074f4
+dblink_connect_u|text|886bbbcbbaa30a91ff9d0797078499e3
+dblink_connect|text, text|f2fbc8bebb33adc023b9746660f31d25
+dblink_connect|text|93c4bfeb6abaac2a3ee60d595317888a
+dblink_current_query||4a94882e3e9bd9695a72e70a3ce63c31
+dblink_disconnect|text|0bdf1e122753ef5acafa8c1cc03391e2
+dblink_disconnect||0bad049c2bb72227ff178a0c100a3917
+dblink_error_message|text|516224b7df585f34727876ef394ca3fc
+dblink_exec|text, boolean|751a67a977d8a65e6041d37082034c31
+dblink_exec|text, text, boolean|7c69687ce4e2642970542dc758c338ce
+dblink_exec|text, text|8416b29e2f8d4634ad39e27b583aeff9
+dblink_exec|text|aeb1f0390e33c59f483f0340f8d01b48
+dblink_fdw_validator|options text[], catalog oid|d3ba721c9f7146464f24dc457ed6b420
+dblink_fetch|text, integer, boolean|a5cee1a0f475ab0283ac2048077fe89b
+dblink_fetch|text, integer|92cb5b64440efee527f3f00f4f3c4170
+dblink_fetch|text, text, integer, boolean|7bf21cfbc86890b23668f5afbe0670ee
+dblink_fetch|text, text, integer|cd11bb3ddee7b8ad63518cf208bbcdbe
+dblink_get_connections||83f529e50d62f80e413b382f9097ce8d
+dblink_get_notify|OUT notify_name text, OUT be_pid integer, OUT extra text|e661ca4d4153b8ecfd19e669f59da44c
+dblink_get_notify|conname text, OUT notify_name text, OUT be_pid integer, OUT extra text|6c1020b3260bbdc67a838fe8f74b0337
+dblink_get_pkey|text|84a240517a690d4394246bcea0a3b149
+dblink_get_result|text, boolean|6a32ac633c972f7f61413166ce94cf85
+dblink_get_result|text|93c6ba0f4dcf33bd5bff75264090f6df
+dblink_is_busy|text|3af087c220177dcd5d8107acee3bf650
+dblink_open|text, text, boolean|23452f217f427a551846f7fb0f748ff2
+dblink_open|text, text, text, boolean|671f9a8a3ec497038e3779588b93a19b
+dblink_open|text, text, text|0784ad61cbb1a561b1629f1b5988937b
+dblink_open|text, text|3c3a612776b0d080d78f379b81f311ad
+dblink_send_query|text, text|481847d855451ebcf4a9c1a8e90a6286
+dblink|text, boolean|d28aa0b232ad954289b93ceeed779860
+dblink|text, text, boolean|20491967193d41d8a0f918ec87a78ec4
+dblink|text, text|d1018b4d855d69f64d9ea437a333a8a8
+dblink|text|cbfbab723f220f779f1ff36b731c75e3
+dearmor|text|d7729372e3d9336abc8d7741203a42e4
+decrypt_iv|bytea, bytea, bytea, text|e16d9883f8115f21498926b02d6d68f2
+decrypt|bytea, bytea, text|d7d544993f5eb2f2442a40bc9649abdf
+digest|bytea, text|f95b6d7c3e7b772aaa79cd847eca825b
+digest|text, text|6b75958a35b3317d784bfa9f6b4f44b5
+encrypt_iv|bytea, bytea, bytea, text|607102fa4c3c8e98c9a2eea7bc631546
+encrypt|bytea, bytea, text|2db5595d113688d14c7a081025de55ee
+financial_projection_environment_bump||e6b375d0541a5faf819bb5c6c73d26c5
+financial_projection_environment_seed||2b9a6afe9a0e749dd1993d7fe9541096
+financial_projection_payment_product_bump||2395d4e0e304a21dcf9d6ccb605eb47e
+financial_projection_workspace_deleted||a6ab74345f2345659c865bd166fd3a0e
+gen_random_bytes|integer|767c42f6188fd5c462c3e27384858565
+gen_random_uuid||ff30e0a6015ca70d7bb1a880f09a11bf
+gen_salt|text, integer|33498c853264afae81c9eef1e42637dd
+gen_salt|text|75059627384e3cc1164aa5bfeeb91fce
+gin_extract_query_trgm|text, internal, smallint, internal, internal, internal, internal|908112f5743e0dc3307ce7da24a3d095
+gin_extract_value_trgm|text, internal|42bc3d69fe7ae6ba4409315e68686e93
+gin_trgm_consistent|internal, smallint, text, integer, internal, internal, internal, internal|3b5516ee327d210cf276d0f7cbec6a1b
+gin_trgm_triconsistent|internal, smallint, text, integer, internal, internal, internal|ebb9557e4d7f2342aa65aa319bf2f6ad
+gtrgm_compress|internal|0ac3144cfd060482fab5339fe0e2a9e1
+gtrgm_consistent|internal, text, smallint, oid, internal|00d55f7471e62f08ca85d8d4e61991e7
+gtrgm_decompress|internal|217b0af3efb9f430e911c6e2aeb0aa99
+gtrgm_distance|internal, text, smallint, oid, internal|374c53a6404b5daf685b2c4222c76a54
+gtrgm_in|cstring|85d9e1867f8d5b1ad99fbeac7a03595e
+gtrgm_options|internal|18b083f2c473ca71bc90b18732d82493
+gtrgm_out|gtrgm|03641c6b5e277450ea5f628094c0a607
+gtrgm_penalty|internal, internal, internal|4f0a4190629a524609fe1b21fc480341
+gtrgm_picksplit|internal, internal|366a79f83941d97999f208690619b79d
+gtrgm_same|gtrgm, gtrgm, internal|e34ae9aee761b36d68942175420b9030
+gtrgm_union|internal, internal|1e514b035bac6c001492f0ec64f222b8
+hmac|bytea, bytea, text|255f76d34f69f526e821c43c1924e758
+hmac|text, text, text|1fa6ecfa0fbb980310ed74909d1315cd
+inbox_action_before_channel_scopes|w uuid, e text, d uuid, t uuid, act text, b jsonb|a4470ab1bf6bf1e2474e608202eea788
+inbox_action_v2|w uuid, e text, d uuid, t uuid, a text, b jsonb|a39cc75ec178919f721a3def49a7e716
+inbox_action|w uuid, e text, d uuid, t uuid, act text, b jsonb|97943c17b7999408d7a464135454474d
+inbox_advanced_before_channel_scopes|w uuid, e text, d uuid, t uuid, a text, b jsonb|8f39c78d8b6960eeed9f7c0f26451f88
+inbox_advanced|w uuid, e text, d uuid, t uuid, act text, b jsonb|00c79018eb0650a79a146986a1a55f89
+inbox_avatar_source|w uuid, e text, t uuid|ff19d28dce1be74d9aa299f9814dfca9
+inbox_capabilities_before_telegram|p text|ab3e6ba5c453a5bc39b5d0b9a8ce0ee0
+inbox_capabilities|p text|12cda35fc80cd78f293cd54638206b68
+inbox_connection_list|w uuid, e text|58606ecbf944a8125450233b596c3606
+inbox_connection_named|w uuid, e text, p text, x text, k bytea, n text|cd5725f2df888b36104430f4209d07b2
+inbox_connection|w uuid, e text, p text, x text, k bytea|c1c551b12aee4382682f5c0c420fab46
+inbox_delivered_watermark|c uuid, r text, at_time timestamp with time zone|d5d2500e0ab84cd2c49e0f670ce53e21
+inbox_disconnect|w uuid, e text, i uuid|ee583c0d0955718507a2d816444093ac
+inbox_finish_push|d uuid, m uuid, s text|24c497bc5b14cb3fcb2353b2f1295b6e
+inbox_finish_send_v1|i uuid, p text, s text, err text|4f62577dd1a9b281e1005d289c8bf27c
+inbox_finish_send|i uuid, p text, s text, err text|f582c0ba079592df6ef03691ef6b7064
+inbox_forward_album_before_channel_scopes|w uuid, e text, d uuid, t uuid, source uuid, k uuid|9a5b36b91869e294835982d66c742b6f
+inbox_forward_album|w uuid, e text, d uuid, t uuid, source uuid, k uuid|05cf7cde5e18a86186edccb6531a8645
+inbox_inbound_media|c uuid, p text, s text, n text, kind text, ref bytea, at_time timestamp with time zone|4ee47ca2c6fba090fde20b32d7af9988
+inbox_inbound_store|w uuid, t uuid, i uuid, k text, n text, m text, z integer, h text|cf93a96b363729fea473c0088b1fe576
+inbox_ingest|c uuid, p text, s text, n text, b text, k text, at_time timestamp with time zone|04b2fe23dd2661733147b235bbda94dc
+inbox_media_access|w uuid, e text, t uuid, i uuid|e6f8afdf0df563c094c9f538419db649
+inbox_media_save|w uuid, e text, t uuid, i uuid, k text, n text, m text, z integer, h text, ms integer|eb64256f4799fc8b8c5de7cc1e17e957
+inbox_media_source|w uuid, e text, t uuid, i uuid|9c1a5d08093fb4efe0af9b733cbd84d0
+inbox_next_push||1ed5ac33191e6dfff1129413305fd52a
+inbox_next_send_v1||e5aa48aa12a0cbbd1e86894ac851d68d
+inbox_next_send||17660ff669cebd3ca9cd246a57df6b8c
+inbox_oauth_begin|d text, w uuid, e text, a uuid, p text|0a717bb52e162e06dfaace2d5cb91224
+inbox_oauth_consume|d text, a uuid|7c564d0399475604cf069bfbdea666d8
+inbox_order_payment_claim|w uuid, t uuid, order_id uuid, method text, phone text, trx text|65154de8019014191ca271048076aef4
+inbox_outgoing_media_reference|job uuid, ref bytea|3f4a477e3ef4471a3b72f12e1c5cc455
+inbox_page_media|w uuid, e text, d uuid, t uuid, before_seq bigint, f jsonb|f05ec38ede4045dabc1de67a1a4304d1
+inbox_page_v1|w uuid, e text, d uuid, t uuid, before_seq bigint, f jsonb|3e60249ee7cc2deb9d52c395f32aeb39
+inbox_page|w uuid, e text, d uuid, t uuid, before_seq bigint, f jsonb|3c0259e9de977a4586a6edfa129ae795
+inbox_profile|w uuid, e text, t uuid|21c2d5b5236f452c58bc54320f18dffd
+inbox_provider_connections|p text, x text|44ede072c9b20ac921bc9048cb91a2d0
+inbox_provider_reaction|c uuid, p text, s text, emoji_value text, at_time timestamp with time zone|c51b89480df562b5582b9b043a80bf9f
+inbox_queue_push||f5fc3ad6f1643dfb2437d25f60426117
+inbox_reaction_finish|i uuid|c1acb2a62723d3ed510e613c4df9c453
+inbox_realtime_notify||6952e718b6c7d5da1a4560c0f4b7dbce
+inbox_register_push|d uuid, t bytea|add3263d431edadfe61ece346d2955fe
+inbox_scope|w uuid, e text, t uuid|0fa2e79e48c5c71ed3c595db07bcc94d
+inbox_seen_watermark|c uuid, r text, at_time timestamp with time zone|b34370946c87aaf29198e44297a9ede9
+inbox_source_metadata|w uuid, t uuid, i uuid, ref bytea, sticker boolean|2643100c8577ecc6fb49cda84e0011c0
+inbox_status|c uuid, p text, s text, at_time timestamp with time zone|909fa0f1d4e88295cfcac37d6aabb3b4
+inbox_telegram_delivered|job uuid|829b39d0048c155a7a1c6161ee867c99
+inbox_webhook_record|i text, p text, b bytea|e1b851c0b1876fe01fb944eae2be6305
+inbox_window_free|connection uuid|cb84d925dc7db30a80f0f2e3618904cc
+list_financial_projections||8048ec59b22483a466e30729319ecfd8
+mobile_device_adopt|i uuid, w uuid, e text, k bytea|3507bc71ec8e62093a7609f875d8e100
+mobile_device_claim|d text, k bytea|fae4ed5c9a2c6850c5ab669ff7771b41
+mobile_device_key|i uuid|101a655ff91d8bd26d9881af2051a0cf
+mobile_device_manage|w uuid, e text, a text, i uuid, n text, d text|bdb66666c73b2c7c2f096cebe0c41cdf
+mobile_device_pair_exists|d text|9de547782f97f3cb6846e14c10cac5ad
+mobile_device_preview|d text|210cee3beb9fb1b39b228e4412fdd071
+mobile_device_touch|i uuid|5635a9ac038c1f76169f181d8aeeca72
+mobile_workspace_preview|w uuid, e text|e9fa0a82102649688a3d49f5f8c1b6bc
+mobile_workspace_state|w uuid, e text|9ed553e81afabf86c2264807f5a27fd9
+payment_plan_admin_resource_usage|a uuid, w uuid|f9244958fa4a096eb071c174053a336a
+payment_plan_admin|a uuid, op text, b jsonb|a8b376a65de1f2c6113c6d45981771ef
+payment_plan_claim_free|w uuid, a uuid, pid text|39ca9266021095461d545f5d0b13c78a
+payment_plan_control_limit||05b8406127b97152ff207a48d4edd7ce
+payment_plan_effective|w uuid|092e81a16c8c4c43023f34b8d03790b5
+payment_plan_free_quota_upgrade||6fbe6f1f2d0dd2af60d312fc6c5616f1
+payment_plan_immutable||41ff5e2753a33e87eb01af753d98bc68
+payment_plan_invite_limit||79a2063347c67491807fb42c46256389
+payment_plan_member_resource_usage|a uuid, w uuid|6184a7baccf89a9c5106f10fee0d7b9e
+payment_plan_prepaid_guard||2125f9dbf11c8b48a02840edb4d54987
+payment_plan_public||a2c3714a8a7dd3e46fdde3b95fd476ed
+payment_plan_validate|t jsonb|1ff5c95f6628a6a094afd8c33db021c8
+pg05_public_business|p_workspace uuid, p_environment text|44cebf9d3f8a33f5c5be85f86bd13e51
+pg10_export_authorized|w uuid, a uuid|01a5e9888266667a78c0f6c86ea742e3
+pg10_invoice_send_authorized|w uuid, a uuid|75129a63f4cf01e8c2b4eafbcef77702
+pg10_public_business|w uuid, e text|aa9d91bdbdd9720c987756a5b06b2149
+pg13_actor|w uuid, a uuid, manage boolean|cc40785af750bcb7082e22b6765cd427
+pg13_billing_allowed|w uuid|7a3c649f0122f0543b342077a7c8c430
+pg13_billing_issue|w uuid, a uuid, plan text, k text|4a6009eb547af7eefa540b30eefd9436
+pg13_billing_read|w uuid, a uuid|43d64a3ab8ca194593325d1f80bebbd4
+pg13_billing_verified|w uuid, invoice uuid, payment uuid, amount bigint, verified_time timestamp with time zone|ed34f9504a0596114a5c096580a407a1
+pg13_capability_override_before_channel_scopes|w uuid, a uuid, cap text|8947c421e60e1ca37261fb479094f31b
+pg13_capability_override|w uuid, a uuid, cap text|6fa1fd33f052a9ca046dbc9e079dc56b
+pg13_grants|w uuid, a uuid, target uuid, b jsonb|5fc25c90f99a5245aa98afbf6f0a125d
+pg13_invite_accept|a uuid, cap text|754993bedc31055e1f89b2e8f7248722
+pg13_invite_resend|w uuid, a uuid, item uuid, cap text|be477b802996bd231f2057aac65abded
+pg13_pending_billing||bba7fdfebde48d958fbbcd24c0d3c7e8
+pg13_privacy_cancel|item uuid, w uuid, a uuid|49e21cb7e17881424a333044bb549af1
+pg13_privacy_history_guard||72989b22475522d5acbc209572d23831
+pg13_privacy_observe|item uuid, w uuid, store_name text, state text, proof text, why text, until_time timestamp with time zone|b2c85b2809368999efb776ef0064567c
+pg13_privacy_read|w uuid, a uuid|1deb87906991ba5657a779a810b59e86
+pg13_privacy_request|w uuid, a uuid, typ text, k text|7f5a9fdd35f3b102a2071174c486ce2c
+pg13_public_checkout|w uuid, e text|56afad211d2ffb81ffe84c9048954588
+pg13_reauth_hash|a uuid, s uuid|a49e34a957ea1eb53f1769bfbfcdb0d4
+pg13_reauth_success|a uuid, s uuid|32cdcdc1f8e7c7de4649b59e21a83e8c
+pg13_support_history|w uuid, a uuid, ticket uuid|48f744fb7f47a1ef0487f8ce88031379
+pg13_support_reply|a uuid, ticket uuid, msg text, target_status text|ed3a4aedc6ec05bdef008e24768dabaa
+pg13_team_grants|w uuid, a uuid|6a7bb8a9b7026a14ea1323674482b5e2
+pg13_transfer_owner|w uuid, a uuid, target uuid|9b2cedd1df66210910df475d37657a6c
+pg13_workspace_read_before_feedback_screenshots|w uuid, a uuid, resource text|fc562859535a6da00aa7b04114b57303
+pg13_workspace_read|w uuid, a uuid, resource text|6ad03106d736b9193b5bf0ab4dcfd70f
+pg13_workspace_write|w uuid, a uuid, resource text, b jsonb, target uuid|924270baa456479b6e00064334d8c2eb
+pgp_armor_headers|text, OUT key text, OUT value text|e8e0141fd364a9f4f2bb77cddefc1375
+pgp_key_id|bytea|65a7e7e64c0e9357f3d9ef90684fc901
+pgp_pub_decrypt_bytea|bytea, bytea, text, text|6bfe210845fb03480bd1c6ba0a23c8ab
+pgp_pub_decrypt_bytea|bytea, bytea, text|b454111dbd336c971f5f943d034522ee
+pgp_pub_decrypt_bytea|bytea, bytea|67dc9e8d117eaceb2ecb2b9ecd4a84bd
+pgp_pub_decrypt|bytea, bytea, text, text|19e39f76f9c02c23f186c03708a697b6
+pgp_pub_decrypt|bytea, bytea, text|f75b5fe07aa0b9878dd0c4b740b4b7c0
+pgp_pub_decrypt|bytea, bytea|8405a5854d6a196497505558a08836d6
+pgp_pub_encrypt_bytea|bytea, bytea, text|a9e9a634c9e5b0043e6545b31bc61abc
+pgp_pub_encrypt_bytea|bytea, bytea|4652e16255901f99b425e1591ac4067b
+pgp_pub_encrypt|text, bytea, text|69c8935398e493c55f1a4416f5e19634
+pgp_pub_encrypt|text, bytea|35b1cfe47cb1c41981ca0cc47d180ff1
+pgp_sym_decrypt_bytea|bytea, text, text|7efaa9f9cd67e698d2c1746a6b1869da
+pgp_sym_decrypt_bytea|bytea, text|85bf7797885fc606a004da1491be44d4
+pgp_sym_decrypt|bytea, text, text|03a9646c8b0a1df4e03651a942f28462
+pgp_sym_decrypt|bytea, text|964df44396e5184c4edd079067e0b616
+pgp_sym_encrypt_bytea|bytea, text, text|6ebf4ffeeb75d708ea16cd9cc2628cca
+pgp_sym_encrypt_bytea|bytea, text|4e6c92a8b7d749d0848233de20e747d9
+pgp_sym_encrypt|text, text, text|780e212e582eccd1b836f953192aad99
+pgp_sym_encrypt|text, text|9de92e2e6e5911ada3edb52d67cce15a
+platform_ai_credit_ledger_immutable||45dc1ec047fae4e9e511952d20bce0ae
+platform_billing_invoice_receiver|w uuid, i uuid|7d66dca1313f55a2e33ff083e69c8ecc
+platform_billing_member_guard||2b0cad8abf6f9b0a9efc8871ec707d5e
+platform_billing_pin_invoice||b5f43aa667ffbd996c4fd862ddae199f
+platform_billing_role_guard||41571a132d5630a7ee3e2e64af6927ff
+platform_billing_set|a uuid, w uuid, reason text|a413ea0ae5294b63b970422c809a901e
+platform_billing_system_workspace|w uuid|a9a861a943ad44f6ce9f4db55dd2a215
+platform_billing_workspace||1ece7ef2dd94b546ac43dc57ddd84f0f
+platform_subscription_admin_export|admin_actor uuid, kind text, filter_text text|6d9c6fc31c89c8e190c56a3db87be89d
+platform_subscription_admin_operations|admin_actor uuid|716bc42dd2b8fb15fb05d914fcf83715
+platform_subscription_coupon_admin|actor uuid, operation text, payload jsonb|1edc549b966098208566346391b5e981
+platform_subscription_coupon_current_quote|a uuid, iid uuid|8398cfc6c494d51881f59c48cceb4481
+platform_subscription_coupon_history|a uuid, cid uuid, off integer|480614dec966c3c3e79e92dc743b897d
+platform_subscription_coupon_quote|a uuid, iid uuid, k uuid, expected bigint, code text|fb34300b368b701ae20bf1fa96f1cf7a
+platform_subscription_coupon_reconcile|iid uuid|aab5cdcd45f2f302c98e2552789287aa
+platform_subscription_intent_command|operation text, actor uuid, guest_digest text, capability_digest text, data jsonb|34e24182774485c3a0e6a87c4a32f8db
+platform_subscription_offer_admin|actor uuid, operation text, payload jsonb|14a0332a83a233d6a0151971767f4944
+platform_subscription_offers_public||56cf2ddfa4a8e4028d037a55d232b828
+platform_subscription_order_request|w uuid, a uuid, purchase uuid, operation text, payload jsonb|c8dce2ad46dc09bceb7f5f17a6ee1df4
+platform_subscription_payment_bind|w uuid, a uuid, purchase uuid, qid uuid, invoice uuid, receiver uuid, token_sha text|f89898af6f89324b57b57c0968f6c023
+platform_subscription_payment_capability|a uuid, token_sha text|ca58576adebe53c53c78fa07a71d56eb
+platform_subscription_payment_is_handoff|invoice uuid|c5260e0ed148ec04eda70669c8e64675
+platform_subscription_payment_pending||7a3d617bfdc54650f407355f7743943f
+platform_subscription_payment_read|w uuid, a uuid, purchase uuid|1af08be691c734f0524ac2cedf75b5d4
+platform_subscription_payment_recover|purchase uuid, payment uuid, reason_text text|adbe3e10a82d4aa9efee9b7bfa8aa3d5
+platform_subscription_payment_settle|purchase uuid, payment uuid, amount bigint, verified_time timestamp with time zone, receiver uuid|95510170dbfdec973f2240ccad74faf2
+platform_subscription_payment_terminal|purchase uuid, final_state text|5d7b555139a6eb0869a723e4e2e27d4e
+platform_subscription_policy_admin|actor uuid, operation text, payload jsonb|a58925cee29cc035198a4c242e67e2f8
+platform_subscription_policy_public||079475fc323e29df863d24d677edaeda
+platform_subscription_tax_admin|actor uuid, operation text, payload jsonb|50e6517f0b0e0af98a0dc2ddd49f26c1
+resolve_financial_projection|p_workspace uuid, p_environment text|8638f52907572a90af1fef258ccdf4e7
+resolve_merchant_api_key|p_public_id text|c8f65aac2d0c46edc1a17b3b283c6473
+seed_workspace_environments||33a9c79a78cc7944cf92a7cf281939b8
+seed_workspace_product_access||894f78303a6f98c9bccd2efddc441bcd
+set_limit|real|c30ba59e63bc3cb36608046c50620e39
+show_limit||4be49f417a851b1848da525e573e408d
+show_trgm|text|42aa0974abb454971132812dcce06cac
+similarity_dist|text, text|831e333ae2231e3fb1e6e88a55ccc0a0
+similarity_op|text, text|c62f80a7a7107d232daf8683decbfaf5
+similarity|text, text|fd931cb85ba442355f277550b8836710
+strict_word_similarity_commutator_op|text, text|49fe0d7b5f628c2f13e21ad6d0c5d28f
+strict_word_similarity_dist_commutator_op|text, text|e4384ee3a07267eb13f09bb4b042f334
+strict_word_similarity_dist_op|text, text|bc660db5cc387e8821747f1ecfb347eb
+strict_word_similarity_op|text, text|fa21d1ae2c217ba161bb3f7777e5e020
+strict_word_similarity|text, text|523450d477b4e105989795603c58761a
+subscription_coupon_invoice_changed||d45d0d82dc1c4100c7da661537423ca1
+subscription_coupon_record_version||dff9a4504b26f4c12df98c9757b9d1ef
+subscription_coupon_version_immutable||8355232d95288491f6193ed7c969680c
+subscription_tax_record_version||5e16098045a836a81ee076d1462cd9ff
+touch_merchant_api_key|p_public_id text, p_digest text|36de62f9c3ce8a1fb5c9abc8684a31da
+word_similarity_commutator_op|text, text|98ece0ccacd71230bea0e7805d310670
+word_similarity_dist_commutator_op|text, text|db36854b61d077b4cb945606bab01fc6
+word_similarity_dist_op|text, text|ab0c2cb7ec6c0cbe0937ec3288d2cfda
+word_similarity_op|text, text|9cb3bc9ce246a2c4c4d17c7205f4a17f
+word_similarity|text, text|f9acfb3b071c96db4b1bb593b621c747
