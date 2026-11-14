@@ -214,7 +214,7 @@ jobs:
         env:
           PGC: ${{ job.services.postgres.id }}
         run: |
-          set -uo pipefail
+          set +e
           out=schema-snapshot; mkdir -p "$out"; r="$out/inventory.txt"
           h() { printf '\n===== %s =====\n' "$1" >> "$r"; }
           q() { docker exec -i "$PGC" psql -At -F " | " -v ON_ERROR_STOP=1 -U ekmivo_test -d "$1" -c "$2" >> "$r" 2>&1; }
@@ -225,11 +225,14 @@ jobs:
           for db in ekmivo_pg00 ekmivo_pg04_live ekmivo_pg04_sandbox; do
             h "$db: extensions"; q "$db" "select extname, extversion from pg_extension order by 1"
             h "$db: object counts"; q "$db" "select 'tables', count(*) from pg_tables where schemaname='public' union all select 'functions', count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' union all select 'indexes', count(*) from pg_indexes where schemaname='public' union all select 'policies', count(*) from pg_policies where schemaname='public'"
-            h "$db: migration ledger (all rows)"; q "$db" "select filename, sha256, applied_at from dashboard_reference_migrations order by filename"
+            h "$db: migration ledger (all rows)"; if [ "$(docker exec -i "$PGC" psql -At -U ekmivo_test -d "$db" -c "select to_regclass('public.dashboard_reference_migrations') is not null")" = "t" ]; then q "$db" "select filename, sha256, applied_at from dashboard_reference_migrations order by filename"; else echo "NO LEDGER TABLE" >> "$r"; fi
             h "$db: function fingerprints"; q "$db" "select p.proname, pg_get_function_identity_arguments(p.oid), md5(pg_get_functiondef(p.oid)), r.rolname, p.prosecdef from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_roles r on r.oid=p.proowner where n.nspname='public' and p.prokind in ('f','p') order by 1,2"
             docker exec -i "$PGC" pg_dump --schema-only --no-owner -U ekmivo_test -d "$db" > "$out/schema-$db.sql" 2>> "$r" || echo "schema dump failed for $db" >> "$r"
           done
           ls -la "$out"
+          # Artifacts are not reachable from the comparison workspace; print the archive into the log instead.
+          tar -czf snapshot.tgz "$out"; sha256sum snapshot.tgz
+          echo "SNAPSHOT-BEGIN"; base64 -w 120 snapshot.tgz | sed 's/^/SNAP:/'; echo "SNAPSHOT-END"
       - name: Upload repo-built schema snapshot
         if: always()
         uses: actions/upload-artifact@v4
