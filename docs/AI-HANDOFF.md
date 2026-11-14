@@ -74,6 +74,7 @@ Not checked yet: whether an AI-created order can be booked through the existing 
 
 ## 7. Open work
 
+0. **First, before anything else:** production and the repo are not level (migration ledger and a few functions). Follow `docs/runbooks/vps-repo-stabilize.bn.md`. No deploy, no hand SQL and no `financial-migrate` run on production until it is done.
 1. PR #167 (docs only): plan update and this file. Merge when the owner says.
 2. The plan `docs/plans/ai-production-ready.md`, in order: foundation, evals with the real model, CX, memory, voice, image search with pgvector, video. Courier is "later" by owner decision.
 3. Owner decisions still open: Cloudflare R2 account; voice or image first; monthly AI conversation cap per plan.
