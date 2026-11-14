@@ -10,7 +10,7 @@ const CONTROL = ["0215_ai_unknown_thread_isolation.sql", "0216_ai_multimodal_inp
   "0223_inbox_blobs_drop.sql", "0224_inbox_telegram_delivered_on_send.sql", "0225_inbox_delivered_watermark.sql", "0226_inbox_realtime_avatars.sql",
   "0227_briofold_customer_orders_link.sql", "0228_briofold_catalog_search.sql", "0229_briofold_catalog_api.sql", "0230_briofold_woo_sync.sql",
   "0231_briofold_catalog_key_actor.sql", "0232_briofold_catalog_search_speed.sql", "0233_briofold_ai_tools.sql", "0234_briofold_ai_selling.sql",
-  "0235_briofold_customer_profile.sql", "0237_briofold_ai_order_notices.sql", "0238_briofold_ai_review_decide.sql", "0239_briofold_customer_products.sql", "0240_briofold_shop_assistant_model.sql", "0241_briofold_ai_channel_catalog.sql", "0242_briofold_ai_channel_cards.sql", "0244_briofold_ai_payment_links.sql", "0245_briofold_customer_identity.sql", "0246_briofold_customer_history_privacy.sql"];
+  "0235_briofold_customer_profile.sql", "0237_briofold_ai_order_notices.sql", "0238_briofold_ai_review_decide.sql", "0239_briofold_customer_products.sql", "0240_briofold_shop_assistant_model.sql", "0241_briofold_ai_channel_catalog.sql", "0242_briofold_ai_channel_cards.sql", "0244_briofold_ai_payment_links.sql", "0245_briofold_customer_identity.sql", "0246_briofold_customer_history_privacy.sql", "0247_briofold_order_payments.sql", "0249_briofold_ai_payment_settle.sql", "0250_briofold_ai_payment_tool.sql", "0251_briofold_production_baseline.sql", "0252_briofold_ai_advance_rule_setting.sql", "0253_briofold_orders_paid_from_ledger.sql"];
 const PREREQ = {"0217_briofold_key_prefix.sql": "to_regclass('public.public_sandbox_config') IS NOT NULL"};
 // Production roles that later migrations grant to; the disposable CI cluster creates them as NOLOGIN placeholders.
 const PRODUCTION_ROLES = ["ekmivo_owner", "ekmivo_runtime", "ekmivo_web_app"];
@@ -37,7 +37,7 @@ export async function runBriofoldAiCommerce({control, apiEnv, phase9Fixture}) {
   for (const realm of [phase9Fixture.liveDatabase, phase9Fixture.sandboxDatabase]) {
     const r = postgres(local(realm), {max: 1, prepare: false, onnotice: () => {}});
     try {
-      for (const file of ["0236_briofold_ai_receipt_lookup.sql", "0243_briofold_ai_payment_link_realm.sql"])
+      for (const file of ["0236_briofold_ai_receipt_lookup.sql", "0243_briofold_ai_payment_link_realm.sql", "0248_briofold_ai_receipts_by_payer.sql"])
         for (let i = 0; i < 2; i++) await r.unsafe(await sql(file)).simple();
     } finally { await r.end({timeout: 3}); }
   }

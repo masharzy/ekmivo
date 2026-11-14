@@ -38,6 +38,7 @@ type studioContext struct {
 		Text   string `json:"text"`
 	} `json:"history"`
 	Products  []json.RawMessage `json:"products"`
+	Business  json.RawMessage   `json:"business"` // Shop name, contact and address from the business profile (claim with include_business).
 	Question  string            `json:"question"`
 	AISelling bool              `json:"ai_selling"` // Set by the claim when the owner enabled AI selling and a live catalog exists.
 	media     []aicredits.Media // Set only by the leased channel worker, never dashboard JSON.
@@ -89,11 +90,16 @@ func studioMessages(c studioContext) ([]aicredits.Message, error) {
 		}
 		history = append(history, map[string]string{"sender": m.Sender, "text": text})
 	}
+	var business any
+	if len(c.Business) > 2 && len(c.Business) <= 3000 && json.Valid(c.Business) {
+		business = c.Business
+	}
 	data, err := json.Marshal(struct {
+		Business  any `json:"business,omitempty"`
 		Knowledge any `json:"knowledge"`
 		Products  any `json:"products"`
 		History   any `json:"conversation_history"`
-	}{facts, c.Products, history})
+	}{business, facts, c.Products, history})
 	if err != nil || len(data) > 18000 {
 		return nil, aicredits.ErrInvalidRequest
 	}
@@ -117,10 +123,11 @@ func studioMessages(c studioContext) ([]aicredits.Message, error) {
 		products := c.Products
 		for {
 			data, err = json.Marshal(struct {
+				Business  any `json:"business,omitempty"`
 				Knowledge any `json:"knowledge"`
 				Products  any `json:"products"`
 				History   any `json:"conversation_history"`
-			}{facts, products, history})
+			}{business, facts, products, history})
 			if err != nil {
 				return nil, aicredits.ErrInvalidRequest
 			}
@@ -347,7 +354,11 @@ func (s *Service) RunStudioAI(ctx context.Context) {
 }
 func (s *Service) runStudioJob(ctx context.Context) {
 	var raw []byte
-	if s.Pipeline.Control.QueryRow(ctx, "SELECT briofold_ai_channel_claim()").Scan(&raw) != nil || len(raw) == 0 {
+	claim := "SELECT briofold_ai_channel_claim()"
+	if aiBusinessFactsEnabled() {
+		claim = "SELECT briofold_ai_channel_claim(true)" // same claim plus the shop's business profile in context.business
+	}
+	if s.Pipeline.Control.QueryRow(ctx, claim).Scan(&raw) != nil || len(raw) == 0 {
 		return
 	}
 	var job struct {
@@ -419,6 +430,7 @@ func (s *Service) runStudioJob(ctx context.Context) {
 		acted := false
 		if toolMode {
 			var loop aiLoopResult
+			s.aiAddOrderMemory(run, &request, job.ID, job.Lease)
 			loop, runErr = s.runAIToolLoop(run, request, job.ID, job.Lease, studioReplyLanguage(job.Context))
 			result, handover, acted = loop.Result, loop.Handover, loop.Acted
 			checkoutOrder = loop.CheckoutOrder

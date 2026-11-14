@@ -189,7 +189,13 @@ func TestAICommerceIntegration(t *testing.T) {
 	version := it.one(it.admin, "INSERT INTO payment_plan_versions(plan_id,version,terms,created_by) VALUES($1,1,payment_plan_validate($2::jsonb),$3::uuid) RETURNING id::text", planID, terms, it.user)
 	it.exec(it.admin, "INSERT INTO pg13_subscriptions(workspace_id,plan_id,plan_version_id,paid_until,grace_until) VALUES($1::uuid,$2,$3::uuid,now()+interval '30 days',now()+interval '33 days')", it.ws, planID, version)
 	it.exec(it.admin, "UPDATE app_users SET email_verified_at=now()-interval '1 minute' WHERE id=$1::uuid", it.user)
-	model := it.one(it.admin, "SELECT model FROM briofold_ai_tariff_catalog ORDER BY model LIMIT 1")
+	// The tool protocol plus the shop context needs the production input bound; shared fixture tariffs are smaller.
+	// This run gets its own model with the terms of an existing tariff and a 32k input bound.
+	model := "fixture/ai-it-" + tag
+	tariff := it.one(it.admin, `INSERT INTO briofold_ai_tariff_versions(model,revision,terms,created_by,reason,operation_key)
+		SELECT $1,1,v.terms||'{"max_input_tokens":32000}'::jsonb,$2::uuid,'AI commerce integration tariff',gen_random_uuid()
+		FROM briofold_ai_tariff_catalog c JOIN briofold_ai_tariff_versions v ON v.id=c.current_version ORDER BY c.model LIMIT 1 RETURNING id::text`, model, it.user)
+	it.exec(it.admin, "INSERT INTO briofold_ai_tariff_catalog(model,current_version) VALUES($1,$2::uuid)", model, tariff)
 	write := func(kind string, body map[string]any) {
 		raw, _ := json.Marshal(body)
 		it.exec(it.admin, "SELECT briofold_ai_studio_write($1::uuid,$2::uuid,gen_random_uuid(),$3,$4::jsonb)", it.ws, it.user, kind, string(raw))
@@ -831,6 +837,81 @@ func TestAICommerceIntegration(t *testing.T) {
 		history := it.one(it.svc.Auth.DB, "SELECT briofold_customer_identity_detail($1::uuid,'live',$2::uuid,$3::uuid,0,'','')->>'events'", it.ws, it.user, customer)
 		if !strings.Contains(history, "fixture-history") || strings.Count(history, "merge-survived") != 1 {
 			t.Fatal("merge lost historical activity or duplicated its audit")
+		}
+	})
+
+	t.Run("payments v2: sender number first, TrxID fallback, partial payment and method switch", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		t.Setenv("BRIOFOLD_AI_PAYMENTS_V2_ENABLED", "true")
+		t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "false")
+		it.exec(it.admin, "UPDATE commerce_stock SET on_hand=on_hand+3 WHERE variant_id=$1::uuid", vl)
+		it.exec(it.admin, "UPDATE briofold_ai_channel_jobs SET state='cancelled' WHERE workspace_id=$1::uuid AND state IN ('queued','running')", it.ws)
+		it.exec(it.admin, "UPDATE commerce_ai_settings SET cod_enabled=true,cod_charge_minor=0,advance_rule='none' WHERE workspace_id=$1::uuid AND environment='live'", it.ws)
+		receipt := func(trx, sender string, amount string) {
+			t.Helper()
+			event := it.one(it.live, "INSERT INTO financial_inbound_events(workspace_id,environment,source_kind,source_event_id,event_digest,original_source_at,encrypted_evidence) VALUES($1::uuid,'live','device_sms',$2,$3,now(),$4) RETURNING id::text",
+				it.ws, "v2-"+trx+tag, deviceevidence.Identity(payerKey, "v2evt-"+trx+tag), make([]byte, 48))
+			digest := deviceevidence.Identity(payerKey, "receipt|bkash|"+trx)
+			it.exec(it.live, `INSERT INTO financial_receipt_observations(workspace_id,environment,inbound_event_id,receiving_account_id,provider_reference_hmac,payer_hmac,amount_minor,method,direction,original_transaction_at,time_precision,parser_version)
+				VALUES($1::uuid,'live',$2::uuid,$3::uuid,$4,$5,$6::bigint,'bkash','incoming',now(),'second',1)`, it.ws, event, account, digest, deviceevidence.Identity(payerKey, sender), amount)
+			it.exec(it.live, "INSERT INTO pg07_receipt_results(workspace_id,environment,observation_id,status,reason,processed_at) SELECT workspace_id,environment,id,'unmatched','no_attempt',now() FROM financial_receipt_observations WHERE provider_reference_hmac=$1 AND workspace_id=$2::uuid", digest, it.ws)
+		}
+		order := func(thread, col string) string {
+			return it.one(it.admin, "SELECT "+col+"::text FROM commerce_orders WHERE source_id=$1::uuid AND source='ai' ORDER BY created_at DESC LIMIT 1", thread)
+		}
+		draft := fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"area":"dhaka","recipient":{"name":"V2","phone":"01733333333","address":"Mirpur 2"},"items":[{"variant_ref":"%s","quantity":1}]}}`, vl)
+
+		// A: the customer pays the exact total; the sender number alone confirms the order.
+		a, state, reason, reply := it.say("psid-v2a", "L size 1ta nibo, Mirpur 2, bkash e dibo", draft,
+			`{"tool":"ask_payment_choice","args":{"choice":"mobile","method":"bkash"}}`,
+			`{"reply":"Please send the total to bKash 01700000000 and tell me the number you paid from."}`)
+		if state != "completed" || !strings.Contains(reply, "01700000000") || order(a, "pay_method||'/'||payment_state||'/'||status") != "mobile/awaiting/draft" {
+			t.Fatalf("v2 A draft: state=%s reason=%s reply=%q order=%s tool=%s", state, reason, reply, order(a, "pay_method||'/'||payment_state||'/'||status"), fake.lastToolResult())
+		}
+		total := order(a, "total_minor")
+		receipt("V2TRXA00001", "+8801722222222", total)
+		_, state, reason, reply = it.say("psid-v2a", "01722222222 theke pathaisi",
+			`{"tool":"verify_payment","args":{"sender_number":"01722222222"}}`,
+			`{"reply":"Payment verified. Your order is confirmed."}`)
+		if state != "completed" || order(a, "payment_state||'/'||status||'/'||paid_minor") != "verified/confirmed/"+total {
+			t.Fatalf("v2 A verify: state=%s reason=%s reply=%q order=%s tool=%s", state, reason, reply, order(a, "payment_state||'/'||status||'/'||paid_minor"), fake.lastToolResult())
+		}
+		if n := it.one(it.admin, "SELECT count(*)::text FROM commerce_order_payments p JOIN commerce_orders o ON o.id=p.order_id WHERE o.source_id=$1::uuid AND p.source='sms' AND p.amount_minor=$2::bigint", a, total); n != "1" {
+			t.Fatalf("v2 A ledger rows: %s", n)
+		}
+		if n := it.one(it.admin, "SELECT count(*)::text FROM ai_tool_calls WHERE workspace_id=$1::uuid AND tool='verify_payment' AND (args_redacted::text LIKE '%0172222%' OR result::text LIKE '%0172222%' OR args_redacted::text ~ '[0-9a-f]{64}')", it.ws); n != "0" {
+			t.Fatalf("v2: sender number or digest stored in ai_tool_calls: %s rows", n)
+		}
+
+		// B: short payment. The number alone is not enough; the TrxID records a partial payment; COD takes the rest.
+		b, state, _, _ := it.say("psid-v2b", "L size 1ta nibo, Mirpur 2", draft,
+			`{"tool":"ask_payment_choice","args":{"choice":"mobile"}}`,
+			`{"reply":"Please pay and tell me the number you paid from."}`)
+		if state != "completed" {
+			t.Fatalf("v2 B draft: %s %s", state, fake.lastToolResult())
+		}
+		totalB := order(b, "total_minor")
+		short := it.one(it.admin, "SELECT ($1::bigint-5000)::text", totalB)
+		receipt("V2TRXB00001", "+8801744444444", short)
+		_, state, _, _ = it.say("psid-v2b", "01744444444",
+			`{"tool":"verify_payment","args":{"sender_number":"01744444444"}}`,
+			`{"reply":"Please send the TrxID."}`)
+		if state != "completed" || !strings.Contains(fake.lastToolResult(), "ask_transaction_id") || order(b, "paid_minor") != "0" {
+			t.Fatalf("v2 B sender only: state=%s tool=%s paid=%s", state, fake.lastToolResult(), order(b, "paid_minor"))
+		}
+		_, state, _, _ = it.say("psid-v2b", "V2TRXB00001",
+			`{"tool":"verify_payment","args":{"sender_number":"01744444444","transaction_id":"v2trxb00001"}}`,
+			`{"reply":"We received part of the payment; 50 taka is still due."}`)
+		if state != "completed" || order(b, "payment_state||'/'||status||'/'||paid_minor") != "partial/hold/"+short {
+			t.Fatalf("v2 B partial: state=%s order=%s tool=%s", state, order(b, "payment_state||'/'||status||'/'||paid_minor"), fake.lastToolResult())
+		}
+		_, state, _, _ = it.say("psid-v2b", "baki ta cash on delivery te dibo",
+			`{"tool":"change_payment_method","args":{"choice":"cod"}}`,
+			`{"reply":"Done. The rest is cash on delivery."}`)
+		if state != "completed" || order(b, "pay_method||'/'||payment_state||'/'||status||'/'||paid_minor") != "cod/cod/confirmed/"+short {
+			t.Fatalf("v2 B switch: state=%s order=%s tool=%s", state, order(b, "pay_method||'/'||payment_state||'/'||status||'/'||paid_minor"), fake.lastToolResult())
 		}
 	})
 
