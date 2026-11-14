@@ -1,6 +1,7 @@
 # AI commerce bot: handoff (2026-11-14)
 
-Read this file first for any work on the AI selling bot, AI payments, orders or the VPS deploy.
+Sections 1 to 4 apply to **every** task in this repo (web, Android, payments, AI). Sections 5 to 9 cover the AI selling bot, AI payments and orders.
+For other areas this file does not describe the current state: read the code and the area's own docs (`AGENTS.md`, `docs/AGENT-HANDOFF.md`, `docs/IMPLEMENTATION-STATUS.md`, `CLAUDE.md` for Android), and treat any of their statements about production as unverified until checked.
 It replaces older notes where they disagree. Then read `docs/plans/ai-production-ready.md` (the agreed plan).
 
 ## 1. How to work with the owner
