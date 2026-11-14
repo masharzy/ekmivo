@@ -30,17 +30,21 @@
 | compose ফাইল | `/opt/briofold/compose.json` | `deploy/vps/deploy.sh` |
 | env ফাইল | `/opt/briofold/briofold.env` | `deploy/vps/deploy.sh` |
 | বিল্ডের সোর্স | `/opt/briofold/rename-release/src` (git checkout) | স্ক্রিপ্ট |
-| ব্যাকআপ | `/opt/briofold/backup/` আর `/opt/briofold/backups/`, একই ডিস্কে | স্ক্রিপ্ট; কোনটায় কী আছে জানা নেই |
-| ডিস্কের জায়গা, OS, ফায়ারওয়াল, cron/timer | জানা নেই | |
+| ব্যাকআপ | `/opt/briofold/backup/`: ডিপ্লয়ের আগে নেওয়া তিন ডাটাবেসের dump (৩, ১৩, ১৪ নভেম্বর)। `/opt/briofold/backups/`: প্রতি রাতের `briofold-*.tar.gz` (প্রায় ১০ MB), আগের compose কপি, `migration-input.*` ফোল্ডার। সব একই ডিস্কে। handoff-এর 0-byte dump তালিকায় নেই | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
+| ডিস্ক | 24 GB, ব্যবহার 11 GB (৪৭%)। RAM 1.9 GB, swap 2 GB। Docker image ৪২টা, 4.3 GB | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
+| OS | Ubuntu (nginx প্যাকেজ থেকে), kernel 6.8.0-147। Ubuntu-র সংস্করণ জানা নেই | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
+| ফায়ারওয়াল | ufw চালু: 22, 80, 443 আর **5432 সবার জন্য খোলা** (IPv4 ও IPv6)। docker `0.0.0.0:5432`-এ শোনে। API শুধু `127.0.0.1:8080` | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
+| cron/timer | `briofold-backup.timer` প্রতিদিন 21:00 UTC (ঢাকা রাত ৩টা); `certbot.timer`; root-এর crontab নেই | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
+| VPS-এর সোর্স চেকআউট | `4e296fa` (৭ নভেম্বর), পুরনো। ডিপ্লয় স্ক্রিপ্ট নির্দিষ্ট কমিট থেকে `git archive` করে, তাই এখন ক্ষতি নেই | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
 
 ### চলমান সেবা
 
 | সেবা | বিবরণ | সূত্র |
 |---|---|---|
 | `briofold-api-1` | Go API, ভেতরে worker-ও চলে। health: `http://127.0.0.1:8080/healthz` | স্ক্রিপ্ট |
-| API ইমেজ | `briofold-api:payments-v2-672d0dfa` হওয়ার কথা | মালিক বলেছেন ডিপ্লয় হয়েছে; আউটপুট দেখা হয়নি |
-| `briofold-postgres-1` | Postgres। সংস্করণ জানা নেই | স্ক্রিপ্ট |
-| nginx | সামনে বসে। কনটেইনার না হোস্টে, কোন ডোমেইন, TLS কবে শেষ: জানা নেই | |
+| API ইমেজ | `briofold-api:payments-v2-672d0dfa`, label revision `672d0dfa422ba97ad29266077e360747b2ddaa6b` | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
+| `briofold-postgres-1` | Postgres 17.11 (`postgres:17`), ১১ দিন চালু। পোর্ট `0.0.0.0:5432` | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
+| nginx | হোস্টে (1.24.0), কনটেইনারে নয়। সাইট `briofold-api` আর `default`। TLS `api.briofold.tech`, মেয়াদ ২০২৭-০২-০১। server_name লাইন ইনভেন্টরিতে আসেনি | ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC |
 | ওয়েব ড্যাশবোর্ড | Vercel প্রজেক্ট `ekmivo-web`, region `sin1`। VPS-এ নয় | `apps/web/vercel.json` |
 | AI মডেল | `qwen/qwen3.8-omni-flash`, OpenRouter দিয়ে; ইনপুট সীমা ১৬,০০০ | আগের যাচাই |
 
@@ -52,7 +56,7 @@
 | `ekmivo_live_financial` | আসল পেমেন্টের SMS রসিদ | `ekmivo_live_owner` |
 | `ekmivo_sandbox_financial` | টেস্ট পেমেন্ট | `ekmivo_sandbox_owner` |
 
-অন্য role: `ekmivo_finance_reader` (রসিদ শুধু পড়ে), `briofold_admin` (পুরনো ফাংশনের মালিক)। Extension (control): `dblink`, `pg_trgm`, `pgcrypto`। আকার, সারির সংখ্যা, financial ডাটাবেসের গঠন: জানা নেই।
+অন্য role: `ekmivo_finance_reader` (রসিদ শুধু পড়ে), `briofold_admin` (পুরনো ফাংশনের মালিক)। Extension (control): `dblink`, `pg_trgm`, `pgcrypto`। আকার: `ekmivo` 25 MB, live 53 MB, sandbox 51 MB। গঠন: control ১৭৮ টেবিল, ৫২০ ফাংশন (extension-এর সহ), ৩৮৫ ইনডেক্স, ১৫০ policy; live ৬৩ / ২১৩ / ১৪৭ / ৬৫; sandbox ৬৫ / ২১৬ / ১৫১ / ৬৭। financial-এ extension শুধু `pgcrypto`। Role: `briofold_admin` superuser ও bypassrls; Neon-এর পুরনো `neon_*` role রয়ে গেছে। API: ২৪ ঘণ্টায় এরর ০, health ঠিক (ইনভেন্টরি ২০২৬-১১-১৪ ১৪:৫৫ UTC)।
 
 ### চালু ফিচার ফ্ল্যাগ (API-র env)
 
