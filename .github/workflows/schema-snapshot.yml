@@ -1,0 +1,239 @@
+name: Schema snapshot (temporary, stabilize step C)
+
+# Temporary. Builds the three databases from the repository exactly as Foundation CI does (same service image,
+# same steps up to and including the PG04 suite), then exports ONLY their structure for comparison with
+# production. No production data or credentials are involved. Delete this branch after the comparison.
+on:
+  push:
+    branches: [ci/schema-snapshot]
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    name: Repo-built schema snapshot (same steps as Foundation CI up to PG04)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ekmivo_pg00
+          POSTGRES_USER: ekmivo_test
+          POSTGRES_PASSWORD: local-only-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ekmivo_test -d ekmivo_pg00"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Clean dependency install
+        working-directory: apps/web
+        run: npm ci
+      - name: Catalog CSV compatibility
+        working-directory: apps/web
+        run: node --test scripts/catalog-import.test.mjs
+      - name: Production dependency security audit
+        working-directory: apps/web
+        shell: bash
+        run: |
+          # Retry npm registry transport failures, never waive real advisories.
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            if npm audit --omit=dev --audit-level=high --fetch-timeout=30000 --fetch-retries=0 >"$log" 2>&1; then
+              cat "$log"
+              rm -f "$log"
+              exit 0
+            fi
+            cat "$log"
+            if grep -Eqi 'audit endpoint returned an error|network timeout|503 Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND' "$log" && [ "$attempt" -lt 3 ]; then
+              rm -f "$log"
+              sleep "$((attempt * 5))"
+              continue
+            fi
+            rm -f "$log"
+            exit 1
+          done
+          exit 1
+      - name: Lint all web sources
+        working-directory: apps/web
+        run: npm run lint
+      - name: Briofold Phase 1 design boundary and responsive contract
+        working-directory: apps/web
+        run: node --test scripts/briofold-design-boundary.test.mjs scripts/dashboard-responsive-cascade.test.mjs
+      - name: Briofold Phase 2 and 3 canonical route and authorization contract
+        working-directory: apps/web
+        run: node --test scripts/briofold-unified-routes.test.mjs scripts/briofold-locale-routing.test.mjs scripts/briofold-account-settings-routing.test.mjs scripts/briofold-unified-devices.test.mjs scripts/briofold-ai-overview.test.mjs scripts/briofold-ai-business-profile.test.mjs scripts/briofold-ai-team-quota.test.mjs scripts/briofold-settings-interactions.test.mjs scripts/briofold-product-operational-analytics.test.mjs
+      - name: Briofold Phase 9 canonical finance-source detail contract
+        working-directory: apps/web
+        run: node --test scripts/briofold-phase9-payment-links.test.mjs scripts/briofold-phase9-refund-report-prerequisites.test.mjs
+      - name: Briofold CRM authorized page CSV and spreadsheet injection guard
+        working-directory: apps/web
+        run: node --test scripts/briofold-crm-csv.test.mjs
+      - name: Single Store signup, switching and typography regression contracts
+        working-directory: apps/web
+        run: node --test scripts/primary-store-binding-contract.test.mjs scripts/business-canonical-routes.test.mjs
+      - name: Published subscription pricing contracts (Phase 2)
+        working-directory: apps/web
+        run: node --test scripts/subscription-public-catalog.test.mjs scripts/subscription-public-quote.test.mjs scripts/subscription-offer-render.test.mjs scripts/subscription-offer-review-contract.test.mjs
+      - name: Briofold Phase 4 and 5 onboarding and prepaid safety contract
+        working-directory: apps/web
+        run: node --test scripts/briofold-onboarding-client.test.mjs scripts/signup-transaction-smoke.mjs scripts/briofold-onboarding-contract.test.mjs scripts/briofold-onboarding-actions.test.mjs scripts/briofold-ai-tariff.test.mjs scripts/briofold-topup-proxy.test.mjs scripts/briofold-topup-proof-integrity.test.mjs
+      - name: Briofold full AI wallet statement and low balance contract
+        working-directory: apps/web
+        run: node --test scripts/briofold-commerce-import.test.mjs scripts/briofold-ai-statement.test.mjs scripts/briofold-ai-studio.test.mjs scripts/briofold-inbox-drafts.test.mjs scripts/briofold-inbox-attachments.test.mjs scripts/briofold-inbox-media-drafts.test.mjs scripts/briofold-studio-requests.test.mjs
+      - name: Phase 6 SaaS payment, recovery and migration safety contract
+        working-directory: apps/web
+        run: node --test scripts/subscription-payment-handoff-contract.test.mjs
+      - name: Store subscription order, legal policy and coupon safety contracts
+        working-directory: apps/web
+        run: node --test scripts/subscription-order-contract.test.mjs scripts/subscription-coupons-contract.test.mjs scripts/subscription-policies-contract.test.mjs scripts/subscription-offers-contract.test.mjs
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Phase 4 purchase capability, retry and continuation contracts
+        working-directory: apps/web
+        run: node --test scripts/subscription-intents-contract.test.mjs
+      - name: Phase 4 isolated PostgreSQL migration constraints
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/subscription-intents-pg-smoke.mjs
+      - name: Typecheck Next.js application before long-running integration tests
+        working-directory: apps/web
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Production build (no application credentials)
+        if: ${{ inputs.pg04_suites == '' || github.event_name != 'workflow_dispatch' }}
+        working-directory: apps/web
+        run: npm run build
+      - name: Verify locked Admin design tokens and theme isolation
+        run: python3 apps/web/scripts/verify-admin-design.py
+      - name: Strict OpenAPI contract and schema references
+        working-directory: apps/web
+        run: npm run payment:contract-check
+      - name: Typecheck generated merchant SDK and TypeScript integrations
+        working-directory: apps/web
+        run: npx tsc --noEmit -p tsconfig.payment-examples.json
+      - name: Release gate negative tests (fictional fixtures)
+        run: node --test tools/release/evidence.test.mjs tools/testing/sdk-transport.test.mjs tools/privacy/store-registry.test.mjs tools/privacy/archive-codec.test.mjs tools/recovery/backup-registry.test.mjs tools/release/compile-cohort.test.mjs tools/testing/pg06-physical-phone-contract.test.mjs tools/testing/pg10-physical-phone-intent.test.mjs tools/testing/sms-device-lifecycle-contract.test.mjs tools/testing/public-pay-design.test.mjs tools/testing/checkout-logo-presentation.test.mjs tools/testing/notification-center.test.mjs
+      - name: Verify PostgreSQL schema on ephemeral local database
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg00-smoke.mjs
+      - name: PG01 RLS 3-tenant/2-environment integration checks
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg01-rls-smoke.mjs
+      - name: PG02 product-access migration and authorization matrix
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg02-product-access-smoke.mjs
+      - name: Go and PostgreSQL session authorization integration
+        working-directory: backend
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+          PG01_RUNTIME_DATABASE_URL: postgresql://ekmivo_financial_runtime:pg01-ci-only-password@127.0.0.1:5432/ekmivo_pg00
+        run: |
+          go mod tidy
+          go test ./internal/authz -run TestPostgresSessionMembershipAndEnvironment -count=1 -v
+      - name: RFC6238 TOTP and replay vectors
+        working-directory: apps/web
+        run: node scripts/pg01-mfa-smoke.mjs
+      - name: PG02 product and environment navigation contracts
+        working-directory: apps/web
+        run: node scripts/pg02-navigation-smoke.mjs
+      - name: PG03 scoped bearer key hash, RLS and environment security
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg03-credentials-smoke.mjs
+      - name: PG02 workspace/server environment authorization checks
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg02-tenant-context-smoke.mjs
+      - name: Restore pinned Playwright browser binaries
+        id: playwright
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-headless-${{ hashFiles('apps/web/package-lock.json') }}
+      - name: Install browser for real PG05 checkout journeys
+        working-directory: apps/web
+        timeout-minutes: 6
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: "45000"
+        run: |
+          npx --no-install playwright install --only-shell chromium
+          node scripts/playwright-readiness.mjs
+      - name: Save installed browser before independent application checks
+        if: steps.playwright.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.cache-primary-key }}
+      - name: Phase 2 published subscription pricing responsive browser acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-public-responsive-browser.test.mjs
+      - name: Phase 5 subscription order summary responsive and interactive browser acceptance
+        working-directory: apps/web
+        run: node --test scripts/subscription-order-browser.test.mjs
+      - name: Archive Phase 2 pricing screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-public-pricing-screenshots
+          path: apps/web/test-results/subscription-pricing/
+          if-no-files-found: ignore
+      - name: Website widget retry, history, XSS and keyboard acceptance
+        working-directory: apps/web
+        run: node --test scripts/briofold-website-widget.test.mjs
+      - name: PG04 independent financial River + realm migration and durability
+        working-directory: apps/web
+        env:
+          PG04_SETTINGS_SUITES: ${{ inputs.pg04_suites }}
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+          PG05_BROWSER_TESTS: "true"
+        run: node scripts/pg04-financial-smoke.mjs
+      - name: Export repo-built schema and fingerprints (structure only)
+        if: always()
+        shell: bash
+        env:
+          PGC: ${{ job.services.postgres.id }}
+        run: |
+          set -uo pipefail
+          out=schema-snapshot; mkdir -p "$out"; r="$out/inventory.txt"
+          h() { printf '\n===== %s =====\n' "$1" >> "$r"; }
+          q() { docker exec -i "$PGC" psql -At -F " | " -v ON_ERROR_STOP=1 -U ekmivo_test -d "$1" -c "$2" >> "$r" 2>&1; }
+          git rev-parse HEAD > "$out/commit.txt"
+          h "postgres"; q postgres "select version()"
+          h "databases"; q postgres "select datname from pg_database where not datistemplate order by 1"
+          h "roles"; q postgres "select rolname, rolsuper, rolcanlogin, rolbypassrls from pg_roles where rolname !~ '^pg_' order by 1"
+          for db in ekmivo_pg00 ekmivo_pg04_live ekmivo_pg04_sandbox; do
+            h "$db: extensions"; q "$db" "select extname, extversion from pg_extension order by 1"
+            h "$db: object counts"; q "$db" "select 'tables', count(*) from pg_tables where schemaname='public' union all select 'functions', count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' union all select 'indexes', count(*) from pg_indexes where schemaname='public' union all select 'policies', count(*) from pg_policies where schemaname='public'"
+            h "$db: migration ledger (all rows)"; q "$db" "select filename, sha256, applied_at from dashboard_reference_migrations order by filename"
+            h "$db: function fingerprints"; q "$db" "select p.proname, pg_get_function_identity_arguments(p.oid), md5(pg_get_functiondef(p.oid)), r.rolname, p.prosecdef from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_roles r on r.oid=p.proowner where n.nspname='public' and p.prokind in ('f','p') order by 1,2"
+            docker exec -i "$PGC" pg_dump --schema-only --no-owner -U ekmivo_test -d "$db" > "$out/schema-$db.sql" 2>> "$r" || echo "schema dump failed for $db" >> "$r"
+          done
+          ls -la "$out"
+      - name: Upload repo-built schema snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-schema-snapshot
+          path: schema-snapshot/
+          retention-days: 7
