@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -197,7 +198,7 @@ func migrateDashboardReference(ctx context.Context) error {
 					if err = tx.QueryRow(ctx, `SELECT sha256 FROM dashboard_reference_migrations WHERE filename=$1`, file).Scan(&saved); err != nil {
 						return err
 					}
-					if saved != checksum {
+					if !ledgerChecksumMatches(saved, body) {
 						return fmt.Errorf("%s checksum mismatch", file)
 					}
 					continue
@@ -217,4 +218,17 @@ func migrateDashboardReference(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// ledgerChecksumMatches accepts a recorded checksum of the same file with LF or CRLF line endings. Production
+// recorded 0219-0226 from a Windows checkout (CRLF); the repository stores LF. Only line endings may differ.
+func ledgerChecksumMatches(saved string, body []byte) bool {
+	lf := bytes.ReplaceAll(body, []byte("\r\n"), []byte("\n"))
+	for _, variant := range [][]byte{body, lf, bytes.ReplaceAll(lf, []byte("\n"), []byte("\r\n"))} {
+		digest := sha256.Sum256(variant)
+		if hex.EncodeToString(digest[:]) == saved {
+			return true
+		}
+	}
+	return false
 }
