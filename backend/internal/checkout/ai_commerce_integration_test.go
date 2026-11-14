@@ -490,8 +490,13 @@ func TestAICommerceIntegration(t *testing.T) {
 				it.one(it.admin, "SELECT revision::text FROM commerce_ai_settings WHERE workspace_id=$1::uuid AND environment='live'", it.ws))
 		}
 		tool(c, 3, "ask_payment_choice", `{"choice":"mobile"}`)
+		// Production rule (0254): a TrxID claim is accepted only after the customer has stated, after the payment
+		// choice, which number they paid from. The racer's own message becomes that statement; updating it instead of
+		// ingesting a new one avoids queuing another AI job that later parts of this test would claim.
+		it.exec(it.admin, `UPDATE inbox_messages SET body='01711111111 theke pathaisi',created_at=clock_timestamp()
+			WHERE sender='customer' AND thread_id=(SELECT thread_id FROM briofold_ai_channel_jobs WHERE id=$1::uuid)`, c.ID)
 	}
-	same := deviceevidence.Identity(payerKey, "receipt|bkash|RACE00001")
+	same :=deviceevidence.Identity(payerKey, "receipt|bkash|RACE00001")
 	proof := fmt.Sprintf(`{"method":"bkash","transaction_digest":"%s","transaction_last4":"0001","payer_digest":"%s","payer_last3":"111"}`, same, deviceevidence.Identity(payerKey, "+8801711111111"))
 	for i, c := range []claimed{a, b} {
 		wg.Add(1)
