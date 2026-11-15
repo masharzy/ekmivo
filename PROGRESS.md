@@ -413,3 +413,17 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   proven on schema-only copies); the coordinator accepts CRLF-recorded checksums (0219–0226) and has a plan-only mode.
 - Still open: 24 h log watch; owner smoke test (Messenger, Orders page); `_retest_backup_*` tables and the open
   Postgres port are recorded in the runbook as known items. Every future release goes through `release.sh` only.
+
+## Services page and AI selling fixes (0257) — 2026-11-15, PR #183 (main 99c2635), baseline PR #184
+- Done: Services under Products in the merchant dashboard (service + plans: name, price, duration, includes; DB `commerce_products.kind='service'`).
+- Done behind `BRIOFOLD_AI_SELLING_FIXES_ENABLED` (Go) and migration 0257 (SQL, applies to everyone on release):
+  no second order after "ha confirm" (`order_already_placed`), human-like bargaining ladder (quarter of the allowed discount per round,
+  near offer accepted from round 2, `final_offer` only at the floor), `*_bdt` amounts (no paisa mistakes), out-of-stock items still found,
+  Bengali/Banglish search (`commerce_bn_latin`, inline synonyms), Messenger text + button template (text no longer dropped),
+  one holding message when a job goes to review, read-only tools in the dashboard test chat, model override for all jobs,
+  order-button turns do not switch the reply language to English.
+- Evidence: PR #183 CI green (TestAICommerceIntegration incl. 0257 subtest, TestAIButtonTurnLanguage); AI Lab run 43727108325,
+  DeepSeek v4.1 flash, 14 scenarios, 1 repeat: fixes arm 14/14, production flags 13/14 (order-button reply in English).
+  Migration applied twice as `ekmivo_owner` on a production copy; expected baseline = PR #184 (8 changed, 3 new functions).
+- Open: release + flag on (owner), merge #184 after release, Messenger check by owner, more lab repeats.
+- Later: image embedding search, R2 backups, voice transcript, offline/home services.
