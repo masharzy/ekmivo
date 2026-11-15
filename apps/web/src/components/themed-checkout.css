@@ -186,7 +186,7 @@
 .checkout-theme-surface .of-chip .pm{width:25px;height:25px}
 .checkout-theme-surface .tk .tk-mk.has-logo{background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;border-radius:var(--lgr,0px)!important;max-width:calc(var(--lgs,40px)*2.4);overflow:hidden}
 .checkout-theme-surface .tk .tk-mk.has-logo img{background:transparent!important;border:0!important;padding:0!important;object-fit:contain;border-radius:inherit}
-.checkout-theme-surface .tk-night[data-logo-invert="true"] .tk-mk.has-logo img{filter:invert(1)}
+.checkout-theme-surface [data-logo-invert="true"] .tk-mk.has-logo img{filter:invert(1)}
 
 /* Logo position changes only the mark. Merchant name/order keep their own fixed cell. */
 .checkout-theme-surface .tk .of-mr,

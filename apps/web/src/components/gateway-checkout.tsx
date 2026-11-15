@@ -41,7 +41,7 @@ export function GatewayCheckout(p:GatewayCheckoutProps){
  const amt="৳"+new Intl.NumberFormat("en-IN",{maximumFractionDigits:2}).format(p.amountMinor/100);
  const amt2=new Intl.NumberFormat("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2}).format(p.amountMinor/100);
  const store=p.config.store,ref=compactOrderReference(p.reference);
- const mark=(cls="")=><div className={`mk ${cls}`}>{store.logo?/* eslint-disable-next-line @next/next/no-img-element */<img src={store.logo} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"inherit"}}/>:(store.name.trim()[0]||"B").toUpperCase()}</div>;
+ const mark=(cls="")=><div className={`mk ${cls}`}>{store.logo?/* eslint-disable-next-line @next/next/no-img-element */<img src={store.logo} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"inherit",filter:store.invert?"invert(1)":undefined}}/>:(store.name.trim()[0]||"B").toUpperCase()}</div>;
  const lgt=p.onLanguage?<span className="lgt"><button type="button" aria-pressed={bn} onClick={()=>{if(!bn)p.onLanguage?.()}}><span>বাং</span></button><button type="button" aria-pressed={!bn} onClick={()=>{if(bn)p.onLanguage?.()}}><span>EN</span></button></span>:null;
  const footer=(x?:PayMethod)=><><div className="pb"><span className="bf">{BF}</span>Powered by <b>Briofold</b> · {t("পেমেন্ট অটোমেশন","Payment Automation")}</div>{x&&<div className="disc">{t(`এটি ${wn(x)}-এর অফিসিয়াল পেজ নয়। ${store.name}-এর পেমেন্ট যাচাই করে Briofold।`,`Not an official ${wn(x)} page. Briofold verifies payments for ${store.name}.`)}</div>}</>;
  const err=p.error?<div className="gw-err" role="alert">{p.error}</div>:null;
@@ -52,7 +52,7 @@ export function GatewayCheckout(p:GatewayCheckoutProps){
   const many=p.tiles.length>10;
   const labels:Record<GatewayField["key"],[string,string]>={name:["নাম","Name"],email:["ইমেইল","Email"],addr:["ঠিকানা","Address"],note:["নোট","Note"]};
   return root(<div className="gw-sw" style={p.preview?{minHeight:0}:undefined}><div className="gw-sb">
-   <aside className="gw-si">{lgt}<div className="gw-logo" style={store.logo?{borderRadius:store.radius||18}:undefined}>{store.logo?/* eslint-disable-next-line @next/next/no-img-element */<img src={store.logo} alt=""/>:(store.name.trim()[0]||"B").toUpperCase()}</div><div className="gw-name">{store.name}</div><div className="gw-ord" title={p.reference}>#{ref}</div></aside>
+   <aside className="gw-si">{lgt}<div className="gw-logo" style={store.logo?{borderRadius:store.radius||18}:undefined}>{store.logo?/* eslint-disable-next-line @next/next/no-img-element */<img src={store.logo} alt="" style={store.invert?{filter:"invert(1)"}:undefined}/>:(store.name.trim()[0]||"B").toUpperCase()}</div><div className="gw-name">{store.name}</div><div className="gw-ord" title={p.reference}>#{ref}</div></aside>
    <div className="gw-sp" style={{"--acc":picked?W[picked.method].c:"#15161C"} as CSSProperties}>
     {many&&<GatewaySearch tiles={p.tiles} render={list=><Grid list={list} p={p}/>} placeholder={t("খুঁজুন","Search")}/>}
     {!many&&<Grid list={p.tiles} p={p}/>}
