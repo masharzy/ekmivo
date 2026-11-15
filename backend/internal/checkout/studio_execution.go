@@ -47,12 +47,15 @@ type studioContext struct {
 
 // Knowledge is quoted data, never additional system instructions. No tools or
 // payment verification are exposed to this assistant.
+// errStudioNoSource: nothing to answer from (no knowledge, products, attachment or tools).
+var errStudioNoSource = errors.New("no grounded source")
+
 func studioMessages(c studioContext) ([]aicredits.Message, error) {
 	if !utf8.ValidString(c.ChannelInstructions) || len(c.ChannelInstructions) > 10000 || c.Config.Model == "" || !utf8.ValidString(c.Question) || len(c.Question) > 8000 || strings.TrimSpace(c.Question) == "" || !utf8.ValidString(c.Config.Instructions) || len(c.Config.Instructions) > 32000 || len(c.Knowledge) > 5 || len(c.Products) > 5 || len(c.History) > 8 {
 		return nil, aicredits.ErrInvalidRequest
 	}
 	if len(c.Knowledge) == 0 && len(c.Products) == 0 && len(c.media) == 0 && !c.tools {
-		return nil, errors.New("no grounded source")
+		return nil, errStudioNoSource
 	}
 	facts := make([]map[string]string, 0, len(c.Knowledge))
 	for _, d := range c.Knowledge {
@@ -108,6 +111,13 @@ func studioMessages(c studioContext) ([]aicredits.Message, error) {
 		system += "\nChannel guidance:\n" + c.ChannelInstructions
 	}
 	policy := studioCapabilityPolicy
+	if c.tools && aiPromptFixEnabled() {
+		// Tool mode: the text-only boundary ("No tools are available", "cannot place an order") contradicts
+		// the TOOL MODE prompt placed before this message, and small models obey the later text and never
+		// call a tool. Keep every other rule, replace only the capability boundary.
+		system = strings.Replace(system, " No tools are available.", "", 1)
+		policy = strings.Replace(policy, studioTextOnlyBoundary, studioToolModeBoundary, 1)
+	}
 	if len(c.media) > 0 {
 		policy = strings.Replace(policy, studioTextOnlyMediaPolicy, studioAttachedMediaPolicy, 1)
 	}
@@ -296,7 +306,10 @@ func (s *Service) HandleStudioTest(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "SOURCE_UNAVAILABLE")
 		return
 	}
-	if input.Purpose != "edit" && len(c.Knowledge) == 0 && len(c.Products) == 0 {
+	// With AI selling on, the test chat answers like a channel conversation: same tools, same model (read-only).
+	testTools := input.Purpose != "edit" && s.aiTestSellingOn(r.Context(), workspace, actor.UserID)
+	c.tools = testTools
+	if input.Purpose != "edit" && !testTools && len(c.Knowledge) == 0 && len(c.Products) == 0 {
 		write(w, 200, map[string]any{"review_required": true, "reason": "NO_GROUNDED_SOURCE", "cost_minor": 0})
 		return
 	}
@@ -306,6 +319,23 @@ func (s *Service) HandleStudioTest(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		fail(w, 422, "AI_CONTEXT_TOO_LARGE")
+		return
+	}
+	if testTools {
+		model := s.selectedAIModel(c.Config.Model)
+		if os.Getenv("BRIOFOLD_AI_MODEL_SETTING_ENABLED") == "true" {
+			var override *string
+			if s.Pipeline.Control.QueryRow(r.Context(), "SELECT briofold_shop_assistant_model()").Scan(&override) == nil && override != nil {
+				model = *override
+			}
+		}
+		result, err := s.runAITestLoop(r.Context(), aicredits.Request{Workspace: workspace, Actor: actor.UserID, Key: r.Header.Get("Idempotency-Key"), Model: model, Messages: messages}, studioReplyLanguage(c))
+		if err != nil {
+			aiExecutionFailure(w, err)
+			return
+		}
+		result.Text = studioSafeReplyMode(c, result.Text, false)
+		write(w, 200, result)
 		return
 	}
 	result, err := s.studioEngine().Run(r.Context(), aicredits.Request{Workspace: workspace, Actor: actor.UserID, Key: r.Header.Get("Idempotency-Key"), Model: s.selectedAIModel(c.Config.Model), Messages: messages})
@@ -411,6 +441,9 @@ func (s *Service) runStudioJob(ctx context.Context) {
 		handover = errors.Is(mediaErr, errAICommerceMediaHandover)
 	} else if err != nil {
 		reason = "AI_CONTEXT_TOO_LARGE"
+		if aiSellingFixesEnabled() && errors.Is(err, errStudioNoSource) {
+			reason = "NO_GROUNDED_SOURCE"
+		}
 	} else {
 		timeout := 75 * time.Second
 		if toolMode {
@@ -418,11 +451,15 @@ func (s *Service) runStudioJob(ctx context.Context) {
 		}
 		run, cancel := context.WithTimeout(ctx, timeout)
 		model := s.selectedAIModel(job.Context.Config.Model)
-		if toolMode && os.Getenv("BRIOFOLD_AI_MODEL_SETTING_ENABLED") == "true" {
+		if (toolMode || aiSellingFixesEnabled()) && os.Getenv("BRIOFOLD_AI_MODEL_SETTING_ENABLED") == "true" {
 			var override *string
 			if s.Pipeline.Control.QueryRow(run, "SELECT briofold_shop_assistant_model()").Scan(&override) == nil && override != nil {
 				model = *override
 			}
+		}
+		if aiSellingFixesEnabled() && len(job.Context.media) > 0 && !aicredits.MediaModel(model) {
+			// A text-only shop assistant model cannot read the attachment: use the assistant's own media model.
+			model = s.selectedAIModel(job.Context.Config.Model)
 		}
 		request := aicredits.Request{Workspace: job.Workspace, Actor: job.Actor, Thread: job.Thread, Key: job.Key, Model: model, Messages: messages}
 		var result aicredits.Result
@@ -456,6 +493,9 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			}
 			if errors.Is(runErr, aicredits.ErrInvalidRequest) || (pg != nil && pg.Code == "22023") {
 				reason = "AI_CONTEXT_TOO_LARGE"
+			}
+			if aiSellingFixesEnabled() && errors.Is(runErr, aicredits.ErrInvalidRequest) && len(job.Context.media) > 0 {
+				reason = "AI_MEDIA_UNAVAILABLE"
 			}
 			if errors.Is(runErr, aicredits.ErrInvalidTariff) || errors.Is(runErr, aicredits.ErrUnavailable) || errors.Is(runErr, errAIRateLimited) || (pg != nil && (pg.Code == "42501" || pg.Code == "P0002" || pg.Code == "54000")) {
 				reason = "AI_RUNTIME_UNAVAILABLE"
@@ -504,6 +544,13 @@ func (s *Service) runStudioJob(ctx context.Context) {
 	}
 	if handover {
 		s.aiApplyHandover(finish, job.ID)
+	}
+	if reason != "" && finishErr == nil && aiSellingFixesEnabled() {
+		// The customer is not left without an answer: one short holding message (no generation, no charge).
+		var sent bool
+		if err := s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_review_notice($1::uuid,$2::uuid,$3)", job.ID, job.Lease, aiHandoverText(studioReplyLanguage(job.Context))).Scan(&sent); err != nil {
+			log.Printf("ai review notice failed job=%s", job.ID)
+		}
 	}
 }
 

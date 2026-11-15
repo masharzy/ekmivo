@@ -314,25 +314,26 @@ func TestAICommerceIntegration(t *testing.T) {
 	}
 
 	// Turn 3: the model invents a price -> refused, retried once, then valid bargaining through quote_ref.
+	// 0257: first counter = list less a quarter of the allowed discount (5% of 1000 = 50 -> 12.50), rounded down to whole taka: 987.
 	_, state, _, _ = it.say("psid-a", "500 taka te dile nibo",
 		fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"items":[{"variant_ref":"%s","quantity":1,"unit_minor":50000}]}}`, vm),
 		fmt.Sprintf(`{"tool":"quote_price","args":{"variant_ref":"%s","offer_minor":50000}}`, vm),
-		`{"reply":"Best I can do is 975 taka."}`)
-	if state != "completed" || !strings.Contains(fake.lastToolResult(), `"unit_minor": 97500`) && !strings.Contains(fake.lastToolResult(), `"unit_minor":97500`) {
+		`{"reply":"Best I can do is 987 taka."}`)
+	if state != "completed" || !strings.Contains(fake.lastToolResult(), `"unit_minor": 98700`) && !strings.Contains(fake.lastToolResult(), `"unit_minor":98700`) {
 		t.Fatalf("turn 3: state=%s quote=%s", state, fake.lastToolResult())
 	}
 	quoteRef := it.one(it.admin, "SELECT id::text FROM commerce_ai_quotes WHERE thread_id=$1::uuid ORDER BY created_at DESC LIMIT 1", thread)
 
 	// Turn 4: order 1 M at the quoted price, address, then mobile payment -> decrypted receiving number reaches the customer.
-	_, state, reason, reply = it.say("psid-a", "ok 975 e nibo, Mirpur 10, 01711111111, bkash",
+	_, state, reason, reply = it.say("psid-a", "ok 987 e nibo, Mirpur 10, 01711111111, bkash",
 		fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"area":"dhaka","recipient":{"name":"IT","phone":"01711111111","address":"Mirpur 10"},"items":[{"variant_ref":"%s","quantity":1,"quote_ref":"%s"}]}}`, vm, quoteRef),
 		`{"tool":"ask_payment_choice","args":{"choice":"mobile","method":"bkash"}}`,
-		`{"reply":"Total 1045 taka. Please send to bKash 01700000000 and share the TrxID and your number."}`)
+		`{"reply":"Total 1057 taka. Please send to bKash 01700000000 and share the TrxID and your number."}`)
 	if state != "completed" || !strings.Contains(reply, "01700000000") {
 		t.Fatalf("turn 4: state=%s reason=%s reply=%q tool=%s", state, reason, reply, fake.lastToolResult())
 	}
 	total := it.one(it.admin, "SELECT total_minor::text FROM commerce_orders WHERE source_id=$1::uuid AND source='ai'", thread)
-	if total != "104500" || it.one(it.admin, "SELECT reserved::text FROM commerce_stock WHERE variant_id=$1::uuid", vm) != "1" {
+	if total != "105700" || it.one(it.admin, "SELECT reserved::text FROM commerce_stock WHERE variant_id=$1::uuid", vm) != "1" {
 		t.Fatalf("order total/reservation: total=%s", total)
 	}
 
@@ -917,6 +918,152 @@ func TestAICommerceIntegration(t *testing.T) {
 			`{"reply":"Done. The rest is cash on delivery."}`)
 		if state != "completed" || order(b, "pay_method||'/'||payment_state||'/'||status||'/'||paid_minor") != "cod/cod/confirmed/"+short {
 			t.Fatalf("v2 B switch: state=%s order=%s tool=%s", state, order(b, "pay_method||'/'||payment_state||'/'||status||'/'||paid_minor"), fake.lastToolResult())
+		}
+	})
+
+	t.Run("percent coupon in basis points; services without stock, delivery or address (0256)", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		t.Setenv("BRIOFOLD_AI_PAYMENTS_V2_ENABLED", "false")
+		t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "false")
+		it.exec(it.admin, "UPDATE briofold_ai_channel_jobs SET state='cancelled' WHERE workspace_id=$1::uuid AND state IN ('queued','running')", it.ws)
+		it.exec(it.admin, "UPDATE commerce_ai_settings SET cod_enabled=true,cod_charge_minor=0,delivery_dhaka_minor=6000,delivery_outside_minor=12000 WHERE workspace_id=$1::uuid AND environment='live'", it.ws)
+		svc, _ := json.Marshal(map[string]any{"external_id": "IT-SVC", "name": "IT Payment Gateway", "category": "service", "search_aliases": []string{"gateway"},
+			"variants": []map[string]any{{"sku": "IT-SVC-M", "price_minor": 50000, "options": map[string]string{"plan": "monthly"}}}})
+		it.exec(it.admin, "SELECT commerce_catalog_write($1::uuid,'live',$2::uuid,gen_random_uuid(),$3::jsonb)", it.ws, it.user, string(svc))
+		it.exec(it.admin, "UPDATE commerce_products SET kind='service' WHERE workspace_id=$1::uuid AND external_id='IT-SVC'", it.ws)
+		vs := it.one(it.admin, "SELECT id::text FROM commerce_variants WHERE workspace_id=$1::uuid AND sku='IT-SVC-M'", it.ws)
+		shirt, _ := json.Marshal(map[string]any{"external_id": "IT-SHIRT", "name": "IT Coupon Shirt", "category": "shirt",
+			"variants": []map[string]any{{"sku": "IT-SHIRT-1", "price_minor": 100000, "stock": 3, "options": map[string]string{"size": "M"}}}})
+		it.exec(it.admin, "SELECT commerce_catalog_write($1::uuid,'live',$2::uuid,gen_random_uuid(),$3::jsonb)", it.ws, it.user, string(shirt))
+		vsh := it.one(it.admin, "SELECT id::text FROM commerce_variants WHERE workspace_id=$1::uuid AND sku='IT-SHIRT-1'", it.ws)
+		// 10% as the dashboard stores it: 1000 basis points.
+		it.exec(it.admin, `INSERT INTO commerce_coupons(workspace_id,environment,code,kind,value,usage_limit,per_customer_limit,expires_at) VALUES($1::uuid,'live','IT10','percent',1000,100,10,now()+interval '30 days')`, it.ws)
+		order := func(thread, cols string) string {
+			return it.one(it.admin, "SELECT "+cols+" FROM commerce_orders WHERE source='ai' AND source_id=$1::uuid ORDER BY created_at DESC LIMIT 1", thread)
+		}
+
+		// Coupon check states the percentage, not the stored basis points.
+		_, state, _, _ := it.say("psid-coupon", "IT10 coupon ache?", `{"tool":"check_coupon","args":{"code":"IT10"}}`, `{"reply":"IT10 gives 10% off."}`)
+		if r := fake.lastToolResult(); state != "completed" || !strings.Contains(r, `"percent_off":10`) || strings.Contains(r, "1000") {
+			t.Fatalf("check_coupon: state=%s result=%s", state, r)
+		}
+		// Product with a 10% coupon: 1000 - 100 + 60 delivery = 960 BDT, stock reserved.
+		thread, state, reason, _ := it.say("psid-coupon", "1ta shirt IT10 diye, Mirpur, 01711111111",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"area":"dhaka","coupon_code":"IT10","recipient":{"name":"IT","phone":"01711111111","address":"Mirpur"},"items":[{"variant_ref":"%s","quantity":1}]}}`, vsh),
+			`{"reply":"Total 960 taka."}`)
+		if got := order(thread, "subtotal_minor||'/'||coupon_discount_minor||'/'||shipping_minor||'/'||total_minor"); state != "completed" || got != "100000/10000/6000/96000" {
+			t.Fatalf("percent coupon order: state=%s reason=%s got=%s tool=%s", state, reason, got, fake.lastToolResult())
+		}
+		if it.one(it.admin, "SELECT reserved::text FROM commerce_stock WHERE variant_id=$1::uuid", vsh) != "1" {
+			t.Fatal("product stock not reserved")
+		}
+
+		// A service is found by search although it has no stock row, and says so with kind and no stock count.
+		thread, state, _, _ = it.say("psid-svc", "gateway er plan ki?", `{"tool":"search_products","args":{"query":"gateway"}}`, `{"reply":"Monthly 500 taka."}`)
+		if r := fake.lastToolResult(); state != "completed" || !strings.Contains(r, "IT Payment Gateway") || !strings.Contains(r, `"service"`) || !strings.Contains(r, "IT-SVC-M") {
+			t.Fatalf("service search: state=%s result=%s", state, r)
+		}
+		// Service-only order: no address, no delivery charge, no stock row touched; coupon applies.
+		_, state, reason, _ = it.say("psid-svc", "monthly nibo, Rahim, 01722222222, IT10",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"coupon_code":"IT10","recipient":{"name":"Rahim","phone":"01722222222"},"items":[{"variant_ref":"%s","quantity":1}]}}`, vs),
+			`{"tool":"ask_payment_choice","args":{"choice":"cod"}}`,
+			`{"reply":"Confirmed, 450 taka."}`)
+		if got := order(thread, "subtotal_minor||'/'||coupon_discount_minor||'/'||shipping_minor||'/'||total_minor||'/'||status"); state != "completed" || got != "50000/5000/0/45000/confirmed" {
+			t.Fatalf("service order: state=%s reason=%s got=%s tool=%s", state, reason, got, fake.lastToolResult())
+		}
+		if n := it.one(it.admin, "SELECT coalesce(sum(reserved),0)::text FROM commerce_stock WHERE variant_id=$1::uuid", vs); n != "0" {
+			t.Fatalf("service reserved stock: %s", n)
+		}
+		// Mixed order (service + product) still needs delivery and an address.
+		thread, state, _, _ = it.say("psid-mixed", "gateway ar shirt duita",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"area":"outside","recipient":{"name":"K","phone":"01733333333"},"items":[{"variant_ref":"%s","quantity":1},{"variant_ref":"%s","quantity":1}]}}`, vs, vsh),
+			`{"tool":"ask_payment_choice","args":{"choice":"cod"}}`,
+			`{"reply":"Please send your address."}`)
+		if got := order(thread, "subtotal_minor||'/'||shipping_minor||'/'||status"); state != "completed" || got != "150000/12000/draft" || !strings.Contains(fake.lastToolResult(), "address_required") {
+			t.Fatalf("mixed order: state=%s got=%s tool=%s", state, got, fake.lastToolResult())
+		}
+	})
+
+	t.Run("0257: services catalogue, no second order, out-of-stock in search, Banglish search, review notice, test tools", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		t.Setenv("BRIOFOLD_AI_PAYMENTS_V2_ENABLED", "false")
+		t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "false")
+		t.Setenv("BRIOFOLD_AI_SELLING_FIXES_ENABLED", "true")
+		it.exec(it.admin, "UPDATE briofold_ai_channel_jobs SET state='cancelled' WHERE workspace_id=$1::uuid AND state IN ('queued','running')", it.ws)
+		it.exec(it.admin, "UPDATE commerce_ai_settings SET cod_enabled=true,cod_charge_minor=0 WHERE workspace_id=$1::uuid AND environment='live'", it.ws)
+
+		// Services page: write with kind service; listed under services only.
+		it.exec(it.admin, `SELECT commerce_write($1::uuid,'live',$2::uuid,gen_random_uuid(),'product','{"kind":"service","name":"IT Course","variants":[{"sku":"SVC-IT-COURSE","price_minor":300000,"options":{"plan":"৩ মাস"}}]}'::jsonb)`, it.ws, it.user)
+		if !strings.Contains(it.one(it.admin, "SELECT commerce_read($1::uuid,'live',$2::uuid,'services')::text", it.ws, it.user), "IT Course") ||
+			strings.Contains(it.one(it.admin, "SELECT commerce_read($1::uuid,'live',$2::uuid,'products')::text", it.ws, it.user), "IT Course") {
+			t.Fatal("services must be listed under services only")
+		}
+
+		// Bengali product, Banglish question: found through the Banglish token; out-of-stock items are included.
+		bn, _ := json.Marshal(map[string]any{"external_id": "IT-POTOL", "name": "পটল", "variants": []map[string]any{{"sku": "IT-POTOL-1", "price_minor": 4000, "stock": 0}}})
+		it.exec(it.admin, "SELECT commerce_catalog_write($1::uuid,'live',$2::uuid,gen_random_uuid(),$3::jsonb)", it.ws, it.user, string(bn))
+		_, state, _, _ := it.say("psid-0257", "potol ache?", `{"tool":"search_products","args":{"query":"potol","in_stock":true}}`, `{"reply":"পটল এখন স্টকে নেই।"}`)
+		if r := fake.lastToolResult(); state != "completed" || !strings.Contains(r, "পটল") || !strings.Contains(r, `"available": 0`) && !strings.Contains(r, `"available":0`) || !strings.Contains(r, "price_bdt") {
+			t.Fatalf("Banglish/out-of-stock search: state=%s result=%s", state, r)
+		}
+
+		// One order per chat: after COD confirmation, another upsert without new_order is refused.
+		shirt := it.one(it.admin, "SELECT id::text FROM commerce_variants WHERE workspace_id=$1::uuid AND sku='IT-SHIRT-1'", it.ws)
+		thread, state, reason, _ := it.say("psid-0257", "1 ta shirt, Rahim, 01711111111, Mirpur, cod",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"area":"dhaka","recipient":{"name":"Rahim","phone":"01711111111","address":"Mirpur"},"items":[{"variant_ref":"%s","quantity":1}]}}`, shirt),
+			`{"tool":"ask_payment_choice","args":{"choice":"cod"}}`, `{"reply":"Confirmed."}`)
+		if state != "completed" {
+			t.Fatalf("order: %s %s %s", state, reason, fake.lastToolResult())
+		}
+		_, _, _, _ = it.say("psid-0257", "ha confirm",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"items":[{"variant_ref":"%s","quantity":1}]}}`, shirt), `{"reply":"Your order is already placed."}`)
+		if r := fake.lastToolResult(); !strings.Contains(r, "order_already_placed") || !strings.Contains(r, "total_bdt") {
+			t.Fatalf("second order must be refused with the existing order: %s", r)
+		}
+		if n := it.one(it.admin, "SELECT count(*)::text FROM commerce_orders WHERE source='ai' AND source_id=$1::uuid", thread); n != "1" {
+			t.Fatalf("orders in chat: %s", n)
+		}
+
+		// Bargaining: small steps, rounded, never below the floor, final_offer at the floor.
+		quote := func(offer int) string {
+			_, _, _, _ = it.say("psid-0257-q", "kom hobe?", fmt.Sprintf(`{"tool":"quote_price","args":{"variant_ref":"%s","offer_minor":%d}}`, shirt, offer), `{"reply":"..."}`)
+			return fake.lastToolResult()
+		}
+		it.exec(it.admin, "UPDATE commerce_ai_settings SET negotiation_enabled=true,max_discount_pct=20 WHERE workspace_id=$1::uuid AND environment='live'", it.ws)
+		first, second := quote(10000), quote(10000)
+		if !strings.Contains(first, "95000") || !strings.Contains(second, "90000") || strings.Contains(first, `"final_offer": true`) {
+			t.Fatalf("ladder: first=%s second=%s", first, second)
+		}
+		quote(10000)
+		if last := quote(10000); !strings.Contains(last, "80000") || !strings.Contains(last, `"final_offer": true`) && !strings.Contains(last, `"final_offer":true`) {
+			t.Fatalf("floor after four rounds: %s", last)
+		}
+
+		// From the second round, an offer at or above the next counter is accepted instead of dragging it out.
+		near := func(offer int) string {
+			_, _, _, _ = it.say("psid-0257-n", "kom hobe?", fmt.Sprintf(`{"tool":"quote_price","args":{"variant_ref":"%s","offer_minor":%d}}`, shirt, offer), `{"reply":"..."}`)
+			return fake.lastToolResult()
+		}
+		if r1, r2 := near(85000), near(85000); !strings.Contains(r1, "95000") || !strings.Contains(r2, `"unit_minor": 85000`) && !strings.Contains(r2, `"unit_minor":85000`) {
+			t.Fatalf("near offer: first=%s second=%s", r1, r2)
+		}
+
+		// A job that goes to review leaves one holding message for the customer.
+		thread, state, reason, _ = it.say("psid-0257-r", "hello?", `{"tool":"no_such_tool","args":{}}`, `{"tool":"no_such_tool","args":{}}`)
+		if state != "review" || it.one(it.admin, "SELECT count(*)::text FROM inbox_messages WHERE thread_id=$1::uuid AND sender='ai' AND content ? 'review_notice'", thread) != "1" {
+			t.Fatalf("review notice: state=%s reason=%s", state, reason)
+		}
+
+		// Dashboard test chat tools are read-only.
+		if r := it.one(it.admin, `SELECT briofold_ai_test_tool($1::uuid,$2::uuid,'search_products','{"query":"potol"}'::jsonb)::text`, it.ws, it.user); !strings.Contains(r, "পটল") {
+			t.Fatalf("test tool search: %s", r)
+		}
+		if r := it.one(it.admin, `SELECT briofold_ai_test_tool($1::uuid,$2::uuid,'upsert_order_draft','{}'::jsonb)::text`, it.ws, it.user); !strings.Contains(r, "test_mode") {
+			t.Fatalf("test tool must not create orders: %s", r)
 		}
 	})
 

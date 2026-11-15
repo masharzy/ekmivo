@@ -13,7 +13,7 @@ briofold_ai_channel_claim||ac15e8a705c70dccd28cb0efed036252
 briofold_ai_channel_enqueue||efc5491d4887cbb5c740fa2a18aa8294
 briofold_ai_channel_finish_cards|job uuid, lease uuid, body text, cards jsonb|ff4c0d56a2ef431a6a156dd9cfbb7b2f
 briofold_ai_channel_finish_link|job uuid, lease uuid, body text, oid uuid|9fb69a949173b3560568374afe8350ff
-briofold_ai_channel_finish|job_id uuid, lease uuid, body text, safe_reason text|eb01d25f0bb5355ee7dfac8b6bac914a
+briofold_ai_channel_finish|job_id uuid, lease uuid, body text, safe_reason text|5c61f8db3a750d2a9468ee787d5b6883
 briofold_ai_channel_media|job uuid, lease uuid|d98c64ccd2295d9963978c9e90fb0a1d
 briofold_ai_channel_photo_products|job uuid, lease uuid, h text, c jsonb|586d9cebd05f882fc2fdff5af73290af
 briofold_ai_channel_valid|job_id uuid|44d1d6044b807e47ace21009a56cbb42
@@ -35,19 +35,19 @@ briofold_ai_order_limit|w uuid, e text, tool text, res jsonb|d7447677bc46368ae62
 briofold_ai_order_memory|job uuid, lease uuid|6cbcff41a2973097802dfce536a46380
 briofold_ai_order_status_live|w uuid, env text, thread_id uuid, ref_arg text|7bb7d137db197057644b05f51a4c464b
 briofold_ai_order_summary|oid uuid|6f2766b5a98df92919a962dedfbbad49
-briofold_ai_order_tool|w uuid, e text, thread uuid, actor uuid, tool_name text, args jsonb|a0a045e9c02774c8ca5b1f9971f2aea6
+briofold_ai_order_tool|w uuid, e text, thread uuid, actor uuid, tool_name text, args jsonb|6ee1721151f88c9e5aba2e4984c03abf
 briofold_ai_payment_context|job uuid, lease uuid|6ca15547b59791f4a881148ab43f00f0
 briofold_ai_payment_link_active|w uuid, t uuid, oid uuid|2dfa8335e3362d65b76dfdf2e19454dd
 briofold_ai_payment_link_bind|job uuid, lease uuid, oid uuid, intent uuid, amount bigint, expiry timestamp with time zone|de497a278d60efd9fa930adf122ec186
 briofold_ai_payment_link_guard||4c3af75cc3d9ae371d1aa04792cb444e
-briofold_ai_payment_link_prepare|job uuid, lease uuid|7ef45f73aad4c4681c17876b2686627a
+briofold_ai_payment_link_prepare|job uuid, lease uuid|0ff8bbaf5b17aa55ba994673426ca268
 briofold_ai_payment_link_resolve|oid uuid, intent uuid, outcome text|14bd4d56edb1518fd4bc13e0e4e86945
 briofold_ai_payment_links_due||42f33097cba66f750e9de8530b7145ca
-briofold_ai_payment_method|w uuid, e text, thread uuid, choice text|e2e35f7d10271891bf2beee2011aaddc
+briofold_ai_payment_method|w uuid, e text, thread uuid, choice text|57dad32c595823bc18292dea60758047
 briofold_ai_payment_record|cid uuid, amount bigint, account uuid|4d03612685c109acb2002e3e6abaea34
 briofold_ai_payment_settle|w uuid, e text, thread uuid, args jsonb|3015b7a61e95379d4685c34fb661687c
 briofold_ai_payment_tool|job uuid, lease uuid, step_no integer, tool_name text, args jsonb, args_redacted jsonb|4ca4a0bb4922c8ac5ad04549471fd540
-briofold_ai_public_product|p jsonb|6e56f5fe696dee697cc96090572d039e
+briofold_ai_public_product|p jsonb|4ed28032e1e22b47e3124cfa5e656167
 briofold_ai_public_variant|v jsonb|732762172b110c0f2142bc796e0524cb
 briofold_ai_rate_ok|w uuid, thread uuid, per_min integer, cap_minor bigint|0a8dd9fc8483f3657849fd0c72f9991d
 briofold_ai_release|oid uuid, why text|b3cf52043d48c0defd947673c8376b4b
@@ -58,6 +58,7 @@ briofold_ai_request_view|w uuid, k text, fresh boolean|c8cc1e171a315db5ec7b25e1f
 briofold_ai_require_super_admin|a uuid|415ee6d85dc26a4a91423caf5b82afee
 briofold_ai_review_decide|w uuid, e text, a uuid, cid uuid, decision text|6f5fb25206f796dedcc654ba095e18ab
 briofold_ai_review_done|w uuid, e text, a uuid, job_id uuid, op uuid|3c405b5691cf271afe606b37a9492ee2
+briofold_ai_review_notice|job uuid, lease uuid, body text|2a64076454fe330f940829f23d9a75b5
 briofold_ai_review_queue|w uuid, e text, a uuid|eccff224e3e6508b88f3b36ab3f7453e
 briofold_ai_review_read|w uuid, e text, a uuid, off integer, q text|6d03941e78a931a08b5c2e4afa801e52
 briofold_ai_selling_on|w uuid|89a4daa8854bcefb1b70944c2c239138
@@ -74,7 +75,8 @@ briofold_ai_studio_validate|b jsonb|f543c54c3fa449393655f887278021d0
 briofold_ai_studio_write|w uuid, a uuid, op uuid, kind text, b jsonb|091ce64ccbc02b51c0acd2f8d643ee7c
 briofold_ai_tariff_current|m text|4a5ac34917cfbc6d5b00b34df84becdb
 briofold_ai_tariff_publish|a uuid, k uuid, m text, expected uuid, b jsonb, why text|96bc027343e6f814821ddc66f77b42ce
-briofold_ai_tool|job uuid, lease uuid, step_no integer, tool_name text, args jsonb, args_redacted jsonb|f69bc460a998d75379765d9daa60c50e
+briofold_ai_test_tool|w uuid, a uuid, tool_name text, args jsonb|93a9064bdae0f26c80f0789d972ea49c
+briofold_ai_tool|job uuid, lease uuid, step_no integer, tool_name text, args jsonb, args_redacted jsonb|3898897db4b3a50333cf753dc64d22b7
 briofold_ai_topup_apply_verified|w uuid, a uuid, topup_id uuid, verified_id uuid, verified_minor bigint|c4e112bc79a014c82174c768131a3a01
 briofold_ai_topup_bind_proof|w uuid, a uuid, tid uuid, proof_digest text|1235c0ebbf33216473dceeef446eac68
 briofold_ai_topup_claim_pending||13f0fafebe7d64fcdf863d552b2aec2e
@@ -110,7 +112,7 @@ briofold_channel_policy|c uuid|216f6d6efd9cb65ffd4ec295c40bf8dd
 briofold_channel_reply|w uuid, e text, a uuid, r uuid|6b2ee9c46ed4bb06e18c2bee7e5e3598
 briofold_channel_scopes_read|w uuid, a uuid|dd04c05dc6644936ebbeae3eb1d84db7
 briofold_channel_scopes_write|w uuid, a uuid, b jsonb|ebb00e1267b650c5dfb6b6ba97d7ea2b
-briofold_channel_send_valid|i uuid|024b7ff9287e92bb1b127f98eb883fb8
+briofold_channel_send_valid|i uuid|17a92746bfb5f992e60829b4f466ac2a
 briofold_channel_settings_read|w uuid, a uuid, c uuid|d96445a13585c36f938d1a836bc92142
 briofold_channel_settings_write|w uuid, a uuid, k uuid, b jsonb|236fad200e7e3dcb15a0bc2fe7be5b12
 briofold_channel_thread|w uuid, e text, a uuid, t uuid, cap text|8ec91a9ba0753e61ee0af7dafe6b5eab
@@ -183,6 +185,7 @@ briofold_inbox_work_write|w uuid, e text, a uuid, t uuid, k uuid, act text, b js
 briofold_linked_order_conversion|w uuid, e text, a uuid, days integer, off integer|5f41ada1e1aa599149865aad20fc2c65
 briofold_meta_customer_name_finish|tid uuid, attempt timestamp with time zone, display text|52aae1a7f9ab3e94e1c7fae953573bef
 briofold_meta_customer_names_claim||5e9f49561eb7f1493c677afc252480b3
+briofold_order_needs_delivery|oid uuid|a60aef3a59229b9ac17025416729b0f7
 briofold_response_snapshot|w uuid, e text, a uuid|59ae754a29986bdc7732d14ef4d54eda
 briofold_saved_reply_send_before_channel_scopes|w uuid, e text, a uuid, t uuid, k uuid, b jsonb|16e7eb1798001c237532ab99d79d3b30
 briofold_saved_reply_send|w uuid, e text, a uuid, t uuid, k uuid, b jsonb|c9efc51f19748f64fc40ef6710edef52
@@ -211,15 +214,16 @@ commerce_api_read|w uuid, e text, key_id uuid, cid uuid, off integer, q text|3b6
 commerce_api_write|w uuid, e text, key_id uuid, k uuid, b jsonb|9c27d1cce5e418ad9fc85afd4817f1ef
 commerce_assignment_read|w uuid, e text, a uuid, oid uuid|1b764a0d25b9af281a83214175b36501
 commerce_assignment_write|w uuid, e text, a uuid, k uuid, b jsonb|a6318b9638a50121318bcb2ba45b3599
+commerce_bn_latin|word text|7a286ca7e823b2258560e600069e50cf
 commerce_capture_inbox_order||92f3caf7d055dbf9edb16e33d4cb0621
 commerce_catalog_deactivate|w uuid, e text, a uuid, pid uuid, src text, ext text|b7460a12c25a88ce34eefeafa84f4603
-commerce_catalog_json|pid uuid|e0123b1df573496bdc13ecce92a3f776
+commerce_catalog_json|pid uuid|3e27fbb3fdc90cffe668cc465e4fe6c8
 commerce_catalog_stock_set|w uuid, e text, a uuid, k uuid, vid uuid, qty bigint, wh uuid|3b513e1aa0ebe5a30f878c988863ee9a
 commerce_catalog_write|w uuid, e text, a uuid, k uuid, b jsonb|f84629833e9080715283bd587d11f4fc
 commerce_derive_key|k uuid, part text|113c7b8ee35d27a4bc1c4bf1a1b12aa9
 commerce_integration|w uuid, e text, a uuid, p text, c bytea, enabled_value boolean|c88220dee5408f5b039a01742e2c6e71
 commerce_media_access|w uuid, e text, a uuid, mid uuid|9eac28738bd6f80e413d05d0320a02cc
-commerce_move|w uuid, e text, a uuid, wh uuid, v uuid, dh bigint, dr bigint, why text, oid uuid|bb7d8e5762c4178ed5697c194f8fe74d
+commerce_move|w uuid, e text, a uuid, wh uuid, v uuid, dh bigint, dr bigint, why text, oid uuid|bea6e5f1b6d76035daa68f8e27c3a7d3
 commerce_notification_ack|w uuid, e text, a uuid, seq bigint|6e9c2992e2f1fa738f5afe5c328fe7b7
 commerce_order_advance|total bigint, shipping bigint, rule text, pct integer|6751747e212133c0fc941dee2c4bdcb5
 commerce_order_payment_owner|w uuid, e text, a uuid, oid uuid, action text, body jsonb|05bddf01756df5bf7968cd4240cdd734
@@ -240,11 +244,11 @@ commerce_photo_signature_valid|h text, c jsonb|235cc8282f5b176fd943f4fda47e6688
 commerce_photo_similarity|h text, c jsonb, sh bit, sc jsonb|919daad5b7b8e8203e357beb0fb720be
 commerce_product_operational_analytics|w uuid, e text, a uuid, off integer, q text|191bcb8699b57ccd6b5fd5b8ec85d73b
 commerce_product_refresh_search|pid uuid|215965cadaaf68abd9846564837d93e0
-commerce_product_search|w uuid, e text, q text, filters jsonb, lim integer|37e4f12fc306088497c51a73797eb368
+commerce_product_search|w uuid, e text, q text, filters jsonb, lim integer|ac9575ee23b50f39f5533401daebc760
 commerce_products_search_trigger||480a43f82ce527b94741d5049193e04c
-commerce_read|w uuid, e text, a uuid, kind text, cid uuid, off integer, q text, state_filter text, source_filter text|2851ddde9ca0ac8670b33b5bcfd6095b
+commerce_read|w uuid, e text, a uuid, kind text, cid uuid, off integer, q text, state_filter text, source_filter text|db3be3f3cc6ac62db2ee7a374b4db30b
 commerce_search_norm|t text|110cc8ede7b87e5f191a32be8fbfcf99
-commerce_search_tokens|t text|997c9e770ea1c7557fe1ea794a6f5c8f
+commerce_search_tokens|t text|e96e92ea3a335ec9cd6b55ce1499675d
 commerce_variants_search_trigger||ac9bdf51e9874e730dacd30cf0cc915b
 commerce_woo_event_claim|eid uuid|2ffa759f34e774ef3e0e27c03664924b
 commerce_woo_event_finish|eid uuid, err text|a1ef7af36dd1df1d58625a311dc7f26d
@@ -255,7 +259,7 @@ commerce_woo_hook_manage|w uuid, e text, a uuid|279f74987c65067db3b7bc4176cb99ab
 commerce_woo_hook_read|w uuid, e text, a uuid, off integer|35cfbf9671b1b27f838f227b9fdc6a20
 commerce_woo_hook_receive|sid uuid, delivery text, h text, pid bigint, n text|a302f705308ec5936c1377fe8615f6e2
 commerce_woo_hook_source|sid uuid|a19ef767927cfee797d69632ebadd60a
-commerce_write|w uuid, e text, a uuid, k uuid, act text, b jsonb|6c387950c543977e6b330fc5e0ad7cf3
+commerce_write|w uuid, e text, a uuid, k uuid, act text, b jsonb|b2c22c5f669c02dabd48060f4e143541
 crypt|text, text|0939715a0bd721d85d420be1aee841c7
 dashboard_billing_change|w uuid, a uuid, pid text, undo boolean|000eb8863e7cab6ed8ce1f1cc8986132
 dashboard_billing_issue|w uuid, a uuid, qid uuid, k text|7d8b373f5d95455064151f112ac5ec67
@@ -368,7 +372,7 @@ inbox_media_access|w uuid, e text, t uuid, i uuid|e6f8afdf0df563c094c9f538419db6
 inbox_media_save|w uuid, e text, t uuid, i uuid, k text, n text, m text, z integer, h text, ms integer|eb64256f4799fc8b8c5de7cc1e17e957
 inbox_media_source|w uuid, e text, t uuid, i uuid|9c1a5d08093fb4efe0af9b733cbd84d0
 inbox_next_push||1ed5ac33191e6dfff1129413305fd52a
-inbox_next_send_v1||e5aa48aa12a0cbbd1e86894ac851d68d
+inbox_next_send_v1||5c2ec32af1b24da08b88db4c05e5832e
 inbox_next_send||17660ff669cebd3ca9cd246a57df6b8c
 inbox_oauth_begin|d text, w uuid, e text, a uuid, p text|0a717bb52e162e06dfaace2d5cb91224
 inbox_oauth_consume|d text, a uuid|7c564d0399475604cf069bfbdea666d8

@@ -312,6 +312,9 @@ func aiMediaAllowed(kind string, seconds int, bytes int64) bool {
 	return true
 }
 
+// aiServiceCouponRule (prompt-fix flag) describes services and check_coupon results as the tools return them (0256).
+const aiServiceCouponRule = "\nA product with kind \"service\" has no stock count (available is null; never mention a quantity in stock) and no delivery. For an order with only services, ask only for name and phone, never an address, and do not mention a delivery charge; upsert_order_draft needs no area for it. check_coupon gives percent_off (a percentage) or discount_minor (paisa); the order total from upsert_order_draft is the amount to tell the customer."
+
 // aiToolPrompt is the single source of the protocol; evals/bangla-commerce/run-evals.mjs reads it from this file.
 const aiToolPrompt = `TOOL MODE. This overrides any other output-format instruction. You sell on behalf of this shop.
 Answer with exactly ONE JSON object and nothing else: {"tool":"<name>","args":{...}} to use a tool, or {"reply":"<message to the customer>"} to answer.
@@ -456,6 +459,13 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 	if paymentsV2 {
 		prompt = aiToolPromptV2()
 	}
+	if aiPromptFixEnabled() {
+		prompt += aiServiceCouponRule
+	}
+	fixes := aiSellingFixesEnabled()
+	if fixes {
+		prompt += aiSellingFixesRule
+	}
 	channelCommerce := aiChannelCommerceEnabledFor(req.Workspace)
 	if channelCommerce {
 		prompt += "\nIf the customer explicitly wants a checkout link for the current draft, ask_payment_choice can take {\"choice\":\"link\"}. Only say a link was prepared if the tool succeeds. The server delivers the link separately. Never invent or include a URL."
@@ -552,6 +562,9 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 		}
 		if h, _ := result["handover"].(bool); h || call.Tool == "handover_to_human" {
 			out.Handover = true
+		}
+		if fixes {
+			result, _ = aiAddBDT(result).(map[string]any)
 		}
 		shown, _ := json.Marshal(result)
 		out.Facts = append(out.Facts, shown)
