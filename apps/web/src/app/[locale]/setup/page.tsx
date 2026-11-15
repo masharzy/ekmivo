@@ -4,6 +4,7 @@ import {onboardingState} from "../../../lib/server/briofold-onboarding";
 import {publicPaymentPlans} from "../../../lib/server/payment-plans";
 import {cookies} from "next/headers";
 import {BriofoldOnboardingClient} from "../../../components/briofold-onboarding-client";
+import {aiSignupOpen} from "../../../lib/server/ai-availability";
 
 export const dynamic="force-dynamic";
 export default async function BriofoldSetup({params}:{params:Promise<{locale:string}>}){
@@ -24,5 +25,6 @@ export default async function BriofoldSetup({params}:{params:Promise<{locale:str
  return <BriofoldOnboardingClient key={workspace.id+step} locale={locale} step={step}
     businessId={workspace.id} mode={workspace.mode} businessName={workspace.name} plans={plans}
     selectedPlan={selected}
-    gatewayPlansUnavailable={catalogue.unavailable||plans.length===0}/>;
+    gatewayPlansUnavailable={catalogue.unavailable||plans.length===0}
+    aiOpen={aiSignupOpen()||workspace.mode==="ai"||workspace.mode==="both"}/>;
 }

@@ -132,3 +132,11 @@
 .wk2-root.wk2-embedded{background:transparent;min-height:0}
 .wk2-embedded .wk2-content{padding:8px 0 48px;max-width:760px;margin:0}
 @media(max-width:520px){.wk2-embedded .wk2-content{padding:4px 0 40px}}
+
+/* AI Bot in development (owner decision 2026-11-15): option visible, not selectable */
+.wk2-option.wk2-closed{cursor:not-allowed;opacity:.72}
+.wk2-option.wk2-closed:hover{background:transparent}
+.wk2-option.wk2-closed input{cursor:not-allowed}
+.wk2-dev{display:inline-block;margin-top:6px;font-style:normal;font-size:11px;font-weight:600;line-height:1.4;padding:2px 8px;border-radius:999px;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;pointer-events:none}
+:root[data-theme="dark"] .wk2-dev{color:#fbbf24;background:#3a2a05;border-color:#78530a}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]) .wk2-dev{color:#fbbf24;background:#3a2a05;border-color:#78530a}}

@@ -7,6 +7,7 @@ import { mailReady, sendCode, verificationEnabled } from "../lib/server/email";
 import { database } from "../lib/server/db";
 import { createSession, currentUser, hashToken, passwordHash, passwordMatches, revokeSession, selectDefaultWorkspace, workspacesFor } from "../lib/server/auth";
 import { asText, strongPassword, validEmail, validatedName, type FormErrorState, safeLocale } from "../lib/server/validation";
+import {aiSignupOpen,aiInDevelopmentMessage} from "../lib/server/ai-availability";
 
 const strings = {
  en:{invalid:"Check the highlighted fields.",generic:"The server could not complete your request. Please try again.",invalidLogin:"Invalid email or password.",locked:"Too many attempts. Try again in 15 minutes.",duplicate:"This email is already registered.",unauthorized:"Please sign in again.",mode:"Choose a service mode.",name:"Enter a store name (2–100 characters).",storeExists:"Your account already has a store. Open your store instead."},
@@ -111,6 +112,7 @@ export async function createWorkspaceAction(localeParam:string,_previous:FormErr
  const name=asText(form.get("name")),mode=asText(form.get("mode"));
  if(!validatedName(name))return fail(t.name,{name:t.name});
  if(!["ai","commerce","both"].includes(mode))return fail(t.mode,{mode:t.mode});
+ if(mode!=="commerce"&&!aiSignupOpen())return fail(aiInDevelopmentMessage[locale],{mode:aiInDevelopmentMessage[locale]});
  let workspaceId:string;
  try{workspaceId=await insertUserWorkspace(user.id,name,mode as "ai"|"commerce"|"both")}
  catch(e){if(e instanceof Error&&e.message==="STORE_LIMIT")return fail(locale==="bn"?"একটি অ্যাকাউন্টে সর্বোচ্চ ৫টি ব্যবসা তৈরি করা যায়।":"An account can have up to 5 businesses.");report("createWorkspace",e);return fail(t.generic);}
@@ -153,6 +155,7 @@ export async function createWorkspaceOnListAction(localeParam:string,nameRaw:str
  const name=nameRaw.trim(),mode=modeRaw;
  if(!validatedName(name)||name.length>60)return {status:"error",message:locale==="bn"?"নাম ২–৬০ অক্ষরের হতে হবে।":"Use 2–60 characters for the name."};
  if(mode!=="ai"&&mode!=="commerce"&&mode!=="both")return {status:"error",message:t.mode};
+ if(mode!=="commerce"&&!aiSignupOpen())return {status:"error",message:aiInDevelopmentMessage[locale]};
  try{
   const id=await insertUserWorkspace(user.id,name,mode);
   try{await selectDefaultWorkspace(user.id,id);}catch(e){report("set initial workspace default",e);}

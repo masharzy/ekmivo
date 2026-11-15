@@ -7,6 +7,7 @@ import {database} from "../lib/server/db";
 import type {PaymentPlan} from "../lib/payment-plans";
 import {dashboardHref} from "../lib/dashboard-navigation";
 import {activePurchase} from "../lib/server/purchase-intents";
+import {aiSignupOpen,aiInDevelopmentMessage} from "../lib/server/ai-availability";
 
 export type SetupResult={status:"idle"|"error";message:string};
 const fail=(message:string):SetupResult=>({status:"error",message});
@@ -56,6 +57,7 @@ export async function submitBriofoldSetup(_previous:SetupResult,form:FormData):P
      const [current]=await tx`SELECT enabled FROM workspace_product_access
       WHERE workspace_id=${workspace.id}::uuid AND product=${product} FOR UPDATE`;
      if(!current)throw new SetupConflict("Service configuration unavailable.");
+     if(product==="ai"&&enabled&&!current.enabled&&!aiSignupOpen())throw new SetupConflict(aiInDevelopmentMessage.en);
      if(Boolean(current.enabled)!==enabled){
       await tx`UPDATE workspace_product_access SET enabled=${enabled},updated_at=now()
        WHERE workspace_id=${workspace.id}::uuid AND product=${product}`;

@@ -56,6 +56,7 @@ function fixture(options={}){
   "../lib/server/db":{database:()=>db},
   "../lib/server/purchase-intents":{activePurchase:async()=>options.purchaseToken||null},
   "../lib/dashboard-navigation":{dashboardHref:(_locale,id,service,section)=>`/w/${id}/${service}/${section}`},
+  "../lib/server/ai-availability":{aiSignupOpen:()=>options.aiOpen!==false,aiInDevelopmentMessage:{en:"AI Bot is in development. For now you can use the Payment Gateway.",bn:"AI বট এখন ডেভেলপমেন্টে আছে।"}},
  };
  runInNewContext(compiled,{exports,require:name=>modules[name]??realRequire(name),console:{error:()=>{}},process:{env:{BRIOFOLD_SUBSCRIPTION_ORDER_PREVIEW:options.preview?"1":"0"}}});
  return {state:()=>state,submit:async fields=>{
@@ -164,4 +165,21 @@ test("stage update failure rolls back Store identity and workspace name",async()
  const f=fixture({step:"business",stageError:true}),before=structuredClone(f.state());
  assert.equal((await f.submit({name:"Fixture shop",business_type:"online"})).status,"error");
  assert.deepEqual(f.state(),before);
+});
+
+test("AI Bot in development: a new business cannot switch AI on, Payments still works",async()=>{
+ for(const mode of ["ai","both"]){
+  const f=fixture({aiOpen:false});const before=structuredClone(f.state());
+  const r=await f.submit({mode});
+  assert.equal(r.status,"error");assert.match(r.message,/in development/);
+  assert.deepEqual(f.state(),before);
+ }
+ const ok=fixture({aiOpen:false});
+ assert.equal((await ok.submit({mode:"commerce"})).location,"/setup");
+ assert.equal(ok.state().products.ai,false);assert.equal(ok.state().products.payments,true);
+});
+test("AI Bot in development: a business that already has AI keeps it",async()=>{
+ const f=fixture({aiOpen:false,products:{ai:true,payments:false}});
+ assert.equal((await f.submit({mode:"both"})).location,"/setup");
+ assert.equal(f.state().products.ai,true);assert.equal(f.state().products.payments,true);
 });

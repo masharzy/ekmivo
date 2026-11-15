@@ -452,3 +452,11 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   Migration applied twice as `ekmivo_owner` on a production copy; expected baseline = PR #184 (8 changed, 3 new functions).
 - Open: release + flag on (owner), merge #184 after release, Messenger check by owner, more lab repeats.
 - Later: image embedding search, R2 backups, voice transcript, offline/home services.
+
+## AI Bot "in development" for new businesses — 2026-11-15 (owner decision)
+- New businesses cannot choose AI or Both (registration setup and business list); AI cannot be switched on for a
+  business that does not have it. Businesses that already have AI or Both keep it. Payment Gateway unchanged.
+- UI: AI and Both stay visible with a yellow "In development / ডেভেলপমেন্টে আছে" badge, not selectable.
+- Server guards in the three actions (onboarding services step, create business x2, product toggle).
+- `BRIOFOLD_AI_SIGNUP_OPEN=true` (web) restores the old behaviour. Default is closed (owner wants it closed now).
+- Known limit: a business that already has AI and turns it off cannot turn it back on while this is closed.
