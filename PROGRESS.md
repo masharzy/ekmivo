@@ -346,3 +346,57 @@ Remaining, in this order:
 - Five requested control functions exist with runtime EXECUTE. briofold_ai_selling_on exists and has no direct runtime grant by design (0234 explicitly revokes it). Its live SECURITY DEFINER caller is owned by ekmivo_owner and that owner has EXECUTE.
 - The same test customer Orders tab rendered its order summary and normal empty state. Overview, Inbox, Orders, Products, Customers, Payments, Reports and Settings opened without the checked page error messages. API health HTTP 200. Post-migration Go log gate pending. Vercel recent error count included /settings/knowledge, not attributed to the drawer.
 - Stage 1 runner staged, with post-migration Go log precheck and stage-specific rollback. No flags enabled yet. Stages 2–4, Vercel redeploy, secret checks and live order/payment/notice/model smoke test pending. No restore or order reference.
+
+## AI commerce state sync (step 0 of the production-ready plan) — 2026-11-14
+
+Read-only audit of the repo. Nothing on the VPS, Vercel or any database was read or changed.
+
+- Code: PR #166 (ai-payments-v2) and PR #167 (docs) are merged to `main` (`09bd9122`). The owner reported the last API deploy from `672d0dfa`; that commit is an ancestor of `main` and differs from it only in four docs files. Not verified on the VPS which commit is running.
+- CI on `672d0dfa`: Go compile and unit tests, Next.js lint/build and isolated PostgreSQL smoke, PG04 Docker builds, Android build and tests, Phase 7 jobs: all success.
+- Migrations: latest is 0253. The next new migration is **0254**.
+- No unmerged code branches from 2026-11-08 onward (only old diagnostic branches).
+- This file had no entry for 2026-11-10 to 2026-11-14; `docs/AI-HANDOFF.md` sections 5 to 8 describe that work.
+
+### v2 plan section 15 checklist (code reading, no screenshots exist yet)
+
+| # | Check | State |
+|---|---|---|
+| 1 | Shop name | In code: `briofold_ai_business_facts` (0251), flag `BRIOFOLD_AI_COMMERCE_V2_ENABLED`. No evidence |
+| 2 | "Potato in stock?" | Live `search_products` when AI selling is on. Root-cause write-up from v2 section 1 missing. Partial |
+| 3 | Order taking | In code; owner reports a real ৳230 order. No screenshot |
+| 4 | Service plans | Not built: no product/service type, no plan table; the Settings → AI list still exists |
+| 5 | Service order without address | Not built |
+| 6 | Coupon check | `check_coupon` tool exists (0234); no shop coupon UI, no product/service scope. Partial |
+| 7 | Product photo | Fingerprint + cards only (0241–0242); photos flag and `PRIVATE_S3_*` reportedly unset; no embedding/pgvector. Not working |
+| 8 | Unclear photo/video asks | Not built: video goes to a human |
+| 9 | Price Save shows next reply | Tools read live, so expected by design. No evidence |
+| 10 | Instructions Save = live | Not built: Draft/Publish still in `ai-studio.tsx` |
+| 11 | AI selling off still shows products | Not built: the off path still reads the old list |
+
+Also still open from v2: warehouse required for stock, Needs-a-human is a card list not a table, receiving number masked for the owner, variant redesign.
+
+### Facts for step 1
+- The model input bound is data, not code: `briofold_ai_tariff_versions.terms->>'max_input_tokens'` (Admin → AI tariffs). Raising it to 32,000 changes production data and needs the owner's permission.
+- AI selling reads `QWEN_API_KEY` / `OPENROUTER_API_KEY` from the admin channel config in the database (`channel_platform.go`, `studio_execution.go`), not from env. Only the older `ai_execution.go` path reads `OPENROUTER_API_KEY` from env.
+- The midnight permission error has no source found in the repo; it needs the VPS log.
+
+### Next (step 1, without R2)
+1. Confirm the running API commit on the VPS (read-only command).
+2. Generic deploy script for any `main` commit, with dry run.
+3. Midnight permission error: find cause from the log, fix in migration 0254.
+4. Input bound 32,000 (owner permission).
+5. Daily owner summary behind a flag.
+
+### VPS check — 2026-11-14 20:35
+- Running API: image `briofold-api:payments-v2-672d0dfa`, label revision `672d0dfa422ba97ad29266077e360747b2ddaa6b`, started 2026-11-14 04:48 UTC. Ancestor of `main`; code identical to `main`. Step 1 "production runs from a main commit": done.
+- API container env (names only): set: `BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED`, `BRIOFOLD_AI_COMMERCE_V2_ENABLED`, `BRIOFOLD_AI_LATE_SMS_REVIEW_ENABLED`, `BRIOFOLD_AI_MODEL_SETTING_ENABLED`, `BRIOFOLD_AI_ORDER_MEMORY_ENABLED`, `BRIOFOLD_AI_PAYMENTS_V2_ENABLED`, `BRIOFOLD_AI_PAYMENT_VERIFY_ENABLED`, `BRIOFOLD_AI_RUNTIME_ENABLED`, `BRIOFOLD_AI_TOOLS_ENABLED`, `BRIOFOLD_BROADCAST_DISPATCH_ENABLED`, `BRIOFOLD_COMMENTS_ENABLED`, `BRIOFOLD_COMMENT_DELIVERY_ENABLED`, `BRIOFOLD_CUSTOMER_IDENTITY_ENABLED`, `BRIOFOLD_GROWTH_CONSENT_ENABLED` (all true).
+- Not set: `BRIOFOLD_CATALOG_ENABLED`, `BRIOFOLD_PRODUCT_PHOTOS_ENABLED`, `PRIVATE_S3_*`, `PG08_SMTP_*`, `INBOX_FCM_CREDENTIALS_FILE`, `OPENROUTER_API_KEY` (env).
+- Consequence: owner email and push notices (0237) are recorded as `skipped`; the daily summary in step 1 cannot reach the owner until SMTP or FCM is set.
+
+### Production migration ledger — 2026-11-14 20:45 (owner-run read-only query)
+- Control `dashboard_reference_migrations`: 101 rows. Ledger rows from 0240 on: 0240, 0241, 0242, 0244, 0245, 0246, then **six files that do not exist in the repo**: `0247_briofold_catalog_kind_stock.sql`, `0248_briofold_ai_business_facts.sql`, `0249_briofold_catalog_spelling.sql`, `0250_briofold_ai_order_address.sql`, `0251_briofold_ai_order_memory.sql`, `0252_briofold_ai_late_sms_review.sql`. These were applied on the VPS through the coordinator and never pushed (same incident as `docs/recovered/vps-2026-11-10/`). Their contents are unknown; only function bodies captured in `control-functions.sql` / migration 0251 are recovered.
+- The repo's own 0247–0253 (payments v2) are **not** in the ledger: `ai-payments-v2.sh` applied them with psql directly.
+- Live and sandbox finance ledgers: 20 rows each, last `0243`. Repo `0248_briofold_ai_receipts_by_payer.sql` is not recorded there.
+- Consequence: the v2 section 15 table above is based on the repo only. Production schema may differ (for example `catalog_kind_stock` may add a product/service kind; unverified). No deploy-script or migration work until the six files are recovered and compared.
+
+Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no email/push for now). Each shop owner sees their own shop; the platform admin sees all shops in Admin.
