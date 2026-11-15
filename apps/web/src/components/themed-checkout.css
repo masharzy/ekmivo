@@ -265,7 +265,7 @@
 /* All configured/unready provider choices stay visible with a small status label. */
 .checkout-theme-surface .tk-ms .tk-method-status{font-size:10px;line-height:1.25;color:var(--mu);text-align:center;max-width:100%;overflow-wrap:anywhere}
 
-/* ===== Gateway theme: flat, polished variant of the Official family (behind BRIOFOLD_CHECKOUT_GATEWAY_THEME_ENABLED) ===== */
+/* ===== Gateway theme: flat, polished variant of the Official family ===== */
 /* Nagad red (--pc/--p2) is set inline by the renderer for the gateway theme. */
 .of-gw .tk-card{max-width:400px;border-radius:18px;box-shadow:0 20px 48px -24px color-mix(in srgb,var(--pc) 50%,transparent),0 2px 8px #0000000f;animation:ofin .28s ease}
 .of-gw .of-hd{border-radius:0;clip-path:none;border-bottom:0;padding:20px 22px 24px;gap:14px;background:linear-gradient(160deg,var(--pc),var(--p2))}
