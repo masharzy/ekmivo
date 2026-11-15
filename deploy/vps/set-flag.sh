@@ -11,7 +11,7 @@ cd /opt/briofold
 exec 9>/opt/briofold/.set-flag.lock
 flock -n 9 || { echo 'Another flag change is running.'; exit 1; }
 
-allowed=(BRIOFOLD_AI_PROMPT_FIX_ENABLED)
+allowed=(BRIOFOLD_AI_PROMPT_FIX_ENABLED BRIOFOLD_AI_PRESEARCH_ENABLED)
 name=${1:-}; mode=${2:-}
 ok=false; for a in "${allowed[@]}"; do [ "$name" = "$a" ] && ok=true; done
 $ok || { echo "usage: sudo bash set-flag.sh <flag> on|off   (flags: ${allowed[*]})"; exit 1; }
