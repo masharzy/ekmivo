@@ -432,6 +432,7 @@ var (
 	labLatin      = regexp.MustCompile(`[A-Za-z]`)
 	labDeflect    = labRx(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার|contact (?:us|the shop|the store|the seller)|reach out|call the shop|shop's own channel|through the shop|সরাসরি দোকান)`)
 	labNumber     = regexp.MustCompile(`[0-9]+`)
+	labCode       = regexp.MustCompile(`(?i)\b(?:[A-Z]{2,}-[A-Z0-9]+|[A-Z0-9]*[0-9][A-Z0-9]*[A-Z][A-Z0-9]*|bkash|nagad|rocket|COD|SAVE10|TrxID)\b`)
 	labMinorField = regexp.MustCompile(`"[a-z_]*_minor"\s*:\s*([0-9]+)`)
 	labPaisa      = labRx(`(?i)(পয়সা|paisa|poisha|minor unit|_minor)`)
 	labMoney      = labRx(`(?i)(?:৳|tk\.?|taka|টাকা|bdt)\s*([0-9][0-9,]*)(?:\.[0-9]+)?|([0-9][0-9,]*)(?:\.[0-9]+)?\s*(?:৳|tk\b|taka|টাকা|bdt|/-)`)
@@ -462,7 +463,9 @@ func labTurnChecks(c *labConv, t *labTurn) []string {
 	if strings.TrimSpace(reply) == "" {
 		f = append(f, "empty_reply")
 	}
-	if !c.run.englishCustomer() && !labLanguageOK(t.Reply) {
+	// The shop's own Latin name and codes (order references, TrxIDs, bKash) stay as written by rule.
+	plain := labCode.ReplaceAllString(strings.ReplaceAll(t.Reply, c.shop.Name, ""), "")
+	if !c.run.englishCustomer() && !labLanguageOK(plain) {
 		f = append(f, "not_bangla")
 	}
 	if labDeflect.MatchString(labNorm(t.Reply)) {
