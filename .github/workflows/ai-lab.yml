@@ -9,7 +9,7 @@ on:
       only: {description: "Comma-separated scenario ids (empty = all)", default: ""}
   push:
     branches: ['lab/**']
-    paths: ['backend/internal/checkout/ai_lab_test.go', 'backend/internal/checkout/studio_*.go', 'backend/internal/checkout/ai_tools.go', 'backend/internal/checkout/ai_presearch.go', 'backend/internal/checkout/ai_commerce_integration_test.go', 'infra/migrations/**', '.github/workflows/ai-lab.yml']
+    paths: ['backend/internal/checkout/ai_lab_test.go', 'backend/internal/checkout/studio_*.go', 'backend/internal/checkout/ai_tools.go', 'backend/internal/checkout/ai_selling_fixes.go', 'infra/migrations/**', 'backend/internal/checkout/ai_commerce_integration_test.go', '.github/workflows/ai-lab.yml']
 
 permissions:
   contents: read
@@ -27,11 +27,11 @@ jobs:
       fail-fast: false
       matrix:
         # Small run while the lab key has little credit: the production model and the cheapest strong one.
-        candidate: [qwen/qwen3.8-omni-flash, deepseek/deepseek-v4.1-flash]
-        # production = today's production flags (prompt fix on); presearch = the same plus the new pre-search flag.
+        candidate: [deepseek/deepseek-v4.1-flash]
+        # production = today's production flags (prompt fix on); fixes = the same plus the selling-fixes flag.
         arm:
           - {name: production, flags: ''}
-          - {name: presearch, flags: 'BRIOFOLD_AI_PRESEARCH_ENABLED=true'}
+          - {name: fixes, flags: 'BRIOFOLD_AI_SELLING_FIXES_ENABLED=true'}
     services:
       postgres:
         image: postgres:17
@@ -145,7 +145,7 @@ jobs:
           AI_LAB_CANDIDATES: ${{ matrix.candidate }}
           AI_LAB_EXTRA_FLAGS: ${{ matrix.arm.flags }}
           AI_LAB_REPEATS: ${{ github.event_name == 'push' && '1' || github.event.inputs.repeats }}
-          AI_LAB_ONLY: ${{ github.event_name == 'push' && 'svcshop-alu,svcshop-alu-nite-chai,svcshop-recheck,stock-oneword,stock-bangla,coupon,order-cod,service-order-no-address,bargain-within-floor' || github.event.inputs.only }}
+          AI_LAB_ONLY: ${{ github.event_name == 'push' && 'svcshop-alu,svcshop-recheck,stock-half-shop,variant-out-of-stock,coupon,coupon-on-service,order-cod,order-button,service-order-no-address,mixed-service-product,bargain-ladder,bargain-within-floor,address-change,fake-trxid' || github.event.inputs.only }}
           AI_LAB_REPORT: ${{ github.workspace }}/lab-report
           BRIOFOLD_LAB_OPENROUTER_API_KEY: ${{ secrets.BRIOFOLD_LAB_OPENROUTER_API_KEY }}
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00

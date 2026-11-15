@@ -348,6 +348,7 @@ type labTurn struct {
 	State     string    `json:"state"`
 	Reason    string    `json:"reason,omitempty"`
 	Tools     []string  `json:"tools"`
+	Results   []string  `json:"tool_results,omitempty"`
 	Calls     []labCall `json:"calls"`
 	Failures  []string  `json:"failures,omitempty"`
 	AIEnabled bool      `json:"ai_enabled_after"`
@@ -400,6 +401,10 @@ func (c *labConv) say(text string) *labTurn {
 			var s, result string
 			_ = rows.Scan(&s, &result)
 			t.Tools = append(t.Tools, s)
+			if len(result) > 400 {
+				result = result[:400]
+			}
+			t.Results = append(t.Results, result)
 			// Amounts a tool returned (quotes, totals, due amounts) are facts the reply may repeat.
 			for _, m := range labMinorField.FindAllStringSubmatch(result, -1) {
 				if v, err := strconv.ParseInt(m[1], 10, 64); err == nil && v%100 == 0 {
@@ -636,18 +641,14 @@ var labProductionFlags = map[string]string{
 	"BRIOFOLD_AI_MEDIA_PROBE":              "",
 	"BRIOFOLD_AI_TEXT_EVALUATION":          "",
 	"BRIOFOLD_AI_PROMPT_FIX_ENABLED":       "true", // on in production since 2026-11-15
-	"BRIOFOLD_AI_PRESEARCH_ENABLED":        "",
+	"BRIOFOLD_AI_SELLING_FIXES_ENABLED":    "",
 }
-
-// labPresearchOn: the server searched the catalogue before the model answered, so stock and price answers are
-// grounded even without a model tool call.
-func labPresearchOn() bool { return os.Getenv("BRIOFOLD_AI_PRESEARCH_ENABLED") == "true" }
 
 func labScenarios() []labScenario {
 	stockQ := func(id, shop, q string, wantStock bool) labScenario {
 		return labScenario{id, shop, func(c *labConv) {
 			t := c.say(q)
-			if c.shop.Kind != "empty" && !c.usedTool("search_products") && !c.usedTool("get_product") && !labPresearchOn() {
+			if c.shop.Kind != "empty" && !c.usedTool("search_products") && !c.usedTool("get_product") {
 				c.fail("answered_stock_without_tool")
 			}
 			if wantStock && (!labHasStock.MatchString(labNorm(t.Reply)) || labNoStock.MatchString(labNorm(t.Reply))) {
@@ -661,7 +662,7 @@ func labScenarios() []labScenario {
 	priceQ := func(id, q string, want ...string) labScenario {
 		return labScenario{id, "full", func(c *labConv) {
 			t := c.say(q)
-			if !c.usedTool("search_products") && !c.usedTool("get_product") && !labPresearchOn() && !c.usedTool("quote_price") {
+			if !c.usedTool("search_products") && !c.usedTool("get_product") && !c.usedTool("quote_price") {
 				c.fail("price_without_tool")
 			}
 			r := labBnDigits.Replace(t.Reply)
@@ -700,7 +701,7 @@ func labScenarios() []labScenario {
 		}},
 		{"variant-out-of-stock", "full", func(c *labConv) {
 			t := c.say("nakshi kantha lal ta ache?")
-			if !c.usedTool("search_products") && !c.usedTool("get_product") && !labPresearchOn() {
+			if !c.usedTool("search_products") && !c.usedTool("get_product") {
 				c.fail("answered_stock_without_tool")
 			}
 			if !labNoStock.MatchString(labNorm(t.Reply)) {
@@ -782,6 +783,34 @@ func labScenarios() []labScenario {
 				c.fail("bargain_price_not_kept:" + unit)
 			}
 		}},
+		{"order-button", "full", func(c *labConv) {
+			// The Messenger "অর্ডার করুন" button sends this text; the AI must take the order, not search again.
+			v := c.one("SELECT id::text FROM commerce_variants WHERE workspace_id=$1::uuid AND sku='LAB-ALU-1'", c.shop.WS)
+			c.say("I would like to order variant " + v + ".")
+			c.say("3 kg. Rahim, 01712121212, Mirpur 2, Dhaka. cash on delivery")
+			c.say("ha confirm")
+			if got := c.order("status||'/'||subtotal_minor"); got != "confirmed/6000" {
+				c.fail("button_order_not_placed:" + got)
+			}
+			if n := c.one("SELECT count(*)::text FROM commerce_orders WHERE workspace_id=$1::uuid AND source_id=$2::uuid", c.shop.WS, c.thread); n != "1" {
+				c.fail("duplicate_orders:" + n)
+			}
+		}},
+		{"bargain-ladder", "full", func(c *labConv) {
+			// Like the owner's test: keep pushing the price down; the shop concedes slowly and never below the floor.
+			c.say("nil kantha ta 1000 taka te diben?")
+			c.say("1200 dibo, er beshi na")
+			c.say("tahole 1500 e den")
+			c.say("ar kom hobe na?")
+			min := c.one(`SELECT coalesce(min(q.unit_minor),0)::text FROM commerce_ai_quotes q JOIN commerce_variants v ON v.id=q.variant_id WHERE q.thread_id=$1::uuid AND v.sku='LAB-KANTHA-BLUE'`, c.thread)
+			first := c.one(`SELECT coalesce((SELECT q.unit_minor FROM commerce_ai_quotes q JOIN commerce_variants v ON v.id=q.variant_id WHERE q.thread_id=$1::uuid AND v.sku='LAB-KANTHA-BLUE' ORDER BY q.created_at LIMIT 1),0)::text`, c.thread)
+			if m, _ := strconv.ParseInt(min, 10, 64); m != 0 && m < 180000 {
+				c.fail("below_floor:" + min)
+			}
+			if f, _ := strconv.ParseInt(first, 10, 64); f != 0 && f < 190000 {
+				c.fail("first_concession_too_big:" + first)
+			}
+		}},
 		{"bargain-plus-coupon", "full", func(c *labConv) {
 			c.say("nil kantha 1800 e den, ar SAVE10 coupon o lagan")
 			c.say("Karim, 01788888888, Uttara, Dhaka, cash on delivery, confirm")
@@ -818,6 +847,9 @@ func labScenarios() []labScenario {
 			c.say("Rahim Uddin, 01711111111, Mirpur 10, Dhaka")
 			c.say("cash on delivery")
 			c.say("ha confirm")
+			if n := c.one("SELECT count(*)::text FROM commerce_orders WHERE workspace_id=$1::uuid AND source_id=$2::uuid", c.shop.WS, c.thread); n != "1" && n != "0" {
+				c.fail("duplicate_orders:" + n)
+			}
 			if c.one(`SELECT count(*)::text FROM commerce_orders o JOIN commerce_lines l ON l.order_id=o.id
 				WHERE o.workspace_id=$1::uuid AND o.source_id=$2::uuid AND l.sku='LAB-ALU-1' AND l.quantity=5`, c.shop.WS, c.thread) == "0" {
 				c.fail("order_not_created_with_5kg")
@@ -880,7 +912,7 @@ func labScenarios() []labScenario {
 		}},
 		{"en-english-customer", "full", func(c *labConv) {
 			t := c.say("Do you have potatoes? How much per kg?")
-			if !c.usedTool("search_products") && !c.usedTool("get_product") && !labPresearchOn() {
+			if !c.usedTool("search_products") && !c.usedTool("get_product") {
 				c.fail("price_without_tool")
 			}
 			if !strings.Contains(labBnDigits.Replace(t.Reply), "20") {
