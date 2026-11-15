@@ -274,8 +274,8 @@ func (e *labEnv) newShop(kind, model string) labShop {
 		}
 	}
 	if kind == "half" {
-		// Half: a product without a stock number (untracked) and without aliases; nothing else.
-		product(map[string]any{"external_id": "LAB-ALU", "name": "আলু", "variants": []map[string]any{{"sku": "LAB-ALU-1", "price_minor": int64(2000), "options": map[string]string{"ওজন": "১ কেজি"}}}})
+		// Half: one product with stock but no aliases, category or description; no knowledge, no coupon, no delivery settings.
+		product(map[string]any{"external_id": "LAB-ALU", "name": "আলু", "variants": []map[string]any{{"sku": "LAB-ALU-1", "price_minor": int64(2000), "stock": 10, "options": map[string]string{"ওজন": "১ কেজি"}}}})
 		settings, _ := json.Marshal(map[string]any{"ai_selling_enabled": true, "cod_enabled": true})
 		it.exec(it.admin, "SELECT briofold_ai_selling_write($1::uuid,'live',$2::uuid,$3::jsonb)", s.WS, s.User, string(settings))
 		return s
@@ -351,6 +351,8 @@ type labConv struct {
 	tools  []string // all tool calls so far in this conversation
 	// current customer message, while its reply is being checked
 	current string
+	// amounts (taka) returned by tools in this conversation
+	toolAmounts map[string]bool
 }
 
 func (c *labConv) say(text string) *labTurn {
@@ -368,12 +370,18 @@ func (c *labConv) say(text string) *labTurn {
 		it.t.Fatal(err)
 	}
 	t.Reason, t.Reply = reason.String, reply.String
-	rows, err := it.admin.QueryContext(it.ctx, "SELECT tool||':'||ok::text FROM ai_tool_calls WHERE job_id=$1::uuid ORDER BY step", job)
+	rows, err := it.admin.QueryContext(it.ctx, "SELECT tool||':'||ok::text,coalesce(result::text,'') FROM ai_tool_calls WHERE job_id=$1::uuid ORDER BY step", job)
 	if err == nil {
 		for rows.Next() {
-			var s string
-			_ = rows.Scan(&s)
+			var s, result string
+			_ = rows.Scan(&s, &result)
 			t.Tools = append(t.Tools, s)
+			// Amounts a tool returned (quotes, totals, due amounts) are facts the reply may repeat.
+			for _, m := range labMinorField.FindAllStringSubmatch(result, -1) {
+				if v, err := strconv.ParseInt(m[1], 10, 64); err == nil && v%100 == 0 {
+					c.toolAmounts[strconv.FormatInt(v/100, 10)] = true
+				}
+			}
 		}
 		rows.Close()
 	}
@@ -419,16 +427,17 @@ func (c *labConv) one(q string, args ...any) string { return c.e.it.one(c.e.it.a
 // ---------- checks ----------
 
 var (
-	labBnDigits  = strings.NewReplacer("০", "0", "১", "1", "২", "2", "৩", "3", "৪", "4", "৫", "5", "৬", "6", "৭", "7", "৮", "8", "৯", "9")
-	labBengali   = regexp.MustCompile(`[\x{0980}-\x{09FF}]`)
-	labLatin     = regexp.MustCompile(`[A-Za-z]`)
-	labDeflect   = labRx(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার|contact (?:us|the shop|the store|the seller)|reach out|call the shop|shop's own channel|through the shop|সরাসরি দোকান)`)
-	labNumber    = regexp.MustCompile(`[0-9]+`)
-	labPaisa     = labRx(`(?i)(পয়সা|paisa|poisha|minor unit|_minor)`)
-	labMoney     = labRx(`(?i)(?:৳|tk\.?|taka|টাকা|bdt)\s*([0-9][0-9,]*)(?:\.[0-9]+)?|([0-9][0-9,]*)(?:\.[0-9]+)?\s*(?:৳|tk\b|taka|টাকা|bdt|/-)`)
-	labNoStock   = labRx(`(?i)(নেই|নাই|পাওয়া যাচ্ছে না|পাওয়া যাবে না|স্টকে নেই|শেষ|not available|out of stock|don't have|do not have)`)
-	labHasStock  = labRx(`(?i)(আছে|পাওয়া যাবে|পাওয়া যাচ্ছে|স্টকে|available|in stock|we have)`)
-	labDaysClaim = regexp.MustCompile(`(?i)[0-9]+\s*(?:-|থেকে|to)?\s*[0-9]*\s*(?:দিন|day)`)
+	labBnDigits   = strings.NewReplacer("০", "0", "১", "1", "২", "2", "৩", "3", "৪", "4", "৫", "5", "৬", "6", "৭", "7", "৮", "8", "৯", "9")
+	labBengali    = regexp.MustCompile(`[\x{0980}-\x{09FF}]`)
+	labLatin      = regexp.MustCompile(`[A-Za-z]`)
+	labDeflect    = labRx(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার|contact (?:us|the shop|the store|the seller)|reach out|call the shop|shop's own channel|through the shop|সরাসরি দোকান)`)
+	labNumber     = regexp.MustCompile(`[0-9]+`)
+	labMinorField = regexp.MustCompile(`"[a-z_]*_minor"\s*:\s*([0-9]+)`)
+	labPaisa      = labRx(`(?i)(পয়সা|paisa|poisha|minor unit|_minor)`)
+	labMoney      = labRx(`(?i)(?:৳|tk\.?|taka|টাকা|bdt)\s*([0-9][0-9,]*)(?:\.[0-9]+)?|([0-9][0-9,]*)(?:\.[0-9]+)?\s*(?:৳|tk\b|taka|টাকা|bdt|/-)`)
+	labNoStock    = labRx(`(?i)(নেই|নাই|পাওয়া যাচ্ছে না|পাওয়া যাবে না|স্টকে নেই|শেষ|not available|out of stock|don't have|do not have)`)
+	labHasStock   = labRx(`(?i)(আছে|পাওয়া যাবে|পাওয়া যাচ্ছে|স্টকে|available|in stock|we have)`)
+	labDaysClaim  = regexp.MustCompile(`(?i)[0-9]+\s*(?:-|থেকে|to)?\s*[0-9]*\s*(?:দিন|day)`)
 )
 
 func labLanguageOK(reply string) bool {
@@ -467,11 +476,27 @@ func labTurnChecks(c *labConv, t *labTurn) []string {
 		if n == "" {
 			continue
 		}
-		if !c.shop.Prices[n] && !c.allowedComputed(n) {
+		if !c.shop.Prices[n] && !c.toolAmounts[n] && !c.customerSaid(n) && !c.allowedComputed(n) {
 			f = append(f, "unknown_amount:"+n)
 		}
 	}
 	return f
+}
+
+// customerSaid: the reply repeats a number the customer wrote (an offer such as "1500 taka te diben?").
+func (c *labConv) customerSaid(n string) bool {
+	said := []string{c.current}
+	for _, t := range c.run.Turns {
+		said = append(said, t.Customer)
+	}
+	for _, text := range said {
+		for _, m := range labNumber.FindAllString(labBnDigits.Replace(text), -1) {
+			if m == n {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Amounts that are correct but derived: quantities times prices, discounts, totals with delivery.
@@ -595,7 +620,7 @@ func labScenarios() []labScenario {
 		stockQ("stock-banglish-misspell", "full", "piyaj ache vai?", true),
 		stockQ("stock-bangla", "full", "আলু আছে?", true),
 		stockQ("stock-not-sold", "full", "mango ache?", false),
-		stockQ("stock-half-untracked", "half", "Alu ase?", true),
+		stockQ("stock-half-shop", "half", "Alu ase?", true),
 		stockQ("stock-empty-shop", "empty", "Alu ase?", false),
 		{"variant-out-of-stock", "full", func(c *labConv) {
 			t := c.say("nakshi kantha lal ta ache?")
@@ -687,7 +712,9 @@ func labScenarios() []labScenario {
 		}},
 		{"shop-name-empty", "empty", func(c *labConv) {
 			t := c.say("dokaner nam ki?")
-			if !strings.Contains(t.Reply, "Lab Empty Shop") {
+			// No products and no knowledge: production hands the thread to a person before any model call.
+			handed := t.State == "review" && len(t.Calls) == 0
+			if !handed && !strings.Contains(t.Reply, "Lab Empty Shop") {
 				c.fail("wrong_shop_name")
 			}
 		}},
@@ -815,7 +842,7 @@ func TestAILab(t *testing.T) {
 			rng.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
 			for _, m := range order {
 				run := labRun{Scenario: sc.ID, Candidate: m, Repeat: r, Shop: sc.Shop}
-				c := &labConv{e: env, p: prov, shop: env.newShop(sc.Shop, m), psid: fmt.Sprintf("lab-%d", time.Now().UnixNano()), run: &run}
+				c := &labConv{e: env, p: prov, shop: env.newShop(sc.Shop, m), psid: fmt.Sprintf("lab-%d", time.Now().UnixNano()), run: &run, toolAmounts: map[string]bool{}}
 				func() {
 					defer func() {
 						if x := recover(); x != nil {
