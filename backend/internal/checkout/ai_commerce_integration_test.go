@@ -945,7 +945,7 @@ func TestAICommerceIntegration(t *testing.T) {
 
 		// Coupon check states the percentage, not the stored basis points.
 		_, state, _, _ := it.say("psid-coupon", "IT10 coupon ache?", `{"tool":"check_coupon","args":{"code":"IT10"}}`, `{"reply":"IT10 gives 10% off."}`)
-		if r := fake.lastToolResult(); state != "completed" || !strings.Contains(r, "percent_off") || !strings.Contains(r, "10.00") || strings.Contains(r, "1000") {
+		if r := fake.lastToolResult(); state != "completed" || !strings.Contains(r, `"percent_off":10`) || strings.Contains(r, "1000") {
 			t.Fatalf("check_coupon: state=%s result=%s", state, r)
 		}
 		// Product with a 10% coupon: 1000 - 100 + 60 delivery = 960 BDT, stock reserved.
