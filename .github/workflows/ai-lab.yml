@@ -9,7 +9,7 @@ on:
       only: {description: "Comma-separated scenario ids (empty = all)", default: ""}
   push:
     branches: ['lab/**']
-    paths: ['backend/internal/checkout/ai_lab_test.go', 'backend/internal/checkout/studio_*.go', 'backend/internal/checkout/ai_tools.go', 'infra/migrations/**', '.github/workflows/ai-lab.yml']
+    paths: ['backend/internal/checkout/ai_lab_test.go', 'backend/internal/checkout/studio_*.go', 'backend/internal/checkout/ai_tools.go', 'backend/internal/checkout/ai_commerce_integration_test.go', 'infra/migrations/**', '.github/workflows/ai-lab.yml']
 
 permissions:
   contents: read
