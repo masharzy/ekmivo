@@ -548,7 +548,9 @@ func (s *Service) runStudioJob(ctx context.Context) {
 	if reason != "" && finishErr == nil && aiSellingFixesEnabled() {
 		// The customer is not left without an answer: one short holding message (no generation, no charge).
 		var sent bool
-		_ = s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_review_notice($1::uuid,$2::uuid,$3)", job.ID, job.Lease, aiHandoverText(studioReplyLanguage(job.Context))).Scan(&sent)
+		if err := s.Pipeline.Control.QueryRow(finish, "SELECT briofold_ai_review_notice($1::uuid,$2::uuid,$3)", job.ID, job.Lease, aiHandoverText(studioReplyLanguage(job.Context))).Scan(&sent); err != nil {
+			log.Printf("ai review notice failed job=%s", job.ID)
+		}
 	}
 }
 
