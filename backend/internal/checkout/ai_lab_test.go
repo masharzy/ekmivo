@@ -61,6 +61,8 @@ type labProvider struct {
 	prices map[string]labPrice
 	mu     sync.Mutex
 	calls  []labCall
+	// keyProblem is set when OpenRouter refuses the lab key (no credit); the run then stops.
+	keyProblem string
 }
 
 func (p *labProvider) take() []labCall {
@@ -120,6 +122,12 @@ func (p *labProvider) Generate(ctx context.Context, model string, maxOutput int6
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	call.Status = resp.StatusCode
+	if resp.StatusCode == 402 || resp.StatusCode == 401 {
+		// The lab key has no credit (or is invalid): every later answer would be scored as a model failure.
+		p.mu.Lock()
+		p.keyProblem = fmt.Sprintf("status %d", resp.StatusCode)
+		p.mu.Unlock()
+	}
 	if resp.StatusCode != 200 {
 		call.Error = fmt.Sprintf("status %d: %.300s", resp.StatusCode, raw)
 		p.record(call)
@@ -974,6 +982,9 @@ func TestAILab(t *testing.T) {
 					}()
 					sc.Run(c)
 				}()
+				if prov.keyProblem != "" {
+					t.Fatalf("OpenRouter refused the lab key (%s: no credit or invalid key) during %s/%s; results so far are not a fair comparison and are not reported", prov.keyProblem, sc.ID, m)
+				}
 				for _, turn := range run.Turns {
 					run.Failures = append(run.Failures, turn.Failures...)
 				}
