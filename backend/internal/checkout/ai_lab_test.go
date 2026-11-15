@@ -239,7 +239,7 @@ func money(minor int64) string { return strconv.FormatInt(minor/100, 10) }
 func (e *labEnv) newShop(kind, model string) labShop {
 	it := e.it
 	tag := fmt.Sprintf("%d", time.Now().UnixNano())
-	names := map[string]string{"full": "Briofold Lab Bazar", "half": "Lab Half Shop", "empty": "Lab Empty Shop"}
+	names := map[string]string{"full": "Briofold Lab Bazar", "half": "Lab Half Shop", "empty": "Lab Empty Shop", "svc": "Briofold"}
 	s := labShop{Kind: kind, Name: names[kind], Prices: map[string]bool{}, FloorMinor: map[string]int64{}}
 	s.User = it.one(it.admin, "INSERT INTO app_users(email,display_name,password_hash) VALUES($1,'AI Lab owner','invalid-fixture') RETURNING id::text", "ai-lab-"+tag+"@example.invalid")
 	s.WS = it.one(it.admin, "INSERT INTO workspaces(name,service_mode,created_by) VALUES($1,'both',$2::uuid) RETURNING id::text", s.Name, s.User)
@@ -262,6 +262,11 @@ func (e *labEnv) newShop(kind, model string) labShop {
 			"description": "তাজা সবজি, নকশি কাঁথা আর অনলাইন পেমেন্ট সার্ভিস", "website": "https://lab.example.invalid", "support_email": "lab@example.invalid"})
 		it.exec(it.admin, "INSERT INTO dashboard_store_profiles(workspace_id,body,updated_by) VALUES($1::uuid,$2::jsonb,$3::uuid) ON CONFLICT(workspace_id) DO UPDATE SET body=EXCLUDED.body", s.WS, string(profile), s.User)
 	}
+	if kind == "svc" {
+		// Like the owner's shop on 2026-11-15: the description names only services, yet a product exists.
+		profile, _ := json.Marshal(map[string]any{"name": s.Name, "description": "Briofold পেমেন্ট গেটওয়ে আর এআই বট সার্ভিস দেয়।"})
+		it.exec(it.admin, "INSERT INTO dashboard_store_profiles(workspace_id,body,updated_by) VALUES($1::uuid,$2::jsonb,$3::uuid) ON CONFLICT(workspace_id) DO UPDATE SET body=EXCLUDED.body", s.WS, string(profile), s.User)
+	}
 	rev := it.one(it.admin, "SELECT (briofold_ai_studio_read($1::uuid,$2::uuid,0,0)->>'revision')", s.WS, s.User)
 	write("publish", map[string]any{"revision": json.Number(rev), "confirmed": true, "reason": "AI Lab shop"})
 	it.exec(it.admin, "SELECT briofold_ai_admin_adjust($1::uuid,$2::uuid,gen_random_uuid(),5000000,'AI Lab grant')", e.adminUser, s.WS)
@@ -280,6 +285,15 @@ func (e *labEnv) newShop(kind, model string) labShop {
 		if f, ok := p["min_price_minor"].(int64); ok {
 			s.FloorMinor[p["external_id"].(string)] = f
 		}
+	}
+	if kind == "svc" {
+		product(map[string]any{"external_id": "LAB-ALU", "name": "Alu", "variants": []map[string]any{{"sku": "sjsjsj", "price_minor": int64(2000), "stock": 44}}})
+		product(map[string]any{"external_id": "LAB-GATEWAY", "name": "পেমেন্ট গেটওয়ে", "description": "দোকানের জন্য পেমেন্ট গেটওয়ে",
+			"variants": []map[string]any{{"sku": "LAB-GW-M", "price_minor": int64(50000), "options": map[string]string{"প্ল্যান": "মাসিক"}}}})
+		it.exec(it.admin, "UPDATE commerce_products SET kind='service' WHERE workspace_id=$1::uuid AND external_id='LAB-GATEWAY'", s.WS)
+		settings, _ := json.Marshal(map[string]any{"ai_selling_enabled": true, "cod_enabled": true})
+		it.exec(it.admin, "SELECT briofold_ai_selling_write($1::uuid,'live',$2::uuid,$3::jsonb)", s.WS, s.User, string(settings))
+		return s
 	}
 	if kind == "half" {
 		// Half: one product with stock but no aliases, category or description; no knowledge, no coupon, no delivery settings.
@@ -621,14 +635,19 @@ var labProductionFlags = map[string]string{
 	"BRIOFOLD_AI_TOPUPS_ENABLED":           "",
 	"BRIOFOLD_AI_MEDIA_PROBE":              "",
 	"BRIOFOLD_AI_TEXT_EVALUATION":          "",
-	"BRIOFOLD_AI_PROMPT_FIX_ENABLED":       "",
+	"BRIOFOLD_AI_PROMPT_FIX_ENABLED":       "true", // on in production since 2026-11-15
+	"BRIOFOLD_AI_PRESEARCH_ENABLED":        "",
 }
+
+// labPresearchOn: the server searched the catalogue before the model answered, so stock and price answers are
+// grounded even without a model tool call.
+func labPresearchOn() bool { return os.Getenv("BRIOFOLD_AI_PRESEARCH_ENABLED") == "true" }
 
 func labScenarios() []labScenario {
 	stockQ := func(id, shop, q string, wantStock bool) labScenario {
 		return labScenario{id, shop, func(c *labConv) {
 			t := c.say(q)
-			if c.shop.Kind != "empty" && !c.usedTool("search_products") && !c.usedTool("get_product") {
+			if c.shop.Kind != "empty" && !c.usedTool("search_products") && !c.usedTool("get_product") && !labPresearchOn() {
 				c.fail("answered_stock_without_tool")
 			}
 			if wantStock && (!labHasStock.MatchString(labNorm(t.Reply)) || labNoStock.MatchString(labNorm(t.Reply))) {
@@ -642,7 +661,7 @@ func labScenarios() []labScenario {
 	priceQ := func(id, q string, want ...string) labScenario {
 		return labScenario{id, "full", func(c *labConv) {
 			t := c.say(q)
-			if !c.usedTool("search_products") && !c.usedTool("get_product") && !c.usedTool("quote_price") {
+			if !c.usedTool("search_products") && !c.usedTool("get_product") && !labPresearchOn() && !c.usedTool("quote_price") {
 				c.fail("price_without_tool")
 			}
 			r := labBnDigits.Replace(t.Reply)
@@ -669,9 +688,19 @@ func labScenarios() []labScenario {
 		stockQ("stock-not-sold", "full", "mango ache?", false),
 		stockQ("stock-half-shop", "half", "Alu ase?", true),
 		stockQ("stock-empty-shop", "empty", "Alu ase?", false),
+		stockQ("svcshop-alu", "svc", "Alu ase?", true),
+		stockQ("svcshop-alu-nite-chai", "svc", "ALu nite chai", true),
+		{"svcshop-recheck", "svc", func(c *labConv) {
+			c.say("Hi")
+			c.say("Alu ase?")
+			t := c.say("Sure? alu nai?")
+			if !labHasStock.MatchString(labNorm(t.Reply)) || labNoStock.MatchString(labNorm(t.Reply)) {
+				c.fail("did_not_say_available")
+			}
+		}},
 		{"variant-out-of-stock", "full", func(c *labConv) {
 			t := c.say("nakshi kantha lal ta ache?")
-			if !c.usedTool("search_products") && !c.usedTool("get_product") {
+			if !c.usedTool("search_products") && !c.usedTool("get_product") && !labPresearchOn() {
 				c.fail("answered_stock_without_tool")
 			}
 			if !labNoStock.MatchString(labNorm(t.Reply)) {
@@ -851,7 +880,7 @@ func labScenarios() []labScenario {
 		}},
 		{"en-english-customer", "full", func(c *labConv) {
 			t := c.say("Do you have potatoes? How much per kg?")
-			if !c.usedTool("search_products") && !c.usedTool("get_product") {
+			if !c.usedTool("search_products") && !c.usedTool("get_product") && !labPresearchOn() {
 				c.fail("price_without_tool")
 			}
 			if !strings.Contains(labBnDigits.Replace(t.Reply), "20") {
