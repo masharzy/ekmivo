@@ -18,7 +18,7 @@ BEGIN
   FOR r IN SELECT * FROM (VALUES
     ('commerce_write','98cb3589cfa4ab483cedd5ace1215314','3990492809741b5ecb1ce0fd46d5f67a'),
     ('commerce_read','cdc53edcb8fdc91d9b6772f8f7178610','8651d58e45b51e21c962ddb7dd1bd688'),
-    ('briofold_ai_order_tool','3a2cf24abdc2e3266c790cf3a2a11a7a','06538eef23266b6c5e18f45bc1396ef4'),
+    ('briofold_ai_order_tool','3a2cf24abdc2e3266c790cf3a2a11a7a','890863eabae8f74435ea57d165200f34'),
     ('briofold_ai_tool','c575c675421f71ab5cadf7baf873e097','71d4d9108a73921acc2f293d4c953752'),
     ('briofold_ai_channel_finish','ef674ae0159330eb202d96241bba77e5','94a4be24597ff399f6274e45e90eb606'),
     ('briofold_channel_send_valid','eae5d0f062ebf91ec50301edc5edaee3','3dec37f5e6d0bd07de60a47c3fc2741c'),
@@ -383,7 +383,7 @@ AS $function$DECLARE role_name text;items jsonb;item jsonb;BEGIN
  RETURN jsonb_build_object('items',items,'can_manage',role_name IN ('owner','admin','editor'),'can_admin',role_name IN ('owner','admin'),'warehouses',coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'name',name)) FROM commerce_warehouses WHERE workspace_id=w AND environment=e),'[]'));
 END $function$;
 
--- briofold_ai_order_tool: production md5(prosrc)=3a2cf24abdc2e3266c790cf3a2a11a7a, this file=06538eef23266b6c5e18f45bc1396ef4
+-- briofold_ai_order_tool: production md5(prosrc)=3a2cf24abdc2e3266c790cf3a2a11a7a, this file=890863eabae8f74435ea57d165200f34
 CREATE OR REPLACE FUNCTION public.briofold_ai_order_tool(w uuid, e text, thread uuid, actor uuid, tool_name text, args jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -420,7 +420,8 @@ BEGIN
       unit:=v.price_minor-((v.price_minor-floor_m)*least(rounds+1,4))/4;
       unit:=CASE WHEN v.price_minor>=10000 THEN (unit/100)*100 ELSE (unit/50)*50 END;
       unit:=greatest(floor_m,unit);
-      IF offer>=unit THEN unit:=offer;END IF;
+      -- from the second round, an offer at or above the next counter is accepted (a person does not drag it out)
+      IF offer>=unit OR (rounds>=1 AND offer>=greatest(floor_m,CASE WHEN v.price_minor>=10000 THEN ((v.price_minor-((v.price_minor-floor_m)*least(rounds+2,4))/4)/100)*100 ELSE ((v.price_minor-((v.price_minor-floor_m)*least(rounds+2,4))/4)/50)*50 END)) THEN unit:=offer;END IF;
     END IF;
     -- never quote more than an earlier, still valid quote in this chat
     unit:=least(unit,coalesce((SELECT min(q.unit_minor) FROM commerce_ai_quotes q WHERE q.thread_id=thread AND q.variant_id=vid AND q.expires_at>now()),unit));
