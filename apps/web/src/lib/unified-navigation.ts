@@ -4,7 +4,7 @@ import type {Service} from "./dashboard-navigation";
 export type BusinessMode="ai"|"commerce"|"both"|"off";
 export type UnifiedRoot="dashboard"|"inbox"|"orders"|"catalog"|"payments"|"sms-data"|"invoices"|"customers"|"reports"|"settings";
 export type UnifiedNavGroup="main"|"money"|"manage";
-export type UnifiedNavItem={key:UnifiedRoot|"devices"|"products"|"coupons";en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common"|"fulfilment";group:UnifiedNavGroup};
+export type UnifiedNavItem={key:UnifiedRoot|"devices"|"products"|"services"|"coupons";en:string;bn:string;icon:SectionKey;href:string;service:"ai"|"payments"|"common"|"fulfilment";group:UnifiedNavGroup};
 export const unifiedNavGroupLabels:Record<UnifiedNavGroup,{en:string;bn:string}>={
  main:{en:"Work",bn:"কাজ"},money:{en:"Money",bn:"টাকা-পয়সা"},manage:{en:"Manage",bn:"পরিচালনা"},
 };
@@ -13,6 +13,7 @@ export const unifiedNavigation:readonly UnifiedNavItem[]=[
  {key:"inbox",en:"Inbox",bn:"ইনবক্স",icon:"inbox",href:"/inbox",service:"ai",group:"main"},
  {key:"orders",en:"Orders",bn:"অর্ডার",icon:"orders",href:"/orders",service:"fulfilment",group:"main"},
  {key:"products",en:"Products",bn:"পণ্য",icon:"products",href:"/catalog/products",service:"fulfilment",group:"main"},
+ {key:"services",en:"Services",bn:"সার্ভিস",icon:"apps",href:"/catalog/services",service:"fulfilment",group:"main"},
  {key:"coupons",en:"Coupons",bn:"কুপন",icon:"coupons",href:"/catalog/coupons",service:"fulfilment",group:"main"},
  {key:"customers",en:"Customers",bn:"গ্রাহক",icon:"customers",href:"/customers",service:"common",group:"main"},
  {key:"payments",en:"Payments",bn:"পেমেন্ট",icon:"transactions",href:"/payments",service:"payments",group:"money"},
@@ -167,7 +168,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   dashboard:{"":{section:"overview",service:defaultService}},
   inbox:{"":{section:"inbox",service:"ai",kind:"inbox"},comments:{section:"comments",service:"ai"},"saved-replies":{section:"saved-replies",service:"ai"},tickets:{section:"tickets",service:"ai"},"agent-desk":{section:"ai-agent",service:"ai"}},
   orders:{"":{section:"orders",service:payments?"payments":"ai"},scan:{section:"orders",service:payments?"payments":"ai"},"to-chase":{section:"orders",service:payments?"payments":"ai"},delivery:{section:"shipping",service:defaultService},courier:{section:"shipping",service:defaultService},returns:{section:"returns",service:defaultService},"payment-review":{section:"orders",service:payments?"payments":"ai",kind:"ai-payment-review"}},
-  catalog:{"":{section:"products",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:defaultService},coupons:{section:"coupons",service:defaultService}},
+  catalog:{"":{section:"products",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},services:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:defaultService},coupons:{section:"coupons",service:defaultService}},
   payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},refunds:{section:"refunds",service:"payments"},reconciliation:{section:"reconciliation",service:"payments"}},
   "sms-data":{"":{section:"incoming",service:"payments"}},
   invoices:{"":{section:"invoices",service:"payments"}},

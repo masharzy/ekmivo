@@ -462,6 +462,10 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 	if aiPromptFixEnabled() {
 		prompt += aiServiceCouponRule
 	}
+	fixes := aiSellingFixesEnabled()
+	if fixes {
+		prompt += aiSellingFixesRule
+	}
 	channelCommerce := aiChannelCommerceEnabledFor(req.Workspace)
 	if channelCommerce {
 		prompt += "\nIf the customer explicitly wants a checkout link for the current draft, ask_payment_choice can take {\"choice\":\"link\"}. Only say a link was prepared if the tool succeeds. The server delivers the link separately. Never invent or include a URL."
@@ -558,6 +562,9 @@ func (s *Service) runAIToolLoop(ctx context.Context, req aicredits.Request, jobI
 		}
 		if h, _ := result["handover"].(bool); h || call.Tool == "handover_to_human" {
 			out.Handover = true
+		}
+		if fixes {
+			result, _ = aiAddBDT(result).(map[string]any)
 		}
 		shown, _ := json.Marshal(result)
 		out.Facts = append(out.Facts, shown)
