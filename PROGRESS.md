@@ -400,3 +400,16 @@ Also still open from v2: warehouse required for stock, Needs-a-human is a card l
 - Consequence: the v2 section 15 table above is based on the repo only. Production schema may differ (for example `catalog_kind_stock` may add a product/service kind; unverified). No deploy-script or migration work until the six files are recovered and compared.
 
 Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no email/push for now). Each shop owner sees their own shop; the platform admin sees all shops in Admin.
+
+## Stabilize: production equals main — 2026-11-15
+
+- Released `51b0a04a8715659792cbe722561cb717c7c0aa84` with `deploy/vps/release.sh` (first use). Dry run first: baseline
+  check passed (520 / 213 / 216 functions), plan listed exactly control 0247, 0249–0254 and live/sandbox 0248, 0255.
+- Release: verified dumps `backup/*-pre-release-51b0a04a-20261115-053940.dump` (2385 / 895 / 914 objects);
+  migrations recorded with functions unchanged; API `briofold-api:release-51b0a04a`, revision label equals the
+  commit, restarts 0, health 200, API errors since start 0.
+- Ledgers now: control 108 (last 0254), live 22 and sandbox 22 (last 0255).
+- What made this possible: 0254/0255 carry every production-only object and function source (no-op on production,
+  proven on schema-only copies); the coordinator accepts CRLF-recorded checksums (0219–0226) and has a plan-only mode.
+- Still open: 24 h log watch; owner smoke test (Messenger, Orders page); `_retest_backup_*` tables and the open
+  Postgres port are recorded in the runbook as known items. Every future release goes through `release.sh` only.
