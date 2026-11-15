@@ -29,6 +29,7 @@ for(const scenario of ["success","legacy-success","duplicate","workspace-failure
   "next/headers":{cookies:async()=>({})},
   "../lib/server/email":{verificationEnabled:async()=>false,mailReady:()=>true},
   "../lib/server/db":{database:()=>db},
+  "../lib/server/ai-availability":{aiSignupOpen:()=>false,aiInDevelopmentMessage:{en:"AI Bot is in development. For now you can use the Payment Gateway.",bn:"AI বট এখন ডেভেলপমেন্টে আছে।"}},
   "../lib/server/auth":{passwordHash:async()=>"simulated-hash",createSession:async()=>authEvents.push("session"),selectDefaultWorkspace:async()=>authEvents.push("default-workspace")},
   "../lib/server/validation":{safeLocale:v=>v==="bn"?"bn":"en",asText:v=>typeof v==="string"?v.trim():"",validatedName:v=>v.length>=2&&v.length<=100,validEmail:v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),strongPassword:policy.exports.validNewPassword}
  };
