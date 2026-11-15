@@ -414,6 +414,31 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
 - Still open: 24 h log watch; owner smoke test (Messenger, Orders page); `_retest_backup_*` tables and the open
   Postgres port are recorded in the runbook as known items. Every future release goes through `release.sh` only.
 
+## Checkout: new "Official" (Gateway) theme — 2026-11-15
+
+- Added a new checkout theme **`gateway`** (label "Official"), a cleaner/flatter variant of the per-wallet
+  Official family. The old `official` theme keeps its key but is **relabelled "Classic"** in the editor; no data
+  migration (merchants' saved `official` keeps working, only the display name changed).
+- Behind feature flag **`BRIOFOLD_CHECKOUT_GATEWAY_THEME_ENABLED`** (web). Flag off → the theme picker does not
+  offer "Official"/`gateway` (same env pattern as `BRIOFOLD_PATHAO_ENABLED`); a merchant who already saved it keeps
+  seeing it. The customer renderer always supports the key, so no checkout breaks if the flag flips off.
+- Files: `lib/checkout-theme.ts` (+`gateway` in `checkoutThemes`), `components/themed-checkout.tsx` (official family
+  now includes gateway; adds `of-gw` class, `data-step`, a per-wallet "not an official … page" disclaimer, and red
+  Nagad `--pc` inline), `components/themed-checkout.css` (new `.of-gw` block — flat header, stacked tiles, coloured
+  body on payer/waiting, flat success), `components/checkout-themes.tsx` (relabel + new entry, flag prop
+  `gatewayTheme`, picker/dock gating, reworded hint + bn), `components/dashboard-content.tsx` (passes the flag),
+  `lib/checkout-preview.ts` (editor-preview iframe mirrors `of-gw` CSS + renders `gateway`; red Nagad).
+- Evidence: `scripts/checkout-default-theme.test.mjs` passes (2/2) under node --test. Rendered the real
+  `themed-checkout.css` with the actual renderer DOM for all steps × bKash/Nagad/Rocket, and rendered the actual
+  `checkoutPreviewHTML` iframe with a `gateway` config — both look correct, Nagad red, Rocket purple, no JS errors.
+  Could NOT run `next build`/`tsc` here (no node_modules; package installs blocked by network) — needs a CI/local
+  typecheck + build before merge.
+- Decisions: new key `gateway`; old label "Classic"; flag name above; timer change is out of scope (handled by the
+  owner's other agent). The payment timer the owner saw as "14 min" was only the standalone HTML preview's mock; the
+  real window is backend/config-driven (`draft_expiry_hours`, default 24h), not a frontend constant.
+- Open / needs-web-change: editor preview omits the "not official" disclaimer line (kept out of the fragile inlined
+  string; it IS on the real checkout). Set `BRIOFOLD_CHECKOUT_GATEWAY_THEME_ENABLED=true` on web to expose the theme.
+
 ## Services page and AI selling fixes (0257) — 2026-11-15, PR #183 (main 99c2635), baseline PR #184
 - Done: Services under Products in the merchant dashboard (service + plans: name, price, duration, includes; DB `commerce_products.kind='service'`).
 - Done behind `BRIOFOLD_AI_SELLING_FIXES_ENABLED` (Go) and migration 0257 (SQL, applies to everyone on release):
