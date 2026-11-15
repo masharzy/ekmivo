@@ -1,4 +1,4 @@
-export const checkoutThemes=['official','receipt','studio','sheet','hero','rail','journal','dial','night'] as const;
+export const checkoutThemes=['official','gateway','receipt','studio','sheet','hero','rail','journal','dial','night'] as const;
 export type CheckoutTheme=typeof checkoutThemes[number];
 export const logoPositions=['top-left','top-center','top-right','beside-left','beside-right'] as const;
 export type LogoPosition=typeof logoPositions[number];
