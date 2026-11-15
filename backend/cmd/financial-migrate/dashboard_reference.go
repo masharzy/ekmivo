@@ -144,6 +144,9 @@ func migrateDashboardReference(ctx context.Context) error {
 		}
 		seen[identity] = true
 	}
+	// DASHBOARD_REFERENCE_PLAN_ONLY=true runs every check (connection role, schema, realm, ledger checksums) and
+	// prints the files that would be applied, then rolls back: nothing is executed or recorded.
+	planOnly := os.Getenv("DASHBOARD_REFERENCE_PLAN_ONLY") == "true"
 	boundary := regexp.MustCompile(`(?m)^(BEGIN|COMMIT);\s*$`)
 	for _, target := range targets {
 		pool, err := pgxpool.New(ctx, target.dsn)
@@ -203,6 +206,10 @@ func migrateDashboardReference(ctx context.Context) error {
 					}
 					continue
 				}
+				if planOnly {
+					fmt.Printf("PLAN %s: would apply %s\n", target.realm, file)
+					continue
+				}
 				// PgConn simple protocol supports the reviewed multi-statement SQL file.
 				if _, err = tx.Conn().PgConn().Exec(ctx, boundary.ReplaceAllString(string(body), "")).ReadAll(); err != nil {
 					return fmt.Errorf("%s: %w", file, err)
@@ -210,6 +217,10 @@ func migrateDashboardReference(ctx context.Context) error {
 				if _, err = tx.Exec(ctx, `INSERT INTO dashboard_reference_migrations(filename,sha256) VALUES($1,$2)`, file, checksum); err != nil {
 					return err
 				}
+			}
+			if planOnly {
+				fmt.Printf("PLAN %s: ledger and checksums OK; nothing was changed\n", target.realm)
+				return tx.Rollback(ctx)
 			}
 			return tx.Commit(ctx)
 		}()
