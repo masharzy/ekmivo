@@ -9,6 +9,7 @@ import {useRouter} from "next/navigation";
 import {resolveCheckoutTheme} from "../lib/checkout-theme";
 import {chooseReceivingAccountId} from "../lib/checkout-account-selection";
 import {ThemedCheckout,ThemedResult,WalletToken,type ThemeStep} from "./themed-checkout";
+import {GatewayCheckout} from "./gateway-checkout";
 import {normalizeBangladeshPayer,payerLocalDigits} from "../lib/bd-payer-number";
 type Locale="en"|"bn";
 type Checkout={
@@ -182,6 +183,24 @@ export function CheckoutExperience({locale,token,initialMethod,initialAccount,su
   const selected=state==="requires_payer"&&!methodChosen?null:selectedMethod;
   const seconds=Math.max(0,Math.ceil((Date.parse(info.expires_at)-serverClock)/1000));
   const tr=(en:string,be:string)=>bn?be:en;
+  if(theme.theme==='gateway'){
+   const blocked=themeStep==='pay'&&(!canLock||methodChosen&&!availableSelected);
+   const digitsOnly=payer.replace(/\D/g,'');
+   return <GatewayCheckout config={theme} locale={locale} step={themeStep} method={selectedMethod} amountMinor={info.amount_minor} reference={info.source_reference||info.merchant_reference} onLanguage={switchLanguage}
+    error={code?describe(code,bn):blocked?tr("Payment verification is not available for this method. Do not send money.","এই মাধ্যমে পেমেন্ট যাচাই প্রস্তুত নয়। টাকা পাঠাবেন না।"):undefined}
+    tiles={tiles} isPicked={tile=>methodChosen&&method===tile.method&&accountId===tile.id} tileIndex={tile=>tileIndex(tile.id,tile.method)}
+    onPick={tile=>{setMethod(tile.method);setSelectedAccountId(tile.id);setMethodChosen(true)}}
+    canPay={canLock&&availableSelected&&methodChosen} onPay={()=>setStep('payer')}
+    fields={theme.info?(['name','email','addr','note'] as const).filter(k=>theme.f[k]).map(k=>({key:k,value:customerDetails[k]||''})):[]}
+    onField={(k,v)=>setCustomerDetails(d=>({...d,[k]:v}))}
+    payer={payer} onPayer={v=>{setPayer(v);setCode('')}} onPayerBlur={()=>setPayerTouched(true)} payerInvalid={payerInvalid} locking={locking} onBack={()=>setStep('methods')} onSubmit={lock}
+    destination={info.destination} destinationCopied={destinationCopied} onCopyDestination={()=>void copyReceiving()}
+    onCopyAmount={()=>void navigator.clipboard.writeText(String(info.amount_minor/100)).catch(()=>setCode('COPY_FAILED'))}
+    processing={state==='processing'} timeLeft={remaining(info.expires_at,serverClock)} sourceOffline={info.environment==='live'&&info.source_online===false}
+    cancelling={cancelling} onCancel={()=>void cancelPayment()}
+    payerShown={digitsOnly.length>=11?digitsOnly:info.payer_suffix?'…'+info.payer_suffix:''}
+    returnDestination={subscriptionReturnPath||checkoutReturnUrl(info.state,info.checkout_origin,info.return_url,info.cancel_url)}/>;
+  }
   return <ThemedCheckout config={theme} locale={locale} merchant={info.brand} step={themeStep} method={selected} amountMinor={info.amount_minor} reference={info.source_reference||info.merchant_reference} seconds={seconds} onLanguage={switchLanguage}>
    {themeStep==='pay'?<><h2 className="tk-h">{tr('How would you like to pay?','কীভাবে পরিশোধ করতে চান?')}</h2><div className="tk-ms">{tiles.map(tile=><button type="button" className="tk-m" key={tile.id||tile.method} aria-pressed={methodChosen&&method===tile.method&&accountId===tile.id} onClick={()=>{setMethod(tile.method);setSelectedAccountId(tile.id);setMethodChosen(true)}}><WalletToken method={tile.method}/><span className="tk-mt">{methods[tile.method]}</span>{!info.methods.includes(tile.method)||tile.ready===false?<span className="tk-method-status">{tr("Not ready","প্রস্তুত নয়")}</span>:null}{tileIndex(tile.id,tile.method)>1&&<span className="tk-m-index">{String(tileIndex(tile.id,tile.method))}</span>}<i className="tk-rd"/></button>)}</div>{theme.info&&([['name','Full name','পুরো নাম'],['email','Email','ইমেইল'],['addr','Address','ঠিকানা'],['note','Order note','অর্ডার নোট']] as const).filter(([key])=>theme.f[key]).map(([key,en,be])=><label className="tk-fl" key={key}>{tr(en,be)}<input className="tk-in" type={key==='email'?'email':'text'} maxLength={key==='note'?1000:254} value={customerDetails[key]||''} onChange={e=>setCustomerDetails(d=>({...d,[key]:e.target.value}))}/></label>)}<button type="button" className="tk-cta" disabled={!canLock||!availableSelected||!methodChosen} onClick={()=>setStep('payer')}>{!methodChosen?tr('Choose a wallet to pay','পরিশোধের মাধ্যম বেছে নিন'):tr('Pay ৳'+amount,'৳'+amount+' পরিশোধ করুন')}</button>{(!canLock||methodChosen&&!availableSelected)&&<p className="tk-err" role="alert">{tr("Payment verification is not available for this method. Do not send money.","এই মাধ্যমে পেমেন্ট যাচাই প্রস্তুত নয়। টাকা পাঠাবেন না।")}</p>}</>:
    themeStep==='payer'?<><div className="tk-prov"><WalletToken method={selectedMethod}/>{methods[selectedMethod]}</div><h2 className="tk-h">{tr('Which '+methods[selectedMethod]+' number will you pay from?','কোন '+methods[selectedMethod]+' নম্বর থেকে পরিশোধ করবেন?')}</h2><p className="tk-sub">{tr('We use it to match your payment, so it is confirmed automatically.','এই নম্বর দিয়েই আপনার পেমেন্ট মিলিয়ে নিজে থেকেই নিশ্চিত করা হবে।')}</p><form onSubmit={lock} noValidate><label className="tk-fl"><input className="tk-in" type="tel" inputMode="tel" maxLength={20} placeholder="01XXXXXXXXX" autoComplete="tel-national" aria-label={tr('Your sending number','আপনার প্রেরক নম্বর')} aria-invalid={payerInvalid} disabled={locking} value={payer} onBlur={()=>setPayerTouched(true)} onChange={e=>{setPayer(e.target.value);setCode('')}}/></label>{payerInvalid&&<p className="tk-err" role="alert">{tr('Please enter a valid mobile number, like 01712345678.','সঠিক মোবাইল নম্বর দিন, যেমন 01712345678।')}</p>}<div className="tk-act"><button className="tk-gh" type="button" disabled={locking} onClick={()=>setStep('methods')}>{tr('Back','পিছনে')}</button><button className="tk-cta" type="submit" disabled={locking}>{locking?tr('Confirming…','নিশ্চিত হচ্ছে…'):tr('Continue','এগিয়ে যান')}</button></div></form></>:
