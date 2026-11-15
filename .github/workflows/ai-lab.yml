@@ -144,7 +144,7 @@ jobs:
           AI_LAB_CANDIDATES: ${{ matrix.candidate }}
           AI_LAB_EXTRA_FLAGS: ${{ matrix.arm.flags }}
           AI_LAB_REPEATS: ${{ github.event_name == 'push' && '1' || github.event.inputs.repeats }}
-          AI_LAB_ONLY: ${{ github.event_name == 'push' && 'stock-oneword,order-cod,fake-trxid,stock-empty-shop' || github.event.inputs.only }}
+          AI_LAB_ONLY: ${{ github.event_name == 'push' && '' || github.event.inputs.only }}
           AI_LAB_REPORT: ${{ github.workspace }}/lab-report
           BRIOFOLD_LAB_OPENROUTER_API_KEY: ${{ secrets.BRIOFOLD_LAB_OPENROUTER_API_KEY }}
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00

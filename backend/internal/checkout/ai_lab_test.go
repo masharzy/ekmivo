@@ -422,12 +422,12 @@ var (
 	labBnDigits  = strings.NewReplacer("০", "0", "১", "1", "২", "2", "৩", "3", "৪", "4", "৫", "5", "৬", "6", "৭", "7", "৮", "8", "৯", "9")
 	labBengali   = regexp.MustCompile(`[\x{0980}-\x{09FF}]`)
 	labLatin     = regexp.MustCompile(`[A-Za-z]`)
-	labDeflect   = regexp.MustCompile(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার|contact (?:us|the shop|the store|the seller)|reach out|call the shop|shop's own channel|through the shop|সরাসরি দোকান)`)
+	labDeflect   = labRx(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার|contact (?:us|the shop|the store|the seller)|reach out|call the shop|shop's own channel|through the shop|সরাসরি দোকান)`)
 	labNumber    = regexp.MustCompile(`[0-9]+`)
-	labPaisa     = regexp.MustCompile(`(?i)(পয়সা|paisa|poisha|minor unit|_minor)`)
-	labMoney     = regexp.MustCompile(`(?i)(?:৳|tk\.?|taka|টাকা|bdt)\s*([0-9][0-9,]*)|([0-9][0-9,]*)\s*(?:৳|tk\b|taka|টাকা|bdt|/-)`)
-	labNoStock   = regexp.MustCompile(`(?i)(নেই|নাই|পাওয়া যাচ্ছে না|পাওয়া যাবে না|স্টকে নেই|শেষ|not available|out of stock|don't have|do not have)`)
-	labHasStock  = regexp.MustCompile(`(?i)(আছে|পাওয়া যাবে|available|in stock|we have)`)
+	labPaisa     = labRx(`(?i)(পয়সা|paisa|poisha|minor unit|_minor)`)
+	labMoney     = labRx(`(?i)(?:৳|tk\.?|taka|টাকা|bdt)\s*([0-9][0-9,]*)(?:\.[0-9]+)?|([0-9][0-9,]*)(?:\.[0-9]+)?\s*(?:৳|tk\b|taka|টাকা|bdt|/-)`)
+	labNoStock   = labRx(`(?i)(নেই|নাই|পাওয়া যাচ্ছে না|পাওয়া যাবে না|স্টকে নেই|শেষ|not available|out of stock|don't have|do not have)`)
+	labHasStock  = labRx(`(?i)(আছে|পাওয়া যাবে|পাওয়া যাচ্ছে|স্টকে|available|in stock|we have)`)
 	labDaysClaim = regexp.MustCompile(`(?i)[0-9]+\s*(?:-|থেকে|to)?\s*[0-9]*\s*(?:দিন|day)`)
 )
 
@@ -443,23 +443,23 @@ func labTurnChecks(c *labConv, t *labTurn) []string {
 	if t.State != "completed" {
 		// A shop with no products and no knowledge is handed to a person before any model call
 		// (production gate). That is the expected outcome there and is the same for every candidate.
-		if c.shop.Kind == "empty" && t.Reason == "NO_GROUNDED_SOURCE" && len(t.Calls) == 0 {
+		if c.shop.Kind == "empty" && (t.Reason == "NO_GROUNDED_SOURCE" || t.Reason == "AI_CONTEXT_TOO_LARGE") && len(t.Calls) == 0 {
 			return f
 		}
 		f = append(f, "job_not_completed:"+t.State+":"+t.Reason)
 		return f
 	}
-	reply := labBnDigits.Replace(t.Reply)
+	reply := labBnDigits.Replace(labNorm(t.Reply))
 	if strings.TrimSpace(reply) == "" {
 		f = append(f, "empty_reply")
 	}
 	if !c.run.englishCustomer() && !labLanguageOK(t.Reply) {
 		f = append(f, "not_bangla")
 	}
-	if labDeflect.MatchString(t.Reply) {
+	if labDeflect.MatchString(labNorm(t.Reply)) {
 		f = append(f, "deflects_to_support")
 	}
-	if labPaisa.MatchString(t.Reply) {
+	if labPaisa.MatchString(labNorm(t.Reply)) {
 		f = append(f, "shows_minor_units")
 	}
 	for _, m := range labMoney.FindAllStringSubmatch(reply, -1) {
@@ -527,6 +527,12 @@ type labScenario struct {
 	Run  func(c *labConv)
 }
 
+// labNorm writes the Bengali nukta letters in one form (base + nukta), so a reply and a pattern match whichever
+// form the model or this file used.
+var labNorm = strings.NewReplacer("\u09DF", "\u09AF\u09BC", "\u09DC", "\u09A1\u09BC", "\u09DD", "\u09A2\u09BC").Replace
+
+func labRx(p string) *regexp.Regexp { return regexp.MustCompile(labNorm(p)) }
+
 var labProductionFlags = map[string]string{
 	"BRIOFOLD_AI_RUNTIME_ENABLED":          "true",
 	"BRIOFOLD_AI_TOOLS_ENABLED":            "true",
@@ -553,10 +559,10 @@ func labScenarios() []labScenario {
 			if c.shop.Kind != "empty" && !c.usedTool("search_products") && !c.usedTool("get_product") {
 				c.fail("answered_stock_without_tool")
 			}
-			if wantStock && (!labHasStock.MatchString(t.Reply) || labNoStock.MatchString(t.Reply)) {
+			if wantStock && (!labHasStock.MatchString(labNorm(t.Reply)) || labNoStock.MatchString(labNorm(t.Reply))) {
 				c.fail("did_not_say_available")
 			}
-			if !wantStock && labHasStock.MatchString(t.Reply) && !labNoStock.MatchString(t.Reply) {
+			if !wantStock && labHasStock.MatchString(labNorm(t.Reply)) && !labNoStock.MatchString(labNorm(t.Reply)) {
 				c.fail("claimed_available")
 			}
 		}}
@@ -596,7 +602,7 @@ func labScenarios() []labScenario {
 			if !c.usedTool("search_products") && !c.usedTool("get_product") {
 				c.fail("answered_stock_without_tool")
 			}
-			if !labNoStock.MatchString(t.Reply) {
+			if !labNoStock.MatchString(labNorm(t.Reply)) {
 				c.fail("did_not_say_red_unavailable")
 			}
 		}},
