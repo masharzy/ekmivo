@@ -71,3 +71,6 @@ func providerMessages(model string, messages []Message) ([]map[string]any, error
 	}
 	return out, nil
 }
+
+// MediaModel reports whether a model accepts image, audio or video input in this runtime.
+func MediaModel(model string) bool { return mediaModel(model) }
