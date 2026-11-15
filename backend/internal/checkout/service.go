@@ -163,7 +163,7 @@ func prepareCreateRequest(body *createRequest, key, workspace, realm string) boo
 		body.Currency = "BDT"
 	}
 	if body.Expiry == 0 {
-		body.Expiry = 30
+		body.Expiry = 5 // owner decision 2026-11-16: five minutes to pay unless the merchant asks for longer (max 60)
 	}
 	// Public URLs may only be HTTPS public destinations. Webhooks additionally
 	// are bound to this immutable payment using the existing signed delivery outbox.

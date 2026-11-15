@@ -753,7 +753,7 @@ paths:
                 order_id: { type: string, format: uuid }
                 invoice_id: { type: string, format: uuid }
                 currency: { type: string, const: BDT, default: BDT }
-                expires_in_minutes: { type: integer, minimum: 5, maximum: 60, default: 30 }
+                expires_in_minutes: { type: integer, minimum: 5, maximum: 60, default: 5 }
       responses:
         '201':
           description: Issued standalone payment request, not paid

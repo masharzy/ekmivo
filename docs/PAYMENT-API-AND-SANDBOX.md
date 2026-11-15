@@ -12,7 +12,7 @@ Source of truth: `backend/cmd/api/main.go`, `backend/internal/checkout/simple_pa
 
 | Step | Call | Notes |
 |---|---|---|
-| Create | `POST /v1/payment/create` (same body as `POST /v1/payment-intents`) | `Authorization: Bearer <key>`. Send `amount` in BDT, `reference`, `redirect_url`, `cancel_url`, `webhook_url`, `customer_email`, `expires_in_minutes` (5-60). Send `Idempotency-Key` (16-128 chars). Returns `invoice_id`, `payment_url`, `checkout_url`, `checkout_token`, `status` (`PENDING`...). `invoice_id` is the payment request id. |
+| Create | `POST /v1/payment/create` (same body as `POST /v1/payment-intents`) | `Authorization: Bearer <key>`. Send `amount` in BDT, `reference`, `redirect_url`, `cancel_url`, `webhook_url`, `customer_email`, `expires_in_minutes` (5-60, default 5). Send `Idempotency-Key` (16-128 chars). Returns `invoice_id`, `payment_url`, `checkout_url`, `checkout_token`, `status` (`PENDING`...). `invoice_id` is the payment request id. |
 | Verify | `POST /v1/payment/verify` with `{"invoice_id": "<uuid>"}` | Returns `status` = `COMPLETED`, `PENDING`, `CANCELLED`, `EXPIRED`, `FAILED` or `REFUNDED`, plus `amount_minor`, `currency`, `reference`. Check all of them against your own order before fulfilling. |
 | Read | `GET /v1/payment-intents/{intentID}` | Key-scoped: workspace and environment come from the key, so no `workspaceID` or `environment` parameter. Returns `{data:{state,...}}`; `state` is `completed` when paid. |
 

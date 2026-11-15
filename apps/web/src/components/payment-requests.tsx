@@ -20,7 +20,7 @@ type SourceDraft=SourceLine&{kind:"order"|"invoice";reference:string};
 const initialSource:SourceDraft={kind:"invoice",reference:"",title:"",quantity:"1",unitPrice:""};
 type Fields={reference:string;amount:string;expiry:string;sourceKind:"standalone"|"order"|"invoice";sourceId:string};
 type LoadState="loading"|"ready"|"offline"|"unavailable"|"forbidden"|"error";
-const empty:Fields={reference:"",amount:"",expiry:"15",sourceKind:"standalone",sourceId:""};
+const empty:Fields={reference:"",amount:"",expiry:"5",sourceKind:"standalone",sourceId:""};
 const uuid=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const short=(code:string,bn:boolean)=>planLimitMessage(code,bn,"payments")??(({
  UNAUTHENTICATED:bn?"সেশন শেষ হয়েছে। আবার লগইন করুন।":"Session expired. Sign in again.",
