@@ -108,6 +108,13 @@ func studioMessages(c studioContext) ([]aicredits.Message, error) {
 		system += "\nChannel guidance:\n" + c.ChannelInstructions
 	}
 	policy := studioCapabilityPolicy
+	if c.tools && aiPromptFixEnabled() {
+		// Tool mode: the text-only boundary ("No tools are available", "cannot place an order") contradicts
+		// the TOOL MODE prompt placed before this message, and small models obey the later text and never
+		// call a tool. Keep every other rule, replace only the capability boundary.
+		system = strings.Replace(system, " No tools are available.", "", 1)
+		policy = strings.Replace(policy, studioTextOnlyBoundary, studioToolModeBoundary, 1)
+	}
 	if len(c.media) > 0 {
 		policy = strings.Replace(policy, studioTextOnlyMediaPolicy, studioAttachedMediaPolicy, 1)
 	}

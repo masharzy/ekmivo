@@ -80,7 +80,7 @@ func (p *labProvider) record(c labCall) {
 }
 
 // Generate sends the same body the production OpenRouter provider sends (text messages, max_completion_tokens,
-// no streaming, reasoning disabled). Unlike production it accepts a returned model id that differs only by a
+// no streaming, and the reasoning field exactly as aicredits.chatReasoning sets it). Unlike production it accepts a returned model id that differs only by a
 // version suffix, and records that as an integration note, so a naming difference is not scored as model quality.
 func (p *labProvider) Generate(ctx context.Context, model string, maxOutput int64, messages []aicredits.Message) (aicredits.Output, error) {
 	var out aicredits.Output
@@ -94,8 +94,13 @@ func (p *labProvider) Generate(ctx context.Context, model string, maxOutput int6
 		}
 		wire = append(wire, map[string]any{"role": m.Role, "content": m.Content})
 	}
-	body, _ := json.Marshal(map[string]any{"model": model, "messages": wire, "max_completion_tokens": maxOutput, "stream": false,
-		"reasoning": map[string]any{"enabled": false}})
+	payload := map[string]any{"model": model, "messages": wire, "max_completion_tokens": maxOutput, "stream": false}
+	// Same rule as aicredits.chatReasoning (production): reasoning is disabled only for the Qwen omni model;
+	// every other model gets the provider default. Keep in step with backend/internal/aicredits/openrouter.go.
+	if model == "qwen/qwen3.8-omni-flash" {
+		payload["reasoning"] = map[string]any{"enabled": false}
+	}
+	body, _ := json.Marshal(payload)
 	start := time.Now()
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {
@@ -344,6 +349,8 @@ type labConv struct {
 	thread string
 	run    *labRun
 	tools  []string // all tool calls so far in this conversation
+	// current customer message, while its reply is being checked
+	current string
 }
 
 func (c *labConv) say(text string) *labTurn {
@@ -383,6 +390,7 @@ func (c *labConv) say(text string) *labTurn {
 			c.run.Integration = append(c.run.Integration, "provider: "+call.Error)
 		}
 	}
+	c.current = t.Customer
 	t.Failures = labTurnChecks(c, &t)
 	c.run.Turns = append(c.run.Turns, t)
 	return &c.run.Turns[len(c.run.Turns)-1]
@@ -414,7 +422,9 @@ var (
 	labBnDigits  = strings.NewReplacer("০", "0", "১", "1", "২", "2", "৩", "3", "৪", "4", "৫", "5", "৬", "6", "৭", "7", "৮", "8", "৯", "9")
 	labBengali   = regexp.MustCompile(`[\x{0980}-\x{09FF}]`)
 	labLatin     = regexp.MustCompile(`[A-Za-z]`)
-	labDeflect   = regexp.MustCompile(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার)`)
+	labDeflect   = regexp.MustCompile(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার|contact (?:us|the shop|the store|the seller)|reach out|call the shop|shop's own channel|through the shop|সরাসরি দোকান)`)
+	labNumber    = regexp.MustCompile(`[0-9]+`)
+	labPaisa     = regexp.MustCompile(`(?i)(পয়সা|paisa|poisha|minor unit|_minor)`)
 	labMoney     = regexp.MustCompile(`(?i)(?:৳|tk\.?|taka|টাকা|bdt)\s*([0-9][0-9,]*)|([0-9][0-9,]*)\s*(?:৳|tk\b|taka|টাকা|bdt|/-)`)
 	labNoStock   = regexp.MustCompile(`(?i)(নেই|নাই|পাওয়া যাচ্ছে না|পাওয়া যাবে না|স্টকে নেই|শেষ|not available|out of stock|don't have|do not have)`)
 	labHasStock  = regexp.MustCompile(`(?i)(আছে|পাওয়া যাবে|available|in stock|we have)`)
@@ -431,6 +441,11 @@ func labLanguageOK(reply string) bool {
 func labTurnChecks(c *labConv, t *labTurn) []string {
 	var f []string
 	if t.State != "completed" {
+		// A shop with no products and no knowledge is handed to a person before any model call
+		// (production gate). That is the expected outcome there and is the same for every candidate.
+		if c.shop.Kind == "empty" && t.Reason == "NO_GROUNDED_SOURCE" && len(t.Calls) == 0 {
+			return f
+		}
 		f = append(f, "job_not_completed:"+t.State+":"+t.Reason)
 		return f
 	}
@@ -443,6 +458,9 @@ func labTurnChecks(c *labConv, t *labTurn) []string {
 	}
 	if labDeflect.MatchString(t.Reply) {
 		f = append(f, "deflects_to_support")
+	}
+	if labPaisa.MatchString(t.Reply) {
+		f = append(f, "shows_minor_units")
 	}
 	for _, m := range labMoney.FindAllStringSubmatch(reply, -1) {
 		n := strings.ReplaceAll(m[1]+m[2], ",", "")
@@ -467,8 +485,21 @@ func (c *labConv) allowedComputed(n string) bool {
 		x, _ := strconv.ParseInt(p, 10, 64)
 		unit = append(unit, x)
 	}
+	// Quantities: 1 plus numbers the customer wrote. A model may not multiply by a quantity nobody asked for.
+	qty := []int64{1}
+	said := []string{c.current}
+	for _, t := range c.run.Turns {
+		said = append(said, t.Customer)
+	}
+	for _, text := range said {
+		for _, m := range labNumber.FindAllString(labBnDigits.Replace(text), -1) {
+			if x, err := strconv.ParseInt(m, 10, 64); err == nil && x >= 1 && x <= 100 {
+				qty = append(qty, x)
+			}
+		}
+	}
 	for _, u := range unit {
-		for q := int64(1); q <= 20; q++ {
+		for _, q := range qty {
 			for _, d := range []int64{0, 60, 120} {
 				base := u*q + d
 				if v == base || v == u*q*9/10+d || v == u*q*9/10 || v == u*q/10 {
@@ -494,6 +525,25 @@ type labScenario struct {
 	ID   string
 	Shop string
 	Run  func(c *labConv)
+}
+
+var labProductionFlags = map[string]string{
+	"BRIOFOLD_AI_RUNTIME_ENABLED":          "true",
+	"BRIOFOLD_AI_TOOLS_ENABLED":            "true",
+	"BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED": "true",
+	"BRIOFOLD_AI_COMMERCE_V2_ENABLED":      "true",
+	"BRIOFOLD_AI_ORDER_MEMORY_ENABLED":     "true",
+	"BRIOFOLD_AI_PAYMENTS_V2_ENABLED":      "true",
+	"BRIOFOLD_AI_PAYMENT_VERIFY_ENABLED":   "true",
+	"BRIOFOLD_AI_LATE_SMS_REVIEW_ENABLED":  "true",
+	"BRIOFOLD_AI_MODEL_SETTING_ENABLED":    "true",
+	"BRIOFOLD_CUSTOMER_IDENTITY_ENABLED":   "true",
+	"BRIOFOLD_AI_KILL_SWITCH":              "",
+	"BRIOFOLD_AI_TOOLS_WORKSPACES":         "",
+	"BRIOFOLD_AI_TOPUPS_ENABLED":           "",
+	"BRIOFOLD_AI_MEDIA_PROBE":              "",
+	"BRIOFOLD_AI_TEXT_EVALUATION":          "",
+	"BRIOFOLD_AI_PROMPT_FIX_ENABLED":       "",
 }
 
 func labScenarios() []labScenario {
@@ -690,10 +740,24 @@ func TestAILab(t *testing.T) {
 	if outDir == "" {
 		outDir = t.TempDir()
 	}
-	t.Setenv("BRIOFOLD_AI_TOOLS_ENABLED", "true")
-	t.Setenv("BRIOFOLD_AI_KILL_SWITCH", "")
-	t.Setenv("BRIOFOLD_AI_TOOLS_WORKSPACES", "")
-	t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "true")
+	// The same AI flags as the production API container (names recorded in PROGRESS.md, 2026-11-15 VPS check).
+	// Everything else AI-related is explicitly off, so a CI default can not change what is measured.
+	for name, value := range labProductionFlags {
+		t.Setenv(name, value)
+	}
+	// Optional arm for a change behind a new flag: AI_LAB_EXTRA_FLAGS="NAME=true,OTHER=true".
+	arm := "production-flags"
+	if extra := strings.TrimSpace(os.Getenv("AI_LAB_EXTRA_FLAGS")); extra != "" {
+		for _, kv := range strings.Split(extra, ",") {
+			name, value, ok := strings.Cut(strings.TrimSpace(kv), "=")
+			if !ok || !strings.HasPrefix(name, "BRIOFOLD_AI_") {
+				t.Fatalf("AI_LAB_EXTRA_FLAGS entry %q must be BRIOFOLD_AI_NAME=value", kv)
+			}
+			t.Setenv(name, value)
+		}
+		arm = "production-flags+" + extra
+	}
+	t.Logf("AI Lab arm: %s", arm)
 	ctx := context.Background()
 	open := func(u string) *sql.DB {
 		db, err := sql.Open("pgx", u)
@@ -726,6 +790,10 @@ func TestAILab(t *testing.T) {
 		Pipeline: &Pipeline{Key: pipelineKey, Control: pool(pipelineURL), Live: pool(liveReaderURL)}}
 	env := &labEnv{it: it, payerKey: payerKey, pipeKey: pipelineKey, tariffs: map[string]bool{}}
 	env.adminUser = it.one(it.admin, "SELECT user_id::text FROM platform_administrators WHERE role='super_admin' LIMIT 1")
+	// With the model-setting flag on (as in production) an admin override would replace every candidate.
+	if o := it.one(it.admin, "SELECT coalesce(briofold_shop_assistant_model(),'')"); o != "" {
+		t.Fatalf("shop assistant model override is set (%s); the lab would not test the candidates", o)
+	}
 	for _, m := range candidates {
 		env.tariff(m)
 	}
@@ -758,12 +826,12 @@ func TestAILab(t *testing.T) {
 			}
 		}
 	}
-	if err := labWriteReport(outDir, candidates, runs); err != nil {
+	if err := labWriteReport(outDir, arm, candidates, runs); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func labWriteReport(dir string, candidates []string, runs []labRun) error {
+func labWriteReport(dir, arm string, candidates []string, runs []labRun) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -804,7 +872,7 @@ func labWriteReport(dir string, candidates []string, runs []labRun) error {
 		a.runs++
 	}
 	var b strings.Builder
-	b.WriteString("# AI Lab report\n\nScenario passes only if every repeat passed (worst case). Cost from real token usage at OpenRouter run-time prices.\n\n")
+	b.WriteString("# AI Lab report\n\nScenario passes only if every repeat passed (worst case). Cost from real token usage at OpenRouter run-time prices.\n\nArm: `" + arm + "`\n\n")
 	b.WriteString("| Candidate | Scenarios passed (all repeats) | Runs passed | Avg cost / conversation (USD) | Avg model time / turn (s) |\n|---|---|---|---|---|\n")
 	sort.SliceStable(candidates, func(i, j int) bool { return labScore(by[candidates[i]].scen) > labScore(by[candidates[j]].scen) })
 	for _, m := range candidates {

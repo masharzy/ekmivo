@@ -9,7 +9,7 @@ on:
       only: {description: "Comma-separated scenario ids (empty = all)", default: ""}
   push:
     branches: ['lab/**']
-    paths: ['backend/internal/checkout/ai_lab_test.go', '.github/workflows/ai-lab.yml']
+    paths: ['backend/internal/checkout/ai_lab_test.go', 'backend/internal/checkout/studio_*.go', '.github/workflows/ai-lab.yml']
 
 permissions:
   contents: read
@@ -20,13 +20,17 @@ concurrency:
 
 jobs:
   lab:
-    name: AI Lab ${{ matrix.candidate }}
+    name: AI Lab ${{ matrix.candidate }} ${{ matrix.arm.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
         candidate: [qwen/qwen3.8-omni-flash, deepseek/deepseek-v4.1-flash, openai/gpt-5-nano, google/gemini-3.1-flash-lite, qwen/qwen3.7-flash, google/gemma-4-26b-a4b-it, openai/gpt-5-mini]
+        # production = today's production flags; prompt-fix = the same plus the new, default-off prompt-fix flag.
+        arm:
+          - {name: production, flags: ''}
+          - {name: prompt-fix, flags: 'BRIOFOLD_AI_PROMPT_FIX_ENABLED=true'}
     services:
       postgres:
         image: postgres:17
@@ -87,6 +91,9 @@ jobs:
         run: |
           go mod tidy
           go test ./internal/authz -run TestPostgresSessionMembershipAndEnvironment -count=1 -v
+      - name: Prompt-fix flag unit tests (flag off = earlier behaviour)
+        working-directory: backend
+        run: go test ./internal/checkout -run 'TestPromptFix|TestStudio' -count=1
       - name: RFC6238 TOTP and replay vectors
         working-directory: apps/web
         run: node scripts/pg01-mfa-smoke.mjs
@@ -135,6 +142,7 @@ jobs:
         env:
           PG04_SETTINGS_SUITES: runBriofoldAiCommerce
           AI_LAB_CANDIDATES: ${{ matrix.candidate }}
+          AI_LAB_EXTRA_FLAGS: ${{ matrix.arm.flags }}
           AI_LAB_REPEATS: ${{ github.event_name == 'push' && '1' || github.event.inputs.repeats }}
           AI_LAB_ONLY: ${{ github.event_name == 'push' && 'stock-oneword,order-cod,fake-trxid,stock-empty-shop' || github.event.inputs.only }}
           AI_LAB_REPORT: ${{ github.workspace }}/lab-report
