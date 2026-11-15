@@ -1,0 +1,161 @@
+name: AI Lab (model comparison)
+
+# docs/plans/ai-lab.md. Same isolated databases and steps as Foundation CI up to the AI commerce suite, then the
+# AI Lab runner drives the real production AI path against one real model per matrix job. Demo shops only.
+on:
+  workflow_dispatch:
+    inputs:
+      repeats: {description: "Repeats per scenario", default: "3"}
+      only: {description: "Comma-separated scenario ids (empty = all)", default: ""}
+  push:
+    branches: ['lab/**']
+    paths: ['backend/internal/checkout/ai_lab_test.go', '.github/workflows/ai-lab.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-lab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lab:
+    name: AI Lab ${{ matrix.candidate }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        candidate: [qwen/qwen3.8-omni-flash, deepseek/deepseek-v4.1-flash, openai/gpt-5-nano, google/gemini-3.1-flash-lite, qwen/qwen3.7-flash, google/gemma-4-26b-a4b-it, openai/gpt-5-mini]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ekmivo_pg00
+          POSTGRES_USER: ekmivo_test
+          POSTGRES_PASSWORD: local-only-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ekmivo_test -d ekmivo_pg00"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Clean dependency install
+        working-directory: apps/web
+        run: npm ci
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Phase 4 isolated PostgreSQL migration constraints
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/subscription-intents-pg-smoke.mjs
+      - name: Production build (no application credentials)
+        if: ${{ inputs.pg04_suites == '' || github.event_name != 'workflow_dispatch' }}
+        working-directory: apps/web
+        run: npm run build
+      - name: Verify PostgreSQL schema on ephemeral local database
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg00-smoke.mjs
+      - name: PG01 RLS 3-tenant/2-environment integration checks
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg01-rls-smoke.mjs
+      - name: PG02 product-access migration and authorization matrix
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg02-product-access-smoke.mjs
+      - name: Go and PostgreSQL session authorization integration
+        working-directory: backend
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+          PG01_RUNTIME_DATABASE_URL: postgresql://ekmivo_financial_runtime:pg01-ci-only-password@127.0.0.1:5432/ekmivo_pg00
+        run: |
+          go mod tidy
+          go test ./internal/authz -run TestPostgresSessionMembershipAndEnvironment -count=1 -v
+      - name: RFC6238 TOTP and replay vectors
+        working-directory: apps/web
+        run: node scripts/pg01-mfa-smoke.mjs
+      - name: PG02 product and environment navigation contracts
+        working-directory: apps/web
+        run: node scripts/pg02-navigation-smoke.mjs
+      - name: PG03 scoped bearer key hash, RLS and environment security
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg03-credentials-smoke.mjs
+      - name: PG02 workspace/server environment authorization checks
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/pg02-tenant-context-smoke.mjs
+      - name: Restore pinned Playwright browser binaries
+        id: playwright
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-headless-${{ hashFiles('apps/web/package-lock.json') }}
+      - name: Install browser for real PG05 checkout journeys
+        working-directory: apps/web
+        timeout-minutes: 6
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: "45000"
+        run: |
+          npx --no-install playwright install --only-shell chromium
+          node scripts/playwright-readiness.mjs
+      - name: Save installed browser before independent application checks
+        if: steps.playwright.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.cache-primary-key }}
+      - name: Archive Phase 2 pricing screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-public-pricing-screenshots
+          path: apps/web/test-results/subscription-pricing/
+          if-no-files-found: ignore
+      - name: PG04 independent financial River + realm migration and durability
+        working-directory: apps/web
+        env:
+          PG04_SETTINGS_SUITES: runBriofoldAiCommerce
+          AI_LAB_CANDIDATES: ${{ matrix.candidate }}
+          AI_LAB_REPEATS: ${{ github.event_name == 'push' && '1' || github.event.inputs.repeats }}
+          AI_LAB_ONLY: ${{ github.event_name == 'push' && 'stock-oneword,order-cod,fake-trxid,stock-empty-shop' || github.event.inputs.only }}
+          AI_LAB_REPORT: ${{ github.workspace }}/lab-report
+          BRIOFOLD_LAB_OPENROUTER_API_KEY: ${{ secrets.BRIOFOLD_LAB_OPENROUTER_API_KEY }}
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+          PG05_BROWSER_TESTS: "true"
+        run: node scripts/pg04-financial-smoke.mjs
+      - name: AI Lab report
+        if: always()
+        shell: bash
+        run: |
+          f="${{ github.workspace }}/lab-report/report.md"
+          if [ -f "$f" ]; then cat "$f" >> "$GITHUB_STEP_SUMMARY"; cat "$f"; else echo "no report"; fi
+          if [ -f "${{ github.workspace }}/lab-report/runs.json" ]; then
+            gzip -c "${{ github.workspace }}/lab-report/runs.json" > runs.json.gz; sha256sum runs.json.gz
+            echo LABRUNS-BEGIN; base64 -w 120 runs.json.gz | sed 's/^/LABRUNS:/'; echo LABRUNS-END
+          fi
+      - name: Upload AI Lab report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-lab-${{ strategy.job-index }}
+          path: ${{ github.workspace }}/lab-report/
+          retention-days: 30

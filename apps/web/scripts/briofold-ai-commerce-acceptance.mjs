@@ -52,4 +52,16 @@ export async function runBriofoldAiCommerce({control, apiEnv, phase9Fixture}) {
   if (run.status !== 0 || !/--- PASS: TestAICommerceIntegration/.test(out)) {
     throw Error("AI commerce integration did not pass:\n" + (out + (run.stderr ?? "")).slice(-4000));
   }
+  // AI Lab (docs/plans/ai-lab.md): only when a lab workflow asks for it; never in normal CI.
+  if (process.env.AI_LAB_CANDIDATES && process.env.BRIOFOLD_LAB_OPENROUTER_API_KEY) {
+    const lab = spawnSync("go", ["test", "-tags", "ailab", "./internal/checkout", "-run", "^TestAILab$", "-count=1", "-v", "-timeout", "170m"], {
+      cwd: new URL("../../../backend/", import.meta.url), timeout: 175 * 60000, encoding: "utf8", maxBuffer: 256 << 20,
+      env: {...process.env, AI_IT_CONTROL_ADMIN_URL: control, AI_IT_RUNTIME_URL: apiEnv.AUTHZ_DATABASE_URL,
+        AI_IT_PIPELINE_CONTROL_URL: apiEnv.PG06_CONTROL_PROJECTION_URL || apiEnv.AUTHZ_DATABASE_URL,
+        AI_IT_LIVE_READER_URL: apiEnv.PG06_LIVE_DATABASE_URL, AI_IT_LIVE_ADMIN_URL: phase9Fixture.liveDatabase,
+        PG05_PAYER_SECRET: apiEnv.PG05_PAYER_SECRET, PG06_ENCRYPTION_KEY_HEX: apiEnv.PG06_ENCRYPTION_KEY_HEX}});
+    const labOut = (lab.stdout ?? "") + (lab.stderr ?? "");
+    console.log(labOut.split("\n").filter(l => /ai_lab_test\.go|^(--- |ok|PASS|FAIL)|panic|cannot|undefined/.test(l)).join("\n"));
+    if (lab.status !== 0) throw Error("AI Lab run failed:\n" + labOut.slice(-6000));
+  }
 }
