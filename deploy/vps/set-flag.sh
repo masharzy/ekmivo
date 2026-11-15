@@ -32,7 +32,7 @@ restore() {
 health || { echo 'STOP: the API is not healthy now; nothing was changed.'; exit 1; }
 cp -p compose.json "$state/compose.before.json"
 cp -p compose.json "backups/compose-pre-flag-$name-$stamp.json"
-trap 'echo "Flag change failed; restoring the previous settings." >&2; restore; exit 1' ERR
+trap 'echo "Flag change failed at line $LINENO; restoring the previous settings." >&2; restore; exit 1' ERR
 NAME="$name" VALUE="$value" python3 - <<'PY'
 import json, os, pathlib
 p = pathlib.Path('compose.json'); cfg = json.loads(p.read_text())
@@ -51,6 +51,7 @@ for _ in 1 2 3 4 5 6; do sleep 5; health; done
 [ "$(docker inspect -f '{{.State.StartedAt}}' "$new")" = "$started" ]
 errs=$(docker logs --since "$started" "$new" 2>&1 | grep -Eic 'panic|fatal|sqlstate=(42883|42P01|42501)' || true)
 [ "$errs" = "0" ]
-[ "$(docker exec "$new" printenv "$name")" = "$value" ]
+# The API image has no shell tools; read the value from the container configuration instead.
+docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$new" | grep -qx "$name=$value"
 trap - ERR
 echo "DONE: $name=$value, API healthy. Undo: sudo bash set-flag.sh $name $([ "$value" = true ] && echo off || echo on)"
