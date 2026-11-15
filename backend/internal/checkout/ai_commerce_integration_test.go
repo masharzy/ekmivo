@@ -71,6 +71,21 @@ func (p *scriptedProvider) lastToolResult() string {
 	return ""
 }
 
+// firstSeen returns the content of the message with this prefix in the first model request of the turn.
+func (p *scriptedProvider) firstSeen(prefix string) string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if len(p.seen) == 0 {
+		return ""
+	}
+	for _, m := range p.seen[0] {
+		if strings.HasPrefix(m.Content, prefix) {
+			return m.Content
+		}
+	}
+	return ""
+}
+
 func itEnv(t *testing.T, name string) string {
 	v := os.Getenv(name)
 	if v == "" {
@@ -982,6 +997,33 @@ func TestAICommerceIntegration(t *testing.T) {
 			`{"reply":"Please send your address."}`)
 		if got := order(thread, "subtotal_minor||'/'||shipping_minor||'/'||status"); state != "completed" || got != "150000/12000/draft" || !strings.Contains(fake.lastToolResult(), "address_required") {
 			t.Fatalf("mixed order: state=%s got=%s tool=%s", state, got, fake.lastToolResult())
+		}
+	})
+
+	t.Run("pre-search gives the model the catalogue even when the description disagrees (0257)", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "false")
+		it.exec(it.admin, "UPDATE briofold_ai_channel_jobs SET state='cancelled' WHERE workspace_id=$1::uuid AND state IN ('queued','running')", it.ws)
+		alu, _ := json.Marshal(map[string]any{"external_id": "IT-ALU", "name": "Alu",
+			"variants": []map[string]any{{"sku": "IT-ALU-1", "price_minor": 2000, "stock": 0, "options": map[string]string{"weight": "1 kg"}}}})
+		it.exec(it.admin, "SELECT commerce_catalog_write($1::uuid,'live',$2::uuid,gen_random_uuid(),$3::jsonb)", it.ws, it.user, string(alu))
+
+		t.Setenv("BRIOFOLD_AI_PRESEARCH_ENABLED", "")
+		it.say("psid-pre-off", "Alu ase?", `{"reply":"Off."}`)
+		if fake.firstSeen("SHOP_SEARCH") != "" {
+			t.Fatal("flag off: the model must not receive a pre-search")
+		}
+		t.Setenv("BRIOFOLD_AI_PRESEARCH_ENABLED", "true")
+		_, state, reason, _ := it.say("psid-pre-on", "Alu ase vai?", `{"reply":"Alu is out of stock now."}`)
+		got := fake.firstSeen("SHOP_SEARCH")
+		// Found although its stock is 0 (search_products would hide it), with its stock count and no floor price.
+		if state != "completed" || !strings.Contains(got, `"Alu"`) || !strings.Contains(got, `"available": 0`) && !strings.Contains(got, `"available":0`) || strings.Contains(got, "min_price") {
+			t.Fatalf("pre-search: state=%s reason=%s got=%s", state, reason, got)
+		}
+		if n := it.one(it.admin, "SELECT count(*)::text FROM ai_tool_calls WHERE workspace_id=$1::uuid AND step>5", it.ws); n != "0" {
+			t.Fatalf("pre-search must not be logged as a tool step: %s", n)
 		}
 	})
 
