@@ -114,6 +114,12 @@ var studioBengaliScript = regexp.MustCompile(`[\x{0980}-\x{09FF}]`)
 var studioBanglish = regexp.MustCompile(`(?i)\b(ami|amra|amar|apni|apnar|tumi|tomar|ache|ase|achen|chai|chaitesi|kivabe|kibhabe|keno|kemon|korben|korbo|koro|korte|diben|den|din|pathaw|pathao|lagbe|hobe|hoise|bhalo|valo|dhonnobad|koto|dam|taka)\b`)
 
 func studioReplyLanguage(c studioContext) string {
+	if aiSellingFixesEnabled() {
+		c = aiWithoutButtonTurns(c)
+		if c.Question == "" && len(c.History) == 0 && c.Config.Language == "en" {
+			return "en"
+		}
+	}
 	question := strings.TrimSpace(c.Question)
 	if !strings.ContainsAny(question, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZঅআইঈউঊএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়") {
 		for i := len(c.History) - 1; i >= 0; i-- {

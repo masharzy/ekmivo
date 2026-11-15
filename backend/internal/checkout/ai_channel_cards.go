@@ -82,7 +82,7 @@ type aiCardProductFact struct {
 		Ref       string            `json:"variant_ref"`
 		Options   map[string]string `json:"options"`
 		Price     int64             `json:"price_minor"`
-		Available int64             `json:"available"`
+		Available *int64            `json:"available"` // null for a service: no stock count
 	} `json:"variants"`
 }
 
@@ -111,7 +111,7 @@ func buildAIProductCards(facts []json.RawMessage, lang string, now time.Time) ai
 			}
 			card := aiProductCard{Name: product.Name}
 			for _, variant := range product.Variants {
-				if variant.Available < 1 || variant.Price < 0 || !uuidPattern.MatchString(variant.Ref) {
+				if (variant.Available == nil && !aiSellingFixesEnabled()) || (variant.Available != nil && *variant.Available < 1) || variant.Price < 0 || !uuidPattern.MatchString(variant.Ref) {
 					continue
 				}
 				label := "Order"
@@ -183,6 +183,14 @@ func (s *Service) aiMetaCardPayload(j inboxSendJob) map[string]any {
 	}
 	cards := s.signAIProductCards(raw, j.Workspace, j.Thread, time.Now())
 	if len(cards) == 0 {
+		return nil
+	}
+	if aiSellingFixesEnabled() && strings.TrimSpace(j.Text) != "" && j.Channel != "wa" {
+		// Messenger: the reply text and its order buttons in one message. Instagram: the text alone.
+		// Either way the AI's reply is never replaced by a bare card.
+		if j.Channel == "ms" {
+			return aiMessengerButtons(j.Recipient, j.Text, cards)
+		}
 		return nil
 	}
 	if j.Channel == "wa" {
