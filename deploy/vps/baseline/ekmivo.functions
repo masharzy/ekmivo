@@ -268,7 +268,7 @@ dashboard_billing_quote|w uuid, a uuid, pid text, n integer|333bd03e4df27de2b0ae
 dashboard_billing_verified|w uuid, i uuid, p uuid, amount bigint, at_time timestamp with time zone, method text, suffix text|57d3edf86984d24c9c5a2ee0e9070213
 dashboard_checkout_logo|d text|939a7bbe99e2a5508d6cc4c97052c3e3
 dashboard_checkout_theme_read|w uuid, a uuid|756d0447c8e3cba6f1b4cdbb7320af28
-dashboard_checkout_theme_write|w uuid, a uuid, b jsonb, v bigint, logo_hash text, logo_png bytea|a444eff60e6572a18ab922e3633c79cb
+dashboard_checkout_theme_write|w uuid, a uuid, b jsonb, v bigint, logo_hash text, logo_png bytea|8c9596ad1aceead045ebb49d79127139
 dashboard_preferences|w uuid, a uuid, hidden boolean|2b234992b995714e52516c1d4fa558f6
 dashboard_store_on_workspace||c1616bae48f1187e851d5d1e908df0d6
 dashboard_store_read|w uuid, a uuid|291b620a0db4a787a8c92f218e1320b0
