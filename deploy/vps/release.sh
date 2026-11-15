@@ -99,7 +99,7 @@ done
 say '== 4. build (pinned Go image, exact commit)'
 out="$state/out-$commit"; mkdir -p "$out"
 if [ ! -s "$out/api" ] || [ ! -s "$out/financial-migrate" ]; then
-  docker run --rm -e CGO_ENABLED=0 -v "$src/backend":/src -v "$out":/out -v briofold-go-cache:/go -w /src "$go_image" \
+  docker run --rm -e CGO_ENABLED=0 -v "$src":/src:ro -v "$out":/out -v briofold-go-cache:/go -w /src/backend "$go_image" \
     sh -c 'go test ./cmd/financial-migrate -count=1 && go build -trimpath -o /out/api ./cmd/api && go build -trimpath -o /out/financial-migrate ./cmd/financial-migrate'
 fi
 [ -s "$out/api" ] && [ -s "$out/financial-migrate" ] || die 'build produced no binary'
