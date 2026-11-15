@@ -11,6 +11,11 @@
 --
 -- Every function below is replaced only if its current source is the expected production source (md5 of prosrc)
 -- or already this file's source; anything else stops the migration before any change. Running it twice is safe.
+--
+-- commerce_product_search carries SET pg_trgm.word_similarity_threshold. A non-superuser owner may set that parameter
+-- only after the pg_trgm library is loaded in the session (otherwise it is an unknown placeholder and CREATE FUNCTION
+-- fails with "permission denied to set parameter"). Calling one pg_trgm function loads it; nothing else changes.
+SELECT word_similarity('a','a');
 
 DO $m$
 DECLARE r record;
