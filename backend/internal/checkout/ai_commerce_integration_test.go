@@ -1044,7 +1044,7 @@ func TestAICommerceIntegration(t *testing.T) {
 		}
 
 		// A job that goes to review leaves one holding message for the customer.
-		thread, state, reason, _ = it.say("psid-0257-r", "hello?", "not json at all", "still not json")
+		thread, state, reason, _ = it.say("psid-0257-r", "hello?", `{"tool":"no_such_tool","args":{}}`, `{"tool":"no_such_tool","args":{}}`)
 		if state != "review" || it.one(it.admin, "SELECT count(*)::text FROM inbox_messages WHERE thread_id=$1::uuid AND sender='ai' AND content ? 'review_notice'", thread) != "1" {
 			t.Fatalf("review notice: state=%s reason=%s", state, reason)
 		}
