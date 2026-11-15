@@ -920,4 +920,69 @@ func TestAICommerceIntegration(t *testing.T) {
 		}
 	})
 
+	t.Run("percent coupon in basis points; services without stock, delivery or address (0256)", func(t *testing.T) {
+		fixture := *it
+		fixture.t = t
+		it := &fixture
+		t.Setenv("BRIOFOLD_AI_PAYMENTS_V2_ENABLED", "false")
+		t.Setenv("BRIOFOLD_AI_CHANNEL_COMMERCE_ENABLED", "false")
+		it.exec(it.admin, "UPDATE briofold_ai_channel_jobs SET state='cancelled' WHERE workspace_id=$1::uuid AND state IN ('queued','running')", it.ws)
+		it.exec(it.admin, "UPDATE commerce_ai_settings SET cod_enabled=true,cod_charge_minor=0,delivery_dhaka_minor=6000,delivery_outside_minor=12000 WHERE workspace_id=$1::uuid AND environment='live'", it.ws)
+		svc, _ := json.Marshal(map[string]any{"external_id": "IT-SVC", "name": "IT Payment Gateway", "category": "service", "search_aliases": []string{"gateway"},
+			"variants": []map[string]any{{"sku": "IT-SVC-M", "price_minor": 50000, "options": map[string]string{"plan": "monthly"}}}})
+		it.exec(it.admin, "SELECT commerce_catalog_write($1::uuid,'live',$2::uuid,gen_random_uuid(),$3::jsonb)", it.ws, it.user, string(svc))
+		it.exec(it.admin, "UPDATE commerce_products SET kind='service' WHERE workspace_id=$1::uuid AND external_id='IT-SVC'", it.ws)
+		vs := it.one(it.admin, "SELECT id::text FROM commerce_variants WHERE workspace_id=$1::uuid AND sku='IT-SVC-M'", it.ws)
+		shirt, _ := json.Marshal(map[string]any{"external_id": "IT-SHIRT", "name": "IT Coupon Shirt", "category": "shirt",
+			"variants": []map[string]any{{"sku": "IT-SHIRT-1", "price_minor": 100000, "stock": 3, "options": map[string]string{"size": "M"}}}})
+		it.exec(it.admin, "SELECT commerce_catalog_write($1::uuid,'live',$2::uuid,gen_random_uuid(),$3::jsonb)", it.ws, it.user, string(shirt))
+		vsh := it.one(it.admin, "SELECT id::text FROM commerce_variants WHERE workspace_id=$1::uuid AND sku='IT-SHIRT-1'", it.ws)
+		// 10% as the dashboard stores it: 1000 basis points.
+		it.exec(it.admin, `INSERT INTO commerce_coupons(workspace_id,environment,code,kind,value,usage_limit,per_customer_limit,expires_at) VALUES($1::uuid,'live','IT10','percent',1000,100,10,now()+interval '30 days')`, it.ws)
+		order := func(thread, cols string) string {
+			return it.one(it.admin, "SELECT "+cols+" FROM commerce_orders WHERE source='ai' AND source_id=$1::uuid ORDER BY created_at DESC LIMIT 1", thread)
+		}
+
+		// Coupon check states the percentage, not the stored basis points.
+		_, state, _, _ := it.say("psid-coupon", "IT10 coupon ache?", `{"tool":"check_coupon","args":{"code":"IT10"}}`, `{"reply":"IT10 gives 10% off."}`)
+		if r := fake.lastToolResult(); state != "completed" || !strings.Contains(r, `"percent_off":10`) || strings.Contains(r, "1000") {
+			t.Fatalf("check_coupon: state=%s result=%s", state, r)
+		}
+		// Product with a 10% coupon: 1000 - 100 + 60 delivery = 960 BDT, stock reserved.
+		thread, state, reason, _ := it.say("psid-coupon", "1ta shirt IT10 diye, Mirpur, 01711111111",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"area":"dhaka","coupon_code":"IT10","recipient":{"name":"IT","phone":"01711111111","address":"Mirpur"},"items":[{"variant_ref":"%s","quantity":1}]}}`, vsh),
+			`{"reply":"Total 960 taka."}`)
+		if got := order(thread, "subtotal_minor||'/'||coupon_discount_minor||'/'||shipping_minor||'/'||total_minor"); state != "completed" || got != "100000/10000/6000/96000" {
+			t.Fatalf("percent coupon order: state=%s reason=%s got=%s tool=%s", state, reason, got, fake.lastToolResult())
+		}
+		if it.one(it.admin, "SELECT reserved::text FROM commerce_stock WHERE variant_id=$1::uuid", vsh) != "1" {
+			t.Fatal("product stock not reserved")
+		}
+
+		// A service is found by search although it has no stock row, and says so with kind and no stock count.
+		thread, state, _, _ = it.say("psid-svc", "gateway er plan ki?", `{"tool":"search_products","args":{"query":"gateway"}}`, `{"reply":"Monthly 500 taka."}`)
+		if r := fake.lastToolResult(); state != "completed" || !strings.Contains(r, "IT Payment Gateway") || !strings.Contains(r, `"service"`) || !strings.Contains(r, "IT-SVC-M") {
+			t.Fatalf("service search: state=%s result=%s", state, r)
+		}
+		// Service-only order: no address, no delivery charge, no stock row touched; coupon applies.
+		_, state, reason, _ = it.say("psid-svc", "monthly nibo, Rahim, 01722222222, IT10",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"coupon_code":"IT10","recipient":{"name":"Rahim","phone":"01722222222"},"items":[{"variant_ref":"%s","quantity":1}]}}`, vs),
+			`{"tool":"ask_payment_choice","args":{"choice":"cod"}}`,
+			`{"reply":"Confirmed, 450 taka."}`)
+		if got := order(thread, "subtotal_minor||'/'||coupon_discount_minor||'/'||shipping_minor||'/'||total_minor||'/'||status"); state != "completed" || got != "50000/5000/0/45000/confirmed" {
+			t.Fatalf("service order: state=%s reason=%s got=%s tool=%s", state, reason, got, fake.lastToolResult())
+		}
+		if n := it.one(it.admin, "SELECT coalesce(sum(reserved),0)::text FROM commerce_stock WHERE variant_id=$1::uuid", vs); n != "0" {
+			t.Fatalf("service reserved stock: %s", n)
+		}
+		// Mixed order (service + product) still needs delivery and an address.
+		thread, state, _, _ = it.say("psid-mixed", "gateway ar shirt duita",
+			fmt.Sprintf(`{"tool":"upsert_order_draft","args":{"area":"outside","recipient":{"name":"K","phone":"01733333333"},"items":[{"variant_ref":"%s","quantity":1},{"variant_ref":"%s","quantity":1}]}}`, vs, vsh),
+			`{"tool":"ask_payment_choice","args":{"choice":"cod"}}`,
+			`{"reply":"Please send your address."}`)
+		if got := order(thread, "subtotal_minor||'/'||shipping_minor||'/'||status"); state != "completed" || got != "150000/12000/draft" || !strings.Contains(fake.lastToolResult(), "address_required") {
+			t.Fatalf("mixed order: state=%s got=%s tool=%s", state, got, fake.lastToolResult())
+		}
+	})
+
 }
