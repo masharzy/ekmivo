@@ -47,6 +47,7 @@ briofold_ai_payment_method|w uuid, e text, thread uuid, choice text|57dad32c5958
 briofold_ai_payment_record|cid uuid, amount bigint, account uuid|4d03612685c109acb2002e3e6abaea34
 briofold_ai_payment_settle|w uuid, e text, thread uuid, args jsonb|3015b7a61e95379d4685c34fb661687c
 briofold_ai_payment_tool|job uuid, lease uuid, step_no integer, tool_name text, args jsonb, args_redacted jsonb|4ca4a0bb4922c8ac5ad04549471fd540
+briofold_ai_presearch|job uuid, lease uuid, words text[]|92fcb653ade5d3f2e750949ca067cecb
 briofold_ai_public_product|p jsonb|4ed28032e1e22b47e3124cfa5e656167
 briofold_ai_public_variant|v jsonb|732762172b110c0f2142bc796e0524cb
 briofold_ai_rate_ok|w uuid, thread uuid, per_min integer, cap_minor bigint|0a8dd9fc8483f3657849fd0c72f9991d
