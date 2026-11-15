@@ -413,3 +413,11 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   proven on schema-only copies); the coordinator accepts CRLF-recorded checksums (0219–0226) and has a plan-only mode.
 - Still open: 24 h log watch; owner smoke test (Messenger, Orders page); `_retest_backup_*` tables and the open
   Postgres port are recorded in the runbook as known items. Every future release goes through `release.sh` only.
+
+## AI Lab — first runs (2026-11-15, branch lab/ai-lab, not merged, nothing deployed)
+- Harness: `backend/internal/checkout/ai_lab_test.go` (build tag `ailab`) drives the real `runStudioJob` path against real OpenRouter models in CI (`.github/workflows/ai-lab.yml`). It sets the same AI flags as the production API container and sends the reasoning field exactly as `aicredits.chatReasoning` does.
+- Root cause of "Alu ase?" with no tool call (production 11-14 and 11-15): in tool mode the system message still says "No tools are available" and "You cannot place or confirm an order", after the TOOL MODE prompt (`studio_execution.go` system string, `studioCapabilityPolicy`). Six of seven candidates, omni included, made no tool call on "Alu ase?" with production flags.
+- Other production findings: the reply language is guessed per message, so a name/number/address line gets an English reply in a Bengali shop; the safety filter replaces a reply that repeats the customer's own phone number with "I don't have verified contact details…"; replies show paisa amounts (tool results are in paisa); an empty shop is reported as `AI_CONTEXT_TOO_LARGE` (the error branch for "no grounded source"), outcome review, no model call.
+- Fix behind new flag `BRIOFOLD_AI_PROMPT_FIX_ENABLED` (default off = earlier behaviour, unit tests `TestPromptFix*`): tool-mode capability boundary without the text-only lines; Latin text that is not clearly English keeps Bengali for a Bengali shop or conversation; the customer's own number is allowed in a reply.
+- 4-scenario smoke, 1 repeat (run 43690195836): with the flag on, 5 of 7 candidates passed stock-oneword, order-cod and fake-trxid (failed in production arm). Full scenario run pending.
+- Open: paisa in replies (tool result format), empty-shop reason label. Needs owner: whether to turn the flag on in production after the full comparison.
