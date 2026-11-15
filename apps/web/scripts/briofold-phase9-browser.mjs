@@ -441,6 +441,14 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   assert.equal(clientThemeGets,0,"initial checkout theme was deferred to a fragile client refetch");
   const nextChoice=firstChoice==="studio"?"receipt":"studio";
   await page.locator(".ref-checkout-editor .themes button.th").filter({hasText:nextChoice==="studio"?"Studio":"Receipt"}).click();
+  // The preview must follow the picked theme (it used to stay on the first one when the iframe loaded before hydration).
+  const previewTheme=()=>page.frameLocator("#fr").locator("main").getAttribute("class");
+  for(let i=0;i<40&&!String(await previewTheme()).includes("tk-"+nextChoice);i++)await page.waitForTimeout(100);
+  assert.ok(String(await previewTheme()).includes("tk-"+nextChoice),"checkout preview did not follow the picked theme");
+  await page.locator(".ref-checkout-editor .themes button.th").filter({hasText:"Official"}).click();
+  for(let i=0;i<40&&!String(await previewTheme()).includes("of-gw");i++)await page.waitForTimeout(100);
+  assert.ok(String(await previewTheme()).includes("of-gw"),"checkout preview did not show the Official theme");
+  await page.locator(".ref-checkout-editor .themes button.th").filter({hasText:nextChoice==="studio"?"Studio":"Receipt"}).click();
   await page.getByRole("button",{name:"Save changes",exact:true}).click();
   await page.locator("#toast.on").getByText("Saved",{exact:true}).waitFor();
   const persistedTheme=await (await context.request.get(themeEndpoint)).json();
