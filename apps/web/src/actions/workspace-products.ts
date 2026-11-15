@@ -4,6 +4,7 @@ import {revalidatePath} from "next/cache";
 import {requireUser} from "../lib/server/auth";
 import {database} from "../lib/server/db";
 import {asText,safeLocale} from "../lib/server/validation";
+import {aiSignupOpen,aiInDevelopmentMessage} from "../lib/server/ai-availability";
 
 export type ServiceToggleState={status:"idle"|"error"|"success";message:string};
 
@@ -28,6 +29,7 @@ export async function setWorkspaceProduct(localeText:string,_old:ServiceToggleSt
     WHERE workspace_id=${workspace}::uuid AND product=${product} FOR UPDATE`;
    if(current.length!==1)return "unavailable";
    if(Boolean(current[0].enabled)===next)return "unchanged";
+   if(product==="ai"&&next&&!aiSignupOpen())return "in_development";
    const changes=await tx`UPDATE workspace_product_access SET enabled=${next},updated_at=now()
     WHERE workspace_id=${workspace}::uuid AND product=${product} RETURNING enabled`;
    if(changes.length!==1)return "unavailable";
@@ -37,6 +39,7 @@ export async function setWorkspaceProduct(localeText:string,_old:ServiceToggleSt
    return "changed";
   });
   if(result==="forbidden")return {status:"error",message:bn?"এই পরিবর্তনের অনুমতি নেই।":"Only an owner or admin can change business products."};
+  if(result==="in_development")return {status:"error",message:aiInDevelopmentMessage[locale]};
   if(result==="unavailable")return {status:"error",message:bn?"এই ব্যবসার সেবা কনফিগার করা হয়নি।":"Product configuration is unavailable."};
   revalidatePath(`/${locale}/businesses`);
   revalidatePath(`/${locale}/dashboard`);

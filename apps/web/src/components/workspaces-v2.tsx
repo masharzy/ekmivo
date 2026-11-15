@@ -56,11 +56,11 @@ function WorkspaceHeaderControls({locale,initialTheme}:{locale:Locale;initialThe
   </button>
  </div>;
 }
-export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initialTheme,selectedPlan="",embedded=false}:{embedded?:boolean;locale:Locale;user:{id:string;name:string};initialWorkspaces:Workspace[];initialDefault:string|null;initialTheme:Theme;selectedPlan?:string}){
+export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initialTheme,selectedPlan="",embedded=false,aiOpen=true}:{embedded?:boolean;locale:Locale;user:{id:string;name:string};initialWorkspaces:Workspace[];initialDefault:string|null;initialTheme:Theme;selectedPlan?:string;aiOpen?:boolean}){
  const t=copy[locale];const router=useRouter();
  const [rows,setRows]=useState(initialWorkspaces),[defaultId,setDefaultId]=useState(initialDefault);
  const [createOpen,setCreateOpen]=useState(false),[selected,setSelected]=useState<string|null>(null);
- const [name,setName]=useState(""),[rename,setRename]=useState(""),[mode,setMode]=useState<"ai"|"commerce"|"both">("both");
+ const [name,setName]=useState(""),[rename,setRename]=useState(""),[mode,setMode]=useState<"ai"|"commerce"|"both">(aiOpen?"both":"commerce");
  const [loadedDraftKey,setLoadedDraftKey]=useState(""),[createError,setCreateError]=useState(""),[manageError,setManageError]=useState("");
  const [creating,setCreating]=useState(false),[busy,setBusy]=useState<string|null>(null);
  const [confirmProduct,setConfirmProduct]=useState<Product|null>(null);
@@ -73,7 +73,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
  const active=rows.find(w=>w.id===selected)??null;
  const canManage=active?.role==="owner"||active?.role==="admin";
  useEffect(()=>{const timer=setTimeout(()=>{setRows(initialWorkspaces);setDefaultId(initialDefault)},0);return()=>clearTimeout(timer)},[initialWorkspaces,initialDefault]);
- useEffect(()=>{const timer=setTimeout(()=>{let saved=null;try{saved=parseSavedDraft(localStorage.getItem(draftKey))}catch{/* browser storage is optional */}setName(saved?saved.name.slice(0,60):"");setMode(saved?saved.mode:"both");setLoadedDraftKey(draftKey)},0);return()=>clearTimeout(timer)},[draftKey]);
+ useEffect(()=>{const timer=setTimeout(()=>{let saved=null;try{saved=parseSavedDraft(localStorage.getItem(draftKey))}catch{/* browser storage is optional */}setName(saved?saved.name.slice(0,60):"");setMode(!aiOpen?"commerce":saved?saved.mode:"both");setLoadedDraftKey(draftKey)},0);return()=>clearTimeout(timer)},[draftKey,aiOpen]);
  useEffect(()=>{if(!draftReady)return;try{localStorage.setItem(draftKey,encodeSavedDraft({name,mode}))}catch{/* silent */}},[name,mode,draftKey,draftReady]);
  useEffect(()=>{if(!toast)return;const timer=window.setTimeout(()=>setToast(""),2400);return()=>clearTimeout(timer)},[toast]);
  useEffect(()=>{const dialog=createDialog.current;if(!dialog)return;if(createOpen&&!dialog.open){previousFocus.current=document.activeElement as HTMLElement;dialog.showModal();requestAnimationFrame(()=>createName.current?.focus())}else if(!createOpen&&dialog.open){dialog.close();previousFocus.current?.focus()}},[createOpen]);
@@ -92,7 +92,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
     if(result.status==="success"&&result.workspace){
      setRows(old=>[{...result.workspace!,role:"owner" as const},...old]);
      if(rows.length===0)setDefaultId(result.workspace.id);
-     setName("");setMode("both");
+     setName("");setMode(aiOpen?"both":"commerce");
      try{localStorage.removeItem(draftKey)}catch{}
      setCreateOpen(false);setToast(t.created);router.refresh();
     }else setCreateError(result.message||t.tryAgain);
@@ -146,7 +146,7 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
     <div className="wk2-modal-header"><h2 id="wk2-create-title">{t.new}</h2><button type="button" aria-label={t.close} onClick={closeCreate}><Icon name="x"/></button></div>
     <label className="wk2-field-label" htmlFor="wk2-name">{t.name}</label><input ref={createName} id="wk2-name" className="wk2-input" name="name" value={name} onChange={e=>setName(e.target.value)} placeholder={t.example} maxLength={60} minLength={2} required autoComplete="off"/>
     <div className="wk2-options" role="radiogroup" aria-label={t.title}>
-     {serviceModes.map(option=><label className="wk2-option" key={option.id}><input type="radio" name="mode" value={option.id} checked={mode===option.id} onChange={()=>setMode(option.id)}/><Icon name={option.id==="commerce"?"pay":option.id}/><strong>{option.title}</strong><small>{option.desc}</small></label>)}
+     {serviceModes.map(option=>{const closed=!aiOpen&&option.id!=="commerce";return <label className={`wk2-option${closed?" wk2-closed":""}`} key={option.id} aria-disabled={closed||undefined}><input type="radio" name="mode" value={option.id} checked={mode===option.id} disabled={closed} onChange={()=>setMode(option.id)}/><Icon name={option.id==="commerce"?"pay":option.id}/><strong>{option.title}</strong><small>{option.desc}</small>{closed&&<em className="wk2-dev">{locale==="bn"?"ডেভেলপমেন্টে আছে":"In development"}</em>}</label>})}
     </div>
     {createError&&<p className="wk2-modal-error" role="alert">{createError}</p>}
     <div className="wk2-modal-footer"><span className="wk2-hint">{t.noPlan}</span><button type="button" className="wk2-button" onClick={closeCreate}>{t.cancel}</button><button type="submit" className="wk2-button wk2-primary" disabled={creating||name.trim().length<2}>{creating?(locale==="bn"?"তৈরি হচ্ছে…":"Creating…"):t.create}</button></div>
@@ -157,7 +157,8 @@ export function WorkspacesV2({locale,user,initialWorkspaces,initialDefault,initi
     <div className="wk2-rename"><label className="wk2-field-label" htmlFor="wk2-rename">{t.name}</label><div className="wk2-rename-row"><input className="wk2-input" id="wk2-rename" value={rename} maxLength={60} disabled={!canManage||Boolean(busy)} onChange={event=>setRename(event.target.value)}/><button className="wk2-button" type="button" onClick={saveRename} disabled={!canManage||Boolean(busy)||rename.trim().length<2||rename.trim()===active.name}>{locale==="bn"?"সংরক্ষণ":"Save"}</button></div></div>
     {([{key:"payments" as const,label:t.payProduct,desc:t.payProductHint},{key:"ai" as const,label:t.aiProduct,desc:t.aiProductHint}]).map(product=>{
      const checked=product.key==="payments"?(active.mode==="both"||active.mode==="commerce"):(active.mode==="both"||active.mode==="ai");
-     return <div className="wk2-product" key={product.key}><div><strong>{product.label}</strong><small>{product.desc}</small></div><button type="button" role="switch" className="wk2-switch" aria-label={product.label} aria-checked={checked} disabled={!canManage||Boolean(busy)} onClick={()=>toggle(product.key)}/></div>;
+     const closed=!aiOpen&&product.key==="ai"&&!checked;
+     return <div className="wk2-product" key={product.key}><div><strong>{product.label}</strong><small>{product.desc}</small>{closed&&<em className="wk2-dev">{locale==="bn"?"ডেভেলপমেন্টে আছে":"In development"}</em>}</div><button type="button" role="switch" className="wk2-switch" aria-label={product.label} aria-checked={checked} disabled={!canManage||Boolean(busy)||closed} onClick={()=>toggle(product.key)}/></div>;
     })}
     {manageError&&<p className="wk2-modal-error" role="alert">{manageError}</p>}
     <div className="wk2-modal-footer"><span className="wk2-hint">{t.access}</span>{active.id!==defaultId&&<button type="button" className="wk2-button" disabled={Boolean(busy)} onClick={makeDefault}>{t.makeDefault}</button>}<button type="button" className="wk2-button wk2-primary" onClick={closeManage} disabled={Boolean(busy)}>{t.done}</button></div>

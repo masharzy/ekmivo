@@ -21,7 +21,10 @@ test("Onboarding preserves the selected plan through the durable intent resume, 
 });
 test("AI-only and Both selection preserve the chosen value",()=>{
  const ui=read("components/briofold-onboarding-client.tsx");
- assert.match(ui,/defaultChecked=\{x\.key===mode\}/);
+ assert.match(ui,/defaultChecked=\{aiOpen\?x\.key===mode:x\.key==="commerce"\}/);
+ // AI Bot in development: AI and Both stay visible but cannot be chosen unless the business already has AI.
+ assert.match(ui,/disabled=\{closed\}/);
+ assert.match(read("app/[locale]/setup/page.tsx"),/aiOpen=\{aiSignupOpen\(\)\|\|workspace\.mode==="ai"\|\|workspace\.mode==="both"\}/);
  const submit=read("actions/briofold-onboarding.ts");
  assert.match(submit,/payment_plan_public\(\)/);
  assert.match(submit,/selected\.terms\.kind==="free"/);

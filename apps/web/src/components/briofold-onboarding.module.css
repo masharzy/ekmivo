@@ -12,3 +12,8 @@
 .notice{padding:13px;font-size:13px;line-height:1.5;color:var(--color-text-muted,#666);border-radius:8px;background:var(--color-hover,#f6f6f7)}
 .error{color:#b91c1c;font-size:13px}.submit{padding:12px;border-radius:9px;background:var(--color-text,#15161a);color:var(--color-surface,#fff);font-weight:600;cursor:pointer;min-height:44px}.submit:disabled{opacity:.6;cursor:wait}
 @media(max-width:540px){.page{padding:12px}.card{padding:21px}}
+
+/* AI Bot in development (owner decision 2026-11-15): option visible, not selectable */
+.option.closed{cursor:not-allowed;opacity:.72}
+.dev{justify-self:start;font-style:normal;font-size:11px;font-weight:600;line-height:1.4;padding:2px 8px;border-radius:999px;color:#92400e;background:#fef3c7;border:1px solid #fcd34d}
+@media(prefers-color-scheme:dark){.dev{color:#fbbf24;background:#3a2a05;border-color:#78530a}}

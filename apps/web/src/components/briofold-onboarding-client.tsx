@@ -19,11 +19,12 @@ const setupErrorBn:Record<string,string>={
  "Owner access required.":"শুধুমাত্র বর্তমান মালিক সেটআপ পরিবর্তন করতে পারবেন।",
  "This setup changed. Refresh and try again.":"সেটআপের অবস্থা বদলেছে। রিফ্রেশ করে আবার চেষ্টা করুন।",
  "Could not save setup. Check the details and retry.":"সেটআপ সংরক্ষণ করা যায়নি। তথ্য পরীক্ষা করে আবার চেষ্টা করুন।",
+ "AI Bot is in development. For now you can use the Payment Gateway.":"AI বট এখন ডেভেলপমেন্টে আছে। আপাতত পেমেন্ট গেটওয়ে ব্যবহার করতে পারবেন।",
 };
 const initial:SetupResult={status:"idle",message:""};
-export function BriofoldOnboardingClient({locale,step,businessId,businessName,mode,plans,selectedPlan="",gatewayPlansUnavailable=false}:{
+export function BriofoldOnboardingClient({locale,step,businessId,businessName,mode,plans,selectedPlan="",gatewayPlansUnavailable=false,aiOpen=true}:{
  businessId:string;locale:"bn"|"en";step:"business"|"services"|"billing";businessName:string;
- mode:"ai"|"commerce"|"both"|"off";plans:Plan[];selectedPlan?:string;gatewayPlansUnavailable?:boolean;
+ mode:"ai"|"commerce"|"both"|"off";plans:Plan[];selectedPlan?:string;gatewayPlansUnavailable?:boolean;aiOpen?:boolean;
 }){
  const bn=locale==="bn",t=(en:string,b:string)=>bn?b:en;
  const [result,action,pending]=useActionState(submitBriofoldSetup,initial);
@@ -60,10 +61,10 @@ export function BriofoldOnboardingClient({locale,step,businessId,businessName,mo
       {key:"ai",title:"AI Bot",desc:t("Inbox and AI assistance","ইনবক্স ও AI সহায়তা")},
       {key:"commerce",title:t("Payment Gateway","পেমেন্ট গেটওয়ে"),desc:t("Verified payments, links and invoices","পেমেন্ট যাচাই, লিংক ও ইনভয়েস")},
       {key:"both",title:t("Both services","দুটিই"),desc:t("One business dashboard, separate billing","এক Dashboard, আলাদা বিলিং")}
-     ].map(x=><label className={styles.option} key={x.key}>
-      <input type="radio" name="mode" value={x.key} defaultChecked={x.key===mode} required/>
-      <span><strong>{x.title}</strong><small>{x.desc}</small></span>
-     </label>)}
+     ].map(x=>{const closed=!aiOpen&&x.key!=="commerce";return <label className={`${styles.option}${closed?" "+styles.closed:""}`} key={x.key} aria-disabled={closed||undefined}>
+      <input type="radio" name="mode" value={x.key} defaultChecked={aiOpen?x.key===mode:x.key==="commerce"} disabled={closed} required/>
+      <span><strong>{x.title}</strong><small>{x.desc}</small>{closed&&<em className={styles.dev}>{t("In development","ডেভেলপমেন্টে আছে")}</em>}</span>
+     </label>})}
     </fieldset>}
     {step==="billing"&&<>
      {mode==="ai"?<div className={styles.notice}>{t("AI-only setup starts with no purchased credits. Paid AI requests require a funded wallet.","AI-only সেটআপে কেনা ক্রেডিট থাকে না। পেইড AI চালাতে আগে ওয়ালেট ফান্ড করতে হবে।")}</div>
