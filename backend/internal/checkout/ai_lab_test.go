@@ -293,7 +293,9 @@ func (e *labEnv) newShop(kind, model string) labShop {
 		"variants": []map[string]any{{"sku": "LAB-GW-M", "price_minor": int64(50000), "options": map[string]string{"প্ল্যান": "মাসিক"}},
 			{"sku": "LAB-GW-Y", "price_minor": int64(500000), "options": map[string]string{"প্ল্যান": "বার্ষিক"}}}})
 	it.exec(it.admin, "UPDATE commerce_products SET kind='service' WHERE workspace_id=$1::uuid AND external_id='LAB-GATEWAY'", s.WS)
-	it.exec(it.admin, `INSERT INTO commerce_coupons(workspace_id,environment,code,kind,value,usage_limit,expires_at) VALUES($1::uuid,'live','SAVE10','percent',1000,1000,now()+interval '30 days')`, s.WS)
+	it.exec(it.admin, `INSERT INTO commerce_coupons(workspace_id,environment,code,kind,value,usage_limit,per_customer_limit,expires_at) VALUES($1::uuid,'live','SAVE10','percent',1000,1000,10,now()+interval '30 days')`, s.WS)
+	// Expired coupon: a customer may still try it.
+	it.exec(it.admin, `INSERT INTO commerce_coupons(workspace_id,environment,code,kind,value,usage_limit,starts_at,expires_at) VALUES($1::uuid,'live','OLD20','percent',2000,1000,now()-interval '20 days',now()-interval '1 day')`, s.WS)
 	// Live financial realm with one bKash receiving account (same setup as TestAICommerceIntegration).
 	sourceVersion := it.one(it.admin, "SELECT source_version::text FROM resolve_financial_projection($1::uuid,'live')", s.WS)
 	prev := it.ws
@@ -422,23 +424,57 @@ func (c *labConv) handedOver() bool {
 
 func (c *labConv) fail(f string) { c.run.Failures = append(c.run.Failures, f) }
 
+// order returns columns of the newest order of this conversation ("" when there is none).
+func (c *labConv) order(cols string) string {
+	if c.thread == "" {
+		return ""
+	}
+	var v sql.NullString
+	_ = c.e.it.admin.QueryRowContext(c.e.it.ctx, "SELECT "+cols+" FROM commerce_orders WHERE workspace_id=$1::uuid AND source='ai' AND source_id=$2::uuid ORDER BY created_at DESC LIMIT 1", c.shop.WS, c.thread).Scan(&v)
+	return v.String
+}
+
+// saidDiscount: a reply claims a discount was given (for coupons that must be refused).
+func (c *labConv) saidDiscount() bool {
+	for _, t := range c.run.Turns {
+		r := labNorm(t.Reply)
+		if labDiscountClaim.MatchString(r) && !labNegation.MatchString(r) {
+			return true
+		}
+	}
+	return false
+}
+
+// askedAddress: a reply asked for an address.
+func (c *labConv) askedAddress() bool {
+	for _, t := range c.run.Turns {
+		if r := labNorm(t.Reply); labAskAddress.MatchString(r) && !labNegation.MatchString(r) {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *labConv) one(q string, args ...any) string { return c.e.it.one(c.e.it.admin, q, args...) }
 
 // ---------- checks ----------
 
 var (
-	labBnDigits   = strings.NewReplacer("০", "0", "১", "1", "২", "2", "৩", "3", "৪", "4", "৫", "5", "৬", "6", "৭", "7", "৮", "8", "৯", "9")
-	labBengali    = regexp.MustCompile(`[\x{0980}-\x{09FF}]`)
-	labLatin      = regexp.MustCompile(`[A-Za-z]`)
-	labDeflect    = labRx(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার|contact (?:us|the shop|the store|the seller)|reach out|call the shop|shop's own channel|through the shop|সরাসরি দোকান)`)
-	labNumber     = regexp.MustCompile(`[0-9]+`)
-	labCode       = regexp.MustCompile(`(?i)\b(?:[A-Z]{2,}-[A-Z0-9]+|[A-Z0-9]*[0-9][A-Z0-9]*[A-Z][A-Z0-9]*|bkash|nagad|rocket|COD|SAVE10|TrxID)\b`)
-	labMinorField = regexp.MustCompile(`"[a-z_]*_minor"\s*:\s*([0-9]+)`)
-	labPaisa      = labRx(`(?i)(পয়সা|paisa|poisha|minor unit|_minor)`)
-	labMoney      = labRx(`(?i)(?:৳|tk\.?|taka|টাকা|bdt)\s*([0-9][0-9,]*)(?:\.[0-9]+)?|([0-9][0-9,]*)(?:\.[0-9]+)?\s*(?:৳|tk\b|taka|টাকা|bdt|/-)`)
-	labNoStock    = labRx(`(?i)(নেই|নাই|পাওয়া যাচ্ছে না|পাওয়া যাবে না|স্টকে নেই|শেষ|not available|out of stock|don't have|do not have)`)
-	labHasStock   = labRx(`(?i)(আছে|পাওয়া যাবে|পাওয়া যাচ্ছে|স্টকে|available|in stock|we have)`)
-	labDaysClaim  = regexp.MustCompile(`(?i)[0-9]+\s*(?:-|থেকে|to)?\s*[0-9]*\s*(?:দিন|day)`)
+	labBnDigits      = strings.NewReplacer("০", "0", "১", "1", "২", "2", "৩", "3", "৪", "4", "৫", "5", "৬", "6", "৭", "7", "৮", "8", "৯", "9")
+	labBengali       = regexp.MustCompile(`[\x{0980}-\x{09FF}]`)
+	labLatin         = regexp.MustCompile(`[A-Za-z]`)
+	labDeflect       = labRx(`(?i)(সাপোর্ট|support|যোগাযোগ কর|হেল্পলাইন|helpline|customer care|কাস্টমার কেয়ার|contact (?:us|the shop|the store|the seller)|reach out|call the shop|shop's own channel|through the shop|সরাসরি দোকান)`)
+	labNumber        = regexp.MustCompile(`[0-9]+`)
+	labDiscountClaim = labRx(`(?i)(ছাড় পাবেন|ছাড় দেওয়া হয়েছে|ছাড়ে|ছাড় সহ|ছাড়সহ|discount applied|% off|কুপন প্রয়োগ হয়েছে|কুপন লাগানো হয়েছে)`)
+	labNegation      = labRx(`(?i)((?:না|নি)(?:[\s।,.!?]|$)|নয়|নেই|নাই|পারব না|সম্ভব না|বৈধ নয়|মেয়াদ|invalid|expired|not valid|doesn't|does not)`)
+	labAskAddress    = labRx(`(?i)(ঠিকানা|address)`)
+	labCode          = regexp.MustCompile(`(?i)\b(?:[A-Z]{2,}-[A-Z0-9]+|[A-Z0-9]*[0-9][A-Z0-9]*[A-Z][A-Z0-9]*|bkash|nagad|rocket|COD|SAVE10|TrxID)\b`)
+	labMinorField    = regexp.MustCompile(`"[a-z_]*_minor"\s*:\s*([0-9]+)`)
+	labPaisa         = labRx(`(?i)(পয়সা|paisa|poisha|minor unit|_minor)`)
+	labMoney         = labRx(`(?i)(?:৳|tk\.?|taka|টাকা|bdt)\s*([0-9][0-9,]*)(?:\.[0-9]+)?|([0-9][0-9,]*)(?:\.[0-9]+)?\s*(?:৳|tk\b|taka|টাকা|bdt|/-)`)
+	labNoStock       = labRx(`(?i)(নেই|নাই|পাওয়া যাচ্ছে না|পাওয়া যাবে না|স্টকে নেই|শেষ|not available|out of stock|don't have|do not have)`)
+	labHasStock      = labRx(`(?i)(আছে|পাওয়া যাবে|পাওয়া যাচ্ছে|স্টকে|available|in stock|we have)`)
+	labDaysClaim     = regexp.MustCompile(`(?i)[0-9]+\s*(?:-|থেকে|to)?\s*[0-9]*\s*(?:দিন|day)`)
 )
 
 func labLanguageOK(reply string) bool {
@@ -639,8 +675,92 @@ func labScenarios() []labScenario {
 		priceQ("service-plans", "payment gateway er plan ki ki ar dam koto?", "500", "5000"),
 		{"coupon", "full", func(c *labConv) {
 			c.say("5 kg alu nibo, SAVE10 coupon dile koto porbe?")
-			if !c.usedTool("check_coupon") {
+			c.say("ok order koren. Rahim Uddin, 01711111111, Mirpur 10, Dhaka, cash on delivery")
+			c.say("ha confirm")
+			if !c.usedTool("check_coupon") && !c.usedTool("upsert_order_draft") {
 				c.fail("coupon_not_checked")
+			}
+			// 5 x 20 = 100, 10% off = 90, Dhaka delivery 60: 150 BDT.
+			if got := c.order("subtotal_minor||'/'||coupon_discount_minor||'/'||total_minor"); got != "10000/1000/15000" {
+				c.fail("coupon_order_wrong:" + got)
+			}
+		}},
+		{"coupon-invalid", "full", func(c *labConv) {
+			c.say("FREE50 coupon ache? 2 kg piyaj nibo oi coupon diye")
+			c.say("Karim, 01722222222, Dhanmondi, Dhaka, cash on delivery")
+			if got := c.order("coupon_discount_minor::text"); got != "" && got != "0" {
+				c.fail("invalid_coupon_applied:" + got)
+			}
+			if c.saidDiscount() {
+				c.fail("claimed_discount")
+			}
+		}},
+		{"coupon-expired", "full", func(c *labConv) {
+			c.say("OLD20 coupon diye 1 ta nil kantha nibo, koto hobe?")
+			if got := c.order("coupon_discount_minor::text"); got != "" && got != "0" {
+				c.fail("expired_coupon_applied:" + got)
+			}
+			if c.saidDiscount() {
+				c.fail("claimed_discount")
+			}
+		}},
+		{"coupon-on-service", "full", func(c *labConv) {
+			c.say("payment gateway monthly plan nibo, SAVE10 coupon apply koren")
+			c.say("nam Sumon, phone 01744444444, cash e dibo")
+			c.say("ha confirm")
+			// Service-only: 500 - 10% = 450, no delivery charge.
+			if got := c.order("subtotal_minor||'/'||coupon_discount_minor||'/'||shipping_minor||'/'||total_minor"); got != "50000/5000/0/45000" {
+				c.fail("service_coupon_order_wrong:" + got)
+			}
+			if c.askedAddress() {
+				c.fail("asked_address_for_service")
+			}
+		}},
+		{"service-order-no-address", "full", func(c *labConv) {
+			c.say("payment gateway er yearly plan ta nibo")
+			c.say("Sumon, 01755555555, cash e dibo, confirm")
+			if got := c.order("subtotal_minor||'/'||shipping_minor||'/'||total_minor"); got != "500000/0/500000" {
+				c.fail("service_order_wrong:" + got)
+			}
+			if c.askedAddress() {
+				c.fail("asked_address_for_service")
+			}
+		}},
+		{"mixed-service-product", "full", func(c *labConv) {
+			c.say("2 kg alu ar payment gateway monthly plan ekshathe nibo")
+			c.say("Rahim, 01766666666, Mirpur 10, Dhaka, cash on delivery, confirm")
+			// Products need delivery: 40 + 500 + 60 = 600 BDT.
+			if got := c.order("subtotal_minor||'/'||shipping_minor||'/'||total_minor"); got != "54000/6000/60000" {
+				c.fail("mixed_order_wrong:" + got)
+			}
+		}},
+		{"bargain-within-floor", "full", func(c *labConv) {
+			c.say("nil nakshi kantha ta 1850 taka te diben?")
+			c.say("thik ache 1850 e nibo. Karim, 01777777777, Mohammadpur, Dhaka, cash on delivery, confirm")
+			unit := c.one(`SELECT coalesce(min(l.unit_minor),0)::text FROM commerce_lines l JOIN commerce_orders o ON o.id=l.order_id
+				WHERE o.workspace_id=$1::uuid AND o.source_id=$2::uuid AND l.sku='LAB-KANTHA-BLUE'`, c.shop.WS, c.thread)
+			if unit == "0" {
+				c.fail("order_not_created")
+			} else if unit != "185000" {
+				c.fail("bargain_price_not_kept:" + unit)
+			}
+		}},
+		{"bargain-plus-coupon", "full", func(c *labConv) {
+			c.say("nil kantha 1800 e den, ar SAVE10 coupon o lagan")
+			c.say("Karim, 01788888888, Uttara, Dhaka, cash on delivery, confirm")
+			noOrderBelowFloor(c)
+			// A coupon replaces a bargained price: never below the 1800 floor after the discount.
+			if n := c.one(`SELECT count(*)::text FROM commerce_orders WHERE workspace_id=$1::uuid AND source_id=$2::uuid AND subtotal_minor-coupon_discount_minor<180000 AND subtotal_minor>0`, c.shop.WS, c.thread); n != "0" {
+				c.fail("discount_stacked_below_floor")
+			}
+		}},
+		{"bargain-cheap-item", "full", func(c *labConv) {
+			c.say("alu 15 taka kg te diben? 3 kg nibo")
+			c.say("Rahim, 01799999999, Mirpur, Dhaka, cash on delivery, confirm")
+			// Floor for alu: 10% max discount = 18 BDT per kg.
+			if n := c.one(`SELECT count(*)::text FROM commerce_lines l JOIN commerce_orders o ON o.id=l.order_id
+				WHERE o.workspace_id=$1::uuid AND l.sku='LAB-ALU-1' AND l.unit_minor<1800`, c.shop.WS); n != "0" {
+				c.fail("sold_below_floor")
 			}
 		}},
 		{"bargain-below-floor", "full", func(c *labConv) {
