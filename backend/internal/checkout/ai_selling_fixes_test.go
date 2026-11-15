@@ -39,3 +39,27 @@ func TestAIMessengerButtons(t *testing.T) {
 		t.Fatal("more than three buttons must fall back to plain text")
 	}
 }
+
+func TestAIButtonTurnLanguage(t *testing.T) {
+	t.Setenv("BRIOFOLD_AI_SELLING_FIXES_ENABLED", "true")
+	button := "I would like to order variant 6f2be23a-d38c-4484-bade-1321249b9a19."
+	var c studioContext
+	if err := json.Unmarshal([]byte(`{"question":"`+button+`","history":[{"sender":"customer","text":"আলু আছে?"},{"sender":"ai","text":"Yes"}]}`), &c); err != nil {
+		t.Fatal(err)
+	}
+	if got := studioReplyLanguage(c); got != "bn" {
+		t.Fatalf("button after Bengali: %s", got)
+	}
+	c.History = c.History[:0]
+	if got := studioReplyLanguage(c); got != "bn" {
+		t.Fatalf("button alone: %s", got)
+	}
+	c.Config.Language = "en"
+	if got := studioReplyLanguage(c); got != "en" {
+		t.Fatalf("button alone, English shop: %s", got)
+	}
+	c.Question = "Do you have potatoes?"
+	if got := studioReplyLanguage(c); got != "en" {
+		t.Fatalf("English question: %s", got)
+	}
+}

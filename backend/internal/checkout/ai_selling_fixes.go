@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -181,4 +182,23 @@ func (s *Service) runAITestLoop(ctx context.Context, req aicredits.Request, lang
 	}
 	out.Text = aiHandoverText(lang)
 	return out, nil
+}
+
+// aiOrderButtonText is the text an order button sends (aiOrderButtonTurn). The customer did not type it, so it
+// says nothing about the customer's language (observed: an English reply after a Bengali conversation).
+var aiOrderButtonText = regexp.MustCompile(`^I would like to order variant [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.$`)
+
+func aiWithoutButtonTurns(c studioContext) studioContext {
+	if aiOrderButtonText.MatchString(strings.TrimSpace(c.Question)) {
+		c.Question = ""
+	}
+	h := c.History[:0:0]
+	for _, m := range c.History {
+		if m.Sender == "customer" && aiOrderButtonText.MatchString(strings.TrimSpace(m.Text)) {
+			continue
+		}
+		h = append(h, m)
+	}
+	c.History = h
+	return c
 }
