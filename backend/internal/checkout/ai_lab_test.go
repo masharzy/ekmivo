@@ -232,7 +232,7 @@ func (e *labEnv) newShop(kind, model string) labShop {
 	s.WS = it.one(it.admin, "INSERT INTO workspaces(name,service_mode,created_by) VALUES($1,'both',$2::uuid) RETURNING id::text", s.Name, s.User)
 	it.exec(it.admin, "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1::uuid,$2::uuid,'owner')", s.WS, s.User)
 	planID := "ci_ai_lab_" + strings.ReplaceAll(newUUID(), "-", "")[:12]
-	terms := `{"name":"AI Lab plan","kind":"free","amount_minor":0,"period_days":30,"grace_days":3,"free_days":30,"payment_limit":null,"quota_period":"billing","active_checkout_limit":100,"create_per_minute":120,"features":{"invoices":true,"payment_links":true,"payment_api":true,"pos":true,"auto_reply":true,"team_members":10,"devices":5,"webhooks":true,"export":true,"ai_credits_minor":0}}`
+	terms := `{"name":"AI Lab plan","kind":"free","amount_minor":0,"period_days":30,"grace_days":3,"free_days":30,"payment_limit":null,"quota_period":"billing","active_checkout_limit":100,"create_per_minute":120,"features":{"invoices":true,"payment_links":true,"reports":true,"exports":true},"limits":{"api_keys":null,"team_members":null,"devices":null,"payment_methods":null}}`
 	it.exec(it.admin, "INSERT INTO pg13_plans(id,name,amount_minor,period_days,grace_days,enabled) VALUES($1,'AI Lab plan',0,30,3,false)", planID)
 	version := it.one(it.admin, "INSERT INTO payment_plan_versions(plan_id,version,terms,created_by) VALUES($1,1,payment_plan_validate($2::jsonb),$3::uuid) RETURNING id::text", planID, terms, s.User)
 	it.exec(it.admin, "INSERT INTO pg13_subscriptions(workspace_id,plan_id,plan_version_id,paid_until,grace_until) VALUES($1::uuid,$2,$3::uuid,now()+interval '30 days',now()+interval '33 days')", s.WS, planID, version)
