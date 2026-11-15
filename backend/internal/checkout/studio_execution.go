@@ -438,7 +438,7 @@ func (s *Service) runStudioJob(ctx context.Context) {
 		if toolMode {
 			var loop aiLoopResult
 			s.aiAddOrderMemory(run, &request, job.ID, job.Lease)
-			loop, runErr = s.runAIToolLoop(run, request, job.ID, job.Lease, studioReplyLanguage(job.Context), job.Context.Question)
+			loop, runErr = s.runAIToolLoop(run, request, job.ID, job.Lease, studioReplyLanguage(job.Context))
 			result, handover, acted = loop.Result, loop.Handover, loop.Acted
 			checkoutOrder = loop.CheckoutOrder
 			// Tool results are business facts for the contact/number check of the safety filter.
