@@ -21,6 +21,8 @@ func aiSellingFixesEnabled() bool { return os.Getenv("BRIOFOLD_AI_SELLING_FIXES_
 const aiSellingFixesRule = "\nAMOUNTS: every *_minor value in a TOOL_RESULT also comes as *_bdt in taka. Tell the customer only the *_bdt amounts (with টাকা or BDT); never convert *_minor yourself and never mention paisa." +
 	"\nORDERS: if upsert_order_draft returns order_already_placed, tell the customer their order is already placed (reference and total from the result) and do not create another. Only if the customer clearly asks for an additional, separate order, call upsert_order_draft with \"new_order\":true." +
 	"\nSTOCK: search results include items that are out of stock now (available 0). Say they are out of stock now; never say the shop does not sell them." +
+	"\nBARGAINING: when quote_price returns final_offer false, present unit_bdt as your counter offer for now; never call it the last, final, lowest or minimum price. Only when final_offer is true say it is the last price." +
+	"\nLANGUAGE: \"I would like to order variant <UUID>\" is sent by an order button, not typed by the customer. Reply in the language of the customer's own messages; if there are none, reply in Bengali." +
 	"\nSEARCH: if search_products finds nothing, search again with the Bengali spelling and with the English name (for example alu, then আলু, then potato) before saying the item is not available."
 
 // aiAddBDT adds a *_bdt string beside every whole-number *_minor value, recursively, so the model never has to

@@ -1043,6 +1043,15 @@ func TestAICommerceIntegration(t *testing.T) {
 			t.Fatalf("floor after four rounds: %s", last)
 		}
 
+		// From the second round, an offer at or above the next counter is accepted instead of dragging it out.
+		near := func(offer int) string {
+			_, _, _, _ = it.say("psid-0257-n", "kom hobe?", fmt.Sprintf(`{"tool":"quote_price","args":{"variant_ref":"%s","offer_minor":%d}}`, shirt, offer), `{"reply":"..."}`)
+			return fake.lastToolResult()
+		}
+		if r1, r2 := near(85000), near(85000); !strings.Contains(r1, "95000") || !strings.Contains(r2, `"unit_minor": 85000`) && !strings.Contains(r2, `"unit_minor":85000`) {
+			t.Fatalf("near offer: first=%s second=%s", r1, r2)
+		}
+
 		// A job that goes to review leaves one holding message for the customer.
 		thread, state, reason, _ = it.say("psid-0257-r", "hello?", `{"tool":"no_such_tool","args":{}}`, `{"tool":"no_such_tool","args":{}}`)
 		if state != "review" || it.one(it.admin, "SELECT count(*)::text FROM inbox_messages WHERE thread_id=$1::uuid AND sender='ai' AND content ? 'review_notice'", thread) != "1" {
