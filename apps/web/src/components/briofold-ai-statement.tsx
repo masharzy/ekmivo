@@ -12,6 +12,7 @@ export function BriofoldAiStatement({workspaceId,locale,initial,nextCursor}:{wor
   verified_topup:["Verified top-up","যাচাইকৃত টপ-আপ"],
   reserve:["Reserved","রিজার্ভ"],settle:["Usage charge","AI ব্যবহারের খরচ"],
   release:["Released","রিজার্ভ ফেরত"],correction:["Admin adjustment","অ্যাডমিন সমন্বয়"],
+  free_grant:["Free credit","ফ্রি ক্রেডিট"],
  };
  async function loadMore(){
   if(busy||!cursor)return;

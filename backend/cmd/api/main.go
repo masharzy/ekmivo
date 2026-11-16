@@ -212,6 +212,11 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 		r.SetPathValue("aiCreditAction", "purchase")
 		pay.HandleAICreditTopup(w, r)
 	})
+	// One-time free credit; flag BRIOFOLD_AI_FREE_CREDIT_ENABLED, amount fixed in SQL (0259).
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai-credits/free", func(w http.ResponseWriter, r *http.Request) {
+		r.SetPathValue("aiCreditAction", "free")
+		pay.HandleAICreditTopup(w, r)
+	})
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/ai-credits/{topupID}/reconcile", func(w http.ResponseWriter, r *http.Request) {
 		r.SetPathValue("aiCreditAction", "reconcile")
 		pay.HandleAICreditTopup(w, r)

@@ -24,7 +24,8 @@ export async function BriofoldAiCreditSummary({workspaceId,actorId,locale,standa
      :wallet.available_minor===0
       ?t("No credits left. AI replies are paused; your inbox and payments keep working.","ক্রেডিট শেষ। AI উত্তর বন্ধ; ইনবক্স ও পেমেন্ট চলবে।")
       :t("Balance is too low for even the smallest AI reply.","ব্যালেন্স সবচেয়ে ছোট AI উত্তরের জন্যও কম।")+" "+t("Minimum:","সর্বনিম্ন:")+" "+money(wallet.minimum_request_minor)}</div>}
-   <BriofoldAiTopupControls workspaceId={workspaceId} locale={locale} enabled={process.env.BRIOFOLD_AI_TOPUPS_ENABLED==="true"} topups={wallet.topups}/>
+   <BriofoldAiTopupControls workspaceId={workspaceId} locale={locale} enabled={process.env.BRIOFOLD_AI_TOPUPS_ENABLED==="true"} topups={wallet.topups}
+    freeEnabled={process.env.BRIOFOLD_AI_FREE_CREDIT_ENABLED==="true"&&!wallet.entries.some(e=>e.kind==="free_grant")}/>
    <BriofoldAiStatement key={workspaceId} workspaceId={workspaceId} locale={locale} initial={wallet.entries} nextCursor={wallet.next_cursor}/>
    <p className={styles.note}>{t("Credits are added only after a verified payment or an authorized grant.","ক্রেডিট শুধু যাচাইকৃত পেমেন্ট বা অনুমোদিত গ্রান্টের পর যোগ হয়।")}</p>
   </>}
