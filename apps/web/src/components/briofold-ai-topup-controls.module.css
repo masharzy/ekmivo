@@ -9,17 +9,18 @@
 .amountRow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .money{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 12px;border:1px solid var(--line,var(--color-border));border-radius:8px;background:var(--panel,var(--color-surface))}
 .money span{color:var(--mut,var(--color-text-muted))}
-.money input{width:96px;border:0;outline:0;background:transparent;color:var(--txt,var(--color-text));font:inherit;font-variant-numeric:tabular-nums}
+.root .money input{width:96px;height:38px;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;background:transparent;-moz-appearance:textfield;appearance:textfield;color:var(--txt,var(--color-text));font:inherit;font-variant-numeric:tabular-nums}
 .money:focus-within{border-color:var(--acc)}
 .root button{font:inherit;font-size:13px;height:40px;padding:0 14px;border-radius:8px;cursor:pointer;border:1px solid var(--line,var(--color-border))}
 .root button:disabled{opacity:.6;cursor:wait}
-.chip{background:var(--panel,var(--color-surface));color:var(--txt,var(--color-text))}
-.chip:hover:not(:disabled){background:var(--hover)}
-.chip.on{border-color:var(--acc);color:var(--acc);background:var(--accb,transparent)}
-.primary{background:var(--txt,var(--color-text));color:var(--panel,var(--color-surface));border-color:var(--txt,var(--color-text))!important;font-weight:500}
-.secondary{background:var(--panel,var(--color-surface));color:var(--txt,var(--color-text));font-weight:500}
+.root .chip{background:var(--panel,var(--color-surface));color:var(--txt,var(--color-text))}
+.root .chip:hover:not(:disabled){background:var(--hover)}
+.root .chip.on{border-color:var(--acc);color:var(--acc);background:var(--accb,transparent)}
+.root .primary{background:var(--txt,var(--color-text));color:var(--panel,var(--color-surface));border-color:var(--txt,var(--color-text))!important;font-weight:500}
+.root .secondary{background:var(--panel,var(--color-surface));color:var(--txt,var(--color-text));font-weight:500}
 .history{border:1px solid var(--line,var(--color-border));border-radius:9px;overflow:hidden}
 .row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line,var(--color-border));font-size:12.5px}
 .row:last-child{border-bottom:0}
 .root .error{color:#dc2626}
-@media(max-width:520px){.root{padding:16px}.primary{flex:1 1 100%}}
+@media(max-width:520px){.root{padding:16px}.root .root .primary{flex:1 1 100%}}
+.root .money input::-webkit-outer-spin-button,.root .money input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
