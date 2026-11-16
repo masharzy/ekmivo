@@ -1,15 +1,18 @@
-.statement{margin-top:18px;border-top:1px solid var(--color-border);padding-top:16px}
+.statement{margin-top:18px;border-top:1px solid var(--line,var(--color-border));padding-top:16px}
 .statement summary{font-size:13px;font-weight:600;cursor:pointer;line-height:1.5}
 .statement summary:focus-visible,.more:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
-.statement p{margin:12px 0;font-size:13px;color:var(--color-text-muted)}
+.statement p{margin:12px 0;font-size:13px;color:var(--mut,var(--color-text-muted))}
 .tableScroll{max-width:100%;overflow-x:auto;margin-top:12px}
 .tableScroll table{border-collapse:collapse;min-width:570px;width:100%;font-size:12px}
-.tableScroll th,.tableScroll td{padding:10px 9px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--color-border)}
-.tableScroll th{color:var(--color-text-muted);font-weight:600;white-space:nowrap}
+.tableScroll th,.tableScroll td{padding:10px 9px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--line,var(--color-border))}
+.tableScroll th{color:var(--mut,var(--color-text-muted));font-weight:600;white-space:nowrap}
 .tableScroll td{white-space:nowrap}
 .numeric{text-align:right!important;font-variant-numeric:tabular-nums}
-.more{margin-top:12px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:10px 14px;cursor:pointer;font-size:12px}
-.more:hover:not(:disabled){background:var(--color-hover)}.more:disabled{opacity:.6;cursor:wait}
+.more{margin-top:12px;border:1px solid var(--line,var(--color-border));background:var(--panel,var(--color-surface));color:var(--txt,var(--color-text));border-radius:8px;padding:10px 14px;cursor:pointer;font-size:12px}
+.more:hover:not(:disabled){background:var(--hover,var(--color-hover))}.more:disabled{opacity:.6;cursor:wait}
 .statement .error{color:var(--color-danger,#b42318)}
 @media(max-width:520px){.tableScroll table{min-width:520px}}
 .statement .note{margin:8px 0 0;font-size:12px;line-height:1.5}
+.open{margin-top:0;border-top:1px solid var(--line);padding:18px 20px}
+.open h3{margin:0 0 4px;font-size:15px;font-weight:600}
+.open .tableScroll{margin-top:8px}
