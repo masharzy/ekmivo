@@ -8,7 +8,7 @@ export const dynamic="force-dynamic";
 export async function GET(){
  const headers={"Cache-Control":"no-store"};
  const observedAt=new Date().toISOString();
- let origin:string|null=null;
+ let origin:URL|null=null;
  try{origin=goOrigin()}catch{origin=null}
  if(!origin)return Response.json(fallbackServiceStatus("unknown",observedAt),{headers});
  try{
