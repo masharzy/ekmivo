@@ -19,6 +19,7 @@ import (
 	"github.com/masharzy/briofold/backend/internal/authz"
 	"github.com/masharzy/briofold/backend/internal/checkout"
 	"github.com/masharzy/briofold/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/servicehealth"
 	"github.com/masharzy/briofold/backend/internal/workerruntime"
 )
 
@@ -33,6 +34,38 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
+// observed records whether a platform-side handler answered without a server
+// error. Client errors (4xx) are the caller's problem and are not recorded.
+func observed(c servicehealth.Component, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		h(rec, r)
+		if rec.status >= 500 {
+			servicehealth.Result(c, false)
+		} else if rec.status < 400 {
+			servicehealth.Result(c, true)
+		}
+	}
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+	wrote  bool
+}
+
+func (s *statusRecorder) WriteHeader(code int) {
+	if !s.wrote {
+		s.status, s.wrote = code, true
+	}
+	s.ResponseWriter.WriteHeader(code)
+}
+func (s *statusRecorder) Write(b []byte) (int, error) {
+	s.wrote = true
+	return s.ResponseWriter.Write(b)
+}
+func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
+
 func merchantError(w http.ResponseWriter, status int, code, message string, retryable bool) {
 	id := make([]byte, 12)
 	if _, err := rand.Read(id); err != nil {
@@ -105,14 +138,14 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/platform/channel-config", pay.HandleChannelPlatform)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/inbox-channel-status", pay.HandleChannelReadiness)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-telegram", pay.HandleTelegramConnect)
-	mux.HandleFunc("POST /v1/channels/telegram/{botID}/webhook", pay.HandleTelegramWebhook)
+	mux.HandleFunc("POST /v1/channels/telegram/{botID}/webhook", observed(servicehealth.Chat, pay.HandleTelegramWebhook))
 	mux.HandleFunc("GET /v1/channels/meta/callback", pay.HandleInboxOAuthCallback)
 	mux.HandleFunc("GET /v1/channels/media/{mediaID}", pay.HandleInboxMedia)
 	mux.HandleFunc("POST /v1/channels/upload/{mediaID}", pay.HandleInboxUpload)
 	mux.HandleFunc("OPTIONS /v1/channels/upload/{mediaID}", pay.HandleInboxUpload)
 	mux.HandleFunc("POST /v1/channels/woocommerce/{sourceID}", pay.HandleWooWebhook)
 	mux.HandleFunc("GET /v1/channels/meta/webhook", pay.HandleInboxWebhook)
-	mux.HandleFunc("POST /v1/channels/meta/webhook", pay.HandleInboxWebhook)
+	mux.HandleFunc("POST /v1/channels/meta/webhook", observed(servicehealth.Chat, pay.HandleInboxWebhook))
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/inbox-connections", pay.HandleInboxConnection)
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/mobile-devices", pay.HandleMobileDevices)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/mobile-devices", pay.HandleMobileDevices)
@@ -204,7 +237,7 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/operations/{resource}/{resourceID}", pay.HandleOperations)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/operations/{resource}", pay.HandleOperations)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/operations/{resource}/{resourceID}/{action}", pay.HandleOperations)
-	mux.HandleFunc("POST /v1/device/{action}", pay.HandleDevice)
+	mux.HandleFunc("POST /v1/device/{action}", observed(servicehealth.SMS, pay.HandleDevice))
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/linked-sources", pay.HandleSources)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/linked-sources", pay.HandleSources)
 	// Public merchant integration: resolve tenant/realm from the authenticated API key.
@@ -294,6 +327,22 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 			return
 		}
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready", "reason": "financial_release_verification_pending"})
+	})
+	// Public per-service status for the /status page. Flag off: 404, as before.
+	mux.HandleFunc("GET /v1/status/services", func(w http.ResponseWriter, r *http.Request) {
+		if os.Getenv("BRIOFOLD_SERVICE_STATUS_ENABLED") != "true" {
+			http.NotFound(w, r)
+			return
+		}
+		payments := servicehealth.Down
+		if os.Getenv("PG10_EXTENSIONS_ENABLED") == "true" && pay.OperationalReadiness(r.Context()) {
+			payments = servicehealth.Operational
+		}
+		services := map[string]servicehealth.State{"payments": payments}
+		for c, state := range servicehealth.Default().Snapshot() {
+			services[string(c)] = state
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"services": services, "observed_at": time.Now().UTC().Format(time.RFC3339)})
 	})
 	identify := func(r *http.Request) (authz.Principal, error) {
 		if repo == nil {
@@ -495,6 +544,8 @@ func main() {
 	runtimeContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if pg05 != nil && pg05.Pipeline != nil {
+		servicehealth.Enable(servicehealth.SMS, 0)
+		servicehealth.Enable(servicehealth.Chat, 0)
 		go pg05.RunInboxRealtime(runtimeContext)
 		go pg05.RunMetaCustomerNames(runtimeContext)
 	}
@@ -513,6 +564,9 @@ func main() {
 	workerConfigs, workerErr := workerruntime.HostedConfigs(os.Getenv)
 	if workerErr != nil {
 		log.Printf("API hosted workers not started: %v", workerErr)
+	}
+	if workerErr == nil && len(workerConfigs) > 0 {
+		servicehealth.Enable(servicehealth.Webhooks, 0)
 	}
 	group := workerruntime.StartHosted(runtimeContext, workerConfigs)
 	projectionConfig, projectionErr := workerruntime.HostedProjectionConfig(os.Getenv)

@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/masharzy/briofold/backend/internal/aicredits"
+	"github.com/masharzy/briofold/backend/internal/servicehealth"
 )
 
 type studioContext struct {
@@ -362,6 +363,7 @@ func (s *Service) RunStudioAI(ctx context.Context) {
 	if !s.studioReady() {
 		return
 	}
+	servicehealth.Enable(servicehealth.AI, 30*time.Second)
 	go s.runStudioMediaProbe(ctx)
 	var workers sync.WaitGroup
 	for i := 0; i < 4; i++ {
@@ -375,6 +377,7 @@ func (s *Service) RunStudioAI(ctx context.Context) {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
+					servicehealth.Beat(servicehealth.AI)
 					s.runStudioJob(ctx)
 				}
 			}
@@ -503,7 +506,12 @@ func (s *Service) runStudioJob(ctx context.Context) {
 			if errors.Is(runErr, errAIToolOutput) {
 				reason = "AI_INVALID_OUTPUT"
 			}
+			// Only platform failures count; a shop's balance or request size is not an outage.
+			if reason == "AI_RUNTIME_UNAVAILABLE" || reason == "AI_REQUEST_UNKNOWN" {
+				servicehealth.Result(servicehealth.AI, false)
+			}
 		} else {
+			servicehealth.Result(servicehealth.AI, true)
 			// In tool mode a successful order/payment tool lets the reply describe what was actually done.
 			body = studioSafeReplyMode(job.Context, result.Text, toolMode && acted)
 			if !utf8.ValidString(body) || strings.TrimSpace(body) == "" || utf8.RuneCountInString(body) > 8000 {
