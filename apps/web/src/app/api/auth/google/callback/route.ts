@@ -25,7 +25,12 @@ export async function GET(request:NextRequest){
   const code=params.get("code");if(!code||code.length>4096)throw Error("GOOGLE_CODE_INVALID");
   if(flow.mode==="signin"&&await currentUser())return finish("/businesses/open");
   const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",cache:"no-store",signal:AbortSignal.timeout(10000),headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:config.clientId,client_secret:config.clientSecret,code,code_verifier:flow.verifier,grant_type:"authorization_code",redirect_uri:config.callback})});
-  if(!response.ok)throw Error("GOOGLE_EXCHANGE_FAILED");
+  if(!response.ok){
+   // Google's own error word (e.g. invalid_client, redirect_uri_mismatch) has no user data.
+   const failure=await response.json().catch(()=>null) as {error?:unknown}|null;
+   const word=typeof failure?.error==="string"&&/^[a-z_]{1,64}$/.test(failure.error)?failure.error:"unknown";
+   throw Error("GOOGLE_EXCHANGE_FAILED:"+response.status+":"+word);
+  }
   const body:unknown=await response.json();
   if(!body||typeof body!=="object"||!("id_token" in body)||typeof body.id_token!=="string"||body.id_token.length>16384)throw Error("GOOGLE_TOKEN_INVALID");
   const identity=await verifyGoogleIdToken(body.id_token,flow.nonce,config.clientId);
@@ -41,7 +46,9 @@ export async function GET(request:NextRequest){
   else if(code==="GOOGLE_EMAIL_MISMATCH")reason="email-mismatch";
   else if(code==="GOOGLE_EMAIL_SIGNUP_REQUIRED")reason="email-signup";
   // Never log authorization codes, tokens, provider responses or user emails.
-  console.error("[google login]",reason);
+  // Only our fixed step codes or the error class name: never codes, tokens or emails.
+  const step=/^GOOGLE_[A-Z_]+(:\d{3}:[a-z_]+)?$/.test(code)?code:(error instanceof Error?error.name:"unknown");
+  console.error("[google login]",reason,step);
   return finish(destination+"?google="+reason);
  }
 }
