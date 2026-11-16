@@ -43,13 +43,13 @@ export function pricingPlans(offers:readonly PublishedSubscriptionOffer[],plans:
  for(const [version,g] of groups){
   const base=g.monthly||g.yearly!;
   const terms=byVersion.get(version)?.terms;
-  out.push({id:version,name:base.name,nameBn:base.name_bn||base.name,description:base.description||terms?.description||"",descriptionBn:base.description_bn||terms?.description_bn||"",
+  out.push({id:version,name:base.name.trim(),nameBn:(base.name_bn||base.name).trim(),description:base.description||terms?.description||"",descriptionBn:base.description_bn||terms?.description_bn||"",
    free:false,custom:false,contactUrl:"",monthly:option(g.monthly),yearly:option(g.yearly),bullets:bullets(terms)});
  }
  for(const p of plans){
   if(groups.has(p.version_id))continue;
   const t=p.terms;
-  out.push({id:p.version_id,name:t.name,nameBn:t.name_bn||t.name,description:t.description,descriptionBn:t.description_bn,
+  out.push({id:p.version_id,name:t.name.trim(),nameBn:(t.name_bn||t.name).trim(),description:t.description,descriptionBn:t.description_bn,
    free:t.kind==="free",custom:t.kind==="custom",contactUrl:t.contact_url,
    monthly:t.kind==="custom"?null:{key:p.id,versionId:null,amountMinor:t.amount_minor,href:`/subscribe/${encodeURIComponent(p.id)}`},
    yearly:null,bullets:bullets(t)});

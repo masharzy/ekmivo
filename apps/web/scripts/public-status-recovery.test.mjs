@@ -43,6 +43,7 @@ test("status page uses the shared public chrome once, in bn and en",()=>{
 
 test("status and recovery styles use only semantic theme tokens",()=>{
  const css=file("app/public-status-recovery.css");
+ assert.ok(css.includes(".bf-pub :where(a){color:inherit")&&!/\.bf-pub a\{/.test(css),"link reset must not beat .bf-btn colours (invisible button text)");
  const hexes=[...css.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map(m=>m[0].toLowerCase());
  assert.deepEqual([...new Set(hexes)].sort(),["#04200e","#a3f56a55","#fff","#ffffff22"].sort(),"new hard-coded colours must come from tokens");
 });

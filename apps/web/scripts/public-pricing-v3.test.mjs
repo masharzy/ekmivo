@@ -11,12 +11,13 @@ const offer=(o)=>({currency:"BDT",name:"Pro",name_bn:"প্রো",description:
 const V1="00000000-0000-0000-0000-000000000001",V2="00000000-0000-0000-0000-000000000002";
 
 test("published monthly and yearly offers join their Gateway plan; legacy plans fill the gaps",()=>{
- const plans=[{id:"pro",version_id:V1,terms:terms()},{id:"free",version_id:V2,terms:terms({name:"Free",kind:"free",amount_minor:0,payment_limit:50})}];
+ const plans=[{id:"pro",version_id:V1,terms:terms({name:"Pro ",name_bn:"প্রো "})},{id:"free",version_id:V2,terms:terms({name:"Free",kind:"free",amount_minor:0,payment_limit:50})}];
  const offers=[offer({key:"pro_m",version_id:"10000000-0000-0000-0000-000000000001",product:"payments",term:"monthly",amount_minor:"39900",gateway_plan_version_id:V1}),
   offer({key:"pro_y",version_id:"10000000-0000-0000-0000-000000000002",product:"payments",term:"yearly",amount_minor:"399000",gateway_plan_version_id:V1}),
   offer({key:"ai",version_id:"10000000-0000-0000-0000-000000000003",product:"ai_credit",term:"one_time",amount_minor:"50000",gateway_plan_version_id:null,included_ai_credits:"500"})];
  const out=pricingPlans(offers,plans);
  assert.deepEqual(out.map(p=>p.name),["Free","Pro"],"free first, AI packs are not payment plans");
+ assert.equal(pricingPlans([],plans).find(p=>p.id===V1).nameBn,"প্রো","stored names are trimmed (no double space in buttons)");
  const pro=out[1];
  assert.equal(pro.monthly.href,"/subscribe/pro_m?term=monthly&version=10000000-0000-0000-0000-000000000001");
  assert.equal(pro.yearly.amountMinor,399000);
