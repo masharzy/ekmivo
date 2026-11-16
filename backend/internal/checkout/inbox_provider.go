@@ -20,6 +20,7 @@ import (
 
 	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
+	"github.com/masharzy/briofold/backend/internal/servicehealth"
 )
 
 // No redirects carrying credentials; account keys stay in encrypted control storage.
@@ -416,6 +417,7 @@ func (s *Service) HandleInboxWebhook(w http.ResponseWriter, r *http.Request) {
 
 // An ambiguous timeout is UNCERTAIN, never silently auto-resends a customer message.
 func (s *Service) RunInboxSender(ctx context.Context) {
+	servicehealth.Enable(servicehealth.Chat, 30*time.Second)
 	ticks := 0
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -425,6 +427,7 @@ func (s *Service) RunInboxSender(ctx context.Context) {
 			return
 		case <-ticker.C:
 			ticks++
+			servicehealth.Beat(servicehealth.Chat)
 			if s.Pipeline != nil && s.Pipeline.Control != nil {
 				s.sendInboxPush(ctx)
 				if os.Getenv("BRIOFOLD_BROADCAST_DISPATCH_ENABLED") == "true" {

@@ -34,10 +34,10 @@ test("live theme and editor expose the same logo controls",()=>{
  for(const key of ["Logo size","Logo radius","Logo position","Invert logo"])assert.ok(editor.includes(key));
  for(const key of ["radius","position","invert"])assert.ok(config.includes(key));
  assert.ok(live.includes('data-logo-position={config.store.position}'));
- assert.ok(live.includes('data-logo-invert={config.theme==='));
+ assert.ok(live.includes('data-logo-invert={config.store.invert'),"invert is the Store's choice in every theme (#190)");
  assert.ok(live.includes("-icon.png"));
  assert.ok(styles.includes("tk-mk.has-logo{background:transparent!important"));
- assert.ok(styles.includes('tk-night[data-logo-invert="true"]'));
+ assert.ok(styles.includes('[data-logo-invert="true"] .tk-mk.has-logo img{filter:invert(1)}'));
  const store=read("../../apps/web/src/components/store-profile-editor.tsx");
  assert.ok(!store.includes("Brand color"));
  assert.ok(!store.includes("ব্র্যান্ড রং"));

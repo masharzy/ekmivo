@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"github.com/masharzy/briofold/backend/internal/receiptnotice"
+	"github.com/masharzy/briofold/backend/internal/servicehealth"
 	"github.com/riverqueue/river"
 	"time"
 )
@@ -17,6 +18,13 @@ type PipelineArgs struct {
 }
 
 func (PipelineArgs) Kind() string { return "receipt_pipeline" }
+
+// reportHealth feeds the public status page from live deliveries only.
+func (w *PipelineWorker) reportHealth(ok bool) {
+	if w.Realm == "live" {
+		servicehealth.Result(servicehealth.Webhooks, ok)
+	}
+}
 
 type PipelineWorker struct {
 	river.WorkerDefaults[PipelineArgs]
@@ -101,6 +109,7 @@ func (w *PipelineWorker) Work(ctx context.Context, job *river.Job[PipelineArgs])
 		}
 		var raw []byte
 		if e = w.Pool.QueryRow(ctx, "SELECT pg08_claim($1::uuid,$2)", p.ID, p.Version).Scan(&raw); e != nil {
+			w.reportHealth(false)
 			return errors.New("delivery claim unavailable")
 		}
 		if len(raw) == 0 || string(raw) == "null" {
@@ -137,8 +146,11 @@ func (w *PipelineWorker) Work(ctx context.Context, job *river.Job[PipelineArgs])
 		code, reason := merchantwebhook.Send(ctx, d.URL, secret, body, d.EventID, d.LeaseID)
 		var recorded bool
 		if e = w.Pool.QueryRow(ctx, "SELECT pg08_finish($1::uuid,$2::uuid,$3,$4)", d.ID, d.LeaseID, code, reason).Scan(&recorded); e != nil {
+			w.reportHealth(false)
 			return errors.New("delivery outcome recording unavailable")
 		}
+		// The merchant's endpoint answer is theirs; Briofold's side worked.
+		w.reportHealth(true)
 		return nil
 	}
 	return nil

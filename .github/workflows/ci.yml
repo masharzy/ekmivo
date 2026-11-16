@@ -78,7 +78,7 @@ jobs:
         run: npm run lint
       - name: Briofold Phase 1 design boundary and responsive contract
         working-directory: apps/web
-        run: node --test scripts/briofold-design-boundary.test.mjs scripts/dashboard-responsive-cascade.test.mjs
+        run: node --test scripts/briofold-design-boundary.test.mjs scripts/dashboard-responsive-cascade.test.mjs scripts/public-status-recovery.test.mjs
       - name: Briofold Phase 2 and 3 canonical route and authorization contract
         working-directory: apps/web
         run: node --test scripts/briofold-unified-routes.test.mjs scripts/briofold-locale-routing.test.mjs scripts/briofold-account-settings-routing.test.mjs scripts/briofold-unified-devices.test.mjs scripts/briofold-ai-overview.test.mjs scripts/briofold-ai-business-profile.test.mjs scripts/briofold-ai-team-quota.test.mjs scripts/briofold-settings-interactions.test.mjs scripts/briofold-product-operational-analytics.test.mjs
