@@ -23,8 +23,10 @@ briofold_ai_customer_paid|oid uuid|f846c592c479978286bead298c623643
 briofold_ai_expire_drafts||cb17b576aa364f49a669cd1a1f96dab5
 briofold_ai_financial_receipt_lookup|w uuid, env text, ref_digest text|d771fba90195591dd2520a23775c0a37
 briofold_ai_finish_notice|oid uuid, k text, email text, push text|fb73bcff8eedae844b524a6cf8133352
-briofold_ai_free_credit_available|w uuid, a uuid|11bc4f0d99c5d76f4d6cac1a52c4551c
-briofold_ai_free_credit_claim|w uuid, a uuid|5dd1642e44e493aa9806b6c12adb401f
+briofold_ai_free_credit_amount||dbe70cd5ed284a4199260092fb965df9
+briofold_ai_free_credit_available|w uuid, a uuid|61c99ace04c1b8155d35569ec60385b6
+briofold_ai_free_credit_change|actor uuid, expected bigint, amount bigint|e657ae288634085c5ccaabd99d7102b6
+briofold_ai_free_credit_claim|w uuid, a uuid|1b5350b4c2ac7a5bf2a992259493fe79
 briofold_ai_import_authorize|w uuid, a uuid|68ca90506dbdb7ca3472b9179f355a74
 briofold_ai_journal_immutable||54b466c4eed5155823a8f0597c2461cf
 briofold_ai_knowledge_read|w uuid, a uuid, s uuid|479bd3be3b226cbb2aaf9ced388f22f3
