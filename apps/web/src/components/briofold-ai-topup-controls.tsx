@@ -55,15 +55,21 @@ export function BriofoldAiTopupControls({workspaceId,locale,enabled,topups,freeE
    }catch(e){setError(t("Could not confirm credits. Retry.","ক্রেডিট নিশ্চিত করা যায়নি। আবার চেষ্টা করুন।")+" "+(e instanceof Error?e.message:""))}
   });
  }
- return <div className={styles.root}>
+ const quick=[100,500,1000];
+ return <div className={`card ${styles.root}`}>
   <h3>{t("Add AI credits","AI ক্রেডিট যোগ করুন")}</h3>
-  {freeEnabled&&<div className={styles.buy}>
-   <p>{t(`Start with ${freeTaka} free AI credit, once per business. No payment needed.`,`শুরুতে ${freeTakaBn} ফ্রি এআই ক্রেডিট, প্রতি ব্যবসায় একবার। কোনো পেমেন্ট লাগবে না।`)}</p>
-   <button type="button" disabled={pending} onClick={()=>void claimFree()}>{t(`Get ${freeTaka} free`,`${freeTakaBn} ফ্রি নিন`)}</button>
+  {freeEnabled&&<div className={styles.free}>
+   <div><b>{t("Free credit","ফ্রি ক্রেডিট")}</b><p>{t(`Start with ${freeTaka} free AI credit, once per business. No payment needed.`,`শুরুতে ${freeTakaBn} ফ্রি এআই ক্রেডিট, প্রতি ব্যবসায় একবার। কোনো পেমেন্ট লাগবে না।`)}</p></div>
+   <button type="button" className={styles.secondary} disabled={pending} onClick={()=>void claimFree()}>{t(`Get ${freeTaka} free`,`${freeTakaBn} ফ্রি নিন`)}</button>
   </div>}
   {enabled?<div className={styles.buy}>
-   <label>{t("Amount in BDT","টাকা")}<input type="number" min={AI_TOPUP_MIN_TAKA} max="100000" step="1" value={amount} disabled={pending} onChange={e=>{key.current="";setAmount(Number(e.target.value));setError("")}}/></label>
-   <button type="button" disabled={pending} onClick={()=>void purchase()}>{t("Continue to payment","পেমেন্টে যান")}</button>
+   <label htmlFor="ai-topup-amount">{t(`Amount (minimum ৳${AI_TOPUP_MIN_TAKA})`,`টাকার পরিমাণ (সর্বনিম্ন ৳${new Intl.NumberFormat("bn-BD").format(AI_TOPUP_MIN_TAKA)})`)}</label>
+   <div className={styles.amountRow}>
+    <span className={styles.money}><span aria-hidden="true">৳</span><input id="ai-topup-amount" type="number" inputMode="numeric" min={AI_TOPUP_MIN_TAKA} max="100000" step="1" value={amount} disabled={pending} onChange={e=>{key.current="";setAmount(Number(e.target.value));setError("")}}/></span>
+    {quick.map(v=><button type="button" key={v} className={`${styles.chip} ${amount===v?styles.on:""}`} aria-pressed={amount===v} disabled={pending} onClick={()=>{key.current="";setAmount(v);setError("")}}>৳{bn?new Intl.NumberFormat("bn-BD").format(v):v}</button>)}
+    <button type="button" className={styles.primary} disabled={pending} onClick={()=>void purchase()}>{t("Continue to payment","পেমেন্টে যান")}</button>
+   </div>
+   <p>{t("You pay on a secure checkout page. Credit is added after the payment is verified.","নিরাপদ চেকআউট পেজে পরিশোধ করবেন। পেমেন্ট যাচাই হলে ক্রেডিট যোগ হবে।")}</p>
   </div>:<p>{t("AI top-ups are disabled until the credit purchase and metering checks have been approved.","ক্রেডিট কেনা ও AI usage-এর verification শেষ না হওয়া পর্যন্ত top-up বন্ধ থাকবে।")}</p>}
   {topups.length>0&&<section><h3>{t("Your top-ups","ক্রেডিট যোগ করার ইতিহাস")}</h3><div className={styles.history}>
    {topups.map(x=><div key={x.id} className={styles.row}>
