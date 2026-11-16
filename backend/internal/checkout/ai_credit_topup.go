@@ -9,11 +9,19 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// Owner decision 2026-11-16: the smallest custom recharge is ৳20.
+const aiTopupMinimumMinor = 2000
+
 // HandleAICreditTopup handles merchant-initiated credit purchases. Neither a
 // browser redirect nor client-submitted "paid" flag may credit the account.
 // Verification reads authoritative financial evidence for the platform receiver.
 func (s *Service) HandleAICreditTopup(w http.ResponseWriter, r *http.Request) {
-	if os.Getenv("BRIOFOLD_AI_TOPUPS_ENABLED") != "true" {
+	if r.PathValue("aiCreditAction") == "free" {
+		if os.Getenv("BRIOFOLD_AI_FREE_CREDIT_ENABLED") != "true" {
+			fail(w, 503, "AI_FREE_CREDIT_NOT_ENABLED")
+			return
+		}
+	} else if os.Getenv("BRIOFOLD_AI_TOPUPS_ENABLED") != "true" {
 		fail(w, 503, "AI_TOPUPS_NOT_ENABLED")
 		return
 	}
@@ -65,12 +73,36 @@ func (s *Service) HandleAICreditTopup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	action := r.PathValue("aiCreditAction")
+	if action == "free" {
+		// The amount is fixed in the database function; nothing from the client decides money.
+		var raw []byte
+		if e = s.Auth.DB.QueryRowContext(r.Context(), "SELECT briofold_ai_free_credit_claim($1::uuid,$2::uuid)", ws, actor.UserID).Scan(&raw); e != nil {
+			billingMapped(w, e)
+			return
+		}
+		var out struct {
+			Granted bool   `json:"granted"`
+			Reason  string `json:"reason"`
+			Amount  int64  `json:"amount_minor"`
+			Balance int64  `json:"balance_minor"`
+		}
+		if json.Unmarshal(raw, &out) != nil || out.Amount <= 0 || out.Balance < 0 {
+			fail(w, 503, "AI_CREDITS_UNAVAILABLE")
+			return
+		}
+		if !out.Granted {
+			write(w, 409, map[string]any{"code": "AI_FREE_CREDIT_ALREADY_CLAIMED", "granted": false, "amount_minor": out.Amount, "balance_minor": out.Balance})
+			return
+		}
+		write(w, 201, map[string]any{"granted": true, "amount_minor": out.Amount, "balance_minor": out.Balance, "currency": "BDT"})
+		return
+	}
 	if action == "purchase" {
 		var req struct {
 			Amount int64 `json:"amount_minor"`
 		}
 		key := r.Header.Get("Idempotency-Key")
-		if !keyPattern.MatchString(key) || decodeBounded(w, r, &req, 1024) != nil || req.Amount < 1000 || req.Amount > 10000000 {
+		if !keyPattern.MatchString(key) || decodeBounded(w, r, &req, 1024) != nil || req.Amount < aiTopupMinimumMinor || req.Amount > 10000000 {
 			fail(w, 422, "INVALID_AI_TOPUP")
 			return
 		}

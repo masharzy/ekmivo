@@ -119,6 +119,7 @@ var dashboardControlMigrations = []string{
 	"0256_briofold_ai_coupon_services.sql",
 	"0257_briofold_services_and_ai_fixes.sql",
 	"0258_checkout_gateway_theme.sql",
+	"0259_briofold_ai_free_credit.sql",
 }
 
 // Explicit release mode in the existing coordinator; never runs at API startup.
