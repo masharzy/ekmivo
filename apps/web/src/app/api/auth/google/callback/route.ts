@@ -8,7 +8,7 @@ export const dynamic="force-dynamic";
 export async function GET(request:NextRequest){
  const config=googleConfiguration();
  const origin=config?.origin||request.nextUrl.origin;
- let destination="/login",reason="failed";
+ let destination="/login",reason="failed",stage="state";
  const finish=(path:string)=>{
   const response=NextResponse.redirect(new URL(path,origin),303);
   response.headers.set("Cache-Control","no-store");response.headers.set("Referrer-Policy","no-referrer");return response;
@@ -19,12 +19,12 @@ export async function GET(request:NextRequest){
  try{
   const params=request.nextUrl.searchParams;
   if(request.nextUrl.origin!==config.origin||params.getAll("state").length!==1||params.getAll("code").length>1||params.getAll("error").length>1||!value)throw Error("GOOGLE_STATE_INVALID");
-  const flow=await openGoogleFlow(value,params.get("state")||"",config.secret,config.origin);
+  stage="flow";const flow=await openGoogleFlow(value,params.get("state")||"",config.secret,config.origin);
   destination=flow.mode==="link"?"/account":"/login";
   if(params.has("error"))return finish(destination+"?google=cancelled");
   const code=params.get("code");if(!code||code.length>4096)throw Error("GOOGLE_CODE_INVALID");
   if(flow.mode==="signin"&&await currentUser())return finish("/businesses/open");
-  const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",cache:"no-store",signal:AbortSignal.timeout(10000),headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:config.clientId,client_secret:config.clientSecret,code,code_verifier:flow.verifier,grant_type:"authorization_code",redirect_uri:config.callback})});
+  stage="exchange";const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",cache:"no-store",signal:AbortSignal.timeout(10000),headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:config.clientId,client_secret:config.clientSecret,code,code_verifier:flow.verifier,grant_type:"authorization_code",redirect_uri:config.callback})});
   if(!response.ok){
    // Google's own error word (e.g. invalid_client, redirect_uri_mismatch) has no user data.
    const failure=await response.json().catch(()=>null) as {error?:unknown}|null;
@@ -33,11 +33,11 @@ export async function GET(request:NextRequest){
   }
   const body:unknown=await response.json();
   if(!body||typeof body!=="object"||!("id_token" in body)||typeof body.id_token!=="string"||body.id_token.length>16384)throw Error("GOOGLE_TOKEN_INVALID");
-  const identity=await verifyGoogleIdToken(body.id_token,flow.nonce,config.clientId);
-  const account=await googleAccount(flow,identity);
+  stage="identity";const identity=await verifyGoogleIdToken(body.id_token,flow.nonce,config.clientId);
+  stage="account";const account=await googleAccount(flow,identity);
   if(account.linked)return finish("/account?google=connected");
   // Reuses password login's session path, including trusted-device/MFA rules.
-  await createSession(account.userId);
+  stage="session";await createSession(account.userId);
   return finish("/businesses/open");
  }catch(error){
   const code=error instanceof Error?error.message:"";
@@ -47,8 +47,11 @@ export async function GET(request:NextRequest){
   else if(code==="GOOGLE_EMAIL_SIGNUP_REQUIRED")reason="email-signup";
   // Never log authorization codes, tokens, provider responses or user emails.
   // Only our fixed step codes or the error class name: never codes, tokens or emails.
-  const step=/^GOOGLE_[A-Z_]+(:\d{3}:[a-z_]+)?$/.test(code)?code:(error instanceof Error?error.name:"unknown");
-  console.error("[google login]",reason,step);
+  // Class names are minified in production, so also keep the library's own fixed
+  // code: jose ERR_* or a 5-character SQLSTATE. Never messages, tokens or emails.
+  const libraryCode=error&&typeof error==="object"&&"code" in error&&typeof error.code==="string"&&/^(ERR_[A-Z_]{1,60}|[0-9A-Z]{5})$/.test(error.code)?error.code:"";
+  const step=/^GOOGLE_[A-Z_]+(:\d{3}:[a-z_]+)?$/.test(code)?code:(libraryCode||(error instanceof Error?error.name:"unknown"));
+  console.error("[google login]",reason,"stage="+stage,step);
   return finish(destination+"?google="+reason);
  }
 }
