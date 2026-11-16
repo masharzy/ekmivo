@@ -33,6 +33,7 @@
 @import "./public-marketing-redesign.css";
 @import "./public-auth-redesign.css";
 @import "./public-status-recovery.css";
+@import "./public-pricing-v3.css";
 /* Admin styles load last so marketing/merchant defaults cannot re-skin Admin. */
 @import "../styles/admin/admin-tokens.css";
 @import "../styles/admin/admin-theme.css";

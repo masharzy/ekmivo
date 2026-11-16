@@ -72,7 +72,10 @@ test("home and pricing use the same catalog data; unpublished offers keep existi
  assert.match(home,/PublicSubscriptionOfferSlot locale=\{locale\} product="bundle"/);
  assert.match(read("components/landing/landing-pricing.tsx"),/\{aiPricing\}/);
  assert.match(read("components/landing/landing-pricing.tsx"),/\{bundlePricing\}/);
- assert.match(read("app/[locale]/pricing/page.tsx"),/<PublicPricing locale=\{locale\} selectedProduct=\{product\}\/>/);
+ // Owner decision 2026-11-16: /pricing has its own design but reads the same two catalog sources.
+ const pricingPage=read("app/[locale]/pricing/page.tsx");
+ assert.match(pricingPage,/Promise\.all\(\[publicPaymentPlans\(\),publicSubscriptionOffers\(\)\]\)/);
+ assert.match(pricingPage,/plans=\{pricingPlans\(offers,plans\)\}/);
  assert.match(read("components/subscription-offer-pricing.tsx"),/aria-pressed/);
  assert.match(read("components/subscription-offer-pricing.tsx"),/Final eligibility and payable total are confirmed in checkout/);
  assert.doesNotMatch(read("components/subscription-offer-pricing.tsx"),/Go to Pay|name="bkash"|yearly.*free/i);
