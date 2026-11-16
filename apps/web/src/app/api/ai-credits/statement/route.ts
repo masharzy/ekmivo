@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {currentUser,preferredWorkspaceFor} from "../../../../lib/server/auth";
 import {database} from "../../../../lib/server/db";
-import {parseStatementCursor,statementCursor,statementEntry} from "../../../../lib/server/briofold-ai-statement";
+import {groupedStatement,parseStatementCursor,statementCursor,statementEntry} from "../../../../lib/server/briofold-ai-statement";
 
 export const dynamic="force-dynamic";
 const noStore={"Cache-Control":"private, no-store, max-age=0"};
@@ -35,18 +35,7 @@ export async function GET(request:Request){
   if(!access||access.capability_allowed===false)return forbidden(403,"ACCESS_DENIED");
   const [installed]=await db`SELECT to_regclass('public.briofold_ai_credit_journal') AS rel`;
   if(!installed?.rel)return forbidden(503,"AI_CREDITS_UNAVAILABLE");
-  const rows=cursor
-   ?await db`SELECT id,kind,available_delta_minor,reserved_delta_minor,
-     available_after_minor,reserved_after_minor,
-     to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at
-     FROM briofold_ai_credit_journal WHERE workspace_id=${workspace.id}::uuid
-      AND (created_at,id)<(${cursor.createdAt}::timestamptz,${cursor.id}::uuid)
-     ORDER BY created_at DESC,id DESC LIMIT 51`
-   :await db`SELECT id,kind,available_delta_minor,reserved_delta_minor,
-     available_after_minor,reserved_after_minor,
-     to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at
-     FROM briofold_ai_credit_journal WHERE workspace_id=${workspace.id}::uuid
-     ORDER BY created_at DESC,id DESC LIMIT 51`;
+  const rows=await groupedStatement(db,workspace.id,cursor,50);
   const entries=rows.slice(0,50).map(row=>statementEntry(row));
   return NextResponse.json({entries,next_cursor:rows.length>50?statementCursor(entries[entries.length-1]):null},
    {status:200,headers:noStore});

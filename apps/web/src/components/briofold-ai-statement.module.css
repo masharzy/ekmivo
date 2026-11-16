@@ -12,3 +12,4 @@
 .more:hover:not(:disabled){background:var(--color-hover)}.more:disabled{opacity:.6;cursor:wait}
 .statement .error{color:var(--color-danger,#b42318)}
 @media(max-width:520px){.tableScroll table{min-width:520px}}
+.statement .note{margin:8px 0 0;font-size:12px;line-height:1.5}

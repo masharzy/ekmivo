@@ -13,6 +13,8 @@ export function BriofoldAiStatement({workspaceId,locale,initial,nextCursor}:{wor
   reserve:["Reserved","রিজার্ভ"],settle:["Usage charge","AI ব্যবহারের খরচ"],
   release:["Released","রিজার্ভ ফেরত"],correction:["Admin adjustment","অ্যাডমিন সমন্বয়"],
   free_grant:["Free credit","ফ্রি ক্রেডিট"],
+  ai_reply:["AI reply","AI উত্তর"],
+  ai_reply_pending:["AI reply (in progress)","AI উত্তর (চলছে)"],
  };
  async function loadMore(){
   if(busy||!cursor)return;
@@ -37,14 +39,16 @@ export function BriofoldAiStatement({workspaceId,locale,initial,nextCursor}:{wor
  }
  return <details className={styles.statement}>
   <summary>{t("AI credit statement","AI ক্রেডিটের সম্পূর্ণ হিসাব")}</summary>
-  {rows.length===0?<p>{t("No credit activity yet.","এখনও কোনো ক্রেডিটের লেনদেন নেই।")}</p>:
+  <p className={styles.note}>{t("Each AI reply shows its actual cost. While a reply is being written, the most it can cost is held and the unused part comes back.","প্রতিটা AI উত্তরে আসল খরচ দেখানো হয়। উত্তর লেখার সময় সর্বোচ্চ সম্ভাব্য খরচ আটকে রাখা হয়, বাকিটা সাথে সাথে ফেরত আসে।")}</p>
+    {rows.length===0?<p>{t("No credit activity yet.","এখনও কোনো ক্রেডিটের লেনদেন নেই।")}</p>:
   <div className={styles.tableScroll}><table>
-   <thead><tr><th>{t("Date","তারিখ")}</th><th>{t("Activity","বিবরণ")}</th><th>{t("Credit change","ক্রেডিট পরিবর্তন")}</th><th>{t("Reserved change","রিজার্ভ পরিবর্তন")}</th><th>{t("Balance after","পরের ব্যালেন্স")}</th></tr></thead>
+   <thead><tr><th>{t("Date","তারিখ")}</th><th>{t("Activity","বিবরণ")}</th><th>{t("Amount","টাকা")}</th><th>{t("Balance after","পরের ব্যালেন্স")}</th></tr></thead>
    <tbody>{rows.map(row=><tr key={row.id}>
     <td><time dateTime={row.created_at}>{new Date(row.created_at).toLocaleString(bn?"bn-BD":"en-BD",{dateStyle:"medium",timeStyle:"short"})}</time></td>
     <td>{kinds[row.kind]?.[bn?1:0]??row.kind.replaceAll("_"," ")}</td>
-    <td className={styles.numeric}>{money(row.available_delta_minor)}</td>
-    <td className={styles.numeric}>{money(row.reserved_delta_minor)}</td>
+    <td className={styles.numeric}>{row.kind==="ai_reply_pending"
+     ?t(`${money(-row.available_delta_minor)} held until the reply finishes`,`উত্তর শেষ না হওয়া পর্যন্ত ${money(-row.available_delta_minor)} আটকে আছে`)
+     :money(row.available_delta_minor)}</td>
     <td className={styles.numeric}>{money(row.available_after_minor)}</td>
    </tr>)}</tbody>
   </table></div>}
