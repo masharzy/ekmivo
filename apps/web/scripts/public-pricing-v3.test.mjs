@@ -40,11 +40,13 @@ test("pricing page: tabs, yearly toggle, credit explained above the cards, free 
  for(const filler of ["১০ সেকেন্ডে","যা সবাই জানতে চায়","লুকানো চার্জ","Pay only for what you use"])assert.ok(!(ui+file("app/[locale]/pricing/page.tsx")).includes(filler),filler);
  assert.ok(!ui.includes("১ ক্রেডিট = ৳১")&&!ui.includes("1 credit = ৳1"),"credit is a taka balance, not a unit per reply");
  assert.ok(/aiView=<>\{creditStrip\}<div className="bf-grid2">/.test(ui),"credit explanation sits right above the AI cards");
- assert.ok(ui.includes("comboEnabled=false")&&ui.includes("comboEnabled?:false"),"one-order plan + recharge stays off until the server supports it");
+ // 0263 makes plan + AI credit one order; the web turns it on only with its flag.
+ assert.ok(ui.includes("comboEnabled=false")&&ui.includes("comboEnabled?:boolean"),"combo defaults off");
+ assert.ok(file("app/[locale]/pricing/page.tsx").includes('comboEnabled={process.env.BRIOFOLD_ORDER_AI_TOPUP_ENABLED==="true"}'),"flag-gated");
  const page=file("app/[locale]/pricing/page.tsx");
  assert.ok(page.includes("freeEnabled={free.enabled} freeAmountMinor={free.amountMinor}"),"free amount comes from the admin setting");
  assert.ok(!ui.includes("৳৩০")&&!ui.includes("৳30"),"no hard-coded free amount");
- assert.ok(!page.includes("comboEnabled"),"page never switches combo on");
+ assert.ok(page.includes("comboEnabled={process.env.BRIOFOLD_ORDER_AI_TOPUP_ENABLED===\"true\"}"),"page switches combo on only with the flag");
  assert.ok(file("app/globals.css").includes('@import "./public-pricing-v3.css";'));
 });
 

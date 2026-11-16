@@ -25,7 +25,12 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  const legacy=plans.find(p=>p.id===plan);
  // Back/forward and refresh may safely reuse the exact still-selected intent.
  // A different selection always gets a fresh intent and cannot mutate invoices.
- const existing=await activePurchase();
+ // Plan + AI credit in one order (pricing "Both"). Whole taka, ৳20 to ৳100,000.
+ const aiRaw=new URL(request.url).searchParams.get("ai_amount")??"";
+ const aiTaka=process.env.BRIOFOLD_ORDER_AI_TOPUP_ENABLED==="true"&&/^[1-9][0-9]{1,5}$/.test(aiRaw)?Number(aiRaw):0;
+ if(aiTaka&&(aiTaka<20||aiTaka>100000))return NextResponse.redirect(new URL("/pricing?tab=both&purchase=AI_AMOUNT",request.url),303);
+ const aiTopupMinor=aiTaka*100;
+ const existing=aiTopupMinor?null:await activePurchase();
  if(existing){
   try{
    const state=await readPurchase(existing);
@@ -38,10 +43,10 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
  // Phase 4 authoritative published offers. Never activate an offer by guessing
  // its amount, version or billing term from a marketing card.
  try{
-  const token=await createPurchase({offerKey:plan,term,quantity,coupon,versionId,legacyPlanId:legacy?.id});
+  const token=await createPurchase({offerKey:plan,term,quantity,coupon,versionId,legacyPlanId:legacy?.id,aiTopupMinor});
   return NextResponse.redirect(new URL(`/subscribe/resume/${token}`,request.url),303);
  }catch(error){
-  const safeLegacy=Boolean(legacy&&term==="monthly"&&quantity===1&&!versionId&&!coupon);
+  const safeLegacy=Boolean(legacy&&term==="monthly"&&quantity===1&&!versionId&&!coupon&&!aiTopupMinor);
   if(!safeLegacy){
    const code=error instanceof IntentError?error.code:"PURCHASE_INTENT_UNAVAILABLE";
    return NextResponse.redirect(new URL("/pricing?purchase="+encodeURIComponent(code),request.url),303);
