@@ -3,7 +3,7 @@ import {useState} from "react";
 import type {WalletStatementEntry} from "../lib/server/briofold-ai-statement";
 import styles from "./briofold-ai-statement.module.css";
 
-export function BriofoldAiStatement({workspaceId,locale,initial,nextCursor}:{workspaceId:string;locale:"en"|"bn";initial:WalletStatementEntry[];nextCursor:string|null}){
+export function BriofoldAiStatement({workspaceId,locale,initial,nextCursor,open=false}:{workspaceId:string;locale:"en"|"bn";initial:WalletStatementEntry[];nextCursor:string|null;open?:boolean}){
  const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en;
  const [rows,setRows]=useState(initial),[cursor,setCursor]=useState(nextCursor);
  const [busy,setBusy]=useState(false),[error,setError]=useState("");
@@ -37,8 +37,7 @@ export function BriofoldAiStatement({workspaceId,locale,initial,nextCursor}:{wor
    setError(t("Could not load older activity. Please retry.","পুরোনো হিসাব লোড হয়নি। আবার চেষ্টা করুন।"));
   }finally{setBusy(false);}
  }
- return <details className={styles.statement}>
-  <summary>{t("AI credit statement","AI ক্রেডিটের সম্পূর্ণ হিসাব")}</summary>
+ const content=<>
   <p className={styles.note}>{t("Each AI reply shows its actual cost. While a reply is being written, the most it can cost is held and the unused part comes back.","প্রতিটা AI উত্তরে আসল খরচ দেখানো হয়। উত্তর লেখার সময় সর্বোচ্চ সম্ভাব্য খরচ আটকে রাখা হয়, বাকিটা সাথে সাথে ফেরত আসে।")}</p>
     {rows.length===0?<p>{t("No credit activity yet.","এখনও কোনো ক্রেডিটের লেনদেন নেই।")}</p>:
   <div className={styles.tableScroll}><table>
@@ -56,5 +55,12 @@ export function BriofoldAiStatement({workspaceId,locale,initial,nextCursor}:{wor
    {busy?t("Loading…","লোড হচ্ছে…"):t("Load older activity","আগের হিসাব দেখুন")}
   </button>}
   {error&&<p role="alert" className={styles.error}>{error}</p>}
+ </>;
+ return open
+  ?<section className={`card ${styles.statement} ${styles.open}`} aria-label={t("AI credit transactions","AI ক্রেডিটের লেনদেন")}>
+   <h3>{t("Transactions","লেনদেন")}</h3>{content}
+  </section>
+  :<details className={styles.statement}>
+  <summary>{t("AI credit statement","AI ক্রেডিটের সম্পূর্ণ হিসাব")}</summary>{content}
  </details>;
 }

@@ -147,11 +147,12 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
     :<DashboardContent locale={locale} user={user} workspace={workspace}
       section={section} service={service} paymentContext={paymentContext} detailId={detailId}
       initialQuery={root==="payments"&&view[0]==="links"&&paymentLinksMode==="requests"?{view:"requests"}:{}}
-      canonicalRoutes framed/>;
+      canonicalRoutes framed
+      billingAi={root==="settings"&&view[0]==="billing"&&workspace.mode==="both"
+       ?<BriofoldAiCreditSummary embedded workspaceId={workspace.id} actorId={user.id} locale={locale}/>:undefined}/>;
  return <AppShell unified locale={locale} user={user} workspace={workspace}
    service={service} section={section} paymentContext={paymentContext}>
     <UnifiedSectionTabs locale={locale} root={root} mode={workspace.mode} view={view} requests={paymentLinksMode==="requests"}/>
     {body}
-    {root==="settings"&&view[0]==="billing"&&workspace.mode==="both"&&<BriofoldAiCreditSummary workspaceId={workspace.id} actorId={user.id} locale={locale}/>}
    </AppShell>;
 }
