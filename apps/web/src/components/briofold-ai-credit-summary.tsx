@@ -1,4 +1,5 @@
 import {readAiWallet} from "../lib/server/briofold-ai-wallet";
+import {publicFreeCredit} from "../lib/server/ai-free-credit";
 import {BriofoldAiTopupControls} from "./briofold-ai-topup-controls";
 import {BriofoldAiStatement} from "./briofold-ai-statement";
 import styles from "./briofold-ai-credit-summary.module.css";
@@ -7,7 +8,7 @@ import "./reference-adapters.css";
 export async function BriofoldAiCreditSummary({workspaceId,actorId,locale,standalone=false}:{
  workspaceId:string;actorId:string;locale:"bn"|"en";standalone?:boolean;
 }){
- const wallet=await readAiWallet(workspaceId,actorId),bn=locale==="bn";
+ const [wallet,free]=await Promise.all([readAiWallet(workspaceId,actorId),publicFreeCredit()]),bn=locale==="bn";
  const t=(en:string,be:string)=>bn?be:en;
  const money=(n:number)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(n/100);
  const low=wallet.status!=="unavailable"&&(wallet.minimum_request_minor===null||wallet.available_minor<wallet.minimum_request_minor);
@@ -25,7 +26,7 @@ export async function BriofoldAiCreditSummary({workspaceId,actorId,locale,standa
       ?t("No credits left. AI replies are paused; your inbox and payments keep working.","ক্রেডিট শেষ। AI উত্তর বন্ধ; ইনবক্স ও পেমেন্ট চলবে।")
       :t("Balance is too low for even the smallest AI reply.","ব্যালেন্স সবচেয়ে ছোট AI উত্তরের জন্যও কম।")+" "+t("Minimum:","সর্বনিম্ন:")+" "+money(wallet.minimum_request_minor)}</div>}
    <BriofoldAiTopupControls workspaceId={workspaceId} locale={locale} enabled={process.env.BRIOFOLD_AI_TOPUPS_ENABLED==="true"} topups={wallet.topups}
-    freeEnabled={process.env.BRIOFOLD_AI_FREE_CREDIT_ENABLED==="true"&&!wallet.entries.some(e=>e.kind==="free_grant")}/>
+    freeEnabled={free.enabled&&!wallet.entries.some(e=>e.kind==="free_grant")} freeAmountMinor={free.amountMinor}/>
    <BriofoldAiStatement key={workspaceId} workspaceId={workspaceId} locale={locale} initial={wallet.entries} nextCursor={wallet.next_cursor}/>
    <p className={styles.note}>{t("Credits are added only after a verified payment or an authorized grant.","ক্রেডিট শুধু যাচাইকৃত পেমেন্ট বা অনুমোদিত গ্রান্টের পর যোগ হয়।")}</p>
   </>}

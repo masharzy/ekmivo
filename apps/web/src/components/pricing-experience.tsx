@@ -16,14 +16,14 @@ const COPY={
   noPlans:"এখনো কোনো প্ল্যান প্রকাশ করা হয়নি।",unavailable:"প্ল্যানের তথ্য এখন পাওয়া যাচ্ছে না। একটু পরে আবার দেখুন।",
   crTitle:"এআই ক্রেডিট কীভাবে কাটে",
   cr:[["টাকায় রিচার্জ","যত টাকা রিচার্জ করবেন, ব্যালেন্স তত টাকা।"],["প্রতি উত্তরে আসল খরচ","এআই উত্তর লিখতে আর পণ্য খুঁজতে যত খরচ করে, ততটুকু কাটে।"],["আপনার উত্তরে কাটে না","আপনি বা আপনার টিম উত্তর দিলে কিছু কাটে না।"]],
-  freeTitle:"ফ্রি",freeAmt:"৳৩০",freeSub:"এআই ক্রেডিট, একবার",freeBody:"প্রতি ব্যবসায় একবার। পেমেন্ট লাগবে না।",getFree:"৳৩০ ফ্রি নিন",
+  freeTitle:"ফ্রি",freeSub:"এআই ক্রেডিট, একবার",freeBody:"প্রতি ব্যবসায় একবার। পেমেন্ট লাগবে না।",getFree:(a:string)=>`${a} ফ্রি নিন`,
   customTitle:"নিজের পছন্দের রিচার্জ",customBody:"যত টাকা দরকার, রিচার্জ করুন।",amount:"টাকার পরিমাণ",min:`সর্বনিম্ন ৳২০`,recharge:"রিচার্জ করুন",
   amountErr:"৳২০ থেকে ৳১,০০,০০০-এর মধ্যে পুরো টাকা দিন।",
   aiNote:"প্রতিটা উত্তরের খরচ আলাদা: উত্তর কত বড়, কতবার খুঁজতে হল, ছবি বা ভয়েস ছিল কি না তার ওপর নির্ভর করে।",
   steps:["পেমেন্ট প্ল্যান","এআই ক্রেডিট","চেকআউট"],stepsLabel:"ধাপ",s1h:"ধাপ ১: কোন পেমেন্ট প্ল্যান নেবেন?",s2h:"ধাপ ২: এআই ক্রেডিট",
-  freeOpt:"৳৩০ ফ্রি ক্রেডিট",freeOptSub:"কোনো বাড়তি টাকা লাগবে না",customOpt:"নিজের পছন্দের রিচার্জ",customOptSub:"সর্বনিম্ন ৳২০, একই পেমেন্টে",
+  freeOpt:(a:string)=>`${a} ফ্রি ক্রেডিট`,freeOptSub:"কোনো বাড়তি টাকা লাগবে না",customOpt:"নিজের পছন্দের রিচার্জ",customOptSub:"সর্বনিম্ন ৳২০, একই পেমেন্টে",
   comboSoon:"একই পেমেন্টে রিচার্জ শিগগিরই আসছে। এখন প্ল্যান নিয়ে পরে ড্যাশবোর্ড থেকে রিচার্জ করুন।",
-  sumPlan:"পেমেন্ট প্ল্যান",sumCredit:"এআই ক্রেডিট",sumTotal:"মোট",pickNext:"পরের ধাপে বেছে নিন",freeAfter:"৳৩০ ফ্রি (পেমেন্টের পর)",
+  sumPlan:"পেমেন্ট প্ল্যান",sumCredit:"এআই ক্রেডিট",sumTotal:"মোট",pickNext:"পরের ধাপে বেছে নিন",freeAfter:(a:string)=>`${a} ফ্রি (পেমেন্টের পর)`,
   next:"পরের ধাপ: এআই ক্রেডিট",checkout:"চেকআউটে যান",
   faqH:"প্রশ্ন ও উত্তর",
   faq:[["একটা উত্তরে কত টাকা কাটে?","নির্দিষ্ট কোনো দাম নেই। এআই উত্তর লিখতে আর পণ্য খুঁজতে যত খরচ করে, ঠিক ততটুকু কাটে। প্রতিটা উত্তরের খরচ ড্যাশবোর্ডের স্টেটমেন্টে দেখবেন।"],["ব্যালেন্স শেষ হলে কী হবে?","আবার রিচার্জ করে ব্যালেন্স বাড়াতে পারবেন। নিজে থেকে কোনো টাকা কাটা হয় না।"],["পেমেন্ট প্ল্যান কখন চালু হয়?","পেমেন্ট যাচাই হওয়ার সাথে সাথে।"],["শুধু এআই বট নিলে পেমেন্ট প্ল্যান লাগবে?","না। শুধু ক্রেডিট রিচার্জ করলেই এআই বট চলবে।"]]
@@ -38,14 +38,14 @@ const COPY={
   noPlans:"No plans have been published yet.",unavailable:"Pricing is temporarily unavailable. Please try again later.",
   crTitle:"How AI credit is used",
   cr:[["Recharge in taka","Your balance is the amount you recharge."],["Real cost per reply","Each AI reply deducts what it cost to write it and search your products."],["Your replies are free","Nothing is deducted when you or your team reply."]],
-  freeTitle:"Free",freeAmt:"৳30",freeSub:"AI credit, once",freeBody:"Once per business. No payment needed.",getFree:"Get ৳30 free",
+  freeTitle:"Free",freeSub:"AI credit, once",freeBody:"Once per business. No payment needed.",getFree:(a:string)=>`Get ${a} free`,
   customTitle:"Your own amount",customBody:"Recharge the amount you need.",amount:"Amount in taka",min:"Minimum ৳20",recharge:"Recharge",
   amountErr:"Enter a whole amount from ৳20 to ৳100,000.",
   aiNote:"Each reply costs a different amount: it depends on the reply length, how much searching it needed, and whether there was a photo or voice note.",
   steps:["Payment plan","AI credit","Checkout"],stepsLabel:"Steps",s1h:"Step 1: Which payment plan?",s2h:"Step 2: AI credit",
-  freeOpt:"৳30 free credit",freeOptSub:"Nothing extra to pay",customOpt:"Your own recharge",customOptSub:"Minimum ৳20, in the same payment",
+  freeOpt:(a:string)=>`${a} free credit`,freeOptSub:"Nothing extra to pay",customOpt:"Your own recharge",customOptSub:"Minimum ৳20, in the same payment",
   comboSoon:"Recharging in the same payment is coming soon. For now, take the plan and recharge later from your dashboard.",
-  sumPlan:"Payment plan",sumCredit:"AI credit",sumTotal:"Total",pickNext:"Choose in the next step",freeAfter:"৳30 free (after payment)",
+  sumPlan:"Payment plan",sumCredit:"AI credit",sumTotal:"Total",pickNext:"Choose in the next step",freeAfter:(a:string)=>`${a} free (after payment)`,
   next:"Next: AI credit",checkout:"Go to checkout",
   faqH:"Questions",
   faq:[["How much does one reply cost?","There is no fixed price. Each reply deducts exactly what the AI spent writing it and searching your products. Every reply’s cost is in your dashboard statement."],["What happens when the balance runs out?","Recharge to top up. Nothing is charged automatically."],["When does a payment plan start?","As soon as the payment is verified."],["Do I need a payment plan for the AI bot?","No. A credit recharge on its own is enough to run the AI bot."]]
@@ -54,8 +54,8 @@ const COPY={
 const ICONS=["","M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z","M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"];
 
 /** comboEnabled must stay false until the one-order plan + recharge checkout exists on the server. */
-export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled,comboEnabled=false,initialTab="payments"}:{
- locale:Locale;plans:PricingPlan[];unavailable:boolean;signedIn:boolean;freeEnabled:boolean;comboEnabled?:false;initialTab?:Tab;
+export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled,freeAmountMinor=0,comboEnabled=false,initialTab="payments"}:{
+ locale:Locale;plans:PricingPlan[];unavailable:boolean;signedIn:boolean;freeEnabled:boolean;freeAmountMinor?:number;comboEnabled?:false;initialTab?:Tab;
 }){
  const c=COPY[locale],bn=locale==="bn";
  const money=(minor:number)=>"৳"+new Intl.NumberFormat(bn?"bn-BD":"en-BD",{maximumFractionDigits:2}).format(minor/100);
@@ -110,9 +110,9 @@ export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled
  const aiView=<>{creditStrip}<div className="bf-grid2">
   {freeEnabled&&<article className="bf-pcard">
    <div className="bf-pcard-top"><h3>{c.freeTitle}</h3><span className="bf-badge">{c.freeSub}</span></div>
-   <div className="bf-amt">{c.freeAmt}</div>
+   <div className="bf-amt">{money(freeAmountMinor)}</div>
    <p className="bf-pcard-desc">{c.freeBody}</p>
-   <Link className="bf-btn bf-btn-out" href={dash("?free=1")}>{c.getFree}</Link>
+   <Link className="bf-btn bf-btn-out" href={dash("?free=1")}>{c.getFree(money(freeAmountMinor))}</Link>
   </article>}
   <article className="bf-pcard is-rec">
    <div className="bf-pcard-top"><h3>{c.customTitle}</h3></div>
@@ -147,7 +147,7 @@ export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled
   </div></>
   :<><h2 className="bf-step-h">{c.s2h}</h2><div className="bf-grid2">
    {freeEnabled&&<button type="button" className="bf-opt" aria-pressed={credit==="free"} onClick={()=>setCredit("free")}>
-    <span className="bf-opt-top"><strong>{c.freeOpt}</strong><span className="bf-radio" aria-hidden="true"/></span><span className="bf-opt-sub">{c.freeOptSub}</span>
+    <span className="bf-opt-top"><strong>{c.freeOpt(money(freeAmountMinor))}</strong><span className="bf-radio" aria-hidden="true"/></span><span className="bf-opt-sub">{c.freeOptSub}</span>
    </button>}
    <button type="button" className="bf-opt" aria-pressed={credit==="custom"} disabled={!comboEnabled} onClick={()=>setCredit("custom")}>
     <span className="bf-opt-top"><strong>{c.customOpt}</strong><span className="bf-radio" aria-hidden="true"/></span>
@@ -161,7 +161,7 @@ export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled
   <div className="bf-sumbar" role="region" aria-label={c.sumTotal}>
    <div className="bf-sum-cells">
     <div><small>{c.sumPlan}</small><b>{bn?sel.nameBn:sel.name} · {selOpt?money(selOpt.amountMinor):"—"} {selOpt===sel.yearly?c.perY:c.perM}</b></div>
-    <div><small>{c.sumCredit}</small><b>{step===1?c.pickNext:credit==="free"&&freeEnabled?c.freeAfter:customOk?money(amt*100):"—"}</b></div>
+    <div><small>{c.sumCredit}</small><b>{step===1?c.pickNext:credit==="free"&&freeEnabled?c.freeAfter(money(freeAmountMinor)):customOk?money(amt*100):"—"}</b></div>
     <div><small>{c.sumTotal}</small><span className="bf-sum-total" aria-live="polite">{money(total)}</span></div>
    </div>
    {step===1?<button type="button" className="bf-btn" onClick={()=>setStep(2)}>{c.next} →</button>

@@ -5,8 +5,8 @@ import type {AiWalletView} from "../lib/server/briofold-ai-wallet";
 import styles from "./briofold-ai-topup-controls.module.css";
 /** Owner decision 2026-11-16: the smallest custom recharge is ৳20 (Go enforces the same). */
 export const AI_TOPUP_MIN_TAKA=20;
-export function BriofoldAiTopupControls({workspaceId,locale,enabled,topups,freeEnabled=false}:{
- workspaceId:string;locale:"en"|"bn";enabled:boolean;topups:AiWalletView["topups"];freeEnabled?:boolean;
+export function BriofoldAiTopupControls({workspaceId,locale,enabled,topups,freeEnabled=false,freeAmountMinor=0}:{
+ workspaceId:string;locale:"en"|"bn";enabled:boolean;topups:AiWalletView["topups"];freeEnabled?:boolean;freeAmountMinor?:number;
 }){
  const bn=locale==="bn",t=(en:string,be:string)=>bn?be:en;
  const router=useRouter();
@@ -29,13 +29,15 @@ export function BriofoldAiTopupControls({workspaceId,locale,enabled,topups,freeE
    }catch(e){setError(t("Could not start your top-up. Retry safely.","ক্রেডিট কেনা শুরু হয়নি। একই অনুরোধ আবার চেষ্টা করুন।")+" "+(e instanceof Error?e.message:""))}
   });
  }
+ const freeTaka="৳"+new Intl.NumberFormat("en-BD",{maximumFractionDigits:2}).format(freeAmountMinor/100);
+ const freeTakaBn="৳"+new Intl.NumberFormat("bn-BD",{maximumFractionDigits:2}).format(freeAmountMinor/100);
  async function claimFree(){
   setError("");
   startTransition(async()=>{
    try{
     const r=await fetch(`/api/go/workspaces/${workspaceId}/ai-credits/free`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:"{}"});
     const data=await r.json();
-    if(r.status===409){setError(t("Free credit has already been used for this business or your account.","এই ব্যবসা বা আপনার অ্যাকাউন্টে ফ্রি ক্রেডিট আগেই নেওয়া হয়েছে।"));return}
+    if(r.status===409){setError(data?.code==="AI_FREE_CREDIT_DISABLED"?t("Free credit is not available now.","এখন ফ্রি ক্রেডিট দেওয়া হচ্ছে না।"):t("Free credit has already been used for this business or your account.","এই ব্যবসা বা আপনার অ্যাকাউন্টে ফ্রি ক্রেডিট আগেই নেওয়া হয়েছে।"));return}
     if(!r.ok)throw Error(data?.error?.code||data?.code||String(r.status));
     router.refresh();
    }catch(e){setError(t("Could not add free credit. Retry.","ফ্রি ক্রেডিট যোগ করা যায়নি। আবার চেষ্টা করুন।")+" "+(e instanceof Error?e.message:""))}
@@ -56,8 +58,8 @@ export function BriofoldAiTopupControls({workspaceId,locale,enabled,topups,freeE
  return <div className={styles.root}>
   <h3>{t("Add AI credits","AI ক্রেডিট যোগ করুন")}</h3>
   {freeEnabled&&<div className={styles.buy}>
-   <p>{t("Start with ৳30 free AI credit, once per business. No payment needed.","শুরুতে ৳৩০ ফ্রি এআই ক্রেডিট, প্রতি ব্যবসায় একবার। কোনো পেমেন্ট লাগবে না।")}</p>
-   <button type="button" disabled={pending} onClick={()=>void claimFree()}>{t("Get ৳30 free","৳৩০ ফ্রি নিন")}</button>
+   <p>{t(`Start with ${freeTaka} free AI credit, once per business. No payment needed.`,`শুরুতে ${freeTakaBn} ফ্রি এআই ক্রেডিট, প্রতি ব্যবসায় একবার। কোনো পেমেন্ট লাগবে না।`)}</p>
+   <button type="button" disabled={pending} onClick={()=>void claimFree()}>{t(`Get ${freeTaka} free`,`${freeTakaBn} ফ্রি নিন`)}</button>
   </div>}
   {enabled?<div className={styles.buy}>
    <label>{t("Amount in BDT","টাকা")}<input type="number" min={AI_TOPUP_MIN_TAKA} max="100000" step="1" value={amount} disabled={pending} onChange={e=>{key.current="";setAmount(Number(e.target.value));setError("")}}/></label>

@@ -86,7 +86,15 @@ func (s *Service) HandleAICreditTopup(w http.ResponseWriter, r *http.Request) {
 			Amount  int64  `json:"amount_minor"`
 			Balance int64  `json:"balance_minor"`
 		}
-		if json.Unmarshal(raw, &out) != nil || out.Amount <= 0 || out.Balance < 0 {
+		if json.Unmarshal(raw, &out) != nil || out.Balance < 0 {
+			fail(w, 503, "AI_CREDITS_UNAVAILABLE")
+			return
+		}
+		if !out.Granted && out.Reason == "DISABLED" { // Super Admin set the free amount to ৳0 (0260)
+			write(w, 409, map[string]any{"code": "AI_FREE_CREDIT_DISABLED", "granted": false})
+			return
+		}
+		if out.Amount <= 0 {
 			fail(w, 503, "AI_CREDITS_UNAVAILABLE")
 			return
 		}

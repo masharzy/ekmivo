@@ -1,4 +1,6 @@
 import Link from "next/link";
+import {AdminAiFreeCredit} from "./admin-ai-free-credit";
+import {freeCreditSetting} from "../lib/server/ai-free-credit";
 import {randomUUID} from "node:crypto";
 import {AdminAiExceptions,type AiException} from "./admin-ai-exceptions";
 import {AdminShopAssistantModel} from "./admin-shop-assistant-model";
@@ -57,7 +59,12 @@ export async function AdminCreditsPage({isSuper,locale}:{isSuper:boolean;locale:
        model={activeVersions[0]?.model ?? null} options={tariffs.filter(row=>row.active).map(row=>row.model)}/>
    : <DbMissing name="Shop assistant model" migration="0240_briofold_shop_assistant_model.sql"/>;
  }
- return workspaces?<><AdminAiCreditsManager canEdit={isSuper} locale={locale} workspaces={workspaces} entries={history} operationKey={randomUUID()}/>{assistantModel}<AdminAiTariffs rows={tariffs} canEdit={isSuper} locale={locale} operationKey={randomUUID()}/><AdminAiExceptions items={exceptions} canEdit={isSuper} locale={locale}/></>:<><div className="pa-page-head"><h1>AI Credits</h1></div><DbMissing name="Prepaid AI wallet and model rates" migration="0130_briofold_ai_exception_resolution.sql"/></>;
+ const free=await freeCreditSetting();
+ const freeCredit=free.settingAvailable
+  ?<AdminAiFreeCredit locale={locale} revision={free.revision} amountMinor={free.amountMinor} changedBy={free.changedBy} changedAt={free.changedAt}
+    customerFlagOn={process.env.BRIOFOLD_AI_FREE_CREDIT_ENABLED==="true"} canEdit={isSuper}/>
+  :<DbMissing name="Free AI credit" migration="0260_briofold_ai_free_credit_setting.sql"/>;
+ return workspaces?<><AdminAiCreditsManager canEdit={isSuper} locale={locale} workspaces={workspaces} entries={history} operationKey={randomUUID()}/>{freeCredit}{assistantModel}<AdminAiTariffs rows={tariffs} canEdit={isSuper} locale={locale} operationKey={randomUUID()}/><AdminAiExceptions items={exceptions} canEdit={isSuper} locale={locale}/></>:<><div className="pa-page-head"><h1>AI Credits</h1></div><DbMissing name="Prepaid AI wallet and model rates" migration="0130_briofold_ai_exception_resolution.sql"/></>;
 }
 export async function AdminSubscriptionsPage({locale,query}:{locale:AdminLocale;query:string}){
  const base="/"+locale+"/admin",q=query.slice(0,80),term="%"+q+"%";
