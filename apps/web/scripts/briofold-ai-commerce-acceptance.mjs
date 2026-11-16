@@ -37,7 +37,7 @@ export async function runBriofoldAiCommerce({control, apiEnv, phase9Fixture}) {
   for (const realm of [phase9Fixture.liveDatabase, phase9Fixture.sandboxDatabase]) {
     const r = postgres(local(realm), {max: 1, prepare: false, onnotice: () => {}});
     try {
-      for (const file of ["0236_briofold_ai_receipt_lookup.sql", "0243_briofold_ai_payment_link_realm.sql", "0248_briofold_ai_receipts_by_payer.sql", "0255_briofold_finance_production_reconcile.sql"])
+      for (const file of ["0236_briofold_ai_receipt_lookup.sql", "0243_briofold_ai_payment_link_realm.sql", "0248_briofold_ai_receipts_by_payer.sql", "0255_briofold_finance_production_reconcile.sql", "0261_sms_recheck_phone_forwarder.sql"])
         for (let i = 0; i < 2; i++) await r.unsafe(await sql(file)).simple();
     } finally { await r.end({timeout: 3}); }
   }

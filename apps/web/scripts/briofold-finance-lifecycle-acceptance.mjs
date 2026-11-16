@@ -43,7 +43,7 @@ export async function runFinanceLifecycle({origin,context,viewerContext,page,fin
  const expired=await create({reference:'EXP-'+randomUUID(),amount_minor:4500,max_quantity:1,max_uses:0,expires_at:new Date(Date.now()-60000).toISOString()});
  const publicVisit=(token)=>context.request.post(origin+'/api/documents/'+token,{headers:{Origin:origin,'Idempotency-Key':randomUUID()},data:{quantity:1,fields:{},customer_details:{}}});
  assert.equal((await publicVisit(expired.public_token)).status(),410,'expired link issued a checkout capability');assert.equal((await finance`SELECT count(*)::integer n FROM pg10_document_intents WHERE document_id=${expired.id}`)[0].n,0);
- for(const returnURL of ['https://unregistered.example.invalid/thanks',registered+'.attacker.invalid/thanks',registered+'/thanks?secret=1'])assert.equal((await post('/documents/payment-links',{amount_minor:4500,reference:'DENY-'+randomUUID(),return_url:returnURL})).status(),409,'unregistered return destination accepted');
+ for(const returnURL of ['https://unregistered.example.invalid/thanks',registered+'.attacker.invalid/thanks',registered+'/thanks?secret=1'])assert.equal((await post('/documents/payment-links',{amount_minor:4500,reference:'DENY-'+randomUUID(),return_url:returnURL})).status(),422,'unregistered return destination accepted');
  const active=await create({reference:'LIVE-'+randomUUID(),amount_minor:4500,max_quantity:1,max_uses:0,expires_at:new Date(Date.now()+86400000).toISOString(),return_url:registered+'/thanks'});
  // The earlier device-health journey deliberately deletes its live fixture.
  // Prove the unavailable-source gate, then provide a separate, freshly paired

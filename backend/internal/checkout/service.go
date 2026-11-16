@@ -363,6 +363,20 @@ func mapped(w http.ResponseWriter, err error) {
 				fail(w, 409, "PAYMENT_LINK_LIMIT_REACHED")
 				return
 			}
+			// Each check below is a fixed database message (no customer data), so the
+			// exact reason is safe to log and to show instead of a generic code.
+			log.Printf("Financial check refused: %q", pg.Message)
+			switch pg.Message {
+			case "deleted link is immutable":
+				fail(w, 409, "PAYMENT_LINK_DELETED")
+				return
+			case "registered return origin required":
+				fail(w, 422, "RETURN_URL_NOT_REGISTERED")
+				return
+			case "paid or expired request cannot be cancelled":
+				fail(w, 409, "PAYMENT_IN_PROGRESS")
+				return
+			}
 			fail(w, 409, "LOCKED_OR_EXPIRED")
 			return
 		case "22023", "23502", "22001", "22003":
