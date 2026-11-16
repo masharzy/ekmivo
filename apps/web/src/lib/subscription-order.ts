@@ -5,7 +5,8 @@ export type LegalDocuments=Record<CheckoutPolicy,PublishedLegalDocument>;
 export type OrderLine={label:string;quantity:number;unit_price_minor:string;subtotal_minor:string};
 export type OrderQuote={id:string;subtotal_minor:string;annual_discount_minor:string;bundle_discount_minor:string;
  coupon_discount_minor:string;tax_minor:string;total_minor:string;currency:"BDT";expires_at:string;
- coupon_code:string|null;lines:OrderLine[]};
+ coupon_code:string|null;lines:OrderLine[];
+ /** AI credit in the same order (0263); not discounted or taxed. */ ai_topup_minor?:string};
 export type OrderRead={status:"selected"|"quoted"|"confirmed";intent_id:string;store_id:string;expires_at:string;
  intent_revision?:number;selected_coupon_code?:string|null;checkout_enabled?:boolean;
  offer:{key:string;product:"payments"|"ai_credit"|"bundle";term:"monthly"|"yearly"|"one_time";version_id:string;
@@ -40,7 +41,7 @@ export function moneyBDT(value:string,locale:"bn"|"en"):string{
 export function verifiedSubscriptionQuote(value:OrderQuote|null|undefined,now=Date.now()):value is OrderQuote{
  return Boolean(value&&uuid.test(value.id)&&value.currency==="BDT"&&
   [value.subtotal_minor,value.annual_discount_minor,value.bundle_discount_minor,value.coupon_discount_minor,
-   value.tax_minor,value.total_minor].every(validMinor)&&
+   value.tax_minor,value.total_minor].every(validMinor)&&(value.ai_topup_minor===undefined||validMinor(value.ai_topup_minor))&&
   Array.isArray(value.lines)&&value.lines.length>0&&value.lines.every(line=>line.label.length>0&&
    Number.isInteger(line.quantity)&&line.quantity>0&&validMinor(line.unit_price_minor)&&validMinor(line.subtotal_minor))&&
   Number.isFinite(Date.parse(value.expires_at))&&Date.parse(value.expires_at)>now);

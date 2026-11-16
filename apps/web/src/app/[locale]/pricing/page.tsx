@@ -33,7 +33,7 @@ export default async function Page({params,searchParams}:{params:Promise<{locale
    :query.purchase&&<p className="bf-note bf-w" role="alert">{bn?"নির্বাচনটা আর পাওয়া যাচ্ছে না। আবার একটা প্ল্যান বেছে নিন।":"That selection is no longer available. Please choose a plan again."}</p>}
   <div className="bf-w">
    <PricingExperience locale={locale} plans={pricingPlans(offers,plans)} unavailable={plansUnavailable&&offersUnavailable}
-    signedIn={signedIn} freeEnabled={free.enabled} freeAmountMinor={free.amountMinor} initialTab={tab}/>
+    signedIn={signedIn} freeEnabled={free.enabled} freeAmountMinor={free.amountMinor} comboEnabled={process.env.BRIOFOLD_ORDER_AI_TOPUP_ENABLED==="true"} initialTab={tab}/>
   </div>
  </main>;
 }

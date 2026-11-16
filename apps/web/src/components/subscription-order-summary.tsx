@@ -214,9 +214,9 @@ export function SubscriptionOrderSummary({locale,intentId,storeId,storeName}:{
      <h2>{t("Payment summary","পেমেন্ট সামারি")}</h2>
      {confirmed&&!quoteReady&&order?.total_minor&&<><div className="ek-order-line ek-order-grand"><span>{t("Previously confirmed total","আগে নিশ্চিত করা মোট")}</span><strong>{money(order.total_minor)}</strong></div><p className="ek-order-message">{t("Your confirmed invoice will be resumed, not recreated.","আগের ইনভয়েসটি আবার খোলা হবে, নতুন তৈরি হবে না।")}</p></>}
      {quoteReady&&quote? <>
-      {quote.lines.map((line,index)=><div className="ek-order-line" key={`${line.label}-${index}`}><span>{line.label} × {line.quantity}<small className="ek-order-unit">{money(line.unit_price_minor)} {t("each","প্রতি ইউনিট")}</small></span><strong>{money(line.subtotal_minor)}</strong></div>)}
+      {quote.lines.map((line,index)=><div className="ek-order-line" key={`${line.label}-${index}`}><span>{line.label==="AI credit"?t("AI credit (recharge)","AI ক্রেডিট (রিচার্জ)"):line.label} × {line.quantity}<small className="ek-order-unit">{money(line.unit_price_minor)} {t("each","প্রতি ইউনিট")}</small></span><strong>{money(line.subtotal_minor)}</strong></div>)}
       <div className="ek-order-separator"/>
-      <div className="ek-order-line"><span>{t("Subtotal","সাবটোটাল")}</span><strong>{money(quote.subtotal_minor)}</strong></div>
+      <div className="ek-order-line"><span>{t("Subtotal","সাবটোটাল")}</span><strong>{money((BigInt(quote.subtotal_minor)+BigInt(quote.ai_topup_minor??"0")).toString())}</strong></div>
       {quote.annual_discount_minor!=="0"&&<div className="ek-order-line ek-order-saving"><span>{t("Published annual savings","প্রকাশিত বার্ষিক সাশ্রয়")}</span><strong>−{money(quote.annual_discount_minor)}</strong></div>}
       {quote.bundle_discount_minor!=="0"&&<div className="ek-order-line ek-order-saving"><span>{t("Approved bundle savings","অনুমোদিত বান্ডেল সাশ্রয়")}</span><strong>−{money(quote.bundle_discount_minor)}</strong></div>}
       {quote.coupon_discount_minor!=="0"&&<div className="ek-order-line ek-order-saving"><span>{t("Coupon discount","কুপন ছাড়")}</span><strong>−{money(quote.coupon_discount_minor)}</strong></div>}

@@ -53,9 +53,9 @@ const COPY={
 } as const;
 const ICONS=["","M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z","M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"];
 
-/** comboEnabled must stay false until the one-order plan + recharge checkout exists on the server. */
+/** comboEnabled: plan + AI credit in one order (0263), web flag BRIOFOLD_ORDER_AI_TOPUP_ENABLED. */
 export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled,freeAmountMinor=0,comboEnabled=false,initialTab="payments"}:{
- locale:Locale;plans:PricingPlan[];unavailable:boolean;signedIn:boolean;freeEnabled:boolean;freeAmountMinor?:number;comboEnabled?:false;initialTab?:Tab;
+ locale:Locale;plans:PricingPlan[];unavailable:boolean;signedIn:boolean;freeEnabled:boolean;freeAmountMinor?:number;comboEnabled?:boolean;initialTab?:Tab;
 }){
  const c=COPY[locale],bn=locale==="bn";
  const money=(minor:number)=>"৳"+new Intl.NumberFormat(bn?"bn-BD":"en-BD",{maximumFractionDigits:2}).format(minor/100);

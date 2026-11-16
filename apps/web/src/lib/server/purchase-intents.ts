@@ -76,7 +76,7 @@ async function command(operation:Operation,token:string,payload:IntentPayload={}
   return rows[0].result as Record<string,unknown>;
  }catch(e){throw mappedError(e)}
 }
-export async function createPurchase(input:{offerKey:string;term:string;versionId?:string;quantity?:number;coupon?:string;idempotencyKey?:string;legacyPlanId?:string}){
+export async function createPurchase(input:{offerKey:string;term:string;versionId?:string;quantity?:number;coupon?:string;idempotencyKey?:string;legacyPlanId?:string;aiTopupMinor?:number}){
  const guest=await ensureGuestSession();
  if(!OFFER.test(input.offerKey)||!["monthly","yearly","one_time"].includes(input.term))
   throw new IntentError("INVALID_SELECTION",422);
@@ -100,7 +100,9 @@ export async function createPurchase(input:{offerKey:string;term:string;versionI
  await command("create",token,{
   offer_key:input.offerKey,term:input.term,version_id:offer.version_id,
   quantity,creation_key:purchaseCreationKey(guest,nonce),
-  coupon_code:coupon,legacy_plan_id:input.legacyPlanId||null
+  coupon_code:coupon,legacy_plan_id:input.legacyPlanId||null,
+  // One cart order: plan + AI credit (0263). The database checks the range and the plan type.
+  ...(input.aiTopupMinor&&input.aiTopupMinor>0?{ai_topup_minor:String(input.aiTopupMinor)}:{})
  },hashToken(guest));
  await rememberPurchase(token);
  return token;
