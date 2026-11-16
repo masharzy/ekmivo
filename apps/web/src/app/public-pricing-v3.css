@@ -24,6 +24,8 @@
 .bf-grid3,.bf-grid2{margin-top:36px;display:grid;gap:14px}
 .bf-grid3{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
 .bf-grid2{grid-template-columns:repeat(2,minmax(0,1fr));max-width:860px;margin-inline:auto}
+.bf-grid2:has(>:only-child){grid-template-columns:minmax(0,440px);justify-content:center}
+.bf-credit-item b.bf-taka{font:700 20px var(--bf-d);color:var(--color-accent)}
 .bf-pcard{border-radius:28px;padding:28px 26px;box-shadow:inset 0 0 0 1.5px var(--color-border);background:var(--color-card);display:flex;flex-direction:column;gap:16px}
 .bf-pcard.is-rec{background:var(--color-forest);color:var(--color-on-forest);box-shadow:none}
 .bf-pcard-top{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:28px}

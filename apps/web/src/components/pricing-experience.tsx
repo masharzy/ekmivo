@@ -51,7 +51,7 @@ const COPY={
   faq:[["How much does one reply cost?","There is no fixed price. Each reply deducts exactly what the AI spent writing it and searching your products. Every reply’s cost is in your dashboard statement."],["What happens when the balance runs out?","Recharge to top up. Nothing is charged automatically."],["When does a payment plan start?","As soon as the payment is verified."],["Do I need a payment plan for the AI bot?","No. A credit recharge on its own is enough to run the AI bot."]]
  }
 } as const;
-const ICONS=["M12 3v18M17 7.5c0-1.9-2.2-3.5-5-3.5S7 5.6 7 7.5 9.2 11 12 11.5s5 1.6 5 3.5-2.2 3.5-5 3.5-5-1.6-5-3.5","M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z","M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"];
+const ICONS=["","M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z","M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"];
 
 /** comboEnabled must stay false until the one-order plan + recharge checkout exists on the server. */
 export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled,comboEnabled=false,initialTab="payments"}:{
@@ -85,7 +85,7 @@ export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled
  </div>;
  const creditStrip=<section className="bf-credit" aria-labelledby="bf-credit-title">
   <div><h2 id="bf-credit-title">{c.crTitle}</h2><p>{c.crLead}</p></div>
-  {c.cr.map(([title,body],i)=><div key={title} className="bf-credit-item"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d={ICONS[i]}/></svg></span><div><b>{title}</b><span>{body}</span></div></div>)}
+  {c.cr.map(([title,body],i)=><div key={title} className="bf-credit-item"><span aria-hidden="true">{i===0?<b className="bf-taka">৳</b>:<svg viewBox="0 0 24 24"><path d={ICONS[i]}/></svg>}</span><div><b>{title}</b><span>{body}</span></div></div>)}
  </section>;
 
  function planCard(p:PricingPlan){
