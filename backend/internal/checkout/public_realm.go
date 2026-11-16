@@ -31,7 +31,12 @@ func (s *Service) lookupCheckout(r *http.Request, cap string) (*pgxpool.Pool, []
 			function = "pg10_checkout_view"
 		}
 		var raw []byte
-		if err := p.QueryRow(r.Context(), "SELECT "+function+"($1)", digest(cap)).Scan(&raw); err != nil {
+		policy := "off"
+		if anyReturnURLEnabled() {
+			policy = "on"
+		}
+		// The setting lives only for this one statement (is_local inside its implicit transaction).
+		if err := p.QueryRow(r.Context(), "SELECT "+function+"($1) FROM (SELECT set_config('ekmivo.any_return_url',$2,true)) policy", digest(cap), policy).Scan(&raw); err != nil {
 			return nil, nil, err
 		}
 		if len(raw) > 0 && string(raw) != "null" {

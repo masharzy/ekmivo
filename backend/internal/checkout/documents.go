@@ -2,6 +2,7 @@ package checkout
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/mail"
+	"os"
 	"strings"
 	"time"
 
@@ -306,6 +308,9 @@ func (s *Service) HandleDocuments(w http.ResponseWriter, r *http.Request) {
 		e = s.creationScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 			if autoReference {
 				return tx.QueryRow(r.Context(), "SELECT pg10_invoice_auto_create($1::uuid,$2,$3::jsonb,$4,$5,$6,$7::uuid)", ws, realm, string(body), key, requestHash, digest(token), nullableID(actor)).Scan(&raw)
+			}
+			if e := allowAnyReturnURL(r.Context(), tx); e != nil {
+				return e
 			}
 			return tx.QueryRow(r.Context(), "SELECT pg10_write($1::uuid,$2,$3,$4::uuid,$5,$6::jsonb,$7,$8,$9,$10::uuid)", ws, realm, res, nullableID(id), action, string(body), key, requestHash, digest(token), nullableID(actor)).Scan(&raw)
 		})
@@ -735,4 +740,16 @@ func (s *Service) HandlePublicDocument(w http.ResponseWriter, r *http.Request) {
 	data["checkout_token"] = token
 	delete(data, "creation_key")
 	write(w, 201, data)
+}
+
+// Owner decision 2026-11-16 (0262): with BRIOFOLD_ANY_RETURN_URL_ENABLED on, any
+// public https Redirect URL is accepted, not only Integrations websites.
+func anyReturnURLEnabled() bool { return os.Getenv("BRIOFOLD_ANY_RETURN_URL_ENABLED") == "true" }
+
+func allowAnyReturnURL(ctx context.Context, tx pgx.Tx) error {
+	if !anyReturnURLEnabled() {
+		return nil
+	}
+	_, err := tx.Exec(ctx, "SELECT set_config('ekmivo.any_return_url','on',true)")
+	return err
 }
