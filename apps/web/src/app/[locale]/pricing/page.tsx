@@ -28,7 +28,9 @@ export default async function Page({params,searchParams}:{params:Promise<{locale
    <h1>{bn?"প্ল্যান ও দাম":"Plans and pricing"}</h1>
    <p>{bn?"পেমেন্ট গেটওয়ে মাসিক বা বার্ষিক প্ল্যানে। এআই বট চলে রিচার্জ করা ব্যালেন্সে।":"The payment gateway is a monthly or yearly plan. The AI bot runs on a recharged balance."}</p>
   </section>
-  {query.purchase&&<p className="bf-note bf-w" role="alert">{bn?"নির্বাচনটা আর পাওয়া যাচ্ছে না। আবার একটা প্ল্যান বেছে নিন।":"That selection is no longer available. Please choose a plan again."}</p>}
+  {query.purchase==="SYSTEM_WORKSPACE"
+   ?<p className="bf-note bf-w" role="alert">{bn?"আপনি এখন Briofold-এর নিজের (সিস্টেম) ব্যবসায় আছেন। এই ব্যবসা প্ল্যান বিক্রি করে, কেনে না। কিনে দেখতে অন্য একটা ব্যবসা বেছে নিন।":"You are in Briofold's own (system) business. It sells plans and cannot buy one. Switch to another business to buy."}</p>
+   :query.purchase&&<p className="bf-note bf-w" role="alert">{bn?"নির্বাচনটা আর পাওয়া যাচ্ছে না। আবার একটা প্ল্যান বেছে নিন।":"That selection is no longer available. Please choose a plan again."}</p>}
   <div className="bf-w">
    <PricingExperience locale={locale} plans={pricingPlans(offers,plans)} unavailable={plansUnavailable&&offersUnavailable}
     signedIn={signedIn} freeEnabled={free.enabled} freeAmountMinor={free.amountMinor} initialTab={tab}/>

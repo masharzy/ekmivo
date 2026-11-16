@@ -6,6 +6,7 @@ import {publicPaymentPlans} from "../../../../lib/server/payment-plans";
 import {dashboardHref} from "../../../../lib/dashboard-navigation";
 import {onboardingState} from "../../../../lib/server/briofold-onboarding";
 import {createPurchase,activePurchase,readPurchase,IntentError} from "../../../../lib/server/purchase-intents";
+import {database} from "../../../../lib/server/db";
 
 // Legacy plans remain on the verified billing route while Phase 5 and Phase 6 are disabled.
 const SELECTION_TTL=7*24*60*60;
@@ -70,8 +71,20 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{locale:s
   return NextResponse.redirect(new URL("/setup",request.url),303);
  }
  if(!["commerce","both"].includes(workspace.mode))return NextResponse.redirect(new URL("/pricing?status=store-payments-disabled",request.url),303);
+ // The platform's own business sells plans; its quote is refused by design (0105), so the
+ // modal could only say "price unavailable". Say why instead.
+ if(await isSystemWorkspace(workspace.id))return NextResponse.redirect(new URL("/pricing?purchase=SYSTEM_WORKSPACE",request.url),303);
  jar.delete("briofold-selected-plan");
  // Keep the existing verified billing path active until coupon, legal-consent
  // enforcement and the new order confirmation contract have passed release gates.
  return NextResponse.redirect(new URL(dashboardHref(locale,workspace.id,"payments","billing")+"?tab=plans&plan="+encodeURIComponent(plan),request.url),303);
+}
+
+async function isSystemWorkspace(id:string){
+ try{
+  const [row]=await database()`SELECT to_regprocedure('public.platform_billing_system_workspace(uuid)') IS NOT NULL AS ready`;
+  if(!row?.ready)return false;
+  const [r]=await database()`SELECT platform_billing_system_workspace(${id}::uuid) AS system`;
+  return r?.system===true;
+ }catch{return false}
 }
