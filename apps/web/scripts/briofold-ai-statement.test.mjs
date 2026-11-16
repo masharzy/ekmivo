@@ -50,10 +50,11 @@ test("Microsecond-precise statement cursors cannot skip same-millisecond ledger 
  assert.ok(older<parsed.createdAt);
  const api=src("app/api/ai-credits/statement/route.ts");
  const server=src("lib/server/briofold-ai-wallet.ts");
- for(const q of [api,server]){
-  assert.match(q,/to_char\(created_at AT TIME ZONE 'UTC'/);
-  assert.match(q,/HH24:MI:SS\.US"Z"'/);
- }
+ const lib=src("lib/server/briofold-ai-statement.ts");
+ assert.match(lib,/to_char\(created_at AT TIME ZONE 'UTC'/);
+ assert.match(lib,/HH24:MI:SS\.US"Z"'/);
+ assert.match(api,/groupedStatement\(db,workspace\.id,cursor,50\)/);
+ assert.match(server,/groupedStatement\(db,workspaceId,null,30\)/);
  const legacy=h.parseStatementCursor(h.statementCursor({created_at:"2026-10-20T10:10:10.123Z",id}));
  assert.equal(legacy.createdAt,"2026-10-20T10:10:10.123Z");
  assert.throws(()=>h.statementEntry({...row,created_at:"not-a-date"}));
@@ -67,9 +68,10 @@ test("Ledger pages are tenant, role, subscription and permission restricted",()=
  assert.match(api,/workspace\.role!==["']owner["']/);
  assert.match(api,/workspace_product_access/);
  assert.match(api,/pg13_capability_override/);
- assert.match(api,/workspace_id=\$\{workspace\.id\}::uuid/);
- assert.match(api,/\(created_at,id\)<\(/);
- assert.match(api,/LIMIT 51/);
+ const lib=src("lib/server/briofold-ai-statement.ts");
+ assert.match(lib,/WHERE workspace_id=\$\{workspaceId\}::uuid/);
+ assert.match(lib,/\(created_at,id\)<\(/);
+ assert.match(lib,/LIMIT \$\{limit\+1\}/);
  assert.match(api,/no-store/);
  assert.match(api,/searchParams\.get\("workspace_id"\)/);
  assert.doesNotMatch(api,/workspace_id[\s\S]*workspaceId/);
@@ -82,4 +84,13 @@ test("Low-balance warnings depend on live configured reservation, not guessed pr
  assert.match(server,/m\.role IN \('owner','admin'\)/);
  assert.match(ui,/wallet\.available_minor<wallet\.minimum_request_minor/);
  assert.match(ui,/BriofoldAiStatement/);
+});
+
+test("One statement line per AI reply: reserve and settle share reference_id",()=>{
+ const lib=src("lib/server/briofold-ai-statement.ts"),ui=src("components/briofold-ai-statement.tsx");
+ assert.match(lib,/CASE WHEN kind IN \('reserve','settle','release'\) AND reference_id IS NOT NULL THEN reference_id ELSE id END AS gid/);
+ assert.match(lib,/sum\(available_delta_minor\)/);
+ assert.match(lib,/'ai_reply_pending'/);
+ assert.match(ui,/ai_reply:\["AI reply","AI উত্তর"\]/);
+ assert.doesNotMatch(ui,/Reserved change/);
 });
