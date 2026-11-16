@@ -460,3 +460,31 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
 - Server guards in the three actions (onboarding services step, create business x2, product toggle).
 - `BRIOFOLD_AI_SIGNUP_OPEN=true` (web) restores the old behaviour. Default is closed (owner wants it closed now).
 - Known limit: a business that already has AI and turns it off cannot turn it back on while this is closed.
+
+## Platform work — 2026-11-16
+- Done (merged, live on Vercel):
+  - /developers API base URL (Vercel env `NEXT_PUBLIC_DEVELOPER_API_ORIGIN`).
+  - Pricing v3 (#194, #195), status and forgot-password redesign (#192).
+  - Google login: `GOOGLE_AUTH_ORIGIN` set to https://briofold.tech; 42501 on `FOR UPDATE OF g` fixed (#202).
+    Diagnostics: #199, #201.
+- Released on the VPS (5f2abe2, then 5f73b4b):
+  - 0259 free AI credit.
+  - 0260 free-credit amount set by Super Admin (#197).
+  - 0261 SMS Recheck for phone-forwarded SMS (#198).
+  - 0262 any https Redirect URL behind `BRIOFOLD_ANY_RETURN_URL_ENABLED` (#200).
+  - Baselines: #197 (after 0259), #203 (after 5f73b4b, open).
+- Flags being switched on by the owner: `BRIOFOLD_SERVICE_STATUS_ENABLED`, `BRIOFOLD_AI_FREE_CREDIT_ENABLED`,
+  `BRIOFOLD_AI_TOPUPS_ENABLED`, `BRIOFOLD_ANY_RETURN_URL_ENABLED`. After that, Vercel needs
+  `BRIOFOLD_AI_FREE_CREDIT_ENABLED` and `BRIOFOLD_AI_TOPUPS_ENABLED` set to true.
+- Decisions:
+  - AI credit is a taka balance; the actual cost of each reply and search is deducted.
+  - Minimum recharge ৳20. Free credit is given once per business and once per person; Super Admin sets the amount.
+  - Yearly discount is set per plan in admin.
+  - The owner publishes offers himself. Pricing goes straight to checkout only for published offers.
+  - "Both" = one order with two items (plan + recharge).
+  - Dashboard pages follow the dashboard design, not the public pages.
+- Open:
+  - AI statement grouped per reply (#204).
+  - Billing & usage redesign.
+  - Plan + recharge in one order.
+  - Teach AI from inbox 👍/👎 (later, owner).
