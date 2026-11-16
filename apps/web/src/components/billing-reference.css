@@ -54,3 +54,10 @@
  .ref-billing .mf{flex-wrap:wrap}
  .ref-billing .tw{max-width:100%;overflow-x:auto}
 }
+
+/* Dashboard standard (2026-11-16): same frame as Payments — no second padding inside
+   .ds-content, 24px/600 title under the tabs, centred empty state with a normal button. */
+.ds-content .ref-billing .wrap{padding:0;max-width:none;margin:0;gap:18px}
+.ds-content .ref-billing .wrap .top h1{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.3;margin:0}
+.ref-billing .table-empty{justify-items:center}
+.ref-billing .table-empty .ib{width:auto;margin-top:6px}

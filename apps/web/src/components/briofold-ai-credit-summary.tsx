@@ -13,7 +13,7 @@ export async function BriofoldAiCreditSummary({workspaceId,actorId,locale,standa
  const money=(n:number)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD",{style:"currency",currency:"BDT",minimumFractionDigits:0,maximumFractionDigits:2}).format(n/100);
  const low=wallet.status!=="unavailable"&&(wallet.minimum_request_minor===null||wallet.available_minor<wallet.minimum_request_minor);
  return <div className="ref-dashboard"><section className={`ref-page ${styles.section}`} aria-labelledby="briofold-ai-credit-title">
-  <div className="top"><h1 id="briofold-ai-credit-title">{standalone?t("Billing & usage","বিলিং ও ব্যবহার"):t("AI credits","AI ক্রেডিট")}</h1><p>{t("Prepaid credits for AI replies. Separate from your payment gateway plan.","AI উত্তরের জন্য প্রিপেইড ক্রেডিট। পেমেন্ট গেটওয়ে প্ল্যান থেকে আলাদা।")}</p></div>
+  <div className={`top ${standalone?"":styles.sub}`}>{standalone?<h1 id="briofold-ai-credit-title">{t("Billing & usage","বিলিং ও ব্যবহার")}</h1>:<h2 id="briofold-ai-credit-title">{t("AI credits","AI ক্রেডিট")}</h2>}<p>{t("Prepaid credits for AI replies. Separate from your payment gateway plan.","AI উত্তরের জন্য প্রিপেইড ক্রেডিট। পেমেন্ট গেটওয়ে প্ল্যান থেকে আলাদা।")}</p></div>
   {wallet.status==="unavailable"?<div className="notice" role="alert">{t("AI credit balance is unavailable right now. Paid AI replies stay off until it is back.","AI ক্রেডিটের হিসাব এখন পাওয়া যাচ্ছে না। ফিরে না আসা পর্যন্ত পেইড AI উত্তর বন্ধ থাকবে।")}</div>:
   <>
    <div className={styles.kpis}>
