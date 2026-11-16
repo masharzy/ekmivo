@@ -9,7 +9,7 @@
 }
 .bf-pub:lang(bn){--bf-d:var(--font-hind-siliguri),"Hind Siliguri",var(--font-outfit),sans-serif;--bf-b:var(--font-hind-siliguri),"Hind Siliguri",var(--font-figtree),sans-serif;line-height:1.75}
 .bf-pub *{box-sizing:border-box}
-.bf-pub :is(h1,h2,h3,p){margin:0}
+.bf-pub :where(h1,h2,h3,p){margin:0} /* :where keeps this reset weaker than component margins */
 .bf-pub :is(h1,h2,h3){font-family:var(--bf-d);font-weight:600;line-height:1.08;letter-spacing:-.035em}
 .bf-pub:lang(bn) :is(h1,h2,h3){letter-spacing:0;line-height:1.35}
 .bf-pub a{color:inherit;text-decoration:none}
