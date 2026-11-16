@@ -14,10 +14,10 @@ const COPY={
   startFree:"ফ্রি শুরু করুন",take:(n:string)=>`${n} নিন`,talk:"যোগাযোগ করুন",
   payNote:"ব্যর্থ বা মেয়াদ শেষ হওয়া পেমেন্ট গোনা হয় না। পেমেন্ট প্রোভাইডারের নিজের চার্জ আলাদা।",
   noPlans:"এখনো কোনো প্ল্যান প্রকাশ করা হয়নি।",unavailable:"প্ল্যানের তথ্য এখন পাওয়া যাচ্ছে না। একটু পরে আবার দেখুন।",
-  crTitle:"এআই ক্রেডিট মানে টাকার ব্যালেন্স",crLead:"কেনার আগে ১০ সেকেন্ডে জেনে নিন",
-  cr:[["টাকায় রিচার্জ করুন","যত টাকা রিচার্জ, তত টাকার ব্যালেন্স।"],["আসল খরচ যত, কাটে তত","উত্তর লিখতে আর পণ্য খুঁজতে এআই-এর যত খরচ হয়, ঠিক ততটুকু টাকা কাটে।"],["আপনি উত্তর দিলে কাটে না","মাসিক চার্জ নেই। প্রতিটা খরচের হিসাব ড্যাশবোর্ডে।"]],
-  freeTitle:"ফ্রি",freeAmt:"৳৩০",freeSub:"এআই ক্রেডিট, একবার",freeBody:"শুরু করে দেখার জন্য ৳৩০ ফ্রি ব্যালেন্স। প্রতি ব্যবসায় একবার, কোনো পেমেন্ট লাগবে না।",getFree:"৳৩০ ফ্রি নিন",
-  customTitle:"নিজের পছন্দের রিচার্জ",customBody:"যত টাকা দরকার, তত রিচার্জ করুন। ব্যালেন্স শেষ না হওয়া পর্যন্ত থাকে।",amount:"টাকার পরিমাণ",min:`সর্বনিম্ন ৳২০`,recharge:"রিচার্জ করুন",
+  crTitle:"এআই ক্রেডিট কীভাবে কাটে",
+  cr:[["টাকায় রিচার্জ","যত টাকা রিচার্জ করবেন, ব্যালেন্স তত টাকা।"],["প্রতি উত্তরে আসল খরচ","এআই উত্তর লিখতে আর পণ্য খুঁজতে যত খরচ করে, ততটুকু কাটে।"],["আপনার উত্তরে কাটে না","আপনি বা আপনার টিম উত্তর দিলে কিছু কাটে না।"]],
+  freeTitle:"ফ্রি",freeAmt:"৳৩০",freeSub:"এআই ক্রেডিট, একবার",freeBody:"প্রতি ব্যবসায় একবার। পেমেন্ট লাগবে না।",getFree:"৳৩০ ফ্রি নিন",
+  customTitle:"নিজের পছন্দের রিচার্জ",customBody:"যত টাকা দরকার, রিচার্জ করুন।",amount:"টাকার পরিমাণ",min:`সর্বনিম্ন ৳২০`,recharge:"রিচার্জ করুন",
   amountErr:"৳২০ থেকে ৳১,০০,০০০-এর মধ্যে পুরো টাকা দিন।",
   aiNote:"প্রতিটা উত্তরের খরচ আলাদা: উত্তর কত বড়, কতবার খুঁজতে হল, ছবি বা ভয়েস ছিল কি না তার ওপর নির্ভর করে।",
   steps:["পেমেন্ট প্ল্যান","এআই ক্রেডিট","চেকআউট"],stepsLabel:"ধাপ",s1h:"ধাপ ১: কোন পেমেন্ট প্ল্যান নেবেন?",s2h:"ধাপ ২: এআই ক্রেডিট",
@@ -25,7 +25,7 @@ const COPY={
   comboSoon:"একই পেমেন্টে রিচার্জ শিগগিরই আসছে। এখন প্ল্যান নিয়ে পরে ড্যাশবোর্ড থেকে রিচার্জ করুন।",
   sumPlan:"পেমেন্ট প্ল্যান",sumCredit:"এআই ক্রেডিট",sumTotal:"মোট",pickNext:"পরের ধাপে বেছে নিন",freeAfter:"৳৩০ ফ্রি (পেমেন্টের পর)",
   next:"পরের ধাপ: এআই ক্রেডিট",checkout:"চেকআউটে যান",
-  faqH:"যা সবাই জানতে চায়",
+  faqH:"প্রশ্ন ও উত্তর",
   faq:[["একটা উত্তরে কত টাকা কাটে?","নির্দিষ্ট কোনো দাম নেই। এআই উত্তর লিখতে আর পণ্য খুঁজতে যত খরচ করে, ঠিক ততটুকু কাটে। প্রতিটা উত্তরের খরচ ড্যাশবোর্ডের স্টেটমেন্টে দেখবেন।"],["ব্যালেন্স শেষ হলে কী হবে?","আবার রিচার্জ করে ব্যালেন্স বাড়াতে পারবেন। নিজে থেকে কোনো টাকা কাটা হয় না।"],["পেমেন্ট প্ল্যান কখন চালু হয়?","পেমেন্ট যাচাই হওয়ার সাথে সাথে।"],["শুধু এআই বট নিলে পেমেন্ট প্ল্যান লাগবে?","না। শুধু ক্রেডিট রিচার্জ করলেই এআই বট চলবে।"]]
  },
  en:{
@@ -36,10 +36,10 @@ const COPY={
   startFree:"Start free",take:(n:string)=>`Get ${n}`,talk:"Contact us",
   payNote:"Failed or expired payments are not counted. Payment-provider charges are separate.",
   noPlans:"No plans have been published yet.",unavailable:"Pricing is temporarily unavailable. Please try again later.",
-  crTitle:"AI credit is a taka balance",crLead:"Ten seconds before you buy",
-  cr:[["Recharge in taka","Your balance equals what you recharge."],["Pay the real cost, nothing more","Each reply deducts exactly what the AI spent writing it and searching your products."],["Free when you reply yourself","No monthly charge. Every deduction is listed in your dashboard."]],
-  freeTitle:"Free",freeAmt:"৳30",freeSub:"AI credit, once",freeBody:"৳30 free balance to try it out. Once per business, no payment needed.",getFree:"Get ৳30 free",
-  customTitle:"Your own amount",customBody:"Recharge as much as you need. The balance stays until you use it.",amount:"Amount in taka",min:"Minimum ৳20",recharge:"Recharge",
+  crTitle:"How AI credit is used",
+  cr:[["Recharge in taka","Your balance is the amount you recharge."],["Real cost per reply","Each AI reply deducts what it cost to write it and search your products."],["Your replies are free","Nothing is deducted when you or your team reply."]],
+  freeTitle:"Free",freeAmt:"৳30",freeSub:"AI credit, once",freeBody:"Once per business. No payment needed.",getFree:"Get ৳30 free",
+  customTitle:"Your own amount",customBody:"Recharge the amount you need.",amount:"Amount in taka",min:"Minimum ৳20",recharge:"Recharge",
   amountErr:"Enter a whole amount from ৳20 to ৳100,000.",
   aiNote:"Each reply costs a different amount: it depends on the reply length, how much searching it needed, and whether there was a photo or voice note.",
   steps:["Payment plan","AI credit","Checkout"],stepsLabel:"Steps",s1h:"Step 1: Which payment plan?",s2h:"Step 2: AI credit",
@@ -47,7 +47,7 @@ const COPY={
   comboSoon:"Recharging in the same payment is coming soon. For now, take the plan and recharge later from your dashboard.",
   sumPlan:"Payment plan",sumCredit:"AI credit",sumTotal:"Total",pickNext:"Choose in the next step",freeAfter:"৳30 free (after payment)",
   next:"Next: AI credit",checkout:"Go to checkout",
-  faqH:"Common questions",
+  faqH:"Questions",
   faq:[["How much does one reply cost?","There is no fixed price. Each reply deducts exactly what the AI spent writing it and searching your products. Every reply’s cost is in your dashboard statement."],["What happens when the balance runs out?","Recharge to top up. Nothing is charged automatically."],["When does a payment plan start?","As soon as the payment is verified."],["Do I need a payment plan for the AI bot?","No. A credit recharge on its own is enough to run the AI bot."]]
  }
 } as const;
@@ -84,7 +84,7 @@ export function PricingExperience({locale,plans,unavailable,signedIn,freeEnabled
   {maxPct>0&&<span className="bf-badge">{c.upTo(num(maxPct))}</span>}
  </div>;
  const creditStrip=<section className="bf-credit" aria-labelledby="bf-credit-title">
-  <div><h2 id="bf-credit-title">{c.crTitle}</h2><p>{c.crLead}</p></div>
+  <h2 id="bf-credit-title">{c.crTitle}</h2>
   {c.cr.map(([title,body],i)=><div key={title} className="bf-credit-item"><span aria-hidden="true">{i===0?<b className="bf-taka">৳</b>:<svg viewBox="0 0 24 24"><path d={ICONS[i]}/></svg>}</span><div><b>{title}</b><span>{body}</span></div></div>)}
  </section>;
 

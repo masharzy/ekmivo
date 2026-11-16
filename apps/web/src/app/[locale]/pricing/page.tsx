@@ -23,9 +23,8 @@ export default async function Page({params,searchParams}:{params:Promise<{locale
  const bn=locale==="bn";
  return <main className="bf-pub bf-pricing" lang={locale} id="main">
   <section className="bf-hero bf-w">
-   <span className="bf-pill"><i aria-hidden="true"/>{bn?"প্ল্যান ও দাম":"Plans and pricing"}</span>
-   <h1>{bn?"যা লাগবে, শুধু সেটাই নিন।":"Pay only for what you use."}<span>{bn?"লুকানো চার্জ নেই।":"No hidden charges."}</span></h1>
-   <p>{bn?"পেমেন্ট গেটওয়ে মাসিক বা বার্ষিক। এআই বট চলে প্রিপেইড ক্রেডিটে, যতটুকু ব্যবহার ততটুকু।":"The payment gateway is monthly or yearly. The AI bot runs on prepaid credit: you pay for what it uses."}</p>
+   <h1>{bn?"প্ল্যান ও দাম":"Plans and pricing"}</h1>
+   <p>{bn?"পেমেন্ট গেটওয়ে মাসিক বা বার্ষিক প্ল্যানে। এআই বট চলে রিচার্জ করা ব্যালেন্সে।":"The payment gateway is a monthly or yearly plan. The AI bot runs on a recharged balance."}</p>
   </section>
   {query.purchase&&<p className="bf-note bf-w" role="alert">{bn?"নির্বাচনটা আর পাওয়া যাচ্ছে না। আবার একটা প্ল্যান বেছে নিন।":"That selection is no longer available. Please choose a plan again."}</p>}
   <div className="bf-w">
