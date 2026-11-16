@@ -13,8 +13,10 @@ export async function googleAccount(flow:GoogleFlow,identity:Awaited<ReturnType<
  // OAuth-only accounts get an unguessable password; recovery can explicitly set one.
  const password=await passwordHash(randomBytes(48).toString("base64url"));
  return database().begin(async tx=>{
+  // The advisory lock serialises one Google subject. Row locks only on app_users: the
+  // web role has no UPDATE on auth_google_identities (0156), so FOR UPDATE OF g is 42501.
   await tx`SELECT pg_advisory_xact_lock(hashtextextended(${'google:'+identity.subject},0))`;
-  const existing=await tx`SELECT g.user_id,u.disabled_at FROM auth_google_identities g JOIN app_users u ON u.id=g.user_id WHERE g.subject=${identity.subject} FOR UPDATE OF g,u`;
+  const existing=await tx`SELECT g.user_id,u.disabled_at FROM auth_google_identities g JOIN app_users u ON u.id=g.user_id WHERE g.subject=${identity.subject} FOR UPDATE OF u`;
   if(existing.length&&existing[0].disabled_at)throw Error("GOOGLE_ACCOUNT_UNAVAILABLE");
   if(flow.mode==="link"){
    const actor=await tx`SELECT u.id,u.email FROM auth_sessions s JOIN app_users u ON u.id=s.user_id WHERE s.user_id=${flow.userId!}::uuid AND s.token_hash=${sessionHash} AND s.revoked_at IS NULL AND s.expires_at>now() AND s.created_at>now()-interval '10 minutes' AND u.disabled_at IS NULL AND u.email_verified_at IS NOT NULL FOR UPDATE OF s,u`;
