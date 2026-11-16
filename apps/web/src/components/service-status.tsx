@@ -5,13 +5,13 @@ import {SERVICE_KEYS,overallState,type ServiceKey,type ServiceState} from "../li
 type Locale="en"|"bn";
 const COPY={
  bn:{
-  overall:{ok:["সব সার্ভিস চালু আছে","সবকিছু স্বাভাবিকভাবে চলছে।"],issue:["কিছু সার্ভিসে সমস্যা চলছে","নিচের তালিকায় কোনটায় সমস্যা দেখুন। বাকি সব স্বাভাবিক।"],unknown:["সব সার্ভিসের অবস্থা জানা যাচ্ছে না","যেগুলোর অবস্থা জানা আছে, নিচের তালিকায় দেখুন।"],loading:["অবস্থা দেখা হচ্ছে…","একটু অপেক্ষা করুন।"]},
+  overall:{ok:["সব সার্ভিস চালু আছে","সবকিছু স্বাভাবিকভাবে চলছে।"],issue:["কিছু সার্ভিসে সমস্যা চলছে","কোনটায় সমস্যা, নিচের তালিকায় দেখুন।"],unknown:["কিছু সার্ভিসের অবস্থা জানা যাচ্ছে না","যেগুলোর অবস্থা জানা আছে, নিচে দেখুন।"],loading:["অবস্থা দেখা হচ্ছে…",""]},
   chip:{operational:"চালু",degraded:"ধীর চলছে",down:"বন্ধ",unknown:"জানা নেই"},
   svc:{web:["ওয়েবসাইট ও ড্যাশবোর্ড","লগইন, ড্যাশবোর্ড আর চেকআউট পেজ"],payments:["পেমেন্ট API","পেমেন্ট তৈরি আর যাচাই"],sms:["SMS দিয়ে পেমেন্ট মেলানো","ফোন থেকে আসা পেমেন্ট SMS মেলানো"],ai:["এআই বট","কাস্টমারকে এআই-এর উত্তর"],chat:["Facebook, Instagram ও WhatsApp চ্যাট","মেসেজ আসা আর পাঠানো"],webhooks:["Webhook","আপনার সার্ভারে ইভেন্ট পাঠানো"]},
   list:"সার্ভিসের তালিকা",checked:"শেষবার দেখা হয়েছে",refresh:"আবার দেখুন",checking:"দেখা হচ্ছে…",never:"এখনো দেখা হয়নি"
  },
  en:{
-  overall:{ok:["All services are up","Everything is running normally."],issue:["Some services have problems","See which ones in the list below. Everything else is normal."],unknown:["Some service states are unknown","See the services we can check in the list below."],loading:["Checking status…","One moment."]},
+  overall:{ok:["All services are up","Everything is running normally."],issue:["Some services have problems","See which ones below."],unknown:["Some service states are unknown","The ones we can check are below."],loading:["Checking status…",""]},
   chip:{operational:"Up",degraded:"Slow",down:"Down",unknown:"Unknown"},
   svc:{web:["Website and dashboard","Sign-in, dashboard and checkout pages"],payments:["Payment API","Creating and verifying payments"],sms:["SMS payment matching","Matching payment SMS from your phone"],ai:["AI bot","AI replies to your customers"],chat:["Facebook, Instagram and WhatsApp chat","Receiving and sending messages"],webhooks:["Webhooks","Sending events to your server"]},
   list:"Services",checked:"Last checked",refresh:"Check again",checking:"Checking…",never:"Not checked yet"
@@ -62,7 +62,7 @@ export function ServiceStatus({locale}:{locale:Locale}){
   <section className={`bf-status-card is-${tone}`} aria-labelledby="bf-status-title" aria-busy={busy}>
    <div className="bf-status-top">
     <span className="bf-status-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d={BIG[overall]}/></svg></span>
-    <div><h2 id="bf-status-title" role="status">{c.overall[overall][0]}</h2><p>{c.overall[overall][1]}</p></div>
+    <div><h2 id="bf-status-title" role="status">{c.overall[overall][0]}</h2>{c.overall[overall][1]&&<p>{c.overall[overall][1]}</p>}</div>
    </div>
    <div className="bf-status-meta">
     <div><small>{c.checked}</small><b>{when}</b></div>

@@ -34,6 +34,7 @@ test("status page uses the shared public chrome once, in bn and en",()=>{
  const page=file("app/[locale]/status/page.tsx");
  assert.ok(!page.includes("SiteHeader")&&!page.includes("SiteFooter"),"layout already renders header and footer");
  assert.ok(page.includes("সেবার অবস্থা")&&page.includes("Service status"));
+ assert.ok(!page.includes("কেমন চলছে")&&!page.includes("every service in one place"),"plain copy, no filler");
  const ui=file("components/service-status.tsx");
  for(const key of ["web","payments","sms","ai","chat","webhooks"])assert.ok(ui.includes(`${key}:[`),key);
  assert.ok(file("components/site-footer.tsx").includes('"/status"'));

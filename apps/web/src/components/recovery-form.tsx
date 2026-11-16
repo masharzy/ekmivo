@@ -46,7 +46,7 @@ export function RecoveryForm({locale}:{locale:Locale}){
      <span className="bf-pill"><i aria-hidden="true"/>{bn?"পাসওয়ার্ড রিসেট":"Password reset"}</span>
      <h1 id="bf-recovery-title">{sent?(bn?"নতুন পাসওয়ার্ড দিন":"Choose a new password"):(bn?"পাসওয়ার্ড ভুলে গেছেন?":"Forgot your password?")}</h1>
     </div>
-    {!sent&&<p className="bf-auth-sub">{bn?"অ্যাকাউন্টের ইমেইল দিন। পাসওয়ার্ড বদলানোর জন্য ৬ সংখ্যার একটা কোড পাঠাব।":"Enter your account email. We will send a 6-digit code to reset your password."}</p>}
+    {!sent&&<p className="bf-auth-sub">{bn?"অ্যাকাউন্টের ইমেইল দিন। ৬ সংখ্যার একটা কোড পাঠানো হবে।":"Enter your account email. We will send a 6-digit code."}</p>}
     <form action={requestAction} className="bf-form" hidden={sent}>
      <div className="bf-field">
       <label htmlFor="bf-recovery-email">{bn?"ইমেইল":"Email"}</label>

@@ -14,9 +14,8 @@ export default async function Status({params}:{params:Promise<{locale:string}>})
  const bn=locale==="bn";
  return <main className="bf-pub" lang={locale} id="main">
   <section className="bf-hero bf-w">
-   <span className="bf-pill"><i aria-hidden="true"/>{bn?"লাইভ অবস্থা":"Live status"}</span>
-   <h1>{bn?"সেবার অবস্থা":"Service status"}<span>{bn?"Briofold এখন কেমন চলছে":"How Briofold is running right now"}</span></h1>
-   <p>{bn?"পেমেন্ট, এআই বট, চ্যাট আর ড্যাশবোর্ড, সব সার্ভিসের অবস্থা এক জায়গায়।":"Payments, the AI bot, chat and the dashboard: every service in one place."}</p>
+   <h1>{bn?"সেবার অবস্থা":"Service status"}</h1>
+   <p>{bn?"Briofold-এর প্রতিটা সার্ভিস এখন চালু আছে কি না।":"Whether each Briofold service is working right now."}</p>
   </section>
   <div className="bf-w">
    <ServiceStatus locale={locale}/>
