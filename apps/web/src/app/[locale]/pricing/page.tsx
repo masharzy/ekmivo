@@ -5,6 +5,7 @@ import {publicPaymentPlans} from "../../../lib/server/payment-plans";
 import {publicSubscriptionOffers} from "../../../lib/server/public-subscription-offers";
 import {pricingPlans} from "../../../lib/pricing-catalog";
 import {currentUser} from "../../../lib/server/auth";
+import {publicFreeCredit} from "../../../lib/server/ai-free-credit";
 export const dynamic="force-dynamic";
 
 export async function generateMetadata({params}:{params:Promise<{locale:string}>}):Promise<Metadata>{
@@ -18,6 +19,7 @@ export default async function Page({params,searchParams}:{params:Promise<{locale
  const query=await searchParams;
  const tab=query.product==="ai_credit"?"ai":query.product==="bundle"?"both":"payments";
  const [{plans,unavailable:plansUnavailable},{offers,unavailable:offersUnavailable}]=await Promise.all([publicPaymentPlans(),publicSubscriptionOffers()]);
+ const free=await publicFreeCredit();
  let signedIn=false;
  try{signedIn=!!await currentUser()}catch{signedIn=false}
  const bn=locale==="bn";
@@ -29,7 +31,7 @@ export default async function Page({params,searchParams}:{params:Promise<{locale
   {query.purchase&&<p className="bf-note bf-w" role="alert">{bn?"নির্বাচনটা আর পাওয়া যাচ্ছে না। আবার একটা প্ল্যান বেছে নিন।":"That selection is no longer available. Please choose a plan again."}</p>}
   <div className="bf-w">
    <PricingExperience locale={locale} plans={pricingPlans(offers,plans)} unavailable={plansUnavailable&&offersUnavailable}
-    signedIn={signedIn} freeEnabled={process.env.BRIOFOLD_AI_FREE_CREDIT_ENABLED==="true"} initialTab={tab}/>
+    signedIn={signedIn} freeEnabled={free.enabled} freeAmountMinor={free.amountMinor} initialTab={tab}/>
   </div>
  </main>;
 }
