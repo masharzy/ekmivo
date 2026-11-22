@@ -488,3 +488,23 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   - Billing & usage redesign.
   - Plan + recharge in one order.
   - Teach AI from inbox 👍/👎 (later, owner).
+
+## Offline SMS phone: checkout is not refused — 2026-11-22 (owner decision), step 1 of 4
+- Owner: when the shop's SMS phone is offline, checkout creation and the customer's number step were refused
+  (`live source unavailable` / `receiving route not available`). Must never be refused; the customer pays and
+  either the SMS verifies later or the shop checks a receipt by hand.
+- "Offline" today = no heartbeat from the Android app's background service (sent every 2 min while it runs) for
+  20 min (phone) or 5 min (old device). It is not "last time the app was opened"; it stops when Android kills the
+  background service.
+- 0264 (both financial realms): `briofold_offline_checkout()` reads the per-connection setting
+  `briofold.offline_checkout`; the heartbeat checks in briofold_payment_intent_insert, pg10_lock_route,
+  pg98_lock_account, pg10_public_payment_sources and pg10_checkout_view (lists only) become
+  `(<check> OR briofold_offline_checkout())`. `source_online` and the checkout's `online` stay honest.
+  Safe to run twice; stops if a function text is not the expected one.
+- API: `BRIOFOLD_OFFLINE_CHECKOUT_ENABLED=true` adds the setting to the live pool and offers offline accounts.
+  Flag off = old behaviour. Startup log says whether it is active.
+- Evidence: 0264 applied twice on Postgres 16 against the real function texts (2+4+2+2+2 checks patched, the
+  `online` statement unchanged); `TestOfflineCheckoutFlagOffersOfflineAccount`; `offline-phone-checkout.test.mjs`.
+- Release note: changes 5 production functions, so the release needs a DB-change run and a new baseline.
+- Next: step 2 checkout notice + TrxID/receipt upload (R2, 30-day expiry); step 3 dashboard review with badge;
+  step 4 approve adds the payment to transactions; a late SMS still verifies a checkout that has a receipt.

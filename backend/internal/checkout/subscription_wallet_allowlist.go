@@ -32,7 +32,7 @@ func (s *Service) eligibleSubscriptionAccounts(checkout, encoded []byte) []map[s
 		method, _ := account["method"].(string)
 		id, _ := account["id"].(string)
 		online, _ := account["source_online"].(bool)
-		if uuidPattern.MatchString(id) && available[method] && online && count[method] == 1 {
+		if uuidPattern.MatchString(id) && available[method] && (online || offlineCheckoutEnabled()) && count[method] == 1 {
 			account["ready"] = true
 			ready = append(ready, account)
 		}

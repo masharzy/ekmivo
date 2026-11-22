@@ -1138,7 +1138,7 @@ func (s *Service) publicResult(w http.ResponseWriter, r *http.Request, raw []byt
 						for _, account := range accounts {
 							method, _ := account["method"].(string)
 							online, _ := account["source_online"].(bool)
-							account["ready"] = available[method] && online
+							account["ready"] = available[method] && (online || offlineCheckoutEnabled())
 						}
 					}
 					for _, account := range accounts {
