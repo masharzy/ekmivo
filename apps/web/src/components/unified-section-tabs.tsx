@@ -20,7 +20,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  payments:[
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},
   {en:"Payment links",bn:"পেমেন্ট লিংক",href:"/payments/links",service:"payments"},
-  {en:"Payment requests",bn:"পেমেন্ট রিকোয়েস্ট",href:"/payments/links?view=requests",service:"payments"},
+  {en:"Payment requests",bn:"পেমেন্ট রিকোয়েস্ট",href:"/payments/links?list=requests",service:"payments"},
   {en:"Refunds",bn:"রিফান্ড",href:"/payments/refunds",service:"payments"},
  ],
  customers:[
@@ -56,7 +56,7 @@ export function UnifiedSectionTabs({root,mode,locale,view,requests=false}:{
    ((tab.href!=="/orders/payment-review"&&tab.href!=="/settings/ai-selling")||process.env.BRIOFOLD_AI_TOOLS_ENABLED==="true"))??[];
  if(!available.length)return null;
  const raw="/"+root+(view.length?"/"+view.join("/"):"");
- const active=raw==="/settings/website"?"/settings/channels/website":raw==="/payments/links"&&requests?"/payments/links?view=requests":raw;
+ const active=raw==="/settings/website"?"/settings/channels/website":raw==="/payments/links"&&requests?"/payments/links?list=requests":raw;
  return <nav className={styles.tabs} aria-label={locale==="bn"?"পৃষ্ঠার বিভাগ":"Page sections"}>
   {available.map(tab=><Link key={tab.href} href={tab.href}
    className={tab.href===active?styles.active:undefined}

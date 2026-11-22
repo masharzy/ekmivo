@@ -111,13 +111,13 @@ test("Canonical payment links expose existing one-time intents without requiring
  assert.match(content,/!oneTimeRequests&&!planFeatures\?\.\[feature\]/);
  assert.match(content,/dashboardInitialData\(workspace\.id,paymentContext\.environment,"requests"/);
  assert.match(content,/<PaymentRequests hideTabs/);
- assert.match(src("components/unified-section-tabs.tsx"),/href:"\/payments\/links\?view=requests"/);
- assert.match(route,/paymentLinksMode=\{query\.view==="requests"\?"requests":undefined\}/);
+ assert.match(src("components/unified-section-tabs.tsx"),/href:"\/payments\/links\?list=requests"/);
+ assert.match(route,/paymentLinksMode=\{query\.list==="requests"\?"requests":undefined\}/);
  assert.match(unified,/initialQuery=\{root==="payments"&&view\[0\]==="links"&&paymentLinksMode==="requests"\?\{view:"requests"\}:\{\}\}/);
  assert.match(requests,/hideTabs=false/);
  assert.match(requests,/!hideTabs&&<div className="tabs">/);
  const documents=src("components/payment-documents.tsx");
- assert.match(documents,/canonicalRoutes\?`\/payments\/links\?view=requests&request=\$\{p\.intent_id\}`/);
+ assert.match(documents,/canonicalRoutes\?`\/payments\/links\?list=requests&request=\$\{p\.intent_id\}`/);
  assert.match(documents,/`\/w\/\$\{workspaceId\}\/payments\/requests\?request=\$\{p\.intent_id\}`/);
  assert.match(documents,/unifiedFinancialDetailPath\("invoices",inv\.id\)/);
 });
@@ -141,4 +141,13 @@ test("checkout editor's 320px preview and wallet toolbar remain contained and re
  const browser=readFileSync(new URL("./briofold-phase9-browser.mjs",import.meta.url),"utf8");
  assert.match(browser,/documentWidth=document\.documentElement\.scrollWidth,fit=documentWidth<=innerWidth\+1/);
  assert.match(browser,/offenders:fit\?\[\]/);
+});
+
+test("payment requests tab: query key does not clash with the [[...view]] segment",()=>{
+ const page=src("app/[locale]/payments/[[...view]]/page.tsx");
+ assert.match(page,/query\.list==="requests"/);
+ assert.doesNotMatch(page,/query\.view/);
+ const proxy=src("proxy.ts");
+ assert.match(proxy,/searchParams\.get\("view"\)==="requests"/);
+ assert.match(proxy,/set\("list","requests"\)/);
 });

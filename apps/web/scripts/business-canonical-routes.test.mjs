@@ -16,13 +16,13 @@ test('every merchant section generates an ID-free canonical URL in either locale
   assert.ok(url.startsWith('/')&&!url.startsWith('//'));
   assert.ok(!url.includes(id)&&!/^\/(w|en|bn)\//.test(url));
  }
- assert.equal(nav.dashboardHref('bn',id,'payments','requests'),'/payments/links?view=requests');
+ assert.equal(nav.dashboardHref('bn',id,'payments','requests'),'/payments/links?list=requests');
  for(const path of ['/payments/transactions/','/sms-data/','/invoices/','/customers/financial/'])assert.equal(unified.isUnifiedFinancialDetailPath(path+id),true);
  for(const path of ['//evil.invalid/'+id,'/w/'+id+'/payments/transactions/'+id,'/payments/transactions/'+id+'?next=evil','/payments/transactions/'+id+'/extra'])assert.equal(unified.isUnifiedFinancialDetailPath(path),false);
 });
 test('old financial details retain exact record identity and request mode; untrusted URL fields cannot select a business',()=>{
  for(const [section,path] of [['payments','/payments/transactions/'],['transactions','/payments/transactions/'],['incoming','/sms-data/'],['customers','/customers/financial/'],['invoices','/invoices/'],['payment-links','/payments/links/'],['refunds','/payments/refunds/'],['devices','/settings/devices/']])assert.equal(legacy.legacyDashboardPath('commerce','payments',section,id),path+id);
- assert.equal(legacy.legacyDashboardPath('commerce','payments','requests',undefined,{request:id,env:'sandbox',workspace_id:id,next:'https://attacker.invalid'}),'/payments/links?view=requests&request='+id);
+ assert.equal(legacy.legacyDashboardPath('commerce','payments','requests',undefined,{request:id,env:'sandbox',workspace_id:id,next:'https://attacker.invalid'}),'/payments/links?list=requests&request='+id);
  for(const bad of ['__proto__','constructor','not-a-uuid'])assert.equal(legacy.legacyDashboardPath('commerce','payments','transactions',bad),null);
 });
 test('payments-only navigation/settings and legacy redirects deny AI products',()=>{

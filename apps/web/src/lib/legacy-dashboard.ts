@@ -3,7 +3,7 @@ import {sections,type SectionKey} from "./dashboard-sections";
 import {unifiedFinancialDetailPath,type BusinessMode,type UnifiedFinancialResource} from "./unified-navigation";
 
 export type LegacyDashboardQuery=Record<string,string|string[]|undefined>;
-const queryKeys=new Set(["plan","thread","request","view","q","page","cursor","status","from","to","range","tab","filter","channel","type","read","source","kind","stage","temperature","assignee"]);
+const queryKeys=new Set(["plan","thread","request","view","list","q","page","cursor","status","from","to","range","tab","filter","channel","type","read","source","kind","stage","temperature","assignee"]);
 export function legacyDashboardPath(mode:BusinessMode,service:string,section:string,resourceID?:string,query:LegacyDashboardQuery={}):string|null{
  if(mode==="off"||(service!=="ai"&&service!=="payments")||!serviceEnabled(service,mode))return null;
  let target:string|null=null;

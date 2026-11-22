@@ -45,7 +45,7 @@ export function dashboardHref(locale: Locale, workspaceId: string, service: Serv
   if(section==="notifications")return "/notifications";
   if(section==="api-docs")return "/developers";
   if(section==="apps")return "/settings/apps";
-  if(section==="requests")return "/payments/links?view=requests";
+  if(section==="requests")return "/payments/links?list=requests";
   return unifiedSectionHref(section,service)??"/dashboard";
 }
 export function searchableNavigation(service: Service, query: string) {
