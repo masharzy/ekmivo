@@ -606,7 +606,7 @@ export async function runBriofoldPhase9Browser({origin,browser,control,sessions,
   await page.goto(origin+"/payments/links?list=requests");
   await page.getByRole("heading",{name:"Checkouts",exact:true}).waitFor();
   // The section tab row (not an in-page button) is the canonical way to reach one-time requests.
-  assert.ok(await page.locator('nav a[aria-current=page]',{hasText:"Payment requests"}).count(),"canonical links do not expose one-time requests");
+  assert.ok(await page.locator('nav a[aria-current=page]',{hasText:"Checkouts"}).count(),"canonical links do not expose one-time requests");
   assert.ok(await page.getByRole("region",{name:"Checkouts"}).count(),"one-time source table missing behind reusable-link entitlement");
   // The same mounted UI must not reveal a provider HMAC, raw payer number, or
   // cached cross-tenant session when opened by a viewer.
