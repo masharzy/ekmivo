@@ -10,6 +10,8 @@ export type ApiKeyRow={id:string;publicId:string;name:string;scopes:string[];exp
 const initial:KeyActionState={status:"idle",message:""};
 const scopes=["payments:read","payments:write","customers:read","customers:write","invoices:read","invoices:write","refunds:read","refunds:write","webhooks:manage","orders:read","orders:write","products:read","products:write"];
 export function ApiKeyManager({locale,userId,workspaceId,environment,keys,enabledEnvironments,onSwitchEnvironment}:{locale:Locale;userId:string;workspaceId:string;environment:PaymentEnvironment;keys:ApiKeyRow[];enabledEnvironments?:PaymentEnvironment[];onSwitchEnvironment?:(realm:PaymentEnvironment)=>void}){
+ // Time of first render, for the expiry warning (render must stay pure).
+ const [renderedAt]=useState(()=>Date.now());
  const router=useRouter();
  const bn=locale==='bn',t=(en:string,be:string)=>bn?be:en;
  const [create,createAction,creating]=useActionState(createMerchantKey.bind(null,locale),initial),[rotate,rotateAction,rotating]=useActionState(rotateMerchantKey.bind(null,locale),initial),[revoke,revokeAction,revoking]=useActionState(revokeMerchantKey.bind(null,locale),initial);
@@ -42,7 +44,7 @@ export function ApiKeyManager({locale,userId,workspaceId,environment,keys,enable
   {(()=>{
    // Owner 2026-11-23: a website stopped taking payments when its key expired
    // without warning. Warn 7 days before, and for 30 days after, expiry.
-   const now=Date.now(),day=86400000;
+   const now=renderedAt,day=86400000;
    const due=keys.filter(k=>!k.revokedAt&&k.expiresAt&&Number.isFinite(Date.parse(k.expiresAt))).map(k=>({k,left:Date.parse(k.expiresAt)-now})).filter(x=>x.left<=7*day&&x.left>-30*day).sort((a,b)=>a.left-b.left);
    if(!due.length)return null;
    return <div className="notice warn" role="alert" data-testid="api-key-expiry-warning">{due.map(({k,left})=><p key={k.id} style={{margin:'2px 0'}}>{left<=0
