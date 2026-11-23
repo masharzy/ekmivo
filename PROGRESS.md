@@ -538,3 +538,12 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   `TestCleanProofImageReencodesAndRejects`, `TestPaymentProofsFlagOffIsNotFound`, `payment-proofs.test.mjs`.
 - Owner: R2 bucket + API token + lifecycle rule (delete `payment-proofs/` after 30 days).
 - Next: step 3 dashboard review with badge; step 4 approve adds the payment; late SMS verifies a proof checkout.
+
+## SMS same-minute match — 2026-11-23 (owner approved), 0266
+- Bug: minute-precision SMS time (20:25 → 20:25:00) was compared with the second the number was entered
+  (20:25:16); payments made in that minute never matched. Production: two ৳99 on 17 Nov. End side likewise.
+- 0266: `briofold_sms_window_start()`; 17 checks in 6 functions (incl. the financial_verify_payment_fields
+  trigger) now accept the number's minute and the last minute. Second-precision unchanged; matched SMS are never
+  matched again.
+- Evidence: on the Neon production copy branch the 17 Nov 20:25 SMS now matches its attempt (all five checks
+  true); no other attempt matches.
