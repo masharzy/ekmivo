@@ -2,7 +2,7 @@
 // Payment proof on the checkout (owner decision 2026-11-22).
 // * The shop's SMS phone is offline: a clear notice that automatic verification
 //   is not possible right now, and the customer can still pay and leave proof.
-// * One minute of waiting without a match: a second notice saying the same.
+// * While waiting: a notice that the TrxID or receipt can be left (shown at once, owner 2026-11-23).
 // * The TrxID box and receipt photo upload are always there while waiting, and
 //   after the checkout expired (the usual case of a phone that was offline).
 // Hidden entirely while BRIOFOLD_PAYMENT_PROOFS_ENABLED is off (the API answers 404).
@@ -44,7 +44,6 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:
  const [busy,setBusy]=useState<""|"trx"|"image">("");
  const [error,setError]=useState("");
  const [done,setDone]=useState("");
- const [waitedMinute,setWaitedMinute]=useState(false);
  const fileInput=useRef<HTMLInputElement>(null);
 
  useEffect(()=>{
@@ -56,8 +55,6 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:
   }).catch(()=>{if(!ctl.signal.aborted){setAvailable(false);onAvailable?.(false)}});
   return()=>ctl.abort();
  },[route,onAvailable]);
-
- useEffect(()=>{const t=setTimeout(()=>setWaitedMinute(true),60000);return()=>clearTimeout(t)},[]);
 
  const fail=useCallback(async(r:Response)=>{
   const json=await r.json().catch(()=>null);
@@ -108,7 +105,7 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:
    <p>{tr("The shop's payment verification phone is offline at the moment. You can still send the money. Then enter your Transaction ID below, or upload a photo or screenshot of the payment receipt. The shop will check it and confirm your payment.",
     "দোকানের পেমেন্ট যাচাইয়ের ফোনটি এই মুহূর্তে অফলাইনে আছে, তাই অটোমেটিক যাচাই এখন সম্ভব হচ্ছে না। আপনি নিশ্চিন্তে টাকা পাঠান। তারপর নিচে Transaction ID লিখুন, অথবা টাকা পাঠানোর রসিদ বা স্ক্রিনশটের ছবি আপলোড করুন। দোকান নিজে যাচাই করে আপনার পেমেন্ট নিশ্চিত করবে।")}</p>
   </div>}
-  {!offline&&!expired&&waitedMinute&&!status.submitted&&<div className={styles.notice} role="status">
+  {!offline&&!expired&&!status.submitted&&<div className={styles.notice} role="status">
    <strong>{tr("Sent the money but not verified yet?","টাকা পাঠিয়েছেন, কিন্তু এখনো যাচাই হয়নি?")}</strong>
    <p>{tr("Don't worry. Enter the Transaction ID or upload the receipt below and keep it here. The shop will verify it by hand.",
     "চিন্তা করবেন না। নিচে Transaction ID দিন বা রসিদের ছবি আপলোড করে রাখুন। দোকান নিজে যাচাই করে নেবে।")}</p>
