@@ -24,10 +24,12 @@ test("API: flag, re-encoded photos in R2 under payment-proofs/",()=>{
  assert.match(main,/"POST \/v1\/public\/checkout\/\{token\}\/proof\/\{part\}"/);
 });
 
-test("checkout: offline notice, one-minute notice, always-on TrxID and photo upload",()=>{
+test("checkout: offline notice and a single upload button that opens a picker of up to 5",()=>{
  const panel=read("apps/web/src/components/payment-proof-panel.tsx");
- assert.match(panel,/অটোমেটিক যাচাই এই মুহূর্তে সম্ভব হচ্ছে না/);
- assert.match(panel,/\{!offline&&!expired&&!status\.submitted&&/,"owner: shown at once, no one-minute wait");
+ assert.match(panel,/অটোমেটিক যাচাই হবে না/);
+ assert.ok(!panel.includes("টাকা পাঠিয়েছেন, কিন্তু"),"owner 2026-11-23: no explanation text");
+ assert.match(panel,/const MAX_IMAGES=5/);
+ assert.match(panel,/\{!open\?<button/,"button first, picker on tap");
  assert.match(panel,/type="file" accept="image\/jpeg,image\/png,image\/\*" multiple/);
  assert.match(panel,/if\(r\.status===404\)\{setAvailable\(false\)/,"hidden while the flag is off");
  const page=read("apps/web/src/components/checkout-experience.tsx");

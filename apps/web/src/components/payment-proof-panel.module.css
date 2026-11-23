@@ -1,19 +1,31 @@
-/* Payment proof panel: sits inside every checkout theme, light or dark, so it
-   inherits text colour and font and only adds an amber notice and plain controls. */
-.panel{margin:16px 0 4px;display:grid;gap:10px;text-align:left;color:inherit;font:inherit}
-.notice{border:1px solid rgba(217,159,0,.55);background:rgba(242,184,28,.14);border-radius:10px;padding:12px 14px}
-.notice strong{display:block;font-size:15px;line-height:1.35;margin-bottom:4px}
-.notice p{margin:0;font-size:14px;line-height:1.55}
-.title{margin:6px 0 0;font-size:15px;font-weight:650;line-height:1.3}
-.hint{margin:0;font-size:12.5px;line-height:1.45;opacity:.72}
-.row{display:flex;gap:8px}
-.input{flex:1;min-width:0;height:44px;border-radius:8px;border:1px solid rgba(127,127,127,.45);background:transparent;color:inherit;
- font:inherit;font-size:15px;letter-spacing:.04em;padding:0 12px;text-transform:uppercase}
-.input::placeholder{text-transform:none;letter-spacing:0;opacity:.55}
-.input:focus-visible{outline:2px solid rgba(217,159,0,.8);outline-offset:1px}
-.primary,.upload{height:44px;border-radius:8px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;padding:0 16px}
-.primary{border:0;background:#1f6feb;color:#fff}
-.upload{width:100%;border:1px dashed rgba(127,127,127,.6);background:transparent;color:inherit}
-.primary:disabled,.upload:disabled{opacity:.5;cursor:default}
-.error{margin:0;font-size:13.5px;color:#d93025}
-.ok{margin:0;font-size:13.5px;color:#1a8f4a}
+/* Payment receipt upload (owner 2026-11-23): one button in the theme's own style;
+   tapping it opens a small picker of up to five photos. data-skin picks the theme. */
+.panel{margin:12px 0 0;display:grid;gap:10px;text-align:left;color:inherit;font:inherit}
+.notice{border:1px solid rgba(217,159,0,.55);background:rgba(242,184,28,.14);border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.5}
+.btn,.send,.ghost{font:inherit;cursor:pointer;width:100%}
+.btn:disabled,.send:disabled,.ghost:disabled,.add:disabled{opacity:.5;cursor:default}
+.box{display:grid;gap:10px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.th{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:rgba(127,127,127,.12)}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.th button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:15px;line-height:1;padding:0;cursor:pointer}
+.add{aspect-ratio:1;border-radius:8px;border:1px dashed rgba(127,127,127,.6);background:transparent;color:inherit;font-size:24px;font-weight:300;cursor:pointer}
+.row{display:flex;gap:10px}.row .ghost{flex:0 0 34%}.row .send{flex:1}
+.error{margin:0;font-size:13px;color:#d93025}
+.ok{margin:0;font-size:13px;color:#1a8f4a}
+
+/* Official (gateway): like its ghost and dark buttons */
+.panel[data-skin=gateway] .btn,.panel[data-skin=gateway] .ghost{padding:13px;border-radius:11px;font-size:14.5px;font-weight:700;background:var(--pp-bg,#F4F5F7);border:1px solid var(--pp-bd,#E6E8EE);color:var(--pp-fg,#444)}
+.panel[data-skin=gateway] .send{padding:13px;border-radius:11px;font-size:14.5px;font-weight:700;background:var(--pp-send,#15161C);border:0;color:var(--pp-send-fg,#fff)}
+.panel[data-skin=gateway] .th,.panel[data-skin=gateway] .add{border-radius:11px}
+
+/* Themed: uses the theme's own colours, radius and lines */
+.panel[data-skin=themed] .btn,.panel[data-skin=themed] .ghost{padding:12px 14px;border:1px solid var(--ln);border-radius:var(--rb);background:transparent;color:var(--t);font-size:14px;font-weight:600}
+.panel[data-skin=themed] .send{padding:12px 14px;border:0;border-radius:var(--rb);background:var(--ac);color:var(--on);font-size:14px;font-weight:600}
+.panel[data-skin=themed] .th,.panel[data-skin=themed] .add{border-radius:var(--rb)}
+.panel[data-skin=themed] .add{border-color:var(--ln)}
+
+/* Classic: like its provider-flow buttons */
+.panel[data-skin=classic] .btn,.panel[data-skin=classic] .ghost{min-height:44px;padding:11px 13px;border:0;border-radius:5px;background:#f4f4f4;color:#20262e;font-size:13px;font-weight:650}
+.panel[data-skin=classic] .send{min-height:44px;padding:11px 13px;border:0;border-radius:5px;background:var(--provider-accent,#20262e);color:#fff;font-size:13px;font-weight:650}
+.panel[data-skin=classic] .th,.panel[data-skin=classic] .add{border-radius:5px}
