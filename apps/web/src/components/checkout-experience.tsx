@@ -10,6 +10,7 @@ import {resolveCheckoutTheme} from "../lib/checkout-theme";
 import {chooseReceivingAccountId} from "../lib/checkout-account-selection";
 import {ThemedCheckout,ThemedResult,WalletToken,type ThemeStep} from "./themed-checkout";
 import {PaymentProofPanel} from "./payment-proof-panel";
+import {CheckoutLoading} from "./checkout-loading";
 import {GatewayCheckout} from "./gateway-checkout";
 import {normalizeBangladeshPayer,payerLocalDigits} from "../lib/bd-payer-number";
 type Locale="en"|"bn";
@@ -181,6 +182,8 @@ export function CheckoutExperience({locale,token,initialMethod,initialAccount,su
  async function copyReceiving(){if(!info?.destination)return;try{await navigator.clipboard.writeText(info.destination);setDestinationCopied(true)}catch{setCode("COPY_FAILED")}}
  function switchLanguage(){document.cookie=`briofold-locale=${bn?"en":"bn"}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol==="https:"?"; Secure":""}`;if(subscriptionReturnPath){router.refresh();return}const target=`/checkout/${token}${initialMethod?`?method=${initialMethod}${initialAccount?`&account=${initialAccount}`:""}`:""}`;if(location.pathname!==`/checkout/${token}`)router.replace(target);else router.refresh()}
  const theme=info?resolveCheckoutTheme(info.brand?.checkout_theme,info.merchant_name,logoUrl):null;
+ // Owner 2026-11-23: no Classic shell flash before the saved theme appears.
+ if(status==="loading")return <CheckoutLoading bn={bn}/>;
  if(theme&&info&&status==="ready"){
   const themeStep:ThemeStep=state==="completed"?"success":state==="cancelled"?"cancelled":state==="expired"?"expired":state==="requires_payer"?(showPayer?"payer":"pay"):"waiting";
   const selected=state==="requires_payer"&&!methodChosen?null:selectedMethod;

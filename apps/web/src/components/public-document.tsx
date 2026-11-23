@@ -5,6 +5,8 @@ import {useEffect,useRef,useState} from "react";
 import {ProviderMark,isPayMethod,payMethods,type PayMethod} from "./provider-mark";
 import {resolveCheckoutTheme} from "../lib/checkout-theme";
 import {ThemedCheckout,WalletToken} from "./themed-checkout";
+import {GatewayCheckout} from "./gateway-checkout";
+import {CheckoutLoading} from "./checkout-loading";
 import type {MerchantBrandInfo} from "./merchant-brand";
 
 type Field={id:string;label:string;type:string;required:boolean;options:string[]};
@@ -107,6 +109,25 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
  const logo=safeUrl(doc?.brand?.logo_url);
  const theme=doc?resolveCheckoutTheme(doc.brand?.checkout_theme,doc.merchant_name,logo):null;
  if(doc?.kind==="invoices"&&(doc.status==="cancelled"||doc.status==="draft"))return <main data-customer-checkout="true" className="customer-pay-screen" lang={locale}><div className="customer-pay-shell" style={{padding:32,textAlign:"center"}}><h1>{doc.status==="draft"?t("Invoice draft","ইনভয়েস খসড়া"):t("Invoice cancelled","ইনভয়েস বাতিল হয়েছে")}</h1><p>{doc.status==="draft"?t("This invoice has not been issued yet. Payment is unavailable.","ইনভয়েসটি এখনো ইস্যু হয়নি। পেমেন্ট করা যাবে না।"):t("This invoice is void. No payment can be made.","এই ইনভয়েসটি বাতিল। কোনো পেমেন্ট করা যাবে না।")}</p><a href={"/invoice/"+token}>{t("View invoice","ইনভয়েস দেখুন")}</a></div></main>;
+ // Owner 2026-11-23: the page showed the Classic shell while loading, then another design.
+ // Show a neutral loader instead, and the saved theme as soon as the data is here.
+ if(loading)return <CheckoutLoading bn={bn}/>;
+ // "Official" in the editor is the gateway theme; the link page rendered it as a generic theme.
+ if(theme&&doc&&theme.theme==='gateway'&&!(doc.body.fields?.length)){
+  const noop=()=>{};
+  const gwTiles=tiles.map(x=>({id:x.id,method:x.method,ready:readyMethods.includes(x.method)&&x.source_online!==false&&x.ready!==false}));
+  const language=()=>{document.cookie=`briofold-locale=${bn?'en':'bn'}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()};
+  return <GatewayCheckout config={theme} locale={locale} step="pay" method={selected?.method||gwTiles[0]?.method||'bkash'} amountMinor={payable} reference={doc.reference} onLanguage={language}
+   tiles={gwTiles} isPicked={x=>selected?.id===x.id&&selected?.method===x.method} tileIndex={x=>tileIndex(x)}
+   onPick={x=>{if(locked)return;const tile=tiles.find(y=>y.id===x.id&&y.method===x.method);if(tile)setSelected(tile)}}
+   canPay={!busy&&!terminal&&selectedReady&&payable>0} onPay={()=>void pay({preventDefault:noop} as unknown as React.FormEvent)}
+   fields={theme.info?(['name','email','addr','note'] as const).filter(k=>theme.f[k]).map(k=>({key:k,value:customerDetails[k]||''})):[]}
+   onField={(k,v)=>setCustomerDetails(c=>({...c,[k]:v}))}
+   extra={doc.kind==='payment-links'&&(doc.body.max_quantity||1)>1?<label style={{display:'grid',gap:4}}>{t('Quantity','পরিমাণ')}<input type="number" required min={1} max={doc.body.max_quantity} disabled={locked} value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label>:undefined}
+   error={error||undefined}
+   payer="" onPayer={noop} onPayerBlur={noop} payerInvalid={false} locking={false} onBack={noop} onSubmit={e=>e.preventDefault()}
+   destination={null} destinationCopied={false} onCopyDestination={noop} onCopyAmount={noop} processing={false} timeLeft="" sourceOffline={false} cancelling={false} onCancel={noop} payerShown="" returnDestination=""/>;
+ }
  if(theme&&doc)return <ThemedCheckout config={theme} locale={locale} merchant={doc.brand} method={selected?.method||null} step="pay" amountMinor={payable} reference={doc.reference} onLanguage={()=>{document.cookie=`briofold-locale=${bn?'en':'bn'}; Path=/; Max-Age=31536000; SameSite=Lax`;window.location.reload()}}>
   <h2 className="tk-h">{t('How would you like to pay?','কীভাবে পরিশোধ করতে চান?')}</h2><form onSubmit={pay} className="tk-document-form"><div className="tk-ms">{tiles.map(tile=><button className="tk-m" key={tile.id||tile.method} type="button" disabled={locked} aria-pressed={selected?.id===tile.id&&selected.method===tile.method} onClick={()=>setSelected(tile)} aria-label={tile.method+" account "+tileIndex(tile)}><WalletToken method={tile.method}/><span className="tk-mt">{tile.method==='bkash'?'bKash':tile.method==='nagad'?'Nagad':'Rocket'}</span>{(tile.source_online===false||tile.ready===false||!readyMethods.includes(tile.method))&&<span className="tk-method-status">{t("Not ready","প্রস্তুত নয়")}</span>}{tileIndex(tile)>1&&<span className="tk-m-index">{tileIndex(tile)}</span>}<i className="tk-rd"/></button>)}</div>
   {theme.info&&([['name','Full name','পুরো নাম'],['email','Email','ইমেইল'],['addr','Address','ঠিকানা'],['note','Order note','অর্ডার নোট']] as const).filter(([key])=>theme.f[key]).map(([key,en,be])=><label className="tk-fl" key={key}>{t(en,be)}<input className="tk-in" type={key==='email'?'email':'text'} maxLength={key==='note'?1000:254} disabled={locked} value={customerDetails[key]||''} onChange={e=>setCustomerDetails(d=>({...d,[key]:e.target.value}))}/></label>)}
