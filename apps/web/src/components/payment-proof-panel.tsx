@@ -14,10 +14,10 @@ const MAX_IMAGES=5;
 
 const messages:Record<string,[string,string]>={
  INVALID_TRX_ID:["Check the Transaction ID: 6 to 24 letters or digits.","Transaction ID ঠিক আছে কি না দেখুন: ৬ থেকে ২৪টা অক্ষর বা সংখ্যা।"],
- EMPTY_PROOF:["Enter the Transaction ID or add a photo.","Transaction ID লিখুন অথবা ছবি দিন।"],
+ EMPTY_PROOF:["Add a photo.","ছবি দিন।"],
  PROOF_IMAGE_INVALID:["This file could not be read as a photo. Use a JPG or PNG screenshot.","ফাইলটা ছবি হিসেবে পড়া গেল না। JPG বা PNG স্ক্রিনশট দিন।"],
  PROOF_IMAGE_TOO_LARGE:["The photo is too large. Try a screenshot.","ছবিটা অনেক বড়। একটা স্ক্রিনশট দিয়ে চেষ্টা করুন।"],
- PROOF_STORAGE_UNAVAILABLE:["Photos cannot be received right now. Please enter the Transaction ID instead.","এই মুহূর্তে ছবি নেওয়া যাচ্ছে না। অনুগ্রহ করে Transaction ID লিখে দিন।"],
+ PROOF_STORAGE_UNAVAILABLE:["Photos cannot be received right now. Please try again in a minute.","এই মুহূর্তে ছবি নেওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।"],
  PROOF_LIMIT_REACHED:["You have already sent the maximum number of photos.","সর্বোচ্চ সংখ্যক ছবি পাঠানো হয়ে গেছে।"],
  PROOF_NOT_ALLOWED:["This payment is already settled; nothing more is needed.","এই পেমেন্টের কাজ শেষ, আর কিছু দিতে হবে না।"],
 };
@@ -40,7 +40,6 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:
  const tr=(en:string,b:string)=>bn?b:en;
  const [available,setAvailable]=useState<boolean|null>(null);
  const [status,setStatus]=useState<ProofStatus>({submitted:false});
- const [trx,setTrx]=useState("");
  const [busy,setBusy]=useState<""|"trx"|"image">("");
  const [error,setError]=useState("");
  const [done,setDone]=useState("");
@@ -62,18 +61,6 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:
   setError(messages[code]?tr(...messages[code]):tr("Could not send. Please try again.","পাঠানো গেল না। আবার চেষ্টা করুন।"));
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[bn]);
-
- async function sendTrx(){
-  setError("");setDone("");
-  if(!/^[A-Za-z0-9\s-]{6,40}$/.test(trx.trim())){setError(tr(...messages.INVALID_TRX_ID));return}
-  setBusy("trx");
-  try{
-   const r=await fetch(route,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({trx_id:trx.trim()})});
-   if(!r.ok){await fail(r);return}
-   setStatus(await r.json());setTrx("");setDone(tr("Transaction ID received. The shop will check it.","Transaction ID পেয়েছি। দোকান যাচাই করে নেবে।"));
-  }catch{setError(tr("No connection. Please try again.","সংযোগ নেই। আবার চেষ্টা করুন।"))}
-  finally{setBusy("")}
- }
 
  async function sendImages(files:FileList|null){
   setError("");setDone("");
@@ -102,27 +89,21 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:
  return <section className={styles.panel} aria-label={tr("Payment proof","পেমেন্টের প্রমাণ")} data-testid="payment-proof-panel">
   {offline&&!expired&&<div className={styles.notice} role="alert">
    <strong>{tr("Automatic verification is not possible right now","অটোমেটিক যাচাই এই মুহূর্তে সম্ভব হচ্ছে না")}</strong>
-   <p>{tr("The shop's payment verification phone is offline at the moment. You can still send the money. Then enter your Transaction ID below, or upload a photo or screenshot of the payment receipt. The shop will check it and confirm your payment.",
-    "দোকানের পেমেন্ট যাচাইয়ের ফোনটি এই মুহূর্তে অফলাইনে আছে, তাই অটোমেটিক যাচাই এখন সম্ভব হচ্ছে না। আপনি নিশ্চিন্তে টাকা পাঠান। তারপর নিচে Transaction ID লিখুন, অথবা টাকা পাঠানোর রসিদ বা স্ক্রিনশটের ছবি আপলোড করুন। দোকান নিজে যাচাই করে আপনার পেমেন্ট নিশ্চিত করবে।")}</p>
+   <p>{tr("The shop's payment verification phone is offline at the moment. You can still send the money. Then upload a photo or screenshot of the payment receipt below. The shop will check it and confirm your payment.",
+    "দোকানের পেমেন্ট যাচাইয়ের ফোনটি এই মুহূর্তে অফলাইনে আছে, তাই অটোমেটিক যাচাই এখন সম্ভব হচ্ছে না। আপনি নিশ্চিন্তে টাকা পাঠান। তারপর নিচে টাকা পাঠানোর রসিদ বা স্ক্রিনশটের ছবি আপলোড করুন। দোকান নিজে যাচাই করে আপনার পেমেন্ট নিশ্চিত করবে।")}</p>
   </div>}
   {!offline&&!expired&&!status.submitted&&<div className={styles.notice} role="status">
    <strong>{tr("Sent the money but not verified yet?","টাকা পাঠিয়েছেন, কিন্তু এখনো যাচাই হয়নি?")}</strong>
-   <p>{tr("Don't worry. Enter the Transaction ID or upload the receipt below and keep it here. The shop will verify it by hand.",
-    "চিন্তা করবেন না। নিচে Transaction ID দিন বা রসিদের ছবি আপলোড করে রাখুন। দোকান নিজে যাচাই করে নেবে।")}</p>
+   <p>{tr("Don't worry. Upload a photo or screenshot of the payment receipt below. The shop will verify it by hand.",
+    "চিন্তা করবেন না। নিচে টাকা পাঠানোর রসিদের ছবি বা স্ক্রিনশট আপলোড করুন। দোকান নিজে যাচাই করে নেবে।")}</p>
   </div>}
   {expired&&<div className={styles.notice} role="status">
    <strong>{tr("Already sent the money?","টাকা কি পাঠিয়ে ফেলেছেন?")}</strong>
-   <p>{tr("Do not pay again. Enter the Transaction ID or upload the receipt below and the shop will check it.",
-    "আবার পাঠাবেন না। নিচে Transaction ID দিন বা রসিদের ছবি আপলোড করুন, দোকান যাচাই করে নেবে।")}</p>
+   <p>{tr("Do not pay again. Upload the receipt below and the shop will check it.",
+    "আবার পাঠাবেন না। নিচে রসিদের ছবি আপলোড করুন, দোকান যাচাই করে নেবে।")}</p>
   </div>}
 
-  <h3 className={styles.title}>{tr("Transaction ID or receipt","Transaction ID বা রসিদ")}</h3>
-  <p className={styles.hint}>{tr("You will find the Transaction ID (TrxID) in the payment SMS or in the app's history.","Transaction ID (TrxID) পাবেন টাকা পাঠানোর SMS-এ বা অ্যাপের হিস্টরিতে।")}</p>
-  <div className={styles.row}>
-   <input className={styles.input} value={trx} onChange={e=>setTrx(e.target.value)} placeholder={tr("e.g. 9A7X3K2M","যেমন 9A7X3K2M")}
-    inputMode="text" autoCapitalize="characters" autoComplete="off" maxLength={40} aria-label="Transaction ID" disabled={busy!==""}/>
-   <button type="button" className={styles.primary} onClick={()=>void sendTrx()} disabled={busy!==""||!trx.trim()}>{busy==="trx"?tr("Sending…","পাঠানো হচ্ছে…"):tr("Send","পাঠান")}</button>
-  </div>
+  <h3 className={styles.title}>{tr("Payment receipt","পেমেন্টের রসিদ")}</h3>
   <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/*" multiple hidden onChange={e=>void sendImages(e.target.files)}/>
   <button type="button" className={styles.upload} onClick={()=>fileInput.current?.click()} disabled={busy!==""||imageCount>=MAX_IMAGES}>
    {busy==="image"?tr("Uploading…","আপলোড হচ্ছে…"):tr("Upload receipt photo or screenshot","রসিদের ছবি বা স্ক্রিনশট আপলোড করুন")}
@@ -132,7 +113,6 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:
   {done&&<p className={styles.ok} role="status">{done}</p>}
   {status.submitted&&!done&&<p className={styles.ok} role="status">{status.state==="rejected"
    ?tr("The shop could not confirm what you sent. Please check and send again.","দোকান আপনার পাঠানো তথ্য নিশ্চিত করতে পারেনি। দেখে আবার পাঠান।")
-   :tr("Received: "+(status.has_trx_id?"Transaction ID":"")+(status.has_trx_id&&imageCount?" and ":"")+(imageCount?imageCount+" photo(s)":"")+". The shop will check it.",
-    "পাওয়া গেছে: "+(status.has_trx_id?"Transaction ID":"")+(status.has_trx_id&&imageCount?" আর ":"")+(imageCount?imageCount+"টা ছবি":"")+"। দোকান যাচাই করে নেবে।")}</p>}
+   :tr(imageCount+" photo(s) received. The shop will check it.",imageCount+"টা ছবি পাওয়া গেছে। দোকান যাচাই করে নেবে।")}</p>}
  </section>;
 }

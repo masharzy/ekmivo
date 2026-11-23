@@ -31,6 +31,6 @@ test("checkout: offline notice, one-minute notice, always-on TrxID and photo upl
  assert.match(panel,/type="file" accept="image\/jpeg,image\/png,image\/\*" multiple/);
  assert.match(panel,/if\(r\.status===404\)\{setAvailable\(false\)/,"hidden while the flag is off");
  const page=read("apps/web/src/components/checkout-experience.tsx");
- assert.equal(page.split("<PaymentProofPanel").length-1,4,"themed and classic, waiting and expired");
+ assert.equal(page.split("<PaymentProofPanel").length-1,5,"official, themed and classic; waiting and expired");
  assert.match(read("deploy/vps/set-flag.sh"),/BRIOFOLD_PAYMENT_PROOFS_ENABLED/);
 });
