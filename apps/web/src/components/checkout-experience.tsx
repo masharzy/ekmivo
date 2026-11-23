@@ -224,8 +224,7 @@ export function CheckoutExperience({locale,token,initialMethod,initialAccount,su
     <button type="button" onClick={switchLanguage} className="provider-checkout-language">{bn?"Eng":"বাংলা"}</button>
     <button type="button" className="provider-checkout-close" onClick={()=>{if(["requires_payer","awaiting_payment","processing"].includes(state))void cancelPayment();else leave()}} aria-label={bn?"বন্ধ":"Close"}>×</button>
    </nav>
-   {status==="loading"&&<div className="provider-checkout-empty" role="status">{bn?"পেমেন্ট লোড হচ্ছে…":"Loading payment…"}</div>}
-   {status!=="loading"&&status!=="ready"&&<div className="provider-checkout-empty" role="alert">
+   {status!=="ready"&&<div className="provider-checkout-empty" role="alert">
     <h1>{status==="missing"?(bn?"পেমেন্ট লিংক পাওয়া যায়নি":"Payment link not found"):(bn?"পেমেন্ট চালু নেই":"Payment unavailable")}</h1>
     <p>{describe(code,bn)}</p><button type="button" onClick={()=>{setStatus("loading");void refresh()}}>{bn?"আবার চেষ্টা করুন":"Retry"}</button>
    </div>}
