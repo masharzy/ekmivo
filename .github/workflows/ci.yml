@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Full suite every night (02:17 Dhaka) even when the day's PRs only ran quick checks.
+    - cron: '17 20 * * *'
   workflow_dispatch:
     inputs:
       pg04_suites:
@@ -19,9 +22,83 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Owner 2026-11-23: a text or design change must not wait 10+ minutes. Pull
+  # requests run only the suites their files can affect; main, the nightly run
+  # and manual runs always run everything.
+  changes:
+    name: Decide which suites this change needs
+    runs-on: ubuntu-latest
+    outputs:
+      web_heavy: ${{ steps.pick.outputs.web_heavy }}
+      go: ${{ steps.pick.outputs.go }}
+      android: ${{ steps.pick.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: pick
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            files='.github/workflows/full-run'
+          else
+            files=$(git diff --name-only "$BASE" "$HEAD")
+          fi
+          printf '%s\n' "$files" | sed 's/^/changed: /'
+          has() { printf '%s\n' "$files" | grep -Eq "$1" && echo true || echo false; }
+          # Workflow changes run everything.
+          all=$(has '^\.github/')
+          go=$(has '^(backend|infra)/'); [ "$all" = true ] && go=true
+          android=$(has '^apps/mobile/'); [ "$all" = true ] && android=true
+          # Server code, migrations, deploy scripts, API routes, dependencies and
+          # integration scripts need PostgreSQL and the browser suites.
+          heavy=$(has '^(backend|infra|deploy|tools)/|^apps/web/(src/app/api/|src/lib/server/|src/proxy\.ts|package(-lock)?\.json|next\.config)')
+          # Integration scripts (not *.test.mjs unit contracts) also need the full suite.
+          if printf '%s\n' "$files" | grep -E '^apps/web/scripts/[^/]+\.mjs$' | grep -vq '\.test\.mjs$'; then heavy=true; fi
+          [ "$all" = true ] && heavy=true
+          echo "web_heavy=$heavy" >> "$GITHUB_OUTPUT"; echo "go=$go" >> "$GITHUB_OUTPUT"; echo "android=$android" >> "$GITHUB_OUTPUT"
+          echo "web_heavy=$heavy go=$go android=$android"
+
+  web_fast:
+    name: Web quick checks (lint, typecheck, unit contracts)
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install
+        working-directory: apps/web
+        run: npm ci
+      - name: Lint
+        working-directory: apps/web
+        run: npm run lint
+      - name: Typecheck
+        working-directory: apps/web
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Unit and contract tests (no database, no browser)
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test $(ls scripts/*.test.mjs | grep -Ev 'browser|responsive') 
+
   web:
     name: Next.js lint, build and isolated PostgreSQL smoke
-    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
+    needs: changes
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary' && needs.changes.outputs.web_heavy == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -341,7 +418,8 @@ jobs:
 
   backend:
     name: Go compile and unit tests
-    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
+    needs: changes
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary' && needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -389,7 +467,8 @@ jobs:
 
   financial_containers:
     name: PG04 runtime and migration Docker builds
-    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
+    needs: changes
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary' && needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -403,7 +482,8 @@ jobs:
 
   android:
     name: Native Kotlin Compose assemble and unit tests
-    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary'
+    needs: changes
+    if: github.head_ref != 'agents/store-subscription-phase3-coupons' && github.head_ref != 'agents/store-subscription-phase5-summary' && github.ref_name != 'agents/store-subscription-phase5-summary' && needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
