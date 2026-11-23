@@ -29,10 +29,15 @@ test("dashboard: separate Receipts tab with a badge, list, photos and reject",()
  assert.match(src("components/unified-section-tabs.tsx"),/href:"\/payments\/receipts"/);
  assert.match(src("components/unified-section-tabs.tsx"),/<ReceiptsBadge/);
  assert.match(src("lib/unified-navigation.ts"),/receipts:\{section:"transactions",service:"payments",kind:"payment-receipts"\}/);
- assert.match(src("app/api/go/[...path]/route.ts"),/payment-proofs\(\?:\\\/\[0-9a-f-\]\{36\}\\\/\(\?:seen\|reject\)\)\?\$/);
+ assert.match(src("app/api/go/[...path]/route.ts"),/payment-proofs\(\?:\\\/\[0-9a-f-\]\{36\}\\\/\(\?:seen\|reject\|approve\)\)\?\$/);
  const page=src("components/payment-receipts.tsx");
  assert.match(page,/\/api\/payment-proofs\//);
- assert.ok(!/approve/i.test(page.replace(/Approving|approved|Approved/g,"")),"approve is a later step");
+ assert.match(page,/className="opw-scroll rc-scroll"/,"same table as Transactions");
+ assert.match(page,/decide\(r\.intent_id,confirm\.action\)/,"accept and reject ask first");
  const mig=readFileSync(new URL("../../../infra/migrations/0270_payment_proof_review.sql",import.meta.url),"utf8");
  assert.ok(!/INSERT INTO financial_(payments|allocations)/.test(mig),"0270 never pays a checkout");
+ const m71=readFileSync(new URL("../../../infra/migrations/0271_payment_proof_approve.sql",import.meta.url),"utf8");
+ assert.ok(!/INSERT INTO financial_(payments|allocations)/.test(m71),"accepting never creates an SMS-verified payment");
+ assert.match(m71,/0271 shop confirmed/);
+ assert.match(src("components/payment-transaction-workspace.tsx"),/merchant_confirmed:\["Confirmed by shop","দোকান নিশ্চিত করেছে"\]/);
 });

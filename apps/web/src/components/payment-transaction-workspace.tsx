@@ -7,10 +7,10 @@ import {DashboardDateTimePicker,DashboardSwitch} from "./dashboard-date-controls
 import {DashboardIcon} from "./dashboard-icon";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {Locale,PaymentEnvironment} from "../lib/dashboard-navigation";
-type Item={id:string;device_name?:string;sms_text?:string;payer_number?:string;transaction_id?:string;balance_minor?:number;merchant_reference?:string;verified_amount_minor?:number;amount_minor?:number;method?:string;payer_suffix?:string;status?:string;reason?:string;parse_reason?:string;device_source?:string;original_transaction_at?:string;verified_at?:string;received_at?:string;webhook_status?:string;source_kind?:string;payment_id?:string};
+type Item={id:string;manual?:boolean;device_name?:string;sms_text?:string;payer_number?:string;transaction_id?:string;balance_minor?:number;merchant_reference?:string;verified_amount_minor?:number;amount_minor?:number;method?:string;payer_suffix?:string;status?:string;reason?:string;parse_reason?:string;device_source?:string;original_transaction_at?:string;verified_at?:string;received_at?:string;webhook_status?:string;source_kind?:string;payment_id?:string};
 type Filters={q:string;status:string;method:string;account:string;from:string;to:string};
 const initial:Filters={q:"",status:"",method:"",account:"",from:"",to:""};
-const statusLabels:Record<string,[string,string]>={verified:["Verified","যাচাইকৃত"],matched:["Matched","মিলেছে"],pending:["Pending","অপেক্ষমাণ"],unmatched:["Unmatched","মেলেনি"],ambiguous:["Ambiguous","একাধিক match"],invalid:["Invalid","অবৈধ"],duplicate:["Duplicate","ডুপ্লিকেট"],cancelled:["Cancelled","বাতিল"]};
+const statusLabels:Record<string,[string,string]>={verified:["Verified","যাচাইকৃত"],merchant_confirmed:["Confirmed by shop","দোকান নিশ্চিত করেছে"],matched:["Matched","মিলেছে"],pending:["Pending","অপেক্ষমাণ"],unmatched:["Unmatched","মেলেনি"],ambiguous:["Ambiguous","একাধিক match"],invalid:["Invalid","অবৈধ"],duplicate:["Duplicate","ডুপ্লিকেট"],cancelled:["Cancelled","বাতিল"]};
 const dt=(v:string|undefined,locale:Locale)=>v&&!Number.isNaN(Date.parse(v))?new Intl.DateTimeFormat(locale==="bn"?"bn-BD":"en-BD",{timeZone:"Asia/Dhaka",dateStyle:"short",timeStyle:"short"}).format(new Date(v)):"—";
 const money=(v:number|undefined,locale:Locale)=>typeof v==="number"&&Number.isFinite(v)?"BDT "+new Intl.NumberFormat(locale==="bn"?"bn-BD":"en-GB",{minimumFractionDigits:2,maximumFractionDigits:2}).format(v/100):"—";
 const dhakaUTC=(value:string)=>{if(!value)return "";const d=new Date(value+":00+06:00");return Number.isFinite(d.valueOf())?d.toISOString():""};
@@ -39,7 +39,7 @@ export function PaymentTransactionWorkspace({locale,workspaceId,environment,reso
  const [accounts,setAccounts]=useState<{id:string;method?:string;display_suffix?:string}[]>(accountSeed?.data?.items??[]);
 
  const [selected,setSelected]=useState<Item|null>(null);
- const openDetail=(item:Item)=>setSelected(item);
+ const openDetail=(item:Item)=>{if(item.manual){window.location.assign("/payments/receipts");return}setSelected(item)};
  const [accountError,setAccountError]=useState(false);
  const [online,setOnline]=useState(true);
  useEffect(()=>{const fn=()=>setOnline(navigator.onLine);fn();window.addEventListener("online",fn);window.addEventListener("offline",fn);return()=>{window.removeEventListener("online",fn);window.removeEventListener("offline",fn)}},[]);
@@ -162,7 +162,7 @@ export function PaymentTransactionWorkspace({locale,workspaceId,environment,reso
     <td hidden={!columns[1]} className="opw-phone">{displayPhone(r.payer_number)}</td>
     <td hidden={!columns[2]} className="opw-trx">{r.transaction_id||"—"}{r.transaction_id&&<button type="button" className="ekv3-copy" title={t("Copy TrxID","TrxID কপি")} aria-label={t("Copy TrxID","TrxID কপি")} onClick={e=>{e.stopPropagation();void navigator.clipboard.writeText(r.transaction_id||"")}}><DashboardIcon name="copy" width={15} height={15}/></button>}</td>
     <td hidden={!columns[3]}>{r.method==="bkash"?"bKash":r.method==="nagad"?"Nagad":r.method==="rocket"?"Rocket":r.method||"—"}</td>
-    <td hidden={!columns[4]}><span className="opw-status ekv3-status" data-tone={r.status==="verified"||r.status==="matched"?"success":r.status==="pending"||r.status==="unmatched"?"warning":r.status==="invalid"?"danger":"neutral"} data-status={r.status||"verified"}>{statusName(r.status||(incoming?"pending":"verified"),bn)}</span></td>
+    <td hidden={!columns[4]}><span className="opw-status ekv3-status" data-tone={r.status==="verified"||r.status==="matched"||r.status==="merchant_confirmed"?"success":r.status==="pending"||r.status==="unmatched"?"warning":r.status==="invalid"?"danger":"neutral"} data-status={r.status||"verified"}>{statusName(r.status||(incoming?"pending":"verified"),bn)}</span></td>
     <td hidden={!columns[5]} className="opw-num">{money(r.verified_amount_minor??r.amount_minor,locale)}</td>
    </tr>)}</tbody></table>
   </div>}
