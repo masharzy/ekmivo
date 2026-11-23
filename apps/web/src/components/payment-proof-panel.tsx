@@ -107,7 +107,10 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable,skin="cl
  const left=status.state==="rejected"?MAX_IMAGES:MAX_IMAGES-imageCount;
 
  return <section className={styles.panel} data-skin={skin} aria-label={tr("Payment receipt","পেমেন্টের রসিদ")} data-testid="payment-proof-panel">
-  {offline&&!expired&&!sent&&<div className={styles.notice} role="alert">{tr("The shop's phone is offline, so automatic verification is not possible now. Pay, then upload the receipt.","দোকানের ফোন অফলাইনে, তাই এখন অটোমেটিক যাচাই হবে না। টাকা পাঠিয়ে রসিদ আপলোড করুন।")}</div>}
+  {offline&&!expired&&!sent&&<div className={styles.notice} role="alert">
+   <svg className={styles.ni} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg>
+   <div><b>{tr("Automatic check is off right now","এখন অটো যাচাই বন্ধ")}</b><span>{tr("The shop's phone is offline. Pay, then upload the receipt.","দোকানের ফোন অফলাইনে। টাকা পাঠিয়ে রসিদ আপলোড করুন।")}</span></div>
+  </div>}
   {sent&&!picked.length?<div className={styles.sent} role="status">
    <span className={styles.tick} aria-hidden="true">✓</span>
    <div><b>{tr("Receipt sent","রসিদ পাঠানো হয়েছে")}</b><small>{tr("The shop will check it and confirm your payment.","দোকান যাচাই করে আপনার পেমেন্ট নিশ্চিত করবে।")}</small></div>
@@ -115,7 +118,7 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable,skin="cl
   <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/*" multiple hidden onChange={e=>add(e.target.files)}/>
   {status.state==="rejected"&&!open&&<p className={styles.error} role="alert">{tr("The shop could not confirm the receipt. Please send it again.","দোকান রসিদটা নিশ্চিত করতে পারেনি। আবার পাঠান।")}</p>}
   {!open?<button type="button" className={styles.btn} onClick={()=>{setOpen(true);if(!picked.length)fileInput.current?.click()}} disabled={left<=0}>
-   {tr("Upload receipt","রসিদ আপলোড করুন")}
+   <svg className={styles.ui} viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>{tr("Upload receipt","রসিদ আপলোড করুন")}
   </button>:<div className={styles.box}>
    <div className={styles.grid}>
     {picked.map((x,i)=><div key={x.url} className={styles.th}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={x.url} alt=""/>

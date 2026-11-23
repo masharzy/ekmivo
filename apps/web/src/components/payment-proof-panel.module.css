@@ -1,7 +1,12 @@
 /* Payment receipt upload (owner 2026-11-23): one button in the theme's own style;
    tapping it opens a small picker of up to five photos. data-skin picks the theme. */
-.panel{margin:12px 0 0;display:grid;gap:10px;text-align:left;color:inherit;font:inherit}
-.notice{border:1px solid rgba(217,159,0,.55);background:rgba(242,184,28,.14);border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.5}
+.panel{margin:0;display:grid;gap:8px;text-align:left;color:inherit;font:inherit}
+.notice{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:rgba(242,170,20,.12);color:inherit;font-size:13px;line-height:1.45}
+.notice b{display:block;font-size:13.5px;font-weight:700}.notice span{display:block;opacity:.8}
+.ni{flex:none;width:20px;height:20px;margin-top:1px;fill:none;stroke:#D98A00;stroke-width:2;stroke-linecap:round}
+.ni circle{fill:rgba(242,170,20,.18);stroke:#D98A00}
+.ui{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .btn,.send,.ghost{font:inherit;cursor:pointer;width:100%}
 .btn:disabled,.send:disabled,.ghost:disabled,.add:disabled{opacity:.5;cursor:default}
 .box{display:grid;gap:10px}
@@ -19,17 +24,20 @@
 .ok{margin:0;font-size:13px;color:#1a8f4a}
 
 /* Official (gateway): like its ghost and dark buttons */
-.panel[data-skin=gateway] .btn,.panel[data-skin=gateway] .ghost{padding:13px;border-radius:11px;font-size:14.5px;font-weight:700;background:var(--pp-bg,#F4F5F7);border:1px solid var(--pp-bd,#E6E8EE);color:var(--pp-fg,#444)}
+.panel[data-skin=gateway] .btn{padding:12px;border-radius:11px;font-size:14.5px;font-weight:700;background:var(--pp-bg,color-mix(in srgb,var(--pc,#15161C) 7%,#fff));border:1.5px solid var(--pp-bd,var(--pc,#15161C));color:var(--pp-fg,var(--pc,#15161C))}
+.panel[data-skin=gateway] .ghost{padding:12px;border-radius:11px;font-size:14.5px;font-weight:700;background:#F4F5F7;border:1px solid #E6E8EE;color:#444}
 .panel[data-skin=gateway] .send{padding:13px;border-radius:11px;font-size:14.5px;font-weight:700;background:var(--pp-send,#15161C);border:0;color:var(--pp-send-fg,#fff)}
 .panel[data-skin=gateway] .th,.panel[data-skin=gateway] .add{border-radius:11px}
 
 /* Themed: uses the theme's own colours, radius and lines */
-.panel[data-skin=themed] .btn,.panel[data-skin=themed] .ghost{padding:12px 14px;border:1px solid var(--ln);border-radius:var(--rb);background:transparent;color:var(--t);font-size:14px;font-weight:600}
+.panel[data-skin=themed] .btn{padding:12px 14px;border:1.5px solid var(--ac);border-radius:var(--rb);background:color-mix(in srgb,var(--ac) 8%,transparent);color:var(--ac);font-size:14px;font-weight:600}
+.panel[data-skin=themed] .ghost{padding:12px 14px;border:1px solid var(--ln);border-radius:var(--rb);background:transparent;color:var(--t);font-size:14px;font-weight:600}
 .panel[data-skin=themed] .send{padding:12px 14px;border:0;border-radius:var(--rb);background:var(--ac);color:var(--on);font-size:14px;font-weight:600}
 .panel[data-skin=themed] .th,.panel[data-skin=themed] .add{border-radius:var(--rb)}
 .panel[data-skin=themed] .add{border-color:var(--ln)}
 
 /* Classic: like its provider-flow buttons */
-.panel[data-skin=classic] .btn,.panel[data-skin=classic] .ghost{min-height:44px;padding:11px 13px;border:0;border-radius:5px;background:#f4f4f4;color:#20262e;font-size:13px;font-weight:650}
+.panel[data-skin=classic] .btn{min-height:44px;padding:11px 13px;border:1.5px solid var(--provider-accent,#20262e);border-radius:5px;background:color-mix(in srgb,var(--provider-accent,#20262e) 7%,#fff);color:var(--provider-accent,#20262e);font-size:13px;font-weight:650}
+.panel[data-skin=classic] .ghost{min-height:44px;padding:11px 13px;border:0;border-radius:5px;background:#f4f4f4;color:#20262e;font-size:13px;font-weight:650}
 .panel[data-skin=classic] .send{min-height:44px;padding:11px 13px;border:0;border-radius:5px;background:var(--provider-accent,#20262e);color:#fff;font-size:13px;font-weight:650}
 .panel[data-skin=classic] .th,.panel[data-skin=classic] .add{border-radius:5px}
