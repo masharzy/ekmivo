@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,12 +15,13 @@ import (
 
 // Receipt review for the shop (owner decision 2026-11-23): uploaded receipts
 // are a separate list on the dashboard with a badge for new ones. Nothing here
-// verifies a payment or changes an amount (migration 0270).
+// creates an SMS-verified payment or changes an amount (0270, 0271).
 //
 //	GET  /v1/workspaces/{ws}/payment-proofs?environment=live        list + new count
 //	GET  /v1/workspaces/{ws}/payment-proofs/{intent}/images/{n}     photo n (JPEG)
 //	POST /v1/workspaces/{ws}/payment-proofs/{intent}/seen           clears "new"
 //	POST /v1/workspaces/{ws}/payment-proofs/{intent}/reject         {"reason":"..."}
+//	POST /v1/workspaces/{ws}/payment-proofs/{intent}/approve        confirmed by the shop (0271)
 //
 // Same authorisation as the payment-intent list: payments:read for reading,
 // payments:write for changes, browser origin checked on changes.
@@ -80,6 +82,8 @@ func (s *Service) HandleMerchantProofs(w http.ResponseWriter, r *http.Request) {
 			return nil
 		case action == "seen":
 			return tx.QueryRow(r.Context(), "SELECT briofold_proof_seen($1::uuid,$2,$3::uuid)", ws, realm, intent).Scan(&raw)
+		case action == "approve":
+			return tx.QueryRow(r.Context(), "SELECT briofold_proof_approve($1::uuid,$2,$3::uuid)", ws, realm, intent).Scan(&raw)
 		case action == "reject":
 			var body struct {
 				Reason string `json:"reason"`
@@ -132,3 +136,42 @@ type proofMethodError struct{}
 func (proofMethodError) Error() string { return "method not allowed" }
 
 var errMethod error = proofMethodError{}
+
+// supplementConfirmedReceipts adds receipts the shop accepted (0271) to the first,
+// unfiltered page of Transactions, marked "confirmed by the shop".
+func (s *Service) supplementConfirmedReceipts(r *http.Request, ws, realm string, result map[string]any) {
+	if !paymentProofsEnabled() {
+		return
+	}
+	q := r.URL.Query()
+	for _, k := range []string{"cursor", "status", "account", "method", "from", "to", "q"} {
+		if q.Get(k) != "" {
+			return
+		}
+	}
+	items, ok := result["items"].([]any)
+	if !ok {
+		return
+	}
+	var raw []byte
+	if err := s.scoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
+		return tx.QueryRow(r.Context(), "SELECT briofold_proof_confirmed($1::uuid,$2)", ws, realm).Scan(&raw)
+	}); err != nil || len(raw) == 0 {
+		return
+	}
+	var extra []any
+	if json.Unmarshal(raw, &extra) != nil || len(extra) == 0 {
+		return
+	}
+	merged := append(extra, items...)
+	stamp := func(v any) string {
+		if m, ok := v.(map[string]any); ok {
+			if s, ok := m["verified_at"].(string); ok {
+				return s
+			}
+		}
+		return ""
+	}
+	sort.SliceStable(merged, func(i, j int) bool { return stamp(merged[i]) > stamp(merged[j]) })
+	result["items"] = merged
+}

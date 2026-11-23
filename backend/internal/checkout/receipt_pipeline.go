@@ -378,6 +378,9 @@ func (s *Service) HandleOperations(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" && (resource == "payments" || resource == "incoming") {
 		s.supplementAuthorizedPaymentEvidence(r, ws, realm, resource, id, result)
 	}
+	if r.Method == "GET" && resource == "payments" && id == "" {
+		s.supplementConfirmedReceipts(r, ws, realm, result)
+	}
 	if r.Method == "GET" && resource == "deliveries" && id != "" {
 		var history []byte
 		if err := s.pipelineScoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
