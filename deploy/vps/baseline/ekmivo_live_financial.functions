@@ -5,6 +5,7 @@ briofold_payment_intent_insert|w uuid, e text, ref text, amount bigint, expiry t
 briofold_proof_checkout|p_digest text|23d9873d96b568e485d84f5456b0ba2c
 briofold_proof_public|p_digest text|6e3974160ae0fd1e1ffa90ba82188e78
 briofold_proof_submit|p_digest text, p_trx text, p_image jsonb|f379fd6163bc4b91fb6a9822a93ea5e2
+briofold_sms_window_start|window_start timestamp with time zone, precision_name text|58be6144609a12e28f66ebfa7d3161f6
 crypt|text, text|0939715a0bd721d85d420be1aee841c7
 dashboard_billing_usage|w uuid, e text, start_at timestamp with time zone, end_at timestamp with time zone|b900a8dddefa744813fb178758a2862d
 dashboard_record_checkout_check|w uuid, e text, i uuid|3de1e18c2317cb36bf12af69172b5e8f
@@ -22,7 +23,7 @@ financial_reject_history_change||f1c425521d4c769e60fcb9fcec6f7bfb
 financial_require_river_job||2c917aca01338d3fba8b3fcb636b171e
 financial_sync_workspace|p_workspace uuid, p_realm text, p_version bigint, p_enabled boolean|6fc32103997facbe53fe4831e95edaf8
 financial_validate_attempt||d6668c2e5427be5528b3af7baea876a5
-financial_verify_payment_fields||84b265a00f02b7ff7791bf54e62fb779
+financial_verify_payment_fields||9068eee77f96b6b47894425800d5e574
 gen_random_bytes|integer|767c42f6188fd5c462c3e27384858565
 gen_random_uuid||ff30e0a6015ca70d7bb1a880f09a11bf
 gen_salt|text, integer|33498c853264afae81c9eef1e42637dd
@@ -72,7 +73,7 @@ pg06_phone_action|w uuid, e text, phone_id uuid, act text, new_name text|914384c
 pg06_phone_attach|w uuid, e text, phone_id uuid, acc uuid, n text, s text, p text, b text|1f6fa48281abf62bb99064b4d40ec7c4
 pg06_phone_begin|w uuid, e text, n text, d text|980c3ac17328c85314001592d4720a3d
 pg06_phone_candidate_accounts|phone_id uuid, provider_method text|9994a951883b8c445caf7f2db9e865cb
-pg06_phone_candidate|p_phone uuid, p_method text, p_payer text, p_amount bigint, p_time timestamp with time zone, p_precision text|aee26c4ed8ed61755175eaba355108f7
+pg06_phone_candidate|p_phone uuid, p_method text, p_payer text, p_amount bigint, p_time timestamp with time zone, p_precision text|b8c67bbe0b8f70ff2fd28c328ae11761
 pg06_phone_claim|d text, k bytea|1e65a9e99d2ba6599d81b7ff4ad4707e
 pg06_phone_configuration|phone_id uuid|9bdecff15191273c3b240a3a707a792b
 pg06_phone_delete|w uuid, e text, phone_id uuid|25c75e80a776fe98d85cbec5c747716c
@@ -87,8 +88,8 @@ pg06_phone_reconnect|w uuid, e text, phone_id uuid, d text|c04d07e7073eb3500f64c
 pg06_phone_self_revoke|phone_id uuid|eca3f0fd5d08eb006e62dcf3381552a2
 pg06_scope|w uuid, e text|fdc414d667bfc95744a3213184e3a5a4
 pg06_workspace_ready|w uuid, e text|8b8fef575d72fc119074d9c44f038f97
-pg07_candidates|w uuid, e text, observation uuid|b36d30de3231f400f1e5cd761366a09c
-pg07_match|o_id uuid, expected_version bigint|41b36f0eff646c17073d85b206a94245
+pg07_candidates|w uuid, e text, observation uuid|b222ee1ae02d16c3b0af41bf194f7116
+pg07_match|o_id uuid, expected_version bigint|1a6d2b91aca248c008674c80a1ab4b64
 pg07_pending||97933f216edda8d137984cdf2e4065ab
 pg08_claim|delivery uuid, expected_version bigint|27de1d3cb92959ba6b9d511a574bef87
 pg08_due||2bdd9b55c3c2cb9bca6cb8b8240c1965
@@ -138,13 +139,13 @@ pg10_upload_commit|w uuid, e text, item uuid|28a38a449f2c66f9c023cbab4418bdb6
 pg10_upload_reserve|w uuid, e text, item uuid, key text, size bigint|e8632adae697266bad3d3a73f79e7d03
 pg10_validate_files||1d6d7d504955706bf3dcbe6671812181
 pg10_visit|cap text, k text, h text, intent_cap text, fields jsonb|d202ac709b0324162924115bdf2cbef3
-pg10_write|w uuid, e text, res text, item uuid, action text, b jsonb, k text, h text, cap text, actor uuid|5635322b476d496ecc7c9f7f36c211c7
+pg10_write|w uuid, e text, res text, item uuid, action text, b jsonb, k text, h text, cap text, actor uuid|6a575d5c8a4984d733ff256e77738874
 pg110_public_workspace_accounts|w uuid, e text|4c3ce6723b0c8d10951adca453e6d601
 pg11_checkout_payment|cap text|70960de296ff61ad54ef1e2d1dbb9c21
 pg11_emit_expiry||961420b4d59143f13600d883b08edff6
 pg11_event|w uuid, e text, payment uuid, typ text, data jsonb|f1e69aa939bd37794d83bd00634a891d
 pg11_exception_event||a365684ce564cd4adce79a2ab2b3c571
-pg11_late_phone_receipt_case||d175e4f2976d210077d84e86851aeb94
+pg11_late_phone_receipt_case||b688a7fec6f18dc07ac91cd0cc9c37d0
 pg11_page|w uuid, e text, res text, item uuid, after_id uuid, filter_status text, account uuid|9b64beea788438c21340499b1c5f203c
 pg11_read|w uuid, e text, res text, item uuid|5d02c16a5247d3d856a59a6ca8a41367
 pg11_refund_action|w uuid, e text, item uuid, action text, note text, ref text, actor uuid, expected bigint|31d7935ed04153aa7f3158f17a238683
@@ -181,7 +182,7 @@ pg58_activity_read|w uuid, e text, kind text, actor uuid, cursor_id uuid, q text
 pg58_delivery_history|w uuid, e text, d uuid|0e2d7659cc9e28cc9245f875d9ee3937
 pg58_record_api|w uuid, e text, m text, path text, status integer, elapsed bigint, correlation text|71997f9e3257d2676c5cc02ab4ef2a53
 pg58_record_delivery||5732e4de431a08d4fddedc884917f8a5
-pg61_transaction_lookup|w uuid, e text, intent uuid, method text, reference_digest text, amount bigint|0af036a2bf41601ccc2a61c774a5ca51
+pg61_transaction_lookup|w uuid, e text, intent uuid, method text, reference_digest text, amount bigint|0d1ed9a0d60fef71b62e80ea9216bbdb
 pg62_checkout_redirects|w uuid, e text, intent uuid|6e00f278394975d19fd2106155329c74
 pg62_merchant_options|w uuid, e text, intent uuid|383f3f4d10f41efcb740a9bb2982b4fb
 pg62_route_payment_webhook||fd4d0095c660f9c8511b9ba0089a8c80
