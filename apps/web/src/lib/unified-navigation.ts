@@ -67,7 +67,7 @@ export const unifiedSettings:readonly {slug:string;en:string;bn:string;items:rea
   {slug:"help/feedback",en:"Submit feedback",bn:"মতামত পাঠান",section:"help",service:"common"},
  ]},
 ];
-export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"member-channel-scopes"|"help-videos"|"channel-settings"|"courier-integrations"|"product-photos"|"ai-selling"|"ai-payment-review"};
+export type UnifiedDestination={section:SectionKey;service:Service;detailId?:string;kind?:"inbox"|"channels"|"devices"|"mixed-devices"|"business-profile"|"settings-index"|"account-devices"|"team-groups"|"member-channel-scopes"|"help-videos"|"channel-settings"|"courier-integrations"|"product-photos"|"ai-selling"|"ai-payment-review"|"payment-receipts"};
 const financialRecordId=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const financialDetailPrefixes={
  payments:"/payments/transactions",incoming:"/sms-data",gateways:"/settings/payment-methods",
@@ -169,7 +169,7 @@ export function unifiedDestination(mode:BusinessMode,root:UnifiedRoot,view:reado
   inbox:{"":{section:"inbox",service:"ai",kind:"inbox"},comments:{section:"comments",service:"ai"},"saved-replies":{section:"saved-replies",service:"ai"},tickets:{section:"tickets",service:"ai"},"agent-desk":{section:"ai-agent",service:"ai"}},
   orders:{"":{section:"orders",service:payments?"payments":"ai"},scan:{section:"orders",service:payments?"payments":"ai"},"to-chase":{section:"orders",service:payments?"payments":"ai"},delivery:{section:"shipping",service:defaultService},courier:{section:"shipping",service:defaultService},returns:{section:"returns",service:defaultService},"payment-review":{section:"orders",service:payments?"payments":"ai",kind:"ai-payment-review"}},
   catalog:{"":{section:"products",service:payments?"payments":"ai"},products:{section:"products",service:payments?"payments":"ai"},services:{section:"products",service:payments?"payments":"ai"},inventory:{section:"inventory",service:defaultService},coupons:{section:"coupons",service:defaultService}},
-  payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},refunds:{section:"refunds",service:"payments"},reconciliation:{section:"reconciliation",service:"payments"}},
+  payments:{"":{section:"transactions",service:"payments"},transactions:{section:"transactions",service:"payments"},links:{section:"payment-links",service:"payments"},refunds:{section:"refunds",service:"payments"},receipts:{section:"transactions",service:"payments",kind:"payment-receipts"},reconciliation:{section:"reconciliation",service:"payments"}},
   "sms-data":{"":{section:"incoming",service:"payments"}},
   invoices:{"":{section:"invoices",service:"payments"}},
   customers:{financial:{section:"customers",service:"payments"},"":{section:payments?"customers":"contacts",service:defaultService},leads:{section:"leads",service:"ai"},"follow-ups":{section:"follow-ups",service:"ai"},broadcasts:{section:"broadcasts",service:"ai"},bookings:{section:"bookings",service:"ai"},posts:{section:"posts",service:"ai"}},

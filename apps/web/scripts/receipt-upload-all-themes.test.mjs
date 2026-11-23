@@ -20,3 +20,19 @@ test("editor preview: upload sample in all waiting screens, 4-minute timer, real
  assert.ok(pv.includes("remaining:4*60")&&!pv.includes("5*60"));
  assert.match(src("components/checkout-themes.tsx"),/const DESKTOP_W=1280/);
 });
+test("checkout: after sending, 'sent' and no more uploads unless rejected",()=>{
+ const panel=src("components/payment-proof-panel.tsx");
+ assert.match(panel,/const sent=status\.submitted&&status\.state!=="rejected"/);
+ assert.match(panel,/\{sent&&!picked\.length\?<div className=\{styles\.sent\}/);
+});
+test("dashboard: separate Receipts tab with a badge, list, photos and reject",()=>{
+ assert.match(src("components/unified-section-tabs.tsx"),/href:"\/payments\/receipts"/);
+ assert.match(src("components/unified-section-tabs.tsx"),/<ReceiptsBadge/);
+ assert.match(src("lib/unified-navigation.ts"),/receipts:\{section:"transactions",service:"payments",kind:"payment-receipts"\}/);
+ assert.match(src("app/api/go/[...path]/route.ts"),/payment-proofs\(\?:\\\/\[0-9a-f-\]\{36\}\\\/\(\?:seen\|reject\)\)\?\$/);
+ const page=src("components/payment-receipts.tsx");
+ assert.match(page,/\/api\/payment-proofs\//);
+ assert.ok(!/approve/i.test(page.replace(/Approving|approved|Approved/g,"")),"approve is a later step");
+ const mig=readFileSync(new URL("../../../infra/migrations/0270_payment_proof_review.sql",import.meta.url),"utf8");
+ assert.ok(!/INSERT INTO financial_(payments|allocations)/.test(mig),"0270 never pays a checkout");
+});

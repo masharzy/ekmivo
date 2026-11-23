@@ -33,6 +33,7 @@ import {TeamGroups} from "./team-groups";
 import {BrowserDevicePreferences} from "./browser-device-preferences";
 import {AiSellingSettings} from "./ai-selling-settings";
 import {AiPaymentReview} from "./ai-payment-review";
+import {PaymentReceipts} from "./payment-receipts";
 
 export const unifiedDynamic="force-dynamic";
 
@@ -87,6 +88,9 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
      canManage={workspace.role==="owner"||workspace.role==="admin"} mode={workspace.mode}/>
   :kind==="ai-payment-review"
    ?<AiPaymentReview key={workspace.id+":"+user.id} workspaceId={workspace.id} bn={locale==="bn"} environment={paymentContext?.environment??"live"}
+     canManage={workspace.role==="owner"||workspace.role==="admin"}/>
+  :kind==="payment-receipts"
+   ?<PaymentReceipts key={workspace.id+":"+user.id+":"+(paymentContext?.environment??"live")} workspaceId={workspace.id} bn={locale==="bn"} environment={paymentContext?.environment??"live"}
      canManage={workspace.role==="owner"||workspace.role==="admin"}/>
   :kind==="product-photos"
    ?<ProductPhotoSearch key={workspace.id+user.id} workspaceId={workspace.id} bn={locale==="bn"}/>
@@ -152,7 +156,8 @@ export async function UnifiedMerchantRoute({locale:raw,root,view=[],thread,payme
        ?<BriofoldAiCreditSummary embedded workspaceId={workspace.id} actorId={user.id} locale={locale}/>:undefined}/>;
  return <AppShell unified locale={locale} user={user} workspace={workspace}
    service={service} section={section} paymentContext={paymentContext}>
-    <UnifiedSectionTabs locale={locale} root={root} mode={workspace.mode} view={view} requests={paymentLinksMode==="requests"}/>
+    <UnifiedSectionTabs locale={locale} root={root} mode={workspace.mode} view={view} requests={paymentLinksMode==="requests"}
+     workspaceId={root==="payments"?workspace.id:undefined} environment={paymentContext?.environment??"live"}/>
     {body}
    </AppShell>;
 }

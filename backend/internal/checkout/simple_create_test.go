@@ -29,7 +29,7 @@ func TestSimpleCreateDefaultsAndLegacyCompatibility(t *testing.T) {
 	if !prepareCreateRequest(&simple, key, w, "sandbox") {
 		t.Fatal("simple request rejected")
 	}
-	if simple.Amount != 15050 || simple.Currency != "BDT" || simple.Expiry != 5 || simple.Reference == "" {
+	if simple.Amount != 15050 || simple.Currency != "BDT" || simple.Expiry != 4 || simple.Reference == "" {
 		t.Fatalf("bad defaults: %#v", simple)
 	}
 	retry := createRequest{AmountBDT: json.RawMessage("150.50"), RedirectURL: "https://merchant.example/success"}
@@ -74,7 +74,7 @@ func TestMerchantShopPayloadAliases(t *testing.T) {
   if body.Amount != 30000 || body.CustomerName != "Easy Education" || body.CustomerEmail != "shop@example.com" || body.Fullname != "" || body.Email != "" {
     t.Fatalf("incorrect normalized customer information / amount: %#v", body)
   }
-  if len(body.Metadata) == 0 || body.Currency != "BDT" || body.Expiry != 5 {
+  if len(body.Metadata) == 0 || body.Currency != "BDT" || body.Expiry != 4 { // owner 2026-11-23: every checkout is 4 minutes
     t.Fatal("metadata and default checkout options should be preserved")
   }
 }

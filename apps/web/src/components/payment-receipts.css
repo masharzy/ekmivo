@@ -1,0 +1,15 @@
+/* Receipts list (owner 2026-11-23): thumbnails, a status tag and a photo viewer. */
+.rc-row{align-items:center}
+.rc-thumbs{display:flex;gap:6px;flex:none}
+.rc-th{width:44px;height:44px;padding:0;border:1px solid var(--line,#e6e8ee);border-radius:8px;overflow:hidden;background:#f4f5f7;cursor:zoom-in}
+.rc-th img{width:100%;height:100%;object-fit:cover;display:block}
+.rc-tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.rc-new{background:#fdecea;color:#b3261e}.rc-wait{background:#fff4d6;color:#8a5a00}
+.rc-ok{background:#e3f4ea;color:#16794c}.rc-bad{background:#eef0f3;color:#555}
+.rc-view{position:fixed;inset:0;z-index:1000;background:rgba(10,12,16,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+.rc-view img{max-width:min(100%,900px);max-height:calc(100dvh - 110px);object-fit:contain;border-radius:8px;background:#fff}
+.rc-nav{display:flex;gap:10px;align-items:center;color:#fff;font-size:14px}
+.rc-nav button{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;font-size:20px;cursor:pointer}
+.rc-nav button:disabled{opacity:.35;cursor:default}
+.ek-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:6px;padding:0 5px;border-radius:999px;background:#d93025;color:#fff;font-size:11px;font-weight:700;line-height:1}
+@media(max-width:640px){.rc-row{flex-wrap:wrap}.rc-thumbs{order:2;width:100%}}

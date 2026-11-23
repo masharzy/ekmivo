@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {enabledUnifiedService,type BusinessMode,type UnifiedRoot} from "../lib/unified-navigation";
 import styles from "./unified-section-tabs.module.css";
+import {ReceiptsBadge} from "./receipts-badge";
 
 type Tab={en:string;bn:string;href:string;service:"ai"|"payments"|"common"|"fulfilment"};
 const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
@@ -21,6 +22,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},
   {en:"Payment links",bn:"পেমেন্ট লিংক",href:"/payments/links",service:"payments"},
   {en:"Payment requests",bn:"পেমেন্ট রিকোয়েস্ট",href:"/payments/links?list=requests",service:"payments"},
+  {en:"Receipts",bn:"রসিদ",href:"/payments/receipts",service:"payments"},
   {en:"Refunds",bn:"রিফান্ড",href:"/payments/refunds",service:"payments"},
  ],
  customers:[
@@ -46,8 +48,9 @@ const aiTabs:readonly Tab[]=[
  {en:"AI selling",bn:"AI দিয়ে বিক্রি",href:"/settings/ai-selling",service:"fulfilment"},
 ];
 const aiViews=["ai","knowledge","channels","website","comment-automation","ai-selling"];
-export function UnifiedSectionTabs({root,mode,locale,view,requests=false}:{
+export function UnifiedSectionTabs({root,mode,locale,view,requests=false,workspaceId,environment}:{
  root:UnifiedRoot;mode:BusinessMode;locale:"bn"|"en";view:readonly string[];requests?:boolean;
+ workspaceId?:string;environment?:string;
 }){
  const inAi=root==="settings"&&aiViews.includes(view[0]??"")&&!(view[0]==="channels"&&view.length>1&&view[1]!=="website");
  const available=(inAi?aiTabs:tabs[root])?.filter(tab=>enabledUnifiedService(mode,tab.service)&&
@@ -60,6 +63,6 @@ export function UnifiedSectionTabs({root,mode,locale,view,requests=false}:{
  return <nav className={styles.tabs} aria-label={locale==="bn"?"পৃষ্ঠার বিভাগ":"Page sections"}>
   {available.map(tab=><Link key={tab.href} href={tab.href}
    className={tab.href===active?styles.active:undefined}
-   aria-current={tab.href===active?"page":undefined}>{tab[locale]}</Link>)}
+   aria-current={tab.href===active?"page":undefined}>{tab[locale]}{tab.href==="/payments/receipts"&&workspaceId&&<ReceiptsBadge workspaceId={workspaceId} environment={environment??"live"}/>}</Link>)}
  </nav>;
 }
