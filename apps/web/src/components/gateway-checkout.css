@@ -208,3 +208,6 @@
 /* Owner 2026-11-23: the page's dark-mode input styles turned these fields black; the theme is always light, like its preview. */
 .gw{color-scheme:light}
 .gw input,.gw textarea,.gw select{background:#fff;color:#15161C}
+
+/* Owner 2026-11-23: step 1 like a classic gateway — amount box and summary on the left, methods on the right; one column on phones. Same rules in lib/checkout-preview.ts. */
+.gw-si{align-items:stretch;justify-content:flex-start;text-align:left;gap:18px;background:#FAFBFC}.gw-mer{display:flex;align-items:center;gap:12px;padding-right:72px}.gw-mer>div{min-width:0}.gw-si .gw-logo{width:48px;height:48px;border-radius:14px;font-size:20px;flex:none}.gw-si .gw-name{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gw-si .gw-ord{margin-top:2px}.gw-pay{background:#EAF2FF;border-radius:14px;padding:16px 18px;display:grid;gap:4px}.gw-pay span{font-size:13px;color:#5B6070}.gw-pay b{font-size:30px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}.gw-sum{display:grid;gap:10px;font-size:14px}.gw-sum div{display:flex;justify-content:space-between;gap:12px}.gw-sum .tot{border-top:1px solid #ECEEF2;padding-top:10px;font-weight:700}.gw-h{margin:0;font-size:15px;font-weight:650;color:var(--ink)}@media(max-width:720px){.gw-pay b{font-size:26px}.gw-si{gap:14px}}

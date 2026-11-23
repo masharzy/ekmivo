@@ -66,6 +66,17 @@ export function PaymentRefunds({locale,workspaceId,environment,canManage,detailI
   <div className="page">
    <header className="ph"><div><h1>{t("Refunds","রিফান্ড")}</h1><p>{t("Review requests and track seller-managed returns.","রিফান্ড অনুরোধ ও বিক্রেতা-পরিচালিত ফেরতের হিসাব দেখুন।")}</p></div>
     <button className={"btn"+(loading?" spin":"")} disabled={loading||busy} onClick={()=>{setNonce(n=>n+1);setNotice(t("Refreshed","রিফ্রেশ করা হয়েছে"))}}><DashboardIcon name="refresh" width={16} height={16}/>{t("Refresh","রিফ্রেশ")}</button></header>
+   {/* Owner 2026-11-23: say when a refund is needed. Briofold never sends money back itself. */}
+   <details className="rf-help" style={{border:"1px solid var(--line,#E4E6EB)",borderRadius:10,padding:"10px 14px",margin:"0 0 14px"}}>
+    <summary style={{cursor:"pointer",fontWeight:600}}>{t("When is a refund needed?","রিফান্ড কখন লাগে?")}</summary>
+    <ul style={{margin:"8px 0 4px",paddingLeft:18,lineHeight:1.6}}>
+     <li>{t("The customer paid after the checkout expired or was cancelled.","checkout-এর মেয়াদ শেষ বা বাতিল হওয়ার পরে কাস্টমার টাকা পাঠিয়েছেন।")}</li>
+     <li>{t("The customer paid twice, or sent more than the amount.","কাস্টমার দুবার পাঠিয়েছেন, বা বেশি টাকা পাঠিয়েছেন।")}</li>
+     <li>{t("You cancelled the order after it was paid.","টাকা পাওয়ার পর আপনি অর্ডার বাতিল করেছেন।")}</li>
+     <li>{t("The customer asked for their money back from the receipt page.","কাস্টমার রসিদের পেজ থেকে টাকা ফেরত চেয়েছেন।")}</li>
+    </ul>
+    <p style={{margin:0,opacity:.75}}>{t("Send the money back yourself from your wallet app, then mark the refund done here so your records match.","টাকা আপনি নিজের ওয়ালেট অ্যাপ থেকে ফেরত পাঠাবেন, তারপর এখানে রিফান্ড সম্পন্ন চিহ্নিত করবেন, যাতে হিসাব মেলে।")}</p>
+   </details>
    <section className="stats" aria-label={t("Summary","সারাংশ")}>
     <div className="st"><div className="si"><DashboardIcon name="list" width={18} height={18}/></div><div><span>{t("Requests on this page","এই পাতার অনুরোধ")}</span><b>{visible.length}</b></div></div>
     <div className={"st"+(needsAction?" hot":"")}><div className="si"><DashboardIcon name="alert-circle" width={18} height={18}/></div><div><span>{t("Needs attention","পদক্ষেপ প্রয়োজন")}</span><b>{needsAction}</b></div></div>
