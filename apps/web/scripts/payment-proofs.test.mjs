@@ -26,7 +26,7 @@ test("API: flag, re-encoded photos in R2 under payment-proofs/",()=>{
 
 test("checkout: offline notice and a single upload button that opens a picker of up to 5",()=>{
  const panel=read("apps/web/src/components/payment-proof-panel.tsx");
- assert.match(panel,/অটোমেটিক যাচাই হবে না/);
+ assert.match(panel,/এখন অটো যাচাই বন্ধ/);
  assert.ok(!panel.includes("টাকা পাঠিয়েছেন, কিন্তু"),"owner 2026-11-23: no explanation text");
  assert.match(panel,/const MAX_IMAGES=5/);
  assert.match(panel,/\{!open\?<button/,"button first, picker on tap");

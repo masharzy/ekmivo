@@ -20,7 +20,7 @@ export function useResourceLimit(resource:PlanResource,workspaceId:string,enviro
 export function PlanResourceStatus({value,locale}:{value:ReturnType<typeof useResourceLimit>;locale:"en"|"bn"}){
  const bn=locale==="bn",t=(en:string,bd:string)=>bn?bd:en;
  if(value.reason==="exempt")return null;
- const label={payment_methods:t("Receiving accounts","Receiving account"),devices:t("SMS devices","SMS ডিভাইস"),api_keys:t("Live API keys","Live API key"),team_members:t("Team seats","সদস্যের slot"),payments:t("Payments this period","এই সময়ের পেমেন্ট")}[value.resource];
+ const label={payment_methods:t("Receiving accounts","Receiving account"),devices:t("SMS devices","SMS ডিভাইস"),api_keys:t("Live API keys","Live API key"),team_members:t("Team seats","সদস্যের slot"),payments:t("Successful payments this billing month","এই বিলিং মাসের সফল পেমেন্ট")}[value.resource];
  const number=(n:number)=>new Intl.NumberFormat(bn?"bn-BD":"en-BD").format(n);
  return <div className="pg-plan-limit" data-blocked={value.blocked||undefined} role="status">
   <span>{value.loading?t("Checking plan limit…","প্ল্যানের সীমা যাচাই হচ্ছে…"):value.reason==="unavailable"?t("Plan limit unavailable.","প্ল্যানের সীমা পাওয়া যাচ্ছে না।"):value.reason==="inactive"?t("Activate or renew your plan to add more.","আরও যোগ করতে প্ল্যান চালু বা নবায়ন করুন।"):<>{label}: {number((value.used??0)+value.pending)} / {value.limit===null?t("Unlimited","সীমাহীন"):number(value.limit)}{value.pending>0&&` (${number(value.pending)} ${t("invited","আমন্ত্রিত")})`}{value.reason==="full"?t(" · Limit reached"," · সীমা পূর্ণ"):value.reason==="active"?t(" · Pending checkout limit reached"," · Pending checkout-এর সীমা পূর্ণ"):""}</>}</span>

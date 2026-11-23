@@ -21,7 +21,7 @@ const tabs:Partial<Record<UnifiedRoot,readonly Tab[]>>={
  payments:[
   {en:"Transactions",bn:"লেনদেন",href:"/payments",service:"payments"},
   {en:"Payment links",bn:"পেমেন্ট লিংক",href:"/payments/links",service:"payments"},
-  {en:"Payment requests",bn:"পেমেন্ট রিকোয়েস্ট",href:"/payments/links?list=requests",service:"payments"},
+  {en:"Checkouts",bn:"চেকআউট",href:"/payments/links?list=requests",service:"payments"},
   {en:"Receipts",bn:"রসিদ",href:"/payments/receipts",service:"payments"},
   {en:"Refunds",bn:"রিফান্ড",href:"/payments/refunds",service:"payments"},
  ],
