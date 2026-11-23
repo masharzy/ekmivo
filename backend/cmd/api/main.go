@@ -320,6 +320,9 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents", pay.HandleMerchant)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-intents/{intentID}/{action}", pay.HandleMerchant)
 	mux.HandleFunc("GET /v1/public/checkout/{token}", pay.HandlePublic)
+	mux.HandleFunc("GET /v1/public/checkout/{token}/proof", pay.HandlePublicProof)
+	mux.HandleFunc("POST /v1/public/checkout/{token}/proof", pay.HandlePublicProof)
+	mux.HandleFunc("POST /v1/public/checkout/{token}/proof/{part}", pay.HandlePublicProof)
 	mux.HandleFunc("POST /v1/public/checkout/{token}/{action}", pay.HandlePublic)
 	mux.HandleFunc("GET /v1/mobile/releases/latest", handleAndroidRelease)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
