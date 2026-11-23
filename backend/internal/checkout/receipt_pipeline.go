@@ -16,7 +16,9 @@ import (
 	"github.com/masharzy/briofold/backend/internal/deviceevidence"
 	"github.com/masharzy/briofold/backend/internal/merchantwebhook"
 	"io"
+	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -75,7 +77,7 @@ func (s *Service) ConfigurePipeline(ctx context.Context, keyHex, rulesJSON, cont
 	}
 	s.Pipeline = &Pipeline{Key: key, Rules: registry, Control: control}
 	if liveDSN != "" {
-		live, err := pgxpool.New(ctx, liveDSN)
+		live, err := openLivePool(ctx, liveDSN)
 		if err != nil {
 			control.Close()
 			s.Pipeline = nil
@@ -691,3 +693,36 @@ func fmtString(v any) string {
 
 // A session-less device can submit only signed evidence for its immutable
 // enrollment. It cannot select a workspace, environment or verified status.
+
+// offlineCheckoutEnabled: owner decision 2026-11-22. A checkout is not refused
+// only because the shop's SMS phone has not been seen recently.
+func offlineCheckoutEnabled() bool {
+	return os.Getenv("BRIOFOLD_OFFLINE_CHECKOUT_ENABLED") == "true"
+}
+
+// openLivePool opens the live realm pool. With the flag on, every connection
+// carries briofold.offline_checkout=on, which migration 0264's
+// briofold_offline_checkout() reads in the checkout SQL functions. Flag off:
+// the setting is absent and the functions behave exactly as before.
+func openLivePool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	config, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+	if offlineCheckoutEnabled() {
+		config.ConnConfig.RuntimeParams["briofold.offline_checkout"] = "on"
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	if offlineCheckoutEnabled() {
+		var active bool
+		if e := pool.QueryRow(ctx, `SELECT to_regprocedure('briofold_offline_checkout()') IS NOT NULL AND briofold_offline_checkout()`).Scan(&active); e != nil || !active {
+			log.Printf("offline checkout flag is on but not active in the live database (migration 0264 missing?)")
+		} else {
+			log.Printf("offline checkout active: checkouts are not refused when the SMS phone is offline")
+		}
+	}
+	return pool, nil
+}

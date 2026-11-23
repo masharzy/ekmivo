@@ -673,7 +673,7 @@ func (s *Service) HandlePublicDocument(w http.ResponseWriter, r *http.Request) {
 			for _, account := range accounts {
 				method, _ := account["method"].(string)
 				online, _ := account["source_online"].(bool)
-				account["ready"] = allowed[method] && online
+				account["ready"] = allowed[method] && (online || offlineCheckoutEnabled())
 			}
 			data["receiving_accounts"] = accounts
 			data["configured_methods"] = selection.Configured
