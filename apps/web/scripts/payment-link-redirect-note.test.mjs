@@ -16,6 +16,7 @@ test("0268: success note reaches the checkout; shown after payment",()=>{
 });
 test("link form: short labels, no customer-field builder, note after payment",()=>{
  const ui=read("apps/web/src/components/payment-documents.tsx");
- for(const s of ["রিডাইরেক্ট URL","কাস্টমার সর্বোচ্চ কয়টা কিনতে পারবে","পণ্যের ছবির লিংক","পেমেন্টের পর নোট","এই লিংকে কতবার পেমেন্ট নেওয়া যাবে"]) assert.ok(ui.includes(s),s);
+ for(const s of ["রিডাইরেক্ট URL","পণ্যের ছবির লিংক","পেমেন্টের পর নোট","এই লিংকে কতবার পেমেন্ট নেওয়া যাবে"]) assert.ok(ui.includes(s),s);
  assert.ok(!ui.includes("Customer fields: questions"));
+ assert.ok(!ui.includes("field('max_quantity'"),"owner: quantity option removed");
 });
