@@ -508,3 +508,13 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
 - Release note: changes 5 production functions, so the release needs a DB-change run and a new baseline.
 - Next: step 2 checkout notice + TrxID/receipt upload (R2, 30-day expiry); step 3 dashboard review with badge;
   step 4 approve adds the payment to transactions; a late SMS still verifies a checkout that has a receipt.
+
+## Neon copy of production — 2026-11-23 (owner request)
+- Neon project "Briofold VPS copy" (`dawn-surf-32920773`, ap-southeast-1, Postgres 17) created for a read copy of
+  the three VPS databases, so agents can inspect and verify without touching production.
+- `deploy/vps/neon-copy.sh`: pg_dump on the VPS (read only), restore into `<db>__next` on Neon, check table and
+  function counts, swap in. `--install-cron` refreshes hourly. Neon has no superuser/BYPASSRLS, so objects are
+  owned by neondb_owner and FORCE RLS is turned off on the copy (list in `neon_copy.forced_rls`).
+- Evidence: local Postgres 16 test with a non-superuser restore role: grants and RLS kept, 500/500 rows readable
+  after the FORCE RLS step, rename swap works.
+- Not done: moving the API to Render or production to Neon (needs owner decision: cost, cutover).
