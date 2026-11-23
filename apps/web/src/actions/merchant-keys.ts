@@ -45,7 +45,7 @@ async function change(localeRaw:string,operation:Operation,_previous:KeyActionSt
  const scopes=selected.filter((v):v is string=>typeof v==="string");
  if(operation==="create" && (
   name.length<2||name.length>80||/[\u0000-\u001F\u007F]/.test(name)||
-  ![0,7,30,90,365].includes(days)||scopes.length<1||scopes.length>11||
+  ![0,7,30,90,365].includes(days)||scopes.length<1||scopes.length>13||
   new Set(scopes).size!==scopes.length||scopes.some(scope=>!SCOPES.has(scope))
  ))return error(bn,"bad");
  try{
