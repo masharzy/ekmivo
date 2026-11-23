@@ -54,8 +54,9 @@ export function GatewayCheckout(p:GatewayCheckoutProps){
   const many=p.tiles.length>10;
   const labels:Record<GatewayField["key"],[string,string]>={name:["নাম","Name"],email:["ইমেইল","Email"],addr:["ঠিকানা","Address"],note:["নোট","Note"]};
   return root(<div className="gw-sw" style={p.preview?{minHeight:0}:undefined}><div className="gw-sb">
-   <aside className="gw-si">{lgt}<div className="gw-logo" style={store.logo?{borderRadius:store.radius||18}:undefined}>{store.logo?/* eslint-disable-next-line @next/next/no-img-element */<img src={store.logo} alt="" style={store.invert?{filter:"invert(1)"}:undefined}/>:(store.name.trim()[0]||"B").toUpperCase()}</div><div className="gw-name">{store.name}</div><div className="gw-ord" title={p.reference}>#{ref}</div></aside>
+   <aside className="gw-si">{lgt}<div className="gw-mer"><div className="gw-logo" style={store.logo?{borderRadius:store.radius||18}:undefined}>{store.logo?/* eslint-disable-next-line @next/next/no-img-element */<img src={store.logo} alt="" style={store.invert?{filter:"invert(1)"}:undefined}/>:(store.name.trim()[0]||"B").toUpperCase()}</div><div><div className="gw-name">{store.name}</div><div className="gw-ord" title={p.reference}>#{ref}</div></div></div><div className="gw-pay"><span>{t("আপনি পরিশোধ করছেন","You are paying")}</span><b>{amt}</b></div><div className="gw-sum"><div><span>{t("সাবটোটাল","Subtotal")}</span><span>{amt}</span></div><div><span>{t("চার্জ","Charge")}</span><span>৳0</span></div><div className="tot"><span>{t("মোট","Total")}</span><span>{amt}</span></div></div></aside>
    <div className="gw-sp" style={{"--acc":picked?W[picked.method].c:"#15161C"} as CSSProperties}>
+    <p className="gw-h">{t("পরিশোধের মাধ্যম বেছে নিন","Choose how to pay")}</p>
     {many&&<GatewaySearch tiles={p.tiles} render={list=><Grid list={list} p={p}/>} placeholder={t("খুঁজুন","Search")}/>}
     {!many&&<Grid list={p.tiles} p={p}/>}
     {p.fields.length>0&&<div className="gw-fields">{p.fields.map(f=>f.key==="note"
