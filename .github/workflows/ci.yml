@@ -93,7 +93,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test $(ls scripts/*.test.mjs | grep -Ev 'browser|responsive') 
+          # Tests that start a browser (Playwright) run in the full suite.
+          node --test $(grep -L playwright scripts/*.test.mjs)
 
   web:
     name: Next.js lint, build and isolated PostgreSQL smoke
