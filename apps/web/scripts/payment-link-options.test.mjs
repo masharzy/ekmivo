@@ -10,5 +10,5 @@ test("0267: editing an active payment link refreshes what customers see",()=>{
 });
 test("payment link options say what they do",()=>{
  const ui=read("apps/web/src/components/payment-documents.tsx");
- for(const s of ["পেমেন্টের পর কাস্টমারকে যেখানে পাঠানো হবে","১ হলে পরিমাণের ঘর দেখাবে না","কাস্টমার পেমেন্ট পেজে দেখবে","শুধু আপনি আর আপনার টিম দেখবে","লিংকটা মোট কতবার পরিশোধ করা যাবে"]) assert.ok(ui.includes(s),s);
+ for(const s of ["রিডাইরেক্ট URL","কাস্টমার সর্বোচ্চ কয়টা কিনতে পারবে","পাবলিক নোট","প্রাইভেট নোট (শুধু আপনি দেখবেন)","এই লিংকে কতবার পেমেন্ট নেওয়া যাবে"]) assert.ok(ui.includes(s),s);
 });

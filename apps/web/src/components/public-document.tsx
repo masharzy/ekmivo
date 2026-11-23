@@ -123,7 +123,11 @@ export function PublicDocument({locale,token,standalone=false}:{locale:"en"|"bn"
    canPay={!busy&&!terminal&&selectedReady&&payable>0} onPay={()=>void pay({preventDefault:noop} as unknown as React.FormEvent)}
    fields={theme.info?(['name','email','addr','note'] as const).filter(k=>theme.f[k]).map(k=>({key:k,value:customerDetails[k]||''})):[]}
    onField={(k,v)=>setCustomerDetails(c=>({...c,[k]:v}))}
-   extra={doc.kind==='payment-links'&&(doc.body.max_quantity||1)>1?<label style={{display:'grid',gap:4}}>{t('Quantity','পরিমাণ')}<input type="number" required min={1} max={doc.body.max_quantity} disabled={locked} value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label>:undefined}
+   extra={doc.body.image_url||doc.body.notes||(doc.kind==='payment-links'&&(doc.body.max_quantity||1)>1)?<>
+    {doc.body.image_url&&/* eslint-disable-next-line @next/next/no-img-element */<img src={doc.body.image_url} alt="" referrerPolicy="no-referrer" style={{gridColumn:'1/-1',width:'100%',maxHeight:220,objectFit:'contain',borderRadius:12}}/>}
+    {doc.body.notes&&<p style={{gridColumn:'1/-1',margin:0,whiteSpace:'pre-line',fontSize:14}}>{doc.body.notes}</p>}
+    {doc.kind==='payment-links'&&(doc.body.max_quantity||1)>1&&<label style={{display:'grid',gap:4}}>{t('Quantity','পরিমাণ')}<input type="number" required min={1} max={doc.body.max_quantity} disabled={locked} value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label>}
+   </>:undefined}
    error={error||undefined}
    payer="" onPayer={noop} onPayerBlur={noop} payerInvalid={false} locking={false} onBack={noop} onSubmit={e=>e.preventDefault()}
    destination={null} destinationCopied={false} onCopyDestination={noop} onCopyAmount={noop} processing={false} timeLeft="" sourceOffline={false} cancelling={false} onCancel={noop} payerShown="" returnDestination=""/>;

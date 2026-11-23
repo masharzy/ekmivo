@@ -54,12 +54,13 @@ type DocumentBody struct {
 	MaxQuantity     int            `json:"max_quantity,omitempty"`
 	ImageURL        string         `json:"image_url,omitempty"`
 	ReturnURL       string         `json:"return_url,omitempty"`
+	SuccessNote     string         `json:"success_note,omitempty"`
 	MaxUses         int            `json:"max_uses,omitempty"`
 	Fields          []CustomField  `json:"fields,omitempty"`
 }
 
 func (b *DocumentBody) validate(kind string) error {
-	if !referencePattern.MatchString(b.Reference) || strings.TrimSpace(b.Reference) != b.Reference || len(b.Notes) > 4000 || len(b.PrivateNotes) > 4000 || len(b.Description) > 2000 || len(b.Tags) > 20 {
+	if !referencePattern.MatchString(b.Reference) || strings.TrimSpace(b.Reference) != b.Reference || len(b.Notes) > 4000 || len(b.PrivateNotes) > 4000 || len(b.SuccessNote) > 500 || len(b.Description) > 2000 || len(b.Tags) > 20 {
 		return errors.New("invalid document")
 	}
 	for _, url := range []string{b.ImageURL, b.ReturnURL} {
