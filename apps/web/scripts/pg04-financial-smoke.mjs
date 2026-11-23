@@ -100,14 +100,6 @@ try{
   same(x[0].realm,realm,"physical realm mismatch");
   ok(x[0].no_sessions&&x[0].no_keys,"control-plane data leaked into finance");
   ok(x[0].river&&x[0].outbox,"River/domain migration missing");
-  // Production runs 0269 (every checkout 4 minutes) as a dashboard release
-  // migration, which this core-only smoke does not apply. The API now always
-  // asks for 4 minutes, so mirror 0269's change to the core issuer here.
-  await dbs[realm].unsafe(`DO $$DECLARE d text;BEGIN
-   d:=pg_get_functiondef('pg05_create_intent(uuid,text,text,bigint,integer,text,text,text)'::regprocedure);
-   IF position('p_minutes NOT BETWEEN 5 AND 60' IN d)>0 THEN
-    EXECUTE replace(d,'p_minutes NOT BETWEEN 5 AND 60','p_minutes NOT BETWEEN 1 AND 60');
-   END IF;END $$`);
  }
  for(const realm of names){
   const db=dbs[realm];
@@ -450,6 +442,14 @@ try{
    const alteredDoc=await fetch(endpoint,{method:"POST",headers:head("owner"),body:JSON.stringify({...docReq,
     items:[{title:"Altered line",quantity:1,unit_amount_minor:1}]})});
    same(alteredDoc.status,409,"PG05 source identity accepted tampered reissue");
+   // Production runs 0269 (every checkout 4 minutes) as a dashboard release
+   // migration, which this core-only smoke does not apply. The API now always
+   // asks for 4 minutes, so mirror 0269's change to the core issuer here.
+   await dbs.sandbox.unsafe(`DO $$DECLARE d text;BEGIN
+    d:=pg_get_functiondef('pg05_create_intent(uuid,text,text,bigint,integer,text,text,text)'::regprocedure);
+    IF position('p_minutes NOT BETWEEN 5 AND 60' IN d)>0 THEN
+     EXECUTE replace(d,'p_minutes NOT BETWEEN 5 AND 60','p_minutes NOT BETWEEN 1 AND 60');
+    END IF;END $$`);
    const intentUrl=merchantRoot+"/payment-intents?environment=sandbox";
    const linkedPayload={merchant_reference:"HTTP-LINK-"+randomUUID(),order_id:editorDoc.id,
     currency:"BDT",expires_in_minutes:15};
