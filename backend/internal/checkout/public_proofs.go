@@ -10,6 +10,7 @@ import (
 	"image/jpeg"
 	_ "image/png"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -101,6 +102,7 @@ func (s *Service) HandlePublicProof(w http.ResponseWriter, r *http.Request) {
 		}
 		key := "payment-proofs/" + id + ".jpg"
 		if _, e = objectRequest(r.Context(), "PUT", key, clean); e != nil {
+			log.Printf("payment proof photo store failed: %v", e) // fixed reasons only, no keys or customer data
 			fail(w, 503, "PROOF_STORAGE_UNAVAILABLE")
 			return
 		}
