@@ -45,7 +45,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   // Go HTTP tests above still validate invoice line pricing and linked intents.
   const merchantPath="/payments/links?list=requests";
   await page.goto(origin+merchantPath);
-  await page.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|One-time requests)$/}).waitFor();
+  await page.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|Checkouts)$/}).waitFor();
   const newRequest=page.getByRole("button",{name:"New request",exact:true});
   // This disposable control-plane tenant has no paid subscription. The modern
   // plan gate correctly disables creation in that case. Assert the visible
@@ -132,7 +132,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
    await viewer.addCookies([{name:"briofold-session",value:sessions.viewer,url:origin,httpOnly:true,sameSite:"Lax"},{name:"briofold-locale",value:"en",url:origin,sameSite:"Lax"}]);
    const viewerPage=await viewer.newPage();
    await viewerPage.goto(origin+merchantPath);
-   await viewerPage.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|One-time requests)$/}).waitFor();
+   await viewerPage.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|Checkouts)$/}).waitFor();
    assert.equal(await viewerPage.getByRole("button",{name:"New request",exact:true}).count(),0);
    record("real viewer session cannot access merchant request creation controls");
   }finally{await viewer.close()}
