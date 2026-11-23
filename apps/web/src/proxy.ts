@@ -43,6 +43,12 @@ export function proxy(request:NextRequest){
   const moved=request.nextUrl.clone();moved.pathname=path.replace(/^\/workspaces/,"/businesses");
   return withApiSession(request,NextResponse.redirect(moved,308));
  }
+ // Old links used ?view=requests, which clashes with the [[...view]] segment
+ // and was dropped by the rewrite. Keep those links working.
+ if(path==="/payments/links"&&request.nextUrl.searchParams.get("view")==="requests"){
+  const moved=request.nextUrl.clone();moved.searchParams.delete("view");moved.searchParams.set("list","requests");
+  return withApiSession(request,NextResponse.redirect(moved,308));
+ }
  const target=request.nextUrl.clone();
  target.pathname="/"+locale+path;
  if(path==="/")target.pathname="/"+locale;
