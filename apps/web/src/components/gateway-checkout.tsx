@@ -32,6 +32,8 @@ export type GatewayCheckoutProps={
  returnDestination:string;
  // step 1: extra inputs a payment link needs (quantity), shown above the Pay button
  extra?:ReactNode;
+ // result: the payment link's note shown after a successful payment
+ successNote?:string;
  // the dashboard preview renders a page fragment, without the full-height page background
  preview?:boolean;
 };
@@ -92,7 +94,7 @@ export function GatewayCheckout(p:GatewayCheckoutProps){
 
  const ok=p.step==="success",expired=p.step==="expired";
  const icon=ok?<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>:<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>;
- return root(<div className="res" style={{"--c":w.c} as CSSProperties}><div className="res-top">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={logo(m)} alt={w.en}/>{lgt}</div><div className="res-mid"><div className={`res-ic ${ok?"ok":"no"}`}>{icon}</div><h2>{ok?t("পেমেন্ট নিশ্চিত হয়েছে","Payment confirmed"):expired?t("পেমেন্টের মেয়াদ শেষ","Payment expired"):t("পেমেন্ট বাতিল হয়েছে","Payment cancelled")}</h2><p className="sub">{ok?t("আপনার "+wn(m)+" পেমেন্ট স্বয়ংক্রিয়ভাবে যাচাই হয়েছে।","Your "+wn(m)+" payment was verified automatically."):t("এই লিংকে আর টাকা পাঠাবেন না। নতুন লিংকের জন্য "+store.name+"-এর সঙ্গে যোগাযোগ করুন।","Do not send money to this link. Ask "+store.name+" for a new one.")}</p></div><dl><div><dt>{t("দোকান","Store")}</dt><dd>{store.name}</dd></div><div><dt>{t("অর্ডার","Order")}</dt><dd className="res-ref" title={p.reference}>{ref}</dd></div><div><dt>{t("পরিমাণ","Amount")}</dt><dd className="num">{amt}</dd></div>{ok&&<div><dt>{t("মাধ্যম","Method")}</dt><dd>{wn(m)}</dd></div>}</dl><div className="res-act">{p.returnDestination?<a className="cta acc" style={{"--c":w.c} as CSSProperties} href={p.returnDestination}>{t("দোকানে ফিরে যান","Back to store")}</a>:null}<CheckoutReturn destination={p.returnDestination} store={store.name} bn={bn}/></div>{err}{footer(m)}</div>);
+ return root(<div className="res" style={{"--c":w.c} as CSSProperties}><div className="res-top">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={logo(m)} alt={w.en}/>{lgt}</div><div className="res-mid"><div className={`res-ic ${ok?"ok":"no"}`}>{icon}</div><h2>{ok?t("পেমেন্ট নিশ্চিত হয়েছে","Payment confirmed"):expired?t("পেমেন্টের মেয়াদ শেষ","Payment expired"):t("পেমেন্ট বাতিল হয়েছে","Payment cancelled")}</h2>{ok&&p.successNote&&<p className="sub" style={{whiteSpace:"pre-line",fontWeight:600}}>{p.successNote}</p>}<p className="sub">{ok?t("আপনার "+wn(m)+" পেমেন্ট স্বয়ংক্রিয়ভাবে যাচাই হয়েছে।","Your "+wn(m)+" payment was verified automatically."):t("এই লিংকে আর টাকা পাঠাবেন না। নতুন লিংকের জন্য "+store.name+"-এর সঙ্গে যোগাযোগ করুন।","Do not send money to this link. Ask "+store.name+" for a new one.")}</p></div><dl><div><dt>{t("দোকান","Store")}</dt><dd>{store.name}</dd></div><div><dt>{t("অর্ডার","Order")}</dt><dd className="res-ref" title={p.reference}>{ref}</dd></div><div><dt>{t("পরিমাণ","Amount")}</dt><dd className="num">{amt}</dd></div>{ok&&<div><dt>{t("মাধ্যম","Method")}</dt><dd>{wn(m)}</dd></div>}</dl><div className="res-act">{p.returnDestination?<a className="cta acc" style={{"--c":w.c} as CSSProperties} href={p.returnDestination}>{t("দোকানে ফিরে যান","Back to store")}</a>:null}<CheckoutReturn destination={p.returnDestination} store={store.name} bn={bn}/></div>{err}{footer(m)}</div>);
 }
 
 function Grid({list,p}:{list:GatewayTile[];p:GatewayCheckoutProps}){
