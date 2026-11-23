@@ -518,3 +518,7 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
 - Evidence: local Postgres 16 test with a non-superuser restore role: grants and RLS kept, 500/500 rows readable
   after the FORCE RLS step, rename swap works.
 - Not done: moving the API to Render or production to Neon (needs owner decision: cost, cutover).
+- 2026-11-23: Neon copy running (hourly cron on the VPS, first run 02:25 UTC: 179/63/65 tables and 528/213/216
+  functions equal to the VPS). Closed #151 and #158: their grants are already in production (checked on the copy).
+  0264 applied on a Neon branch of the production copy (`test-0264`): 2+4+2+2+2 checks patched as expected.
+  `set-flag.sh` accepts BRIOFOLD_OFFLINE_CHECKOUT_ENABLED.
