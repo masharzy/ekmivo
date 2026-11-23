@@ -2,9 +2,8 @@
 // Payment proof on the checkout (owner decision 2026-11-22).
 // * The shop's SMS phone is offline: a clear notice that automatic verification
 //   is not possible right now, and the customer can still pay and leave proof.
-// * While waiting: a notice that the TrxID or receipt can be left (shown at once, owner 2026-11-23).
-// * The TrxID box and receipt photo upload are always there while waiting, and
-//   after the checkout expired (the usual case of a phone that was offline).
+// * Owner 2026-11-23: no TrxID box and no explanations; one upload button in the
+//   theme's own style, above Cancel. Tapping it opens a picker of up to 5 photos.
 // Hidden entirely while BRIOFOLD_PAYMENT_PROOFS_ENABLED is off (the API answers 404).
 import {useCallback,useEffect,useRef,useState} from "react";
 import styles from "./payment-proof-panel.module.css";
@@ -35,15 +34,22 @@ async function shrink(file:File):Promise<Blob>{
  return await new Promise<Blob>((ok,no)=>canvas.toBlob(b=>b?ok(b):no(new Error("encode")),"image/jpeg",0.82));
 }
 
-export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:string;bn:boolean;offline:boolean;expired?:boolean;onAvailable?:(on:boolean)=>void}){
+export type ProofSkin="gateway"|"themed"|"classic";
+
+export function PaymentProofPanel({token,bn,offline,expired,onAvailable,skin="classic"}:{token:string;bn:boolean;offline:boolean;expired?:boolean;onAvailable?:(on:boolean)=>void;skin?:ProofSkin}){
  const route="/api/checkout/"+token+"/proof";
  const tr=(en:string,b:string)=>bn?b:en;
  const [available,setAvailable]=useState<boolean|null>(null);
  const [status,setStatus]=useState<ProofStatus>({submitted:false});
- const [busy,setBusy]=useState<""|"trx"|"image">("");
+ const [busy,setBusy]=useState<""|"image">("");
  const [error,setError]=useState("");
  const [done,setDone]=useState("");
  const fileInput=useRef<HTMLInputElement>(null);
+ // Owner 2026-11-23: only an upload button; tapping it opens the picker with up to 5 photos.
+ const [open,setOpen]=useState(false);
+ const [picked,setPicked]=useState<{file:File;url:string}[]>([]);
+ const pickedRef=useRef(picked);pickedRef.current=picked;
+ useEffect(()=>()=>pickedRef.current.forEach(x=>URL.revokeObjectURL(x.url)),[]);
 
  useEffect(()=>{
   const ctl=new AbortController();
@@ -62,57 +68,61 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable}:{token:
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[bn]);
 
- async function sendImages(files:FileList|null){
+ function add(files:FileList|null){
   setError("");setDone("");
-  if(!files||!files.length)return;
-  const room=MAX_IMAGES-(status.image_count||0);
-  if(room<=0){setError(tr(...messages.PROOF_LIMIT_REACHED));return}
+  if(!files)return;
+  const room=MAX_IMAGES-(status.image_count||0)-picked.length;
+  const next=Array.from(files).filter(f=>f.type.startsWith("image/")).slice(0,Math.max(0,room)).map(file=>({file,url:URL.createObjectURL(file)}));
+  if(files.length>room)setError(tr("Up to "+MAX_IMAGES+" photos.","সর্বোচ্চ "+MAX_IMAGES+"টা ছবি।"));
+  setPicked(p=>[...p,...next]);
+  if(fileInput.current)fileInput.current.value="";
+ }
+ function remove(i:number){setPicked(p=>{URL.revokeObjectURL(p[i].url);return p.filter((_,j)=>j!==i)})}
+
+ async function send(){
+  setError("");setDone("");
+  if(!picked.length){setError(tr(...messages.EMPTY_PROOF));return}
   setBusy("image");
   let sent=0;
   try{
-   for(const file of Array.from(files).slice(0,room)){
+   for(const x of picked){
     let blob:Blob;
-    try{blob=await shrink(file)}catch{setError(tr(...messages.PROOF_IMAGE_INVALID));continue}
+    try{blob=await shrink(x.file)}catch{setError(tr(...messages.PROOF_IMAGE_INVALID));break}
     const r=await fetch(route+"/image",{method:"POST",headers:{"Content-Type":"application/octet-stream"},body:blob});
     if(!r.ok){await fail(r);break}
     setStatus(await r.json());sent++;
    }
-   if(sent)setDone(sent===1?tr("Photo received. The shop will check it.","ছবি পেয়েছি। দোকান যাচাই করে নেবে।"):tr(sent+" photos received. The shop will check them.",sent+"টা ছবি পেয়েছি। দোকান যাচাই করে নেবে।"));
   }catch{setError(tr("No connection. Please try again.","সংযোগ নেই। আবার চেষ্টা করুন।"))}
-  finally{setBusy("");if(fileInput.current)fileInput.current.value=""}
+  finally{
+   setBusy("");
+   if(sent){setPicked(p=>{p.slice(0,sent).forEach(x=>URL.revokeObjectURL(x.url));const rest=p.slice(sent);if(!rest.length)setOpen(false);return rest});
+    setDone(tr(sent===1?"Photo sent.":sent+" photos sent.",sent+"টা ছবি পাঠানো হয়েছে।"))}
+  }
  }
 
  if(!available)return null;
  if(status.state==="approved"||status.state==="auto_verified")return null;
- const imageCount=status.image_count||0;
+ const imageCount=status.image_count||0,left=MAX_IMAGES-imageCount;
 
- return <section className={styles.panel} aria-label={tr("Payment proof","পেমেন্টের প্রমাণ")} data-testid="payment-proof-panel">
-  {offline&&!expired&&<div className={styles.notice} role="alert">
-   <strong>{tr("Automatic verification is not possible right now","অটোমেটিক যাচাই এই মুহূর্তে সম্ভব হচ্ছে না")}</strong>
-   <p>{tr("The shop's payment verification phone is offline at the moment. You can still send the money. Then upload a photo or screenshot of the payment receipt below. The shop will check it and confirm your payment.",
-    "দোকানের পেমেন্ট যাচাইয়ের ফোনটি এই মুহূর্তে অফলাইনে আছে, তাই অটোমেটিক যাচাই এখন সম্ভব হচ্ছে না। আপনি নিশ্চিন্তে টাকা পাঠান। তারপর নিচে টাকা পাঠানোর রসিদ বা স্ক্রিনশটের ছবি আপলোড করুন। দোকান নিজে যাচাই করে আপনার পেমেন্ট নিশ্চিত করবে।")}</p>
+ return <section className={styles.panel} data-skin={skin} aria-label={tr("Payment receipt","পেমেন্টের রসিদ")} data-testid="payment-proof-panel">
+  {offline&&!expired&&<div className={styles.notice} role="alert">{tr("The shop's phone is offline, so automatic verification is not possible now. Pay, then upload the receipt.","দোকানের ফোন অফলাইনে, তাই এখন অটোমেটিক যাচাই হবে না। টাকা পাঠিয়ে রসিদ আপলোড করুন।")}</div>}
+  <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/*" multiple hidden onChange={e=>add(e.target.files)}/>
+  {!open?<button type="button" className={styles.btn} onClick={()=>{setOpen(true);setDone("");if(!picked.length)fileInput.current?.click()}} disabled={left<=0}>
+   {imageCount?tr("Upload more receipts","আরও রসিদ আপলোড করুন"):tr("Upload receipt","রসিদ আপলোড করুন")}
+  </button>:<div className={styles.box}>
+   <div className={styles.grid}>
+    {picked.map((x,i)=><div key={x.url} className={styles.th}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={x.url} alt=""/>
+     <button type="button" aria-label={tr("Remove","সরান")} onClick={()=>remove(i)} disabled={busy!==""}>×</button></div>)}
+    {picked.length<left&&<button type="button" className={styles.add} onClick={()=>fileInput.current?.click()} disabled={busy!==""} aria-label={tr("Add photo","ছবি যোগ করুন")}>+</button>}
+   </div>
+   <div className={styles.row}>
+    <button type="button" className={styles.ghost} onClick={()=>{picked.forEach(x=>URL.revokeObjectURL(x.url));setPicked([]);setOpen(false);setError("")}} disabled={busy!==""}>{tr("Cancel","বাতিল")}</button>
+    <button type="button" className={styles.send} onClick={()=>void send()} disabled={busy!==""||!picked.length}>{busy?tr("Sending…","পাঠানো হচ্ছে…"):tr("Send","পাঠান")+(picked.length?" ("+picked.length+")":"")}</button>
+   </div>
   </div>}
-  {!offline&&!expired&&!status.submitted&&<div className={styles.notice} role="status">
-   <strong>{tr("Sent the money but not verified yet?","টাকা পাঠিয়েছেন, কিন্তু এখনো যাচাই হয়নি?")}</strong>
-   <p>{tr("Don't worry. Upload a photo or screenshot of the payment receipt below. The shop will verify it by hand.",
-    "চিন্তা করবেন না। নিচে টাকা পাঠানোর রসিদের ছবি বা স্ক্রিনশট আপলোড করুন। দোকান নিজে যাচাই করে নেবে।")}</p>
-  </div>}
-  {expired&&<div className={styles.notice} role="status">
-   <strong>{tr("Already sent the money?","টাকা কি পাঠিয়ে ফেলেছেন?")}</strong>
-   <p>{tr("Do not pay again. Upload the receipt below and the shop will check it.",
-    "আবার পাঠাবেন না। নিচে রসিদের ছবি আপলোড করুন, দোকান যাচাই করে নেবে।")}</p>
-  </div>}
-
-  <h3 className={styles.title}>{tr("Payment receipt","পেমেন্টের রসিদ")}</h3>
-  <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/*" multiple hidden onChange={e=>void sendImages(e.target.files)}/>
-  <button type="button" className={styles.upload} onClick={()=>fileInput.current?.click()} disabled={busy!==""||imageCount>=MAX_IMAGES}>
-   {busy==="image"?tr("Uploading…","আপলোড হচ্ছে…"):tr("Upload receipt photo or screenshot","রসিদের ছবি বা স্ক্রিনশট আপলোড করুন")}
-  </button>
-  <p className={styles.hint}>{tr("Up to "+MAX_IMAGES+" photos. Photos are deleted after 30 days.","সর্বোচ্চ "+MAX_IMAGES+"টা ছবি। ছবি ৩০ দিন পরে মুছে যায়।")}</p>
   {error&&<p className={styles.error} role="alert">{error}</p>}
-  {done&&<p className={styles.ok} role="status">{done}</p>}
-  {status.submitted&&!done&&<p className={styles.ok} role="status">{status.state==="rejected"
-   ?tr("The shop could not confirm what you sent. Please check and send again.","দোকান আপনার পাঠানো তথ্য নিশ্চিত করতে পারেনি। দেখে আবার পাঠান।")
-   :tr(imageCount+" photo(s) received. The shop will check it.",imageCount+"টা ছবি পাওয়া গেছে। দোকান যাচাই করে নেবে।")}</p>}
+  {(done||(!open&&status.submitted))&&<p className={styles.ok} role="status">{status.state==="rejected"&&!done
+   ?tr("The shop could not confirm it. Please send again.","দোকান নিশ্চিত করতে পারেনি। আবার পাঠান।")
+   :done||tr(imageCount+" photo(s) sent.",imageCount+"টা ছবি পাঠানো হয়েছে।")}</p>}
  </section>;
 }

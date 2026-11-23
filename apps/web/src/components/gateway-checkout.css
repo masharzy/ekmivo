@@ -217,3 +217,5 @@
 
 /* Receipt / TrxID panel under the cancel button (owner 2026-11-23). */
 .gw-proof{padding:4px 20px 18px;color:#15161C;background:#fff}
+/* Nagad waiting screen: the upload sits on the Nagad colour, like its secondary button */
+.gw-proof.ng{padding:0;margin-top:18px;background:transparent;color:#fff;--pp-bg:rgba(255,255,255,.14);--pp-bd:rgba(255,255,255,.4);--pp-fg:#fff;--pp-send:#fff;--pp-send-fg:#15161C}
