@@ -110,7 +110,7 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable,skin="cl
   {offline&&!expired&&!sent&&<div className={styles.notice} role="alert">
    <svg className={styles.ni} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg>
    <div><b>{tr("Automatic check is off right now","এখন অটো যাচাই বন্ধ")}</b><span>{tr("The shop's phone is offline. Pay, then upload the receipt.","দোকানের ফোন অফলাইনে। টাকা পাঠিয়ে রসিদ আপলোড করুন।")}</span></div>
-  </div>}}
+  </div>}
   {sent&&!picked.length?<div className={styles.sent} role="status">
    <span className={styles.tick} aria-hidden="true">✓</span>
    <div><b>{tr("Receipt sent","রসিদ পাঠানো হয়েছে")}</b><small>{tr("The shop will check it and confirm your payment.","দোকান যাচাই করে আপনার পেমেন্ট নিশ্চিত করবে।")}</small></div>
