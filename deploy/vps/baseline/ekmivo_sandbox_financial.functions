@@ -3,8 +3,13 @@ armor|bytea|f6d2959639d44048e31b0b9a869efa66
 briofold_offline_checkout||5e37a750c95d19695ba5de85453f47c9
 briofold_payment_intent_insert|w uuid, e text, ref text, amount bigint, expiry timestamp with time zone, k text, cap text, h text|3e83222a47ae636f23b125b3c6d34a95
 briofold_proof_checkout|p_digest text|23d9873d96b568e485d84f5456b0ba2c
+briofold_proof_image|p_workspace uuid, p_environment text, p_intent uuid, p_index integer|063cdec879cfa3b047c15f0f36c9bd48
+briofold_proof_list|p_workspace uuid, p_environment text|8dbcaccdad480dbbc1aef969cac7fc02
 briofold_proof_public|p_digest text|6e3974160ae0fd1e1ffa90ba82188e78
-briofold_proof_submit|p_digest text, p_trx text, p_image jsonb|f379fd6163bc4b91fb6a9822a93ea5e2
+briofold_proof_reject|p_workspace uuid, p_environment text, p_intent uuid, p_reason text|a43fa44b16bc3ffd3a5ff49886ea6ccc
+briofold_proof_scope|p_workspace uuid, p_environment text|05bc77eb974df8ea30b3db893b528b4f
+briofold_proof_seen|p_workspace uuid, p_environment text, p_intent uuid|9efe5cddcb48313068c85c7243cf733a
+briofold_proof_submit|p_digest text, p_trx text, p_image jsonb|b8cbb5f62038ee077bc9e91086b01655
 briofold_sms_window_start|window_start timestamp with time zone, precision_name text|58be6144609a12e28f66ebfa7d3161f6
 crypt|text, text|0939715a0bd721d85d420be1aee841c7
 dashboard_billing_usage|w uuid, e text, start_at timestamp with time zone, end_at timestamp with time zone|b900a8dddefa744813fb178758a2862d
