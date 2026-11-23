@@ -10,6 +10,7 @@ import {resolveCheckoutTheme} from "../lib/checkout-theme";
 import {chooseReceivingAccountId} from "../lib/checkout-account-selection";
 import {ThemedCheckout,ThemedResult,WalletToken,type ThemeStep} from "./themed-checkout";
 import {PaymentProofPanel} from "./payment-proof-panel";
+import {CheckoutLoading} from "./checkout-loading";
 import {GatewayCheckout} from "./gateway-checkout";
 import {normalizeBangladeshPayer,payerLocalDigits} from "../lib/bd-payer-number";
 type Locale="en"|"bn";
@@ -181,6 +182,8 @@ export function CheckoutExperience({locale,token,initialMethod,initialAccount,su
  async function copyReceiving(){if(!info?.destination)return;try{await navigator.clipboard.writeText(info.destination);setDestinationCopied(true)}catch{setCode("COPY_FAILED")}}
  function switchLanguage(){document.cookie=`briofold-locale=${bn?"en":"bn"}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol==="https:"?"; Secure":""}`;if(subscriptionReturnPath){router.refresh();return}const target=`/checkout/${token}${initialMethod?`?method=${initialMethod}${initialAccount?`&account=${initialAccount}`:""}`:""}`;if(location.pathname!==`/checkout/${token}`)router.replace(target);else router.refresh()}
  const theme=info?resolveCheckoutTheme(info.brand?.checkout_theme,info.merchant_name,logoUrl):null;
+ // Owner 2026-11-23: no Classic shell flash before the saved theme appears.
+ if(status==="loading")return <CheckoutLoading bn={bn}/>;
  if(theme&&info&&status==="ready"){
   const themeStep:ThemeStep=state==="completed"?"success":state==="cancelled"?"cancelled":state==="expired"?"expired":state==="requires_payer"?(showPayer?"payer":"pay"):"waiting";
   const selected=state==="requires_payer"&&!methodChosen?null:selectedMethod;
@@ -221,8 +224,7 @@ export function CheckoutExperience({locale,token,initialMethod,initialAccount,su
     <button type="button" onClick={switchLanguage} className="provider-checkout-language">{bn?"Eng":"বাংলা"}</button>
     <button type="button" className="provider-checkout-close" onClick={()=>{if(["requires_payer","awaiting_payment","processing"].includes(state))void cancelPayment();else leave()}} aria-label={bn?"বন্ধ":"Close"}>×</button>
    </nav>
-   {status==="loading"&&<div className="provider-checkout-empty" role="status">{bn?"পেমেন্ট লোড হচ্ছে…":"Loading payment…"}</div>}
-   {status!=="loading"&&status!=="ready"&&<div className="provider-checkout-empty" role="alert">
+   {status!=="ready"&&<div className="provider-checkout-empty" role="alert">
     <h1>{status==="missing"?(bn?"পেমেন্ট লিংক পাওয়া যায়নি":"Payment link not found"):(bn?"পেমেন্ট চালু নেই":"Payment unavailable")}</h1>
     <p>{describe(code,bn)}</p><button type="button" onClick={()=>{setStatus("loading");void refresh()}}>{bn?"আবার চেষ্টা করুন":"Retry"}</button>
    </div>}

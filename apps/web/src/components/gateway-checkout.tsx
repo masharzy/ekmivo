@@ -30,6 +30,8 @@ export type GatewayCheckoutProps={
  destination:string|null;destinationCopied:boolean;onCopyDestination:()=>void;onCopyAmount:()=>void;processing:boolean;timeLeft:string;sourceOffline:boolean;cancelling:boolean;onCancel:()=>void;payerShown:string;
  // result
  returnDestination:string;
+ // step 1: extra inputs a payment link needs (quantity), shown above the Pay button
+ extra?:ReactNode;
  // the dashboard preview renders a page fragment, without the full-height page background
  preview?:boolean;
 };
@@ -59,6 +61,7 @@ export function GatewayCheckout(p:GatewayCheckoutProps){
     {p.fields.length>0&&<div className="gw-fields">{p.fields.map(f=>f.key==="note"
      ?<textarea key={f.key} placeholder={t(...labels.note)} aria-label={t(...labels.note)} maxLength={1000} value={f.value} onChange={e=>p.onField("note",e.target.value)}/>
      :<input key={f.key} className={f.key==="addr"?"w":undefined} type={f.key==="email"?"email":"text"} maxLength={254} placeholder={t(...labels[f.key])} aria-label={t(...labels[f.key])} value={f.value} onChange={e=>p.onField(f.key,e.target.value)}/>)}</div>}
+    {p.extra&&<div className="gw-fields">{p.extra}</div>}
     <button type="button" className="gw-cta" disabled={!p.canPay} onClick={p.onPay}>{t(amt+" পরিশোধ করুন","Pay "+amt)}</button>
     {err}
     <p className="gw-pb">Powered by <b>Briofold</b></p>
