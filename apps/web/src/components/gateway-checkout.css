@@ -214,3 +214,6 @@
 
 /* Owner 2026-11-23: the Pay button sits at the bottom of the panel, level with the summary. Same in lib/checkout-preview.ts. */
 .gw-sp .gw-cta{margin-top:auto}
+
+/* Receipt / TrxID panel under the cancel button (owner 2026-11-23). */
+.gw-proof{padding:4px 20px 18px;color:#15161C;background:#fff}

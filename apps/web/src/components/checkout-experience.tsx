@@ -206,6 +206,7 @@ export function CheckoutExperience({locale,token,initialMethod,initialAccount,su
     cancelling={cancelling} onCancel={()=>void cancelPayment()}
     payerShown={digitsOnly.length>=11?digitsOnly:info.payer_suffix?'…'+info.payer_suffix:''}
     successNote={info.success_note}
+    proof={themeStep==='waiting'||themeStep==='expired'?<PaymentProofPanel token={token} bn={bn} offline={themeStep==='waiting'&&info.environment==='live'&&info.source_online===false} expired={themeStep==='expired'} onAvailable={setProofsOn}/>:undefined}
     returnDestination={subscriptionReturnPath||checkoutReturnUrl(info.state,info.checkout_origin,info.return_url,info.cancel_url)}/>;
   }
   return <ThemedCheckout config={theme} locale={locale} merchant={info.brand} step={themeStep} method={selected} amountMinor={info.amount_minor} reference={info.source_reference||info.merchant_reference} seconds={seconds} onLanguage={switchLanguage}>
