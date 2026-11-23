@@ -8,6 +8,7 @@
 # Rules it enforces (docs/runbooks/vps-repo-stabilize.bn.md):
 #   - the commit must be on origin/main
 #   - production database functions must equal the recorded baseline before anything runs
+#     (or the functions recorded after the last successful release on this server)
 #     (deploy/vps/baseline/*.functions, taken from production 2026-11-14); any drift stops the release
 #   - fresh, verified dumps of all three databases before any change
 #   - migrations only through the repository coordinator (financial-migrate), which records them in the ledger
@@ -89,11 +90,18 @@ say '== 3. production database functions must equal the baseline'
 mkdir -p "$state/check-$commit"
 for db in "${dbs[@]}"; do
   fingerprints "$db" > "$state/check-$commit/$db.before"
-  if ! cmp -s "$state/check-$commit/$db.before" "$src/deploy/vps/baseline/$db.functions"; then
-    diff "$src/deploy/vps/baseline/$db.functions" "$state/check-$commit/$db.before" | head -20 || true
+  # Accepted: the baseline in the commit, or the functions this script recorded
+  # after the last successful release on this server (owner 2026-11-23: no manual
+  # baseline update after every database release). Anything else is drift.
+  if cmp -s "$state/check-$commit/$db.before" "$src/deploy/vps/baseline/$db.functions"; then
+    say "$db: $(wc -l < "$state/check-$commit/$db.before") functions equal the baseline"
+  elif [ -f "$state/baseline/$db.functions" ] && cmp -s "$state/check-$commit/$db.before" "$state/baseline/$db.functions"; then
+    say "$db: $(wc -l < "$state/check-$commit/$db.before") functions equal the state after the last release"
+  else
+    ref="$src/deploy/vps/baseline/$db.functions"; [ -f "$state/baseline/$db.functions" ] && ref="$state/baseline/$db.functions"
+    diff "$ref" "$state/check-$commit/$db.before" | head -20 || true
     die "$db functions differ from the baseline (something changed outside a release). Nothing was changed."
   fi
-  say "$db: $(wc -l < "$state/check-$commit/$db.before") functions equal the baseline"
 done
 
 say '== 4. build (pinned Go image, exact commit)'
@@ -169,6 +177,8 @@ for _ in 1 2 3 4 5 6; do sleep 5; health; done
 errs=$(docker logs --since "$started" "$new" 2>&1 | grep -Eic 'panic|fatal|sqlstate=(42883|42P01|42501)' || true)
 [ "$errs" = "0" ]
 trap - ERR
+mkdir -p "$state/baseline"
+for db in "${dbs[@]}"; do cp "$state/check-$commit/$db.after" "$state/baseline/$db.functions"; done
 say
 say "RELEASED $tag (revision $commit)"
 say "Backups: $root/backup/*-pre-release-${commit:0:8}-$stamp.dump"
