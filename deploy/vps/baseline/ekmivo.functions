@@ -484,19 +484,19 @@ platform_subscription_admin_operations|admin_actor uuid|716bc42dd2b8fb15fb05d914
 platform_subscription_coupon_admin|actor uuid, operation text, payload jsonb|1edc549b966098208566346391b5e981
 platform_subscription_coupon_current_quote|a uuid, iid uuid|8398cfc6c494d51881f59c48cceb4481
 platform_subscription_coupon_history|a uuid, cid uuid, off integer|480614dec966c3c3e79e92dc743b897d
-platform_subscription_coupon_quote|a uuid, iid uuid, k uuid, expected bigint, code text|fb34300b368b701ae20bf1fa96f1cf7a
+platform_subscription_coupon_quote|a uuid, iid uuid, k uuid, expected bigint, code text|7aa677f5e5bf5a6cba1018e173d21deb
 platform_subscription_coupon_reconcile|iid uuid|aab5cdcd45f2f302c98e2552789287aa
-platform_subscription_intent_command|operation text, actor uuid, guest_digest text, capability_digest text, data jsonb|34e24182774485c3a0e6a87c4a32f8db
+platform_subscription_intent_command|operation text, actor uuid, guest_digest text, capability_digest text, data jsonb|f2d61ca7e029295f257d361b115d1f80
 platform_subscription_offer_admin|actor uuid, operation text, payload jsonb|14a0332a83a233d6a0151971767f4944
 platform_subscription_offers_public||56cf2ddfa4a8e4028d037a55d232b828
-platform_subscription_order_request|w uuid, a uuid, purchase uuid, operation text, payload jsonb|c8dce2ad46dc09bceb7f5f17a6ee1df4
-platform_subscription_payment_bind|w uuid, a uuid, purchase uuid, qid uuid, invoice uuid, receiver uuid, token_sha text|f89898af6f89324b57b57c0968f6c023
+platform_subscription_order_request|w uuid, a uuid, purchase uuid, operation text, payload jsonb|a02c7a7cadbca6bb06c2861bbfccaa2c
+platform_subscription_payment_bind|w uuid, a uuid, purchase uuid, qid uuid, invoice uuid, receiver uuid, token_sha text|5c448d7a4743fb324f736d918d9eebb3
 platform_subscription_payment_capability|a uuid, token_sha text|ca58576adebe53c53c78fa07a71d56eb
 platform_subscription_payment_is_handoff|invoice uuid|c5260e0ed148ec04eda70669c8e64675
 platform_subscription_payment_pending||7a3d617bfdc54650f407355f7743943f
 platform_subscription_payment_read|w uuid, a uuid, purchase uuid|1af08be691c734f0524ac2cedf75b5d4
 platform_subscription_payment_recover|purchase uuid, payment uuid, reason_text text|adbe3e10a82d4aa9efee9b7bfa8aa3d5
-platform_subscription_payment_settle|purchase uuid, payment uuid, amount bigint, verified_time timestamp with time zone, receiver uuid|95510170dbfdec973f2240ccad74faf2
+platform_subscription_payment_settle|purchase uuid, payment uuid, amount bigint, verified_time timestamp with time zone, receiver uuid|ac4ad360ee86d8afee62541f14028ddd
 platform_subscription_payment_terminal|purchase uuid, final_state text|5d7b555139a6eb0869a723e4e2e27d4e
 platform_subscription_policy_admin|actor uuid, operation text, payload jsonb|a58925cee29cc035198a4c242e67e2f8
 platform_subscription_policy_public||079475fc323e29df863d24d677edaeda

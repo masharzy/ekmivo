@@ -1,6 +1,7 @@
 armor|bytea, text[], text[]|1bce182b530c0933287cdf307667e70f
 armor|bytea|f6d2959639d44048e31b0b9a869efa66
-briofold_payment_intent_insert|w uuid, e text, ref text, amount bigint, expiry timestamp with time zone, k text, cap text, h text|cad227b021abc83628e3bec5c3d63f7d
+briofold_offline_checkout||5e37a750c95d19695ba5de85453f47c9
+briofold_payment_intent_insert|w uuid, e text, ref text, amount bigint, expiry timestamp with time zone, k text, cap text, h text|3e83222a47ae636f23b125b3c6d34a95
 crypt|text, text|0939715a0bd721d85d420be1aee841c7
 dashboard_billing_usage|w uuid, e text, start_at timestamp with time zone, end_at timestamp with time zone|b900a8dddefa744813fb178758a2862d
 dashboard_record_checkout_check|w uuid, e text, i uuid|3de1e18c2317cb36bf12af69172b5e8f
@@ -105,7 +106,7 @@ pg09_read|w uuid, e text, resource text, resource_id uuid, cursor_id uuid, statu
 pg103_notification_page|w uuid, e text, actor uuid, p_page integer, p_size integer, p_filter text, p_status text, p_query text|9f6d1be31e9b016a5ad89d8648bbf3fd
 pg108_pending_phone_receipts||e3a596e46d64dded76b677d7f756992c
 pg108_recover_phone_receipt|fid uuid, expected_version bigint, payer text, amount bigint, original_time timestamp with time zone, precision_name text, reference_identity text, method_name text, parser_ver integer, payer_contact bytea|85a61f4b085575a624abc20c8e9775b4
-pg10_checkout_view|cap text|fe34972ac5c9305f5863f84312694baa
+pg10_checkout_view|cap text|8c744286f8951c5a639005ff064a7820
 pg10_customer_activity|w uuid, e text, customer uuid|cddd7eaf1efcae3b1deaca57beef3de2
 pg10_export_claim||34f8d706900c0fe1ebdbaacaac2d253d
 pg10_export_enqueue|w uuid, e text, a uuid, res text, k text|0ebadc51b38e2eb8dc7c6e98cb464f29
@@ -124,8 +125,8 @@ pg10_invoice_notice_claim||94bac731e030488480ff57ebb9b72557
 pg10_invoice_notice_finish|item uuid, lease uuid, result text|85984462e62c868ab86f2442f7ae2a04
 pg10_invoice_paid_event||460f67f80d795492425874fdc79d434c
 pg10_invoice_send|w uuid, e text, doc uuid, actor uuid, typ text, recipient bytea, k text, expected bigint|29502493c829d41c1d90c29f1b0cdde1
-pg10_lock_route|p_digest text, p_payer_hmac text, p_suffix text, p_method text|317b0f8550fd0d1fa682366f83018336
-pg10_public_payment_sources|w uuid, e text|4d37bc9f7c001ad979dcca24a08d81b9
+pg10_lock_route|p_digest text, p_payer_hmac text, p_suffix text, p_method text|5a490a48b73146842ec665c560a77954
+pg10_public_payment_sources|w uuid, e text|876d186eabb78ddf660f75148de46367
 pg10_public|cap text|555b09386eb375b1a02a15f91ceefb78
 pg10_read|w uuid, e text, res text, item uuid, after_id uuid, search text|63af911f07fdb08792a1ba22885e6b32
 pg10_return_allowed|w uuid, e text, url text|b37b5be78af7a53fae9003120071d60e
@@ -189,7 +190,7 @@ pg66_customer_payer_evidence|w uuid, e text, ids jsonb|85d9f5935490b4c1e101dfff9
 pg66_payment_sms_evidence|w uuid, e text, resource text, ids jsonb|80a26c4f013a87f4e98cc038f5d924a2
 pg75_checkout_details|cap text, b jsonb|3d9e8f2b6d7f2e876f880c9e8712d6f0
 pg98_checkout_accounts|cap text|4df259a445ae3385a46f30a68e56c81c
-pg98_lock_account|p_digest text, p_payer_hmac text, p_suffix text, p_method text, p_account uuid|b6d66011d842f7cfec164e57ed2be2c9
+pg98_lock_account|p_digest text, p_payer_hmac text, p_suffix text, p_method text, p_account uuid|270ea7798f368e06f08bd3d39f9b91da
 pgp_armor_headers|text, OUT key text, OUT value text|e8e0141fd364a9f4f2bb77cddefc1375
 pgp_key_id|bytea|65a7e7e64c0e9357f3d9ef90684fc901
 pgp_pub_decrypt_bytea|bytea, bytea, text, text|6bfe210845fb03480bd1c6ba0a23c8ab
