@@ -46,7 +46,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   const merchantPath="/payments/links?list=requests";
   await page.goto(origin+merchantPath);
   await page.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|Checkouts)$/}).waitFor();
-  const newRequest=page.getByRole("button",{name:"New request",exact:true});
+  const newRequest=page.getByRole("button",{name:"New checkout",exact:true});
   // This disposable control-plane tenant has no paid subscription. The modern
   // plan gate correctly disables creation in that case. Assert the visible
   // fail-closed reason rather than waiting 30s for a disabled button to click.
@@ -54,7 +54,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
   await newRequest.waitFor({state:"visible"});
   if(await newRequest.isEnabled()){
    await newRequest.click();
-   await page.getByRole("heading",{name:"New request",exact:true}).waitFor();
+   await page.getByRole("heading",{name:"New checkout",exact:true}).waitFor();
    await page.getByRole("button",{name:"Issue source document",exact:true}).click();
    await page.getByRole("heading",{name:"Issue document",exact:true}).waitFor();
    assert.ok(await page.getByRole("button",{name:"Issue document",exact:true}).isDisabled(),
@@ -133,7 +133,7 @@ export async function runPG05Browser({control,goOrigin,tenant,sessions,token,exp
    const viewerPage=await viewer.newPage();
    await viewerPage.goto(origin+merchantPath);
    await viewerPage.locator(".pg05-merchant").getByRole("heading",{name:/^(Payment links|Checkouts)$/}).waitFor();
-   assert.equal(await viewerPage.getByRole("button",{name:"New request",exact:true}).count(),0);
+   assert.equal(await viewerPage.getByRole("button",{name:"New checkout",exact:true}).count(),0);
    record("real viewer session cannot access merchant request creation controls");
   }finally{await viewer.close()}
 
