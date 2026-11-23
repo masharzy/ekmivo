@@ -100,6 +100,14 @@ try{
   same(x[0].realm,realm,"physical realm mismatch");
   ok(x[0].no_sessions&&x[0].no_keys,"control-plane data leaked into finance");
   ok(x[0].river&&x[0].outbox,"River/domain migration missing");
+  // Production runs 0269 (every checkout 4 minutes) as a dashboard release
+  // migration, which this core-only smoke does not apply. The API now always
+  // asks for 4 minutes, so mirror 0269's change to the core issuer here.
+  await dbs[realm].unsafe(`DO $$DECLARE d text;BEGIN
+   d:=pg_get_functiondef('pg05_create_intent(uuid,text,text,bigint,integer,text,text,text)'::regprocedure);
+   IF position('p_minutes NOT BETWEEN 5 AND 60' IN d)>0 THEN
+    EXECUTE replace(d,'p_minutes NOT BETWEEN 5 AND 60','p_minutes NOT BETWEEN 1 AND 60');
+   END IF;END $$`);
  }
  for(const realm of names){
   const db=dbs[realm];
