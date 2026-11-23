@@ -522,3 +522,19 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   functions equal to the VPS). Closed #151 and #158: their grants are already in production (checked on the copy).
   0264 applied on a Neon branch of the production copy (`test-0264`): 2+4+2+2+2 checks patched as expected.
   `set-flag.sh` accepts BRIOFOLD_OFFLINE_CHECKOUT_ENABLED.
+
+## Payment proofs on the checkout — 2026-11-23, step 2 of 4 (flag BRIOFOLD_PAYMENT_PROOFS_ENABLED)
+- 0265 (both financial realms): `briofold_payment_proofs`, one row per checkout (TrxID, up to 5 photo keys, state,
+  seen_at for the dashboard badge). `briofold_proof_submit` refuses completed/cancelled checkouts, accepts expired
+  ones, never touches payment state or amounts. `briofold_proof_public` for the page.
+- API: GET/POST `/v1/public/checkout/{token}/proof`, POST `.../proof/image` (JPEG/PNG ≤ 8 MB, decoded and re-encoded
+  as JPEG, stored in R2 under `payment-proofs/`). Flag off = 404.
+- Checkout (both themes): amber notice when the SMS phone is offline; after 1 minute of waiting a second notice;
+  TrxID box and multi-photo upload always shown while waiting and after expiry. Photos shrunk to ≤1600 px JPEG
+  in the browser (Vercel request limit).
+- `deploy/vps/set-r2.sh` puts R2 settings from /opt/briofold/r2.env on the API.
+- Evidence: 0265 on the Neon production copy branch `test-0264`: submit on an expired checkout works, TrxID
+  normalised, completed/cancelled refused (P6808), bad TrxID/key/empty refused (22023);
+  `TestCleanProofImageReencodesAndRejects`, `TestPaymentProofsFlagOffIsNotFound`, `payment-proofs.test.mjs`.
+- Owner: R2 bucket + API token + lifecycle rule (delete `payment-proofs/` after 30 days).
+- Next: step 3 dashboard review with badge; step 4 approve adds the payment; late SMS verifies a proof checkout.
