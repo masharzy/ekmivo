@@ -7,8 +7,11 @@ test('merchant success and cancellation return after ten seconds using appropria
  assert.equal(checkoutReturnUrl('cancelled','merchant','https://merchant.test/paid','https://merchant.test/cancel'),'https://merchant.test/cancel');
  assert.equal(checkoutReturnUrl('cancelled','merchant','https://merchant.test/paid'),'https://merchant.test/paid');
 });
-test('payment links, unknown origin, nonterminal states and unsafe URLs never redirect',()=>{
- for(const origin of ['payment_link',undefined])for(const state of ['completed','cancelled'])assert.equal(checkoutReturnUrl(state,origin,'https://merchant.test/paid'),'');
+test('payment links only after payment; unknown origin, nonterminal states and unsafe URLs never redirect',()=>{
+ // Owner 2026-11-23: a payment link redirects after a completed payment only.
+ assert.equal(checkoutReturnUrl('completed','payment_link','https://merchant.test/paid'),'https://merchant.test/paid');
+ assert.equal(checkoutReturnUrl('cancelled','payment_link','https://merchant.test/paid'),'');
+ for(const state of ['completed','cancelled'])assert.equal(checkoutReturnUrl(state,undefined,'https://merchant.test/paid'),'');
  for(const state of ['expired','processing','awaiting_payment'])assert.equal(checkoutReturnUrl(state,'merchant','https://merchant.test'),'');
  for(const url of ['javascript:alert(1)','//evil.test','https://user:password@merchant.test','http://merchant.test'])assert.equal(checkoutReturnUrl('completed','merchant',url),'');
 });
