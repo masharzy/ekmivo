@@ -2,6 +2,9 @@ armor|bytea, text[], text[]|1bce182b530c0933287cdf307667e70f
 armor|bytea|f6d2959639d44048e31b0b9a869efa66
 briofold_offline_checkout||5e37a750c95d19695ba5de85453f47c9
 briofold_payment_intent_insert|w uuid, e text, ref text, amount bigint, expiry timestamp with time zone, k text, cap text, h text|3e83222a47ae636f23b125b3c6d34a95
+briofold_proof_checkout|p_digest text|23d9873d96b568e485d84f5456b0ba2c
+briofold_proof_public|p_digest text|6e3974160ae0fd1e1ffa90ba82188e78
+briofold_proof_submit|p_digest text, p_trx text, p_image jsonb|f379fd6163bc4b91fb6a9822a93ea5e2
 crypt|text, text|0939715a0bd721d85d420be1aee841c7
 dashboard_billing_usage|w uuid, e text, start_at timestamp with time zone, end_at timestamp with time zone|b900a8dddefa744813fb178758a2862d
 dashboard_record_checkout_check|w uuid, e text, i uuid|3de1e18c2317cb36bf12af69172b5e8f
