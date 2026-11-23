@@ -162,9 +162,9 @@ func prepareCreateRequest(body *createRequest, key, workspace, realm string) boo
 	if body.Currency == "" {
 		body.Currency = "BDT"
 	}
-	if body.Expiry == 0 {
-		body.Expiry = 5 // owner decision 2026-11-16: five minutes to pay unless the merchant asks for longer (max 60)
-	}
+	// Owner decision 2026-11-23: every checkout gives 4 minutes to pay; a value sent
+	// by the merchant is accepted for compatibility but does not change it (0269).
+	body.Expiry = 4
 	// Public URLs may only be HTTPS public destinations. Webhooks additionally
 	// are bound to this immutable payment using the existing signed delivery outbox.
 	for _, candidate := range []string{body.RedirectURL, body.CancelURL, body.WebhookURL} {
@@ -409,7 +409,7 @@ func metadataOrEmpty(raw json.RawMessage) string {
 	return string(raw)
 }
 func validRequest(body createRequest) bool {
-	if body.Currency != "BDT" || body.Expiry < 5 || body.Expiry > 60 {
+	if body.Currency != "BDT" || body.Expiry < 1 || body.Expiry > 60 {
 		return false
 	}
 	if strings.TrimSpace(body.Reference) != body.Reference || !referencePattern.MatchString(body.Reference) {
