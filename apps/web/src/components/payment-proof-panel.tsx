@@ -47,7 +47,8 @@ export function PaymentProofPanel({token,bn,offline,expired,onAvailable,skin="cl
  // Owner 2026-11-23: only an upload button; tapping it opens the picker with up to 5 photos.
  const [open,setOpen]=useState(false);
  const [picked,setPicked]=useState<{file:File;url:string}[]>([]);
- const pickedRef=useRef(picked);pickedRef.current=picked;
+ const pickedRef=useRef(picked);
+ useEffect(()=>{pickedRef.current=picked},[picked]);
  useEffect(()=>()=>pickedRef.current.forEach(x=>URL.revokeObjectURL(x.url)),[]);
 
  useEffect(()=>{
