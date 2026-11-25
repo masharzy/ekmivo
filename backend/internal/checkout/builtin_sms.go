@@ -32,7 +32,7 @@ func flexSMSRules() []deviceevidence.ParserRule {
 	flex := func(id, source, method, incoming string) deviceevidence.ParserRule {
 		return deviceevidence.ParserRule{ID: id, Version: 1, Source: source, Method: method,
 			TimeLayout: "02/01/2006 15:04", TimeZone: "Asia/Dhaka", Precision: "minute",
-			Approved: true, Flex: true, Incoming: incoming, Reject: reject}
+			Approved: true, Flex: true, Incoming: incoming, Reject: reject, TimeFromObserved: true}
 	}
 	return []deviceevidence.ParserRule{
 		flex("builtin-bkash-flex-v1", "bKash", "bkash",

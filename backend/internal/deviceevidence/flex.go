@@ -27,10 +27,15 @@ import (
 // amount, time, account and method against a payment attempt stays in the database.
 
 var (
-	flexFeeBalance = regexp.MustCompile(`(?i)\b(?:fee|charge|vat|balance)\b(?:\s*[:\-]?\s*|\s+(?:is|was|now)\s+)(?:tk\.?|bdt|৳)?\s*[0-9][0-9,]*(?:\.[0-9]+)?`)
-	flexAmount     = regexp.MustCompile(`(?i)(?:\btk\.?|\bbdt|৳)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)`)
-	flexRef        = regexp.MustCompile(`(?i)\b(?:trx\s?id|txn\s?id|transaction\s?id|tid)\b\s*[:#\-]?\s*([A-Za-z0-9]{6,32})\b`)
-	flexPayerFrom  = regexp.MustCompile(`(?i)\b(?:from|sender)\b\s*:?\s*((?:\+?88)?01[3-9][0-9]{8})(?:[^0-9]|$)`)
+	// A figure is the amount of money when a currency marker sits right before or
+	// after it (Tk, Tk., Tk:, BDT, ৳, taka, টাকা) or it follows an "Amount" label.
+	// Fee/charge/VAT/balance figures are removed first.
+	flexFeeBalance = regexp.MustCompile(`(?i)\b(?:fee|charge|vat|balance)\b(?:\s*[:\-]?\s*|\s+(?:is|was|now)\s+)(?:(?:tk|bdt)\.?\s*:?\s*|৳\s*)?[0-9][0-9,]*(?:\.[0-9]+)?(?:\s*(?:(?:tk|bdt|taka)\b|টাকা))?`)
+	flexAmountA    = regexp.MustCompile(`(?i)(?:\btk|\bbdt|৳)\.?\s*:?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)`)
+	flexAmountB    = regexp.MustCompile(`(?i)(?:^|[^0-9.,])([0-9][0-9,]*(?:\.[0-9]{1,2})?)\s*(?:(?:tk|bdt|taka)\b|টাকা)`)
+	flexAmountC    = regexp.MustCompile(`(?i)\bamount\b\s*:?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)`)
+	flexRef        = regexp.MustCompile(`(?i)\b(?:trx\s?id|txn\s?id|tx\s?id|transaction\s?id|tid)\b\s*[:#\-]?\s*([A-Za-z0-9]{6,32})\b`)
+	flexPayerFrom  = regexp.MustCompile(`(?i)\b(?:from|sender|uddokta)\b\s*:?\s*(?:cellfin\s*:?\s*|a/c\s*:?\s*)?((?:\+?88)?01[3-9][0-9]{8})(?:[^0-9]|$)`)
 	flexPayerAny   = regexp.MustCompile(`(?:^|[^0-9])((?:\+?88)?01[3-9][0-9]{8})(?:[^0-9]|$)`)
 	flexSpace      = regexp.MustCompile(`\s+`)
 	flexMeridiem   = regexp.MustCompile(`\s*([AaPp][Mm])$`)
@@ -44,14 +49,14 @@ var flexTimes = []struct {
 	layout    string
 	precision string
 }{
-	{regexp.MustCompile(`(?i)(?:^|[^0-9])([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{1,2}:[0-9]{2}:[0-9]{2} ?[AP]M)(?:[^a-z0-9]|$)`), "02/01/2006 3:04:05PM", "second"},
-	{regexp.MustCompile(`(?i)(?:^|[^0-9])([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{1,2}:[0-9]{2} ?[AP]M)(?:[^a-z0-9]|$)`), "02/01/2006 3:04PM", "minute"},
-	{regexp.MustCompile(`(?:^|[^0-9])([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2})(?:[^0-9]|$)`), "02/01/2006 15:04:05", "second"},
-	{regexp.MustCompile(`(?:^|[^0-9])([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2})(?:[^0-9:]|$)`), "02/01/2006 15:04", "minute"},
-	{regexp.MustCompile(`(?:^|[^0-9])([0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2})(?:[^0-9]|$)`), "02-01-2006 15:04:05", "second"},
-	{regexp.MustCompile(`(?:^|[^0-9])([0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2})(?:[^0-9:]|$)`), "02-01-2006 15:04", "minute"},
-	{regexp.MustCompile(`(?:^|[^0-9])([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})(?:[^0-9]|$)`), "2006-01-02 15:04:05", "second"},
-	{regexp.MustCompile(`(?:^|[^0-9])([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2})(?:[^0-9:]|$)`), "2006-01-02 15:04", "minute"},
+	{regexp.MustCompile(`(?i)\b([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{1,2}:[0-9]{2}:[0-9]{2} ?[AP]M)\b`), "02/01/2006 3:04:05PM", "second"},
+	{regexp.MustCompile(`(?i)\b([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{1,2}:[0-9]{2} ?[AP]M)\b`), "02/01/2006 3:04PM", "minute"},
+	{regexp.MustCompile(`\b([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2})\b`), "02/01/2006 15:04:05", "second"},
+	{regexp.MustCompile(`\b([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2})\b`), "02/01/2006 15:04", "minute"},
+	{regexp.MustCompile(`\b([0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2})\b`), "02-01-2006 15:04:05", "second"},
+	{regexp.MustCompile(`\b([0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2})\b`), "02-01-2006 15:04", "minute"},
+	{regexp.MustCompile(`\b([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})\b`), "2006-01-02 15:04:05", "second"},
+	{regexp.MustCompile(`\b([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2})\b`), "2006-01-02 15:04", "minute"},
 }
 
 func (r ParserRule) validateFlex() error {
@@ -116,7 +121,7 @@ func distinct(matches [][]string) []string {
 	return out
 }
 
-func (r ParserRule) parseFlex(body string) (ParsedReceipt, error) {
+func (r ParserRule) parseFlex(body string, observed time.Time) (ParsedReceipt, error) {
 	var p ParsedReceipt
 	if !r.flexAccepts(body) {
 		return p, errors.New("unrecognized or nonincoming evidence")
@@ -133,17 +138,20 @@ func (r ParserRule) parseFlex(body string) (ParsedReceipt, error) {
 	withoutRef := flexRef.ReplaceAllString(text, " ")
 
 	amounts := map[int64]bool{}
-	for _, m := range flexAmount.FindAllStringSubmatch(flexFeeBalance.ReplaceAllString(withoutRef, " "), -1) {
-		grouped, ok := stripAmountGrouping(strings.TrimRight(m[1], ","))
-		if !ok {
-			return p, errors.New("invalid amount")
+	figures := flexFeeBalance.ReplaceAllString(withoutRef, " ")
+	for _, re := range []*regexp.Regexp{flexAmountA, flexAmountB, flexAmountC} {
+		for _, m := range re.FindAllStringSubmatch(figures, -1) {
+			grouped, ok := stripAmountGrouping(strings.TrimRight(m[1], ","))
+			if !ok {
+				return p, errors.New("invalid amount")
+			}
+			minor, e := MinorUnits(grouped)
+			if e != nil {
+				return p, e
+			}
+			amounts[minor] = true
+			p.Amount = minor
 		}
-		minor, e := MinorUnits(grouped)
-		if e != nil {
-			return p, e
-		}
-		amounts[minor] = true
-		p.Amount = minor
 	}
 	if len(amounts) != 1 {
 		return p, errors.New("missing or ambiguous amount")
@@ -189,7 +197,15 @@ func (r ParserRule) parseFlex(body string) (ParsedReceipt, error) {
 		break
 	}
 	if !found {
-		return p, errors.New("missing original transaction time")
+		// No date-time in the SMS at all (some providers omit it). Only when the rule
+		// allows it, the moment the phone observed the SMS stands in for the
+		// transaction time, to the minute. A malformed or ambiguous time in the SMS
+		// never reaches this branch.
+		if !r.TimeFromObserved || observed.IsZero() {
+			return p, errors.New("missing original transaction time")
+		}
+		p.TransactionAt = observed.Truncate(time.Minute)
+		p.Precision = "minute"
 	}
 	p.Method = r.Method
 	p.Version = r.Version

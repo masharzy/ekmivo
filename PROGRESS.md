@@ -586,3 +586,14 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   (need provider allowlist migrations), SMS with no time. Android `likelyPayment` still needs "received"/"cash in".
 - Evidence: 6 new flex tests plus the existing builtin/parser tests pass in an isolated Go 1.24 module. NOT run:
   full checkout package, CI, DB, device. NOT verified on real SMS.
+- Update 2026-11-26 (owner decisions): (1) an SMS with NO date-time uses the time the phone observed it
+  (`observed_at`, truncated to the minute): `ParserRule.TimeFromObserved` + `ParseObserved`, used only by
+  phone_forward.go and only when the observed time is within -24h/+5min of server time; an SMS time always wins,
+  two times fail, strict rules ignore it. Not persisted anywhere: the audit row cannot yet tell the two apart.
+  (2) Amount is found by structure, not by the word "Tk": currency marker before or after the figure (Tk, Tk.,
+  Tk:, BDT, ৳, taka, টাকা) or an "Amount" label; Fee/Balance figures removed first; TxID/TrxID/TxnID labels.
+  (3) Rocket stays out: its SMS masks the payer. Bengali wording and Bengali digits are guesses, untested on real SMS.
+  Evidence: all 14 PipraPay-derived samples (bKash personal/cash in/merchant, Nagad personal/cash in, Upay, Tap,
+  CellFin, OK Wallet, mCash, Pathao Pay, taka-word forms) parse in an isolated Go 1.24 module; Rocket correctly fails.
+  Only bKash and NAGAD have flex rules in the product; the other providers need allowlist migrations and an
+  Android release (the Android and server pre-gates still require "received"/"tk " words).

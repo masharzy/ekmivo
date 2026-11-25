@@ -44,6 +44,9 @@ type ParserRule struct {
 	Flex     bool   `json:"flex,omitempty"`
 	Incoming string `json:"incoming,omitempty"`
 	Reject   string `json:"reject,omitempty"`
+	// TimeFromObserved (flex only): when the SMS carries no date-time, use the time
+	// the phone observed it (see ParseObserved) instead of failing.
+	TimeFromObserved bool `json:"time_from_observed,omitempty"`
 }
 type ParsedReceipt struct {
 	Receiving     string // optional approved full receiving identity, never SMS originatingAddress
@@ -191,7 +194,18 @@ func (r ParserRule) Validate() error {
 	_, e = time.LoadLocation(r.TimeZone)
 	return e
 }
+// ParseObserved is Parse for callers that know when the phone observed the SMS.
+// Only a flex rule with TimeFromObserved uses observed, and only when the SMS has
+// no date-time of its own; a zero observed time disables the fallback.
+func (r ParserRule) ParseObserved(source, realm, body string, observed time.Time) (ParsedReceipt, error) {
+	return r.parse(source, realm, body, observed)
+}
+
 func (r ParserRule) Parse(source, realm, body string) (ParsedReceipt, error) {
+	return r.parse(source, realm, body, time.Time{})
+}
+
+func (r ParserRule) parse(source, realm, body string, observed time.Time) (ParsedReceipt, error) {
 	var p ParsedReceipt
 	if !r.Approved || r.SandboxOnly && realm != "sandbox" || source != r.Source || len(body) > 8192 || !utf8.ValidString(body) {
 		return p, errors.New("unsupported receipt source")
@@ -200,7 +214,7 @@ func (r ParserRule) Parse(source, realm, body string) (ParsedReceipt, error) {
 		return p, e
 	}
 	if r.Flex {
-		return r.parseFlex(body)
+		return r.parseFlex(body, observed)
 	}
 	expression := regexp.MustCompile(r.Pattern)
 	match := expression.FindStringSubmatch(body)
