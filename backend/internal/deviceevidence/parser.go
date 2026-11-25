@@ -31,6 +31,11 @@ type ParserRule struct {
 	Precision      string `json:"precision"`
 	Approved       bool   `json:"approved"`
 	SandboxOnly    bool   `json:"sandbox_only"`
+	// AmountGrouping is opt-in per rule. When true the captured amount may carry
+	// strict thousands separators ("1,250.50" or lakh style "1,00,000.00"); the
+	// commas are removed before the strict decimal parse. Default false keeps the
+	// old behaviour: any comma in the amount is rejected.
+	AmountGrouping bool `json:"amount_grouping,omitempty"`
 }
 type ParsedReceipt struct {
 	Receiving     string // optional approved full receiving identity, never SMS originatingAddress
@@ -79,6 +84,25 @@ func NormalizeNumber(s string) (string, bool) {
 	}
 	return s, phonePattern.MatchString(s)
 }
+var (
+	westernGrouping = regexp.MustCompile(`^[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?$`)
+	lakhGrouping    = regexp.MustCompile(`^[0-9]{1,2}(?:,[0-9]{2})*,[0-9]{3}(?:\.[0-9]{1,2})?$`)
+)
+
+// stripAmountGrouping removes thousands separators only when they sit in a
+// strict western (1,234,567.00) or lakh (12,34,567.00) position. ASCII digits
+// only. Any other comma placement, e.g. "1,2", "1,00" or "12,34", is invalid.
+// An amount without a comma is returned unchanged.
+func stripAmountGrouping(s string) (string, bool) {
+	if !strings.Contains(s, ",") {
+		return s, true
+	}
+	if westernGrouping.MatchString(s) || lakhGrouping.MatchString(s) {
+		return strings.ReplaceAll(s, ",", ""), true
+	}
+	return "", false
+}
+
 func MinorUnits(s string) (int64, error) {
 	// Normalize numeral scripts without relaxing the strict decimal syntax.
 	// Parser rules must still explicitly permit these characters; this does
@@ -177,7 +201,15 @@ func (r ParserRule) Parse(source, realm, body string) (ParsedReceipt, error) {
 		return p, errors.New("missing actual full payer")
 	}
 	var e error
-	p.Amount, e = MinorUnits(capture("amount"))
+	capturedAmount := capture("amount")
+	if r.AmountGrouping {
+		grouped, valid := stripAmountGrouping(capturedAmount)
+		if !valid {
+			return p, errors.New("invalid amount")
+		}
+		capturedAmount = grouped
+	}
+	p.Amount, e = MinorUnits(capturedAmount)
 	if e != nil {
 		return p, e
 	}

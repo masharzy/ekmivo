@@ -547,3 +547,22 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   matched again.
 - Evidence: on the Neon production copy branch the 17 Nov 20:25 SMS now matches its attempt (all five checks
   true); no other attempt matches.
+
+## Nagad "Money Received" SMS rule — 2026-11-25, behind BRIOFOLD_NAGAD_MONEY_RECEIVED_ENABLED (default off)
+- Why: Nagad SMS were not verifying while bKash did. The only Nagad grammar (`builtin-nagad-received-v1`,
+  "You have received Tk… Current Balance… TxnID… Date:") uses the same sample TxnID, number and time as the bKash
+  test, so it looks derived from the bKash text, never from a consented real Nagad SMS (MANUAL-VERIFICATION still
+  lists real samples as open). The phone forwarder already accepts "Money Received. Amount: Tk… Sender:…" (see
+  `phone_forward_test.go`), but no parser rule recognised it, so it stayed unmatched.
+- New rule `builtin-nagad-money-received-v1` (Amount / Sender / optional Ref / TxnID / Balance / dd/mm/yyyy hh:mm),
+  whitespace-tolerant (one line or one field per line), anchored, balance opaque. Flag off = exactly the old two rules.
+- `ParserRule.AmountGrouping` (opt-in per rule, default false): strict thousands separators in the amount
+  ("1,250.50", lakh "1,00,000.00"). Only the new Nagad rule turns it on. bKash/old Nagad rules still reject commas.
+- `set-flag.sh` accepts the flag. The flag is read at API start (registry built once): use set-flag.sh.
+- Evidence: 7 new `checkout` tests + 2 new `deviceevidence` tests, run in an isolated module with Go 1.24 (the repo
+  needs Go 1.27, not installable in the cloud session) together with the existing builtin and parser tests: all pass.
+  NOT run: the full `checkout` package, CI, any database test.
+- NOT verified against a real Nagad SMS. The grammar comes from PipraPay's public Nagad template. Before turning the
+  flag on in production: send one real Nagad payment, read its text (phone), and compare with the rule.
+- Open question for the owner: bKash/old-Nagad amounts at or above 1,000 may arrive as "1,000.00"; those rules reject
+  commas, so such payments would stay unmatched. Needs one real bKash SMS of ≥ ৳1,000 to confirm.
