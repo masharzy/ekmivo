@@ -597,3 +597,6 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   CellFin, OK Wallet, mCash, Pathao Pay, taka-word forms) parse in an isolated Go 1.24 module; Rocket correctly fails.
   Only bKash and NAGAD have flex rules in the product; the other providers need allowlist migrations and an
   Android release (the Android and server pre-gates still require "received"/"tk " words).
+- Update 2026-11-26 (Rocket): flex flag now also adds `builtin-rocket-flex-v1` (source "Rocket"). A Rocket SMS with the
+  payer written out in full parses; the real masked one (`A/C:01826*****6`) still stays unmatched. Rocket's real SMS
+  has "Tk500.00" with no space, which the Android and server pre-gates (`"tk "`) would drop before the parser.

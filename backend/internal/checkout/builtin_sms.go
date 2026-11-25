@@ -39,6 +39,8 @@ func flexSMSRules() []deviceevidence.ParserRule {
 			`\b(?:you have received|has been received|received payment|cash in)\b`),
 		flex("builtin-nagad-flex-v1", "NAGAD", "nagad",
 			`\b(?:you have received|has been received|money received|received payment|cash in)\b`),
+		flex("builtin-rocket-flex-v1", "Rocket", "rocket",
+			`\b(?:received from|has been received|you have received|cash in)\b`),
 	}
 }
 

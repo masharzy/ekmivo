@@ -59,7 +59,7 @@ func TestFlexOneRulePerSource(t *testing.T) {
 	for _, r := range builtinSMSRules() {
 		seen[r.Source]++
 	}
-	if len(seen) != 2 || seen["bKash"] != 1 || seen["NAGAD"] != 1 {
+	if len(seen) != 3 || seen["bKash"] != 1 || seen["NAGAD"] != 1 || seen["Rocket"] != 1 {
 		t.Fatalf("exactly one flex rule per source is required (two would conflict): %v", seen)
 	}
 }
@@ -144,7 +144,7 @@ func TestFlexNeverPaysFromUnsafeOrAmbiguousText(t *testing.T) {
 func TestFlexIgnoresOtherSendersAndFeeBalanceFigures(t *testing.T) {
 	t.Setenv(flexFlag, "true")
 	text := "You have received Tk 500.00 from 01881114519. Fee Tk 5.00. Balance Tk 9,999.00. TrxID DJ168FS582 at 01/10/2026 15:40"
-	if _, _, _, _, _, err := flexParse(t, "Rocket", text); err == nil {
+	if _, _, _, _, _, err := flexParse(t, "Upay", text); err == nil {
 		t.Fatal("a source without a flex rule must not parse")
 	}
 	amount, _, _, _, _, err := flexParse(t, "bKash", text)
@@ -160,5 +160,21 @@ func TestFlexRoutePatternIsPhoneSafe(t *testing.T) {
 		if !strings.HasPrefix(pat, "(?is)^(?=") || !strings.HasSuffix(pat, ".*$") || !strings.Contains(pat, "(?!") {
 			t.Fatalf("%s: unexpected route pattern %q", r.ID, pat)
 		}
+	}
+}
+
+func TestFlexRocketFullNumberParsesMaskedDoesNot(t *testing.T) {
+	t.Setenv(flexFlag, "true")
+	// Rocket SMS (PipraPay template) with the payer written out in full. The real
+	// SMS masks the middle digits; a masked payer must stay unmatched.
+	full := "Tk500.00 received from A/C:01826687856 Fee:Tk0.00, Your A/C Balance: Tk2,406.35 TxnId:RK12345678 Date:19/11/2026 01:36"
+	amount, payer, ref, at, _, err := flexParse(t, "Rocket", full)
+	if err != nil || amount != 50000 || payer != "+8801826687856" || ref != "RK12345678" ||
+		!at.Equal(time.Date(2026, 11, 18, 19, 36, 0, 0, time.UTC)) {
+		t.Fatalf("rocket full number: %d %s %s %s %v", amount, payer, ref, at, err)
+	}
+	masked := "Tk500.00 received from A/C:01826*****6 Fee:Tk0.00, Your A/C Balance: Tk2,406.35 TxnId:RK12345678 Date:19/11/2026 01:36"
+	if _, _, _, _, _, err := flexParse(t, "Rocket", masked); err == nil {
+		t.Fatal("masked Rocket payer must stay unmatched")
 	}
 }
