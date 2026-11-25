@@ -30,6 +30,7 @@ var (
 	flexFeeBalance = regexp.MustCompile(`(?i)\b(?:fee|charge|vat|balance)\b(?:\s*[:\-]?\s*|\s+(?:is|was|now)\s+)(?:tk\.?|bdt|৳)?\s*[0-9][0-9,]*(?:\.[0-9]+)?`)
 	flexAmount     = regexp.MustCompile(`(?i)(?:\btk\.?|\bbdt|৳)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)`)
 	flexRef        = regexp.MustCompile(`(?i)\b(?:trx\s?id|txn\s?id|transaction\s?id|tid)\b\s*[:#\-]?\s*([A-Za-z0-9]{6,32})\b`)
+	flexPayerFrom  = regexp.MustCompile(`(?i)\b(?:from|sender)\b\s*:?\s*((?:\+?88)?01[3-9][0-9]{8})(?:[^0-9]|$)`)
 	flexPayerAny   = regexp.MustCompile(`(?:^|[^0-9])((?:\+?88)?01[3-9][0-9]{8})(?:[^0-9]|$)`)
 	flexSpace      = regexp.MustCompile(`\s+`)
 	flexMeridiem   = regexp.MustCompile(`\s*([AaPp][Mm])$`)
@@ -148,11 +149,17 @@ func (r ParserRule) parseFlex(body string) (ParsedReceipt, error) {
 		return p, errors.New("missing or ambiguous amount")
 	}
 
-	// Exactly one mobile number may appear at all. A second number (a receiver, a
-	// number inside a reference) could be the real payer, so it is left for review.
+	// The number right after "from"/"Sender" is the payer, even if another number
+	// (a receiver, "to 01...") also appears. With no such label the message must
+	// hold exactly one mobile number. Two labelled payers, or several unlabelled
+	// numbers, stay for review.
 	payerText := ""
-	if all := distinct(flexPayerAny.FindAllStringSubmatch(withoutRef, -1)); len(all) == 1 {
-		payerText = all[0]
+	if from := distinct(flexPayerFrom.FindAllStringSubmatch(withoutRef, -1)); len(from) == 1 {
+		payerText = from[0]
+	} else if len(from) == 0 {
+		if all := distinct(flexPayerAny.FindAllStringSubmatch(withoutRef, -1)); len(all) == 1 {
+			payerText = all[0]
+		}
 	}
 	var ok bool
 	if p.Payer, ok = NormalizeNumber(payerText); !ok {

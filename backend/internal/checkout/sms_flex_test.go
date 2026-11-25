@@ -88,6 +88,10 @@ func TestFlexAcceptsEveryKnownLayout(t *testing.T) {
 		{"bkash iso date", "bKash", "You have received Tk 500.00 from 01881114519. TrxID DJ168FS592 at 2026-10-01 15:40:00", "+8801881114519", "DJ168FS592", 50000, d, "second"},
 		{"bkash 12h", "bKash", "You have received Tk 500.00 from 01881114519. TrxID DJ168FS593 at 01/10/2026 03:40 PM", "+8801881114519", "DJ168FS593", 50000, d, "minute"},
 		{"bkash tk without space", "bKash", "You have received Tk500 from 01881114519. TrxID DJ168FS594 at 01/10/2026 15:40", "+8801881114519", "DJ168FS594", 50000, d, "minute"},
+		// the owner's real bKash SMS (19 Nov 2026, comma amount, no ref)
+		{"real bkash 1000", "bKash", "You have received Tk 1,000.00 from 01826687856. Fee Tk 0.00. Balance Tk 2,406.35. TrxID DKJ8NK8VI8 at 19/11/2026 01:36", "+8801826687856", "DKJ8NK8VI8", 100000, time.Date(2026, 11, 18, 19, 36, 0, 0, time.UTC), "minute"},
+		// a second number is fine when the one after "from" is clear
+		{"from plus another number", "bKash", "You have received Tk 500.00 from 01881114519 to 01911114519. TrxID DJ168FS595 at 01/10/2026 15:40", "+8801881114519", "DJ168FS595", 50000, d, "minute"},
 		// Nagad "Money Received"
 		{"nagad money received", "NAGAD", "Money Received. Amount: Tk 500.00 Sender: 01881114519 Ref: Order TxnID: 7ABC1234 Balance: Tk 505.89 01/10/2026 15:40", "+8801881114519", "7ABC1234", 50000, d, "minute"},
 		{"nagad money received lines", "NAGAD", "Money Received.\nAmount: Tk 1,500.00\nSender: 01881114519\nTxnID: 7ABC1235\nBalance: Tk 2,505.89\n01/10/2026 15:40", "+8801881114519", "7ABC1235", 150000, d, "minute"},
@@ -108,24 +112,25 @@ func TestFlexAcceptsEveryKnownLayout(t *testing.T) {
 func TestFlexNeverPaysFromUnsafeOrAmbiguousText(t *testing.T) {
 	t.Setenv(flexFlag, "true")
 	bad := map[string]string{
-		"outgoing":           "You have sent Tk 500.00 to 01881114519. Fee Tk 0.00. Balance Tk 505.89. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"otp":                "Your bKash OTP is 123456. You have received Tk 500.00 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"cash out":           "Cash Out Tk 500.00 to 01881114519 successful. You have received nothing. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"no time":            "You have received Tk 500.00 from 01881114519. Fee Tk 0.00. Balance Tk 505.89. TrxID DJ168FS582",
-		"no trxid":           "You have received Tk 500.00 from 01881114519. Fee Tk 0.00. Balance Tk 505.89. at 01/10/2026 15:40",
-		"no payer":           "You have received Tk 500.00. Fee Tk 0.00. Balance Tk 505.89. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"masked payer":       "You have received Tk 500.00 from 018811*****. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"two amounts":        "You have received Tk 500.00 from 01881114519. Bonus Tk 20.00. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"two payers":         "You have received Tk 500.00 from 01881114519 and 01911114519. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"two ids":            "You have received Tk 500.00 from 01881114519. TrxID DJ168FS582 TrxID DJ168FS583 at 01/10/2026 15:40",
-		"two times":          "You have received Tk 500.00 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40 or 02/10/2026 15:40",
-		"bad grouping":       "You have received Tk 12,34 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"zero":               "You have received Tk 0.00 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"impossible date":    "You have received Tk 500.00 from 01881114519. TrxID DJ168FS582 at 31/02/2026 15:40",
-		"balance only":       "You have received a message. Balance Tk 505.89. from 01881114519 TrxID DJ168FS582 at 01/10/2026 15:40",
-		"received but no tk": "You have received 500 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40",
-		"unrelated":          "Your account balance is Tk 4000",
-		"failed":             "Cash In Tk 500.00 from 01881114519 failed. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"outgoing":            "You have sent Tk 500.00 to 01881114519. Fee Tk 0.00. Balance Tk 505.89. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"otp":                 "Your bKash OTP is 123456. You have received Tk 500.00 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"cash out":            "Cash Out Tk 500.00 to 01881114519 successful. You have received nothing. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"no time":             "You have received Tk 500.00 from 01881114519. Fee Tk 0.00. Balance Tk 505.89. TrxID DJ168FS582",
+		"no trxid":            "You have received Tk 500.00 from 01881114519. Fee Tk 0.00. Balance Tk 505.89. at 01/10/2026 15:40",
+		"no payer":            "You have received Tk 500.00. Fee Tk 0.00. Balance Tk 505.89. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"masked payer":        "You have received Tk 500.00 from 018811*****. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"two amounts":         "You have received Tk 500.00 from 01881114519. Bonus Tk 20.00. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"two from payers":     "You have received Tk 500.00 from 01881114519 and from 01911114519. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"two numbers no from": "You have received Tk 500.00 (01881114519, 01911114519). TrxID DJ168FS582 at 01/10/2026 15:40",
+		"two ids":             "You have received Tk 500.00 from 01881114519. TrxID DJ168FS582 TrxID DJ168FS583 at 01/10/2026 15:40",
+		"two times":           "You have received Tk 500.00 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40 or 02/10/2026 15:40",
+		"bad grouping":        "You have received Tk 12,34 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"zero":                "You have received Tk 0.00 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"impossible date":     "You have received Tk 500.00 from 01881114519. TrxID DJ168FS582 at 31/02/2026 15:40",
+		"balance only":        "You have received a message. Balance Tk 505.89. from 01881114519 TrxID DJ168FS582 at 01/10/2026 15:40",
+		"received but no tk":  "You have received 500 from 01881114519. TrxID DJ168FS582 at 01/10/2026 15:40",
+		"unrelated":           "Your account balance is Tk 4000",
+		"failed":              "Cash In Tk 500.00 from 01881114519 failed. TrxID DJ168FS582 at 01/10/2026 15:40",
 	}
 	for name, text := range bad {
 		for _, source := range []string{"bKash", "NAGAD"} {

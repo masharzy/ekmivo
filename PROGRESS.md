@@ -580,7 +580,8 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   Received", comma and lakh amounts, seconds, dd-mm-yyyy, ISO and 12-hour times, reordered fields, multi-line.
 - `ParserRule.RoutePattern()` gives the phone a lookahead prefilter for flex rules (used in receipt_pipeline.go and
   physical_devices.go). Not verified on a device: check the Android regex engine accepts it.
-- Fail-closed choices: a second mobile number anywhere in the SMS, two amounts, two ids or two times send it to review.
+- Fail-closed choices: the number after "from"/"Sender" is the payer even if another number appears; with no label the
+  SMS must hold exactly one number. Two labelled payers, two amounts, two ids or two times go to review.
 - NOT covered: Rocket (PipraPay's Rocket SMS masks the payer, so the payer match cannot work), Upay/Tap/Cellfin/...
   (need provider allowlist migrations), SMS with no time. Android `likelyPayment` still needs "received"/"cash in".
 - Evidence: 6 new flex tests plus the existing builtin/parser tests pass in an isolated Go 1.24 module. NOT run:
