@@ -547,3 +547,56 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   matched again.
 - Evidence: on the Neon production copy branch the 17 Nov 20:25 SMS now matches its attempt (all five checks
   true); no other attempt matches.
+
+## Nagad "Money Received" SMS rule — 2026-11-25, behind BRIOFOLD_NAGAD_MONEY_RECEIVED_ENABLED (default off)
+- Why: Nagad SMS were not verifying while bKash did. The only Nagad grammar (`builtin-nagad-received-v1`,
+  "You have received Tk… Current Balance… TxnID… Date:") uses the same sample TxnID, number and time as the bKash
+  test, so it looks derived from the bKash text, never from a consented real Nagad SMS (MANUAL-VERIFICATION still
+  lists real samples as open). The phone forwarder already accepts "Money Received. Amount: Tk… Sender:…" (see
+  `phone_forward_test.go`), but no parser rule recognised it, so it stayed unmatched.
+- New rule `builtin-nagad-money-received-v1` (Amount / Sender / optional Ref / TxnID / Balance / dd/mm/yyyy hh:mm),
+  whitespace-tolerant (one line or one field per line), anchored, balance opaque. Flag off = exactly the old two rules.
+- `ParserRule.AmountGrouping` (opt-in per rule, default false): strict thousands separators in the amount
+  ("1,250.50", lakh "1,00,000.00"). Only the new Nagad rule turns it on. bKash/old Nagad rules still reject commas.
+- `set-flag.sh` accepts the flag. The flag is read at API start (registry built once): use set-flag.sh.
+- Evidence: 7 new `checkout` tests + 2 new `deviceevidence` tests, run in an isolated module with Go 1.24 (the repo
+  needs Go 1.27, not installable in the cloud session) together with the existing builtin and parser tests: all pass.
+  NOT run: the full `checkout` package, CI, any database test.
+- NOT verified against a real Nagad SMS. The grammar comes from PipraPay's public Nagad template. Before turning the
+  flag on in production: send one real Nagad payment, read its text (phone), and compare with the rule.
+- Open question for the owner: bKash/old-Nagad amounts at or above 1,000 may arrive as "1,000.00"; those rules reject
+  commas, so such payments would stay unmatched. Needs one real bKash SMS of ≥ ৳1,000 to confirm.
+
+## Field-based ("flex") SMS parser for bKash and Nagad — 2026-11-25, behind BRIOFOLD_SMS_FLEX_ENABLED (default off)
+- Why: the strict rules match one exact sentence, so any wording change in a real provider SMS misses it, and real
+  samples are hard to collect. The sender is already known, so the receipt is now read by fields, not by sentence.
+- `ParserRule.Flex` (deviceevidence/flex.go): sender fixed by the caller; `Incoming` must match, `Reject` (outgoing,
+  OTP, failed, cash out, refund, ...) must not; Fee/Balance figures are removed; then exactly ONE distinct Tk amount
+  (commas ok), ONE mobile number, ONE TrxID/TxnID/Transaction ID and ONE date-time must remain. Missing or ambiguous
+  = error = kept for review, never paid. The parser extracts only; the five-field match stays in the database.
+- Flag on: `builtinSMSRules()` returns ONE flex rule per source (bKash, NAGAD) INSTEAD of the strict rules (and the
+  Nagad Money Received rule), because the phone path treats two rules that both parse one SMS as a conflict. Tests
+  prove every strict sample still parses identically, plus bKash Cash In / "received payment", Nagad "Money
+  Received", comma and lakh amounts, seconds, dd-mm-yyyy, ISO and 12-hour times, reordered fields, multi-line.
+- `ParserRule.RoutePattern()` gives the phone a lookahead prefilter for flex rules (used in receipt_pipeline.go and
+  physical_devices.go). Not verified on a device: check the Android regex engine accepts it.
+- Fail-closed choices: the number after "from"/"Sender" is the payer even if another number appears; with no label the
+  SMS must hold exactly one number. Two labelled payers, two amounts, two ids or two times go to review.
+- NOT covered: Rocket (PipraPay's Rocket SMS masks the payer, so the payer match cannot work), Upay/Tap/Cellfin/...
+  (need provider allowlist migrations), SMS with no time. Android `likelyPayment` still needs "received"/"cash in".
+- Evidence: 6 new flex tests plus the existing builtin/parser tests pass in an isolated Go 1.24 module. NOT run:
+  full checkout package, CI, DB, device. NOT verified on real SMS.
+- Update 2026-11-26 (owner decisions): (1) an SMS with NO date-time uses the time the phone observed it
+  (`observed_at`, truncated to the minute): `ParserRule.TimeFromObserved` + `ParseObserved`, used only by
+  phone_forward.go and only when the observed time is within -24h/+5min of server time; an SMS time always wins,
+  two times fail, strict rules ignore it. Not persisted anywhere: the audit row cannot yet tell the two apart.
+  (2) Amount is found by structure, not by the word "Tk": currency marker before or after the figure (Tk, Tk.,
+  Tk:, BDT, ৳, taka, টাকা) or an "Amount" label; Fee/Balance figures removed first; TxID/TrxID/TxnID labels.
+  (3) Rocket stays out: its SMS masks the payer. Bengali wording and Bengali digits are guesses, untested on real SMS.
+  Evidence: all 14 PipraPay-derived samples (bKash personal/cash in/merchant, Nagad personal/cash in, Upay, Tap,
+  CellFin, OK Wallet, mCash, Pathao Pay, taka-word forms) parse in an isolated Go 1.24 module; Rocket correctly fails.
+  Only bKash and NAGAD have flex rules in the product; the other providers need allowlist migrations and an
+  Android release (the Android and server pre-gates still require "received"/"tk " words).
+- Update 2026-11-26 (Rocket): flex flag now also adds `builtin-rocket-flex-v1` (source "Rocket"). A Rocket SMS with the
+  payer written out in full parses; the real masked one (`A/C:01826*****6`) still stays unmatched. Rocket's real SMS
+  has "Tk500.00" with no space, which the Android and server pre-gates (`"tk "`) would drop before the parser.

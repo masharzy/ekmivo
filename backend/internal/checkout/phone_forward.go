@@ -82,7 +82,11 @@ func (s *Service) handlePhoneForward(w http.ResponseWriter,r *http.Request,raw [
   if !rule.Approved || (rule.SandboxOnly && realm!="sandbox") ||
    !strings.EqualFold(rule.Source,event.Source) ||
    !rule.AcceptCapture(rule.Source,realm,event.Evidence){continue}
-  receipt,e:=rule.Parse(rule.Source,realm,event.Evidence)
+  // The phone-observed time may stand in for a missing SMS time (flex rules only);
+  // an implausible client time disables that fallback instead of being trusted.
+  observed:=event.ObservedAt
+  if now:=time.Now();observed.After(now.Add(5*time.Minute))||observed.Before(now.Add(-24*time.Hour)){observed=time.Time{}}
+  receipt,e:=rule.ParseObserved(rule.Source,realm,event.Evidence,observed)
   if e!=nil || receipt.Payer=="" || receipt.TransactionAt.IsZero() || receipt.Amount<=0 ||
    receipt.Reference==""{continue}
   if parsed!=nil {

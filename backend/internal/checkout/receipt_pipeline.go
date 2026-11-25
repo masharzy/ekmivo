@@ -561,10 +561,7 @@ func (s *Service) HandleDevice(w http.ResponseWriter, r *http.Request) {
 			fail(w, 503, "PARSER_UNAVAILABLE")
 			return
 		}
-		capturePattern := rule.CapturePattern
-		if capturePattern == "" {
-			capturePattern = rule.Pattern
-		}
+		capturePattern := rule.RoutePattern()
 		enrollment["capture_pattern"] = strings.ReplaceAll(capturePattern, "(?P<", "(?<")
 		write(w, 200, enrollment)
 		return

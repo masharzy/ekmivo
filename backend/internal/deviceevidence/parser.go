@@ -31,6 +31,22 @@ type ParserRule struct {
 	Precision      string `json:"precision"`
 	Approved       bool   `json:"approved"`
 	SandboxOnly    bool   `json:"sandbox_only"`
+	// AmountGrouping is opt-in per rule. When true the captured amount may carry
+	// strict thousands separators ("1,250.50" or lakh style "1,00,000.00"); the
+	// commas are removed before the strict decimal parse. Default false keeps the
+	// old behaviour: any comma in the amount is rejected.
+	AmountGrouping bool `json:"amount_grouping,omitempty"`
+	// Flex switches the rule to the field-based parser in flex.go: instead of one
+	// whole-message pattern, the receipt is accepted when Incoming matches, Reject
+	// does not, and every required field is found exactly once. Pattern and
+	// CapturePattern must then be empty. Incoming and Reject are plain RE2 (no
+	// flags, no lookaround); they are compiled case-insensitively.
+	Flex     bool   `json:"flex,omitempty"`
+	Incoming string `json:"incoming,omitempty"`
+	Reject   string `json:"reject,omitempty"`
+	// TimeFromObserved (flex only): when the SMS carries no date-time, use the time
+	// the phone observed it (see ParseObserved) instead of failing.
+	TimeFromObserved bool `json:"time_from_observed,omitempty"`
 }
 type ParsedReceipt struct {
 	Receiving     string // optional approved full receiving identity, never SMS originatingAddress
@@ -50,6 +66,9 @@ func (r ParserRule) AcceptCapture(source, realm, text string) bool {
 	if r.Validate() != nil || source != r.Source || (realm != "sandbox" && realm != "live") ||
 		(r.SandboxOnly && realm != "sandbox") || !utf8.ValidString(text) || len(text) > 8192 {
 		return false
+	}
+	if r.Flex {
+		return r.flexAccepts(text)
 	}
 	pattern, err := regexp.Compile(r.Pattern)
 	return err == nil && pattern.MatchString(text)
@@ -79,6 +98,25 @@ func NormalizeNumber(s string) (string, bool) {
 	}
 	return s, phonePattern.MatchString(s)
 }
+var (
+	westernGrouping = regexp.MustCompile(`^[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?$`)
+	lakhGrouping    = regexp.MustCompile(`^[0-9]{1,2}(?:,[0-9]{2})*,[0-9]{3}(?:\.[0-9]{1,2})?$`)
+)
+
+// stripAmountGrouping removes thousands separators only when they sit in a
+// strict western (1,234,567.00) or lakh (12,34,567.00) position. ASCII digits
+// only. Any other comma placement, e.g. "1,2", "1,00" or "12,34", is invalid.
+// An amount without a comma is returned unchanged.
+func stripAmountGrouping(s string) (string, bool) {
+	if !strings.Contains(s, ",") {
+		return s, true
+	}
+	if westernGrouping.MatchString(s) || lakhGrouping.MatchString(s) {
+		return strings.ReplaceAll(s, ",", ""), true
+	}
+	return "", false
+}
+
 func MinorUnits(s string) (int64, error) {
 	// Normalize numeral scripts without relaxing the strict decimal syntax.
 	// Parser rules must still explicitly permit these characters; this does
@@ -118,6 +156,9 @@ func MinorUnits(s string) (int64, error) {
 	return amount, nil
 }
 func (r ParserRule) Validate() error {
+	if r.Flex {
+		return r.validateFlex()
+	}
 	if len(r.Pattern) > 2048 || len(r.CapturePattern) > 2048 {
 		return errors.New("parser rule exceeds safe bounds")
 	}
@@ -153,13 +194,27 @@ func (r ParserRule) Validate() error {
 	_, e = time.LoadLocation(r.TimeZone)
 	return e
 }
+// ParseObserved is Parse for callers that know when the phone observed the SMS.
+// Only a flex rule with TimeFromObserved uses observed, and only when the SMS has
+// no date-time of its own; a zero observed time disables the fallback.
+func (r ParserRule) ParseObserved(source, realm, body string, observed time.Time) (ParsedReceipt, error) {
+	return r.parse(source, realm, body, observed)
+}
+
 func (r ParserRule) Parse(source, realm, body string) (ParsedReceipt, error) {
+	return r.parse(source, realm, body, time.Time{})
+}
+
+func (r ParserRule) parse(source, realm, body string, observed time.Time) (ParsedReceipt, error) {
 	var p ParsedReceipt
 	if !r.Approved || r.SandboxOnly && realm != "sandbox" || source != r.Source || len(body) > 8192 || !utf8.ValidString(body) {
 		return p, errors.New("unsupported receipt source")
 	}
 	if e := r.Validate(); e != nil {
 		return p, e
+	}
+	if r.Flex {
+		return r.parseFlex(body, observed)
 	}
 	expression := regexp.MustCompile(r.Pattern)
 	match := expression.FindStringSubmatch(body)
@@ -177,7 +232,15 @@ func (r ParserRule) Parse(source, realm, body string) (ParsedReceipt, error) {
 		return p, errors.New("missing actual full payer")
 	}
 	var e error
-	p.Amount, e = MinorUnits(capture("amount"))
+	capturedAmount := capture("amount")
+	if r.AmountGrouping {
+		grouped, valid := stripAmountGrouping(capturedAmount)
+		if !valid {
+			return p, errors.New("invalid amount")
+		}
+		capturedAmount = grouped
+	}
+	p.Amount, e = MinorUnits(capturedAmount)
 	if e != nil {
 		return p, e
 	}
