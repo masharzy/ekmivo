@@ -14,11 +14,42 @@ func nagadMoneyReceivedEnabled() bool {
 	return os.Getenv("BRIOFOLD_NAGAD_MONEY_RECEIVED_ENABLED") == "true"
 }
 
+// smsFlexEnabled switches bKash and Nagad from the exact-sentence rules to one
+// field-based rule each (see deviceevidence/flex.go). Off (the default) keeps the
+// strict rules. Same restart-time semantics as the flag above: use set-flag.sh.
+func smsFlexEnabled() bool {
+	return os.Getenv("BRIOFOLD_SMS_FLEX_ENABLED") == "true"
+}
+
+// flexSMSRules is a REPLACEMENT for the strict bKash/Nagad rules, never an
+// addition: the phone path treats two rules that both parse one SMS as a conflict,
+// so exactly one rule per source may exist. Each flex rule accepts every sentence
+// the strict rules accepted (a test enforces this) plus the other known layouts:
+// bKash "Cash In" and "received payment", Nagad "Money Received", amounts with
+// thousands separators, and other date-time styles.
+func flexSMSRules() []deviceevidence.ParserRule {
+	const reject = `\b(?:otp|pin|password|paid|cash[- ]?out|withdraw(?:n|al)?|recharge|bill|failed|unsuccessful|reversed|refund(?:ed)?|cancel(?:l?ed)?|request(?:ed)?)\b`
+	flex := func(id, source, method, incoming string) deviceevidence.ParserRule {
+		return deviceevidence.ParserRule{ID: id, Version: 1, Source: source, Method: method,
+			TimeLayout: "02/01/2006 15:04", TimeZone: "Asia/Dhaka", Precision: "minute",
+			Approved: true, Flex: true, Incoming: incoming, Reject: reject}
+	}
+	return []deviceevidence.ParserRule{
+		flex("builtin-bkash-flex-v1", "bKash", "bkash",
+			`\b(?:you have received|has been received|received payment|cash in)\b`),
+		flex("builtin-nagad-flex-v1", "NAGAD", "nagad",
+			`\b(?:you have received|has been received|money received|received payment|cash in)\b`),
+	}
+}
+
 // Built-in, versioned receipt grammar for the owner-provided bKash/Nagad samples.
 // These formats are deliberately narrow: a new provider message is stored for
 // review, never paid from partial fields or arbitrary keyword matching.
 // No merchant-created parser or customer-entered TrxID is required.
 func builtinSMSRules() []deviceevidence.ParserRule {
+	if smsFlexEnabled() {
+		return flexSMSRules()
+	}
 	const payer = `(?:\+?88)?01[3-9][0-9]{8}`
 	const amount = `[0-9]{1,10}(?:\.[0-9]{1,2})?`
 	const date = `[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}`

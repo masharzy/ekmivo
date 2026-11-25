@@ -415,10 +415,7 @@ func (s *Service) HandlePhysicalDevice(w http.ResponseWriter, r *http.Request, r
 			if !ok || !rule.Approved || rule.Source != binding.Source || (rule.SandboxOnly && realm != "sandbox") {
 				continue
 			}
-			pat := rule.CapturePattern
-			if pat == "" {
-				pat = rule.Pattern
-			}
+			pat := rule.RoutePattern()
 			binding.CapturePattern = strings.ReplaceAll(pat, "(?P<", "(?<")
 			var method, label, suffix string
 			if err := pool.QueryRow(r.Context(),

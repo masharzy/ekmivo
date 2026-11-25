@@ -36,6 +36,14 @@ type ParserRule struct {
 	// commas are removed before the strict decimal parse. Default false keeps the
 	// old behaviour: any comma in the amount is rejected.
 	AmountGrouping bool `json:"amount_grouping,omitempty"`
+	// Flex switches the rule to the field-based parser in flex.go: instead of one
+	// whole-message pattern, the receipt is accepted when Incoming matches, Reject
+	// does not, and every required field is found exactly once. Pattern and
+	// CapturePattern must then be empty. Incoming and Reject are plain RE2 (no
+	// flags, no lookaround); they are compiled case-insensitively.
+	Flex     bool   `json:"flex,omitempty"`
+	Incoming string `json:"incoming,omitempty"`
+	Reject   string `json:"reject,omitempty"`
 }
 type ParsedReceipt struct {
 	Receiving     string // optional approved full receiving identity, never SMS originatingAddress
@@ -55,6 +63,9 @@ func (r ParserRule) AcceptCapture(source, realm, text string) bool {
 	if r.Validate() != nil || source != r.Source || (realm != "sandbox" && realm != "live") ||
 		(r.SandboxOnly && realm != "sandbox") || !utf8.ValidString(text) || len(text) > 8192 {
 		return false
+	}
+	if r.Flex {
+		return r.flexAccepts(text)
 	}
 	pattern, err := regexp.Compile(r.Pattern)
 	return err == nil && pattern.MatchString(text)
@@ -142,6 +153,9 @@ func MinorUnits(s string) (int64, error) {
 	return amount, nil
 }
 func (r ParserRule) Validate() error {
+	if r.Flex {
+		return r.validateFlex()
+	}
 	if len(r.Pattern) > 2048 || len(r.CapturePattern) > 2048 {
 		return errors.New("parser rule exceeds safe bounds")
 	}
@@ -184,6 +198,9 @@ func (r ParserRule) Parse(source, realm, body string) (ParsedReceipt, error) {
 	}
 	if e := r.Validate(); e != nil {
 		return p, e
+	}
+	if r.Flex {
+		return r.parseFlex(body)
 	}
 	expression := regexp.MustCompile(r.Pattern)
 	match := expression.FindStringSubmatch(body)

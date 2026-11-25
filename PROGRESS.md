@@ -566,3 +566,22 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   flag on in production: send one real Nagad payment, read its text (phone), and compare with the rule.
 - Open question for the owner: bKash/old-Nagad amounts at or above 1,000 may arrive as "1,000.00"; those rules reject
   commas, so such payments would stay unmatched. Needs one real bKash SMS of ≥ ৳1,000 to confirm.
+
+## Field-based ("flex") SMS parser for bKash and Nagad — 2026-11-25, behind BRIOFOLD_SMS_FLEX_ENABLED (default off)
+- Why: the strict rules match one exact sentence, so any wording change in a real provider SMS misses it, and real
+  samples are hard to collect. The sender is already known, so the receipt is now read by fields, not by sentence.
+- `ParserRule.Flex` (deviceevidence/flex.go): sender fixed by the caller; `Incoming` must match, `Reject` (outgoing,
+  OTP, failed, cash out, refund, ...) must not; Fee/Balance figures are removed; then exactly ONE distinct Tk amount
+  (commas ok), ONE mobile number, ONE TrxID/TxnID/Transaction ID and ONE date-time must remain. Missing or ambiguous
+  = error = kept for review, never paid. The parser extracts only; the five-field match stays in the database.
+- Flag on: `builtinSMSRules()` returns ONE flex rule per source (bKash, NAGAD) INSTEAD of the strict rules (and the
+  Nagad Money Received rule), because the phone path treats two rules that both parse one SMS as a conflict. Tests
+  prove every strict sample still parses identically, plus bKash Cash In / "received payment", Nagad "Money
+  Received", comma and lakh amounts, seconds, dd-mm-yyyy, ISO and 12-hour times, reordered fields, multi-line.
+- `ParserRule.RoutePattern()` gives the phone a lookahead prefilter for flex rules (used in receipt_pipeline.go and
+  physical_devices.go). Not verified on a device: check the Android regex engine accepts it.
+- Fail-closed choices: a second mobile number anywhere in the SMS, two amounts, two ids or two times send it to review.
+- NOT covered: Rocket (PipraPay's Rocket SMS masks the payer, so the payer match cannot work), Upay/Tap/Cellfin/...
+  (need provider allowlist migrations), SMS with no time. Android `likelyPayment` still needs "received"/"cash in".
+- Evidence: 6 new flex tests plus the existing builtin/parser tests pass in an isolated Go 1.24 module. NOT run:
+  full checkout package, CI, DB, device. NOT verified on real SMS.
