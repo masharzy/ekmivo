@@ -18,6 +18,7 @@ func TestPaymentGatewaysFlagOffIsNotFound(t *testing.T) {
 		{"POST", "/v1/workspaces/aaaaaaaa-0000-4000-8000-000000000001/gateways?environment=live"},
 		{"GET", "/v1/workspaces/aaaaaaaa-0000-4000-8000-000000000001/payment-providers?environment=live"},
 		{"POST", "/v1/workspaces/aaaaaaaa-0000-4000-8000-000000000001/gateway-accounts/x/limits?environment=live"},
+		{"GET", "/v1/workspaces/aaaaaaaa-0000-4000-8000-000000000001/payment-reviews?environment=live&state=open"},
 	} {
 		rec := httptest.NewRecorder()
 		(&Service{}).HandlePaymentGateways(rec, httptest.NewRequest(c.method, c.path, bytes.NewBufferString(`{}`)))
@@ -38,7 +39,7 @@ func TestPaymentGatewaysNotReadyIsNotFound(t *testing.T) {
 
 func TestGatewayErrorCodes(t *testing.T) {
 	for state, want := range map[string]string{"P7201": "INVALID_GATEWAY", "P7202": "GATEWAY_VERSION_CONFLICT",
-		"P7203": "GATEWAY_HAS_ACCOUNTS", "P7204": "NOT_FOUND", "23505": ""} {
+		"P7203": "GATEWAY_HAS_ACCOUNTS", "P7204": "NOT_FOUND", "P7205": "REVIEW_DECIDED", "23505": ""} {
 		got := gatewayErrorCode(&pgconn.PgError{Code: state})
 		if got != want {
 			t.Fatalf("%s: got %q want %q", state, got, want)
@@ -66,7 +67,8 @@ func TestPaymentGatewaysHandlerHasNoMoneyOrLogging(t *testing.T) {
 	}
 	for _, fn := range []string{"briofold_gateway_list", "briofold_gateway_save", "briofold_gateway_action",
 		"briofold_gateway_reorder", "briofold_gateway_quote", "briofold_provider_list", "briofold_gateway_accounts",
-		"briofold_gateway_pick_account", "briofold_account_assign", "briofold_account_set_limits"} {
+		"briofold_gateway_pick_account", "briofold_account_assign", "briofold_account_set_limits",
+		"briofold_review_list", "briofold_review_approve", "briofold_review_reject"} {
 		if !strings.Contains(text, fn) {
 			t.Fatalf("handler does not call %s", fn)
 		}

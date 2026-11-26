@@ -330,6 +330,8 @@ func newHandlerWithCheckout(repo *authz.Repository, pay *checkout.Service) http.
 	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/gateways/{gatewayID}/{action}", pay.HandlePaymentGateways)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/gateways/{gatewayID}/{action}", pay.HandlePaymentGateways)
 	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/gateway-accounts/{accountID}/{action}", pay.HandlePaymentGateways)
+	mux.HandleFunc("GET /v1/workspaces/{workspaceID}/payment-reviews", pay.HandlePaymentGateways)
+	mux.HandleFunc("POST /v1/workspaces/{workspaceID}/payment-reviews/{reviewID}/{action}", pay.HandlePaymentGateways)
 	mux.HandleFunc("GET /v1/public/checkout/{token}", pay.HandlePublic)
 	mux.HandleFunc("GET /v1/public/checkout/{token}/proof", pay.HandlePublicProof)
 	mux.HandleFunc("POST /v1/public/checkout/{token}/proof", pay.HandlePublicProof)
