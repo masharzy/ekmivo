@@ -1,7 +1,7 @@
 -- Assertions for 0273 (after 0272 and 0273 each ran twice on payment-gateways-stub.sql).
-CREATE FUNCTION pg_temp.ok(cond boolean,msg text) RETURNS void LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION pg_temp.ok(cond boolean,msg text) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN IF cond IS NOT TRUE THEN RAISE EXCEPTION 'FAILED: %',msg; END IF; END $$;
-CREATE FUNCTION pg_temp.err(q text) RETURNS text LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION pg_temp.err(q text) RETURNS text LANGUAGE plpgsql AS $$
 BEGIN EXECUTE q; RETURN 'none'; EXCEPTION WHEN others THEN RETURN SQLSTATE; END $$;
 SELECT set_config('ekmivo.workspace_id','aaaaaaaa-0000-4000-8000-000000000001',false),set_config('ekmivo.environment','live',false);
 CREATE TEMP TABLE ids AS SELECT
