@@ -600,3 +600,12 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
 - Update 2026-11-26 (Rocket): flex flag now also adds `builtin-rocket-flex-v1` (source "Rocket"). A Rocket SMS with the
   payer written out in full parses; the real masked one (`A/C:01826*****6`) still stays unmatched. Rocket's real SMS
   has "Tk500.00" with no space, which the Android and server pre-gates (`"tk "`) would drop before the parser.
+
+## MFS provider logos — 2026-11-26
+- Added `apps/web/public/payment-assets/{upay,tap,cellfin,okwallet,mcash,pathaopay,ipay,telecash}.png`, 500x250 transparent
+  PNG like the existing bkash/nagad/rocket.png. Background made transparent (only white connected to the border, edges
+  feathered); checked visually on dark and light backgrounds.
+- Source: PipraPay's public repo (AGPL-3.0) image files. The marks belong to each provider. Replace with each provider's
+  official brand-kit file before showing them publicly, if one is available.
+- Not referenced by any code yet: none of these providers exists in the payment allowlists (SQL, Go, web `PayMethod`).
+  The admin catalog's "existing asset" field can point at them (`/payment-assets/<code>.png` passes its check).
