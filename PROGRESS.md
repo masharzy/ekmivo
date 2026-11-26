@@ -652,3 +652,33 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   payer hash in answers) passes locally with 0272-0274 applied twice; CI runs it.
 - Next: 3b tolerance (changes the matcher and the exact-amount trigger; owner approved 2026-11-26, defaults
   underpaid 0, overpaid 10 Tk), 3c TrxID without time limit.
+
+## Payment automation: real-schema check and fix — 2026-11-26
+- Applied 0272-0274 on a Neon copy of the live financial database (project "Briofold VPS copy", throwaway branch
+  `test-payment-phase3`, copy made 2026-11-26 19:17). 0272 failed: `financial_receiving_accounts` is append-only
+  in production, so `UPDATE ... SET gateway_id` is refused. The stand-in schema had no such rule. Fixed (PR #243):
+  the link is its own table `briofold_gateway_accounts`; the stand-in now makes the financial tables append-only.
+  After the fix: 8 gateways backfilled, all 14 live numbers linked; list, quote, picker, Pending list answer.
+- Real data seen (counts only): 51 receipts "no exact candidate", 47 of them from payers with no checkout at all
+  (money without a checkout), 2 where the payer had a checkout of the same amount on another number of the same
+  shop (pg06_phone_candidate falls back to the shop's first number of that method when no exact attempt fits;
+  likely wrong number chosen when a shop has several), 1 same amount outside the time window. Open question.
+
+## Payment automation Phase 3b: tolerance — 2026-11-26 (same flag; backfilled gateways stay exact)
+- Done: `0275_payment_tolerance.sql`. Gateways: underpaid tolerance (default 0) and overpaid tolerance (NULL = no
+  limit, 0 = exact; new gateways via API 10 Tk, backfilled 0). Attempts copy their gateway's tolerance when written
+  (trigger), so a later change never affects an open checkout. Overpaid within tolerance = normal SMS-verified
+  payment (verified = what arrived, allocation = checkout amount). Underpaid within tolerance = shop-confirmed
+  automatically (0271 proof + approved review case), never an SMS-verified payment. Two possible checkouts =
+  ambiguous (Pending). pg06_phone_candidate attributes a phone SMS within tolerance to the checkout's number.
+- pg07_match, financial_verify_payment_fields and pg06_phone_candidate are replaced only if their md5 equals the
+  production version read from the copy (otherwise the migration stops). Grants kept.
+- Evidence: `tools/testing/sql/production-matcher-0271.sql` recreates the three production functions in the
+  stand-in database and checks their md5 equals production; `payment-tolerance-test.sql` runs the real matcher:
+  exact unchanged, exact gateway 5 Tk extra -> Pending, 5 Tk extra within 10 Tk -> paid (verified 1005, allocated
+  1000), 20 Tk extra -> Pending, 2 Tk short within 3 Tk -> shop-confirmed, 10 Tk short -> Pending list, snapshot
+  kept after a gateway change, two candidates -> ambiguous, no limit, duplicate SMS, trigger refuses under/over,
+  phone attribution. All pass locally (PG16) and on CI. 0275 also applied on the Neon copy: guard matched
+  production, 41 existing attempts and 8 gateways exact, new gateway gets 10 Tk.
+- Not verified: a full checkout through the production attempt issuance (plan-allowance trigger needs a full shop
+  setup); the tolerance trigger runs before it and only sets two columns.
