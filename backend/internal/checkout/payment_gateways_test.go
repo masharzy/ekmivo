@@ -3,7 +3,6 @@ package checkout
 import (
 	"bytes"
 	"errors"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
