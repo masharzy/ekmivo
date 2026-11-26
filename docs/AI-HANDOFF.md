@@ -35,13 +35,22 @@ It replaces older notes where they disagree. Then read `docs/plans/ai-production
 
 Deploy only from a GitHub commit, only with the script. Never place code on the VPS by hand: earlier VPS-only fixes were lost from the repo and had to be recovered (`docs/recovered/vps-2026-11-10/`).
 
+Since 2026-11-15 the one script is `deploy/vps/release.sh` (runbook `docs/runbooks/vps-repo-stabilize.bn.md`). The commit must be on `origin/main`. Always dry-run first, show the owner the plan (especially which migrations will run), and release only after the owner says so.
+
 ```bash
-cd /opt/briofold/rename-release/src && git fetch origin <branch> && git show <full-40-char-hash>:deploy/vps/ai-payments-v2.sh > ~/ai-payments-v2.sh
-sudo bash ~/ai-payments-v2.sh <full-40-char-hash>
+cd /opt/briofold/rename-release/src && git fetch origin main && git show <full-40-char-hash>:deploy/vps/release.sh > ~/release.sh
+sudo bash ~/release.sh <full-40-char-hash> --dry-run    # checks and plan only, changes nothing
+sudo bash ~/release.sh <full-40-char-hash>              # release
+sudo bash ~/release.sh --rollback                       # previous API image and settings
 ```
 
-The script checks health, dumps all three databases, applies migrations 0247 to 0253, builds the API image, restarts the API, watches health for 30 s and rolls the API back on failure. `--rollback` and `--flag-off` exist. The restore paths have not been exercised on the real VPS.
-New migrations must be added to the script's list, to `backend/cmd/financial-migrate/dashboard_reference.go` and to `apps/web/scripts/briofold-ai-commerce-acceptance.mjs`.
+The script checks that production database functions equal the recorded baseline (any drift stops it), takes verified dumps of all three databases, runs pending migrations only through the coordinator (`financial-migrate`, recorded in the ledger), switches the API, watches health and rolls the API back on failure. Database rollback is never automatic: restore from the printed dumps.
+
+Feature flags: `deploy/vps/set-flag.sh`, taken from the same commit (`git show <hash>:deploy/vps/set-flag.sh > ~/set-flag.sh`, then `sudo bash ~/set-flag.sh <FLAG> on|off`). Only flags in its `allowed` list.
+
+Known issue: `release.sh` runs `git fetch` as root, so new objects in `.git` become root-owned and the owner's next plain `git fetch` fails with "Permission denied". Fix: `cd /opt/briofold/rename-release/src && sudo chown -R briofold:briofold .git`.
+
+`deploy/vps/ai-payments-v2.sh` is retired: it fetches the old `ai-payments-v2` branch and knows only migrations 0247 to 0253. Do not use it.
 
 CI: `.github/workflows/ci.yml`. The job "Next.js lint, build and isolated PostgreSQL smoke" takes 30 to 50 minutes. Wait for green before deploy. From Claude cloud sessions GitHub GraphQL is blocked: use `gh api` REST.
 
