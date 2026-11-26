@@ -196,6 +196,11 @@ jobs:
         env:
           PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
         run: node scripts/subscription-intents-pg-smoke.mjs
+      - name: Payment gateways 0272 on an isolated PostgreSQL database
+        working-directory: apps/web
+        env:
+          PG00_TEST_DATABASE_URL: postgresql://ekmivo_test:local-only-ci-password@127.0.0.1:5432/ekmivo_pg00
+        run: node scripts/payment-gateways-pg-smoke.mjs
       - name: Typecheck Next.js application before long-running integration tests
         working-directory: apps/web
         run: npx tsc --noEmit -p tsconfig.json

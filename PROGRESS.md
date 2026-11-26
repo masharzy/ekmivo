@@ -600,3 +600,25 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
 - Update 2026-11-26 (Rocket): flex flag now also adds `builtin-rocket-flex-v1` (source "Rocket"). A Rocket SMS with the
   payer written out in full parses; the real masked one (`A/C:01826*****6`) still stays unmatched. Rocket's real SMS
   has "Tk500.00" with no space, which the Android and server pre-gates (`"tk "`) would drop before the parser.
+
+## Payment automation Phase 1: gateways — 2026-11-26 (flag BRIOFOLD_PAYMENT_GATEWAYS_ENABLED, default off)
+- Done: migration `0272_payment_gateways.sql` (both financial realms): provider registry (13 MFS providers) with SMS
+  senders (exact text + confidence official/observed/unverified + content hint for shared senders such as
+  "IslamiBank" for mCash and CellFin), `briofold_gateways` (provider x type, label, display name, min/max, fixed and
+  percent discount and charge, QR key, status, order, version, soft delete), optional
+  `financial_receiving_accounts.gateway_id`, backfill (one "personal" gateway per shop and existing method, current
+  accounts linked; deleted accounts not). Empty limit = no limit, 0 is a real value. Money arithmetic only in SQL
+  (`briofold_gateway_payable`, paisa, half-up); limits compare the order amount before discount/charge (owner).
+- API (`backend/internal/checkout/payment_gateways.go`): providers, list, create, edit (version check), status,
+  duplicate (disabled, no accounts), delete (refused while accounts are linked), reorder, quote. Read: payments:read;
+  change: signed-in payments:manage. Flag off: every route 404. Checkout, matching and AI are unchanged.
+- Bug found by the tests and fixed: an unset session setting made the scope check NULL, which let the function run;
+  `briofold_gateway_scope` now COALESCEs to false. The same pattern exists in older scope functions (e.g.
+  `briofold_proof_scope`, 0270); not changed here, listed as an open question.
+- Evidence: 0272 applied twice on PostgreSQL 16 with stand-in financial tables, `tools/testing/sql/payment-gateways-test.sql`
+  (registry, backfill, arithmetic, scope isolation, validation, versions, quote reasons, duplicate/delete/reorder,
+  grants) all pass locally. Go code not compiled locally (no module cache, no network): CI must prove it. CI runs the
+  same SQL test (`apps/web/scripts/payment-gateways-pg-smoke.mjs`) and the new Go tests.
+- Not done: QR upload (Phase 6), new providers' receiving accounts (method CHECK, Phase 7), any UI.
+- Deploy note: release needs `--allow-db-change` (new functions) and the baseline files updated after release.
+- Open: older scope functions with the NULL pattern; real letter case of unverified senders (learn-and-confirm, Phase 7).
