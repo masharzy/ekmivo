@@ -1,10 +1,10 @@
 -- Assertions for 0272 after it ran twice on payment-gateways-stub.sql.
 -- Any failed check raises and stops the run.
-CREATE FUNCTION pg_temp.ok(cond boolean,msg text) RETURNS void LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION pg_temp.ok(cond boolean,msg text) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN IF cond IS NOT TRUE THEN RAISE EXCEPTION 'FAILED: %',msg; END IF; END $$;
-CREATE FUNCTION pg_temp.err(q text) RETURNS text LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION pg_temp.err(q text) RETURNS text LANGUAGE plpgsql AS $$
 BEGIN EXECUTE q; RETURN 'none'; EXCEPTION WHEN others THEN RETURN SQLSTATE; END $$;
-CREATE FUNCTION pg_temp.as_shop(ws text) RETURNS void LANGUAGE sql AS $$
+CREATE OR REPLACE FUNCTION pg_temp.as_shop(ws text) RETURNS void LANGUAGE sql AS $$
  SELECT set_config('ekmivo.workspace_id',ws,false),set_config('ekmivo.environment','live',false) $$;
 
 -- Registry and senders
