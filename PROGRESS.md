@@ -622,3 +622,17 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
 - Not done: QR upload (Phase 6), new providers' receiving accounts (method CHECK, Phase 7), any UI.
 - Deploy note: release needs `--allow-db-change` (new functions) and the baseline files updated after release.
 - Open: older scope functions with the NULL pattern; real letter case of unverified senders (learn-and-confirm, Phase 7).
+
+## Payment automation Phase 2: numbers in a gateway — 2026-11-26 (same flag, default off)
+- Done: migration `0273_gateway_accounts.sql`: per-number receive limits (daily/monthly count and amount; NULL = no
+  limit, 0 = real 0), usage = incoming SMS receipts on the number per Asia/Dhaka day and month (all senders, because
+  the provider's limit counts everything), `briofold_gateway_pick_account` (online, enabled, within limits, least
+  recently given out = oldest payment attempt; read-only), assign a number to a gateway (method must match the
+  provider), set limits, list numbers with usage. API: gateways/{id}/accounts, gateways/{id}/next-account,
+  gateway-accounts/{account}/assign, gateway-accounts/{account}/limits.
+- Not yet used by checkout: the customer still picks a number tile. Phase 5 switches checkout to the picked number.
+- Evidence: 0272 and 0273 applied twice on PostgreSQL 16 stand-ins; `tools/testing/sql/gateway-accounts-test.sql`
+  (offline skipped, rotation order, 0 vs null limits, would-cross for count and amount, outgoing ignored, all blocked,
+  assign rules, cross-shop refusal, grants) passes locally; CI runs both SQL tests.
+- Choice to confirm: usage counts only money that arrived (not checkouts still waiting), so two checkouts started
+  at the same moment can together go over a limit by one payment.

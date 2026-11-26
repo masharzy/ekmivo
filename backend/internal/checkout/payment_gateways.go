@@ -27,6 +27,10 @@ import (
 //	PATCH /v1/workspaces/{ws}/gateways/{id}                 {"version":n,"gateway":{...}}
 //	GET   /v1/workspaces/{ws}/gateways/{id}/quote?amount_minor=n
 //	POST  /v1/workspaces/{ws}/gateways/{id}/{status|duplicate|delete}
+//	GET   /v1/workspaces/{ws}/gateways/{id}/accounts?amount_minor=n   numbers, limits, usage (Phase 2)
+//	GET   /v1/workspaces/{ws}/gateways/{id}/next-account?amount_minor=n  which number turns next
+//	POST  /v1/workspaces/{ws}/gateway-accounts/{account}/assign      {"gateway_id":"..."}
+//	POST  /v1/workspaces/{ws}/gateway-accounts/{account}/limits      {"limits":{...}}
 //
 // Reading needs payments:read. Changes need a signed-in owner or admin
 // (payments:manage), like phones and receiving accounts.
@@ -35,10 +39,12 @@ func paymentGatewaysEnabled() bool {
 }
 
 type gatewayChange struct {
-	Version int64           `json:"version"`
-	Status  string          `json:"status"`
-	IDs     []string        `json:"ids"`
-	Gateway json.RawMessage `json:"gateway"`
+	Version   int64           `json:"version"`
+	GatewayID string          `json:"gateway_id"`
+	Limits    json.RawMessage `json:"limits"`
+	Status    string          `json:"status"`
+	IDs       []string        `json:"ids"`
+	Gateway   json.RawMessage `json:"gateway"`
 }
 
 func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) {
@@ -51,8 +57,8 @@ func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) 
 		fail(w, 400, "INVALID_SCOPE")
 		return
 	}
-	id, action := r.PathValue("gatewayID"), r.PathValue("action")
-	if id != "" && !uuidPattern.MatchString(id) {
+	id, action, account := r.PathValue("gatewayID"), r.PathValue("action"), r.PathValue("accountID")
+	if id != "" && !uuidPattern.MatchString(id) || account != "" && !uuidPattern.MatchString(account) {
 		fail(w, 404, "NOT_FOUND")
 		return
 	}
@@ -95,9 +101,34 @@ func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) 
 				return errGatewayInput
 			}
 			return tx.QueryRow(ctx, "SELECT briofold_gateway_quote($1::uuid,$2,$3::uuid,$4)", ws, realm, id, amount).Scan(&raw)
-		case r.Method == "POST" && id == "" && action == "reorder":
+		case read && (action == "accounts" || action == "next-account"):
+			var amount any
+			if q := r.URL.Query().Get("amount_minor"); q != "" || action == "next-account" {
+				n, e := strconv.ParseInt(q, 10, 64)
+				if e != nil {
+					return errGatewayInput
+				}
+				amount = n
+			}
+			fn := "briofold_gateway_accounts"
+			if action == "next-account" {
+				fn = "briofold_gateway_pick_account"
+			}
+			return tx.QueryRow(ctx, "SELECT "+fn+"($1::uuid,$2,$3::uuid,$4)", ws, realm, id, amount).Scan(&raw)
+		case r.Method == "POST" && account != "" && action == "assign":
+			if !uuidPattern.MatchString(body.GatewayID) {
+				return errGatewayInput
+			}
+			return tx.QueryRow(ctx, "SELECT briofold_account_assign($1::uuid,$2,$3::uuid,$4::uuid)", ws, realm, account, body.GatewayID).Scan(&raw)
+		case r.Method == "POST" && account != "" && action == "limits":
+			limits := []byte(body.Limits)
+			if len(limits) == 0 {
+				limits = []byte("{}")
+			}
+			return tx.QueryRow(ctx, "SELECT briofold_account_set_limits($1::uuid,$2,$3::uuid,$4::jsonb)", ws, realm, account, limits).Scan(&raw)
+		case r.Method == "POST" && id == "" && account == "" && action == "reorder":
 			return tx.QueryRow(ctx, "SELECT briofold_gateway_reorder($1::uuid,$2,$3::uuid[])", ws, realm, body.IDs).Scan(&raw)
-		case r.Method == "POST" && id == "" && action == "":
+		case r.Method == "POST" && id == "" && account == "" && action == "":
 			return tx.QueryRow(ctx, "SELECT briofold_gateway_save($1::uuid,$2,NULL,$3::jsonb,NULL)", ws, realm, gateway).Scan(&raw)
 		case r.Method == "PATCH" && id != "" && action == "":
 			return tx.QueryRow(ctx, "SELECT briofold_gateway_save($1::uuid,$2,$3::uuid,$4::jsonb,$5)", ws, realm, id, gateway, body.Version).Scan(&raw)
@@ -119,7 +150,7 @@ func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) 
 		fail(w, 404, "NOT_FOUND")
 	case err == nil:
 		status := 200
-		if r.Method == "POST" && action == "" || action == "duplicate" {
+		if r.Method == "POST" && action == "" && account == "" || action == "duplicate" {
 			status = 201
 		}
 		write(w, status, json.RawMessage(raw))

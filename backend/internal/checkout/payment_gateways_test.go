@@ -17,6 +17,7 @@ func TestPaymentGatewaysFlagOffIsNotFound(t *testing.T) {
 		{"GET", "/v1/workspaces/aaaaaaaa-0000-4000-8000-000000000001/gateways?environment=live"},
 		{"POST", "/v1/workspaces/aaaaaaaa-0000-4000-8000-000000000001/gateways?environment=live"},
 		{"GET", "/v1/workspaces/aaaaaaaa-0000-4000-8000-000000000001/payment-providers?environment=live"},
+		{"POST", "/v1/workspaces/aaaaaaaa-0000-4000-8000-000000000001/gateway-accounts/x/limits?environment=live"},
 	} {
 		rec := httptest.NewRecorder()
 		(&Service{}).HandlePaymentGateways(rec, httptest.NewRequest(c.method, c.path, bytes.NewBufferString(`{}`)))
@@ -64,7 +65,8 @@ func TestPaymentGatewaysHandlerHasNoMoneyOrLogging(t *testing.T) {
 		}
 	}
 	for _, fn := range []string{"briofold_gateway_list", "briofold_gateway_save", "briofold_gateway_action",
-		"briofold_gateway_reorder", "briofold_gateway_quote", "briofold_provider_list"} {
+		"briofold_gateway_reorder", "briofold_gateway_quote", "briofold_provider_list", "briofold_gateway_accounts",
+		"briofold_gateway_pick_account", "briofold_account_assign", "briofold_account_set_limits"} {
 		if !strings.Contains(text, fn) {
 			t.Fatalf("handler does not call %s", fn)
 		}
