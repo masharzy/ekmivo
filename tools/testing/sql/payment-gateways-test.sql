@@ -18,12 +18,12 @@ SELECT pg_temp.ok((SELECT string_agg(content_hint,',' ORDER BY content_hint) FRO
 SELECT pg_temp.ok((SELECT count(*) FROM briofold_gateways)=3,'three backfilled gateways after two runs');
 SELECT pg_temp.ok((SELECT count(*) FROM briofold_gateways WHERE legacy_backfill AND gateway_type='personal'
  AND min_amount_minor IS NULL AND max_amount_minor IS NULL AND fixed_charge_minor=0 AND status='active')=3,'backfill defaults');
-SELECT pg_temp.ok((SELECT count(*) FROM financial_receiving_accounts WHERE gateway_id IS NOT NULL)=4,'four live accounts linked');
-SELECT pg_temp.ok((SELECT gateway_id IS NULL FROM financial_receiving_accounts WHERE id='00000000-0000-4000-8000-0000000000a4'),'deleted account not linked');
-SELECT pg_temp.ok((SELECT count(DISTINCT gateway_id) FROM financial_receiving_accounts WHERE id IN
+SELECT pg_temp.ok((SELECT count(*) FROM briofold_gateway_accounts)=4,'four live accounts linked');
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM briofold_gateway_accounts WHERE account_id='00000000-0000-4000-8000-0000000000a4'),'deleted account not linked');
+SELECT pg_temp.ok((SELECT count(DISTINCT gateway_id) FROM briofold_gateway_accounts WHERE account_id IN
  ('00000000-0000-4000-8000-0000000000a1','00000000-0000-4000-8000-0000000000a2'))=1,'both bKash numbers in one gateway');
-SELECT pg_temp.ok((SELECT g.workspace_id FROM briofold_gateways g JOIN financial_receiving_accounts a ON a.gateway_id=g.id
- WHERE a.id='00000000-0000-4000-8000-0000000000b1')='bbbbbbbb-0000-4000-8000-000000000002','shop B account in shop B gateway');
+SELECT pg_temp.ok((SELECT g.workspace_id FROM briofold_gateways g JOIN briofold_gateway_accounts a ON a.gateway_id=g.id
+ WHERE a.account_id='00000000-0000-4000-8000-0000000000b1')='bbbbbbbb-0000-4000-8000-000000000002','shop B account in shop B gateway');
 
 -- Arithmetic: half-up to paisa
 SELECT pg_temp.ok(briofold_gateway_payable(100000,0,0,0,0)->>'payable_minor'='100000','no charge');
@@ -81,11 +81,11 @@ SELECT pg_temp.ok(briofold_gateway_quote('aaaaaaaa-0000-4000-8000-000000000001',
 
 -- Duplicate (disabled copy, no accounts), delete refused while accounts linked, delete ok when empty
 CREATE TEMP TABLE c AS SELECT briofold_gateway_action('aaaaaaaa-0000-4000-8000-000000000001','live',
- (SELECT gateway_id FROM financial_receiving_accounts WHERE id='00000000-0000-4000-8000-0000000000a1'),'duplicate',NULL,NULL) j;
+ (SELECT gateway_id FROM briofold_gateway_accounts WHERE account_id='00000000-0000-4000-8000-0000000000a1'),'duplicate',NULL,NULL) j;
 SELECT pg_temp.ok((SELECT j->>'status' FROM c)='disabled' AND (SELECT (j->>'account_count')::int FROM c)=0,'duplicate is disabled and empty');
 SELECT pg_temp.ok(pg_temp.err($q$SELECT briofold_gateway_action('aaaaaaaa-0000-4000-8000-000000000001','live',
- (SELECT gateway_id FROM financial_receiving_accounts WHERE id='00000000-0000-4000-8000-0000000000a1'),'delete',NULL,
- (SELECT version FROM briofold_gateways WHERE id=(SELECT gateway_id FROM financial_receiving_accounts WHERE id='00000000-0000-4000-8000-0000000000a1')))$q$)='P7203','cannot delete with accounts');
+ (SELECT gateway_id FROM briofold_gateway_accounts WHERE account_id='00000000-0000-4000-8000-0000000000a1'),'delete',NULL,
+ (SELECT version FROM briofold_gateways WHERE id=(SELECT gateway_id FROM briofold_gateway_accounts WHERE account_id='00000000-0000-4000-8000-0000000000a1')))$q$)='P7203','cannot delete with accounts');
 SELECT pg_temp.ok((briofold_gateway_action('aaaaaaaa-0000-4000-8000-000000000001','live',(SELECT (j->>'id')::uuid FROM c),'delete',NULL,
  (SELECT (j->>'version')::bigint FROM c))->>'deleted')::boolean,'empty gateway deleted');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM jsonb_array_elements(briofold_gateway_list('aaaaaaaa-0000-4000-8000-000000000001','live')->'items') x

@@ -62,3 +62,16 @@ CREATE FUNCTION pg05_intent_state(p_workspace uuid,p_environment text,p_intent u
   AND intent_id=p_intent AND state='approved') THEN 'completed' ELSE 'awaiting_payment' END $$;
 CREATE FUNCTION briofold_sms_window_start(window_start timestamptz,precision_name text) RETURNS timestamptz
 LANGUAGE sql STABLE AS $$ SELECT CASE WHEN precision_name='minute' THEN date_trunc('minute',window_start) ELSE window_start END $$;
+
+-- Production makes these tables append-only (financial_reject_history_change, 0008). Same rule here so a
+-- migration that updates or deletes their rows fails in the test as it would in production.
+CREATE FUNCTION financial_reject_history_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'immutable financial history' USING ERRCODE='55000'; END $$;
+CREATE TRIGGER financial_receiving_accounts_immutable BEFORE UPDATE OR DELETE ON financial_receiving_accounts
+ FOR EACH ROW EXECUTE FUNCTION financial_reject_history_change();
+CREATE TRIGGER payment_attempts_immutable BEFORE UPDATE OR DELETE ON payment_attempts
+ FOR EACH ROW EXECUTE FUNCTION financial_reject_history_change();
+CREATE TRIGGER payment_intents_immutable BEFORE UPDATE OR DELETE ON payment_intents
+ FOR EACH ROW EXECUTE FUNCTION financial_reject_history_change();
+CREATE TRIGGER financial_receipt_observations_immutable BEFORE UPDATE OR DELETE ON financial_receipt_observations
+ FOR EACH ROW EXECUTE FUNCTION financial_reject_history_change();

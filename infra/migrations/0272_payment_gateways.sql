@@ -8,8 +8,10 @@
 --   only in Phase 1; matching does not read it yet.
 -- * briofold_gateways: one row per shop gateway. An empty limit (NULL) means
 --   "no limit"; 0 is a real number. Percent values are basis points (1% = 100).
--- * financial_receiving_accounts.gateway_id: optional link. No existing column,
---   constraint or function is changed.
+-- * briofold_gateway_accounts: which gateway a receiving account belongs to. A
+--   separate table because financial_receiving_accounts is immutable history
+--   (financial_reject_history_change). No existing table, column or function is
+--   changed.
 -- * Backfill: one "personal" gateway per shop and existing method (bkash, nagad,
 --   rocket), and the shop's current accounts of that method are linked to it.
 --   Only new rows and the new column; existing rows keep every other value.
@@ -134,15 +136,16 @@ CREATE INDEX IF NOT EXISTS briofold_gateways_shop ON briofold_gateways(workspace
 CREATE UNIQUE INDEX IF NOT EXISTS briofold_gateways_one_backfill ON briofold_gateways(workspace_id,environment,provider)
  WHERE legacy_backfill;
 
-ALTER TABLE financial_receiving_accounts ADD COLUMN IF NOT EXISTS gateway_id uuid;
-DO $$BEGIN
- IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='financial_receiving_accounts_gateway_fk') THEN
-  ALTER TABLE financial_receiving_accounts ADD CONSTRAINT financial_receiving_accounts_gateway_fk
-   FOREIGN KEY(workspace_id,environment,gateway_id) REFERENCES briofold_gateways(workspace_id,environment,id);
- END IF;
-END $$;
-CREATE INDEX IF NOT EXISTS financial_receiving_accounts_gateway ON financial_receiving_accounts(gateway_id)
- WHERE gateway_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS briofold_gateway_accounts(
+ workspace_id uuid NOT NULL,
+ environment text NOT NULL CHECK(environment IN ('sandbox','live')),
+ account_id uuid PRIMARY KEY,
+ gateway_id uuid NOT NULL,
+ assigned_at timestamptz NOT NULL DEFAULT now(),
+ FOREIGN KEY(workspace_id,environment,account_id) REFERENCES financial_receiving_accounts(workspace_id,environment,id),
+ FOREIGN KEY(workspace_id,environment,gateway_id) REFERENCES briofold_gateways(workspace_id,environment,id)
+);
+CREATE INDEX IF NOT EXISTS briofold_gateway_accounts_gateway ON briofold_gateway_accounts(gateway_id);
 
 -- Backfill: existing shops keep working exactly as before; the gateways only
 -- describe what is already there.
@@ -154,11 +157,14 @@ JOIN briofold_providers p ON p.legacy_method=a.method
 JOIN financial_workspace_registry r ON r.workspace_id=a.workspace_id AND r.environment=a.environment
 ON CONFLICT DO NOTHING;
 
-UPDATE financial_receiving_accounts a SET gateway_id=g.id
-FROM pg06_account_configuration c, briofold_providers p, briofold_gateways g
-WHERE a.gateway_id IS NULL AND c.account_id=a.id AND c.deleted_at IS NULL
- AND p.legacy_method=a.method AND g.legacy_backfill AND g.deleted_at IS NULL
- AND g.workspace_id=a.workspace_id AND g.environment=a.environment AND g.provider=p.code;
+INSERT INTO briofold_gateway_accounts(workspace_id,environment,account_id,gateway_id)
+SELECT a.workspace_id,a.environment,a.id,g.id
+FROM financial_receiving_accounts a
+JOIN pg06_account_configuration c ON c.account_id=a.id AND c.deleted_at IS NULL
+JOIN briofold_providers p ON p.legacy_method=a.method
+JOIN briofold_gateways g ON g.legacy_backfill AND g.deleted_at IS NULL
+ AND g.workspace_id=a.workspace_id AND g.environment=a.environment AND g.provider=p.code
+ON CONFLICT(account_id) DO NOTHING;
 
 -- Arithmetic only, no data access. Half-up rounding to whole paisa.
 CREATE OR REPLACE FUNCTION briofold_gateway_payable(p_amount bigint,p_fixed_discount bigint,p_percent_discount integer,
@@ -188,9 +194,9 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
   'fixed_charge_minor',g.fixed_charge_minor,'percent_charge_bp',g.percent_charge_bp,
   'has_qr',g.qr_object_key IS NOT NULL,'status',g.status,'position',g.position,
   'version',g.version,'created_at',g.created_at,'updated_at',g.updated_at,
-  'account_count',(SELECT count(*) FROM financial_receiving_accounts a
-    JOIN pg06_account_configuration c ON c.account_id=a.id AND c.deleted_at IS NULL
-    WHERE a.gateway_id=g.id))
+  'account_count',(SELECT count(*) FROM briofold_gateway_accounts m
+    JOIN pg06_account_configuration c ON c.account_id=m.account_id AND c.deleted_at IS NULL
+    WHERE m.gateway_id=g.id))
  FROM briofold_providers p WHERE p.code=g.provider
 $$;
 
@@ -282,8 +288,8 @@ BEGIN
   IF p_status IS NULL OR p_status NOT IN ('active','disabled') THEN RAISE EXCEPTION 'invalid gateway' USING ERRCODE='P7201'; END IF;
   UPDATE briofold_gateways SET status=p_status,version=version+1,updated_at=now() WHERE id=g.id RETURNING * INTO g;
  ELSIF p_action='delete' THEN
-  IF EXISTS(SELECT 1 FROM financial_receiving_accounts a JOIN pg06_account_configuration c
-    ON c.account_id=a.id AND c.deleted_at IS NULL WHERE a.gateway_id=g.id) THEN
+  IF EXISTS(SELECT 1 FROM briofold_gateway_accounts m JOIN pg06_account_configuration c
+    ON c.account_id=m.account_id AND c.deleted_at IS NULL WHERE m.gateway_id=g.id) THEN
    RAISE EXCEPTION 'gateway has accounts' USING ERRCODE='P7203'; END IF;
   UPDATE briofold_gateways SET deleted_at=now(),status='disabled',version=version+1,updated_at=now()
    WHERE id=g.id RETURNING * INTO g;
@@ -337,7 +343,7 @@ BEGIN
  RETURN q||jsonb_build_object('gateway_id',g.id,'offered',why IS NULL,'reason',why);
 END $$;
 
-REVOKE ALL ON TABLE briofold_providers,briofold_provider_senders,briofold_gateways FROM PUBLIC;
+REVOKE ALL ON TABLE briofold_providers,briofold_provider_senders,briofold_gateways,briofold_gateway_accounts FROM PUBLIC;
 REVOKE ALL ON FUNCTION briofold_gateway_payable(bigint,bigint,integer,bigint,integer),
  briofold_gateway_scope(uuid,text),briofold_gateway_json(briofold_gateways),briofold_provider_list(),
  briofold_gateway_list(uuid,text),briofold_gateway_save(uuid,text,uuid,jsonb,bigint),

@@ -14,7 +14,7 @@
 -- Safe to run twice.
 BEGIN;
 DO $$BEGIN
- IF to_regclass('public.briofold_gateways') IS NULL OR to_regprocedure('briofold_gateway_scope(uuid,text)') IS NULL
+ IF to_regclass('public.briofold_gateway_accounts') IS NULL OR to_regprocedure('briofold_gateway_scope(uuid,text)') IS NULL
   OR to_regclass('public.financial_receipt_observations') IS NULL OR to_regclass('public.payment_attempts') IS NULL
   OR to_regclass('public.pg06_devices') IS NULL OR to_regclass('public.pg06_phones') IS NULL THEN
   RAISE EXCEPTION '0273 requires 0272 and the phone and receipt tables';
@@ -87,9 +87,10 @@ BEGIN
    'usage',briofold_account_usage(a.id),
    'limit_reason',CASE WHEN p_amount IS NULL THEN NULL ELSE briofold_account_limit_reason(a.id,p_amount) END)
    ORDER BY a.created_at,a.id)
-  FROM financial_receiving_accounts a JOIN pg06_account_configuration c ON c.account_id=a.id AND c.deleted_at IS NULL
+  FROM briofold_gateway_accounts m JOIN financial_receiving_accounts a ON a.id=m.account_id
+  JOIN pg06_account_configuration c ON c.account_id=a.id AND c.deleted_at IS NULL
   LEFT JOIN briofold_account_limits l ON l.account_id=a.id
-  WHERE a.gateway_id=p_gateway AND a.workspace_id=p_workspace AND a.environment=p_environment),'[]'::jsonb));
+  WHERE m.gateway_id=p_gateway AND a.workspace_id=p_workspace AND a.environment=p_environment),'[]'::jsonb));
 END $$;
 
 -- The next number for a payment of p_amount through this gateway, or a reason.
@@ -102,16 +103,16 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM briofold_gateways WHERE id=p_gateway AND workspace_id=p_workspace
    AND environment=p_environment AND deleted_at IS NULL) THEN RAISE EXCEPTION 'gateway not found' USING ERRCODE='P7204'; END IF;
  SELECT a.id,a.display_suffix INTO pick
- FROM financial_receiving_accounts a JOIN pg06_account_configuration c ON c.account_id=a.id
-  AND c.deleted_at IS NULL AND c.disabled_at IS NULL
- WHERE a.gateway_id=p_gateway AND a.workspace_id=p_workspace AND a.environment=p_environment
+ FROM briofold_gateway_accounts m JOIN financial_receiving_accounts a ON a.id=m.account_id
+ JOIN pg06_account_configuration c ON c.account_id=a.id AND c.deleted_at IS NULL AND c.disabled_at IS NULL
+ WHERE m.gateway_id=p_gateway AND a.workspace_id=p_workspace AND a.environment=p_environment
   AND briofold_account_online(a.workspace_id,a.environment,a.id)
   AND briofold_account_limit_reason(a.id,p_amount) IS NULL
  ORDER BY (SELECT max(t.issued_at) FROM payment_attempts t WHERE t.receiving_account_id=a.id) ASC NULLS FIRST,a.created_at,a.id
  LIMIT 1;
  IF pick.id IS NOT NULL THEN RETURN jsonb_build_object('account_id',pick.id,'suffix',pick.display_suffix,'reason',NULL); END IF;
- SELECT EXISTS(SELECT 1 FROM financial_receiving_accounts a JOIN pg06_account_configuration c ON c.account_id=a.id
-  AND c.deleted_at IS NULL AND c.disabled_at IS NULL WHERE a.gateway_id=p_gateway) INTO any_account;
+ SELECT EXISTS(SELECT 1 FROM briofold_gateway_accounts m JOIN pg06_account_configuration c ON c.account_id=m.account_id
+  AND c.deleted_at IS NULL AND c.disabled_at IS NULL WHERE m.gateway_id=p_gateway) INTO any_account;
  RETURN jsonb_build_object('account_id',NULL,'suffix',NULL,
   'reason',CASE WHEN any_account THEN 'NO_ACCOUNT_AVAILABLE' ELSE 'NO_ACCOUNT' END);
 END $$;
@@ -119,18 +120,21 @@ END $$;
 -- Move a number into a gateway. The number's method must be the provider's.
 CREATE OR REPLACE FUNCTION briofold_account_assign(p_workspace uuid,p_environment text,p_account uuid,p_gateway uuid) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE a financial_receiving_accounts; g briofold_gateways;
+DECLARE a financial_receiving_accounts; g briofold_gateways; old_gateway uuid;
 BEGIN
  IF NOT briofold_gateway_scope(p_workspace,p_environment) THEN RETURN NULL; END IF;
  SELECT r.* INTO a FROM financial_receiving_accounts r JOIN pg06_account_configuration c ON c.account_id=r.id AND c.deleted_at IS NULL
-  WHERE r.id=p_account AND r.workspace_id=p_workspace AND r.environment=p_environment FOR UPDATE OF r;
+  WHERE r.id=p_account AND r.workspace_id=p_workspace AND r.environment=p_environment;
  SELECT * INTO g FROM briofold_gateways WHERE id=p_gateway AND workspace_id=p_workspace
   AND environment=p_environment AND deleted_at IS NULL FOR UPDATE;
  IF a.id IS NULL OR g.id IS NULL THEN RAISE EXCEPTION 'not found' USING ERRCODE='P7204'; END IF;
  IF NOT EXISTS(SELECT 1 FROM briofold_providers p WHERE p.code=g.provider AND p.legacy_method=a.method) THEN
   RAISE EXCEPTION 'invalid gateway' USING ERRCODE='P7201'; END IF;
- UPDATE financial_receiving_accounts SET gateway_id=g.id WHERE id=a.id;
- UPDATE briofold_gateways SET version=version+1,updated_at=now() WHERE id=g.id OR id=a.gateway_id;
+ SELECT gateway_id INTO old_gateway FROM briofold_gateway_accounts WHERE account_id=a.id FOR UPDATE;
+ INSERT INTO briofold_gateway_accounts(workspace_id,environment,account_id,gateway_id)
+ VALUES(a.workspace_id,a.environment,a.id,g.id)
+ ON CONFLICT(account_id) DO UPDATE SET gateway_id=EXCLUDED.gateway_id,assigned_at=now();
+ UPDATE briofold_gateways SET version=version+1,updated_at=now() WHERE id=g.id OR id=old_gateway;
  RETURN briofold_gateway_accounts(p_workspace,p_environment,g.id,NULL);
 END $$;
 
