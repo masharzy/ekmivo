@@ -7,8 +7,8 @@ SELECT set_config('ekmivo.workspace_id','aaaaaaaa-0000-4000-8000-000000000001',f
 CREATE TEMP TABLE ids AS SELECT
  '00000000-0000-4000-8000-0000000000a1'::uuid a1,'00000000-0000-4000-8000-0000000000a2'::uuid a2,
  '00000000-0000-4000-8000-0000000000a3'::uuid a3,
- (SELECT gateway_id FROM financial_receiving_accounts WHERE id='00000000-0000-4000-8000-0000000000a1') gb,
- (SELECT gateway_id FROM financial_receiving_accounts WHERE id='00000000-0000-4000-8000-0000000000a3') gn,
+ (SELECT gateway_id FROM briofold_gateway_accounts WHERE account_id='00000000-0000-4000-8000-0000000000a1') gb,
+ (SELECT gateway_id FROM briofold_gateway_accounts WHERE account_id='00000000-0000-4000-8000-0000000000a3') gn,
  'aaaaaaaa-0000-4000-8000-000000000001'::uuid ws;
 
 -- No phone online: nothing can be picked
@@ -54,7 +54,7 @@ SELECT pg_temp.ok((SELECT x->>'limit_reason' FROM jsonb_array_elements(briofold_
 SELECT pg_temp.ok(pg_temp.err($q$SELECT briofold_account_assign((SELECT ws FROM ids),'live',(SELECT a3 FROM ids),(SELECT gb FROM ids))$q$)='P7201','Nagad number cannot join a bKash gateway');
 CREATE TEMP TABLE g2 AS SELECT (briofold_gateway_save((SELECT ws FROM ids),'live',NULL,'{"provider":"bkash","type":"merchant"}',NULL)->>'id')::uuid id;
 SELECT briofold_account_assign((SELECT ws FROM ids),'live',(SELECT a2 FROM ids),(SELECT id FROM g2));
-SELECT pg_temp.ok((SELECT gateway_id FROM financial_receiving_accounts WHERE id=(SELECT a2 FROM ids))=(SELECT id FROM g2),'moved to the merchant gateway');
+SELECT pg_temp.ok((SELECT gateway_id FROM briofold_gateway_accounts WHERE account_id=(SELECT a2 FROM ids))=(SELECT id FROM g2),'moved to the merchant gateway');
 SELECT pg_temp.ok(jsonb_array_length(briofold_gateway_accounts((SELECT ws FROM ids),'live',(SELECT gb FROM ids),NULL)->'items')=1,'old gateway lost it');
 CREATE TEMP TABLE g3 AS SELECT (briofold_gateway_save((SELECT ws FROM ids),'live',NULL,'{"provider":"upay","type":"personal"}',NULL)->>'id')::uuid id;
 SELECT pg_temp.ok(briofold_gateway_pick_account((SELECT ws FROM ids),'live',(SELECT id FROM g3),100)->>'reason'='NO_ACCOUNT','empty gateway');
