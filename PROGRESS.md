@@ -636,3 +636,19 @@ Owner decision 2026-11-14: daily AI summary is shown in the dashboard only (no e
   assign rules, cross-shop refusal, grants) passes locally; CI runs both SQL tests.
 - Choice to confirm: usage counts only money that arrived (not checkouts still waiting), so two checkouts started
   at the same moment can together go over a limit by one payment.
+
+## Payment automation Phase 3a: Pending money (review cases) — 2026-11-26 (same flag, default off)
+- Done: migration `0274_payment_review_cases.sql`. The matcher already set aside SMS whose amount did not fit
+  (partial/excess) or that fit two checkouts (ambiguous); they were only a reason in the incoming report. Now each
+  becomes one Pending case (one per SMS, unique = the SMS is claimed), kinds underpaid/overpaid/ambiguous, with the
+  suggested checkout and the candidates. Owner can approve (suggested checkout or another one = move) or reject.
+  Approval is recorded as "confirmed by the shop" through briofold_payment_proofs (0271), never as an SMS-verified
+  payment, so the exact-amount trigger on verified payments is untouched. A checkout can be accepted once.
+- Matcher, triggers and existing functions unchanged. Cases are created only when the Pending list is read (flag on).
+- API: GET payment-reviews?state=open|approved|rejected, POST payment-reviews/{id}/approve|reject.
+- Evidence: `tools/testing/sql/payment-review-test.sql` (cases from the three reasons only, idempotent sync,
+  underpaid -2 Tk, overpaid, conflict with two candidates and no suggestion, approve completes the checkout, second
+  SMS refused for a paid checkout, decided case final, move to the owner's choice, reject, cross-shop refusal, no
+  payer hash in answers) passes locally with 0272-0274 applied twice; CI runs it.
+- Next: 3b tolerance (changes the matcher and the exact-amount trigger; owner approved 2026-11-26, defaults
+  underpaid 0, overpaid 10 Tk), 3c TrxID without time limit.

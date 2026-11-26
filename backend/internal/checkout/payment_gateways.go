@@ -31,6 +31,9 @@ import (
 //	GET   /v1/workspaces/{ws}/gateways/{id}/next-account?amount_minor=n  which number turns next
 //	POST  /v1/workspaces/{ws}/gateway-accounts/{account}/assign      {"gateway_id":"..."}
 //	POST  /v1/workspaces/{ws}/gateway-accounts/{account}/limits      {"limits":{...}}
+//	GET   /v1/workspaces/{ws}/payment-reviews?state=open             Pending money (Phase 3a)
+//	POST  /v1/workspaces/{ws}/payment-reviews/{review}/approve       {"intent_id":"..."} (empty = suggested)
+//	POST  /v1/workspaces/{ws}/payment-reviews/{review}/reject        {"reason":"..."}
 //
 // Reading needs payments:read. Changes need a signed-in owner or admin
 // (payments:manage), like phones and receiving accounts.
@@ -41,6 +44,8 @@ func paymentGatewaysEnabled() bool {
 type gatewayChange struct {
 	Version   int64           `json:"version"`
 	GatewayID string          `json:"gateway_id"`
+	IntentID  string          `json:"intent_id"`
+	Reason    string          `json:"reason"`
 	Limits    json.RawMessage `json:"limits"`
 	Status    string          `json:"status"`
 	IDs       []string        `json:"ids"`
@@ -57,8 +62,9 @@ func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) 
 		fail(w, 400, "INVALID_SCOPE")
 		return
 	}
-	id, action, account := r.PathValue("gatewayID"), r.PathValue("action"), r.PathValue("accountID")
-	if id != "" && !uuidPattern.MatchString(id) || account != "" && !uuidPattern.MatchString(account) {
+	id, action, account, review := r.PathValue("gatewayID"), r.PathValue("action"), r.PathValue("accountID"), r.PathValue("reviewID")
+	if id != "" && !uuidPattern.MatchString(id) || account != "" && !uuidPattern.MatchString(account) ||
+		review != "" && !uuidPattern.MatchString(review) {
 		fail(w, 404, "NOT_FOUND")
 		return
 	}
@@ -91,6 +97,19 @@ func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) 
 	err := s.scoped(r.Context(), ws, realm, func(tx pgx.Tx) error {
 		ctx := r.Context()
 		switch {
+		case read && strings.HasSuffix(r.URL.Path, "/payment-reviews"):
+			return tx.QueryRow(ctx, "SELECT briofold_review_list($1::uuid,$2,$3)", ws, realm, r.URL.Query().Get("state")).Scan(&raw)
+		case r.Method == "POST" && review != "" && action == "approve":
+			var intent any
+			if body.IntentID != "" {
+				if !uuidPattern.MatchString(body.IntentID) {
+					return errGatewayInput
+				}
+				intent = body.IntentID
+			}
+			return tx.QueryRow(ctx, "SELECT briofold_review_approve($1::uuid,$2,$3::uuid,$4::uuid)", ws, realm, review, intent).Scan(&raw)
+		case r.Method == "POST" && review != "" && action == "reject":
+			return tx.QueryRow(ctx, "SELECT briofold_review_reject($1::uuid,$2,$3::uuid,$4)", ws, realm, review, body.Reason).Scan(&raw)
 		case read && strings.HasSuffix(r.URL.Path, "/payment-providers"):
 			return tx.QueryRow(ctx, "SELECT briofold_provider_list()").Scan(&raw)
 		case read && id == "":
@@ -126,9 +145,9 @@ func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) 
 				limits = []byte("{}")
 			}
 			return tx.QueryRow(ctx, "SELECT briofold_account_set_limits($1::uuid,$2,$3::uuid,$4::jsonb)", ws, realm, account, limits).Scan(&raw)
-		case r.Method == "POST" && id == "" && account == "" && action == "reorder":
+		case r.Method == "POST" && id == "" && account == "" && review == "" && action == "reorder":
 			return tx.QueryRow(ctx, "SELECT briofold_gateway_reorder($1::uuid,$2,$3::uuid[])", ws, realm, body.IDs).Scan(&raw)
-		case r.Method == "POST" && id == "" && account == "" && action == "":
+		case r.Method == "POST" && id == "" && account == "" && review == "" && action == "":
 			return tx.QueryRow(ctx, "SELECT briofold_gateway_save($1::uuid,$2,NULL,$3::jsonb,NULL)", ws, realm, gateway).Scan(&raw)
 		case r.Method == "PATCH" && id != "" && action == "":
 			return tx.QueryRow(ctx, "SELECT briofold_gateway_save($1::uuid,$2,$3::uuid,$4::jsonb,$5)", ws, realm, id, gateway, body.Version).Scan(&raw)
@@ -150,7 +169,7 @@ func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) 
 		fail(w, 404, "NOT_FOUND")
 	case err == nil:
 		status := 200
-		if r.Method == "POST" && action == "" && account == "" || action == "duplicate" {
+		if r.Method == "POST" && action == "" && account == "" && review == "" || action == "duplicate" {
 			status = 201
 		}
 		write(w, status, json.RawMessage(raw))
@@ -170,7 +189,7 @@ func (s *Service) HandlePaymentGateways(w http.ResponseWriter, r *http.Request) 
 var errGatewayInput = errors.New("invalid gateway input")
 
 var gatewayErrorStatus = map[string]int{"INVALID_GATEWAY": 422, "GATEWAY_VERSION_CONFLICT": 409,
-	"GATEWAY_HAS_ACCOUNTS": 409, "NOT_FOUND": 404}
+	"GATEWAY_HAS_ACCOUNTS": 409, "REVIEW_DECIDED": 409, "NOT_FOUND": 404}
 
 // gatewayErrorCode turns the fixed 0272 SQLSTATEs into API codes.
 func gatewayErrorCode(err error) string {
@@ -179,5 +198,5 @@ func gatewayErrorCode(err error) string {
 		return ""
 	}
 	return map[string]string{"P7201": "INVALID_GATEWAY", "P7202": "GATEWAY_VERSION_CONFLICT",
-		"P7203": "GATEWAY_HAS_ACCOUNTS", "P7204": "NOT_FOUND"}[pg.Code]
+		"P7203": "GATEWAY_HAS_ACCOUNTS", "P7204": "NOT_FOUND", "P7205": "REVIEW_DECIDED"}[pg.Code]
 }

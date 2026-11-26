@@ -33,6 +33,32 @@ CREATE TABLE pg06_devices(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),account_
  permission_ok boolean NOT NULL DEFAULT true,heartbeat_at timestamptz);
 CREATE TABLE pg06_phones(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),workspace_id uuid NOT NULL,environment text NOT NULL,
  claimed_at timestamptz,revoked_at timestamptz,permission_ok boolean NOT NULL DEFAULT true,heartbeat_at timestamptz);
-CREATE TABLE payment_attempts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),receiving_account_id uuid NOT NULL,issued_at timestamptz NOT NULL);
-CREATE TABLE financial_receipt_observations(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),receiving_account_id uuid NOT NULL,
- amount_minor bigint,direction text NOT NULL,original_transaction_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE payment_intents(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ workspace_id uuid NOT NULL DEFAULT 'aaaaaaaa-0000-4000-8000-000000000001',environment text NOT NULL DEFAULT 'live',
+ merchant_reference text NOT NULL DEFAULT 'order',amount_minor bigint NOT NULL DEFAULT 100000,expires_at timestamptz NOT NULL DEFAULT now()+interval '15 minutes',
+ UNIQUE(workspace_id,environment,id));
+CREATE TABLE payment_attempts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ workspace_id uuid NOT NULL DEFAULT 'aaaaaaaa-0000-4000-8000-000000000001',environment text NOT NULL DEFAULT 'live',
+ intent_id uuid,receiving_account_id uuid NOT NULL,payer_hmac text NOT NULL DEFAULT repeat('a',64),payer_suffix char(4) NOT NULL DEFAULT '5678',
+ amount_minor bigint NOT NULL DEFAULT 100000,currency char(3) NOT NULL DEFAULT 'BDT',method text NOT NULL DEFAULT 'bkash',
+ window_start timestamptz NOT NULL DEFAULT now()-interval '1 minute',window_end timestamptz NOT NULL DEFAULT now()+interval '15 minutes',
+ issued_at timestamptz NOT NULL);
+CREATE TABLE financial_receipt_observations(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ workspace_id uuid NOT NULL DEFAULT 'aaaaaaaa-0000-4000-8000-000000000001',environment text NOT NULL DEFAULT 'live',
+ receiving_account_id uuid NOT NULL,payer_hmac text DEFAULT repeat('a',64),method text DEFAULT 'bkash',currency char(3) NOT NULL DEFAULT 'BDT',
+ time_precision text NOT NULL DEFAULT 'minute',
+ amount_minor bigint,direction text NOT NULL,original_transaction_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(workspace_id,environment,id));
+
+-- Phase 3a (0274) stand-ins: receipt results, shop-confirmed proofs, intent state, SMS window rule (0266).
+CREATE TABLE pg07_receipt_results(workspace_id uuid NOT NULL,environment text NOT NULL,observation_id uuid PRIMARY KEY,
+ status text NOT NULL,reason text NOT NULL DEFAULT '',processed_at timestamptz DEFAULT now());
+CREATE TABLE briofold_payment_proofs(workspace_id uuid NOT NULL,environment text NOT NULL,intent_id uuid NOT NULL,
+ trx_id text,images jsonb NOT NULL DEFAULT '[]',state text NOT NULL DEFAULT 'submitted',submissions integer NOT NULL DEFAULT 1,
+ created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),seen_at timestamptz,
+ decided_at timestamptz,decided_by uuid,decision_reason text,PRIMARY KEY(workspace_id,environment,intent_id));
+CREATE FUNCTION pg05_intent_state(p_workspace uuid,p_environment text,p_intent uuid) RETURNS text LANGUAGE sql STABLE AS $$
+ SELECT CASE WHEN EXISTS(SELECT 1 FROM briofold_payment_proofs WHERE workspace_id=p_workspace AND environment=p_environment
+  AND intent_id=p_intent AND state='approved') THEN 'completed' ELSE 'awaiting_payment' END $$;
+CREATE FUNCTION briofold_sms_window_start(window_start timestamptz,precision_name text) RETURNS timestamptz
+LANGUAGE sql STABLE AS $$ SELECT CASE WHEN precision_name='minute' THEN date_trunc('minute',window_start) ELSE window_start END $$;
